@@ -93,6 +93,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -106,6 +107,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.launch
@@ -150,15 +152,28 @@ fun WorkflowRunBoardScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Resolve snackbar copy here (composable scope) so the coroutine lambdas below don't call stringRes.
+    val msgTriggered = stringRes(R.string.buzz_workflow_triggered_toast)
+    val msgTriggerFailed = stringRes(R.string.buzz_workflow_trigger_failed_toast)
+    val msgApproved = stringRes(R.string.buzz_workflow_approved_toast)
+    val msgDenied = stringRes(R.string.buzz_workflow_denied_toast)
+    val msgDecisionFailed = stringRes(R.string.buzz_workflow_decision_failed_toast)
+
+    // Section titles resolved here too — `section()` runs in LazyListScope, not a composable scope.
+    val titleAwaiting = stringRes(R.string.buzz_workflow_section_awaiting)
+    val titleActive = stringRes(R.string.buzz_workflow_section_active)
+    val titleShipped = stringRes(R.string.buzz_workflow_section_shipped)
+    val titleClosed = stringRes(R.string.buzz_workflow_section_closed)
+
     Scaffold(
-        topBar = { TopBarWithBackButton("Workflow runs", nav) },
+        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_workflow_runs_title), nav) },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             if (canWrite) {
                 ExtendedFloatingActionButton(
                     onClick = { composing = true },
                     icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
-                    text = { Text("New run") },
+                    text = { Text(stringRes(R.string.buzz_workflow_new_run)) },
                 )
             }
         },
@@ -177,12 +192,12 @@ fun WorkflowRunBoardScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
                     ) {
-                        section("Needs your approval", groups.awaiting, RunStyle.GATE, me, canWrite, accountViewModel, nav) { run, grant ->
+                        section(titleAwaiting, groups.awaiting, RunStyle.GATE, me, canWrite, accountViewModel, nav) { run, grant ->
                             pending = PendingDecision(run, grant)
                         }
-                        section("Working now", groups.active, RunStyle.ACTIVE, me, canWrite, accountViewModel, nav)
-                        section("Shipped", groups.done, RunStyle.SHIPPED, me, canWrite, accountViewModel, nav)
-                        section("Closed", groups.closed, RunStyle.CLOSED, me, canWrite, accountViewModel, nav)
+                        section(titleActive, groups.active, RunStyle.ACTIVE, me, canWrite, accountViewModel, nav)
+                        section(titleShipped, groups.done, RunStyle.SHIPPED, me, canWrite, accountViewModel, nav)
+                        section(titleClosed, groups.closed, RunStyle.CLOSED, me, canWrite, accountViewModel, nav)
                     }
                 }
 
@@ -208,9 +223,9 @@ fun WorkflowRunBoardScreen(
                 viewModel.trigger(workflowId, task) { ok ->
                     if (ok) {
                         composing = false
-                        scope.launch { snackbar.showSnackbar("Run triggered") }
+                        scope.launch { snackbar.showSnackbar(msgTriggered) }
                     } else {
-                        scope.launch { snackbar.showSnackbar("Couldn't trigger the run — check you can post to this workspace") }
+                        scope.launch { snackbar.showSnackbar(msgTriggerFailed) }
                     }
                 }
             },
@@ -228,9 +243,9 @@ fun WorkflowRunBoardScreen(
                     scope.launch {
                         snackbar.showSnackbar(
                             when {
-                                ok && grant -> "Approved — the runner is opening a pull request"
-                                ok -> "Denied — the work was discarded"
-                                else -> "Couldn't publish your decision — check you can post to this workspace"
+                                ok && grant -> msgApproved
+                                ok -> msgDenied
+                                else -> msgDecisionFailed
                             },
                         )
                     }
@@ -381,7 +396,7 @@ private fun LazyItemScope.GateCard(
                         Icon(symbol = MaterialSymbols.Gavel, contentDescription = null, tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
                     }
                     Text(
-                        text = if (mine) "Needs your approval" else "Awaiting approval",
+                        text = if (mine) stringRes(R.string.buzz_workflow_gate_needs_you) else stringRes(R.string.buzz_workflow_gate_awaiting),
                         style = MaterialTheme.typography.titleSmall,
                         color = scheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -391,13 +406,13 @@ private fun LazyItemScope.GateCard(
             }
 
             Text(
-                text = run.task?.takeIf { it.isNotBlank() } ?: run.workflowId?.let { "Workflow: $it" } ?: "(no description)",
+                text = runHeadline(run),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
             )
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Person("by", run.requester, accountViewModel, nav)
+                Person(stringRes(R.string.buzz_workflow_by), run.requester, accountViewModel, nav)
             }
 
             if (mine && canWrite) {
@@ -408,7 +423,7 @@ private fun LazyItemScope.GateCard(
             } else if (mine) {
                 // Named approver, but this login can't sign (read-only / remote signer w/o write).
                 Text(
-                    text = "You're the approver, but this login can't sign a decision.",
+                    text = stringRes(R.string.buzz_workflow_readonly_approver),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -434,7 +449,7 @@ private fun ApprovalActions(
             onClick = onDeny,
             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
         ) {
-            Text("Deny", fontWeight = FontWeight.SemiBold)
+            Text(stringRes(R.string.buzz_workflow_deny), fontWeight = FontWeight.SemiBold)
         }
         Button(
             onClick = onApprove,
@@ -443,7 +458,7 @@ private fun ApprovalActions(
         ) {
             Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Approve & open PR", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(stringRes(R.string.buzz_workflow_approve_open_pr), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -459,7 +474,7 @@ private fun ConfirmDecisionDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val task = decision.run.task?.takeIf { it.isNotBlank() } ?: "this run"
+    val task = decision.run.task?.takeIf { it.isNotBlank() } ?: stringRes(R.string.buzz_workflow_this_run)
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
@@ -469,13 +484,13 @@ private fun ConfirmDecisionDialog(
                 tint = if (decision.grant) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             )
         },
-        title = { Text(if (decision.grant) "Approve this run?" else "Deny this run?") },
+        title = { Text(if (decision.grant) stringRes(R.string.buzz_workflow_approve_title) else stringRes(R.string.buzz_workflow_deny_title)) },
         text = {
             Text(
                 if (decision.grant) {
-                    "The runner will push its branch and open a pull request for “$task”. Approving never merges or deploys — that still happens on GitHub."
+                    stringRes(R.string.buzz_workflow_approve_body, task)
                 } else {
-                    "The agent's work for “$task” will be discarded. This can't be undone."
+                    stringRes(R.string.buzz_workflow_deny_body, task)
                 },
             )
         },
@@ -484,15 +499,15 @@ private fun ConfirmDecisionDialog(
                 Button(onClick = onConfirm) {
                     Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Approve & open PR")
+                    Text(stringRes(R.string.buzz_workflow_approve_open_pr))
                 }
             } else {
                 TextButton(onClick = onConfirm, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                    Text("Deny", fontWeight = FontWeight.SemiBold)
+                    Text(stringRes(R.string.buzz_workflow_deny), fontWeight = FontWeight.SemiBold)
                 }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(R.string.buzz_workflow_cancel)) } },
     )
 }
 
@@ -511,9 +526,9 @@ private fun WaitingPill(
         ) {
             Icon(symbol = MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
             if (approver != null) {
-                Person("waiting on", approver, accountViewModel, nav)
+                Person(stringRes(R.string.buzz_workflow_waiting_on), approver, accountViewModel, nav)
             } else {
-                Text("Waiting for approval", style = MaterialTheme.typography.labelLarge)
+                Text(stringRes(R.string.buzz_workflow_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
             }
         }
     }
@@ -565,12 +580,12 @@ private fun LazyItemScope.RunCard(
                 }
 
                 Text(
-                    text = run.task?.takeIf { it.isNotBlank() } ?: run.workflowId?.let { "Workflow: $it" } ?: "(no description)",
+                    text = runHeadline(run),
                     style = if (style == RunStyle.ACTIVE) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
                     fontWeight = if (style == RunStyle.ACTIVE) FontWeight.SemiBold else FontWeight.Normal,
                 )
 
-                Person("by", run.requester, accountViewModel, nav)
+                Person(stringRes(R.string.buzz_workflow_by), run.requester, accountViewModel, nav)
 
                 when (style) {
                     RunStyle.ACTIVE -> {
@@ -604,9 +619,9 @@ private fun ClosedLine(
 ) {
     val text =
         when (run.state) {
-            WorkflowRunState.DENIED -> "Denied — work discarded"
-            WorkflowRunState.CANCELLED -> "Cancelled"
-            else -> run.error?.let { "Failed: $it" } ?: "Failed"
+            WorkflowRunState.DENIED -> stringRes(R.string.buzz_workflow_closed_denied)
+            WorkflowRunState.CANCELLED -> stringRes(R.string.buzz_workflow_closed_cancelled)
+            else -> run.error?.let { stringRes(R.string.buzz_workflow_closed_failed_prefix, it) } ?: stringRes(R.string.buzz_workflow_closed_failed)
         }
     Text(
         text,
@@ -648,7 +663,7 @@ private fun ResultLine(result: String) {
         Button(onClick = { uriHandler.openUri(url) }, shape = RoundedCornerShape(12.dp)) {
             Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("View PR")
+            Text(stringRes(R.string.buzz_workflow_view_pr))
         }
     } else {
         Text(result, style = MaterialTheme.typography.bodyMedium)
@@ -679,7 +694,7 @@ private fun StatePill(
     state: WorkflowRunState,
     accent: Color,
 ) {
-    val (label, symbol) = pillContent(state)
+    val (labelRes, symbol) = pillContent(state)
     Surface(color = accent.copy(alpha = 0.14f), shape = RoundedCornerShape(20.dp)) {
         Row(
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
@@ -687,10 +702,17 @@ private fun StatePill(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
-            Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
+            Text(text = stringRes(labelRes), style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
         }
     }
 }
+
+/** The task/workflow-id/placeholder headline shown for a run, resolved for the current locale. */
+@Composable
+private fun runHeadline(run: WorkflowRun): String =
+    run.task?.takeIf { it.isNotBlank() }
+        ?: run.workflowId?.let { stringRes(R.string.buzz_workflow_id_prefix, it) }
+        ?: stringRes(R.string.buzz_workflow_no_description)
 
 /**
  * Trigger a run: pick one of the channel's published **workflow definitions** (kind-30620) from the
@@ -729,9 +751,9 @@ private fun NewRunSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("Trigger a workflow", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringRes(R.string.buzz_workflow_trigger_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                "The runner does the work, then pauses for a human to approve before it opens a PR. The whole channel sees the run.",
+                stringRes(R.string.buzz_workflow_trigger_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -757,7 +779,7 @@ private fun NewRunSheet(
                     // Don't leave a first-time user staring at a disabled Trigger button and an empty
                     // dropdown — point them at the way forward.
                     Text(
-                        "No workflows yet. Open the menu above and choose “New definition…” to create one, then trigger it.",
+                        stringRes(R.string.buzz_workflow_no_defs_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -765,7 +787,7 @@ private fun NewRunSheet(
                 OutlinedTextField(
                     value = task,
                     onValueChange = { task = it },
-                    label = { Text("What should it do?") },
+                    label = { Text(stringRes(R.string.buzz_workflow_task_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                 )
@@ -776,7 +798,7 @@ private fun NewRunSheet(
                 ) {
                     Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Trigger run")
+                    Text(stringRes(R.string.buzz_workflow_trigger_run))
                 }
             }
         }
@@ -798,8 +820,8 @@ private fun WorkflowPicker(
             value = selected?.label ?: "",
             onValueChange = {},
             readOnly = true,
-            label = { Text("Workflow") },
-            placeholder = { Text(if (definitions.isEmpty()) "No workflows defined yet" else "Choose a workflow") },
+            label = { Text(stringRes(R.string.buzz_workflow_picker_label)) },
+            placeholder = { Text(if (definitions.isEmpty()) stringRes(R.string.buzz_workflow_picker_empty) else stringRes(R.string.buzz_workflow_picker_choose)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
         )
@@ -815,7 +837,7 @@ private fun WorkflowPicker(
             }
             if (definitions.isNotEmpty()) HorizontalDivider()
             DropdownMenuItem(
-                text = { Text("New definition…", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) },
+                text = { Text(stringRes(R.string.buzz_workflow_new_definition), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) },
                 leadingIcon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
                 onClick = {
                     expanded = false
@@ -840,18 +862,19 @@ private fun DefinitionEditor(
     var yaml by remember { mutableStateOf("") }
     var publishing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val publishFailedMsg = stringRes(R.string.buzz_workflow_def_publish_failed)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("New workflow definition", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text(stringRes(R.string.buzz_workflow_def_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         Text(
-            "Names it for the channel and publishes its YAML recipe (kind-30620). A real Buzz relay runs the YAML. Self-hosted, the runner runs its configured command — here the definition just names and catalogs the run.",
+            stringRes(R.string.buzz_workflow_def_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Name") },
-            placeholder = { Text("build-and-test") },
+            label = { Text(stringRes(R.string.buzz_workflow_def_name)) },
+            placeholder = { Text(stringRes(R.string.buzz_workflow_def_name_hint)) },
             singleLine = true,
             enabled = !publishing,
             modifier = Modifier.fillMaxWidth(),
@@ -859,7 +882,7 @@ private fun DefinitionEditor(
         OutlinedTextField(
             value = yaml,
             onValueChange = { yaml = it },
-            label = { Text("YAML recipe") },
+            label = { Text(stringRes(R.string.buzz_workflow_def_yaml)) },
             enabled = !publishing,
             modifier = Modifier.fillMaxWidth(),
             minLines = 4,
@@ -868,14 +891,14 @@ private fun DefinitionEditor(
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onCancel, enabled = !publishing) { Text("Cancel") }
+            OutlinedButton(onClick = onCancel, enabled = !publishing) { Text(stringRes(R.string.buzz_workflow_cancel)) }
             Button(
                 onClick = {
                     error = null
                     publishing = true
                     onCreate(name.trim(), yaml) { ok ->
                         publishing = false
-                        if (!ok) error = "Couldn't publish the definition — check you can post to this workspace."
+                        if (!ok) error = publishFailedMsg
                     }
                 },
                 enabled = !publishing && name.isNotBlank() && yaml.isNotBlank(),
@@ -883,7 +906,7 @@ private fun DefinitionEditor(
             ) {
                 Icon(symbol = MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (publishing) "Publishing…" else "Create definition")
+                Text(if (publishing) stringRes(R.string.buzz_workflow_publishing) else stringRes(R.string.buzz_workflow_create_definition))
             }
         }
     }
@@ -897,9 +920,9 @@ private fun EmptyRunBoard() {
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
     ) {
         Icon(symbol = MaterialSymbols.Gavel, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
-        Text("No runs yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringRes(R.string.buzz_workflow_empty_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
-            "Tap “New run” to trigger a workflow. The runner does the work and pauses on an approval gate — a human grants it before anything ships.",
+            stringRes(R.string.buzz_workflow_empty_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -915,14 +938,14 @@ private fun styleColors(style: RunStyle): Pair<Color, Color> =
         RunStyle.CLOSED -> MaterialTheme.colorScheme.surfaceContainerLow to MaterialTheme.colorScheme.outline
     }
 
-private fun pillContent(state: WorkflowRunState): Pair<String, MaterialSymbol> =
+private fun pillContent(state: WorkflowRunState): Pair<Int, MaterialSymbol> =
     when (state) {
-        WorkflowRunState.TRIGGERED -> "Queued" to MaterialSymbols.Schedule
-        WorkflowRunState.RUNNING -> "Working" to MaterialSymbols.Bolt
-        WorkflowRunState.AWAITING_APPROVAL -> "Needs approval" to MaterialSymbols.Gavel
-        WorkflowRunState.APPROVED -> "Approved" to MaterialSymbols.CheckCircle
-        WorkflowRunState.COMPLETED -> "Shipped" to MaterialSymbols.CheckCircle
-        WorkflowRunState.FAILED -> "Failed" to MaterialSymbols.Error
-        WorkflowRunState.CANCELLED -> "Cancelled" to MaterialSymbols.Cancel
-        WorkflowRunState.DENIED -> "Denied" to MaterialSymbols.Close
+        WorkflowRunState.TRIGGERED -> R.string.buzz_workflow_pill_queued to MaterialSymbols.Schedule
+        WorkflowRunState.RUNNING -> R.string.buzz_workflow_pill_working to MaterialSymbols.Bolt
+        WorkflowRunState.AWAITING_APPROVAL -> R.string.buzz_workflow_pill_needs_approval to MaterialSymbols.Gavel
+        WorkflowRunState.APPROVED -> R.string.buzz_workflow_pill_approved to MaterialSymbols.CheckCircle
+        WorkflowRunState.COMPLETED -> R.string.buzz_workflow_pill_shipped to MaterialSymbols.CheckCircle
+        WorkflowRunState.FAILED -> R.string.buzz_workflow_pill_failed to MaterialSymbols.Error
+        WorkflowRunState.CANCELLED -> R.string.buzz_workflow_pill_cancelled to MaterialSymbols.Cancel
+        WorkflowRunState.DENIED -> R.string.buzz_workflow_pill_denied to MaterialSymbols.Close
     }

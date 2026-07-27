@@ -59,6 +59,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.AttestationConditions
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -123,7 +125,7 @@ fun AgentAttestationScreen(
     val myPubkey = accountViewModel.account.userProfile().pubkeyHex
 
     Scaffold(
-        topBar = { TopBarWithBackButton("Attestations", nav) },
+        topBar = { TopBarWithBackButton(stringRes(R.string.buzz_attest_topbar), nav) },
     ) { padding ->
         Column(
             modifier =
@@ -167,26 +169,26 @@ private fun HoldAttestationSection(myPubkey: String) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "Hold an attestation",
+                text = stringRes(R.string.buzz_attest_hold_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             if (mine != null) {
                 Text(
-                    text = "Holding an attestation for this account. It is attached automatically when you authenticate to a Buzz relay.",
+                    text = stringRes(R.string.buzz_attest_holding),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = "Grants: " + mine.conditions.ifEmpty { "any kind, any time (unrestricted)" },
+                    text = stringRes(R.string.buzz_attest_grants_prefix, mine.conditions.ifEmpty { stringRes(R.string.buzz_attest_grants_unrestricted) }),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedButton(onClick = { BuzzHeldAttestations.remove(myPubkey) }) {
-                    Text("Remove")
+                    Text(stringRes(R.string.buzz_attest_remove))
                 }
             } else {
                 Text(
-                    text = "Paste an owner-signed auth tag issued to this account to authenticate to their Buzz workspace as a virtual member.",
+                    text = stringRes(R.string.buzz_attest_hold_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -196,7 +198,7 @@ private fun HoldAttestationSection(myPubkey: String) {
                         input = it
                         error = null
                     },
-                    label = { Text("auth tag JSON") },
+                    label = { Text(stringRes(R.string.buzz_attest_authtag_label)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -217,7 +219,7 @@ private fun HoldAttestationSection(myPubkey: String) {
                     enabled = input.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Hold attestation")
+                    Text(stringRes(R.string.buzz_attest_hold_button))
                 }
             }
         }
@@ -267,16 +269,12 @@ private fun ReadOnlyKeyNotice() {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "Local key required",
+                text = stringRes(R.string.buzz_attest_readonly_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text =
-                    "A NIP-OA attestation is a signature over a hashed commitment, not a Nostr event, " +
-                        "so it can only be produced by a signer that holds your raw private key. This " +
-                        "account uses a remote (NIP-46 bunker) or external (NIP-55) signer, which cannot " +
-                        "sign an attestation.",
+                text = stringRes(R.string.buzz_attest_readonly_desc),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -300,9 +298,7 @@ private fun AttestationForm(
     var result by remember { mutableStateOf<OwnerAttestation?>(null) }
 
     Text(
-        text =
-            "Authorize an agent pubkey to publish in your workspace without enrolling its key. " +
-                "The agent attaches the signed tag below to its events.",
+        text = stringRes(R.string.buzz_attest_form_desc),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -326,7 +322,7 @@ private fun AttestationForm(
     )
 
     Text(
-        text = "Conditions (optional) — leave blank for an unrestricted attestation.",
+        text = stringRes(R.string.buzz_attest_conditions_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -339,7 +335,7 @@ private fun AttestationForm(
             error = null
             result = null
         },
-        label = "Restrict to kind (0–65535)",
+        label = stringRes(R.string.buzz_attest_kind_label),
         options = KIND_OPTIONS,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         supportingText = KIND_LABELS[kindInput],
@@ -352,7 +348,7 @@ private fun AttestationForm(
             error = null
             result = null
         },
-        label = { Text("Only events after (unix seconds)") },
+        label = { Text(stringRes(R.string.buzz_attest_after_label)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         // Echo the entered epoch back as a readable UTC time so nobody has to eyeball unix seconds.
@@ -367,7 +363,7 @@ private fun AttestationForm(
             error = null
             result = null
         },
-        label = { Text("Only events before (unix seconds)") },
+        label = { Text(stringRes(R.string.buzz_attest_before_label)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         supportingText = unixEcho(beforeInput)?.let { echo -> { Text(echo) } },
@@ -399,7 +395,7 @@ private fun AttestationForm(
         enabled = selectedAgent != null,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text("Generate attestation")
+        Text(stringRes(R.string.buzz_attest_generate))
     }
 
     result?.let { attestation ->
@@ -450,12 +446,12 @@ private fun AgentKeyPicker(
             query = it
             pasteError = false
         },
-        label = { Text("Agent (search a name, or paste npub / hex)") },
+        label = { Text(stringRes(R.string.buzz_attest_agent_label)) },
         leadingIcon = { Icon(symbol = MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
         singleLine = true,
         isError = pasteError,
         // Keep the invalid-paste error on the field the user just typed in, not far down the form.
-        supportingText = "Enter an npub or 64-char hex key.".takeIf { pasteError }?.let { msg -> { Text(msg) } },
+        supportingText = stringRes(R.string.buzz_attest_agent_paste_error).takeIf { pasteError }?.let { msg -> { Text(msg) } },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions =
             KeyboardActions(
@@ -512,7 +508,7 @@ private fun AgentChip(
         onClick = onRemove,
         label = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         avatar = { UserPicture(hex, 22.dp, accountViewModel = accountViewModel, nav = nav) },
-        trailingIcon = { Icon(symbol = MaterialSymbols.Close, contentDescription = "Change agent", modifier = Modifier.size(16.dp)) },
+        trailingIcon = { Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(R.string.buzz_attest_change_agent), modifier = Modifier.size(16.dp)) },
     )
 }
 
@@ -524,14 +520,12 @@ private fun AttestationResultCard(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "Signed attestation",
+                text = stringRes(R.string.buzz_attest_signed_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text =
-                    "Grants: " +
-                        (attestation.conditions.ifEmpty { "any kind, any time (unrestricted)" }),
+                text = stringRes(R.string.buzz_attest_grants_prefix, attestation.conditions.ifEmpty { stringRes(R.string.buzz_attest_grants_unrestricted) }),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
@@ -545,14 +539,11 @@ private fun AttestationResultCard(
                 horizontalArrangement = Arrangement.End,
             ) {
                 OutlinedButton(onClick = onCopy) {
-                    Text("Copy tag")
+                    Text(stringRes(R.string.buzz_attest_copy_tag))
                 }
             }
             Text(
-                text =
-                    "⚠ Hand this to the agent operator only. While it is valid and you remain a " +
-                        "workspace member, the relay lets this agent post as a member under the " +
-                        "conditions above.",
+                text = stringRes(R.string.buzz_attest_warning),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )

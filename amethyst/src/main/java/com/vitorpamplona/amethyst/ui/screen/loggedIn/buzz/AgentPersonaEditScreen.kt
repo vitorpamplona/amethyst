@@ -38,9 +38,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 
 // Well-known values for the persona's optional model / provider / runtime — suggestions only; any
 // string is still accepted (the fields are free-form both in NIP-AP and in Buzz's persona events).
@@ -81,7 +83,7 @@ fun AgentPersonaEditScreen(
     viewModel.bind(accountViewModel.account, slug)
 
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val title = if (slug == null) "New persona" else "Edit persona"
+    val title = if (slug == null) stringRes(R.string.buzz_persona_new_title) else stringRes(R.string.buzz_persona_edit_title)
 
     Scaffold(
         topBar = { TopBarWithBackButton(title, nav) },
@@ -98,23 +100,23 @@ fun AgentPersonaEditScreen(
             OutlinedTextField(
                 value = state.slug,
                 onValueChange = viewModel::onSlugChange,
-                label = { Text("Slug (persona id)") },
+                label = { Text(stringRes(R.string.buzz_persona_slug)) },
                 singleLine = true,
                 enabled = !state.slugLocked,
-                supportingText = { Text("a-z, 0-9, '-' or '_'. Cannot change after creation.") },
+                supportingText = { Text(stringRes(R.string.buzz_persona_slug_help)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = state.displayName,
                 onValueChange = viewModel::onDisplayNameChange,
-                label = { Text("Display name") },
+                label = { Text(stringRes(R.string.buzz_persona_display_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = state.systemPrompt,
                 onValueChange = viewModel::onSystemPromptChange,
-                label = { Text("System prompt") },
+                label = { Text(stringRes(R.string.buzz_persona_system_prompt)) },
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -123,25 +125,25 @@ fun AgentPersonaEditScreen(
             EditableSuggestDropdown(
                 value = state.model,
                 onValueChange = viewModel::onModelChange,
-                label = "Model (optional)",
+                label = stringRes(R.string.buzz_persona_model),
                 options = MODEL_OPTIONS,
             )
             EditableSuggestDropdown(
                 value = state.provider,
                 onValueChange = viewModel::onProviderChange,
-                label = "Provider (optional)",
+                label = stringRes(R.string.buzz_persona_provider),
                 options = PROVIDER_OPTIONS,
             )
             EditableSuggestDropdown(
                 value = state.runtime,
                 onValueChange = viewModel::onRuntimeChange,
-                label = "Runtime (optional)",
+                label = stringRes(R.string.buzz_persona_runtime),
                 options = RUNTIME_OPTIONS,
             )
             OutlinedTextField(
                 value = state.avatarUrl,
                 onValueChange = viewModel::onAvatarUrlChange,
-                label = { Text("Avatar URL (optional)") },
+                label = { Text(stringRes(R.string.buzz_persona_avatar)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -159,7 +161,7 @@ fun AgentPersonaEditScreen(
                 enabled = state.canSave,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (state.isSaving) "Publishing…" else "Publish persona")
+                Text(if (state.isSaving) stringRes(R.string.buzz_persona_publishing) else stringRes(R.string.buzz_persona_publish))
             }
         }
     }
