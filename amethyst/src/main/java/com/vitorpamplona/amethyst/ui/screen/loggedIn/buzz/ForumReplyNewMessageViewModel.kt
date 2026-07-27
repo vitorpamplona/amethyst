@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send.ChannelNewMessageViewModel
 import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -47,12 +48,31 @@ class ForumReplyNewMessageViewModel : ChannelNewMessageViewModel() {
     override suspend fun createTemplate(): EventTemplate<out Event>? {
         val forumChannel = channel as? RelayGroupChannel ?: return super.createTemplate()
         val root = forumRootId ?: return super.createTemplate()
-        val text = message.text.toString().trim()
-        if (text.isEmpty()) return null
+        if (message.text
+                .toString()
+                .trim()
+                .isEmpty()
+        ) {
+            return null
+        }
+
+        // Resolve `@`-mentions the same way the chat composer does: the tagger rewrites each name
+        // into a `nostr:` reference in the body AND collects the cited users (seeded with the reply
+        // target) so they land as `p` mention tags — without this, a named member was neither
+        // notified nor linked.
+        val tagger =
+            NewMessageTagger(
+                message = message.text.toString(),
+                pTags = listOfNotNull(replyTo.value?.author),
+                eTags = listOfNotNull(replyTo.value),
+                dao = accountViewModel,
+            )
+        tagger.run()
+
         // A reply to another comment nests under it (parent = that comment); a top-level reply targets
         // the root (parent == root), per ForumCommentEvent.build's root/parent contract.
         val parent = replyTo.value?.idHex ?: root
-        val mentions = listOfNotNull(replyTo.value?.author?.pubkeyHex)
-        return ForumCommentEvent.build(forumChannel.groupId.id, text, rootEventId = root, parentEventId = parent, mentions = mentions)
+        val mentions = tagger.pTags?.map { it.pubkeyHex }.orEmpty()
+        return ForumCommentEvent.build(forumChannel.groupId.id, tagger.message.trim(), rootEventId = root, parentEventId = parent, mentions = mentions)
     }
 }

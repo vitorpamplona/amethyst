@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
@@ -437,7 +438,7 @@ interface ILocalCache {
     }
 }
 
-object LocalCache : ILocalCache, ICacheProvider {
+object LocalCache : ILocalCache, ICacheProvider, Dao {
     val antiSpam = AntiSpamFilter()
 
     val users = LargeSoftCache<HexKey, User>()
@@ -822,7 +823,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
-    fun getOrCreateNote(idHex: String): Note {
+    override fun getOrCreateNote(idHex: String): Note {
         require(isValidHex(idHex)) { "$idHex is not a valid hex" }
 
         return notes.getOrCreate(idHex) {

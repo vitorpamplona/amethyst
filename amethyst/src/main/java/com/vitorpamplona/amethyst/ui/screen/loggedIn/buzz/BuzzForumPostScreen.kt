@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -117,8 +118,23 @@ fun BuzzForumPostScreen(
                     scope.launch {
                         try {
                             withContext(Dispatchers.IO) {
+                                // Resolve any `@`/`nostr:` mention in the body into a `nostr:` ref and
+                                // collect the cited users as `p` tags, so naming a member both notifies
+                                // them and renders as a link — matching the chat/reply composers.
+                                val tagger =
+                                    NewMessageTagger(
+                                        message = body,
+                                        pTags = emptyList(),
+                                        eTags = emptyList(),
+                                        dao = accountViewModel,
+                                    )
+                                tagger.run()
                                 accountViewModel.account.signAndSendPrivatelyOrBroadcast(
-                                    ForumPostEvent.build(channelId, body.trim()),
+                                    ForumPostEvent.build(
+                                        channelId,
+                                        tagger.message.trim(),
+                                        mentions = tagger.pTags?.map { it.pubkeyHex }.orEmpty(),
+                                    ),
                                 ) { listOf(relay) }
                             }
                             nav.popBack()

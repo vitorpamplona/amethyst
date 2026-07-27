@@ -260,9 +260,9 @@ class NewMessageTagger(
 }
 
 interface Dao {
-    suspend fun getOrCreateUser(hex: String): User
+    fun getOrCreateUser(hex: HexKey): User
 
-    suspend fun getOrCreateNote(hex: String): Note
+    fun getOrCreateNote(hex: HexKey): Note
 
     fun getOrCreateAddressableNote(address: Address): AddressableNote?
 }

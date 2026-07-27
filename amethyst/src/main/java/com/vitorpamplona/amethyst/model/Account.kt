@@ -159,6 +159,7 @@ import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDeliveryT
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
@@ -256,6 +257,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasMoreHashtagsThan
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
@@ -289,6 +291,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
@@ -2435,13 +2438,22 @@ class Account(
         // additionally carry the `h` tag and go only to the host relay. Attached media rides as
         // NIP-92 `imeta` tags, with each URL appended to the content so any client renders it.
         val rootEvent = rootNote.event ?: return false
-        val finalText = appendMediaUrls(text, imetas)
+
+        // Resolve @/nostr: mentions the same way the full composer does, so a member cited in a
+        // quick reply is notified (`p`) and their reference resolves. The reply-parent author is
+        // already tagged by each builder below, so drop it from the body mentions to avoid a
+        // duplicate `p`.
+        val tagger = NewMessageTagger(text, dao = LocalCache)
+        tagger.run()
+        val mentions = tagger.pTags?.mapNotNull { it.pubkeyHex.takeIf { pk -> pk != rootEvent.pubKey } }.orEmpty()
+        val finalText = appendMediaUrls(tagger.message, imetas)
 
         gatherers?.firstNotNullOfOrNull { it as? PublicChatChannel }?.let { chat ->
             val relays = chat.relays()
             val signed =
                 signer.sign(
                     CommentEvent.replyBuilder(finalText, EventHintBundle(rootEvent, relays.firstOrNull())) {
+                        notify(mentions.map { PTag(it) })
                         imetas(imetas)
                     },
                 )
@@ -2474,6 +2486,7 @@ class Account(
                             hTag(group.groupId.id)
                             buzzThread(root, rootEvent.id)
                             rootNote.author?.pubkeyHex?.let { pTag(PTag(it)) }
+                            pTags(mentions.map { PTag(it) })
                             previous(group.previousEventRefs(pubKey))
                         },
                     )
@@ -2482,6 +2495,7 @@ class Account(
                         CommentEvent.replyBuilder(finalText, EventHintBundle(rootEvent, hostRelay)) {
                             hTag(group.groupId.id)
                             previous(group.previousEventRefs(pubKey))
+                            notify(mentions.map { PTag(it) })
                             imetas(imetas)
                         },
                     )

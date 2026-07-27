@@ -30,11 +30,14 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -199,6 +202,14 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
         val targetEvent = LocalCache.getNoteIfExists(targetEventId)?.event ?: return
 
+        // Resolve @/nostr: mentions typed into the notification reply, so a cited member is tagged
+        // (`p`) and linkable — the same enrichment the in-app composers do. The comment builders
+        // already tag the reply-parent author, so drop it from the body mentions to avoid a
+        // duplicate `p` (kind-1 doesn't auto-tag the parent, so nothing is lost there).
+        val tagger = NewMessageTagger(replyText, dao = LocalCache)
+        tagger.run()
+        val mentions = tagger.pTags?.mapNotNull { pt -> pt.pubkeyHex.takeIf { it != targetEvent.pubKey } }.orEmpty()
+
         val template =
             when {
                 // A brand-new Amethyst kind-1 thread root is replied to with a NIP-22
@@ -207,25 +218,31 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                     targetEvent.isNewThread() &&
                     targetEvent.isClient(AccountCacheState.CLIENT_TAG_NAME) -> {
                     CommentEvent.replyBuilder(
-                        msg = replyText,
+                        msg = tagger.message,
                         replyingTo = EventHintBundle(targetEvent),
-                    )
+                    ) {
+                        notify(mentions.map { PTag(it) })
+                    }
                 }
 
                 targetEvent is TextNoteEvent -> {
                     TextNoteEvent.build(
-                        note = replyText,
+                        note = tagger.message,
                         replyingTo = EventHintBundle(targetEvent),
-                    )
+                    ) {
+                        notify(mentions.map { PTag(it) })
+                    }
                 }
 
                 else -> {
                     // NIP-22 CommentEvent and other non-threaded events (e.g. long-form articles)
                     // both reply via NIP-22 comments.
                     CommentEvent.replyBuilder(
-                        msg = replyText,
+                        msg = tagger.message,
                         replyingTo = EventHintBundle(targetEvent),
-                    )
+                    ) {
+                        notify(mentions.map { PTag(it) })
+                    }
                 }
             }
 
