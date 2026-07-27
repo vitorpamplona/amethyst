@@ -2512,6 +2512,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_discovery_empty_filtered">S tem filtrom še ni najdenih nobenih skupin.</string>
     <string name="relay_group_favorite_relay">Dodaj ta rele med priljubljene</string>
     <string name="relay_group_threads_empty">Še ni nizov objav. Začni jih z + gumbom.</string>
+    <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="relay_group_threads_loading_older">Nalaganje starejšega niza objav…</string>
     <string name="relay_group_threads_all_caught_up">Nalaganje starejšega niza objav…</string>
     <string name="relay_group_thread_new">Nov niz objav</string>
