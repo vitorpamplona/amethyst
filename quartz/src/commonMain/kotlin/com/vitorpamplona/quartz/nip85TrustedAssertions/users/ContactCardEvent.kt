@@ -51,9 +51,11 @@ class ContactCardEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    // Only the public summary tag is indexed; the rest of the card lives in
-    // NIP-44 encrypted content and is intentionally never indexed.
-    override fun indexableContent() = (listOfNotNull(summary()) + topics()).joinToString("\n")
+    // Only the public petname and summary tags are indexed; the rest of the
+    // card lives in NIP-44 encrypted content and is intentionally never
+    // indexed. (petName()/summary() read the public tag array, so a petname
+    // kept in the encrypted content stays out of the index.)
+    override fun indexableContent() = (listOfNotNull(petName(), summary()) + topics()).joinToString("\n")
 
     fun aboutUser() = tags.dTag()
 
