@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip60Cashu.mintApi.SecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.splitAmountIntoDenominations
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PKUnredeemableException
+import com.vitorpamplona.quartz.nip60Cashu.p2pk.firstUnsignableP2pkLock
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -1306,6 +1307,8 @@ private fun p2pkKeyIndex(vararg privKeysHex: String?): Map<String, String> =
     buildMap {
         privKeysHex.forEach { hex ->
             if (!hex.isNullOrBlank()) {
+                // toHexKey() emits lowercase, matching the lowercased x-only the
+                // resolver is queried with (see P2PKRedeem.xOnly).
                 val xOnly =
                     Secp256k1
                         .pubKeyCompress(Secp256k1.pubkeyCreate(hex.hexToByteArray()))
@@ -1315,6 +1318,23 @@ private fun p2pkKeyIndex(vararg privKeysHex: String?): Map<String, String> =
             }
         }
     }
+
+/**
+ * Pre-flight a token's proofs against the keys we hold: throws
+ * [P2PKUnredeemableException] (naming the offending lock) if any P2PK-locked
+ * proof can't be signed. Callers redeem a multi-group token one group at a time,
+ * each swapping + publishing, so checking every group up front avoids redeeming
+ * some and then failing on an unsignable one — mirroring the unknown-mint
+ * pre-check. Plain (unlocked) proofs are ignored.
+ */
+fun requireP2pkRedeemable(
+    proofs: List<CashuProof>,
+    walletP2pkPrivkeyHex: String?,
+    identityPrivkeyHex: String?,
+) {
+    val signingKeys = p2pkKeyIndex(walletP2pkPrivkeyHex, identityPrivkeyHex)
+    firstUnsignableP2pkLock(proofs) { signingKeys[it] }?.let { throw P2PKUnredeemableException(it) }
+}
 
 /** Catches mint HTTP / protocol errors and surfaces their detail message. */
 fun describeMintError(e: Throwable): String =
@@ -1338,7 +1358,7 @@ fun describeRedeemError(
 ): String =
     if (e is P2PKUnredeemableException) {
         val lock = e.lockPubKeyHex.lastHex64()
-        if (identityPubKeyHex != null && lock == identityPubKeyHex.lastHex64()) {
+        if (identityPubKeyHex != null && lock.equals(identityPubKeyHex.lastHex64(), ignoreCase = true)) {
             "This ecash is locked to your Nostr identity key, which the current login can't sign for " +
                 "(only a local key / nsec login can). Import your nsec into a Cashu wallet to claim it."
         } else {

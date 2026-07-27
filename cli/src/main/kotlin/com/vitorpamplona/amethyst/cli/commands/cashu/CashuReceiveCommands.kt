@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.commands.route
+import com.vitorpamplona.amethyst.commons.cashu.ops.requireP2pkRedeemable
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -169,6 +170,9 @@ object CashuReceiveCommands {
                 val walletKey =
                     if (locked) ctx.cashuSnapshot().walletEvent?.let { runCatching { it.privkey(ctx.signer) }.getOrNull() } else null
                 val identityKey = if (locked) (ctx.signer as? NostrSignerInternal)?.keyPair?.privKey?.toHexKey() else null
+                // All-or-nothing: reject an unsignable P2PK lock before redeeming
+                // any group, so a multi-mint token never ends up half-redeemed.
+                if (locked) requireP2pkRedeemable(parsed.flatMap { it.proofs }, walletKey, identityKey)
                 var total = 0L
                 var lastTokenEventId: String? = null
                 var lastHistoryEventId: String? = null

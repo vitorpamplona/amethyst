@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.MintQuoteStarted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeRedeemError
+import com.vitorpamplona.amethyst.commons.cashu.ops.requireP2pkRedeemable
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -919,6 +920,9 @@ class CashuWalletViewModel : ViewModel() {
                     } else {
                         null to null
                     }
+                // All-or-nothing: reject an unsignable P2PK lock before redeeming
+                // any group, so a multi-mint token never ends up half-redeemed.
+                requireP2pkRedeemable(parsedTokens.flatMap { it.proofs }, walletKey, identityKey)
                 val total =
                     parsedTokens.sumOf {
                         ops

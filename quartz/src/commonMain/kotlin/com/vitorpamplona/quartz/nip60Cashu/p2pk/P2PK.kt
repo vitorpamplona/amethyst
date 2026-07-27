@@ -125,6 +125,14 @@ object P2PK {
      * BIP-340 Schnorr signature over `sha256(secret_bytes)` used as the unlock
      * witness. Returns the witness JSON string ready to drop into a Cashu
      * proof's `witness` field.
+     *
+     * SECURITY: [secret] is attacker-controlled (it comes from a pasted token),
+     * and when [privKeyHex] is the account's Nostr identity key this signs
+     * `sha256(secret)` with that key. Cross-protocol reuse against Nostr event
+     * signing is prevented only because a valid P2PK secret must start with
+     * `["P2PK"` while a Nostr event serialization starts with `[0,` — so callers
+     * MUST only reach here for secrets that already passed [parseSecret]; that
+     * prefix check is load-bearing for safety, not just parsing.
      */
     fun signWitness(
         secret: String,

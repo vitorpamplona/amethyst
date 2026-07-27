@@ -55,13 +55,34 @@ fun signP2pkWitnesses(
 ): List<CashuProof> =
     proofs.map { proof ->
         val parsed = P2PK.parseSecret(proof.secret) ?: return@map proof
-        val xOnly = parsed.pubKeyHex.xOnly()
-        val privKeyHex = signingKeyFor(xOnly) ?: throw P2PKUnredeemableException(parsed.pubKeyHex)
+        val privKeyHex = signingKeyFor(parsed.pubKeyHex.xOnly()) ?: throw P2PKUnredeemableException(parsed.pubKeyHex)
         proof.copy(witness = P2PK.signWitness(proof.secret, privKeyHex))
     }
+
+/**
+ * The first P2PK lock across [proofs] that [signingKeyFor] can't resolve, or
+ * null if every locked proof is signable (plain proofs are ignored). Lets a
+ * caller pre-flight a multi-group token so it never swaps some groups and then
+ * discovers a later group is unredeemable — leaving a half-redeemed state.
+ */
+fun firstUnsignableP2pkLock(
+    proofs: List<CashuProof>,
+    signingKeyFor: (lockPubKeyXOnly: String) -> String?,
+): String? {
+    proofs.forEach { proof ->
+        val parsed = P2PK.parseSecret(proof.secret) ?: return@forEach
+        if (signingKeyFor(parsed.pubKeyHex.xOnly()) == null) return parsed.pubKeyHex
+    }
+    return null
+}
 
 /** True when any proof in the set carries a NUT-11 P2PK-locked secret. */
 fun List<CashuProof>.anyP2pkLocked(): Boolean = any { P2PK.parseSecret(it.secret) != null }
 
-/** Drop a 33-byte compressed pubkey's parity prefix, yielding the 32-byte x-only hex. */
-private fun String.xOnly(): String = if (length == 66) substring(2) else this
+/**
+ * Drop a 33-byte compressed pubkey's parity prefix, yielding the 32-byte x-only
+ * hex, and lowercase it. The `data` field is formatted by the sender and NUT-11
+ * doesn't mandate a case, so normalize before matching against our (lowercase)
+ * key index — otherwise an uppercase lock we *can* sign for is falsely rejected.
+ */
+private fun String.xOnly(): String = (if (length == 66) substring(2) else this).lowercase()

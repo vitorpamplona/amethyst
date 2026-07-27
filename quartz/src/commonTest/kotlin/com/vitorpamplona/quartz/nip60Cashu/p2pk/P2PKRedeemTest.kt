@@ -133,4 +133,33 @@ class P2PKRedeemTest {
         assertFalse(listOf(plainProof()).anyP2pkLocked())
         assertTrue(listOf(plainProof(), lockedProof(xOnlyPub)).anyP2pkLocked())
     }
+
+    @Test
+    fun uppercaseLockMatchesLowercaseKeyIndex() {
+        // NUT-11 doesn't mandate a hex case for `data`. Our key index is keyed
+        // by lowercase x-only (Hex.encode is lowercase), so an uppercase lock we
+        // hold the key for must still resolve — not be reported unredeemable.
+        val upperLock = "02${xOnlyPub.uppercase()}"
+        val index = mapOf(xOnlyPub to priv)
+        val out = signP2pkWitnesses(listOf(lockedProof(upperLock))) { index[it] }
+        assertTrue(witnessVerifies(out[0], xOnlyPub), "an uppercase lock we hold the key for must sign")
+    }
+
+    @Test
+    fun firstUnsignableReturnsNullWhenAllSignable() {
+        assertNull(firstUnsignableP2pkLock(listOf(plainProof(), lockedProof(xOnlyPub))) { priv })
+    }
+
+    @Test
+    fun firstUnsignableNamesTheUnredeemableLock() {
+        val other = "02${"b".repeat(64)}"
+        assertEquals(other, firstUnsignableP2pkLock(listOf(plainProof(), lockedProof(other))) { null })
+    }
+
+    @Test
+    fun firstUnsignableIsCaseInsensitive() {
+        val upperLock = "02${xOnlyPub.uppercase()}"
+        val index = mapOf(xOnlyPub to priv)
+        assertNull(firstUnsignableP2pkLock(listOf(lockedProof(upperLock))) { index[it] })
+    }
 }
