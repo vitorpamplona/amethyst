@@ -27,7 +27,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -814,11 +816,22 @@ private suspend fun INostrClient.reconcileStreaming(
     // the next one once we ack, and we ack only after this round's ids are queued.
     val incoming = Channel<NegFrame>(Channel.UNLIMITED)
 
-    // Idle watchdog. Bumped on connect and on EVERY message this relay sends —
-    // including the download REQs' events, since this is a connection-level listener
-    // that sees all of them — so any progress anywhere in the pipeline pushes the
-    // reconcile deadline out. Only true silence trips it.
+    // Idle watchdog. Bumped on connect and on the messages that represent real
+    // progress on this connection — this session's own NEG frames and the download
+    // REQs' events/EOSEs (a connection-level listener sees them all) — so any
+    // progress anywhere in the pipeline pushes the reconcile deadline out. It is
+    // deliberately NOT bumped by NOTICE/CLOSED error chatter: a relay that keeps
+    // refusing our subscriptions would otherwise reset the watchdog forever, which
+    // is exactly how a rejected sync escaped the idle timeout.
     val clock = IdleClock()
+
+    // Have we received a single valid NEG frame for our subId yet? A relay that
+    // advertises NIP-77 but refuses it at runtime answers our NEG-OPEN with a
+    // connection-level NOTICE (which carries no subId) rather than a subId-addressed
+    // NEG-ERR. Before the first NEG frame arrives, such a NOTICE is the answer to
+    // our NEG-OPEN and must be treated as terminal. Only touched from the relay's
+    // single reader coroutine.
+    var sawNegFrame = false
 
     val listener =
         object : RelayConnectionListener {
@@ -835,11 +848,48 @@ private suspend fun INostrClient.reconcileStreaming(
                 msgStr: String,
                 msg: Message,
             ) {
-                if (relay.url == targetUrl) clock.bump()
+                if (relay.url != targetUrl) return
                 when (msg) {
-                    is NegMsgMessage -> if (msg.subId == subId) incoming.trySend(NegFrame.Msg(msg.message))
-                    is NegErrMessage -> if (msg.subId == subId) incoming.trySend(NegFrame.Err(msg.reason))
-                    else -> Unit
+                    is NegMsgMessage -> {
+                        clock.bump()
+                        if (msg.subId == subId) {
+                            sawNegFrame = true
+                            incoming.trySend(NegFrame.Msg(msg.message))
+                        }
+                    }
+
+                    is NegErrMessage -> {
+                        clock.bump()
+                        if (msg.subId == subId) {
+                            sawNegFrame = true
+                            incoming.trySend(NegFrame.Err(msg.reason))
+                        }
+                    }
+
+                    is ClosedMessage ->
+                        // A CLOSED addressed to our negentropy subscription is a
+                        // terminal rejection of the NEG-OPEN (some relays answer a
+                        // refused negentropy session this way instead of NEG-ERR).
+                        if (msg.subId == subId) incoming.trySend(NegFrame.Err("closed: ${msg.message}"))
+
+                    is NoticeMessage ->
+                        // NIP-77 says a relay SHOULD reject with NEG-ERR, but relays
+                        // that advertise NIP-77 yet refuse it at runtime answer with a
+                        // connection-level NOTICE instead (strfry: "ERROR: bad msg:
+                        // negentropy disabled"; purplepag.es: "failed to parse
+                        // envelope: unknown envelope label"). A NOTICE has no subId, so
+                        // we bind it to this session by phase + wording: before the
+                        // first valid NEG frame, a negentropy-looking NOTICE is the
+                        // answer to our NEG-OPEN. Surface it as terminal so the caller
+                        // fails over (paging) instead of hanging until the socket drops.
+                        if (!sawNegFrame && isNegentropyRejectionNotice(msg.message)) {
+                            incoming.trySend(NegFrame.Err("notice: ${msg.message}"))
+                        }
+
+                    else ->
+                        // EVENT/EOSE from the download REQs (and any other framing on
+                        // this connection) = real progress; keep the reconcile alive.
+                        clock.bump()
                 }
             }
 
@@ -954,6 +1004,25 @@ private fun isOverflow(reason: String): Boolean =
     reason.contains("too many", ignoreCase = true) ||
         reason.contains("too large", ignoreCase = true) ||
         reason.contains("max_sync_events", ignoreCase = true)
+
+/**
+ * A relay that advertises NIP-77 but refuses it at runtime signals the refusal with
+ * a connection-level `NOTICE` (which carries no subId) rather than a subId-addressed
+ * `NEG-ERR`. Observed against public relays that all list NIP-77 in NIP-11:
+ *   - strfry with negentropy off: `"ERROR: bad msg: negentropy disabled"`
+ *   - purplepag.es (no NEG envelope): `"failed to parse envelope: unknown envelope label"`
+ *
+ * We only treat a NOTICE as our negentropy rejection when it plausibly refers to the
+ * NEG exchange (this matcher) AND it arrives before this session's first valid NEG
+ * frame — so an unrelated NOTICE on a healthy relay mid-reconcile can never abort an
+ * otherwise-progressing sync. This MUST stay narrow for the same reason [isOverflow]
+ * must: a false positive fails the whole window over to paging.
+ */
+private fun isNegentropyRejectionNotice(reason: String): Boolean =
+    reason.contains("negentropy", ignoreCase = true) ||
+        reason.contains("envelope", ignoreCase = true) ||
+        reason.contains("NEG-OPEN", ignoreCase = true) ||
+        reason.contains("NEG-MSG", ignoreCase = true)
 
 /**
  * One `REQ` for [batch] ids; collects the matching events and returns them on
