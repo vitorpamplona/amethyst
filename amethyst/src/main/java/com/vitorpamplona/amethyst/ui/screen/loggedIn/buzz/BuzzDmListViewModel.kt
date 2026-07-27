@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
@@ -126,8 +127,37 @@ class BuzzDmListViewModel : ViewModel() {
         // challenge was spent unauthenticated, so reconnect to re-challenge and authenticate.
         if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
 
+        // Paint from cache BEFORE any network work. [discoverMemberChannels] learns the channel ids
+        // from a relay round-trip, so waiting on it left the Direct Messages section visibly empty
+        // for about a second on every visit — even though the always-on [BuzzDmDiscovery] already
+        // recorded those ids process-wide and [rebuildRows] reads nothing but caches. Seeding from
+        // that registry makes the first frame the right frame; the refresh below still runs and
+        // corrects anything stale.
+        seedFromDiscovery(account, relay)
+
         refresh()
         startLive()
+    }
+
+    /**
+     * Fills [memberChannels] from the app-wide [BuzzDmChannels] registry (scoped to this community's
+     * relay) and projects the rows straight away, so the inbox renders from cache instead of after a
+     * fetch. A no-op the first time a viewer ever opens a Buzz relay, when discovery genuinely has
+     * nothing yet.
+     */
+    private fun seedFromDiscovery(
+        account: Account,
+        relay: NormalizedRelayUrl,
+    ) {
+        val known = BuzzDmChannels.channelsFor(account.userProfile().pubkeyHex)
+        var seeded = false
+        known.forEach { (channelId, discoveredOn) ->
+            if (discoveredOn == relay) {
+                memberChannels[channelId] = discoveredOn
+                seeded = true
+            }
+        }
+        if (seeded) rebuildRows(account)
     }
 
     fun refresh() {
