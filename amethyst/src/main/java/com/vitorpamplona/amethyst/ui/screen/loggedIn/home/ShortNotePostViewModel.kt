@@ -1265,6 +1265,9 @@ open class ShortNotePostViewModel :
             // authorizes the write.
             ThreadEvent.build(tagger.message, subjectValue) {
                 hTag(threadTarget.groupId)
+                // `p` mentions for everyone cited in the body, so a named member is notified and the
+                // `nostr:` reference resolves — matching the Poll/ZapPoll branches below.
+                pTags(tagger.directMentionsUsers.map { it.toPTag() })
 
                 hashtags(findHashtags(tagger.message))
                 references(findURLs(tagger.message))

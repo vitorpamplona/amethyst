@@ -94,6 +94,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
@@ -102,6 +103,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip28PublicChat.base.notify
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
@@ -622,6 +624,14 @@ open class ChannelNewMessageViewModel :
                     hTag(channel.groupId.id)
                     previous(channel.previousEventRefs(account.userProfile().pubkeyHex))
                 }
+                // `p` mentions for everyone else cited in the body — replyBuilder already tags the
+                // parent/root author, so exclude the parent to avoid a duplicate `p`.
+                notify(
+                    tagger.pTags
+                        ?.filter { it.pubkeyHex != minichatParent.pubKey }
+                        ?.map { it.toPTag() }
+                        .orEmpty(),
+                )
                 hashtags(findHashtags(tagger.message))
                 references(findURLs(tagger.message))
                 quotes(findNostrUris(tagger.message))
@@ -843,6 +853,14 @@ open class ChannelNewMessageViewModel :
                         hTag(channel.groupId.id)
                         previous(channel.previousEventRefs(account.userProfile().pubkeyHex))
                         pTag(replyingToEvent.toPTag())
+                        // `p` mentions for everyone else cited in the body (the parent author is
+                        // already tagged above with its relay hint) so a named member is notified.
+                        pTags(
+                            tagger.pTags
+                                ?.filter { it.pubkeyHex != replyingToEvent.event.pubKey }
+                                ?.map { it.toPTag() }
+                                .orEmpty(),
+                        )
 
                         hashtags(findHashtags(tagger.message))
                         references(findURLs(tagger.message))
@@ -857,6 +875,8 @@ open class ChannelNewMessageViewModel :
                     ChatEvent.build(tagger.message) {
                         hTag(channel.groupId.id)
                         previous(channel.previousEventRefs(account.userProfile().pubkeyHex))
+                        // `p` mentions for everyone cited in the body so a named member is notified.
+                        pTags(tagger.pTags?.map { it.toPTag() }.orEmpty())
 
                         hashtags(findHashtags(tagger.message))
                         references(findURLs(tagger.message))
