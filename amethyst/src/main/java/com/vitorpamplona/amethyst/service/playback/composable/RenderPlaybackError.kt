@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,18 +77,14 @@ fun RenderPlaybackError(
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.75f)),
     ) {
-        // A Column measures its children against the height left over by the ones before them, so
-        // the button — last in the stack — is what collapses when the overlay is taller than its
-        // box. That is not hypothetical: the media box is 16:9 whenever the stream reports no
-        // dimensions, and in the feed a note is inset under the 55dp author column, leaving 322dp
-        // x 181dp on a normal phone. The full layout wants ~220dp, so the button was rendering
-        // 0.38dp tall — in the tree, and invisible on screen.
-        //
-        // Two things keep it alive. The description takes a weight, so it is the element that
-        // yields when space runs short rather than the button. And the icon, which is decorative
-        // and costs 60dp with its spacer, is dropped when even one line of description plus the
-        // button would not otherwise fit.
-        val hasRoomForIcon = maxHeight >= MIN_HEIGHT_FOR_ICON
+        // The button is the overlay's whole point, so it must never be the child that starves —
+        // and a Column starves whoever is measured last. In the feed a 16:9 media box can be as
+        // small as 322dp x 181dp, which used to squeeze the button (last in the stack) to 0.38dp.
+        // Putting everything above it in one weighted block makes the Column measure the button
+        // first and hand only the leftover to the text, so the squeeze structurally cannot land
+        // on the button at any box height, font scale, or locale. The thresholds below only
+        // decide how the text block degrades while it yields.
+        val hasRoomForIcon = maxHeight >= MIN_HEIGHT_FOR_ICON * LocalDensity.current.fontScale
         val hasRoomForDescription = maxHeight >= MIN_HEIGHT_FOR_DESCRIPTION
         val padding = if (maxHeight >= MIN_HEIGHT_FOR_FULL_PADDING) 16.dp else 8.dp
 
@@ -96,35 +93,40 @@ fun RenderPlaybackError(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (hasRoomForIcon) {
-                Icon(
-                    symbol = MaterialSymbols.VideocamOff,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = Color.White,
-                )
+            Column(
+                modifier = Modifier.weight(1f, fill = false),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (hasRoomForIcon) {
+                    Icon(
+                        symbol = MaterialSymbols.VideocamOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.White,
+                    )
 
-                Spacer(Modifier.height(12.dp))
-            }
-
-            Text(
-                text = stringRes(R.string.error_video_playback_failed),
-                color = Color.White,
-                style = MaterialTheme.typography.titleSmall,
-                textAlign = TextAlign.Center,
-            )
-
-            if (hasRoomForDescription) {
-                Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(12.dp))
+                }
 
                 Text(
-                    text = stringRes(R.string.error_video_playback_failed_description, errorCodeName),
-                    color = Color.White.copy(alpha = 0.85f),
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringRes(R.string.error_video_playback_failed),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleSmall,
                     textAlign = TextAlign.Center,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
                 )
+
+                if (hasRoomForDescription) {
+                    Spacer(Modifier.height(4.dp))
+
+                    Text(
+                        text = stringRes(R.string.error_video_playback_failed_description, errorCodeName),
+                        color = Color.White.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -151,13 +153,20 @@ fun RenderPlaybackError(
  * Smallest overlay height that still fits the 48dp icon and its 12dp spacer on top of the title,
  * one line of description, the 16dp gap and the 40dp button, inside 16dp of padding. Below this
  * the icon is the first thing to go, because it is the only part carrying no information.
+ *
+ * Multiplied by the current `fontScale` at the call site, because everything it is budgeting
+ * against is text. The icon is non-weighted and declared first, so within the weighted block it is
+ * measured before the title — left unscaled, a box of 190dp to 199dp at fontScale 2 kept the icon
+ * and sliced the title to pay for it. Scaling over-corrects slightly, since the icon and paddings
+ * are fixed dp, but this threshold is cosmetic-only now: erring towards dropping decoration is the
+ * harmless direction.
  */
 private val MIN_HEIGHT_FOR_ICON = 190.dp
 
 /**
- * Below this the 16dp padding is itself competing with the button for space — a very wide, short
- * video (a panorama, or anything past about 2.5:1) leaves barely more height than the title and
- * button need. Halving the padding there buys the button its full height back.
+ * Below this the 16dp padding is itself crowding out the text — a very wide, short video (a
+ * panorama, or anything past about 2.5:1) leaves barely more height than the title and button
+ * need. Halving the padding there gives the title room to draw whole.
  */
 private val MIN_HEIGHT_FOR_FULL_PADDING = 150.dp
 

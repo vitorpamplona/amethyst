@@ -23,12 +23,17 @@ package com.vitorpamplona.amethyst.service.playback.composable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.PlaybackException
@@ -36,6 +41,7 @@ import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import io.mockk.mockk
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -47,7 +53,7 @@ import org.junit.runner.RunWith
  * survive whatever box the media layout hands it.
  *
  * [Column] measures children in declaration order against the remaining height, so the button —
- * being last — is what starves when the content is taller than the box. A note in the feed is
+ * being last — is what starved when the content was taller than the box. A note in the feed is
  * inset under the 55dp author column (screenWidth - 89dp), and with no imeta `dim` the media box
  * is 16:9, which on a 411dp phone is 322dp wide and only 181dp tall. That was enough to squeeze
  * the button down to 0.38dp — present in the tree, invisible and untappable on screen — while the
@@ -58,81 +64,70 @@ import org.junit.runner.RunWith
 class PlaybackErrorOverlayFitTest {
     @get:Rule val rule = createComposeRule()
 
-    private val browserButtonLabel =
-        InstrumentationRegistry
-            .getInstrumentation()
-            .targetContext
-            .getString(R.string.error_video_open_in_browser)
-
-    /** A FilledTonalButton's natural height; anything much under this is a squeezed button. */
-    private val naturalButtonHeight = 40.dp
+    private val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
 
     private fun renderInBox(
         width: Dp,
         height: Dp,
+        fontScale: Float = 1f,
     ) {
         rule.setContent {
-            Box(Modifier.width(width).height(height)) {
-                RenderPlaybackError(
-                    controllerState =
-                        MediaControllerState(
-                            controller = mockk<Player>(relaxed = true),
-                            playbackError =
-                                mutableStateOf(
-                                    PlaybackException(
-                                        "Malformed HLS manifest",
-                                        null,
-                                        PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+            val density = LocalDensity.current.density
+            CompositionLocalProvider(LocalDensity provides Density(density, fontScale)) {
+                Box(Modifier.width(width).height(height)) {
+                    RenderPlaybackError(
+                        controllerState =
+                            MediaControllerState(
+                                controller = mockk<Player>(relaxed = true),
+                                playbackError =
+                                    mutableStateOf(
+                                        PlaybackException(
+                                            "Malformed HLS manifest",
+                                            null,
+                                            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+                                        ),
                                     ),
-                                ),
-                        ),
-                    videoUri = "https://streamstr.net/x/hls/live.m3u8",
-                )
+                            ),
+                        videoUri = "https://streamstr.net/x/hls/live.m3u8",
+                    )
+                }
             }
         }
-        rule.waitForIdle()
     }
 
-    private fun assertButtonUsable(context: String) {
-        val button = rule.onNodeWithText(browserButtonLabel)
-        button.assertIsDisplayed()
-
-        val bounds = button.getUnclippedBoundsInRoot()
-        val height = bounds.bottom - bounds.top
-        assertTrue(
-            "$context: browser button collapsed to $height (natural is $naturalButtonHeight)",
-            height >= naturalButtonHeight - 2.dp,
-        )
+    private fun assertButtonUsable() {
+        rule
+            .onNodeWithText(stringRes(targetContext, R.string.error_video_open_in_browser))
+            .assertIsDisplayed()
+            .assertHeightIsAtLeast(ButtonDefaults.MinHeight)
     }
 
     @Test
-    fun buttonSurvivesTheFeedsSixteenByNineBox() {
+    fun buttonAndTitleSurviveTheFeedsSixteenByNineBox() {
         renderInBox(width = 322.dp, height = 181.dp)
-        assertButtonUsable("feed 16:9")
+        assertButtonUsable()
+        rule
+            .onNodeWithText(stringRes(targetContext, R.string.error_video_playback_failed))
+            .assertIsDisplayed()
     }
 
     @Test
     fun buttonSurvivesTheThreadsSixteenByNineBox() {
         renderInBox(width = 385.dp, height = 217.dp)
-        assertButtonUsable("thread 16:9")
+        assertButtonUsable()
     }
 
     @Test
-    fun buttonSurvivesAnUnusuallyShortBox() {
-        // A 3:1 banner-ish stream, or a narrow quote card: far less height than 16:9 gives.
+    fun shortBoxKeepsTheButtonAndDropsTheDescription() {
+        // A 3:1 banner-ish stream, or a narrow quote card: far less height than 16:9 gives. A
+        // weighted Text handed less than one line's height draws it clipped through the middle,
+        // which looks broken — under that much pressure it should not be emitted at all.
         renderInBox(width = 322.dp, height = 110.dp)
-        assertButtonUsable("short box")
-    }
-
-    @Test
-    fun descriptionIsDroppedRatherThanSlicedInHalf() {
-        // A weighted Text given less than one line's height draws it clipped through the middle,
-        // which looks broken. Under that much pressure it should not be emitted at all.
-        renderInBox(width = 322.dp, height = 110.dp)
-
+        assertButtonUsable()
         rule
             .onNodeWithText(
-                InstrumentationRegistry.getInstrumentation().targetContext.getString(
+                stringRes(
+                    targetContext,
                     R.string.error_video_playback_failed_description,
                     "ERROR_CODE_PARSING_MANIFEST_MALFORMED",
                 ),
@@ -140,8 +135,116 @@ class PlaybackErrorOverlayFitTest {
     }
 
     @Test
-    fun titleStillShowsWhenRoomIsTight() {
-        renderInBox(width = 322.dp, height = 181.dp)
-        rule.onNodeWithText(InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.error_video_playback_failed)).assertIsDisplayed()
+    fun buttonSurvivesLargeFontScale() {
+        // At fontScale 2 the text wants far more height than the dp thresholds were tuned for.
+        // The button must still get its intrinsic height, because it is measured before the
+        // weighted text block — the guarantee is structural, not numeric.
+        renderInBox(width = 322.dp, height = 195.dp, fontScale = 2f)
+        assertButtonUsable()
+    }
+
+    @Test
+    fun shrinkingTheBoxNeverShrinksTheButton() {
+        // ButtonDefaults.MinHeight alone does not pin the guarantee: a button squeezed from its
+        // intrinsic 53dp down to 40dp at fontScale 2 still clears that floor. What actually has to
+        // hold is that the box height cannot influence the button's height at all, because the
+        // button is measured before the weighted text block that absorbs the shortfall. Measure
+        // the same button roomy and then at its tightest, and require the two to agree.
+        val boxHeight = mutableStateOf(400.dp)
+
+        rule.setContent {
+            val density = LocalDensity.current.density
+            CompositionLocalProvider(LocalDensity provides Density(density, 2f)) {
+                Box(Modifier.width(322.dp).height(boxHeight.value)) {
+                    RenderPlaybackError(
+                        controllerState =
+                            MediaControllerState(
+                                controller = mockk<Player>(relaxed = true),
+                                playbackError =
+                                    mutableStateOf(
+                                        PlaybackException(
+                                            "Malformed HLS manifest",
+                                            null,
+                                            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+                                        ),
+                                    ),
+                            ),
+                        videoUri = "https://streamstr.net/x/hls/live.m3u8",
+                    )
+                }
+            }
+        }
+
+        val roomy = buttonHeight()
+
+        // 190dp is the worst case for the old threshold-only layout: just enough to keep the icon,
+        // not enough to pay for it, so the shortfall landed on the button.
+        rule.runOnUiThread { boxHeight.value = 190.dp }
+        rule.waitForIdle()
+
+        val tight = buttonHeight()
+        assertTrue(
+            "button shrank from $roomy to $tight when the box did",
+            tight >= roomy - 1.dp,
+        )
+    }
+
+    @Test
+    fun theIconNeverCostsTheTitleItsHeight() {
+        // The icon is non-weighted and declared first, so inside the weighted text block it is
+        // measured before the title. With a fixed 190dp gate, a box of 190dp to 199dp at fontScale 2
+        // was just tall enough to keep the icon and not tall enough to pay for it, so the title
+        // rendered sliced. Decoration must yield before words do.
+        val boxHeight = mutableStateOf(400.dp)
+
+        rule.setContent {
+            val density = LocalDensity.current.density
+            CompositionLocalProvider(LocalDensity provides Density(density, 2f)) {
+                Box(Modifier.width(322.dp).height(boxHeight.value)) {
+                    RenderPlaybackError(
+                        controllerState =
+                            MediaControllerState(
+                                controller = mockk<Player>(relaxed = true),
+                                playbackError =
+                                    mutableStateOf(
+                                        PlaybackException(
+                                            "Malformed HLS manifest",
+                                            null,
+                                            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+                                        ),
+                                    ),
+                            ),
+                        videoUri = "https://streamstr.net/x/hls/live.m3u8",
+                    )
+                }
+            }
+        }
+
+        val roomy = titleHeight()
+
+        rule.runOnUiThread { boxHeight.value = 195.dp }
+        rule.waitForIdle()
+
+        val tight = titleHeight()
+        assertTrue(
+            "title sliced from $roomy to $tight to make room for the decorative icon",
+            tight >= roomy - 1.dp,
+        )
+    }
+
+    private fun titleHeight(): Dp {
+        val bounds =
+            rule
+                .onNodeWithText(stringRes(targetContext, R.string.error_video_playback_failed))
+                .getUnclippedBoundsInRoot()
+        return bounds.bottom - bounds.top
+    }
+
+    private fun buttonHeight(): Dp {
+        val bounds =
+            rule
+                .onNodeWithText(stringRes(targetContext, R.string.error_video_open_in_browser))
+                .getUnclippedBoundsInRoot()
+        return bounds.bottom - bounds.top
     }
 }
