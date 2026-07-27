@@ -112,6 +112,33 @@ purplepag.es answer ordinary REQs fine, so paging delivers the events).
   watchdog — which now fires correctly because the refusal chatter no longer
   resets it.
 
+## Live validation across 30 public relays
+
+`NegentropyMultiRelayLiveTest` (gated `NEG_MULTI=1`) runs `negentropySyncOrFetch`
+(`kinds:[0]`, `maxEvents=100`, `idleTimeoutMs=20s`) against 30 reachable relays and
+fails if any HANGs. Result: **0 hangs, 0 errors** — 10 reconciled via native
+negentropy, 20 fell over to paging. Nine+ relay softwares (strfry, ditto,
+purplepag.es, nostr.wine, nostr-rs-relay, NFDB, rockstr, wot-relay, nostrcheck).
+
+Both fallback mechanisms fire as designed:
+
+- **NOTICE fast-path (~1-4 s):** `relay.primal.net` (`negentropy disabled`),
+  `purplepag.es` / `wot.utxo.one` (`unknown envelope`), `relay.nostrplebs.com` /
+  `relay.0xchat.com` (`negentropy error …`).
+- **Idle-watchdog backstop (~20 s):** relays whose refusal wording the (deliberately
+  narrow) matcher skips still fail over because NOTICE/CLOSED no longer bump the
+  clock — `relay.damus.io` (silently ignores NEG-OPEN, no error at all),
+  `relay.snort.social` (`Unknown message type: NEG-OPEN`), `relay.momostr.pink`,
+  `relay.wellorder.net` (`could not parse command`), `relay.nostrcheck.me`, …
+- **Overflow window-split (native):** `nos.lol`, `relay.ditto.pub`,
+  `nostr.oxtr.dev` returned `NEG-ERR "too many … records/results"` → split →
+  downloaded natively.
+
+Takeaway: the narrow NOTICE matcher plus the un-defeated idle watchdog is the right
+split — the fast-path speeds up the relays whose wording is unambiguous, and the
+watchdog safely (if more slowly) catches everything else, with no false aborts on
+the 10 relays that genuinely speak NIP-77.
+
 ## Follow-up audit (same PR)
 
 A read-through of the whole negentropy accessories package surfaced a few more
