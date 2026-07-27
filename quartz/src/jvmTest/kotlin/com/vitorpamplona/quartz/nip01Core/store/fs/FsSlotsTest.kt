@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
@@ -45,7 +44,6 @@ class FsSlotsTest {
 
     @BeforeTest
     fun setup() {
-        Secp256k1Instance
         root = Files.createTempDirectory("fs-slot-")
         store = FsEventStore(root)
     }

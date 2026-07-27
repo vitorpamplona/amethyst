@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.store.fs
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -46,7 +45,6 @@ class FsMaintenanceTest {
 
     @BeforeTest
     fun setup() {
-        Secp256k1Instance
         root = Files.createTempDirectory("fs-maint-")
         store = FsEventStore(root)
     }

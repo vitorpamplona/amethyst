@@ -67,14 +67,14 @@ class GiantReqStreamTest {
                     Request.Builder().url(server.url).build(),
                     object : okhttp3.WebSocketListener() {
                         override fun onOpen(
-                            w: okhttp3.WebSocket,
-                            r: Response,
+                            webSocket: okhttp3.WebSocket,
+                            response: Response,
                         ) {
-                            w.send("""["REQ","big",{"kinds":[1]}]""")
+                            webSocket.send("""["REQ","big",{"kinds":[1]}]""")
                         }
 
                         override fun onMessage(
-                            w: okhttp3.WebSocket,
+                            webSocket: okhttp3.WebSocket,
                             text: String,
                         ) {
                             if (text.startsWith("[\"EVENT\"")) {
@@ -85,9 +85,9 @@ class GiantReqStreamTest {
                         }
 
                         override fun onFailure(
-                            w: okhttp3.WebSocket,
+                            webSocket: okhttp3.WebSocket,
                             t: Throwable,
-                            r: Response?,
+                            response: Response?,
                         ) {
                             done.countDown()
                         }

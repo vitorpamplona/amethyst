@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.EventFactory
-import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import java.nio.file.Path
@@ -50,7 +49,6 @@ class FsAuthorsMissingOutboxTest {
 
     @BeforeTest
     fun setup() {
-        Secp256k1Instance
         root = Files.createTempDirectory("fs-missing-outbox-")
         store = FsEventStore(root)
     }

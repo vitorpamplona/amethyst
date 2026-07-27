@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class PairingEventTest {
@@ -67,7 +68,7 @@ class PairingEventTest {
     @Test
     fun unknownAbortReasonMapsToUnknown() {
         val decoded = PairingMessage.decodeFromJson("""{"type":"abort","reason":"solar_flare"}""")
-        assertTrue(decoded is PairingMessage.Abort)
-        assertEquals(AbortReason.UNKNOWN, (decoded as PairingMessage.Abort).reasonOrUnknown())
+        assertIs<PairingMessage.Abort>(decoded)
+        assertEquals(AbortReason.UNKNOWN, decoded.reasonOrUnknown())
     }
 }

@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.currentTime
@@ -41,6 +42,7 @@ import kotlin.test.assertTrue
  * that keeps streaming is never cropped, and a stalled fetch ends one idle
  * window after its last message.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class FetchAllIdleTimeoutTest {
     /** Captures the subscription listener so the test can play a relay. */
     private class ScriptedClient : INostrClient by EmptyNostrClient() {
