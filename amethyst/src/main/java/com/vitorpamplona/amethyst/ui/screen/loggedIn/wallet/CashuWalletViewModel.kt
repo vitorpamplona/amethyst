@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
+import com.vitorpamplona.quartz.nip60Cashu.p2pk.anyP2pkLocked
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -909,7 +910,15 @@ class CashuWalletViewModel : ViewModel() {
                 // Keys that can unlock a P2PK-locked token: our wallet key, and
                 // — for a local nsec login only — the identity key (some senders,
                 // e.g. Bey Wallet, P2PK-lock ecash straight to the recipient npub).
-                val (walletKey, identityKey) = state.redeemSigningKeys()
+                // Only gathered when a proof is actually locked: redeemSigningKeys()
+                // decrypts the kind:17375 privkey, which is a signer round-trip on
+                // a bunker/external signer we shouldn't pay for a plain token.
+                val (walletKey, identityKey) =
+                    if (parsedTokens.any { it.proofs.anyP2pkLocked() }) {
+                        state.redeemSigningKeys()
+                    } else {
+                        null to null
+                    }
                 val total =
                     parsedTokens.sumOf {
                         ops
