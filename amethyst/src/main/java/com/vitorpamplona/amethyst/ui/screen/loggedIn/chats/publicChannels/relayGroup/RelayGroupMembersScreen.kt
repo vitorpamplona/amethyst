@@ -86,16 +86,13 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
-import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 /**
  * The roster of a NIP-29 group: everyone the relay lists as an admin (kind 39001)
@@ -116,37 +113,6 @@ fun RelayGroupMembersScreen(
 
     LoadRelayGroupChannel(channelId, accountViewModel) { channel ->
         RelayGroupMembers(channel, accountViewModel, nav)
-    }
-}
-
-/**
- * Re-reads a group's 39000-39003 whenever a new relay system message (kind 40099) lands in it.
- *
- * Keyed on the newest system message's id, so it fires once per change rather than polling, and not
- * at all on a relay that doesn't emit them.
- */
-@Composable
-private fun RefreshRelayGroupStateOnSystemMessage(
-    channel: RelayGroupChannel,
-    accountViewModel: AccountViewModel,
-) {
-    val notesState by channel
-        .flow()
-        .notes.stateFlow
-        .collectAsStateWithLifecycle()
-
-    val newestSystemMessageId =
-        remember(notesState) {
-            channel.notes
-                .filter { _, note -> note.event is SystemMessageEvent }
-                .maxByOrNull { it.createdAt() ?: 0L }
-                ?.idHex
-        }
-
-    LaunchedEffect(newestSystemMessageId) {
-        if (newestSystemMessageId != null) {
-            withContext(Dispatchers.IO) { accountViewModel.account.refreshRelayGroupState(channel) }
-        }
     }
 }
 
@@ -174,13 +140,6 @@ private fun RelayGroupMembers(
     // Recompose when the relay-signed roster (39001/39002) changes.
     val channelState by observeChannel(baseChannel, accountViewModel)
     val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
-
-    // Buzz never streams the roster: it signs 39001/39002 with `d`/`p` and no `h`, yet stores and
-    // fans them channel-scoped — so a filter with `#h` doesn't match their tags and one without is a
-    // global subscription, which receives no channel-scoped event. Adding or promoting somebody
-    // therefore left this screen showing the old roles until the next cold start. The relay *does*
-    // push the kind-40099 narrating the change, so treat that as the cue to re-read the state.
-    RefreshRelayGroupStateOnSystemMessage(channel, accountViewModel)
 
     val myPubkey = accountViewModel.userProfile().pubkeyHex
     val iCanModerate = channel.membershipOf(myPubkey).canModerate()

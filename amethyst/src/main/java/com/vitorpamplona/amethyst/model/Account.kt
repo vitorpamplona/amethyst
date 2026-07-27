@@ -3424,23 +3424,22 @@ class Account(
     }
 
     /**
-     * Re-reads a relay group's own state (39000-39003) from its host relay.
+     * Re-reads one relay group's own state (39000-39003) from its host relay, straight into
+     * [LocalCache] so every screen observing that group updates through the flows it already has.
      *
-     * Needed because Buzz never streams those. It signs them with `d`/`p` tags and **no `h`**, yet
-     * stores and fans them out channel-scoped — so a filter carrying `#h` does not match their tags,
-     * and one without `#h` is a global subscription, which by design receives no channel-scoped
-     * event. Neither shape can be live, so a role change or rename left the roster stale until the
-     * next cold start. What the relay does push is the kind-40099 that narrates the change; callers
-     * use that as the cue to call this.
+     * Buzz cannot stream those events: it signs them with `d`/`p` tags and **no `h`**, yet stores
+     * and fans them out channel-scoped — so a filter carrying `#h` does not match their tags, and
+     * one without `#h` is a global subscription, which by design receives no channel-scoped event.
+     * Re-issuing the standing REQ doesn't help either: its filters are unchanged, so no new REQ goes
+     * out. An explicit fetch is the only thing that actually pulls them.
      */
-    suspend fun refreshRelayGroupState(channel: RelayGroupChannel) {
-        val relay = channel.groupId.relayUrl
+    suspend fun refreshRelayGroupState(groupId: GroupId) {
         val filter =
             Filter(
                 kinds = RELAY_GROUP_METADATA_KINDS,
-                tags = mapOf("d" to listOf(channel.groupId.id)),
+                tags = mapOf("d" to listOf(groupId.id)),
             )
-        client.fetchAll(filters = mapOf(relay to listOf(filter)), timeoutMs = 8_000)
+        client.fetchAll(filters = mapOf(groupId.relayUrl to listOf(filter)), timeoutMs = 8_000)
     }
 
     /**
