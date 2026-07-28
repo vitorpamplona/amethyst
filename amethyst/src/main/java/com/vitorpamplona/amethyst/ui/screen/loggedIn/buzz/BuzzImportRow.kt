@@ -84,7 +84,8 @@ private const val CARD_WARMUP_LIMIT = 10
  * recent-posters facepile, a preview of the last message (author + snippet, or the Buzz activity
  * summary for system/diff/job rows), the relative time of that message, and an unread-count badge.
  * Tapping the card opens the channel ([onOpen]); the trailing overflow (3-dot) menu holds the
- * per-channel actions — Pin/Unpin and Add-to-my-list — so the row stays clean.
+ * per-channel actions — Pin/Unpin and the Add/Remove-from-Messages toggle ([isAdded] says which half
+ * to show, and it must come from the live kind-10009 list) — so the row stays clean.
  *
  * Reused by the relay group-list screen where Buzz membership discovery is folded in.
  *
@@ -99,6 +100,7 @@ fun BuzzImportRow(
     groupId: GroupId,
     isAdded: Boolean,
     onAdd: () -> Unit,
+    onRemove: () -> Unit,
     accountViewModel: AccountViewModel,
     onOpen: (() -> Unit)? = null,
     isStarred: Boolean = false,
@@ -168,6 +170,7 @@ fun BuzzImportRow(
                 isStarred = isStarred,
                 onToggleStar = onToggleStar,
                 onAdd = onAdd,
+                onRemove = onRemove,
                 accountViewModel = accountViewModel,
             )
         }
@@ -192,6 +195,7 @@ private fun BuzzImportRowContent(
     isStarred: Boolean,
     onToggleStar: (() -> Unit)?,
     onAdd: () -> Unit,
+    onRemove: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
     Row(
@@ -249,6 +253,7 @@ private fun BuzzImportRowContent(
         BuzzChannelRowMenu(
             isAdded = isAdded,
             onAdd = onAdd,
+            onRemove = onRemove,
             isStarred = isStarred,
             onToggleStar = onToggleStar,
         )
@@ -307,6 +312,7 @@ private fun BuzzChannelPreviewLine(
 private fun BuzzChannelRowMenu(
     isAdded: Boolean,
     onAdd: () -> Unit,
+    onRemove: () -> Unit,
     isStarred: Boolean,
     onToggleStar: (() -> Unit)?,
 ) {
@@ -338,20 +344,22 @@ private fun BuzzChannelRowMenu(
                     },
                 )
             }
+            // A toggle, not a one-way "Added" badge: a channel already on the kind-10009 list offers
+            // the way back off it. Neither half touches the relay roster, so the channel stays in this
+            // list (and readable) either way — only whether it shows on Messages changes.
             DropdownMenuItem(
                 leadingIcon = {
                     Icon(
-                        symbol = if (isAdded) MaterialSymbols.Check else MaterialSymbols.Add,
+                        symbol = if (isAdded) MaterialSymbols.VisibilityOff else MaterialSymbols.Add,
                         contentDescription = null,
-                        tint = if (isAdded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
                 },
-                text = { Text(stringRes(if (isAdded) R.string.buzz_import_added else R.string.buzz_import_add)) },
-                enabled = !isAdded,
+                text = { Text(stringRes(if (isAdded) R.string.remove_from_messages else R.string.add_to_messages)) },
                 onClick = {
                     expanded = false
-                    onAdd()
+                    if (isAdded) onRemove() else onAdd()
                 },
             )
         }

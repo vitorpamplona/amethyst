@@ -56,7 +56,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -83,6 +85,12 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import kotlinx.coroutines.launch
 
 /**
+ * Bottom room the inbox leaves for its extended FAB — same clearance the community view uses, and
+ * wide enough for the taller extended variant.
+ */
+private val FAB_CLEARANCE = 96.dp
+
+/**
  * The **Buzz Direct Messages** inbox. A Buzz DM is a relay-authoritative NIP-29 group
  * whose id is a UUID, so tapping a row opens the very same [Route.RelayGroup] chat screen
  * every workspace channel uses — this screen only lists the conversations (discovered from
@@ -99,6 +107,11 @@ fun BuzzDmListScreen(
     viewModel.bind(accountViewModel.account, relayUrl)
 
     val rows by viewModel.rows.collectAsStateWithLifecycle()
+    val hiddenRows by viewModel.hiddenRows.collectAsStateWithLifecycle()
+
+    // Hidden conversations stay collapsed behind a header — they are off Messages by the user's own
+    // choice, so they must not compete with the live inbox; they only need to be *reachable* again.
+    var showHidden by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(R.string.buzz_dm_title), nav) },
@@ -110,19 +123,70 @@ fun BuzzDmListScreen(
             )
         },
     ) { padding ->
-        if (rows.isEmpty()) {
+        if (rows.isEmpty() && hiddenRows.isEmpty()) {
             EmptyDmInbox(modifier = Modifier.padding(padding))
         } else {
             LazyColumn(
                 modifier = Modifier.padding(padding).fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                // Extra room at the bottom so the last row's overflow clears the FAB, which the
+                // Scaffold's padding deliberately doesn't account for (a FAB overlays content).
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = FAB_CLEARANCE),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(rows, key = { it.channelId }) { row ->
-                    DmRowCard(row, accountViewModel, nav)
+                    DmRowCard(row, isHidden = false, viewModel = viewModel, accountViewModel = accountViewModel, nav = nav)
+                }
+                if (hiddenRows.isNotEmpty()) {
+                    item(key = "hidden-header") {
+                        HiddenDmHeader(
+                            count = hiddenRows.size,
+                            expanded = showHidden,
+                            onToggle = { showHidden = !showHidden },
+                        )
+                    }
+                    if (showHidden) {
+                        items(hiddenRows, key = { "hidden-${it.channelId}" }) { row ->
+                            DmRowCard(row, isHidden = true, viewModel = viewModel, accountViewModel = accountViewModel, nav = nav)
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * The collapsible "Hidden (N)" divider between the live inbox and the conversations I took off it.
+ * Shared with the community view's inline Direct Messages section, so a hidden DM is reachable from
+ * wherever the user's DMs are — this inbox screen is only reachable behind a "see all" row.
+ */
+@Composable
+fun HiddenDmHeader(
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            symbol = if (expanded) MaterialSymbols.ExpandMore else MaterialSymbols.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = pluralStringResource(R.plurals.buzz_dm_hidden_count, count, count),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -130,6 +194,8 @@ fun BuzzDmListScreen(
 @Composable
 private fun DmRowCard(
     row: BuzzDmListViewModel.DmRow,
+    isHidden: Boolean,
+    viewModel: BuzzDmListViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -156,7 +222,9 @@ private fun DmRowCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            // A hidden DM is still openable (it's a live conversation I merely took off the list), so
+            // it renders faded rather than disabled — visibly parked, not broken.
+            modifier = Modifier.padding(12.dp).alpha(if (isHidden) 0.55f else 1f),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DmAvatars(row.others, accountViewModel, nav)
@@ -204,21 +272,21 @@ private fun DmRowCard(
                             addMemberOpen = true
                         },
                     )
+                    // A toggle, like the channel rows: hiding a DM is a per-viewer, reversible
+                    // relay-side flag (kind-41012 / the 30622 snapshot), never a departure — so a
+                    // hidden conversation must offer its own way back rather than vanishing for good.
                     DropdownMenuItem(
-                        text = { Text(stringRes(R.string.remove_from_messages)) },
+                        text = { Text(stringRes(if (isHidden) R.string.add_to_messages else R.string.remove_from_messages)) },
                         leadingIcon = {
                             Icon(
-                                symbol = MaterialSymbols.VisibilityOff,
+                                symbol = if (isHidden) MaterialSymbols.Add else MaterialSymbols.VisibilityOff,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
                             )
                         },
                         onClick = {
                             menuOpen = false
-                            scope.launch {
-                                val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
-                                accountViewModel.account.hideBuzzDm(channel)
-                            }
+                            if (isHidden) viewModel.addToMessages(row) else viewModel.removeFromMessages(row)
                         },
                     )
                 }

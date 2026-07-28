@@ -450,6 +450,7 @@
     <string name="changed_chat_profile_to">New chat profile:</string>
     <string name="leave">Leave</string>
     <string name="remove_from_messages">Remove from Messages</string>
+    <string name="add_to_messages">Add to Messages</string>
     <string name="unfollow">Unfollow</string>
     <string name="channel_created">Channel created</string>
     <string name="channel_information_changed_to">"Channel Information changed to"</string>
@@ -3586,6 +3587,10 @@
     <string name="buzz_pin">Pin channel</string>
     <string name="buzz_unpin">Unpin channel</string>
     <string name="buzz_dm_section_empty">No conversations yet</string>
+    <plurals name="buzz_dm_hidden_count">
+        <item quantity="one">%1$d hidden conversation</item>
+        <item quantity="other">%1$d hidden conversations</item>
+    </plurals>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">See %1$d more conversation</item>
         <item quantity="other">See all %1$d conversations</item>

@@ -39,7 +39,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Collections
 
@@ -79,7 +78,12 @@ class BuzzRelayImportViewModel : ViewModel() {
     private val _channels = MutableStateFlow<List<GroupId>>(emptyList())
     val channels: StateFlow<List<GroupId>> = _channels.asStateFlow()
 
-    /** Channel ids already present in the user's kind-10009 list (seeded + updated as they add). */
+    /**
+     * Channel ids on this relay that are currently in the user's kind-10009 list. Mirrors the live
+     * list rather than snapshotting it: it used to be seeded once at [bind] and only ever grow, so a
+     * channel taken off Messages anywhere else still rendered as "Added" — with the Add action
+     * disabled, leaving no way back.
+     */
     private val _added = MutableStateFlow<Set<String>>(emptySet())
     val added: StateFlow<Set<String>> = _added.asStateFlow()
 
@@ -110,12 +114,13 @@ class BuzzRelayImportViewModel : ViewModel() {
         // every other `#p=me`-gated read on the shared socket.
         if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
 
-        // Seed "already added" from the current kind-10009 list so channels the user already has
-        // render as added rather than offering a duplicate Add.
-        _added.value =
-            account.relayGroupList.liveRelayGroupList.value
-                .filter { RelayUrlNormalizer.normalizeOrNull(it.relayUrl) == normalized }
-                .mapTo(mutableSetOf()) { it.groupId }
+        // Track "already added" against the live kind-10009 list, scoped to this relay, so the rows
+        // follow every add/remove — from here, from the channel's top bar, or from another device.
+        viewModelScope.launch(Dispatchers.IO) {
+            account.relayGroupList.liveRelayGroupIds.collect { groups ->
+                _added.value = groups.filter { it.relayUrl == normalized }.mapTo(mutableSetOf()) { it.id }
+            }
+        }
 
         discover(account, normalized)
     }
@@ -176,13 +181,32 @@ class BuzzRelayImportViewModel : ViewModel() {
         }
     }
 
-    /** Append [groupId] to the user's kind-10009 list (public group tag), so it shows in Messages. */
+    /**
+     * Append [groupId] to the user's kind-10009 list (public group tag), so it shows in Messages, and
+     * clear any earlier dismissal so the relay's kind-44100 re-announcement isn't filtered back out.
+     * [_added] is not touched here — the live-list collector in [bind] reflects the new event.
+     */
     fun add(groupId: GroupId) {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
             val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
+            account.settings.undismissChannelInvite(groupId.id)
             account.follow(channel)
-            _added.update { it + groupId.id }
+        }
+    }
+
+    /**
+     * Take [groupId] off the kind-10009 list without leaving the channel: no kind-9022, so the relay
+     * roster (and therefore this very list of channels) is untouched and it can be added back. The
+     * dismissal keeps a Buzz relay's kind-44100 re-announcement from bouncing it back as an invite —
+     * mirrors `AccountViewModel.removeRelayGroupFromMessages`.
+     */
+    fun remove(groupId: GroupId) {
+        val account = account ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
+            account.settings.dismissChannelInvite(groupId.id)
+            account.unfollow(channel)
         }
     }
 
