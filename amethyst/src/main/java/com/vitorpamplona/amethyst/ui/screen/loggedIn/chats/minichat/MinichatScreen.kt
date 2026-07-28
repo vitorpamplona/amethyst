@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.minichat
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -174,7 +176,17 @@ fun MinichatScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.fillMaxHeight().padding(padding)) {
+        // The reply composer must ride above the soft keyboard — the bare Material3 Scaffold's
+        // content insets cover the system bars but not the IME. consumeWindowInsets(padding) before
+        // imePadding() unions the two so the nav-bar inset already in `padding` is dropped while the
+        // keyboard is up instead of stacking on top of it.
+        Column(
+            Modifier
+                .fillMaxHeight()
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding(),
+        ) {
             // Every reply here is rooted at [rootNote], which is already pinned at the top — so
             // suppress the redundant reply-to-root preview each reply would otherwise render.
             CompositionLocalProvider(LocalSuppressReplyToNoteId provides rootId) {
