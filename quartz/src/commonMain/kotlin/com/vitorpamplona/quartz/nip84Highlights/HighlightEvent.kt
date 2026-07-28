@@ -190,5 +190,45 @@ class HighlightEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): HighlightEvent = signer.sign(createdAt, KIND, emptyArray(), msg)
+
+        /**
+         * Builds a fully-tagged NIP-84 highlight from the pieces a browser share (or the
+         * highlight composer) produces. The highlighted passage becomes the event `content`;
+         * the remaining inputs are emitted as their NIP-84 tags when present:
+         *
+         * - [url] → an `r` source reference (normalized by [ReferenceTag]; clean it of
+         *   trackers with [com.vitorpamplona.quartz.nip84Highlights.parse.UrlTrackerCleaner] first),
+         * - [prefix]/[suffix] → a `textquoteselector` anchor (the `exact` field stays a
+         *   placeholder since the passage already lives in `content`),
+         * - [context] → the surrounding paragraph as a `context` tag,
+         * - [comment] → the user's own note as a `comment` tag (turns it into a quote highlight).
+         */
+        suspend fun create(
+            quote: String,
+            url: String? = null,
+            prefix: String? = null,
+            suffix: String? = null,
+            comment: String? = null,
+            context: String? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): HighlightEvent {
+            val tags = mutableListOf<Array<String>>()
+
+            if (!url.isNullOrBlank()) {
+                tags.add(ReferenceTag.assemble(url))
+            }
+            if (!prefix.isNullOrEmpty() || !suffix.isNullOrEmpty()) {
+                tags.add(TextQuoteSelectorTag.assemble(null, prefix, suffix))
+            }
+            if (!context.isNullOrBlank()) {
+                tags.add(ContextTag.assemble(context))
+            }
+            if (!comment.isNullOrBlank()) {
+                tags.add(CommentTag.assemble(comment))
+            }
+
+            return signer.sign(createdAt, KIND, tags.toTypedArray(), quote)
+        }
     }
 }

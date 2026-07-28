@@ -1,0 +1,97 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip84Highlights.parse
+
+/**
+ * Turns the free-form text a browser hands Amethyst on "Share selection" into the pieces of
+ * a NIP-84 highlight. The share intent's plain text can arrive in several shapes and this
+ * parser normalises all of them:
+ *
+ * - **Selection only** — `"Some highlighted sentence."` → quote, no URL.
+ * - **Selection + page URL** — `"Some highlighted sentence."\n\nhttps://example.com/post`
+ *   (what many browsers and read-it-later apps emit) → quote + source URL.
+ * - **URL only** — `https://example.com/post` → source URL, no quote yet.
+ * - **Link to highlight** — `https://example.com/post#:~:text=prefix-,Some%20sentence,-after`
+ *   (Chrome/Edge/Safari "Copy link to highlight") → the passage decoded from the text
+ *   fragment plus its prefix/suffix anchors, with the fragment stripped off the stored URL.
+ *
+ * The URL is always cleaned of tracking parameters ([UrlTrackerCleaner]) and of its
+ * text-fragment directive ([TextFragmentParser]) before being returned. Surrounding quote
+ * marks the browser wraps around the selection are trimmed off the passage.
+ *
+ * The result is a best-effort pre-fill: the composer screen lets the user confirm and edit
+ * every field before the event is signed.
+ */
+object SharedHighlightParser {
+    private val URL_REGEX = Regex("""https?://\S+""", RegexOption.IGNORE_CASE)
+
+    // Trailing punctuation that is part of the surrounding sentence, not the URL token.
+    private const val URL_TRAILING_TRIM = ".,;:!?)]}>\"'»”’"
+
+    // Quote marks a browser may wrap around a shared selection (straight, curly, guillemets).
+    private const val QUOTE_CHARS = "\"'“”‘’«»"
+
+    fun parse(shared: String): SharedHighlight {
+        val input = shared.trim()
+        if (input.isEmpty()) return SharedHighlight(null, null, null, null)
+
+        // The source URL is normally appended after the selection, so prefer the last URL in
+        // the string (a URL inside the highlighted text itself stays part of the quote).
+        val match = URL_REGEX.findAll(input).lastOrNull()
+
+        var url: String? = null
+        var prefix: String? = null
+        var suffix: String? = null
+        var fragmentQuote: String? = null
+        var remainder = input
+
+        if (match != null) {
+            val rawToken = match.value
+            val rawUrl = rawToken.trimEnd(*URL_TRAILING_TRIM.toCharArray())
+
+            val fragment = TextFragmentParser.parse(rawUrl)
+            prefix = fragment?.prefix
+            suffix = fragment?.suffix
+            fragmentQuote = fragment?.start
+
+            val stripped = TextFragmentParser.stripTextFragment(rawUrl)
+            url = UrlTrackerCleaner.clean(stripped).takeIf { it.isNotBlank() }
+
+            // Remove the whole matched token (incl. any trailing punctuation) from the passage.
+            remainder = input.removeRange(match.range).trim()
+        }
+
+        val quote = cleanQuote(remainder) ?: fragmentQuote?.let { cleanQuote(it) }
+
+        return SharedHighlight(
+            quote = quote,
+            url = url,
+            prefix = prefix,
+            suffix = suffix,
+        )
+    }
+
+    /** Trims surrounding whitespace and matching quote marks; returns null when nothing is left. */
+    private fun cleanQuote(text: String): String? {
+        val trimmed = text.trim { it.isWhitespace() || it in QUOTE_CHARS }
+        return trimmed.ifBlank { null }
+    }
+}
