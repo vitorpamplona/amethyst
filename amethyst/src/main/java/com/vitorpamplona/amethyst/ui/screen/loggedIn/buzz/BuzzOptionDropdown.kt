@@ -24,9 +24,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -77,7 +77,7 @@ fun EditableSuggestDropdown(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showMenu) },
             keyboardOptions = keyboardOptions,
             supportingText = supportingText?.let { { Text(it) } },
-            modifier = modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
+            modifier = modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
         )
         ExposedDropdownMenu(expanded = showMenu, onDismissRequest = { expanded = false }) {
             filtered.forEach { opt ->

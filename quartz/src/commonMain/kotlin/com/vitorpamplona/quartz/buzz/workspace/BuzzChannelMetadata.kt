@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.buzz.workspace
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
@@ -37,9 +36,6 @@ import com.vitorpamplona.quartz.utils.RandomInstance
  * as `p` tags on the 39000 itself. Ground truth: buzz-relay/src/handlers/side_effects.rs
  * (emit_group_discovery_events).
  */
-
-/** The Buzz channel type from the relay's `t` tag ("stream" / "forum" / "dm"), or null. */
-fun GroupMetadataEvent.buzzChannelType(): String? = tags.firstTagValue("t")
 
 /** True when the relay marks this channel a DM (`t` = "dm"). */
 fun GroupMetadataEvent.isBuzzDm(): Boolean = buzzChannelType() == BUZZ_CHANNEL_TYPE_DM
