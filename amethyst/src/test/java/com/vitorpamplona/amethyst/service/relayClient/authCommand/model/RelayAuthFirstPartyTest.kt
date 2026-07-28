@@ -71,4 +71,21 @@ class RelayAuthFirstPartyTest {
         // Delivering my own DM/post to the recipient's relay, even one not in my list.
         assertTrue(RelayAuthFirstParty.hasReason(me, relay, listOf(event(me)), emptySet()))
     }
+
+    @Test
+    fun aRelayHostingAJoinedGroupIsFirstParty() {
+        // A NIP-29 group host relay is in none of my NIP-65/DM/… lists, and a private group's content
+        // is `#h`-scoped so it never names me — the joined-group set is the only signal that lets us
+        // AUTH so the relay serves the group's `auth-required` content instead of leaving it empty.
+        val groupRelay = NormalizedRelayUrl("wss://chat.wisp.talk/")
+        assertTrue(RelayAuthFirstParty.hasReason(me, groupRelay, emptyList(), emptySet(), setOf(groupRelay)))
+    }
+
+    @Test
+    fun aGroupRelayIHaveNotJoinedIsNotFirstParty() {
+        // Merely knowing a group relay exists (e.g. browsing its public directory) must not AUTH it;
+        // only a group on my own kind-10009 list counts.
+        val groupRelay = NormalizedRelayUrl("wss://chat.wisp.talk/")
+        assertFalse(RelayAuthFirstParty.hasReason(me, groupRelay, emptyList(), emptySet(), emptySet()))
+    }
 }
