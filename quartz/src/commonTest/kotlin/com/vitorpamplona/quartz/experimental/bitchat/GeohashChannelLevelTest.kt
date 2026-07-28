@@ -28,6 +28,7 @@ import kotlin.test.assertNull
 class GeohashChannelLevelTest {
     @Test
     fun charCountsMatchBitchat() {
+        assertEquals(1, GeohashChannelLevel.CONTINENT.chars)
         assertEquals(2, GeohashChannelLevel.REGION.chars)
         assertEquals(4, GeohashChannelLevel.PROVINCE.chars)
         assertEquals(5, GeohashChannelLevel.CITY.chars)
@@ -39,6 +40,7 @@ class GeohashChannelLevelTest {
     @Test
     fun cellForTruncatesToLevel() {
         val fix = "u4pruydq" // 8 chars
+        assertEquals("u", GeohashChannelLevel.CONTINENT.cellFor(fix))
         assertEquals("u4", GeohashChannelLevel.REGION.cellFor(fix))
         assertEquals("u4pr", GeohashChannelLevel.PROVINCE.cellFor(fix))
         assertEquals("u4pru", GeohashChannelLevel.CITY.cellFor(fix))
@@ -55,11 +57,12 @@ class GeohashChannelLevelTest {
 
     @Test
     fun orderedIsCoarseToFine() {
-        assertEquals(listOf(2, 4, 5, 6, 7, 8), GeohashChannelLevel.ordered.map { it.chars })
+        assertEquals(listOf(1, 2, 4, 5, 6, 7, 8), GeohashChannelLevel.ordered.map { it.chars })
     }
 
     @Test
     fun forCharsResolvesNamedLevels() {
+        assertEquals(GeohashChannelLevel.CONTINENT, GeohashChannelLevel.forChars(1))
         assertEquals(GeohashChannelLevel.CITY, GeohashChannelLevel.forChars(5))
         assertNull(GeohashChannelLevel.forChars(3))
     }
