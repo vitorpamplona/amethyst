@@ -55,10 +55,16 @@ import java.util.concurrent.ConcurrentSkipListSet
  * stays lock-free: [byId] is a ConcurrentHashMap and every write to [sorted] for
  * a given idHex happens INSIDE that key's `compute` critical section.
  * ConcurrentHashMap stripes per key, so same-idHex ops serialize while different
- * keys run fully in parallel. The invariant that prevents duplicates: an entry
- * is added to [sorted] only while its key is absent from [byId], and every path
- * that makes a key absent removes its entry from [sorted] first — so [sorted]
- * can never hold two entries for one idHex.
+ * keys run fully in parallel. An entry is added to [sorted] only while its key
+ * is absent from [byId], and every path that makes a key absent removes its
+ * entry from [sorted] first, keeping [sorted] converged to one entry per idHex.
+ *
+ * That convergence isn't enough on its own: a ConcurrentSkipListSet iterator is
+ * only weakly consistent, so under concurrent add/remove churn a single
+ * traversal can momentarily surface a key twice (a lazy-deleted node not yet
+ * unlinked while its replacement is inserted). The emitted list must never carry
+ * a duplicate idHex — the LazyColumn keyed on it would crash — so [snapshot]
+ * deduplicates by idHex as it materializes.
  */
 class NoteListMatchingFilter(
     private val filter: Filter,
@@ -114,7 +120,7 @@ class NoteListMatchingFilter(
             sorted.pollLast()?.let { byId.remove(it.note.idHex, it) }
         }
 
-        update(sorted.map { it.note })
+        update(snapshot())
     }
 
     override fun remove(note: Note) {
@@ -127,7 +133,7 @@ class NoteListMatchingFilter(
             }
             null
         }
-        if (removed) update(sorted.map { it.note })
+        if (removed) update(snapshot())
     }
 
     fun init() {
@@ -136,6 +142,14 @@ class NoteListMatchingFilter(
         atOnce(filter).forEach { note ->
             byId.computeIfAbsent(note.idHex) { entryFor(note).also { sorted.add(it) } }
         }
-        update(sorted.map { it.note })
+        update(snapshot())
+    }
+
+    private fun snapshot(): List<Note> {
+        // Dedup by idHex: the weakly-consistent iterator can transiently surface a
+        // key twice under concurrent churn. Keeping the first (newest position) is
+        // correct — both nodes point at the same note.
+        val seen = HashSet<HexKey>()
+        return sorted.mapNotNull { e -> e.note.takeIf { seen.add(it.idHex) } }
     }
 }
