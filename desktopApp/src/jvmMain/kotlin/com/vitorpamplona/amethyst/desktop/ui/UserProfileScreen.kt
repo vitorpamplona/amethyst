@@ -50,7 +50,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -82,9 +82,12 @@ import com.vitorpamplona.amethyst.commons.profile.ui.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
+import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.feeds.DesktopBookmarkFeedFilter
+import com.vitorpamplona.amethyst.desktop.feeds.DesktopMutualFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopProfileFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -99,11 +102,14 @@ import com.vitorpamplona.amethyst.desktop.ui.note.RichTextCallbacks
 import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadgedAvatar
 import com.vitorpamplona.amethyst.desktop.ui.profile.EditProfileDialog
 import com.vitorpamplona.amethyst.desktop.ui.profile.GalleryTab
+import com.vitorpamplona.amethyst.desktop.ui.profile.RelayRowCard
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
@@ -111,6 +117,9 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
@@ -252,6 +261,52 @@ fun UserProfileScreen(
         } else {
             kotlinx.collections.immutable.persistentListOf()
         }
+
+    // Mutual — notes the logged-in user authored that tag this profile.
+    val mutualViewModel =
+        remember(pubKeyHex, account, iAccount) {
+            if (account != null) {
+                DesktopFeedViewModel(
+                    DesktopMutualFeedFilter(account.pubKeyHex, pubKeyHex, localCache, hidden = hidden),
+                    localCache,
+                    iAccount?.hiddenUsers,
+                )
+            } else {
+                null
+            }
+        }
+    DisposableEffect(mutualViewModel) { onDispose { mutualViewModel?.destroy() } }
+    val mutualLoadedNotes =
+        mutualViewModel?.let { vm ->
+            val state by vm.feedState.feedContent.collectAsState()
+            if (state is FeedState.Loaded) {
+                val loaded by (state as FeedState.Loaded).feed.collectAsState()
+                loaded.list
+            } else {
+                kotlinx.collections.immutable.persistentListOf()
+            }
+        } ?: kotlinx.collections.immutable.persistentListOf()
+
+    // Bookmarks — public bookmarks (kind 10003) resolved to notes from cache.
+    var bookmarkIds by remember(pubKeyHex) { mutableStateOf<Set<HexKey>>(emptySet()) }
+    val bookmarkViewModel =
+        remember(pubKeyHex) {
+            DesktopFeedViewModel(
+                DesktopBookmarkFeedFilter({ bookmarkIds }, localCache),
+                localCache,
+            )
+        }
+    DisposableEffect(bookmarkViewModel) { onDispose { bookmarkViewModel.destroy() } }
+    LaunchedEffect(bookmarkIds) { bookmarkViewModel.invalidateData(false) }
+    val bookmarkFeedState by bookmarkViewModel.feedState.feedContent.collectAsState()
+    val bookmarkLoadedNotes =
+        if (bookmarkFeedState is FeedState.Loaded) {
+            val loaded by (bookmarkFeedState as FeedState.Loaded).feed.collectAsState()
+            loaded.list
+        } else {
+            kotlinx.collections.immutable.persistentListOf()
+        }
+
     var retryTrigger by remember { mutableStateOf(0) }
 
     // Subscribe to profile user's text notes (kind 1) — populates cache for DesktopFeedViewModel
@@ -283,6 +338,12 @@ fun UserProfileScreen(
     val pictureEvents = remember { mutableStateListOf<PictureEvent>() }
     val articleEvents = remember { mutableStateListOf<LongTextNoteEvent>() }
     val highlightEvents = remember { mutableStateListOf<HighlightEvent>() }
+
+    // Followers / Following user lists (pubkeys) and the profile's relay list.
+    val followerList = remember(pubKeyHex) { mutableStateListOf<String>() }
+    val followingList = remember(pubKeyHex) { mutableStateListOf<String>() }
+    // Each relay entry: (url, canRead, canWrite)
+    var relayList by remember(pubKeyHex) { mutableStateOf<List<Triple<String, Boolean, Boolean>>>(emptyList()) }
 
     // Follow state
     val followState =
@@ -390,9 +451,11 @@ fun UserProfileScreen(
                 pubKeyHex = pubKeyHex,
                 onEvent = { event, _, _, _ ->
                     if (event is ContactListEvent) {
-                        val count = event.verifiedFollowKeySet().size
-                        followingCount = count
-                        localCache.cacheFollowingCount(pubKeyHex, count)
+                        val follows = event.verifiedFollowKeySet()
+                        followingCount = follows.size
+                        followingList.clear()
+                        followingList.addAll(follows)
+                        localCache.cacheFollowingCount(pubKeyHex, follows.size)
                     }
                 },
                 onEose = { _, _ -> },
@@ -410,6 +473,7 @@ fun UserProfileScreen(
         if (connectedRelays.isNotEmpty()) {
             // Clear dedup set but keep cached followersCount visible until new data arrives
             followerAuthors.clear()
+            followerList.clear()
 
             SubscriptionConfig(
                 subId = "followers-${pubKeyHex.take(8)}-${System.currentTimeMillis()}",
@@ -425,6 +489,7 @@ fun UserProfileScreen(
                 onEvent = { event, _, _, _ ->
                     // Count unique authors who follow this user
                     if (followerAuthors.add(event.pubKey)) {
+                        followerList.add(event.pubKey)
                         val count = followerAuthors.size
                         followersCount = count
                         localCache.cacheFollowerCount(pubKeyHex, count)
@@ -511,6 +576,103 @@ fun UserProfileScreen(
                         highlightEvents.add(event)
                     }
                 },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Subscribe to the profile user's relay list (kind 10002) for the Relays tab
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            SubscriptionConfig(
+                subId = generateSubId("relays-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(pubKeyHex),
+                            kinds = listOf(AdvertisedRelayListEvent.KIND),
+                            limit = 1,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is AdvertisedRelayListEvent) {
+                        val writes = event.writeRelaysNorm()?.map { it.url }?.toSet() ?: emptySet()
+                        val reads = event.readRelaysNorm()?.map { it.url }?.toSet() ?: emptySet()
+                        relayList = (writes + reads).sorted().map { url -> Triple(url, url in reads, url in writes) }
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Subscribe to the profile user's public bookmarks list (kind 10003)
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            SubscriptionConfig(
+                subId = generateSubId("bmlist-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.byAuthors(
+                            authors = listOf(pubKeyHex),
+                            kinds = listOf(BookmarkListEvent.KIND),
+                            limit = 1,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is BookmarkListEvent) {
+                        bookmarkIds =
+                            event
+                                .publicBookmarks()
+                                .filterIsInstance<EventBookmark>()
+                                .map { it.eventId }
+                                .toSet()
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Fetch the bookmarked notes themselves once their ids are known
+    rememberSubscription(connectedRelays, bookmarkIds, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty() && bookmarkIds.isNotEmpty()) {
+            SubscriptionConfig(
+                subId = generateSubId("bmnotes-${pubKeyHex.take(8)}"),
+                filters = listOf(FilterBuilders.byIds(bookmarkIds.toList())),
+                relays = connectedRelays,
+                onEvent = { event, _, relay, _ -> subscriptionsCoordinator?.consumeEvent(event, relay) },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Fetch the logged-in user's notes that tag this profile (Mutual tab)
+    rememberSubscription(connectedRelays, pubKeyHex, account, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty() && account != null) {
+            SubscriptionConfig(
+                subId = generateSubId("mutual-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        Filter(
+                            kinds = listOf(TextNoteEvent.KIND),
+                            authors = listOf(account.pubKeyHex),
+                            tags = mapOf("p" to listOf(pubKeyHex)),
+                            limit = 200,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, relay, _ -> subscriptionsCoordinator?.consumeEvent(event, relay) },
                 onEose = { _, _ -> },
             )
         } else {
@@ -936,7 +1098,7 @@ fun UserProfileScreen(
 
                     // Tabs
                     item(key = "tabs") {
-                        PrimaryTabRow(selectedTabIndex = selectedTab) {
+                        PrimaryScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 0.dp) {
                             Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
                                 Text("Notes", modifier = Modifier.padding(12.dp))
                             }
@@ -957,6 +1119,30 @@ fun UserProfileScreen(
                                     "Highlights${if (highlightEvents.isNotEmpty()) " (${highlightEvents.size})" else ""}",
                                     modifier = Modifier.padding(12.dp),
                                 )
+                            }
+                            Tab(selected = selectedTab == 5, onClick = { selectedTab = 5 }) {
+                                Text(
+                                    "Followers${if (followersCount > 0) " ($followersCount)" else ""}",
+                                    modifier = Modifier.padding(12.dp),
+                                )
+                            }
+                            Tab(selected = selectedTab == 6, onClick = { selectedTab = 6 }) {
+                                Text(
+                                    "Following${if (followingCount > 0) " ($followingCount)" else ""}",
+                                    modifier = Modifier.padding(12.dp),
+                                )
+                            }
+                            Tab(selected = selectedTab == 7, onClick = { selectedTab = 7 }) {
+                                Text(
+                                    "Relays${if (relayList.isNotEmpty()) " (${relayList.size})" else ""}",
+                                    modifier = Modifier.padding(12.dp),
+                                )
+                            }
+                            Tab(selected = selectedTab == 8, onClick = { selectedTab = 8 }) {
+                                Text("Bookmarks", modifier = Modifier.padding(12.dp))
+                            }
+                            Tab(selected = selectedTab == 9, onClick = { selectedTab = 9 }) {
+                                Text("Mutual", modifier = Modifier.padding(12.dp))
                             }
                         }
                     }
@@ -1214,6 +1400,96 @@ fun UserProfileScreen(
                                 }
                             }
                         }
+
+                        5 -> {
+                            if (followerList.isEmpty()) {
+                                item(key = "no-followers") { ProfileTabMessage("No followers found yet") }
+                            } else {
+                                items(followerList.toList(), key = { "follower-$it" }) { pk ->
+                                    val user = remember(pk) { localCache.getOrCreateUser(pk) }
+                                    UserSearchCard(user = user, onClick = { onNavigateToProfile(pk) })
+                                }
+                            }
+                        }
+
+                        6 -> {
+                            if (followingList.isEmpty()) {
+                                item(key = "no-following") { ProfileTabMessage("No following found yet") }
+                            } else {
+                                items(followingList.toList(), key = { "following-$it" }) { pk ->
+                                    val user = remember(pk) { localCache.getOrCreateUser(pk) }
+                                    UserSearchCard(user = user, onClick = { onNavigateToProfile(pk) })
+                                }
+                            }
+                        }
+
+                        7 -> {
+                            if (relayList.isEmpty()) {
+                                item(key = "no-relays") { ProfileTabMessage("No relay list published") }
+                            } else {
+                                items(relayList, key = { "relay-${it.first}" }) { (url, read, write) ->
+                                    RelayRowCard(url = url, canRead = read, canWrite = write)
+                                }
+                            }
+                        }
+
+                        8 -> {
+                            if (bookmarkLoadedNotes.isEmpty()) {
+                                item(key = "no-bookmarks") { ProfileTabMessage("No public bookmarks") }
+                            } else {
+                                items(bookmarkLoadedNotes, key = { "bm-${it.idHex}" }) { note ->
+                                    FeedNoteCard(
+                                        note = note,
+                                        relayManager = relayManager,
+                                        localCache = localCache,
+                                        account = account,
+                                        myPubKeyHex = account?.pubKeyHex,
+                                        nwcConnection = nwcConnection,
+                                        onReply = onCompose,
+                                        onZapFeedback = onZapFeedback,
+                                        onNavigateToProfile = onNavigateToProfile,
+                                        onNavigateToThread = onNavigateToThread,
+                                        onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
+                                        onMediaClick = { urls, index, seekPos ->
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .playVideo(urls[index], seekPos)
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .toggleFullscreen()
+                                        },
+                                    )
+                                }
+                            }
+                        }
+
+                        9 -> {
+                            if (account == null) {
+                                item(key = "mutual-login") { ProfileTabMessage("Log in to see mutual posts") }
+                            } else if (mutualLoadedNotes.isEmpty()) {
+                                item(key = "no-mutual") { ProfileTabMessage("You haven't posted about this user") }
+                            } else {
+                                items(mutualLoadedNotes, key = { "mutual-${it.idHex}" }) { note ->
+                                    FeedNoteCard(
+                                        note = note,
+                                        relayManager = relayManager,
+                                        localCache = localCache,
+                                        account = account,
+                                        myPubKeyHex = account.pubKeyHex,
+                                        nwcConnection = nwcConnection,
+                                        onReply = onCompose,
+                                        onZapFeedback = onZapFeedback,
+                                        onNavigateToProfile = onNavigateToProfile,
+                                        onNavigateToThread = onNavigateToThread,
+                                        onImageClick = { urls, index -> lightboxState = LightboxState(urls, index) },
+                                        onMediaClick = { urls, index, seekPos ->
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .playVideo(urls[index], seekPos)
+                                            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                .toggleFullscreen()
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1364,6 +1640,20 @@ private suspend fun unfollowUser(
             throw IllegalStateException("Cannot unfollow: No contact list available")
         }
     }
+
+@Composable
+private fun ProfileTabMessage(text: String) {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(32.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 @Composable
 private fun PublishedHighlightCard(

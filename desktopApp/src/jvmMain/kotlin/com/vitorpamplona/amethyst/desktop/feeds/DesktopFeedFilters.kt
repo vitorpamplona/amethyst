@@ -254,6 +254,40 @@ class DesktopProfileFeedFilter(
 }
 
 /**
+ * Mutual feed: notes authored by the logged-in user ([myPubkey]) that tag the
+ * viewed profile ([profilePubkey]) — "posts you wrote that mention them".
+ */
+class DesktopMutualFeedFilter(
+    private val myPubkey: HexKey,
+    private val profilePubkey: HexKey,
+    private val cache: DesktopLocalCache,
+    private val hidden: () -> LiveHiddenUsers = { LiveHiddenUsers.EMPTY },
+) : AdditiveFeedFilter<Note>() {
+    override fun feedKey(): String = "mutual-$myPubkey-$profilePubkey"
+
+    private fun isMutualNote(note: Note): Boolean {
+        val event = note.event ?: return false
+        return note.author?.pubkeyHex == myPubkey &&
+            isFeedNote(event) &&
+            event.isTaggedUser(profilePubkey) &&
+            !note.isHiddenFor(hidden())
+    }
+
+    override fun feed(): List<Note> =
+        cache.notes
+            .filterIntoSet { _, note -> isMutualNote(note) }
+            .sortedWith(DefaultFeedOrder)
+            .deduplicateReposts()
+            .take(limit())
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = newItems.filterTo(HashSet()) { isMutualNote(it) }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder).deduplicateReposts()
+
+    override fun limit(): Int = 200
+}
+
+/**
  * Bookmark feed: notes by ID set (from BookmarkListEvent).
  */
 class DesktopBookmarkFeedFilter(
