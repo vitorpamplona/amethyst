@@ -28,9 +28,10 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.vitorpamplona.amethyst.ui.navigation.BOTTOM_NAV_ROOT_KEY
 import com.vitorpamplona.amethyst.ui.navigation.isBottomNavRoot
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -115,19 +116,35 @@ class Nav(
 
     @Composable
     override fun canPop(): Boolean {
-        // Observe the current entry as State so consumers recompose when the
-        // back stack settles after a navigation or back-swipe transition.
-        // A non-reactive read would leave a stale value behind: e.g. on
-        // back-swipe to Home, previousBackStackEntry is still the popping
-        // entry until the gesture finishes, and nothing would re-evaluate
-        // canPop afterwards.
-        val current by controller.currentBackStackEntryAsState()
-        val entry = current ?: return false
+        // Decide the back arrow / bottom-bar visibility from THIS screen's own
+        // back-stack entry — the one the NavHost hands to each destination
+        // through LocalViewModelStoreOwner — instead of the globally-current
+        // entry.
+        //
+        // A pop commits the moment it is accepted (most visibly during a
+        // predictive back-swipe, whose exit animation is long and finger-driven):
+        // controller.currentBackStackEntry flips to the destination while the
+        // screen being dismissed is still on screen, sliding out and still
+        // composing its top bar. Reading the global entry there re-evaluated
+        // canPop against the incoming destination and dropped the arrow before
+        // the outgoing screen had finished leaving. An entry is intrinsic to its
+        // screen and never changes for the life of that composition, so the arrow
+        // now stays put until the screen itself is gone.
+        //
+        // Outside a NavHost destination (shell chrome, drawer) the current owner
+        // is the account-scoped ViewModelStoreOwner, not an entry; fall back to
+        // the globally-current entry so those callers keep their prior behavior.
+        val entry =
+            (LocalViewModelStoreOwner.current as? NavBackStackEntry)
+                ?: controller.currentBackStackEntry
+                ?: return false
+
+        // Hidden on tab roots (reached via the bottom nav) and on Home (the
+        // graph's start destination): nothing sits below either that a back
+        // arrow could return to. Every other entry is a push on top of Home,
+        // so it can always pop.
         if (entry.isBottomNavRoot()) return false
-        // Home is the graph's start destination and nothing can sit below
-        // it, so a back arrow there is never meaningful.
-        if (entry.destination.id == controller.graph.findStartDestination().id) return false
-        return controller.previousBackStackEntry != null
+        return entry.destination.id != controller.graph.findStartDestination().id
     }
 
     override fun popBack() {
