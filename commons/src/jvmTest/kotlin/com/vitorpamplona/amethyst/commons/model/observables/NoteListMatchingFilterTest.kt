@@ -102,6 +102,27 @@ class NoteListMatchingFilterTest {
     }
 
     @Test
+    fun listStaysSortedByCreatedAtDescendingAsNotesArriveOutOfOrder() {
+        var last: List<Note> = emptyList()
+        val subject = newFilter { last = it }
+        subject.init()
+
+        val a = noteFor("app-a")
+        val b = noteFor("app-b")
+        val c = noteFor("app-c")
+
+        // Arrive out of order; the emitted list must always be newest-first.
+        a.load(2000)
+        subject.new(a.event!!, a)
+        b.load(4000)
+        subject.new(b.event!!, b)
+        c.load(1000)
+        subject.new(c.event!!, c)
+
+        assertEquals(listOf(b.idHex, a.idHex, c.idHex), last.map { it.idHex })
+    }
+
+    @Test
     fun removeDropsTheNoteEvenAfterCreatedAtChanged() {
         var last: List<Note> = emptyList()
         val subject = newFilter { last = it }
