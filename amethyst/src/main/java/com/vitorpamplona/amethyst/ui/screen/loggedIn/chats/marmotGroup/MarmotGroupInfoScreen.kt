@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -171,6 +172,9 @@ fun MarmotGroupInfoScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    // consume the scaffold insets so imePadding() unions with the nav-bar inset in
+                    // `padding` instead of stacking on top of it while the keyboard is up.
+                    .consumeWindowInsets(padding)
                     .imePadding(),
         ) {
             // Group header section (fixed at top)

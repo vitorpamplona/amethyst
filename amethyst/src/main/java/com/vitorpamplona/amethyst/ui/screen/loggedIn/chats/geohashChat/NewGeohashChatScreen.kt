@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -106,6 +107,9 @@ fun NewGeohashChatScreen(
                 .fillMaxSize()
                 .padding(top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding())
                 .padding(horizontal = 16.dp)
+                // consume the scaffold insets so the trailing imePadding() only adds the part of
+                // the IME the nav-bar padding above doesn't already cover (union, not a sum).
+                .consumeWindowInsets(pad)
                 .verticalScroll(rememberScrollState())
                 .imePadding(),
             verticalArrangement = Arrangement.spacedBy(20.dp),
