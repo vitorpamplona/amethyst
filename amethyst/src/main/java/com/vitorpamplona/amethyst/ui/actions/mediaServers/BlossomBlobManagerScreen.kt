@@ -115,6 +115,9 @@ import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 
+private const val MIME_IMAGE_PREFIX = "image/"
+private const val MIME_VIDEO_PREFIX = "video/"
+
 @Composable
 fun BlossomBlobManagerScreen(
     accountViewModel: AccountViewModel,
@@ -291,7 +294,7 @@ private fun OverflowMenuIcon(symbol: MaterialSymbol) {
 
 /** Whether a blob is an image or a video, i.e. it can be previewed and shown full-screen. */
 private val BlobRow.isViewable: Boolean
-    get() = type?.let { it.startsWith("image/") || it.startsWith("video/") } == true
+    get() = type?.let { it.startsWith(MIME_IMAGE_PREFIX) || it.startsWith(MIME_VIDEO_PREFIX) } == true
 
 @Composable
 private fun CenteredState(content: @Composable () -> Unit) {
@@ -381,7 +384,7 @@ private fun BlobPreview(
     glyphSize: Dp = 34.dp,
     playIconSize: Dp = 40.dp,
 ) {
-    val isVideo = row.type?.startsWith("video/") == true
+    val isVideo = row.type?.startsWith(MIME_VIDEO_PREFIX) == true
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         if (row.url != null && row.isViewable) {
             SubcomposeAsyncImage(
@@ -483,7 +486,7 @@ private fun BlossomBlobViewer(
 ) {
     val context = LocalContext.current
     var drawerOpen by remember { mutableStateOf(false) }
-    val isVideo = row.type?.startsWith("video/") == true
+    val isVideo = row.type?.startsWith(MIME_VIDEO_PREFIX) == true
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -739,8 +742,8 @@ private fun DetailAction(
 
 private fun glyphFor(type: String?): MaterialSymbol =
     when {
-        type?.startsWith("image/") == true -> MaterialSymbols.Image
-        type?.startsWith("video/") == true -> MaterialSymbols.PlayCircle
+        type?.startsWith(MIME_IMAGE_PREFIX) == true -> MaterialSymbols.Image
+        type?.startsWith(MIME_VIDEO_PREFIX) == true -> MaterialSymbols.PlayCircle
         else -> MaterialSymbols.Storage
     }
 

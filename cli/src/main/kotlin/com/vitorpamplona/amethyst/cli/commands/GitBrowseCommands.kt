@@ -38,13 +38,16 @@ import java.io.File
  * pushing objects back is still out of scope (see cli/ROADMAP.md).
  */
 object GitBrowseCommands {
+    /** Name of the first positional argument: the repo's naddr or `kind:pubkey:d` coordinates. */
+    private const val ARG_REPO_COORD = "repo-naddr-or-coordinates"
+
     /** `git browse REPO [PATH]` — list the tree entries at PATH (default: repo root). */
     suspend fun browse(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val coord = args.positional(0, "repo-naddr-or-coordinates")
+        val coord = args.positional(0, ARG_REPO_COORD)
         val path = args.positionalOrNull(1).orEmpty()
         val ref = args.flag("ref")
         val cloneOverride = args.flag("clone")
@@ -79,7 +82,7 @@ object GitBrowseCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val coord = args.positional(0, "repo-naddr-or-coordinates")
+        val coord = args.positional(0, ARG_REPO_COORD)
         val path = args.positional(1, "file-path")
         val ref = args.flag("ref")
         val cloneOverride = args.flag("clone")
@@ -118,7 +121,7 @@ object GitBrowseCommands {
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val coord = args.positional(0, "repo-naddr-or-coordinates")
+        val coord = args.positional(0, ARG_REPO_COORD)
         val ref = args.flag("ref")
         val cloneOverride = args.flag("clone")
         val depth = args.intFlag("depth", 50)

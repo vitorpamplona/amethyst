@@ -146,12 +146,12 @@ object BuzzAgentCommands {
         val repo = args.flag("repo") ?: return Output.error("bad_args", "pass --repo DIR (your git checkout — the agent works and opens PRs here)")
         if (!File(repo).resolve(".git").exists()) return Output.error("bad_args", "--repo is not a git repository: $repo")
         val approver = args.flag("approver") ?: return Output.error("bad_args", "pass --approver NPUB (the human who signs off each run)")
-        val baseRef = args.flag("base-ref")
+        val baseRef = args.flag(FLAG_BASE_REF)
         val poll = args.flag("poll")
         val timeout = args.flag("timeout")
         val once = args.bool("once")
         val explicitChannel = args.flag("channel")
-        args.rejectUnknown("repo", "approver", "channel", "base-ref", "poll", "timeout", "once")
+        args.rejectUnknown("repo", "approver", "channel", FLAG_BASE_REF, "poll", "timeout", "once")
 
         val channel =
             explicitChannel
@@ -320,7 +320,7 @@ object BuzzAgentCommands {
         val timeoutSecs = args.flag("timeout")?.toLongOrNull() ?: 8
         val execTimeoutSecs = args.flag("exec-timeout")?.toLongOrNull() ?: 1800
         val worktreeBase = args.flag("worktree")
-        val baseRef = args.flag("base-ref") ?: "HEAD"
+        val baseRef = args.flag(FLAG_BASE_REF) ?: "HEAD"
         val branchPrefix = args.flag("branch-prefix") ?: "claude/job-"
         val fromChannel = args.bool("accept-from-channel")
         val acceptFrom =
@@ -340,7 +340,7 @@ object BuzzAgentCommands {
             "claim-untargeted",
             "parallel",
             "worktree",
-            "base-ref",
+            FLAG_BASE_REF,
             "branch-prefix",
             "poll",
             "exec-timeout",
@@ -714,4 +714,7 @@ object BuzzAgentCommands {
     }
 
     private const val MAX_BODY = 60_000
+
+    /** Flag name for the git ref each job's worktree branches off. */
+    private const val FLAG_BASE_REF = "base-ref"
 }

@@ -147,7 +147,7 @@ object BuzzCommands {
             ctx.prepare()
             val me = ctx.identity.pubKeyHex
             val relays = relaysFor(ctx, relaysFlag)
-            if (relays.isEmpty()) return Output.error("no_relays", "no relays: pass --relays ws://…")
+            if (relays.isEmpty()) return Output.error("no_relays", NO_RELAYS_MSG)
 
             // The deployed Buzz relay does NOT emit kind-41001; instead it (a) confirms a DM's
             // channel id synchronously in the open OK, and (b) addresses each member a kind-44100
@@ -518,7 +518,7 @@ object BuzzCommands {
             ctx.prepare()
             val me = ctx.identity.pubKeyHex
             val relays = relaysFor(ctx, relaysFlag)
-            if (relays.isEmpty()) return Output.error("no_relays", "no relays: pass --relays ws://…")
+            if (relays.isEmpty()) return Output.error("no_relays", NO_RELAYS_MSG)
 
             val filter = Filter(kinds = listOf(AgentTurnMetricEvent.KIND), tags = mapOf("p" to listOf(me)))
             val decrypted =
@@ -572,7 +572,7 @@ object BuzzCommands {
             ctx.prepare()
             val me = ctx.identity.pubKeyHex
             val relays = relaysFor(ctx, relaysFlag)
-            if (relays.isEmpty()) return Output.error("no_relays", "no relays: pass --relays ws://…")
+            if (relays.isEmpty()) return Output.error("no_relays", NO_RELAYS_MSG)
 
             val filter = Filter(kinds = listOf(PersonaEvent.KIND), authors = listOf(me))
             val personas =
@@ -599,6 +599,9 @@ object BuzzCommands {
             return 0
         }
     }
+
+    /** Message for the `no_relays` error: neither `--relays` nor the account's outbox had one. */
+    private const val NO_RELAYS_MSG = "no relays: pass --relays ws://…"
 
     /** The `--relays` set if given, else the account's outbox relays. */
     private suspend fun relaysFor(

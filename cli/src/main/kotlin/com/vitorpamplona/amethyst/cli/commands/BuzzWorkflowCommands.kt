@@ -125,7 +125,7 @@ object BuzzWorkflowCommands {
         val wfId = args.positionalOrNull(1) ?: return Output.error("bad_args", usage)
         val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
         val task = args.flag("task")?.takeIf { it.isNotBlank() } ?: return Output.error("bad_args", "pass --task TEXT")
-        val channel = args.flag("channel") ?: return Output.error("bad_args", "pass --channel GID")
+        val channel = args.flag("channel") ?: return Output.error("bad_args", MISSING_CHANNEL_MSG)
         args.rejectUnknown("task", "channel")
 
         Context.open(dataDir).use { ctx ->
@@ -181,7 +181,7 @@ object BuzzWorkflowCommands {
         val usage = "buzz workflow list RELAY --channel GID [--timeout SECS]"
         val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", usage)
         val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
-        val channel = args.flag("channel") ?: return Output.error("bad_args", "pass --channel GID")
+        val channel = args.flag("channel") ?: return Output.error("bad_args", MISSING_CHANNEL_MSG)
         val timeoutSecs = args.flag("timeout")?.toLongOrNull() ?: 8
         args.rejectUnknown("channel", "timeout")
 
@@ -301,7 +301,7 @@ object BuzzWorkflowCommands {
         val relayUrl = args.positionalOrNull(0) ?: return Output.error("bad_args", USAGE)
         val relay = normalizeGroupRelay(relayUrl) ?: return Output.error("bad_args", "invalid relay url: $relayUrl")
         val exec = args.flag("exec") ?: return Output.error("bad_args", "pass --exec CMD (the agent's work step)")
-        val channel = args.flag("channel") ?: return Output.error("bad_args", "pass --channel GID")
+        val channel = args.flag("channel") ?: return Output.error("bad_args", MISSING_CHANNEL_MSG)
         val approverInput = args.flag("approver") ?: return Output.error("bad_args", "pass --approver NPUB (who signs off the gate)")
         val approver =
             decodePublicKeyAsHexOrNull(approverInput.trim())?.takeIf { it.isValid() }
@@ -597,6 +597,10 @@ object BuzzWorkflowCommands {
             .orEmpty()
 
     private const val MAX = 60_000
+
+    /** Message for the `bad_args` error raised when `--channel` is missing. */
+    private const val MISSING_CHANNEL_MSG = "pass --channel GID"
+
     private val LIFECYCLE_KINDS =
         listOf(
             WorkflowTriggeredEvent.KIND,
