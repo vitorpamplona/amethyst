@@ -619,6 +619,10 @@ private fun List<Note>.toDiscoverApps(
             matchAuthor(author)
         }.mapNotNull { it.toDiscoverNostrApp() }
         .filter { it.app.coordinate !in excludeCoordinates }
+        // The observed store can surface the same addressable manifest twice (a replaceable note whose
+        // new version mutates its sort key inside the backing set), so collapse by coordinate to keep the
+        // grid keys unique — otherwise LazyVerticalGrid throws on the duplicate "ns:"/"np:" key.
+        .distinctBy { it.app.coordinate }
         .take(DISCOVER_NOSTR_LIMIT)
         .toList()
 
