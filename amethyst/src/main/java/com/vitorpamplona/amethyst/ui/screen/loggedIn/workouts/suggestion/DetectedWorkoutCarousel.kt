@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
@@ -211,7 +212,8 @@ private fun summaryLine(workout: DetectedWorkout): String {
     }
     parts.add(formatWorkoutDuration(workout.durationSeconds))
     if (workout.sessionCount > 1) {
-        parts.add(stringRes(R.string.workout_suggestion_combined_sessions, workout.sessionCount))
+        val sessions = workout.sessionCount
+        parts.add(pluralStringResource(R.plurals.workout_suggestion_combined_sessions, sessions, sessions))
     }
     return parts.joinToString(" · ")
 }

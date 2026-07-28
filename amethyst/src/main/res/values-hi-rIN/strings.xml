@@ -762,7 +762,10 @@
     <string name="workout_suggestion_connect_button">संयोजन</string>
     <string name="workout_suggestion_distance_km">%1$s सहस्रमीटर</string>
     <string name="workout_from_health_connect">स्वास्थ्य संयोजन से</string>
-    <string name="workout_suggestion_combined_sessions">%1$d गतिविधियाँ</string>
+    <plurals name="workout_suggestion_combined_sessions">
+        <item quantity="one">%1$d गतिविधि</item>
+        <item quantity="other">%1$d गतिविधियाँ</item>
+    </plurals>
     <string name="exercise_running">धावन</string>
     <string name="exercise_walking">पैदल</string>
     <string name="exercise_cycling">द्विचक्रिकाचालन</string>

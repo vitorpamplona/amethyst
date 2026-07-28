@@ -802,7 +802,12 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="workout_suggestion_connect_button">Poveži</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Iz Health Connect</string>
-    <string name="workout_suggestion_combined_sessions">%1$d aktivnosti</string>
+    <plurals name="workout_suggestion_combined_sessions">
+        <item quantity="one">%1$d aktivnost</item>
+        <item quantity="two">%1$d aktivnosti</item>
+        <item quantity="few">%1$d aktivnosti</item>
+        <item quantity="other">%1$d aktivnosti</item>
+    </plurals>
     <string name="exercise_running">Tek</string>
     <string name="exercise_walking">Hoja</string>
     <string name="exercise_cycling">Kolesarjenje</string>
