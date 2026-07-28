@@ -25,7 +25,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,7 +42,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.highlights.HighlightQuote
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteIndent
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteSpacing
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightedQuote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -65,7 +72,6 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
-import java.util.UUID
 
 @Composable
 fun RenderHighlight(
@@ -180,45 +186,27 @@ fun DisplayHighlight(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+        Spacer(Modifier.height(HighlightQuoteSpacing))
     }
 
     val quote =
-        remember(highlight) {
-            val uuid = UUID.randomUUID().toString()
-            if (context != null) {
-                if (context.contains(highlight)) {
-                    val cleanContext = context.replace(highlight, uuid)
-
-                    val quotedContext = cleanContext.split("\n").joinToString("\n") { "> ${it.removeSuffix(" ")}" }
-
-                    val quotedSplit = highlight.split("\n")
-                    val quotedHighlight = quotedSplit.joinToString("\n >") { "**${it.removeSuffix(" ")}**" }
-
-                    quotedContext.replace(uuid, quotedHighlight)
-                } else {
-                    highlight.split("\n").joinToString("\n") { "> ${it.removeSuffix(" ")}" }
-                }
-            } else {
-                highlight.split("\n").joinToString("\n") { "> ${it.removeSuffix(" ")}" }
-            }
+        remember(highlight, context, textFragmentPrefix) {
+            HighlightQuote.of(highlight, context, textFragmentPrefix)
         }
 
-    TranslatableRichTextViewer(
-        content = quote,
-        canPreview = canPreview && !makeItShort,
-        quotesLeft = quotesLeft,
+    HighlightedQuote(
+        text = quote.text,
+        highlight = quote.marked,
         modifier = Modifier.fillMaxWidth(),
-        tags = EmptyTagList,
-        backgroundColor = backgroundColor,
-        id = quote,
-        callbackUri = null,
-        accountViewModel = accountViewModel,
-        nav = nav,
     )
+
+    Spacer(Modifier.height(HighlightQuoteSpacing))
 
     val spaceWidth = measureSpaceWidth(textStyle = LocalTextStyle.current)
 
+    // Indented to sit under the quote text, not under the quote bar.
     FlowRow(
+        modifier = Modifier.padding(start = HighlightQuoteIndent),
         horizontalArrangement = Arrangement.spacedBy(spaceWidth),
         verticalArrangement = Arrangement.Center,
     ) {
