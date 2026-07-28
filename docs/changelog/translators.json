@@ -75,118 +75,12 @@
     "rchk": ""
   },
   "sinceLastTag": {
-    "tag": "v1.12.6",
-    "since": "2026-06-19T19:01:59-04:00",
+    "tag": "v1.13.0",
+    "since": "2026-07-28T10:52:38-04:00",
     "translators": [
       {
         "user": "vitorpamplona",
-        "languages": [
-          "Arabic, Saudi Arabia",
-          "Bengali",
-          "Chinese Simplified",
-          "Chinese Simplified, Singapore",
-          "Chinese Traditional",
-          "Chinese Traditional, Hong Kong",
-          "Czech",
-          "Dutch",
-          "Esperanto",
-          "Finnish",
-          "French",
-          "French, Canada",
-          "German",
-          "Greek",
-          "Hindi",
-          "Hungarian",
-          "Indonesian",
-          "Italian",
-          "Japanese",
-          "Korean",
-          "Latvian",
-          "Persian",
-          "Polish",
-          "Portuguese",
-          "Portuguese, Brazilian",
-          "Russian",
-          "Rսssian, Սkraine",
-          "Serbian (Cyrillic)",
-          "Slovenian",
-          "Spanish",
-          "Spanish, Mexico",
-          "Spanish, United States",
-          "Swahili, Kenya",
-          "Swedish",
-          "Tamil",
-          "Thai",
-          "Turkish",
-          "Ukrainian",
-          "Uzbek",
-          "Vietnamese"
-        ]
-      },
-      {
-        "user": "rajs19420616",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
-        "user": "StellarStoic",
-        "languages": [
-          "Slovenian"
-        ]
-      },
-      {
-        "user": "maxblake2015",
-        "languages": [
-          "Polish"
-        ]
-      },
-      {
-        "user": "hypnotichemionus4",
-        "languages": [
-          "Chinese Simplified"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "anthony-robin",
-        "languages": [
-          "French"
-        ]
-      },
-      {
-        "user": "crowdin.pretended462",
-        "languages": [
-          "German"
-        ]
-      },
-      {
-        "user": "Bardesss",
-        "languages": [
-          "Dutch"
-        ]
-      },
-      {
-        "user": "BitByBit21",
-        "languages": [
-          "Spanish",
-          "Spanish, Mexico",
-          "Spanish, United States"
-        ]
-      },
-      {
-        "user": "davotoula",
-        "languages": [
-          "Czech",
-          "German",
-          "Portuguese, Brazilian",
-          "Swedish"
-        ]
+        "languages": []
       },
       {
         "user": "greenart7c3",
@@ -218,6 +112,14 @@
       },
       {
         "user": "vazw",
+        "languages": []
+      },
+      {
+        "user": "Bardesss",
+        "languages": []
+      },
+      {
+        "user": "anthony-robin",
         "languages": []
       },
       {
@@ -253,7 +155,15 @@
         "languages": []
       },
       {
+        "user": "davotoula",
+        "languages": []
+      },
+      {
         "user": "crackadoo",
+        "languages": []
+      },
+      {
+        "user": "BitByBit21",
         "languages": []
       },
       {
@@ -313,6 +223,10 @@
         "languages": []
       },
       {
+        "user": "rajs19420616",
+        "languages": []
+      },
+      {
         "user": "Maxblake",
         "languages": []
       },
@@ -329,7 +243,15 @@
         "languages": []
       },
       {
+        "user": "StellarStoic",
+        "languages": []
+      },
+      {
         "user": "D4rkFIow",
+        "languages": []
+      },
+      {
+        "user": "summoner001",
         "languages": []
       },
       {
@@ -346,6 +268,14 @@
       },
       {
         "user": "Coool",
+        "languages": []
+      },
+      {
+        "user": "hypnotichemionus4",
+        "languages": []
+      },
+      {
+        "user": "maxblake2015",
         "languages": []
       },
       {
@@ -366,6 +296,10 @@
       },
       {
         "user": "Kevin_1",
+        "languages": []
+      },
+      {
+        "user": "crowdin.pretended462",
         "languages": []
       },
       {
