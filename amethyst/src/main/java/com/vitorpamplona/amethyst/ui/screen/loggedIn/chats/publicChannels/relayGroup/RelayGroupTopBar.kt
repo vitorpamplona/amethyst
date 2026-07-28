@@ -114,8 +114,11 @@ fun RelayGroupTopBar(
     val dmOther = if (isDm) channel.event?.buzzParticipants()?.firstOrNull { it != myPubkey } else null
 
     var menuOpen by remember { mutableStateOf(false) }
+    // My kind-10009 list, live: drives the Add/Remove-from-Messages toggle in the overflow below.
+    val joinedGroupIds by accountViewModel.account.relayGroupList.liveRelayGroupIds
+        .collectAsStateWithLifecycle()
     // Read once here (nav.canPop() is @Composable) so the post-action navigation can pop from a menu
-    // callback — leaving/removing a group shouldn't strand the user on the screen of a group they left.
+    // callback — leaving a group shouldn't strand the user on the screen of a group they left.
     val canPop = nav.canPop()
     var showInvite by remember { mutableStateOf(false) }
     var showJoinCode by remember { mutableStateOf(false) }
@@ -302,15 +305,26 @@ fun RelayGroupTopBar(
                                 },
                             )
                         }
-                        // Two distinct actions, never conflated: "Remove from Messages" drops the group
-                        // from my kind-10009 list but keeps my relay membership; "Leave" sends the
-                        // kind-9022 that actually removes me. Same split as the channel-invite card.
+                        // Two distinct actions, never conflated: the Messages toggle adds/drops the group
+                        // on my kind-10009 list but keeps my relay membership either way; "Leave" sends
+                        // the kind-9022 that actually removes me. Same split as the channel-invite card.
+                        //
+                        // Reads the live kind-10009 list rather than assuming the group is on it: this
+                        // bar also opens for channels reached from the workspace browse (a Buzz relay
+                        // lists every channel you're a member of, joined or not) and for ones you removed
+                        // earlier — both need the "Add" half. And because it's a reversible toggle, remove
+                        // does NOT pop back: you're still a member reading the channel, and staying is
+                        // what makes the entry flip so the action is visibly undoable. Leave still pops.
+                        val onMyList = channel.groupId in joinedGroupIds
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.remove_from_messages)) },
+                            text = { Text(stringRes(if (onMyList) R.string.remove_from_messages else R.string.add_to_messages)) },
                             onClick = {
                                 menuOpen = false
-                                accountViewModel.removeRelayGroupFromMessages(channel)
-                                if (canPop) nav.popBack()
+                                if (onMyList) {
+                                    accountViewModel.removeRelayGroupFromMessages(channel)
+                                } else {
+                                    accountViewModel.addRelayGroupToMessages(channel)
+                                }
                             },
                         )
                         DropdownMenuItem(

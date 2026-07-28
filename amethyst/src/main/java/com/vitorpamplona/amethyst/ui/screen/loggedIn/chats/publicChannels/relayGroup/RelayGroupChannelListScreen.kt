@@ -24,6 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +37,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -53,6 +56,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.pluralStringResource
@@ -90,6 +94,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzDmListViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzImportRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzRelayImportViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.BuzzWorkspaceOverflowMenu
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.HiddenDmHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.PresenceDot
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
@@ -112,6 +117,13 @@ private const val CHANNEL_LIST_WARMUP_LIMIT = 10
 
 /** Grace period before offering the Tor→clearnet escape hatch, so a slow-but-working relay isn't nagged. */
 private const val TOR_CLEARNET_HINT_DELAY_MS = 6_000L
+
+/**
+ * Bottom room the list leaves for the floating action button: a 56dp FAB + the Scaffold's 16dp margin
+ * + slack, so the last row's overflow menu stays tappable instead of sitting under the FAB. Matches
+ * the value `JobBoardScreen` already uses.
+ */
+private val FAB_CLEARANCE = 96.dp
 
 /**
  * Lists every channel a relay hosts (its kind 39000-39003 directory), so the user
@@ -200,6 +212,12 @@ fun RelayGroupChannelListScreen(
     val dmVm: BuzzDmListViewModel = viewModel(key = "BuzzDmInline-${relay.url}")
     LaunchedEffect(relay, isBuzz) { if (isBuzz) dmVm.bind(accountViewModel.account, relay.url) }
     val dmRows by dmVm.rows.collectAsStateWithLifecycle()
+    val hiddenDmRows by dmVm.hiddenRows.collectAsStateWithLifecycle()
+    // DMs I took off Messages, parked behind a collapsed "Hidden (N)" tail below the section. They
+    // live here and not only on the full inbox screen because that screen sits behind a "see all"
+    // row that never appears until a community has more DMs than fit inline — so without this, a
+    // hidden DM in a small workspace would have no way back at all.
+    var showHiddenDms by remember { mutableStateOf(false) }
 
     // A Buzz workspace's channels come in three flavours, distinguished by the relay-signed 39000
     // `channel_type`: chat "stream" channels, "forum" channels (threaded posts), and "dm" channels
@@ -345,7 +363,14 @@ fun RelayGroupChannelListScreen(
                 }
             }
         } else {
-            LazyColumn(modifier = Modifier.padding(padding)) {
+            // The Scaffold's `padding` carries the top/bottom bars but deliberately not the FAB — a FAB
+            // overlays content by design, so clearing it is the list's job. As contentPadding (not a
+            // modifier) so rows scroll *through* that strip and only come to rest clear of it; the
+            // modifier form would shrink the viewport and leave the FAB floating over dead space.
+            LazyColumn(
+                modifier = Modifier.padding(padding),
+                contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+            ) {
                 if (showTorHint) {
                     item(key = "tor-hint") {
                         TorClearnetBanner(
@@ -391,6 +416,7 @@ fun RelayGroupChannelListScreen(
                                     groupId = groupId,
                                     isAdded = groupId.id in buzzAdded,
                                     onAdd = { buzzVm.add(groupId) },
+                                    onRemove = { buzzVm.remove(groupId) },
                                     accountViewModel = accountViewModel,
                                     onOpen = { nav.nav(Route.RelayGroup(groupId.id, relay.url)) },
                                     isStarred = groupId.id in starred,
@@ -416,6 +442,7 @@ fun RelayGroupChannelListScreen(
                                     groupId = groupId,
                                     isAdded = groupId.id in buzzAdded,
                                     onAdd = { buzzVm.add(groupId) },
+                                    onRemove = { buzzVm.remove(groupId) },
                                     accountViewModel = accountViewModel,
                                     // A forum channel's primary content is its threads (kind-45001 posts), not a
                                     // kind-9 chat, so open the forum/threads view directly instead of the chat.
@@ -455,7 +482,14 @@ fun RelayGroupChannelListScreen(
                     } else {
                         val shown = dmRows.take(INLINE_DM_LIMIT)
                         items(shown, key = { "dm-${it.channelId}" }) { row ->
-                            BuzzDmInlineRow(row, myPubkey, accountViewModel, nav) {
+                            BuzzDmInlineRow(
+                                row = row,
+                                myPubkey = myPubkey,
+                                isHidden = false,
+                                onToggleMessages = { dmVm.removeFromMessages(row) },
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            ) {
                                 nav.nav(Route.RelayGroup(row.channelId, row.relayUrl.url))
                             }
                         }
@@ -464,6 +498,30 @@ fun RelayGroupChannelListScreen(
                             item(key = "dm-see-all") {
                                 SeeAllRow(pluralStringResource(R.plurals.buzz_dm_see_all_count, extra, extra)) {
                                     nav.nav(Route.BuzzDmList(relay.url))
+                                }
+                            }
+                        }
+                    }
+                    if (hiddenDmRows.isNotEmpty()) {
+                        item(key = "dm-hidden-header") {
+                            HiddenDmHeader(
+                                count = hiddenDmRows.size,
+                                expanded = showHiddenDms,
+                                onToggle = { showHiddenDms = !showHiddenDms },
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                        if (showHiddenDms) {
+                            items(hiddenDmRows, key = { "dm-hidden-${it.channelId}" }) { row ->
+                                BuzzDmInlineRow(
+                                    row = row,
+                                    myPubkey = myPubkey,
+                                    isHidden = true,
+                                    onToggleMessages = { dmVm.addToMessages(row) },
+                                    accountViewModel = accountViewModel,
+                                    nav = nav,
+                                ) {
+                                    nav.nav(Route.RelayGroup(row.channelId, row.relayUrl.url))
                                 }
                             }
                         }
@@ -572,18 +630,25 @@ private fun RelayGroupSectionHeader(
 
 /**
  * One inline Direct-Message conversation row inside the community view: the counterpart's avatar +
- * name (or a "+N" cluster label for a group DM), a preview of the last message, and a compact
- * last-activity time. The channel's recent content is warmed while the row is visible so the preview
- * fills in ahead of a tap. Tapping opens the DM as its relay-group chat.
+ * name (or a "+N" cluster label for a group DM), a preview of the last message, a compact
+ * last-activity time, and an overflow holding the Add/Remove-from-Messages toggle. The channel's
+ * recent content is warmed while the row is visible so the preview fills in ahead of a tap. Tapping
+ * opens the DM as its relay-group chat.
+ *
+ * [isHidden] renders the row faded and flips the overflow to "Add to Messages" — a hidden DM is a
+ * live conversation the viewer merely parked, so it stays openable and reversible.
  */
 @Composable
 private fun BuzzDmInlineRow(
     row: BuzzDmListViewModel.DmRow,
     myPubkey: HexKey,
+    isHidden: Boolean,
+    onToggleMessages: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
     onClick: () -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     val others = row.others.ifEmpty { listOf(myPubkey) }
     val leadHex = others.first()
     val leadUser = remember(leadHex) { LocalCache.getOrCreateUser(leadHex) }
@@ -612,7 +677,8 @@ private fun BuzzDmInlineRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
+                .alpha(if (isHidden) 0.55f else 1f),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -639,6 +705,33 @@ private fun BuzzDmInlineRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        Box {
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(
+                    symbol = MaterialSymbols.MoreVert,
+                    contentDescription = stringRes(R.string.more_options),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    leadingIcon = {
+                        Icon(
+                            symbol = if (isHidden) MaterialSymbols.Add else MaterialSymbols.VisibilityOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    text = { Text(stringRes(if (isHidden) R.string.add_to_messages else R.string.remove_from_messages)) },
+                    onClick = {
+                        menuOpen = false
+                        onToggleMessages()
+                    },
+                )
+            }
         }
     }
 }

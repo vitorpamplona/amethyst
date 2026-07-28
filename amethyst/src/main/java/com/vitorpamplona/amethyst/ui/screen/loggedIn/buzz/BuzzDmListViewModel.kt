@@ -71,8 +71,11 @@ import java.util.concurrent.ConcurrentHashMap
  *   `t` = `dm` — that same 39000 also carries the roster the shared chat composer's member gate
  *   needs, and the DM participants;
  * - subscribes the per-viewer [DmVisibilityEvent] (`kind:30622`) so a hidden DM (tracked in
- *   [BuzzDmRegistry]) drops out;
- * - projects the visible DMs into [rows], sorted by last message time.
+ *   [BuzzDmRegistry]) moves from [rows] to [hiddenRows];
+ * - projects the visible DMs into [rows] and the hidden ones into [hiddenRows], both sorted by
+ *   last message time. Hidden DMs stay projected (rather than being dropped on the floor) so the
+ *   inbox can offer them back — hiding is reversible, and a conversation with no way back is a
+ *   conversation the user has lost.
  */
 class BuzzDmListViewModel : ViewModel() {
     @Volatile private var account: Account? = null
@@ -87,6 +90,10 @@ class BuzzDmListViewModel : ViewModel() {
 
     private val _rows = MutableStateFlow<List<DmRow>>(emptyList())
     val rows: StateFlow<List<DmRow>> = _rows.asStateFlow()
+
+    /** The DMs I hid (per the relay's 30622 snapshot), newest-first — offered back under "Hidden". */
+    private val _hiddenRows = MutableStateFlow<List<DmRow>>(emptyList())
+    val hiddenRows: StateFlow<List<DmRow>> = _hiddenRows.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -211,14 +218,17 @@ class BuzzDmListViewModel : ViewModel() {
         account.client.fetchAllWithHooks(filters = byRelay, timeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
     }
 
-    /** Project the discovered DM channels (metadata `t` = `dm`), minus my hidden set, newest-first. */
+    /**
+     * Project the discovered DM channels (metadata `t` = `dm`) newest-first, split by my hidden set
+     * (the relay's 30622 snapshot) into [rows] and [hiddenRows]. Both halves come from one pass so a
+     * DM can only ever be in one of them.
+     */
     private fun rebuildRows(account: Account) {
         val myPubkey = account.userProfile().pubkeyHex
         val hidden = BuzzDmRegistry.hiddenFor(myPubkey)
-        _rows.value =
+        val (hiddenDms, visibleDms) =
             memberChannels.entries
                 .mapNotNull { (channelId, relay) ->
-                    if (channelId in hidden) return@mapNotNull null
                     val channel = LocalCache.getOrCreateRelayGroupChannel(GroupId(channelId, relay))
                     val metadata = channel.event ?: return@mapNotNull null
                     if (!metadata.isBuzzDm()) return@mapNotNull null
@@ -231,6 +241,38 @@ class BuzzDmListViewModel : ViewModel() {
                         lastActivity = lastActivityFor(channelId),
                     )
                 }.sortedByDescending { it.lastActivity }
+                .partition { it.channelId in hidden }
+        _rows.value = visibleDms
+        _hiddenRows.value = hiddenDms
+    }
+
+    /**
+     * Take [row] off Messages with a kind-41012 hide command. Server-side and per-viewer: the relay
+     * republishes my 30622 snapshot with this channel in it, which moves the row to [hiddenRows].
+     * Membership is untouched — nobody else's inbox changes, and [addToMessages] brings it back.
+     */
+    fun removeFromMessages(row: DmRow) {
+        val account = account ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            account.hideBuzzDm(LocalCache.getOrCreateRelayGroupChannel(GroupId(row.channelId, row.relayUrl)))
+        }
+    }
+
+    /**
+     * Put a hidden DM back on Messages. Buzz has no "unhide" command — re-opening the conversation is
+     * the un-hide: a kind-41010 with the same participants resolves to the same canonical channel and
+     * drops it from the 30622 hidden snapshot. A self-DM has no `others`, so send myself, which is
+     * what the relay derived that channel from (and satisfies kind-41010's 1-8 participant rule).
+     */
+    fun addToMessages(row: DmRow) {
+        val account = account ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val me = account.userProfile().pubkeyHex
+            account.openBuzzDm(row.relayUrl, row.others.ifEmpty { listOf(me) })
+            // The relay's new 30622 normally arrives on the live subscription; refresh anyway so the
+            // row returns even if this screen's socket missed the snapshot.
+            refresh()
+        }
     }
 
     /** Newest message `created_at` for [channelId] from [LocalCache], or 0 when the DM is empty. */

@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.model.nip29RelayGroups
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -96,6 +98,27 @@ class RelayGroupListState(
             .transformLatest { groups -> emit(groups.mapTo(mutableSetOf()) { it.relayUrl }) }
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    /**
+     * The joined groups as normalized [GroupId]s — what the UI asks when it needs to know whether a
+     * channel is on my Messages list ("Remove from Messages" vs "Add to Messages"). The stored tag
+     * carries a raw relay url string (another client may not have normalized it the way we do), so
+     * normalize before comparing instead of matching [GroupTag] strings.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val liveRelayGroupIds: StateFlow<Set<GroupId>> =
+        liveRelayGroupList
+            .transformLatest { groups ->
+                emit(
+                    groups.mapNotNullTo(mutableSetOf()) { tag ->
+                        RelayUrlNormalizer.normalizeOrNull(tag.relayUrl)?.let { GroupId(tag.groupId, it) }
+                    },
+                )
+            }.flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    /** Is [groupId] currently on my kind-10009 list (i.e. does it show on Messages)? */
+    fun isOnMyList(groupId: GroupId) = groupId in liveRelayGroupIds.value
 
     private fun RelayGroupChannel.toGroupTag() = GroupTag(groupId.id, groupId.relayUrl.url, event?.name())
 

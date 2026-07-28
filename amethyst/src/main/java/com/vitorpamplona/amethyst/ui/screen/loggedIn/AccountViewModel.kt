@@ -1689,16 +1689,24 @@ class AccountViewModel(
         }
 
     /**
-     * Accept a channel somebody added me to: write it into my kind-10009 so it shows on Messages and
-     * follows me to other devices. No kind-9021 join — the relay already put me in the roster, which is
-     * why the channel opens and accepts posts today; this only records *my* decision to surface it.
+     * Put a relay group (back) on Messages: write it into my kind-10009 so it shows and follows me to
+     * other devices, and clear the dismissal [removeRelayGroupFromMessages] left behind so a Buzz relay
+     * re-announcing my membership isn't filtered out. No kind-9021 join — the relay roster is untouched
+     * by both halves of this toggle; this only records *my* decision to surface the channel.
      */
-    fun acceptChannelInvite(channel: RelayGroupChannel) =
+    fun addRelayGroupToMessages(channel: RelayGroupChannel) =
         launchSigner {
             account.settings.undismissChannelInvite(channel.groupId.id)
             account.follow(channel)
             BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
         }
+
+    /**
+     * Accept a channel somebody added me to. Identical to [addRelayGroupToMessages] — accepting an
+     * invite *is* surfacing the channel, since the relay already put me in the roster (which is why
+     * the channel opens and accepts posts today).
+     */
+    fun acceptChannelInvite(channel: RelayGroupChannel) = addRelayGroupToMessages(channel)
 
     /**
      * Keep the channel off Messages without touching membership. Local and reversible — I stay in the
