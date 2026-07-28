@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -321,7 +322,15 @@ fun ConcordChannelListScreen(
                 )
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+            // Bottom room for the FAB, which the Scaffold's `padding` deliberately doesn't account for
+            // (a FAB overlays content) — without it the last row's manager overflow menu sits under it
+            // and can't be tapped. As contentPadding so rows scroll *through* the strip rather than the
+            // viewport shrinking. Gated on [canManageChannels] because that is what renders the FAB:
+            // a plain member has nothing to clear, and no reason to lose the space.
+            LazyColumn(
+                Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(bottom = if (canManageChannels) FAB_CLEARANCE else 0.dp),
+            ) {
                 items(channels, key = { it.key }) { entry ->
                     val def = entry.value.definition
                     val name = def.name.ifBlank { entry.key }
@@ -451,6 +460,13 @@ private fun ConcordChannelListRow(
 
 /** How many recent-poster avatars a channel row's facepile shows at most. */
 private const val FACEPILE_MAX = 4
+
+/**
+ * Bottom room the list leaves for the floating action button: a 56dp FAB + the Scaffold's 16dp margin
+ * + slack, so the last row's overflow menu stays tappable instead of sitting under the FAB. Matches
+ * the value `JobBoardScreen` and the relay-group list screens use.
+ */
+private val FAB_CLEARANCE = 96.dp
 
 /**
  * The line under a channel name. When someone is composing it shows a live italic "X is typing…";
