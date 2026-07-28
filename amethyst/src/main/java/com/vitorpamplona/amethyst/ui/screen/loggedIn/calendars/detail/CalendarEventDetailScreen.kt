@@ -138,7 +138,6 @@ fun CalendarEventDetailScreen(
                 title = {
                     Text(
                         text = stringRes(R.string.route_calendar_event_detail),
-                        style = MaterialTheme.typography.titleMedium,
                     )
                 },
                 navigationIcon = {
