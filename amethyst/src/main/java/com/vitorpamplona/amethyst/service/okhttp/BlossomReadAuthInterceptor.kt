@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.service.okhttp
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import okhttp3.Interceptor
+import okhttp3.Request
 import okhttp3.Response
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Retries a Blossom blob download with a BUD-01 `t=get` authorization when the
@@ -51,10 +53,24 @@ import okhttp3.Response
  * signer is available or signing times out, and is only consulted on a real
  * `401`, so an unauthenticated user simply keeps seeing the broken image
  * rather than paying any signing cost.
+ *
+ * The first blob from an auth-gated host costs an extra round trip (anonymous
+ * `GET` → `401` → signed retry), but that host is then remembered in
+ * [knownAuthHosts] so every later blob from it is signed **up front** — one
+ * round trip, not two. This matters on a Buzz community feed where nearly every
+ * image comes from the same gated host: without it each image would keep paying
+ * the wasted 401 probe. The learned host also short-circuits to anonymous when
+ * no signer is available, so a logged-out user never re-probes needlessly.
  */
 class BlossomReadAuthInterceptor(
     private val authHeaderProvider: (host: String, sha256: HexKey) -> String?,
 ) : Interceptor {
+    // Hosts observed to answer 401 to an anonymous Blossom GET. Small (a user
+    // follows a handful of auth-gated servers at most) and shared across all
+    // clients derived from the same factory. newKeySet() is thread-safe for the
+    // concurrent reads/writes of parallel feed downloads.
+    private val knownAuthHosts: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
 
@@ -65,23 +81,35 @@ class BlossomReadAuthInterceptor(
         }
 
         val sha256 = blossomHashOrNull(request.url.encodedPath) ?: return chain.proceed(request)
+        val host = request.url.host
+
+        // Known-gated host: skip the anonymous probe and sign the first attempt.
+        // Falls through to anonymous only when we can't produce a token (no
+        // signer / timeout) — the server would 401 either way.
+        if (host in knownAuthHosts) {
+            authHeaderProvider(host, sha256)?.let { header ->
+                return chain.proceed(request.withAuth(header))
+            }
+        }
 
         val response = chain.proceed(request)
         if (response.code != 401) return response
 
-        val header = authHeaderProvider(request.url.host, sha256) ?: return response
+        // Learn the host so its next blob is signed up front.
+        knownAuthHosts.add(host)
+
+        val header = authHeaderProvider(host, sha256) ?: return response
 
         // Close the 401 body before replaying so the connection can be reused.
         response.close()
 
-        val authed =
-            request
-                .newBuilder()
-                .header("Authorization", header)
-                .build()
-
-        return chain.proceed(authed)
+        return chain.proceed(request.withAuth(header))
     }
+
+    private fun Request.withAuth(header: String) =
+        newBuilder()
+            .header("Authorization", header)
+            .build()
 
     companion object {
         private val SHA256_HEX = Regex("^[0-9a-f]{64}$")

@@ -163,6 +163,46 @@ class BlossomReadAuthInterceptorTest {
         response.close()
     }
 
+    @Test
+    fun learnsHostThenSignsSubsequentBlobsUpFront() {
+        val provider = RecordingProvider(header = "Nostr token")
+        val interceptor = BlossomReadAuthInterceptor(provider::header)
+        val otherSha = "b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553"
+
+        // First blob learns the host via the 401 probe + signed retry.
+        val first = fakeChain("https://$host/media/$sha.png", codes = listOf(401, 200))
+        interceptor.intercept(first.asChain()).close()
+        assertEquals(2, first.requests.size)
+
+        // Second, different blob on the same host is signed on the first attempt —
+        // no anonymous probe, so a single request.
+        val second = fakeChain("https://$host/media/$otherSha.png", codes = listOf(200))
+        val response = interceptor.intercept(second.asChain())
+
+        assertEquals(200, response.code)
+        assertEquals("no anonymous probe on a known-gated host", 1, second.requests.size)
+        assertEquals("Nostr token", second.requests.single().header("Authorization"))
+        response.close()
+    }
+
+    @Test
+    fun learnedHostWithoutSignerDoesNotLoop() {
+        val provider = RecordingProvider(header = null)
+        val interceptor = BlossomReadAuthInterceptor(provider::header)
+
+        val first = fakeChain("https://$host/media/$sha.png", codes = listOf(401))
+        interceptor.intercept(first.asChain()).close()
+
+        // Host is now known, but with no signer the preemptive path must fall
+        // back to a single anonymous request rather than retrying endlessly.
+        val second = fakeChain("https://$host/media/$sha.png", codes = listOf(401))
+        val response = interceptor.intercept(second.asChain())
+
+        assertEquals(401, response.code)
+        assertEquals(1, second.requests.size)
+        response.close()
+    }
+
     private class RecordingProvider(
         private val header: String?,
     ) {
