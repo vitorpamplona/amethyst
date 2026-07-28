@@ -377,6 +377,7 @@ private fun TeleportCard(onClick: () -> Unit) {
 
 internal fun GeohashChannelLevel.label(): String =
     when (this) {
+        GeohashChannelLevel.CONTINENT -> "Continent"
         GeohashChannelLevel.REGION -> "Region"
         GeohashChannelLevel.PROVINCE -> "Province"
         GeohashChannelLevel.CITY -> "City"
