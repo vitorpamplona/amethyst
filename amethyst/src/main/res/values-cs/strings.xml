@@ -341,6 +341,7 @@
     <string name="concord_leave_message">Opustit %1$s? Bude odebrána ze seznamu tohoto účtu a přestane se synchronizovat na vašich zařízeních. Komunita o tom nedostane oznámení a nebudete odebráni z jejího seznamu členů. Zprávy, které již nedokážete dešifrovat, mohou být neobnovitelné, a vrátit se můžete pouze s novou pozvánkou.</string>
     <string name="concord_leave_owner_warning">Tuto komunitu jste vytvořili vy. Opuštěním ji nesmažete ani ji nepředáte nikomu jinému, ale zahodíte klíč vlastníka uložený ve vašem seznamu — už byste ji nemohli spravovat.</string>
     <string name="concord_edit_relays_desc">Kde jsou publikovány a čteny šifrované roviny této komunity.</string>
+    <string name="concord_dissolved_read_only">Tato komunita byla rozpuštěna a je nyní pouze pro čtení. Její historii si stále můžete přečíst, ale nové zprávy už nelze odesílat.</string>
     <string name="concord_typing_one">%1$s píše…</string>
     <string name="concord_typing_two">%1$s a %2$s píší…</string>
     <string name="concord_typing_many">Píše několik lidí…</string>
@@ -4704,6 +4705,7 @@
     <string name="buzz_workflow_def_title">Nová definice workflow</string>
     <string name="buzz_workflow_def_desc">Pojmenuje ho pro kanál a publikuje jeho YAML recept (kind-30620). Skutečný relay Buzz ten YAML spouští. Při vlastním hostování runner spouští svůj nakonfigurovaný příkaz — zde definice běh jen pojmenovává a kataloguje.</string>
     <string name="buzz_workflow_def_name">Název</string>
+    <string name="buzz_workflow_def_name_hint">build-a-test</string>
     <string name="buzz_workflow_def_yaml">YAML recept</string>
     <string name="buzz_workflow_def_publish_failed">Definici se nepodařilo publikovat — ověřte, že můžete přispívat do tohoto pracovního prostoru.</string>
     <string name="buzz_workflow_publishing">Publikování…</string>
@@ -4747,6 +4749,4 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
-    <string name="buzz_workflow_def_name_hint">build-a-test</string>
-    <string name="concord_dissolved_read_only">Tato komunita byla rozpuštěna a je nyní pouze pro čtení. Její historii si stále můžete přečíst, ale nové zprávy už nelze odesílat.</string>
 </resources>
