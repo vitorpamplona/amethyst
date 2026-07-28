@@ -129,6 +129,48 @@ fun TranslatableRichTextViewer(
     )
 }
 
+/**
+ * The translation of [content] under the current language settings, or [content] unchanged when
+ * no translation applies. Same machinery and cache as [TranslatableRichTextViewer] but without
+ * the status bar, for callers that already render one and need a second string translated in
+ * step with it — e.g. a NIP-84 highlight, which must translate the quoted passage alongside the
+ * context in order to keep locating the passage inside it.
+ */
+@Composable
+fun rememberTranslation(
+    content: String,
+    accountViewModel: AccountViewModel,
+): String {
+    val languages = accountViewModel.account.settings.syncedSettings.languages
+    val translateTo by languages.translateTo.collectAsStateWithLifecycle()
+    val dontTranslateFrom by languages.dontTranslateFrom.collectAsStateWithLifecycle()
+
+    val state =
+        remember(content, translateTo, dontTranslateFrom) {
+            mutableStateOf(
+                TranslationsCache.get(content, translateTo, dontTranslateFrom)
+                    ?: TranslationConfig(content, null, null),
+            )
+        }
+
+    LaunchedEffect(content, translateTo, dontTranslateFrom) {
+        try {
+            state.value =
+                withContext(Dispatchers.IO) {
+                    translateAndCache(content, translateTo, dontTranslateFrom)
+                }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Transient ML Kit / network failure — keep the original, same as the viewer does.
+        }
+    }
+
+    val config = state.value
+    val translated = config.sourceLang != null && config.targetLang != null && config.sourceLang != config.targetLang
+    return if (translated) config.result else content
+}
+
 @Composable
 private fun RenderTextWithTranslateOptions(
     translatedTextState: TranslationConfig,

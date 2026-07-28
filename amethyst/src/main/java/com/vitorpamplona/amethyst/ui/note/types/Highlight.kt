@@ -25,7 +25,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,8 +41,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.highlights.HighlightQuote
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteIndent
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteSpacing
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightedQuote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -50,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayEvent
 import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
+import com.vitorpamplona.amethyst.ui.components.rememberTranslation
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -65,7 +74,6 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
-import java.util.UUID
 
 @Composable
 fun RenderHighlight(
@@ -180,45 +188,51 @@ fun DisplayHighlight(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+        Spacer(Modifier.height(HighlightQuoteSpacing))
     }
 
     val quote =
-        remember(highlight) {
-            val uuid = UUID.randomUUID().toString()
-            if (context != null) {
-                if (context.contains(highlight)) {
-                    val cleanContext = context.replace(highlight, uuid)
-
-                    val quotedContext = cleanContext.split("\n").joinToString("\n") { "> ${it.removeSuffix(" ")}" }
-
-                    val quotedSplit = highlight.split("\n")
-                    val quotedHighlight = quotedSplit.joinToString("\n >") { "**${it.removeSuffix(" ")}**" }
-
-                    quotedContext.replace(uuid, quotedHighlight)
-                } else {
-                    highlight.split("\n").joinToString("\n") { "> ${it.removeSuffix(" ")}" }
-                }
-            } else {
-                highlight.split("\n").joinToString("\n") { "> ${it.removeSuffix(" ")}" }
-            }
+        remember(highlight, context, textFragmentPrefix) {
+            HighlightQuote.of(highlight, context, textFragmentPrefix)
         }
 
     TranslatableRichTextViewer(
-        content = quote,
-        canPreview = canPreview && !makeItShort,
-        quotesLeft = quotesLeft,
-        modifier = Modifier.fillMaxWidth(),
-        tags = EmptyTagList,
-        backgroundColor = backgroundColor,
-        id = quote,
-        callbackUri = null,
+        content = quote.text,
+        id = quote.text,
+        // Indented like the attribution, so the "Auto-translated from …" line sits under the
+        // quote text rather than under the bar.
+        translationMessageModifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 5.dp, start = HighlightQuoteIndent),
         accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    ) { shown ->
+        // A translation rewrites the passage, so the original offsets stop locating anything.
+        // Translate the quote too and re-find it inside the translated context — ML Kit works
+        // sentence by sentence, so a quote that is one or more whole sentences comes back the
+        // same either way. HighlightQuote.of degrades to the quote alone when the two
+        // translations don't line up, which beats marking a span the reader never highlighted.
+        val translatedQuote = rememberTranslation(highlight, accountViewModel)
+
+        val display =
+            remember(shown, translatedQuote, quote) {
+                if (shown == quote.text) quote else HighlightQuote.of(translatedQuote, shown)
+            }
+
+        HighlightedQuote(
+            text = display.text,
+            highlight = display.marked,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    Spacer(Modifier.height(HighlightQuoteSpacing))
 
     val spaceWidth = measureSpaceWidth(textStyle = LocalTextStyle.current)
 
+    // Indented to sit under the quote text, not under the quote bar.
     FlowRow(
+        modifier = Modifier.padding(start = HighlightQuoteIndent),
         horizontalArrangement = Arrangement.spacedBy(spaceWidth),
         verticalArrangement = Arrangement.Center,
     ) {
