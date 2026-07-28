@@ -1,17 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
+    <string name="login_title">Dobrodošli v Amethyst</string>
+    <string name="login_subtitle">Vpiši se v svoj Nostr račun</string>
+    <string name="login_subtitle_desktop">Nostr odjemalec za namizje</string>
+    <string name="login_card_title">Vpiši se s svojim Nostr ključem</string>
+    <string name="login_card_subtitle">nsec za poln dostop, bunker:// za oddaljeno podpisovanje ali npub samo za branje</string>
+    <string name="login_with_key">Vpiši se z ključem</string>
+    <string name="login_button">Vpis</string>
+    <string name="login_generate_new">Ustvari nov ključ</string>
+    <string name="login_generate_button">Ustvari novega</string>
+    <string name="login_key_hint">Vpiši svoj zasebni ključ (nsec) ali javni ključ (npub)</string>
+    <string name="login_key_label">nsec, bunker://, ali npub</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
+    <string name="login_show_key">Prikaži kključ</string>
+    <string name="login_hide_key">Skrij ključ</string>
     <!-- New Key Warning -->
+    <string name="new_key_warning_title">POMEMBNO: Shrani svoje ključe!</string>
+    <string name="new_key_warning_message">Vaš tajni ključ (nsec) je EDINI način za dostop do vašega računa. Če ga izgubite, je vaš račun za vselej izgubljen. Shranite ga na varno mesto!</string>
+    <string name="new_key_public_label">Javni ključ (za deljenje):</string>
+    <string name="new_key_secret_label">Zasebni ključ (NIKOLI ne deli!)</string>
+    <string name="new_key_continue_button">Shranil sem moje ključe, nadaljuj</string>
     <!-- Common Actions -->
+    <string name="action_copy">Kopiraj</string>
+    <string name="action_paste">Prilepi</string>
+    <string name="action_cancel">Prekliči</string>
+    <string name="action_ok">OK</string>
+    <string name="action_save">Shrani</string>
+    <string name="action_delete">Izbriši</string>
+    <string name="action_share">Deli</string>
     <!-- Errors -->
+    <string name="error_invalid_key">Neveljavna oblika ključa. Preverite vnos in poskusite znova.</string>
+    <string name="error_network">Omrežna napaka. Preverite svojo povezavo.</string>
+    <string name="error_generic">Prišlo je do napake. Prosimo, poskusite znova.</string>
     <!-- Loading & Empty States -->
+    <string name="action_refresh">Osveži</string>
+    <string name="action_try_again">Poskusi znova</string>
+    <string name="feed_empty">Vir vsebin je prazen</string>
+    <string name="error_loading_feed">Napaka pri nalaganju vsebin: %s</string>
     <!-- Placeholder Screens -->
+    <string name="screen_search_title">Išči</string>
+    <string name="screen_search_description">Išči uporabnike, zapiske ali ključnike</string>
+    <string name="screen_messages_title">Sporočila</string>
+    <string name="screen_messages_description">Vaša šifrirana neposredna sporočila (ZS) bodo prikazana tukaj.</string>
+    <string name="screen_notifications_title">Obvestila</string>
+    <string name="screen_notifications_description">Omembe, odgovori in odzivne ikone bodo prikazani tukaj.</string>
     <!-- Accessibility -->
+    <string name="accessibility_user_avatar">Uporabniška slika profila</string>
+    <string name="accessibility_navigate">Krmarjenje</string>
     <!-- Relay history paging (shared feed markers + status card) -->
+    <string name="chats_history_loading_label">Nalagam:</string>
+    <string name="chats_history_fully_loaded_label">Popolnoma naloženo</string>
+    <string name="chats_history_fully_loaded">(popolnoma naloženo)</string>
+    <string name="chats_history_by_relay">Zgodovina po releju</string>
+    <string name="chats_history_stalled_retry">Poskusim znova ko obnovite to okno</string>
+    <string name="chats_history_older">starejša %1$s sporočila</string>
+    <string name="chats_history_all_caught_up">Vse ste na tekočem</string>
+    <string name="chats_history_reached_start">Dosegli ste začetek svojih %1$s sporočil</string>
+    <string name="chats_history_subtitle">%1$s · %2$s · naloženo od %3$s</string>
+    <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
+    <string name="chats_history_waiting">Čakam na %1$s</string>
+    <string name="chats_history_incomplete">Nekateri releji se niso odzvali</string>
+    <string name="chats_history_incomplete_sub">%1$s nedosegljivih · tapni za ogled kateri</string>
+    <string name="chats_history_relays_title">%1$s · zgodovina po releju</string>
+    <string name="chats_history_relay_since">že od %1$s</string>
+    <string name="action_dismiss">Prekliči</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d rele</item>
+        <item quantity="two">%1$d releja</item>
+        <item quantity="few">%1$d releji</item>
+        <item quantity="other">%1$d relejev</item>
+    </plurals>
     <!-- Notes & Replies -->
+    <string name="replying_to">odgovoriti </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_kind">nApplet</string>
+    <string name="nsite_website_kind">nSite</string>
+    <string name="napplet_card_permissions">Do česa lahko ta aplikacija dostopa</string>
+    <string name="nsite_root_site">Izhodiščno spletišče</string>
+    <string name="nsite_source">Vir:</string>
+    <string name="nsite_servers">Strežniki:</string>
+    <string name="nsite_open">Odpri</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Uporabi direktni URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_title">Vzdevek</string>
+    <string name="nickname_dialog_explainer">Prikazano namesto imena tega uporabnika, povsod v aplikaciji. Shranjeno je šifrirano v vaši kontaktni kartici: samo vi ga lahko preberete. Vtipkajte : za uporabo svojih lastnih emoji-jev.</string>
+    <string name="nickname_label">Vzdevek</string>
+    <string name="nickname_summary_label">Zasebni zapisek o tem uporabniku</string>
+    <string name="nickname_save">Shrani</string>
+    <string name="nickname_cancel">Prekliči</string>
     <string name="git_status_open">Odprto</string>
     <string name="git_status_merged">Združeno</string>
     <string name="git_status_closed">Zaključeno</string>
@@ -59,6 +139,7 @@
     <string name="road_event_traffic_jam">Zastoj</string>
     <string name="road_event_unknown">Dogodek na cesti</string>
     <string name="podcast_value_zap_split_hint">Zapi bojo razdeljeni med:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Vrednost za vrednost</string>
     <string name="relay_monitor_rtt_open">Odprto</string>
     <string name="relay_monitor_rtt_read">Branje</string>
@@ -67,6 +148,7 @@
     <string name="relay_monitor_relay_type">Vrsta</string>
     <string name="relay_monitor_requirements">Zahteve</string>
     <string name="relay_monitor_supported_nips">Podprti NIP-i</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Sprejeti tipi (kind)</string>
     <string name="relay_discovery_geohash">Lokacija</string>
     <string name="calendar_rsvp_going">Grem</string>
