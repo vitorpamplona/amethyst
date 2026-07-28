@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopBookmarkFeedFilter
@@ -1237,7 +1238,7 @@ fun UserProfileScreen(
                             }
                             Tab(selected = selectedTab == 10, onClick = { selectedTab = 10 }) {
                                 Text(
-                                    "Zaps${if (zapTotalSats.signum() > 0) " (${zapTotalSats.toBigInteger()})" else ""}",
+                                    "Zaps${if (zapTotalSats.signum() > 0) " (${showAmount(zapTotalSats)})" else ""}",
                                     modifier = Modifier.padding(12.dp),
                                 )
                             }
@@ -1604,7 +1605,7 @@ fun UserProfileScreen(
                                             u?.metadataOrNull()?.bestName()
                                                 ?: (pk.hexToByteArrayOrNull()?.toNpub()?.take(16) ?: pk.take(16)),
                                         pictureUrl = u?.metadataOrNull()?.profilePicture(),
-                                        sats = sats.toBigInteger().toString(),
+                                        sats = showAmount(sats),
                                         onClick = { onNavigateToProfile(pk) },
                                     )
                                 }
