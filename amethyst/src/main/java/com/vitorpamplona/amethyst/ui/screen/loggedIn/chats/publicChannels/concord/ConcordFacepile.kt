@@ -20,65 +20,41 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor
-import com.vitorpamplona.amethyst.ui.note.ObserveAndDrawInnerUserPicture
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * A horizontal stack of overlapping avatars for the recent posters in a channel — the "who's here"
- * cue that makes a busy channel feel alive. Each avatar wears a thin ring in the row's background
- * colour so the overlap reads as a deck of cards; the newest poster sits on top (leftmost, highest
- * z-index). Renders nothing for an empty [authorHexes], so callers can drop it in unconditionally.
+ * A horizontal strip of the recent posters in a channel — the "who's here" cue that makes a busy
+ * channel feel alive. Each poster is drawn with the app's standard profile avatar
+ * ([ClickableUserPicture]), so it carries the same following badge (top-right) and trust-score tag
+ * (bottom-centre) shown everywhere else a user appears, instead of a bare cropped image. Laid out
+ * with a small gap rather than an overlapping stack so those badges stay readable; the newest poster
+ * is leftmost. Renders nothing for an empty [authorHexes], so callers can drop it in unconditionally.
  */
 @Composable
 fun ConcordAuthorFacepile(
     authorHexes: List<HexKey>,
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
-    avatarSize: Dp = 22.dp,
+    avatarSize: Dp = 24.dp,
     maxShown: Int = 4,
 ) {
     if (authorHexes.isEmpty()) return
     val shown = authorHexes.take(maxShown)
-    // A ring one-and-a-half dp wide, and each avatar pulled left over its neighbour by a third of
-    // its width — enough overlap to read as a stack without hiding faces.
-    val ring = 1.5.dp
-    val overlap = avatarSize * 0.36f
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(-overlap)) {
-        shown.forEachIndexed { index, hex ->
-            Box(
-                Modifier
-                    // Newest (index 0) on top so it isn't clipped by the one after it.
-                    .zIndex((shown.size - index).toFloat())
-                    .size(avatarSize)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(ring),
-            ) {
-                LoadUser(baseUserHex = hex, accountViewModel) { user ->
-                    if (user != null) {
-                        ObserveAndDrawInnerUserPicture(user, avatarSize - ring * 2, accountViewModel)
-                    } else {
-                        DisplayBlankAuthor(avatarSize - ring * 2, Modifier, accountViewModel)
-                    }
-                }
-            }
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        shown.forEach { hex ->
+            ClickableUserPicture(
+                baseUserHex = hex,
+                size = avatarSize,
+                accountViewModel = accountViewModel,
+            )
         }
     }
 }
