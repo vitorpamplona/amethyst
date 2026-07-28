@@ -760,6 +760,10 @@
     <string name="workout_suggestion_connect_button">Anslut</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Från Health Connect</string>
+    <plurals name="workout_suggestion_combined_sessions">
+        <item quantity="one">%1$d aktivitet</item>
+        <item quantity="other">%1$d aktiviteter</item>
+    </plurals>
     <string name="exercise_running">Löpning</string>
     <string name="exercise_walking">Promenad</string>
     <string name="exercise_cycling">Cykling</string>
@@ -4578,8 +4582,4 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
-    <plurals name="workout_suggestion_combined_sessions">
-        <item quantity="one">%1$d aktivitet</item>
-        <item quantity="other">%1$d aktiviteter</item>
-    </plurals>
 </resources>
