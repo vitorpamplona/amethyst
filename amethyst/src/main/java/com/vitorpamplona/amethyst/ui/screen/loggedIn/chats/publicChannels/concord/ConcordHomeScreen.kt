@@ -310,7 +310,11 @@ private fun CommunityHeader(
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
             autoPlayGif = autoPlayGif,
         )
-        Column(Modifier.weight(1f)) {
+        // The identity block — icon *and* name/subtitle — opens the community; the rest of the row and
+        // the chevron expand it. Tapping a title to open the thing it names is the convention users
+        // arrive with, and the name previously fell through to the row's expand, leaving the 40dp
+        // avatar as the only way in with nothing to suggest it was a separate target.
+        Column(Modifier.weight(1f).clickable(onClick = onOpen)) {
             Text(
                 name,
                 style = MaterialTheme.typography.bodyLarge,
