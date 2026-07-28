@@ -84,17 +84,20 @@ data class HighlightQuote(
             val trail = trimTrail(context.substring(endExclusive))
             val quote = context.substring(start, endExclusive)
 
-            // Nothing to trim on either side: the original context is short enough to show whole.
-            if (!lead.trimmed && !trail.trimmed) {
-                return HighlightQuote(context, start until endExclusive)
-            }
-
             val prefix = if (lead.trimmed) "$ELLIPSIS " else ""
             val suffix = if (trail.trimmed) " $ELLIPSIS" else ""
 
-            val text = prefix + lead.text + quote + trail.text + suffix
-            val markStart = prefix.length + lead.text.length
-            return HighlightQuote(text, markStart until (markStart + quote.length))
+            // Drop any blank lines sitting at the very edges of the context — with the far text
+            // trimmed (or even when it isn't) they would otherwise render as empty space above or
+            // below the quote. Only the outer edges are touched; the whitespace framing the quote
+            // itself is preserved.
+            val raw = prefix + lead.text + quote + trail.text + suffix
+            val leadingBlank = raw.length - raw.trimStart().length
+            val text = raw.trim()
+
+            val markStart = (prefix.length + lead.text.length - leadingBlank).coerceAtLeast(0)
+            val markEnd = (markStart + quote.length).coerceAtMost(text.length)
+            return HighlightQuote(text, markStart until markEnd)
         }
 
         private class Side(
@@ -138,9 +141,13 @@ data class HighlightQuote(
             highlight: String,
             prefix: String?,
         ): Int? {
+            // The common case — no prefix to disambiguate with — needs only the first match, so
+            // don't scan the whole context enumerating every occurrence.
+            if (prefix.isNullOrBlank()) return context.indexOf(highlight).takeIf { it >= 0 }
+
             val occurrences = occurrencesOf(context, highlight)
             if (occurrences.isEmpty()) return null
-            if (occurrences.size == 1 || prefix.isNullOrBlank()) return occurrences.first()
+            if (occurrences.size == 1) return occurrences.first()
 
             val tail = prefix.trimEnd()
             return occurrences.firstOrNull { context.substring(0, it).trimEnd().endsWith(tail) }

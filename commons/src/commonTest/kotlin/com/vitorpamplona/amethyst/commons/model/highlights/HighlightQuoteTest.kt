@@ -115,6 +115,17 @@ class HighlightQuoteTest {
     }
 
     @Test
+    fun dropsBlankLinesAtTheEdgesOfAShortContext() {
+        // A context whose paragraph boundaries left blank lines at its very start and end would
+        // otherwise render as empty space above and below the quote.
+        val quote = HighlightQuote.of("Forward Secrecy", "\n\nForward Secrecy is nice.\n\n")
+
+        assertEquals("Forward Secrecy is nice.", quote.text)
+        assertEquals(0 until 15, quote.marked)
+        assertEquals("Forward Secrecy", quote.text.substring(quote.marked!!))
+    }
+
+    @Test
     fun trimmingSnapsToWholeWordsSoNoWordIsCutInHalf() {
         val lead = "alpha bravo charlie delta echo foxtrot ".repeat(20) // long, space-separated
         val context = "${lead}QUOTE"
