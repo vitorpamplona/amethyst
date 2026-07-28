@@ -75,6 +75,23 @@ internal fun stripLowLatencyTags(playlist: String): String {
 }
 
 /**
+ * The byte-level form: decode as UTF-8, strip, re-encode.
+ *
+ * Split out from [LowLatencyStrippingParser] so the charset round-trip is reachable from a plain JVM
+ * unit test — `parse` takes an `android.net.Uri`, which stubs to null under
+ * `unitTests.isReturnDefaultValues`, so nothing that goes through it is testable without Robolectric.
+ *
+ * A UTF-8 BOM survives: decoding leaves U+FEFF in the string, `trimStart` does not treat it as
+ * whitespace, and re-encoding reproduces the same three bytes. When there is nothing to strip the
+ * *original array* is returned, so the common path neither re-encodes nor copies.
+ */
+internal fun stripLowLatencyTags(playlist: ByteArray): ByteArray {
+    val original = playlist.toString(Charsets.UTF_8)
+    val stripped = stripLowLatencyTags(original)
+    return if (stripped === original) playlist else stripped.toByteArray(Charsets.UTF_8)
+}
+
+/**
  * Wraps a media3 playlist parser and strips the Low-Latency tags before delegating.
  *
  * Playlists are a few KB, so reading the stream fully into memory is cheaper than the alternative of
@@ -87,11 +104,7 @@ internal class LowLatencyStrippingParser(
     override fun parse(
         uri: Uri,
         inputStream: InputStream,
-    ): HlsPlaylist {
-        val original = inputStream.readBytes().toString(Charsets.UTF_8)
-        val stripped = stripLowLatencyTags(original)
-        return delegate.parse(uri, ByteArrayInputStream(stripped.toByteArray(Charsets.UTF_8)))
-    }
+    ): HlsPlaylist = delegate.parse(uri, ByteArrayInputStream(stripLowLatencyTags(inputStream.readBytes())))
 }
 
 /**
@@ -123,8 +136,13 @@ internal class LowLatencyStrippingParser(
  * becomes a fatal `ExoPlaybackException: Source error`. Forcing a retry would not help either — the
  * `HlsMediaChunk` instance keeps its `nextLoadPosition`, so it would throw identically forever.
  *
- * Still present verbatim in media3 1.11.0-rc01, and unreported upstream at the time of writing, so
- * there is no version to upgrade to.
+ * Still present verbatim in media3 1.11.0-rc01, so there is no version to upgrade to.
+ *
+ * **Tracking: https://github.com/androidx/media/issues/3350** — delete this whole file and its test
+ * once that is fixed and we are on a media3 release carrying the fix, then drop the explicit
+ * `HlsMediaSource.Factory` in [CustomMediaSourceFactory] and let `DefaultMediaSourceFactory` build
+ * HLS again. That also restores low latency, and removes the caveat about the wrapping
+ * `DefaultMediaSourceFactory` features documented there.
  *
  * ## Trade-off
  *
@@ -133,11 +151,9 @@ internal class LowLatencyStrippingParser(
  * below the part tags, so they play normally otherwise. Given the alternative is a hard failure
  * within a second, and that media3 offers no per-stream way to decline just the parts, disabling it
  * globally is the conservative trade.
- *
- * Remove this once media3 fixes `HlsMediaChunk.feedDataToExtractor`.
  */
 @UnstableApi
-class LowLatencyStrippingHlsPlaylistParserFactory(
+internal class LowLatencyStrippingHlsPlaylistParserFactory(
     private val delegate: HlsPlaylistParserFactory = DefaultHlsPlaylistParserFactory(),
 ) : HlsPlaylistParserFactory {
     override fun createPlaylistParser(): ParsingLoadable.Parser<HlsPlaylist> = LowLatencyStrippingParser(delegate.createPlaylistParser())

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.playback.playerPool.positions
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
+import com.vitorpamplona.amethyst.service.playback.playerPool.isHlsMediaItem
 import kotlin.math.abs
 
 class CurrentPlayPositionCacher(
@@ -41,7 +41,10 @@ class CurrentPlayPositionCacher(
             isLiveStreaming = false
         } else {
             currentUrl = mediaItem.mediaId
-            isLiveStreaming = isLiveStreaming(mediaItem.mediaId)
+            // Same predicate the source factory routes on, so a blossom-hosted playlist — which has
+            // no `.m3u8` in its URL — is recognised here too and doesn't get a resume position
+            // persisted against a stream that has no stable position to return to.
+            isLiveStreaming = isHlsMediaItem(mediaItem)
         }
     }
 

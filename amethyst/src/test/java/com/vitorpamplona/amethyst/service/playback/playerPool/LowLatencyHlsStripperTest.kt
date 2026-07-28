@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.playerPool
 
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -62,25 +63,11 @@ class LowLatencyHlsStripperTest {
     }
 
     @Test
-    fun keepsThePlaylistPlayable() {
-        val result = stripLowLatencyTags(ZAP_STREAM_LL_PLAYLIST)
-
-        // Everything a plain HLS player needs must survive untouched.
-        assertTrue(result.startsWith("#EXTM3U"))
-        assertTrue(result.contains("#EXT-X-VERSION:6"))
-        assertTrue(result.contains("#EXT-X-TARGETDURATION:2"))
-        assertTrue(result.contains("#EXT-X-MEDIA-SEQUENCE:191184"))
-        assertTrue(result.contains("""#EXT-X-MAP:URI="init.mp4""""))
-        assertTrue(result.contains("#EXT-X-PROGRAM-DATE-TIME:2026-07-26T20:18:34.572Z"))
-        assertTrue(result.contains("#EXTINF:1.961,"))
-        assertTrue(result.contains("191198.m4s"))
-        assertTrue(result.contains("191199.m4s"))
-    }
-
-    @Test
     fun keepsSegmentAndTagOrdering() {
         val result = stripLowLatencyTags(ZAP_STREAM_LL_PLAYLIST)
 
+        // Exact equality, so this also pins that everything a plain HLS player needs survives
+        // untouched and in order: the header, MAP, PROGRAM-DATE-TIME, EXTINF and both segments.
         assertEquals(
             listOf(
                 "#EXTM3U",
@@ -147,6 +134,57 @@ class LowLatencyHlsStripperTest {
         assertTrue(result.contains("#EXT-X-SKIP:SKIPPED-SEGMENTS=10"))
         assertTrue(result.contains("#EXT-X-RENDITION-REPORT:"))
         assertFalse(result.contains("#EXT-X-PART:"))
+    }
+
+    @Test
+    fun stripsPreloadHint() {
+        // The *other* tag that yields a byte-range chunk, so it matters as much as EXT-X-PART.
+        // Synthetic rather than folded into the capture above, which is labelled verbatim and did
+        // not carry a hint; shaped per RFC 8216 §4.4.5.3.
+        val input =
+            """
+            #EXTM3U
+            #EXTINF:1.96,
+            191199.m4s
+            #EXT-X-PRELOAD-HINT:TYPE=PART,URI="191200.m4s",BYTERANGE-START=402501
+            """.trimIndent()
+
+        val result = stripLowLatencyTags(input)
+
+        assertFalse(result.contains("#EXT-X-PRELOAD-HINT"))
+        assertFalse("no byte range should survive", result.contains("BYTERANGE-START"))
+        assertEquals("#EXTM3U\n#EXTINF:1.96,\n191199.m4s", result)
+    }
+
+    @Test
+    fun byteFormPreservesBomAndMultibyteWhenStripping() {
+        // Written as raw bytes rather than a "﻿" literal so the fixture states the on-the-wire
+        // encoding directly. 🎵 is a 4-byte sequence / surrogate pair, so it also covers the
+        // decode-modify-re-encode round trip beyond the BMP.
+        val bom = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
+        val input =
+            bom +
+                (
+                    "#EXTM3U\n" +
+                        "#EXT-X-PART:URI=\"a.m4s\",BYTERANGE=\"1@0\"\n" +
+                        "#EXTINF:2,caffè 🎵\n" +
+                        "a.m4s\n"
+                ).toByteArray(Charsets.UTF_8)
+
+        val result = stripLowLatencyTags(input)
+
+        assertArrayEquals(
+            bom + "#EXTM3U\n#EXTINF:2,caffè 🎵\na.m4s\n".toByteArray(Charsets.UTF_8),
+            result,
+        )
+    }
+
+    @Test
+    fun byteFormForwardsTheOriginalArrayWhenNothingToStrip() {
+        val input = "#EXTM3U\n#EXTINF:2,\na.m4s\n".toByteArray(Charsets.UTF_8)
+
+        // Same array, not an equal copy: the common path must not re-encode.
+        assertSame(input, stripLowLatencyTags(input))
     }
 
     @Test

@@ -51,7 +51,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVi
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
@@ -265,7 +265,7 @@ fun UrlImageView(
             content.toCoilModel(useLocalBlossomBridge)
         }
     val imageModelUrl = artworkUri ?: bridgedUrl
-    val canLoadAsImage = !isVideo || artworkUri != null || !isLiveStreaming(content.url)
+    val canLoadAsImage = !isVideo || artworkUri != null || !isHlsMedia(content.url, content.mimeType)
 
     CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center, accountViewModel = accountViewModel) {
         if (it && canLoadAsImage) {

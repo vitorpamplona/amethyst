@@ -98,7 +98,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
-import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -431,7 +431,7 @@ private fun DialogContent(
                     }
 
                     val isPdfOrStaticImage = myContent is MediaUrlImage || myContent is MediaLocalImage || myContent is MediaUrlPdf
-                    val isNotLiveStream = myContent !is MediaUrlContent || !isLiveStreaming(myContent.url)
+                    val isNotLiveStream = myContent !is MediaUrlContent || !isHlsMedia(myContent.url, myContent.mimeType)
                     if (isPdfOrStaticImage && isNotLiveStream) {
                         val localContext = LocalContext.current
 
