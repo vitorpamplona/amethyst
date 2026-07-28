@@ -2328,7 +2328,7 @@
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="buzz_channel_create_title">नयी प्रणाली</string>
     <string name="buzz_channel_flag_private">निजी प्रणाली</string>
-    <string name="buzz_channel_flag_private_desc">प्रणाली सूची में छिपाया गया तथा आमन्त्रण सीमित। निषक्रिय अर्थात इस पुनःप्रसारक पर कोई भी इसे खोज सकेगा तथा जुड सकेगा।</string>
+    <string name="buzz_channel_flag_private_desc">प्रणाली सूची में छिपाया गया तथा आमन्त्रण सीमित। निष्क्रिय अर्थात इस पुनःप्रसारक पर कोई भी इसे खोज सकेगा तथा जुड सकेगा।</string>
     <string name="buzz_channel_flag_forum">मंच प्रणाली</string>
     <string name="buzz_channel_flag_forum_desc">सूत्रबद्ध पत्र प्रदर्शनशैली चर्चा समयरेखा के स्थान पर। यह तत्पश्चात परिवर्तनीय नहीं।</string>
     <string name="relay_group_relay_no_nip29">यह पुनःप्रसारक निप॰२९ पुनःप्रसारक समूहों का अवलम्बन करने का विज्ञापन नहीं करता। यहाँ बनाए गए समूह काम नहीं करेंगे। उसका नाम तथा सदस्यों तथा सन्देशों का प्रबन्धन पुनःप्रसारक द्वारा नहीं किया जाएगा। एक पुनःप्रसारक का चयन करें जो पुनःप्रसारक आधारित समूहों का अवलम्बन करता हो।</string>
@@ -4494,7 +4494,7 @@
     <string name="buzz_workflow_new_run">नयी पुनरावृत्ति</string>
     <string name="buzz_workflow_section_awaiting">आपकी अनुमति आवश्यक</string>
     <string name="buzz_workflow_section_active">कार्य चालू</string>
-    <string name="buzz_workflow_section_shipped">संस्करण भेज दिया गया</string>
+    <string name="buzz_workflow_section_shipped">संस्करण प्रयोक्ताओं को भेज दिया गया</string>
     <string name="buzz_workflow_section_closed">आवृत</string>
     <string name="buzz_workflow_gate_needs_you">आपकी अनुमति आवश्यक</string>
     <string name="buzz_workflow_gate_awaiting">अनुमति की प्रतीक्षा में</string>
@@ -4507,12 +4507,18 @@
     <string name="buzz_workflow_approve_open_pr">अनुमति दें तथा कर्षण अनुरोध खोलें</string>
     <string name="buzz_workflow_approve_title">क्या इस पुनरावृत्ति को अनुमति दें।</string>
     <string name="buzz_workflow_deny_title">क्या इस पुनरावृत्ति को अनुमति ना दें।</string>
+    <string name="buzz_workflow_approve_body">धावक अपनी शाका का प्रेषण करेगा तथा एक कर्षण अनुरोध खोलेगा %1$s के लिए। अनुमति देने से विलय अथवा परिनियोजन नहीं होता। वह गिटहब पर होता है।</string>
+    <string name="buzz_workflow_deny_body">%1$s के लिए घटक का श्रम परित्यक्त होगा। इसे पूर्ववत नहीं किया जा सकता।</string>
     <string name="buzz_workflow_this_run">इस पुनरावृत्ति</string>
     <string name="buzz_workflow_cancel">निरस्त</string>
     <string name="buzz_workflow_waiting_for_approval">अनुमति की प्रतीक्षा में</string>
     <string name="buzz_workflow_triggered_toast">पुनरावृत्ति प्रवर्तित</string>
+    <string name="buzz_workflow_trigger_failed_toast">पुनरावृत्ति का प्रवर्तन असफल। जाँच करें यदि आप इस कार्यशाला में पत्र भेज सकते हैं</string>
+    <string name="buzz_workflow_approved_toast">अनुमत। धावक एक कर्षण अनुरोध खोल रहा है</string>
+    <string name="buzz_workflow_denied_toast">अस्वीकृत। श्रम परित्यक्त</string>
+    <string name="buzz_workflow_decision_failed_toast">आपका निर्णय प्रकाशित करने में असफल। जाँच करें यदि आप इस कार्यशाला में पत्र भेज सकते हैं</string>
     <string name="buzz_workflow_view_pr">कर्षण अनुरोध देखें</string>
-    <string name="buzz_workflow_closed_denied">अस्वीकृत। कार्य परित्यक्त</string>
+    <string name="buzz_workflow_closed_denied">अस्वीकृत। श्रम परित्यक्त</string>
     <string name="buzz_workflow_closed_cancelled">निरस्त</string>
     <string name="buzz_workflow_closed_failed_prefix">असफल : %1$s</string>
     <string name="buzz_workflow_closed_failed">असफल</string>
@@ -4520,11 +4526,13 @@
     <string name="buzz_workflow_pill_working">कार्य मध्य</string>
     <string name="buzz_workflow_pill_needs_approval">अनुमति आवश्यक</string>
     <string name="buzz_workflow_pill_approved">स्वीकृत</string>
-    <string name="buzz_workflow_pill_shipped">संस्करण भेज दिया गया</string>
+    <string name="buzz_workflow_pill_shipped">संस्करण प्रयोक्ताओं को भेज दिया गया</string>
     <string name="buzz_workflow_pill_failed">असफल</string>
     <string name="buzz_workflow_pill_cancelled">निरस्त</string>
     <string name="buzz_workflow_pill_denied">अस्वीकृत</string>
     <string name="buzz_workflow_trigger_title">कार्यप्रवाह का प्रवर्तन</string>
+    <string name="buzz_workflow_trigger_desc">धावक श्रम करता है। तत्पश्चात एक मनुष्य की अनुमति तक विराम लेता है। तत्पश्चात कर्षण अनुरोध खोलता है। सम्पूर्ण प्रणाली पुनरावृत्ति देखेंगे।</string>
+    <string name="buzz_workflow_no_defs_hint">कोई कार्यप्रवाह नहीं अब तक। ऊपर विकल्पसूची खोलें तथा नया निरूपण… का चयन करें एक बनाने के लिए। तत्पश्चात उसका प्रवर्तन करें।</string>
     <string name="buzz_workflow_task_label">यह क्या करना चाहिए।</string>
     <string name="buzz_workflow_trigger_run">पुनरावृत्ति प्रवर्तन</string>
     <string name="buzz_workflow_picker_label">कार्यप्रवाह</string>
@@ -4532,21 +4540,28 @@
     <string name="buzz_workflow_picker_choose">कार्यप्रवाह का चयन करें</string>
     <string name="buzz_workflow_new_definition">नया निरूपण…</string>
     <string name="buzz_workflow_def_title">नया कार्यप्रवाह निरूपण</string>
+    <string name="buzz_workflow_def_desc">प्रणाली के लिए उसका नामकरण करता है तथा उसकी वैयेएमएल॰ विधिलेख (प्रकार ३०६२०) का प्रकाशन करता है। एक वास्तविक बज्स्स पुनःप्रसारक वैयेएमएल॰ को चलाता है। स्व जालावास स्थापित धावक अपना समाकृत आदेश चलाता है। यहाँ निरूपण केवल नामकरण करता है तथा पुनरावृत्ति सूचीपत्रांकित करता है।</string>
     <string name="buzz_workflow_def_name">नाम</string>
     <string name="buzz_workflow_def_name_hint">निर्माण तथा परीक्षण</string>
     <string name="buzz_workflow_def_yaml">वैयेएमएल॰ विधिलेख</string>
+    <string name="buzz_workflow_def_publish_failed">निरूपण प्रकाशित करने में असफल। जाँच करें यदि आप इस कार्यशाला में पत्र भेज सकते हैं।</string>
     <string name="buzz_workflow_publishing">प्रकाशन मध्य…</string>
     <string name="buzz_workflow_create_definition">निरूपण बनाएँ</string>
     <string name="buzz_workflow_empty_title">कोई पुनरावृत्ति नहीं अब तक</string>
+    <string name="buzz_workflow_empty_desc">नयी पुनरावृत्ति दबाएँ कार्यप्रवाह का प्रवर्तन करने के लिए। धावक श्रम करता है तथा अनुमति द्वार पर विराम लेता है। एक मनुष्य उसे प्रदान करता है प्रयोक्ताओं को संस्करण भेजने के पूर्व।</string>
     <!-- Buzz agent attestation -->
     <string name="buzz_attest_topbar">साक्ष्यांकन सूची</string>
     <string name="buzz_attest_hold_title">साक्ष्यांकन रखें</string>
+    <string name="buzz_attest_holding">एक साक्ष्यांकन रखा जा रहा है इस लेखा के लिए। यह स्वचालित रूप से संलग्न किया जाएगा जब आप एक बज्स्स पुनःप्रसारक प्रति प्रमाणीकरण करेंगे।</string>
     <string name="buzz_attest_grants_prefix">देता है : %1$s</string>
     <string name="buzz_attest_grants_unrestricted">किसी भी प्रकार तथा कभी भी (सीमित नहीं)</string>
     <string name="buzz_attest_remove">हटाएँ</string>
-    <string name="buzz_attest_authtag_label">प्रमाणीकरन विषयसूचक जेसोन॰</string>
+    <string name="buzz_attest_hold_desc">एक स्वत्वधारी हस्ताक्षरित प्रमाणीकरण विषयसूचक चिपकाएँ जो इस लेखा को दिया गया था अपने बज्स्स कार्यशाला प्रति प्रमाणीकरण के लिए अभासी सदस्य के रूप में।</string>
+    <string name="buzz_attest_authtag_label">प्रमाणीकरण विषयसूचक जेसोन॰</string>
     <string name="buzz_attest_hold_button">साक्ष्यांकन रखें</string>
     <string name="buzz_attest_readonly_title">स्थानीय कुंचिका आवश्यक</string>
+    <string name="buzz_attest_readonly_desc">एक निप॰ओए साक्ष्यांकन एक हस्ताक्षर है एक प्रतिज्ञासूचक पर। तथा एक नोस्टर घटना नहीं। इसलिए इसका उत्पादन केवल एक हस्ताक्षरकर्ता द्वारा हो सकता है जो आपकी कच्ची निजी कुंचिका रखता है। यह लेखा एक दूरस्थ (निप॰४६ कोष्ठागार) अथवा बाहरी (निप॰५५) हस्ताक्षरकर्ता का उपयोग करता है जो एक साक्ष्यांकन पर हस्ताक्षर नहीं कर सकते।</string>
+    <string name="buzz_attest_form_desc">एक घटक एनपुब॰ को आपकी कार्यशाला में प्रकाशन करने की अनुमति दें उसकी कुंचिका के नामांकन बिना। घटक संलग्न करेगा नीचे हस्ताक्षरित सूचक को अपने घटनाओं में।</string>
     <string name="buzz_attest_agent_label">घटक (नाम खोजें अथवा एनपुब॰ अथवा षोडशांक चिपकाएँ)</string>
     <string name="buzz_attest_agent_paste_error">एनपुब॰ अथवा ६४ अक्षर षोडशांक कुंचिका प्रविष्ट करें।</string>
     <string name="buzz_attest_change_agent">घटक परिवर्तन</string>
@@ -4557,6 +4572,7 @@
     <string name="buzz_attest_generate">साक्ष्यांकन उत्पादन</string>
     <string name="buzz_attest_signed_title">साक्ष्यांकन हस्ताक्षरण</string>
     <string name="buzz_attest_copy_tag">विषयसूचक अनुकृति</string>
+    <string name="buzz_attest_warning">सावधान। इसे देना केवल घटक परिचालक को। जब तक यह मान्य है तथा आप कार्यशाला सदस्य हैं तब तक पुनःप्रसारक इस घटक को अनुमति देगा एक सदस्य के रूप में पत्र प्रकाशित करने के लिए ऊपर दिए गए अवस्थाओं में।</string>
     <!-- Buzz agent persona editor -->
     <string name="buzz_persona_new_title">नयी व्यक्तिशैली</string>
     <string name="buzz_persona_edit_title">व्यक्तिशैली सम्पादन</string>
