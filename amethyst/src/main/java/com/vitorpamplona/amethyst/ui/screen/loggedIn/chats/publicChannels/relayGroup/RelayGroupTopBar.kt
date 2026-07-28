@@ -112,6 +112,9 @@ fun RelayGroupTopBar(
     val dmOther = if (isDm) channel.event?.buzzParticipants()?.firstOrNull { it != myPubkey } else null
 
     var menuOpen by remember { mutableStateOf(false) }
+    // Read once here (nav.canPop() is @Composable) so the post-action navigation can pop from a menu
+    // callback — leaving/removing a group shouldn't strand the user on the screen of a group they left.
+    val canPop = nav.canPop()
     var showInvite by remember { mutableStateOf(false) }
     var showJoinCode by remember { mutableStateOf(false) }
 
@@ -296,11 +299,23 @@ fun RelayGroupTopBar(
                                 },
                             )
                         }
+                        // Two distinct actions, never conflated: "Remove from Messages" drops the group
+                        // from my kind-10009 list but keeps my relay membership; "Leave" sends the
+                        // kind-9022 that actually removes me. Same split as the channel-invite card.
                         DropdownMenuItem(
-                            text = { Text(stringRes(R.string.leave)) },
+                            text = { Text(stringRes(R.string.remove_from_messages)) },
+                            onClick = {
+                                menuOpen = false
+                                accountViewModel.removeRelayGroupFromMessages(channel)
+                                if (canPop) nav.popBack()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error) },
                             onClick = {
                                 menuOpen = false
                                 accountViewModel.leaveRelayGroup(channel)
+                                if (canPop) nav.popBack()
                             },
                         )
                     }

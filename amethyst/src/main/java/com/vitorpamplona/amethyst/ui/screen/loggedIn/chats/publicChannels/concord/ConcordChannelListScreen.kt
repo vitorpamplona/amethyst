@@ -529,7 +529,7 @@ private fun rememberConcordDisplayName(
  * so leaving is what actually retires the community for them.
  */
 @Composable
-private fun ConcordLeaveDialog(
+internal fun ConcordLeaveDialog(
     communityName: String,
     isOwner: Boolean,
     onDismiss: () -> Unit,

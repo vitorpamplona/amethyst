@@ -205,7 +205,7 @@ private fun DmRowCard(
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text(stringRes(R.string.buzz_dm_hide)) },
+                        text = { Text(stringRes(R.string.remove_from_messages)) },
                         leadingIcon = {
                             Icon(
                                 symbol = MaterialSymbols.VisibilityOff,
