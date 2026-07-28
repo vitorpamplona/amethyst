@@ -24,57 +24,76 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import java.util.SortedSet
-import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Creates a list of events (regular and addressable)
  * that is updated every time a new event that matches
  * the filter is received, including addressables.
+ *
+ * Entries are keyed by [Note.idHex] rather than kept in a set ordered by
+ * `created_at`. That ordering key is MUTABLE for addressables: a newer version
+ * replaces the event on the same Note in place, so a set ordered by `created_at`
+ * would navigate to the note's new position, miss the existing node at its old
+ * position, and insert a duplicate for the same address — surfacing the same
+ * event twice in the emitted list. Keying by the stable `idHex` keeps exactly
+ * one entry per note (a replacement updates it), and the list is sorted fresh on
+ * emit.
  */
 class EventListMatchingFilter<T : Event>(
     private val filter: Filter,
     private val atOnce: (filter: Filter) -> SortedSet<Note>,
     private val update: (List<T>) -> Unit,
 ) : Observable {
-    // Keeping this here blocks it from being cleared from memory
-    var currentResults: ConcurrentSkipListSet<Note> = ConcurrentSkipListSet(CreatedAtIdHexComparator)
+    private val currentResults = ConcurrentHashMap<HexKey, Note>()
 
-    @Suppress("UNCHECKED_CAST")
     override fun new(
         event: Event,
         note: Note,
     ) {
         if (event is AddressableEvent && note !is AddressableNote) {
             // event update
-            if (currentResults.contains(note)) {
-                update(currentResults.mapNotNull { it.event as? T })
+            if (currentResults.containsKey(note.idHex)) {
+                update(sortedResults())
             }
             return
         }
 
         if (filter.match(event)) {
-            currentResults.add(note)
-            val limit = filter.limit
-            if (limit != null && currentResults.size > limit) {
-                currentResults.remove(currentResults.last())
-            }
-
-            update(currentResults.mapNotNull { it.event as? T })
+            // Replaces on a matching idHex so an addressable's newer content is
+            // reflected without duplicating the entry.
+            currentResults[note.idHex] = note
+            emitEnforcingLimit()
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     override fun remove(note: Note) {
-        if (currentResults.remove(note)) {
-            update(currentResults.mapNotNull { it.event as? T })
+        if (currentResults.remove(note.idHex) != null) {
+            update(sortedResults())
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun init() {
-        currentResults = ConcurrentSkipListSet(atOnce(filter))
-        update(currentResults.mapNotNull { it.event as? T })
+        currentResults.clear()
+        atOnce(filter).forEach { currentResults[it.idHex] = it }
+        update(sortedResults())
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun sortedResults(): List<T> =
+        currentResults.values
+            .sortedWith(CreatedAtIdHexComparator)
+            .mapNotNull { it.event as? T }
+
+    private fun emitEnforcingLimit() {
+        val limit = filter.limit
+        if (limit != null && currentResults.size > limit) {
+            val sortedNotes = currentResults.values.sortedWith(CreatedAtIdHexComparator)
+            sortedNotes.drop(limit).forEach { currentResults.remove(it.idHex) }
+        }
+        update(sortedResults())
     }
 }
