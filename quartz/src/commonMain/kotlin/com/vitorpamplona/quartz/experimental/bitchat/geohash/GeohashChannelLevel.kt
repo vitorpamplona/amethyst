@@ -21,8 +21,13 @@
 package com.vitorpamplona.quartz.experimental.bitchat.geohash
 
 /**
- * The named geohash precision levels Bitchat exposes as location channels, each a
- * fixed geohash character length. Coarser (fewer chars) = larger area.
+ * The named geohash precision levels exposed as location channels, each a fixed
+ * geohash character length. Coarser (fewer chars) = larger area.
+ *
+ * [REGION]…[BUILDING] (2–8 chars) mirror the levels Bitchat exposes, so those cells
+ * interoperate with Bitchat peers. [CONTINENT] (1 char) is an Amethyst extension: a
+ * single character splits the globe into 32 ~5000 km cells, coarser than any Bitchat
+ * channel, for a whole-continent room.
  *
  * Because a geohash is a prefix code, the channel for any level is just the first
  * [chars] characters of a finer cell — so one precise fix yields every level via
@@ -31,6 +36,7 @@ package com.vitorpamplona.quartz.experimental.bitchat.geohash
 enum class GeohashChannelLevel(
     val chars: Int,
 ) {
+    CONTINENT(1),
     REGION(2),
     PROVINCE(4),
     CITY(5),
@@ -47,7 +53,7 @@ enum class GeohashChannelLevel(
 
     companion object {
         /** Coarsest → finest, the order a location-channel picker should list them. */
-        val ordered = listOf(REGION, PROVINCE, CITY, NEIGHBORHOOD, BLOCK, BUILDING)
+        val ordered = listOf(CONTINENT, REGION, PROVINCE, CITY, NEIGHBORHOOD, BLOCK, BUILDING)
 
         /** The named level whose precision matches [chars], if any. */
         fun forChars(chars: Int): GeohashChannelLevel? = entries.firstOrNull { it.chars == chars }

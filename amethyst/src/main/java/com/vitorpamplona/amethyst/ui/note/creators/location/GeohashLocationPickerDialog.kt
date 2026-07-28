@@ -766,6 +766,7 @@ private fun geohashBounds(geohash: String): BoundingBox? {
 /** A rough physical size for a geohash cell at this precision, for the chip subtitle. */
 private fun GeohashChannelLevel.areaSize(): String =
     when (this) {
+        GeohashChannelLevel.CONTINENT -> "~5000 km"
         GeohashChannelLevel.REGION -> "~1250 km"
         GeohashChannelLevel.PROVINCE -> "~39 km"
         GeohashChannelLevel.CITY -> "~5 km"
