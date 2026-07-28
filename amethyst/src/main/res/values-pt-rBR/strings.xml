@@ -3230,7 +3230,6 @@
     <string name="buzz_dm_empty_title">Nenhuma mensagem direta ainda</string>
     <string name="buzz_dm_empty_body">Inicie uma conversa privada com qualquer pessoa em um espaço de trabalho Buzz.</string>
     <string name="buzz_dm_more">Mais</string>
-    <string name="buzz_dm_hide">Ocultar conversa</string>
     <string name="buzz_dm_add_member">Adicionar membro</string>
     <string name="buzz_dm_add_member_title">Adicionar alguém a esta DM</string>
     <string name="buzz_dm_add_member_invalid">Não é uma chave npub ou hex válida</string>

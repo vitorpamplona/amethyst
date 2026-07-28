@@ -3230,7 +3230,6 @@
     <string name="buzz_dm_empty_title">Inga direktmeddelanden än</string>
     <string name="buzz_dm_empty_body">Starta en privat konversation med vem som helst i en Buzz-arbetsyta.</string>
     <string name="buzz_dm_more">Mer</string>
-    <string name="buzz_dm_hide">Dölj konversation</string>
     <string name="buzz_dm_add_member">Lägg till medlem</string>
     <string name="buzz_dm_add_member_title">Lägg till någon i det här DM:et</string>
     <string name="buzz_dm_add_member_invalid">Inte en giltig npub- eller hexnyckel</string>

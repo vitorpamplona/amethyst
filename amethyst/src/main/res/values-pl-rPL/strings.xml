@@ -3297,7 +3297,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_dm_empty_title">Brak bezpośrednich wiadomości</string>
     <string name="buzz_dm_empty_body">Rozpocznij prywatną rozmowę z kimkolwiek w przestrzeni roboczej Buzz.</string>
     <string name="buzz_dm_more">Więcej</string>
-    <string name="buzz_dm_hide">Ukryj konwersację</string>
     <string name="buzz_dm_add_member">Dodaj członka</string>
     <string name="buzz_dm_add_member_title">Dodaj kogoś do tej wiadomości DM</string>
     <string name="buzz_dm_add_member_invalid">Nieprawidłowy klucz npub lub hex</string>

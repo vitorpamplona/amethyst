@@ -3348,7 +3348,6 @@
     <string name="buzz_dm_empty_title">Zatím žádné přímé zprávy</string>
     <string name="buzz_dm_empty_body">Začněte soukromou konverzaci s kýmkoli v pracovním prostoru Buzz.</string>
     <string name="buzz_dm_more">Více</string>
-    <string name="buzz_dm_hide">Skrýt konverzaci</string>
     <string name="buzz_dm_add_member">Přidat člena</string>
     <string name="buzz_dm_add_member_title">Přidat někoho do této konverzace</string>
     <string name="buzz_dm_add_member_invalid">Neplatný npub nebo hex klíč</string>

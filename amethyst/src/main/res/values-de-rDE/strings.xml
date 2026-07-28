@@ -3232,7 +3232,6 @@
     <string name="buzz_dm_empty_title">Noch keine Direktnachrichten</string>
     <string name="buzz_dm_empty_body">Beginne eine private Unterhaltung mit jemandem in einem Buzz-Workspace.</string>
     <string name="buzz_dm_more">Mehr</string>
-    <string name="buzz_dm_hide">Unterhaltung ausblenden</string>
     <string name="buzz_dm_add_member">Mitglied hinzufügen</string>
     <string name="buzz_dm_add_member_title">Jemanden zu dieser DM hinzufügen</string>
     <string name="buzz_dm_add_member_invalid">Kein gültiger npub- oder Hex-Schlüssel</string>
