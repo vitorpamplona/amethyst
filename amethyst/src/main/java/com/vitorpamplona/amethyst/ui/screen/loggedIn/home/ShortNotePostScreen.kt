@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -93,6 +92,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.getActivity
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.KeyboardAwareBackHandler
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -235,7 +235,7 @@ internal fun NewPostScreenInner(
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
-    BackHandler {
+    KeyboardAwareBackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
             postViewModel.cancel()
