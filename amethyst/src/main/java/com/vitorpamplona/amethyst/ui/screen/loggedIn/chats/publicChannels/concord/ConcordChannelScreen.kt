@@ -24,6 +24,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -186,10 +187,17 @@ fun ConcordChannelScreen(
             )
         },
     ) { padding ->
-        // imePadding so the composer rides above the soft keyboard. The bare Material3 Scaffold's
-        // content insets cover the system bars but not the IME, so without this the message field
-        // sat behind the keyboard while typing.
-        Column(Modifier.fillMaxHeight().imePadding().padding(padding)) {
+        // The composer must ride above the soft keyboard: the bare Material3 Scaffold's content
+        // insets cover the system bars but not the IME. consumeWindowInsets(padding) before
+        // imePadding() unions the two so the nav-bar inset already in `padding` is dropped while
+        // the keyboard is up (WindowInsets.ime already spans that band) instead of stacking on top.
+        Column(
+            Modifier
+                .fillMaxHeight()
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding(),
+        ) {
             Column(Modifier.fillMaxHeight().weight(1f, true)) {
                 RefreshingChatroomFeedView(
                     feedContentState = feedViewModel.feedState,

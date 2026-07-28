@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -160,6 +161,7 @@ private fun ScaffoldLayout(
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
     val navBarInsets = WindowInsets.navigationBars
+    val imeInsets = WindowInsets.ime
     SubcomposeLayout { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
@@ -195,13 +197,20 @@ private fun ScaffoldLayout(
                 }.firstOrNull()?.measure(looseConstraints)
             }
         // When the bar lambda is provided but its content emits nothing (e.g. AppBottomBar
-        // hides itself on canPop entries), reserve the system-nav-bar inset so the FAB and
-        // content stay clear of the navigation bar instead of sliding under it. The
-        // `bottomBar == null` branch is already handled by navigationBarsPadding on
-        // rootModifier.
+        // hides itself on canPop entries, or while the keyboard is up), reserve the
+        // system-nav-bar inset so the FAB and content stay clear of the navigation bar instead
+        // of sliding under it. Subtract the IME inset: the root imePadding has already lifted the
+        // whole scaffold above the keyboard, and WindowInsets.ime spans the nav-bar band, so
+        // reserving the full nav bar on top of that would double-count and strand a gap above the
+        // keyboard (the `bottomBar == null` branch gets this for free via navigationBarsPadding,
+        // which excludes the consumed IME inset). The `bottomBar == null` case is on rootModifier.
         val bottomHeight =
             (bottomPlaceable?.height ?: 0).let { measured ->
-                if (bottomBar != null && measured == 0) navBarInsets.getBottom(this) else measured
+                if (bottomBar != null && measured == 0) {
+                    (navBarInsets.getBottom(this) - imeInsets.getBottom(this)).coerceAtLeast(0)
+                } else {
+                    measured
+                }
             }
 
         // Publish the measured limits so the nested-scroll connection can clamp correctly.
