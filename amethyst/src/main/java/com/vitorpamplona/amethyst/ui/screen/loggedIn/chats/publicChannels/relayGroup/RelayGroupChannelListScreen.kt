@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
@@ -411,7 +410,8 @@ fun RelayGroupChannelListScreen(
                             )
                         }
                         if (!channelsCollapsed) {
-                            items(buzzChatChannels, key = { "chat-${it.id}" }) { groupId ->
+                            itemsIndexed(buzzChatChannels, key = { _, it -> "chat-${it.id}" }) { index, groupId ->
+                                RowHairline(index)
                                 BuzzImportRow(
                                     groupId = groupId,
                                     isAdded = groupId.id in buzzAdded,
@@ -437,7 +437,8 @@ fun RelayGroupChannelListScreen(
                             )
                         }
                         if (!forumsCollapsed) {
-                            items(buzzForumChannels, key = { "forum-${it.id}" }) { groupId ->
+                            itemsIndexed(buzzForumChannels, key = { _, it -> "forum-${it.id}" }) { index, groupId ->
+                                RowHairline(index)
                                 BuzzImportRow(
                                     groupId = groupId,
                                     isAdded = groupId.id in buzzAdded,
@@ -481,7 +482,8 @@ fun RelayGroupChannelListScreen(
                         }
                     } else {
                         val shown = dmRows.take(INLINE_DM_LIMIT)
-                        items(shown, key = { "dm-${it.channelId}" }) { row ->
+                        itemsIndexed(shown, key = { _, it -> "dm-${it.channelId}" }) { index, row ->
+                            RowHairline(index)
                             BuzzDmInlineRow(
                                 row = row,
                                 myPubkey = myPubkey,
@@ -512,7 +514,8 @@ fun RelayGroupChannelListScreen(
                             )
                         }
                         if (showHiddenDms) {
-                            items(hiddenDmRows, key = { "dm-hidden-${it.channelId}" }) { row ->
+                            itemsIndexed(hiddenDmRows, key = { _, it -> "dm-hidden-${it.channelId}" }) { index, row ->
+                                RowHairline(index)
                                 BuzzDmInlineRow(
                                     row = row,
                                     myPubkey = myPubkey,
@@ -530,9 +533,7 @@ fun RelayGroupChannelListScreen(
                 } else {
                     // Vanilla NIP-29 relay: flat channel directory (no forums/DMs/console).
                     itemsIndexed(channels, key = { _, channel -> channel.groupId.id }) { index, channel ->
-                        if (index > 0) {
-                            HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                        }
+                        RowHairline(index)
                         RelayGroupChannelRow(channel, myPubkey, accountViewModel) { nav.nav(routeFor(channel)) }
                     }
                 }
@@ -548,6 +549,17 @@ fun RelayGroupChannelListScreen(
             onAdd = { accountViewModel.addCommunityMember(relay, it) },
             onDismiss = { showAddPeople = false },
         )
+    }
+}
+
+/**
+ * The hairline separating two adjacent rows within a section. Drawn *before* row [index], and never
+ * before the first one, so a section's own header keeps providing the separation at its boundaries.
+ */
+@Composable
+private fun RowHairline(index: Int) {
+    if (index > 0) {
+        HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
