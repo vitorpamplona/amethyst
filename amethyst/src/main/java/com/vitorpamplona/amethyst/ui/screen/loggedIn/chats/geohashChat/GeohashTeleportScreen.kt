@@ -26,7 +26,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -52,7 +51,7 @@ fun GeohashTeleportScreen(
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
-                title = { Text(stringRes(R.string.geohash_teleport_title), fontWeight = FontWeight.Bold) },
+                title = { Text(stringRes(R.string.geohash_teleport_title)) },
                 popBack = nav::popBack,
             )
         },

@@ -54,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -427,10 +426,10 @@ private fun GeohashChatTopBar(
                 LoadCityName(
                     geohashStr = geohash,
                     onLoading = {
-                        Text("#$geohash", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("#$geohash")
                     },
                 ) { cityName ->
-                    Text(cityName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(cityName)
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

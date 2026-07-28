@@ -280,7 +280,6 @@ fun RelayGroupChannelListScreen(
                 title = {
                     Text(
                         text = relay.displayUrl(),
-                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.MiddleEllipsis,
                     )

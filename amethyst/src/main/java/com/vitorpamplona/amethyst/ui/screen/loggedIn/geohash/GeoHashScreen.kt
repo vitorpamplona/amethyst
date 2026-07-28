@@ -26,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -124,7 +123,6 @@ fun DisplayGeoTagHeader(
     LoadCityName(geohashStr = geohash) { cityName ->
         Text(
             cityName,
-            fontWeight = FontWeight.Bold,
             modifier = modifier,
         )
     }

@@ -96,7 +96,7 @@ fun NewGeohashChatScreen(
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
-                title = { Text("New location channel", fontWeight = FontWeight.Bold) },
+                title = { Text("New location channel") },
                 popBack = nav::popBack,
             )
         },

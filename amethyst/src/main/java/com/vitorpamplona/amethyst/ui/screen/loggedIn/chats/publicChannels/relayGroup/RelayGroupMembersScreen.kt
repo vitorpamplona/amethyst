@@ -178,7 +178,6 @@ private fun RelayGroupMembers(
                     Column {
                         Text(
                             text = stringRes(R.string.relay_group_members_title),
-                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
