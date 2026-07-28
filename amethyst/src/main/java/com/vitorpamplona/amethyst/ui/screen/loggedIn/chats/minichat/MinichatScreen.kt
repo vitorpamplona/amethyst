@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -174,7 +175,9 @@ fun MinichatScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.fillMaxHeight().padding(padding)) {
+        // imePadding so the reply composer rides above the soft keyboard — the bare Material3
+        // Scaffold's content insets cover the system bars but not the IME.
+        Column(Modifier.fillMaxHeight().imePadding().padding(padding)) {
             // Every reply here is rooted at [rootNote], which is already pinned at the top — so
             // suppress the redundant reply-to-root preview each reply would otherwise render.
             CompositionLocalProvider(LocalSuppressReplyToNoteId provides rootId) {

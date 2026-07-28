@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -185,7 +186,10 @@ fun ConcordChannelScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.fillMaxHeight().padding(padding)) {
+        // imePadding so the composer rides above the soft keyboard. The bare Material3 Scaffold's
+        // content insets cover the system bars but not the IME, so without this the message field
+        // sat behind the keyboard while typing.
+        Column(Modifier.fillMaxHeight().imePadding().padding(padding)) {
             Column(Modifier.fillMaxHeight().weight(1f, true)) {
                 RefreshingChatroomFeedView(
                     feedContentState = feedViewModel.feedState,
