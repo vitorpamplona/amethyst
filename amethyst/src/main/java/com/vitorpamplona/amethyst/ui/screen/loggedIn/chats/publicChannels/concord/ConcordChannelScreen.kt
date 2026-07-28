@@ -251,9 +251,27 @@ fun ConcordChannelScreen(
                     nav = nav,
                     onMessageSent = { feedViewModel.feedState.sendToTop() },
                 )
+            } else if (channel.dissolved) {
+                // CORD-02 §9: an owner-signed tombstone seals the community read-only — the composer is
+                // gone (canPost() is false) and this replaces it so the seal is explained, not silent.
+                ConcordDissolvedNotice()
             }
         }
     }
+}
+
+/**
+ * The read-only notice shown where the composer would be once a community is dissolved (CORD-02 §9).
+ * The tombstone seals the community: history stays readable, but no member may post again.
+ */
+@Composable
+private fun ConcordDissolvedNotice() {
+    Text(
+        text = stringRes(R.string.concord_dissolved_read_only),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.placeholderText,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+    )
 }
 
 /** The number of messages a freshly-opened channel eagerly backfills to before paging goes demand-driven. */
