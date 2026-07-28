@@ -687,12 +687,12 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
 
     fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
 
-    override fun getOrCreateUser(pubkey: HexKey): User {
-        require(isValidHex(key = pubkey)) { "$pubkey is not a valid hex" }
+    override fun getOrCreateUser(hex: HexKey): User {
+        require(isValidHex(key = hex)) { "$hex is not a valid hex" }
         // Pass `this` as the UserContext — User now resolves each pinned
         // addressable note (kind:10002 / 10050 / 10019) lazily on first
         // read, instead of all-or-nothing at construction time.
-        return users.getOrCreate(pubkey) { User(it, userContext) }
+        return users.getOrCreate(hex) { User(it, userContext) }
     }
 
     /** [UserContext] bridge to this cache's addressable lookup. */
@@ -823,11 +823,11 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         }
     }
 
-    override fun getOrCreateNote(idHex: String): Note {
-        require(isValidHex(idHex)) { "$idHex is not a valid hex" }
+    override fun getOrCreateNote(hex: String): Note {
+        require(isValidHex(hex)) { "$hex is not a valid hex" }
 
-        return notes.getOrCreate(idHex) {
-            Note(idHex)
+        return notes.getOrCreate(hex) {
+            Note(hex)
         }
     }
 
@@ -945,11 +945,11 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
 
     fun getOrCreateAddressableNoteInternal(key: Address): AddressableNote = addressables.getOrCreate(key) { AddressableNote(key) }
 
-    override fun getOrCreateAddressableNote(key: Address): AddressableNote {
-        val note = getOrCreateAddressableNoteInternal(key)
+    override fun getOrCreateAddressableNote(address: Address): AddressableNote {
+        val note = getOrCreateAddressableNoteInternal(address)
         // Loads the user outside a Syncronized block to avoid blocking
         if (note.author == null) {
-            note.author = checkGetOrCreateUser(key.pubKeyHex)
+            note.author = checkGetOrCreateUser(address.pubKeyHex)
         }
         return note
     }
