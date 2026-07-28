@@ -299,6 +299,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
@@ -3447,6 +3448,18 @@ class Account(
     /** Send a kind 9022 leave request to the host relay and drop it from our list. */
     suspend fun leaveRelayGroup(channel: RelayGroupChannel) {
         val template = LeaveRequestEvent.build(channel.groupId.id)
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+        unfollow(channel)
+    }
+
+    /**
+     * Delete the whole group with a kind 9008 delete-group event (owner/admin only — the relay
+     * enforces this). Unlike [leaveRelayGroup], this destroys the channel for everyone rather than
+     * just removing me; the relay drops the group and its messages. Also drops it from our own list
+     * so it disappears from Messages immediately instead of lingering as a now-dead id.
+     */
+    suspend fun deleteRelayGroup(channel: RelayGroupChannel) {
+        val template = DeleteGroupEvent.build(channel.groupId.id)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
         unfollow(channel)
     }

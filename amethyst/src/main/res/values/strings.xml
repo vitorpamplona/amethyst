@@ -2587,6 +2587,10 @@
     <string name="relay_group_edit_confirm">Save</string>
     <string name="relay_group_menu_members">Members</string>
     <string name="relay_group_menu_edit">Edit group</string>
+    <string name="relay_group_delete">Delete group</string>
+    <string name="relay_group_delete_confirm">Delete \"%1$s\"? This removes the group and its history for everyone, and cannot be undone.</string>
+    <string name="buzz_channel_delete">Delete channel</string>
+    <string name="buzz_channel_delete_confirm">Delete \"%1$s\"? This removes the channel and its messages for everyone, and cannot be undone.</string>
     <string name="relay_group_threads_title">Threads</string>
     <string name="relay_group_pin_message">Pin message</string>
     <string name="relay_group_unpin_message">Unpin message</string>

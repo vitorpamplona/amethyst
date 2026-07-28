@@ -1672,6 +1672,9 @@ class AccountViewModel(
 
     fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.leaveRelayGroup(channel) }
 
+    /** Delete the channel/group for everyone (kind-9008). Owner/admin only; the relay enforces it. */
+    fun deleteRelayGroup(channel: RelayGroupChannel) = launchSigner { account.deleteRelayGroup(channel) }
+
     /**
      * Take a relay group off Messages WITHOUT leaving it: drop it from my kind-10009 list so it stops
      * showing, but send no kind-9022 — I stay in the relay roster and can still read/post, and re-joining
