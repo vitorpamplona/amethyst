@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.highlights.HighlightQuote
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
@@ -57,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.components.DisplayEvent
 import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
+import com.vitorpamplona.amethyst.ui.components.rememberTranslation
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -194,11 +196,35 @@ fun DisplayHighlight(
             HighlightQuote.of(highlight, context, textFragmentPrefix)
         }
 
-    HighlightedQuote(
-        text = quote.text,
-        highlight = quote.marked,
-        modifier = Modifier.fillMaxWidth(),
-    )
+    TranslatableRichTextViewer(
+        content = quote.text,
+        id = quote.text,
+        // Indented like the attribution, so the "Auto-translated from …" line sits under the
+        // quote text rather than under the bar.
+        translationMessageModifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 5.dp, start = HighlightQuoteIndent),
+        accountViewModel = accountViewModel,
+    ) { shown ->
+        // A translation rewrites the passage, so the original offsets stop locating anything.
+        // Translate the quote too and re-find it inside the translated context — ML Kit works
+        // sentence by sentence, so a quote that is one or more whole sentences comes back the
+        // same either way. HighlightQuote.of degrades to the quote alone when the two
+        // translations don't line up, which beats marking a span the reader never highlighted.
+        val translatedQuote = rememberTranslation(highlight, accountViewModel)
+
+        val display =
+            remember(shown, translatedQuote, quote) {
+                if (shown == quote.text) quote else HighlightQuote.of(translatedQuote, shown)
+            }
+
+        HighlightedQuote(
+            text = display.text,
+            highlight = display.marked,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 
     Spacer(Modifier.height(HighlightQuoteSpacing))
 

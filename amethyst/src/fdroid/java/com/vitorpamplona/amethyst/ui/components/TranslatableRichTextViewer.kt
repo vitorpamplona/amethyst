@@ -66,3 +66,10 @@ fun TranslatableRichTextViewer(
     accountViewModel: AccountViewModel,
     displayText: @Composable (String) -> Unit,
 ) = displayText(content)
+
+/** No translation service in this flavor, so the content is always its own "translation". */
+@Composable
+fun rememberTranslation(
+    content: String,
+    accountViewModel: AccountViewModel,
+): String = content
