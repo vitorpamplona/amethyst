@@ -131,6 +131,13 @@ class HighlightEvent(
      * NIP-84 `context` tag and falling back to reconstructing it from a W3C
      * `textquoteselector`'s prefix/suffix (as web highlighter clients emit) so the
      * in-context rendering still works when no `context` tag is present.
+     *
+     * The prefix/suffix are scraped from a web page, so they carry the page's
+     * block-boundary whitespace — runs of newlines and spaces between DOM nodes — which
+     * would otherwise render as a stack of blank lines around the highlight. Each run is
+     * collapsed to a single space so the surrounding context reads as one continuous
+     * passage; the highlight's own [content] is left verbatim so its offsets inside the
+     * reconstructed context stay exact for the in-context marker.
      */
     fun contextOrReconstructed(): String? {
         context()?.let { return it }
@@ -138,7 +145,10 @@ class HighlightEvent(
         val selector = textQuoteSelector() ?: return null
         if (selector.prefix == null && selector.suffix == null) return null
 
-        return (selector.prefix ?: "") + content + (selector.suffix ?: "")
+        val prefix = selector.prefix?.replace(WHITESPACE_RUN, " ")?.trimStart() ?: ""
+        val suffix = selector.suffix?.replace(WHITESPACE_RUN, " ")?.trimEnd() ?: ""
+
+        return prefix + content + suffix
     }
 
     fun inPost() = firstTaggedATag()
@@ -149,6 +159,9 @@ class HighlightEvent(
 
     companion object {
         const val KIND = 9802
+
+        /** Any run of whitespace (spaces, tabs, newlines) — collapsed to a single space. */
+        private val WHITESPACE_RUN = Regex("\\s+")
 
         suspend fun create(
             msg: String,

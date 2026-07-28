@@ -64,9 +64,36 @@ class HighlightEventTest {
 
     @Test
     fun reconstructsContextFromSelectorWhenNoContextTag() {
+        // The suffix's leading "\n\n" (a page block boundary) is collapsed to a single space so
+        // it doesn't render as blank lines; the quote's own content is left verbatim.
         assertEquals(
-            "Your food is prechewed for you. The caged tiger prefers a pot of meat slop to an antelope they have to chase.\n\nAnd it’s not like there’s anyw",
+            "Your food is prechewed for you. The caged tiger prefers a pot of meat slop to an antelope they have to chase. And it’s not like there’s anyw",
             webHighlight.contextOrReconstructed(),
+        )
+    }
+
+    @Test
+    fun collapsesRunsOfWhitespaceScrapedFromThePage() {
+        // A real highlight whose prefix carries five newlines between two paragraphs of the
+        // source page. Without collapsing, the reconstructed context renders a stack of blank
+        // lines above the marked quote.
+        val excessWhitespace =
+            HighlightEvent(
+                id = "fc2366a5ac54de837842492e525f8f5d141d4a9bba5b1238e135adaf4225763f",
+                pubKey = "6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93",
+                createdAt = 1785270682,
+                tags =
+                    arrayOf(
+                        arrayOf("r", "https://geohot.github.io//blog/jekyll/update/2026/06/06/our-great-war.html"),
+                        arrayOf("textquoteselector", "-", "n way, the better.\n\n\n\n\nHowever, ", ". A single totalizing control sy"),
+                    ),
+                content = "it will end badly for everyone if the systems of comfort prevent structural exit for the people who don’t want it",
+                sig = "0428ad8aef2a12f36a4dc86105f8b429a4b4161f1fa72b08414fb2dd6c1a2276838b167682cb49ab94aa5c4e1d6351bbec0b7906a4b5e6cec1ab64a9d4c63d9d",
+            )
+
+        assertEquals(
+            "n way, the better. However, it will end badly for everyone if the systems of comfort prevent structural exit for the people who don’t want it. A single totalizing control sy",
+            excessWhitespace.contextOrReconstructed(),
         )
     }
 
