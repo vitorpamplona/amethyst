@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.playback.playerPool
 
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
+import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
@@ -81,20 +84,33 @@ class CustomMediaSourceFactory(
     videoCache: VideoCache,
     dataSourceFactory: DataSource.Factory,
 ) : MediaSource.Factory {
+    private val cachingDataSource: DataSource.Factory = videoCache.get(dataSourceFactory)
+
     private var cachingFactory: MediaSource.Factory =
-        DefaultMediaSourceFactory(videoCache.get(dataSourceFactory))
+        DefaultMediaSourceFactory(cachingDataSource)
     private var nonCachingFactory: MediaSource.Factory =
         DefaultMediaSourceFactory(dataSourceFactory)
 
+    // HLS is built explicitly rather than through DefaultMediaSourceFactory, which exposes no hook
+    // for a playlist parser factory. See LowLatencyStrippingHlsPlaylistParserFactory for why we need
+    // one. Everything else still routes through the Default factories above.
+    private val cachingHlsFactory: MediaSource.Factory = hlsFactory(cachingDataSource)
+    private val nonCachingHlsFactory: MediaSource.Factory = hlsFactory(dataSourceFactory)
+
+    private fun hlsFactory(dataSource: DataSource.Factory): MediaSource.Factory =
+        HlsMediaSource
+            .Factory(dataSource)
+            .setPlaylistParserFactory(LowLatencyStrippingHlsPlaylistParserFactory())
+
+    private fun allFactories() = listOf(cachingFactory, nonCachingFactory, cachingHlsFactory, nonCachingHlsFactory)
+
     override fun setDrmSessionManagerProvider(drmSessionManagerProvider: DrmSessionManagerProvider): MediaSource.Factory {
-        cachingFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
-        nonCachingFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
+        allFactories().forEach { it.setDrmSessionManagerProvider(drmSessionManagerProvider) }
         return this
     }
 
     override fun setLoadErrorHandlingPolicy(loadErrorHandlingPolicy: LoadErrorHandlingPolicy): MediaSource.Factory {
-        cachingFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
-        nonCachingFactory.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+        allFactories().forEach { it.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy) }
         return this
     }
 
@@ -107,17 +123,27 @@ class CustomMediaSourceFactory(
         val knownOnDemand = HlsLivenessCache.isKnownOnDemand(id)
         val bypassCache = shouldBypassCache(flaggedLive, hls, knownOnDemand)
 
+        // Reuse media3's own inference rather than the looser `.m3u8`-substring check that drives
+        // cache routing, so the HLS branch here always agrees with what DefaultMediaSourceFactory
+        // would have picked. `isLiveStreaming` matches a `.m3u8` anywhere in the URL — including a
+        // query string on a progressive file — which must not select an HlsMediaSource.
+        val config = mediaItem.localConfiguration
+        val isHlsContent =
+            config != null &&
+                Util.inferContentTypeForUriAndMimeType(config.uri, config.mimeType) == C.CONTENT_TYPE_HLS
+
         val source =
-            if (bypassCache) {
-                nonCachingFactory.createMediaSource(mediaItem)
-            } else {
-                cachingFactory.createMediaSource(mediaItem)
+            when {
+                isHlsContent && bypassCache -> nonCachingHlsFactory.createMediaSource(mediaItem)
+                isHlsContent -> cachingHlsFactory.createMediaSource(mediaItem)
+                bypassCache -> nonCachingFactory.createMediaSource(mediaItem)
+                else -> cachingFactory.createMediaSource(mediaItem)
             }
-        // Logs the three routing inputs directly rather than a re-derived label, so it can't drift
-        // from shouldBypassCache.
+        // Logs the routing inputs directly rather than a re-derived label, so it can't drift from
+        // shouldBypassCache.
         Log.d(PLAYBACK_DIAG_TAG) {
             "SOURCE ${if (bypassCache) "BYPASS" else "CACHE"} flaggedLive=$flaggedLive hls=$hls knownOnDemand=$knownOnDemand " +
-                "mime=${mediaItem.localConfiguration?.mimeType} -> ${source::class.java.simpleName} id=$id"
+                "hlsContent=$isHlsContent mime=${config?.mimeType} -> ${source::class.java.simpleName} id=$id"
         }
         return source
     }
