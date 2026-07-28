@@ -46,8 +46,8 @@ object ResourceUsageAlerts {
         val value: Long,
     )
 
-    /** > 100 MB of background traffic on cellular in one day. */
-    const val BG_MOBILE_BYTES_PER_DAY = 100L * 1024L * 1024L
+    /** > 500 MB of background traffic on cellular in one day. */
+    const val BG_MOBILE_BYTES_PER_DAY = 500L * 1024L * 1024L
 
     /** > 24 relay-connection-hours while backgrounded on cellular in one day. */
     const val BG_MOBILE_RELAY_CONN_MS_PER_DAY = 24L * 60L * 60L * 1000L
