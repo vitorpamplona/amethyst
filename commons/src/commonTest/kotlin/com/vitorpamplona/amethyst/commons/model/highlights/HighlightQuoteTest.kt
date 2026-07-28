@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.highlights
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class HighlightQuoteTest {
     @Test
@@ -88,5 +89,50 @@ class HighlightQuoteTest {
 
         assertEquals("some context", quote.text)
         assertNull(quote.marked)
+    }
+
+    @Test
+    fun keepsShortContextWholeWithoutEllipsis() {
+        val quote = HighlightQuote.of("the merge happens slowly", "We think the merge happens slowly. It does.")
+
+        assertEquals("We think the merge happens slowly. It does.", quote.text)
+        assertTrue('…' !in quote.text)
+    }
+
+    @Test
+    fun trimsLongContextToAWindowAroundTheQuote() {
+        val filler = "word ".repeat(200).trim() // ~1000 chars of context on each side
+        val context = "$filler the marked quote $filler"
+        val quote = HighlightQuote.of("the marked quote", context)
+
+        // The whole quote survives and stays marked...
+        assertEquals("the marked quote", quote.text.substring(quote.marked!!))
+        // ...but the surrounding text is trimmed with an ellipsis on each side...
+        assertTrue(quote.text.startsWith("… "))
+        assertTrue(quote.text.endsWith(" …"))
+        // ...and the result is a small fraction of the original two-paragraph context.
+        assertTrue(quote.text.length < context.length / 2, "expected windowing, got ${quote.text.length} of ${context.length}")
+    }
+
+    @Test
+    fun dropsBlankLinesAtTheEdgesOfAShortContext() {
+        // A context whose paragraph boundaries left blank lines at its very start and end would
+        // otherwise render as empty space above and below the quote.
+        val quote = HighlightQuote.of("Forward Secrecy", "\n\nForward Secrecy is nice.\n\n")
+
+        assertEquals("Forward Secrecy is nice.", quote.text)
+        assertEquals(0 until 15, quote.marked)
+        assertEquals("Forward Secrecy", quote.text.substring(quote.marked!!))
+    }
+
+    @Test
+    fun trimmingSnapsToWholeWordsSoNoWordIsCutInHalf() {
+        val lead = "alpha bravo charlie delta echo foxtrot ".repeat(20) // long, space-separated
+        val context = "${lead}QUOTE"
+        val quote = HighlightQuote.of("QUOTE", context)
+
+        // The kept lead-in starts right after the ellipsis with a whole word, never a fragment.
+        val keptLead = quote.text.removePrefix("… ").removeSuffix("QUOTE")
+        assertTrue(keptLead.split(" ").first() in setOf("alpha", "bravo", "charlie", "delta", "echo", "foxtrot"))
     }
 }
