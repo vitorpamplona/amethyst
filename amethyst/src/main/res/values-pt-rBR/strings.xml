@@ -760,6 +760,10 @@
     <string name="workout_suggestion_connect_button">Conectar</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Do Health Connect</string>
+    <plurals name="workout_suggestion_combined_sessions">
+        <item quantity="one">%1$d atividade</item>
+        <item quantity="other">%1$d atividades</item>
+    </plurals>
     <string name="exercise_running">Corrida</string>
     <string name="exercise_walking">Caminhada</string>
     <string name="exercise_cycling">Ciclismo</string>
@@ -4577,8 +4581,4 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
-    <plurals name="workout_suggestion_combined_sessions">
-        <item quantity="one">%1$d atividade</item>
-        <item quantity="other">%1$d atividades</item>
-    </plurals>
 </resources>
