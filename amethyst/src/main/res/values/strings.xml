@@ -3930,6 +3930,10 @@
     <string name="git_repo_settings_save">Save</string>
     <string name="git_repositories">Git Repositories</string>
     <string name="highlights">Highlights</string>
+    <string name="git_repositories_search_open">Filter repositories</string>
+    <string name="git_repositories_search_close">Close filter</string>
+    <string name="git_repositories_search_placeholder">Filter by name, topic, host, maintainer…</string>
+    <string name="git_repositories_search_no_results">No repositories in the current feed match this search.</string>
     <string name="nsite_title">nSite: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Permissions:</string>
