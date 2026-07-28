@@ -1451,37 +1451,52 @@ private fun AppInner(
                                         modifier = bannerModifier,
                                     )
                                     Box(modifier = Modifier.weight(1f)) {
-                                        MainContent(
-                                            layoutMode = layoutMode,
-                                            deckState = deckState,
-                                            workspaceManager = workspaceManager,
-                                            singlePaneState = singlePaneState,
-                                            pinnedNavBarState = pinnedNavBarState,
-                                            relayManager = relayManager,
-                                            localCache = localCache,
-                                            accountManager = accountManager,
-                                            account = account,
-                                            iAccount = iAccount,
-                                            accountRelays = accountRelays,
-                                            dmSendTracker = dmSendTracker,
-                                            nwcConnection = nwcConnection,
-                                            subscriptionsCoordinator = subscriptionsCoordinator,
-                                            indexRelaysStore = indexRelaysStore,
-                                            nip11Fetcher = nip11Fetcher,
-                                            dmInboxResolver = dmInboxResolver,
-                                            appScope = scope,
-                                            torStatus = currentTorStatus,
-                                            onShowComposeDialog = onShowComposeDialog,
-                                            onShowReplyDialog = onShowReplyDialog,
-                                            onEditInComposer = onEditInComposer,
-                                            onShowAppDrawer = onShowAppDrawer,
-                                            onOpenFeedsDrawer = {
-                                                appDrawerInitialTab =
-                                                    com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
-                                                onShowAppDrawer()
-                                            },
-                                            onShowImportFollowListDialog = onShowImportFollowListDialog,
-                                        )
+                                        // Force a Compose subtree teardown when the active
+                                        // account changes. Without this, the currently-open
+                                        // column keeps its account-A `remember { ... }`
+                                        // state (LazyListState scroll position, expanded
+                                        // rows, filter-tab selection, in-flight metadata
+                                        // observers, per-column view-models) even though the
+                                        // outer `iAccount` / `accountRelays` swap correctly.
+                                        // Users saw account A's notifications / profile /
+                                        // messages page rendered under account B's identity
+                                        // until they navigated away and back. `key(pubKeyHex)`
+                                        // is the idiomatic Compose way to reset an entire
+                                        // subtree on identity change while keeping the outer
+                                        // deck layout / workspace state (declared above) alive.
+                                        androidx.compose.runtime.key(account.pubKeyHex) {
+                                            MainContent(
+                                                layoutMode = layoutMode,
+                                                deckState = deckState,
+                                                workspaceManager = workspaceManager,
+                                                singlePaneState = singlePaneState,
+                                                pinnedNavBarState = pinnedNavBarState,
+                                                relayManager = relayManager,
+                                                localCache = localCache,
+                                                accountManager = accountManager,
+                                                account = account,
+                                                iAccount = iAccount,
+                                                accountRelays = accountRelays,
+                                                dmSendTracker = dmSendTracker,
+                                                nwcConnection = nwcConnection,
+                                                subscriptionsCoordinator = subscriptionsCoordinator,
+                                                indexRelaysStore = indexRelaysStore,
+                                                nip11Fetcher = nip11Fetcher,
+                                                dmInboxResolver = dmInboxResolver,
+                                                appScope = scope,
+                                                torStatus = currentTorStatus,
+                                                onShowComposeDialog = onShowComposeDialog,
+                                                onShowReplyDialog = onShowReplyDialog,
+                                                onEditInComposer = onEditInComposer,
+                                                onShowAppDrawer = onShowAppDrawer,
+                                                onOpenFeedsDrawer = {
+                                                    appDrawerInitialTab =
+                                                        com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
+                                                    onShowAppDrawer()
+                                                },
+                                                onShowImportFollowListDialog = onShowImportFollowListDialog,
+                                            )
+                                        }
                                     }
                                 }
 
