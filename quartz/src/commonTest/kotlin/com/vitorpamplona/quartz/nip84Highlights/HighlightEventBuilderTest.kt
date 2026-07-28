@@ -118,6 +118,23 @@ class HighlightEventBuilderTest {
         }
 
     @Test
+    fun buildProducesUnsignedTemplateWithSameTags() {
+        val template =
+            HighlightEvent.build(
+                quote = "the passage",
+                url = "https://example.com/post",
+                prefix = "before ",
+                comment = "note",
+            )
+
+        assertEquals(HighlightEvent.KIND, template.kind)
+        assertEquals("the passage", template.content)
+        assertTrue(template.tags.any { it[0] == "r" && it[1] == "https://example.com/post" })
+        assertTrue(template.tags.any { it[0] == "textquoteselector" })
+        assertTrue(template.tags.any { it[0] == "comment" && it[1] == "note" })
+    }
+
+    @Test
     fun roundTripsFromSharedHighlightParser() =
         runTest {
             val parsed =

@@ -987,6 +987,20 @@ sealed class Route {
         val draft: String? = null,
     ) : Route()
 
+    /**
+     * The NIP-84 highlight composer. Opened by the "Add highlight" action (all fields null) or
+     * when a browser shares a text selection to Amethyst — in which case the shared string has
+     * already been run through SharedHighlightParser and the pieces arrive pre-split here.
+     */
+    @Serializable
+    data class NewHighlight(
+        val quote: String? = null,
+        val url: String? = null,
+        val prefix: String? = null,
+        val suffix: String? = null,
+        val comment: String? = null,
+    ) : Route()
+
     @Serializable data object NewHlsVideo : Route()
 
     @Serializable

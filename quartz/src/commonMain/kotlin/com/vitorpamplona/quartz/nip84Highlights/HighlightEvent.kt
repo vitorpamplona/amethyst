@@ -28,7 +28,9 @@ import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
@@ -212,7 +214,33 @@ class HighlightEvent(
             context: String? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): HighlightEvent {
+        ): HighlightEvent = signer.sign(createdAt, KIND, assembleTags(url, prefix, suffix, comment, context), quote)
+
+        /**
+         * The unsigned [EventTemplate] counterpart of [create], for the app's
+         * sign-and-broadcast pipeline (`account.signAndComputeBroadcast(...)`). Same tag
+         * assembly; the caller supplies the signer.
+         */
+        fun build(
+            quote: String,
+            url: String? = null,
+            prefix: String? = null,
+            suffix: String? = null,
+            comment: String? = null,
+            context: String? = null,
+            createdAt: Long = TimeUtils.now(),
+        ): EventTemplate<HighlightEvent> =
+            eventTemplate(KIND, quote, createdAt) {
+                addAll(assembleTags(url, prefix, suffix, comment, context))
+            }
+
+        private fun assembleTags(
+            url: String?,
+            prefix: String?,
+            suffix: String?,
+            comment: String?,
+            context: String?,
+        ): Array<Array<String>> {
             val tags = mutableListOf<Array<String>>()
 
             if (!url.isNullOrBlank()) {
@@ -228,7 +256,7 @@ class HighlightEvent(
                 tags.add(CommentTag.assemble(comment))
             }
 
-            return signer.sign(createdAt, KIND, tags.toTypedArray(), quote)
+            return tags.toTypedArray()
         }
     }
 }
