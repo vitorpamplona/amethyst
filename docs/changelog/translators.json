@@ -80,7 +80,12 @@
     "translators": [
       {
         "user": "vitorpamplona",
-        "languages": []
+        "languages": [
+          "Czech",
+          "German",
+          "Portuguese, Brazilian",
+          "Swedish"
+        ]
       },
       {
         "user": "greenart7c3",

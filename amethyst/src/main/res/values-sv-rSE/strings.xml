@@ -333,6 +333,7 @@
     <string name="concord_leave_message">Lämna %1$s? Den tas bort från det här kontots lista och slutar synkas på dina enheter. Gemenskapen meddelas inte och du tas inte bort från dess medlemslista. Meddelanden som du inte längre kan dekryptera kan gå förlorade, och du kan bara återvända med en ny inbjudan.</string>
     <string name="concord_leave_owner_warning">Du skapade den här gemenskapen. Att lämna raderar den inte och överlämnar den inte till någon annan, men det kasserar ägarnyckeln som lagras i din lista — du skulle inte kunna hantera den igen.</string>
     <string name="concord_edit_relays_desc">Var den här gemenskapens krypterade plan publiceras och läses.</string>
+    <string name="concord_dissolved_read_only">Den här gemenskapen har upplösts och är nu skrivskyddad. Du kan fortfarande läsa dess historik, men inga nya meddelanden kan publiceras.</string>
     <string name="concord_typing_one">%1$s skriver…</string>
     <string name="concord_typing_two">%1$s och %2$s skriver…</string>
     <string name="concord_typing_many">Flera personer skriver…</string>
@@ -4539,6 +4540,7 @@
     <string name="buzz_workflow_def_title">Ny arbetsflödesdefinition</string>
     <string name="buzz_workflow_def_desc">Namnger det för kanalen och publicerar dess YAML-recept (kind-30620). Ett riktigt Buzz-relä kör YAML:en. Självhostat kör runnern sitt konfigurerade kommando — här namnger och katalogiserar definitionen bara körningen.</string>
     <string name="buzz_workflow_def_name">Namn</string>
+    <string name="buzz_workflow_def_name_hint">build-och-testa</string>
     <string name="buzz_workflow_def_yaml">YAML-recept</string>
     <string name="buzz_workflow_def_publish_failed">Kunde inte publicera definitionen — kontrollera att du kan posta i den här arbetsytan.</string>
     <string name="buzz_workflow_publishing">Publicerar…</string>
@@ -4582,6 +4584,4 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
-    <string name="buzz_workflow_def_name_hint">build-och-testa</string>
-    <string name="concord_dissolved_read_only">Den här gemenskapen har upplösts och är nu skrivskyddad. Du kan fortfarande läsa dess historik, men inga nya meddelanden kan publiceras.</string>
 </resources>

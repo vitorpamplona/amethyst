@@ -333,6 +333,7 @@
     <string name="concord_leave_message">Sair de %1$s? Ela é removida da lista desta conta e para de sincronizar nos seus dispositivos. A comunidade não é notificada e você não é removido da lista de membros. Mensagens que você não conseguir mais descriptografar podem ser irrecuperáveis, e você só poderá voltar com um novo convite.</string>
     <string name="concord_leave_owner_warning">Você criou esta comunidade. Sair não a exclui nem a entrega a mais ninguém, mas descarta a chave de proprietário armazenada na sua lista — você não conseguiria gerenciá-la novamente.</string>
     <string name="concord_edit_relays_desc">Onde os planos criptografados desta comunidade são publicados e lidos.</string>
+    <string name="concord_dissolved_read_only">Esta comunidade foi dissolvida e agora é somente leitura. Você ainda pode ler o histórico, mas não é possível publicar novas mensagens.</string>
     <string name="concord_typing_one">%1$s está digitando…</string>
     <string name="concord_typing_two">%1$s e %2$s estão digitando…</string>
     <string name="concord_typing_many">Várias pessoas estão digitando…</string>
@@ -4538,6 +4539,7 @@
     <string name="buzz_workflow_def_title">Nova definição de fluxo de trabalho</string>
     <string name="buzz_workflow_def_desc">Dá um nome a ele para o canal e publica sua receita YAML (kind-30620). Um relay Buzz real executa o YAML. Auto-hospedado, o runner executa o comando configurado — aqui a definição apenas nomeia e cataloga a execução.</string>
     <string name="buzz_workflow_def_name">Nome</string>
+    <string name="buzz_workflow_def_name_hint">build-e-teste</string>
     <string name="buzz_workflow_def_yaml">Receita YAML</string>
     <string name="buzz_workflow_def_publish_failed">Não foi possível publicar a definição — verifique se você pode publicar neste espaço de trabalho.</string>
     <string name="buzz_workflow_publishing">Publicando…</string>
@@ -4581,6 +4583,4 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
-    <string name="buzz_workflow_def_name_hint">build-e-teste</string>
-    <string name="concord_dissolved_read_only">Esta comunidade foi dissolvida e agora é somente leitura. Você ainda pode ler o histórico, mas não é possível publicar novas mensagens.</string>
 </resources>
