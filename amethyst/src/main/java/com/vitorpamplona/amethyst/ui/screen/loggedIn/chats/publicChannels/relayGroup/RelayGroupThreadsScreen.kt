@@ -154,7 +154,6 @@ private fun RelayGroupThreads(
                     Column {
                         Text(
                             text = stringRes(R.string.relay_group_threads_title),
-                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )

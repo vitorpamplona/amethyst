@@ -24,7 +24,6 @@ import android.annotation.SuppressLint
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -114,7 +113,6 @@ fun DisplayUrlHeader(
 ) {
     Text(
         url,
-        fontWeight = FontWeight.Bold,
         modifier = modifier,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,

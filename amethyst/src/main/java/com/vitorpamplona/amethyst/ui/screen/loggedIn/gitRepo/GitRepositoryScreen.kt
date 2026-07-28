@@ -754,7 +754,6 @@ private fun TopBarTitle(
 ) {
     Text(
         text = event?.name() ?: fallback,
-        style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
