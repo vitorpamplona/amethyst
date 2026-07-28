@@ -1673,6 +1673,19 @@ class AccountViewModel(
     fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.leaveRelayGroup(channel) }
 
     /**
+     * Take a relay group off Messages WITHOUT leaving it: drop it from my kind-10009 list so it stops
+     * showing, but send no kind-9022 — I stay in the relay roster and can still read/post, and re-joining
+     * re-surfaces it instantly. Also records it in `dismissedChannelInvites` so a Buzz relay re-announcing
+     * my membership (kind-44100) can't bounce it back in as a pending invite. This is the soft counterpart
+     * to [leaveRelayGroup]; "Remove from Messages" vs "Leave" is the same split the invite card offers.
+     */
+    fun removeRelayGroupFromMessages(channel: RelayGroupChannel) =
+        launchSigner {
+            account.settings.dismissChannelInvite(channel.groupId.id)
+            account.unfollow(channel)
+        }
+
+    /**
      * Accept a channel somebody added me to: write it into my kind-10009 so it shows on Messages and
      * follows me to other devices. No kind-9021 join — the relay already put me in the roster, which is
      * why the channel opens and accepts posts today; this only records *my* decision to surface it.

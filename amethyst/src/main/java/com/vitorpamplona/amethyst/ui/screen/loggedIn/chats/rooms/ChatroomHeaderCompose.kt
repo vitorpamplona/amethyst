@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberM
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.reportWarningContentDescription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordLeaveDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordCommunityHasUnreadFlow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
@@ -489,36 +490,61 @@ private fun RelayGroupRoomCompose(
     // A placeholder row (no messages yet) has a null createdAt and never lights the dot.
     val lastReadTime by accountViewModel.account.loadLastReadFlow(relayGroupChannelLastReadRoute(channel.groupId)).collectAsStateWithLifecycle()
 
-    ChannelName(
-        channelIdHex = channel.groupId.id,
-        channelPicture = channelPicture,
-        channelTitle = { modifier ->
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-                Text(
-                    text = channel.toBestDisplayName(),
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(Modifier.width(6.dp))
-                RelayNameChip(
-                    label = channel.groupId.relayUrl.displayUrl(),
-                    onClick = { nav.nav(Route.RelayGroupServer(channel.groupId.relayUrl.url)) },
-                )
-            }
-        },
-        channelLastTime = lastMessage.createdAt(),
-        channelLastContent = lastContent,
-        hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-        autoPlayGif =
-            accountViewModel.settings.autoPlayVideosFlow
-                .collectAsStateWithLifecycle()
-                .value,
-        onClick = { nav.nav(Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url)) },
-    )
+    // Long-press brings the group's membership actions to the Messages row itself, mirroring the group
+    // top bar so "Remove from Messages" (drop from my list, stay a member) and "Leave" (kind-9022) are
+    // reachable without opening the group first.
+    var menuOpen by remember { mutableStateOf(false) }
+
+    Box {
+        ChannelName(
+            channelIdHex = channel.groupId.id,
+            channelPicture = channelPicture,
+            channelTitle = { modifier ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+                    Text(
+                        text = channel.toBestDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    RelayNameChip(
+                        label = channel.groupId.relayUrl.displayUrl(),
+                        onClick = { nav.nav(Route.RelayGroupServer(channel.groupId.relayUrl.url)) },
+                    )
+                }
+            },
+            channelLastTime = lastMessage.createdAt(),
+            channelLastContent = lastContent,
+            hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif =
+                accountViewModel.settings.autoPlayVideosFlow
+                    .collectAsStateWithLifecycle()
+                    .value,
+            onClick = { nav.nav(Route.RelayGroup(channel.groupId.id, channel.groupId.relayUrl.url)) },
+            onLongClick = { menuOpen = true },
+        )
+
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.remove_from_messages)) },
+                onClick = {
+                    menuOpen = false
+                    accountViewModel.removeRelayGroupFromMessages(channel)
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error) },
+                onClick = {
+                    menuOpen = false
+                    accountViewModel.leaveRelayGroup(channel)
+                },
+            )
+        }
+    }
 }
 
 @Composable
@@ -550,40 +576,78 @@ private fun ConcordRoomCompose(
         .loadLastReadFlow(concordChannelLastReadRoute(channel.channelId.communityId, channel.channelId.channelId))
         .collectAsStateWithLifecycle()
 
-    ChannelName(
-        channelIdHex = channel.channelId.channelId,
-        channelPicture = rememberConcordImageModel(channel.communityIcon, accountViewModel),
-        channelTitle = { modifier ->
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
-                Text(
-                    text = channel.toBestDisplayName(),
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                channel.communityName?.let { communityName ->
-                    Spacer(Modifier.width(6.dp))
-                    // The chip names the parent community and, when tapped, opens that community's
-                    // channel list — the "chip that opens the Concord Channel" entry point.
-                    ConcordCommunityPill(
-                        communityName = communityName,
-                        onClick = { nav.nav(Route.ConcordServer(channel.channelId.communityId)) },
+    // Concord has no server-side membership beyond my own kind-13302 list, so there is no soft
+    // "Remove from Messages" distinct from leaving — the only action is "Leave" (drop the community
+    // from my list = I'm out). Long-press surfaces it on the row with the same confirm the community
+    // screen uses; leaving a channel row leaves the whole community it belongs to (the dialog names it).
+    val communityId = channel.channelId.communityId
+    val isOwner =
+        accountViewModel.account.concordSessions
+            .sessionFor(communityId)
+            ?.entry
+            ?.owner == accountViewModel.account.signer.pubKey
+    var menuOpen by remember { mutableStateOf(false) }
+    var showLeave by remember { mutableStateOf(false) }
+
+    if (showLeave) {
+        ConcordLeaveDialog(
+            communityName = channel.communityName ?: channel.toBestDisplayName(),
+            isOwner = isOwner,
+            onDismiss = { showLeave = false },
+            onConfirm = {
+                showLeave = false
+                accountViewModel.leaveConcordCommunity(communityId)
+            },
+        )
+    }
+
+    Box {
+        ChannelName(
+            channelIdHex = channel.channelId.channelId,
+            channelPicture = rememberConcordImageModel(channel.communityIcon, accountViewModel),
+            channelTitle = { modifier ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+                    Text(
+                        text = channel.toBestDisplayName(),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
+                    channel.communityName?.let { communityName ->
+                        Spacer(Modifier.width(6.dp))
+                        // The chip names the parent community and, when tapped, opens that community's
+                        // channel list — the "chip that opens the Concord Channel" entry point.
+                        ConcordCommunityPill(
+                            communityName = communityName,
+                            onClick = { nav.nav(Route.ConcordServer(channel.channelId.communityId)) },
+                        )
+                    }
                 }
-            }
-        },
-        channelLastTime = lastMessage.createdAt(),
-        channelLastContent = lastContent,
-        hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
-        loadProfilePicture = accountViewModel.settings.showProfilePictures(),
-        loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
-        autoPlayGif =
-            accountViewModel.settings.autoPlayVideosFlow
-                .collectAsStateWithLifecycle()
-                .value,
-        onClick = { nav.nav(Route.Concord(channel.channelId.communityId, channel.channelId.channelId)) },
-    )
+            },
+            channelLastTime = lastMessage.createdAt(),
+            channelLastContent = lastContent,
+            hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
+            autoPlayGif =
+                accountViewModel.settings.autoPlayVideosFlow
+                    .collectAsStateWithLifecycle()
+                    .value,
+            onClick = { nav.nav(Route.Concord(channel.channelId.communityId, channel.channelId.channelId)) },
+            onLongClick = { menuOpen = true },
+        )
+
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error) },
+                onClick = {
+                    menuOpen = false
+                    showLeave = true
+                },
+            )
+        }
+    }
 }
 
 @Composable
@@ -935,6 +999,7 @@ fun ChannelName(
     loadRobohash: Boolean,
     autoPlayGif: Boolean,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
 ) {
     ChannelName(
         channelPicture = {
@@ -953,6 +1018,7 @@ fun ChannelName(
         channelLastContent,
         hasNewMessages,
         onClick,
+        onLongClick,
     )
 }
 
@@ -964,6 +1030,7 @@ fun ChannelName(
     channelLastContent: String?,
     hasNewMessages: Boolean,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
 ) {
     ChatHeaderLayout(
         channelPicture = channelPicture,
@@ -998,6 +1065,7 @@ fun ChannelName(
             }
         },
         onClick = onClick,
+        onLongClick = onLongClick,
     )
 }
 
