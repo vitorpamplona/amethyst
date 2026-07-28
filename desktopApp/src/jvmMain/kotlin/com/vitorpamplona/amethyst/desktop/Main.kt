@@ -78,6 +78,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
 import com.vitorpamplona.amethyst.commons.moderation.LocalHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSettings
+import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationReadState
+import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationSettings
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalBanner
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
@@ -131,6 +133,9 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.param
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
+import com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationDispatcher
+import com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationReadState
+import com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationSettings
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
@@ -1272,10 +1277,7 @@ private fun AppInner(
                 // switch or granting permission never actually notified the auto-
                 // dispatcher until the app restarted.
                 val notifSettings =
-                    remember {
-                        com.vitorpamplona.amethyst.commons.moderation.notifications
-                            .PreferencesNotificationSettings()
-                    }
+                    remember { PreferencesNotificationSettings() }
                 // Per-account read-state for the notification inbox. Keyed on
                 // pubKey so switching accounts gets a fresh cursor. `remember` here
                 // is intentionally keyed on pubKeyHex; a null pubKey (Loading /
@@ -1283,10 +1285,7 @@ private fun AppInner(
                 // guard against a stale ReadState leaking between accounts).
                 val notifReadState =
                     remember(loggedIn?.pubKeyHex) {
-                        loggedIn?.pubKeyHex?.let { pk ->
-                            com.vitorpamplona.amethyst.commons.moderation.notifications
-                                .PreferencesNotificationReadState(pk)
-                        }
+                        loggedIn?.pubKeyHex?.let { pk -> PreferencesNotificationReadState(pk) }
                     }
                 DisposableEffect(loggedIn?.pubKeyHex, notifDispatcher, localCache) {
                     val myPk = loggedIn?.pubKeyHex
@@ -1314,9 +1313,9 @@ private fun AppInner(
                     LocalScheduledPostStore provides scheduledPostStore,
                     com.vitorpamplona.amethyst.desktop.service.drafts.LocalNoteDraftStore provides noteDraftStore,
                     LocalHashtagSpamSettings provides hashtagSpamSettings,
-                    com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationDispatcher provides notifDispatcher,
-                    com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationSettings provides notifSettings,
-                    com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationReadState provides notifReadState,
+                    LocalNotificationDispatcher provides notifDispatcher,
+                    LocalNotificationSettings provides notifSettings,
+                    LocalNotificationReadState provides notifReadState,
                 ) {
                     when (accountState) {
                         is AccountState.Loading -> {
