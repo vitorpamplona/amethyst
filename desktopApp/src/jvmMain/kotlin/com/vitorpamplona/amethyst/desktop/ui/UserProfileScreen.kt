@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.desktop.ui.note.RichTextCallbacks
 import com.vitorpamplona.amethyst.desktop.ui.note.WoTBadgedAvatar
 import com.vitorpamplona.amethyst.desktop.ui.profile.EditProfileDialog
 import com.vitorpamplona.amethyst.desktop.ui.profile.GalleryTab
+import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileZapRow
 import com.vitorpamplona.amethyst.desktop.ui.profile.RelayRowCard
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -123,6 +124,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
@@ -133,6 +135,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+import java.math.BigDecimal
 
 /**
  * User profile screen showing user info, follow button, and their posts.
@@ -352,6 +355,11 @@ fun UserProfileScreen(
     val followingList = remember(pubKeyHex) { mutableStateListOf<String>() }
     // Each relay entry: (url, canRead, canWrite)
     var relayList by remember(pubKeyHex) { mutableStateOf<List<Triple<String, Boolean, Boolean>>>(emptyList()) }
+
+    // Zaps received: raw zap receipts, aggregated per zapper (pubkey → total sats).
+    val zapEvents = remember(pubKeyHex) { mutableStateListOf<LnZapEvent>() }
+    var zapAmounts by remember(pubKeyHex) { mutableStateOf<List<Pair<String, BigDecimal>>>(emptyList()) }
+    var zapTotalSats by remember(pubKeyHex) { mutableStateOf(BigDecimal.ZERO) }
 
     // Follow state
     val followState =
@@ -686,6 +694,54 @@ fun UserProfileScreen(
         } else {
             null
         }
+    }
+
+    // Subscribe to zap receipts (kind 9735) that tag this profile (Zaps tab)
+    rememberSubscription(connectedRelays, pubKeyHex, retryTrigger, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            zapEvents.clear()
+            SubscriptionConfig(
+                subId = generateSubId("zaps-${pubKeyHex.take(8)}"),
+                filters =
+                    listOf(
+                        FilterBuilders.byPTags(
+                            pubKeys = listOf(pubKeyHex),
+                            kinds = listOf(LnZapEvent.KIND),
+                            limit = 500,
+                        ),
+                    ),
+                relays = connectedRelays,
+                onEvent = { event, _, _, _ ->
+                    if (event is LnZapEvent && zapEvents.none { it.id == event.id }) {
+                        zapEvents.add(event)
+                    }
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Aggregate zaps per zapper. Private zaps only decrypt on the viewer's own
+    // profile (needs the account signer); otherwise the public zap-request
+    // pubkey is used.
+    LaunchedEffect(zapEvents.size, pubKeyHex, account) {
+        val byUser = HashMap<String, BigDecimal>()
+        val isOwn = account != null && pubKeyHex == account.pubKeyHex
+        zapEvents.toList().forEach { z ->
+            val req = z.zapRequest
+            val zapper =
+                when {
+                    req == null -> z.pubKey
+                    req.isPrivateZap() && isOwn ->
+                        iAccount?.privateZapsDecryptionCache?.decryptPrivateZap(req)?.pubKey ?: req.pubKey
+                    else -> req.pubKey
+                }
+            byUser[zapper] = (byUser[zapper] ?: BigDecimal.ZERO) + (z.amount ?: BigDecimal.ZERO)
+        }
+        zapAmounts = byUser.entries.sortedByDescending { it.value }.map { it.key to it.value }
+        zapTotalSats = byUser.values.fold(BigDecimal.ZERO) { a, b -> a + b }
     }
 
     // Scroll state for detecting scroll direction
@@ -1218,6 +1274,12 @@ fun UserProfileScreen(
                             Tab(selected = selectedTab == 9, onClick = { selectedTab = 9 }) {
                                 Text("Mutual", modifier = Modifier.padding(12.dp))
                             }
+                            Tab(selected = selectedTab == 10, onClick = { selectedTab = 10 }) {
+                                Text(
+                                    "Zaps${if (zapTotalSats.signum() > 0) " (${zapTotalSats.toBigInteger()})" else ""}",
+                                    modifier = Modifier.padding(12.dp),
+                                )
+                            }
                         }
                     }
 
@@ -1560,6 +1622,25 @@ fun UserProfileScreen(
                                             com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
                                                 .toggleFullscreen()
                                         },
+                                    )
+                                }
+                            }
+                        }
+
+                        10 -> {
+                            if (zapAmounts.isEmpty()) {
+                                item(key = "no-zaps") { ProfileTabMessage("No zaps received yet") }
+                            } else {
+                                items(zapAmounts, key = { "zap-${it.first}" }) { (pk, sats) ->
+                                    val u = remember(pk) { localCache.getUserIfExists(pk) }
+                                    ProfileZapRow(
+                                        userHex = pk,
+                                        displayName =
+                                            u?.metadataOrNull()?.bestName()
+                                                ?: (pk.hexToByteArrayOrNull()?.toNpub()?.take(16) ?: pk.take(16)),
+                                        pictureUrl = u?.metadataOrNull()?.profilePicture(),
+                                        sats = sats.toBigInteger().toString(),
+                                        onClick = { onNavigateToProfile(pk) },
                                     )
                                 }
                             }
