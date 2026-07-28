@@ -4575,4 +4575,8 @@
     <string name="buzz_persona_avatar">Avatar-URL (optional)</string>
     <string name="buzz_persona_publishing">Wird veröffentlicht…</string>
     <string name="buzz_persona_publish">Persona veröffentlichen</string>
+    <plurals name="workout_suggestion_combined_sessions">
+        <item quantity="one">%1$d Aktivität</item>
+        <item quantity="other">%1$d Aktivitäten</item>
+    </plurals>
 </resources>

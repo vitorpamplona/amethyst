@@ -4741,4 +4741,10 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
+    <plurals name="workout_suggestion_combined_sessions">
+        <item quantity="one">%1$d aktivita</item>
+        <item quantity="few">%1$d aktivity</item>
+        <item quantity="many">%1$d aktivity</item>
+        <item quantity="other">%1$d aktivit</item>
+    </plurals>
 </resources>
