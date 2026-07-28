@@ -1231,7 +1231,9 @@ fun UserProfileScreen(
                                 Text("Bookmarks", modifier = Modifier.padding(12.dp))
                             }
                             Tab(selected = selectedTab == 9, onClick = { selectedTab = 9 }) {
-                                Text("Mutual", modifier = Modifier.padding(12.dp))
+                                // "Yours" = your own posts that mention this profile
+                                // (Android names the filter "Mutual" but labels the tab "Yours").
+                                Text("Yours", modifier = Modifier.padding(12.dp))
                             }
                             Tab(selected = selectedTab == 10, onClick = { selectedTab = 10 }) {
                                 Text(
@@ -1562,7 +1564,7 @@ fun UserProfileScreen(
 
                         9 -> {
                             if (account == null) {
-                                item(key = "mutual-login") { ProfileTabMessage("Log in to see mutual posts") }
+                                item(key = "mutual-login") { ProfileTabMessage("Log in to see your posts about this user") }
                             } else if (mutualLoadedNotes.isEmpty()) {
                                 item(key = "no-mutual") { ProfileTabMessage("You haven't posted about this user") }
                             } else {
