@@ -21,9 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -48,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -64,11 +67,16 @@ import com.vitorpamplona.amethyst.ui.components.hasPushNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
 @Composable
 fun NotificationSettingsScreen(
@@ -118,7 +126,7 @@ private fun DeliverySection(accountViewModel: AccountViewModel) {
     }
 
     if (master) {
-        BackgroundAccountsSection()
+        BackgroundAccountsSection(accountViewModel)
         BatteryOptimizationBanner()
     }
 }
@@ -131,7 +139,7 @@ private fun DeliverySection(accountViewModel: AccountViewModel) {
  * observes, so participation changes take effect live.
  */
 @Composable
-private fun BackgroundAccountsSection() {
+private fun BackgroundAccountsSection(accountViewModel: AccountViewModel) {
     val accounts by produceState<List<Pair<AccountInfo, AccountSettings>>>(emptyList()) {
         value =
             runCatching {
@@ -149,7 +157,7 @@ private fun BackgroundAccountsSection() {
     SettingsSection(R.string.notification_service_accounts_title) {
         accounts.forEachIndexed { index, (info, settings) ->
             if (index > 0) SettingsDivider()
-            AccountParticipationRow(info, settings)
+            AccountParticipationRow(info, settings, accountViewModel)
         }
     }
 }
@@ -158,14 +166,63 @@ private fun BackgroundAccountsSection() {
 private fun AccountParticipationRow(
     info: AccountInfo,
     settings: AccountSettings,
+    accountViewModel: AccountViewModel,
 ) {
     val participates by settings.alwaysOnNotificationService.collectAsStateWithLifecycle()
-    SettingsControlRow(
-        icon = MaterialSymbols.AccountCircle,
-        title = info.npub.toShortDisplay(),
-        description = stringRes(R.string.notification_service_participation_title),
-        onClick = { settings.toggleAlwaysOnNotificationService() },
+    val pubkeyHex = remember(info) { decodePublicKeyAsHexOrNull(info.npub) }
+    val npubShort = remember(info) { info.npub.toShortDisplay() }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { settings.toggleAlwaysOnNotificationService() }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Weight built here in RowScope, then captured by the LoadUser content lambda
+        // (which is not itself a RowScope) so the name still expands to fill the row.
+        val nameModifier =
+            Modifier
+                .weight(1f)
+                .padding(start = 16.dp, end = 12.dp)
+
+        // These are other/background accounts, not the logged-in one, so LoadUser
+        // resolves (and lazily creates) the User behind each npub off the main thread,
+        // then the shared UserPicture / UsernameDisplay observe its live metadata.
+        if (pubkeyHex != null) {
+            LoadUser(pubkeyHex, accountViewModel) { user ->
+                if (user != null) {
+                    ClickableUserPicture(
+                        baseUser = user,
+                        size = Size35dp,
+                        accountViewModel = accountViewModel,
+                    )
+                    UsernameDisplay(
+                        baseUser = user,
+                        weight = nameModifier,
+                        accountViewModel = accountViewModel,
+                    )
+                } else {
+                    Text(
+                        text = npubShort,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = nameModifier,
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = npubShort,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = nameModifier,
+            )
+        }
+
         Switch(
             checked = participates,
             onCheckedChange = { settings.toggleAlwaysOnNotificationService() },
