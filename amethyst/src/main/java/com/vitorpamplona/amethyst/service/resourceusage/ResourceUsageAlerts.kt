@@ -46,25 +46,25 @@ object ResourceUsageAlerts {
         val value: Long,
     )
 
-    /** > 50 MB of background traffic on cellular in one day. */
-    const val BG_MOBILE_BYTES_PER_DAY = 50L * 1024L * 1024L
+    /** > 100 MB of background traffic on cellular in one day. */
+    const val BG_MOBILE_BYTES_PER_DAY = 100L * 1024L * 1024L
 
-    /** > 12 relay-connection-hours while backgrounded on cellular in one day. */
-    const val BG_MOBILE_RELAY_CONN_MS_PER_DAY = 12L * 60L * 60L * 1000L
+    /** > 24 relay-connection-hours while backgrounded on cellular in one day. */
+    const val BG_MOBILE_RELAY_CONN_MS_PER_DAY = 24L * 60L * 60L * 1000L
 
-    /** > 30 minutes of notification wakelock held in one day. */
-    const val WAKELOCK_MS_PER_DAY = 30L * 60L * 1000L
+    /** > 60 minutes of notification wakelock held in one day. */
+    const val WAKELOCK_MS_PER_DAY = 60L * 60L * 1000L
 
-    /** > 75 process starts in one day (WorkManager/restart churn). */
-    const val APP_STARTS_PER_DAY = 75L
+    /** > 150 process starts in one day (WorkManager/restart churn). */
+    const val APP_STARTS_PER_DAY = 150L
 
     /**
-     * > 5000 completed relay (re)connections in one day. A healthy day is a
+     * > 10000 completed relay (re)connections in one day. A healthy day is a
      * few hundred to ~2000 even with a large relay set; sustained thousands
      * means something is cycling (a stuck relay tier, a flapping network, a
      * Tor bootstrap loop) and every cycle pays a TLS handshake.
      */
-    const val RELAY_CONNECTS_PER_DAY = 5_000L
+    const val RELAY_CONNECTS_PER_DAY = 10_000L
 
     const val MIN_DAYS_BETWEEN_PROMPTS = 7L
 
