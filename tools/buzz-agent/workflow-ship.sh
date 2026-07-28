@@ -28,6 +28,8 @@ cd "$BUZZ_WORKTREE" || die "cannot cd into worktree $BUZZ_WORKTREE"
 base_branch="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || echo main)"
 case "$BUZZ_BRANCH" in
     "$base_branch" | main | master) die "refusing to operate on the default branch ($BUZZ_BRANCH)" ;;
+    # Anything else is a per-run branch — the only thing this script is allowed to push.
+    *) : ;;
 esac
 
 title="$(git log -1 --format='%s' 2>/dev/null | cut -c1-72)"
