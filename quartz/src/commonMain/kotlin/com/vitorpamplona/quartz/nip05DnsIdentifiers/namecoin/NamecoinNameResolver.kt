@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -236,7 +237,7 @@ class NamecoinNameResolver(
             try {
                 electrumxClient.nameShowWithFallback(parsed.namecoinName, serverListProvider())
                     ?: return null
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: NamecoinLookupException) {
                 // NameNotFound / NameExpired / ServersUnreachable → null per
@@ -316,7 +317,7 @@ class NamecoinNameResolver(
         return NamecoinImportResolver.expandImports(root) { name ->
             try {
                 electrumxClient.nameShowWithFallback(name, serverListProvider())?.value
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: NamecoinLookupException) {
                 // Best-effort: missing/expired/unreachable → contribute nothing.
