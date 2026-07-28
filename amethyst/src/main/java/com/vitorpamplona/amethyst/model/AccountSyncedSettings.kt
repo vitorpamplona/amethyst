@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -79,6 +80,10 @@ class AccountSyncedSettings(
             MutableStateFlow(internalSettings.proofOfWork.difficulty),
             MutableStateFlow(PoWCategory.fromIds(internalSettings.proofOfWork.enabledCategories)),
         )
+    val navigation =
+        AccountNavigationPreferences(
+            MutableStateFlow(internalSettings.navigation.bottomBarItems),
+        )
 
     fun toInternal(): AccountSyncedSettingsInternal =
         AccountSyncedSettingsInternal(
@@ -119,6 +124,7 @@ class AccountSyncedSettings(
                         .map { it.id }
                         .sorted(),
                 ),
+            navigation = AccountNavigationPreferencesInternal(navigation.bottomBarItems.value),
         )
 
     fun updateFrom(syncedSettingsInternal: AccountSyncedSettingsInternal) {
@@ -209,6 +215,11 @@ class AccountSyncedSettings(
         val newPoWCategories = PoWCategory.fromIds(syncedSettingsInternal.proofOfWork.enabledCategories)
         if (proofOfWork.enabledCategories.value != newPoWCategories) {
             proofOfWork.enabledCategories.tryEmit(newPoWCategories)
+        }
+
+        val newBottomBarItems = syncedSettingsInternal.navigation.bottomBarItems
+        if (navigation.bottomBarItems.value != newBottomBarItems) {
+            navigation.bottomBarItems.tryEmit(newBottomBarItems)
         }
     }
 
@@ -306,6 +317,11 @@ class AccountLanguagePreferences(
 @Stable
 class AccountMediaPreferences(
     val audioVisualizer: MutableStateFlow<VisualizerStyle>,
+)
+
+@Stable
+class AccountNavigationPreferences(
+    val bottomBarItems: MutableStateFlow<List<BottomBarEntry>>,
 )
 
 @Stable

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.model
 import android.content.res.Resources
 import androidx.core.os.ConfigurationCompat
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.serialization.Serializable
 import java.util.Locale
@@ -159,6 +161,15 @@ class AccountSyncedSettingsInternal(
     val media: AccountMediaPreferencesInternal = AccountMediaPreferencesInternal(),
     val chats: AccountChatPreferencesInternal = AccountChatPreferencesInternal(),
     val proofOfWork: AccountPoWPreferencesInternal = AccountPoWPreferencesInternal(),
+    val navigation: AccountNavigationPreferencesInternal = AccountNavigationPreferencesInternal(),
+)
+
+@Serializable
+class AccountNavigationPreferencesInternal(
+    // The ordered list of tabs pinned to the bottom navigation bar (built-ins,
+    // favorite apps, and individual joined chats/groups). Defaulted so blobs
+    // written before this field existed decode to the app's current defaults.
+    var bottomBarItems: List<BottomBarEntry> = DefaultBottomBarEntries,
 )
 
 @Serializable

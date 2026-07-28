@@ -348,7 +348,7 @@ fun AppNavigation(
                 // holding their surfaces attached. Below the drawer (drawn by the layout above) and below
                 // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    val bottomBarItems by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+                    val bottomBarItems by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
                         .collectAsStateWithLifecycle()
                     // Move every embedded app to the new account on a switch. Mounted before the layer and
                     // the preloader so the previous account's sessions are dropped ahead of the first sweep

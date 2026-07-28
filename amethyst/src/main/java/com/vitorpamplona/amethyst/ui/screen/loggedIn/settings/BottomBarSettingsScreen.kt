@@ -150,12 +150,14 @@ fun BottomBarSettingsScreen(
 
 @Composable
 fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
-    val bottomBarItemsFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
+    // Per-account bottom bar, synced through the NIP-78 app-specific data event.
+    val bottomBarItemsFlow = accountViewModel.bottomBarItemsFlow()
     val savedItems by bottomBarItemsFlow.collectAsStateWithLifecycle()
 
     // All pin/unpin/reorder logic lives in the holder (unit-tested); the composable only renders and
-    // forwards events. syncFrom re-seeds when the saved list changes elsewhere without clobbering a drag.
-    val state = remember { BottomBarSettingsState(savedItems) { bottomBarItemsFlow.tryEmit(it) } }
+    // forwards events. Each persist republishes the account's NIP-78 settings event. syncFrom re-seeds
+    // when the saved list changes elsewhere without clobbering a drag.
+    val state = remember { BottomBarSettingsState(savedItems) { accountViewModel.changeBottomBarItems(it) } }
     LaunchedEffect(savedItems) { state.syncFrom(savedItems) }
 
     val pinned = state.pinned

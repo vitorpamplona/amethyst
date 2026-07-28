@@ -675,7 +675,7 @@ class AccountViewModel(
     fun importConcordCommunities() =
         viewModelScope.launch(Dispatchers.IO) {
             val pinnedRelays =
-                settings.uiSettingsFlow.bottomBarItems.value
+                account.settings.syncedSettings.navigation.bottomBarItems.value
                     .flatMap {
                         when (it) {
                             is BottomBarEntry.Concord -> it.relays
@@ -1934,6 +1934,18 @@ class AccountViewModel(
         launchSigner {
             account.changeAudioVisualizer(style)
         }
+
+    fun bottomBarItemsFlow(): StateFlow<List<BottomBarEntry>> = account.settings.syncedSettings.navigation.bottomBarItems
+
+    fun changeBottomBarItems(items: List<BottomBarEntry>) {
+        // Apply to the reactive flow synchronously on the caller (UI) thread so rapid edits stay
+        // ordered — launchSigner dispatches on a multi-threaded pool, so wrapping the emit too would
+        // let two quick edits complete out of order and revert the newer one (the settings screen
+        // re-seeds its editable list from this flow). Only the sign + encrypt + publish runs off-thread.
+        if (account.applyBottomBarItems(items)) {
+            launchSigner { account.sendNewAppSpecificData() }
+        }
+    }
 
     fun pinnedChatroomsFlow(): StateFlow<Set<ChatroomKey>> = account.settings.syncedSettings.chats.pinnedChatrooms
 

@@ -95,7 +95,7 @@ fun AppBottomBar(
     // pushes). Mirrors the back-arrow rule in canPop().
     if (nav.canPop()) return
 
-    val items by accountViewModel.settings.uiSettingsFlow.bottomBarItems
+    val items by accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
         .collectAsStateWithLifecycle()
     if (items.isEmpty()) {
         Spacer(

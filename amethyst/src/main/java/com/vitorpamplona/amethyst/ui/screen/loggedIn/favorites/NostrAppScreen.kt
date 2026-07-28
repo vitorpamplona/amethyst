@@ -175,7 +175,7 @@ private fun EmbeddedNostrAppTab(
     // so it runs after [setActive]; the host short-circuits the identical remembered instance.
     SideEffect { EmbeddedTabHost.setActiveChrome(id, chrome) }
 
-    val bottomBarFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
+    val bottomBarFlow = accountViewModel.account.settings.syncedSettings.navigation.bottomBarItems
     DisposableEffect(id) {
         val token = EmbeddedTabHost.setActive(id)
         onDispose {

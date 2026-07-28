@@ -24,10 +24,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * One slot in the bottom navigation bar. A single ordered list of these (persisted in
- * [com.vitorpamplona.amethyst.model.UiSettings.bottomBarItems]) holds built-in destinations,
- * favorite apps, and individual joined chats/groups, so the user can pin and drag-reorder them
- * together in one list.
+ * One slot in the bottom navigation bar. A single ordered list of these (persisted per-account in
+ * the NIP-78 app-specific data event via
+ * [com.vitorpamplona.amethyst.model.AccountNavigationPreferencesInternal.bottomBarItems]) holds
+ * built-in destinations, favorite apps, and individual joined chats/groups, so the user can pin and
+ * drag-reorder them together in one list.
  *
  * - [BuiltIn] resolves its [Route][com.vitorpamplona.amethyst.ui.navigation.routes.Route] (and its
  *   icon/label/notification badge) through [NavBarCatalog], like before.

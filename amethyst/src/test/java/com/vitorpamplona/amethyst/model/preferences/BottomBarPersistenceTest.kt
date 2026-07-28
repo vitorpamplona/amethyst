@@ -20,42 +20,44 @@
  */
 package com.vitorpamplona.amethyst.model.preferences
 
+import com.vitorpamplona.amethyst.model.AccountNavigationPreferencesInternal
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.DefaultBottomBarEntries
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Locks the "reset to defaults migrates automatically" behavior.
- *
- * Resetting the bottom bar (or never customizing it) is persisted as a blank sentinel rather than the
- * concrete default list, so that a user on the defaults tracks whatever [DefaultBottomBarEntries] the
- * *installed* app version ships. If a future version changes the default, that blank value resolves to
- * the new default on load — the user is migrated instead of being pinned to the old default.
+ * Locks the per-account bottom-bar persistence: the pinned list now lives inside the NIP-78
+ * app-specific data blob ([AccountNavigationPreferencesInternal], one field of
+ * [com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal]) rather than the app-global
+ * DataStore, so every account keeps its own bar and it syncs across the user's devices.
  */
 class BottomBarPersistenceTest {
     @Test
-    fun defaultsAreStoredAsBlankSentinel() {
-        assertEquals("", UiSharedPreferences.encodeBottomBarItems(DefaultBottomBarEntries))
+    fun defaultsRoundTripThroughSyncedSettingsBlob() {
+        val decoded = JsonMapper.fromJson<AccountNavigationPreferencesInternal>(JsonMapper.toJson(AccountNavigationPreferencesInternal()))
+        assertEquals(DefaultBottomBarEntries, decoded.bottomBarItems)
     }
 
     @Test
-    fun blankSentinelDecodesToCurrentDefaults() {
-        // The blank sentinel resolves to whatever DefaultBottomBarEntries this build ships. Because it
-        // returns the current constant (not a value frozen at reset time), a future version that changes
-        // the default automatically migrates every user who is on the defaults.
-        assertEquals(DefaultBottomBarEntries, UiSharedPreferences.decodeBottomBarItems(""))
+    fun blobWrittenBeforeTheNavigationFieldExistedDecodesToCurrentDefaults() {
+        // Older clients (and older Amethyst builds) never wrote the `bottomBarItems` field. The default
+        // means such a blob decodes to whatever DefaultBottomBarEntries the installed build ships — no
+        // migration from the old app-global setting is attempted, matching the intended behavior.
+        val decoded = JsonMapper.fromJson<AccountNavigationPreferencesInternal>("{}")
+        assertEquals(DefaultBottomBarEntries, decoded.bottomBarItems)
     }
 
     @Test
-    fun customizedBarIsStoredVerbatimAndRoundTrips() {
+    fun customizedBarRoundTripsThroughSyncedSettingsBlob() {
         val custom =
-            listOf(
+            listOf<BottomBarEntry>(
                 BottomBarEntry.BuiltIn(NavBarItem.HOME),
                 BottomBarEntry.Favorite("url:https://example.com"),
             )
-        val encoded = UiSharedPreferences.encodeBottomBarItems(custom)
-        assertEquals(custom, UiSharedPreferences.decodeBottomBarItems(encoded))
+        val decoded = JsonMapper.fromJson<AccountNavigationPreferencesInternal>(JsonMapper.toJson(AccountNavigationPreferencesInternal(custom)))
+        assertEquals(custom, decoded.bottomBarItems)
     }
 }
