@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopDmRoute
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 
@@ -91,6 +92,13 @@ fun SinglePaneLayout(
     // stack so the tapped destination is what the user actually sees.
     LaunchedEffect(Unit) {
         singlePaneState.clearOverlaySignal.collect { navState.clear() }
+    }
+
+    // Navigate to Messages when a "message this user" request arrives (profile screen).
+    LaunchedEffect(Unit) {
+        DesktopDmRoute.pendingTarget.collect { target ->
+            if (target != null) singlePaneState.navigate(DeckColumnType.Messages)
+        }
     }
 
     // Sidebar is now provided by Main.kt (shared MainSidebar for both layout modes).

@@ -96,6 +96,8 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopDmRoute
+import com.vitorpamplona.amethyst.desktop.ui.deck.LocalFollowPacksState
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.DesktopRichText
 import com.vitorpamplona.amethyst.desktop.ui.note.RichTextCallbacks
@@ -119,11 +121,14 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Toolkit
@@ -217,6 +222,9 @@ fun UserProfileScreen(
     }
     var showProfileModMenu by remember(pubKeyHex) { mutableStateOf(false) }
     var showProfileReportDialog by remember(pubKeyHex) { mutableStateOf(false) }
+    var showAddToListMenu by remember(pubKeyHex) { mutableStateOf(false) }
+    val followPacksState = LocalFollowPacksState.current
+    val followPacks by (followPacksState?.allPacks ?: MutableStateFlow(emptyList<FollowListEvent>())).collectAsState()
     val profileHidden by (iAccount?.hiddenUsers ?: kotlinx.coroutines.flow.MutableStateFlow(com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers.EMPTY)).collectAsState()
     val isUserMuted = profileHidden.isUserHidden(pubKeyHex)
 
@@ -791,6 +799,33 @@ fun UserProfileScreen(
                                         onDismissRequest = { showProfileModMenu = false },
                                     ) {
                                         DropdownMenuItem(
+                                            text = { Text("Message") },
+                                            onClick = {
+                                                DesktopDmRoute.request(pubKeyHex)
+                                                showProfileModMenu = false
+                                            },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Add to list…") },
+                                            onClick = {
+                                                showProfileModMenu = false
+                                                showAddToListMenu = true
+                                            },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Share (copy link)") },
+                                            onClick = {
+                                                pubKeyHex.hexToByteArrayOrNull()?.toNpub()?.let { npub ->
+                                                    Toolkit
+                                                        .getDefaultToolkit()
+                                                        .systemClipboard
+                                                        .setContents(StringSelection("nostr:$npub"), null)
+                                                    scope.launch { profileSnackbar?.showSnackbar("Profile link copied") }
+                                                }
+                                                showProfileModMenu = false
+                                            },
+                                        )
+                                        DropdownMenuItem(
                                             text = { Text(if (isUserMuted) "Unmute user" else "Mute user") },
                                             onClick = {
                                                 scope.launch {
@@ -812,6 +847,45 @@ fun UserProfileScreen(
                                                 showProfileModMenu = false
                                             },
                                         )
+                                    }
+                                    // Add-to-list pack picker (opened from the menu above).
+                                    DropdownMenu(
+                                        expanded = showAddToListMenu,
+                                        onDismissRequest = { showAddToListMenu = false },
+                                    ) {
+                                        if (followPacks.isEmpty()) {
+                                            DropdownMenuItem(
+                                                text = { Text("No lists yet") },
+                                                enabled = false,
+                                                onClick = { showAddToListMenu = false },
+                                            )
+                                        } else {
+                                            followPacks.forEach { pack ->
+                                                DropdownMenuItem(
+                                                    text = { Text(pack.title() ?: "Untitled list") },
+                                                    onClick = {
+                                                        val acct = account
+                                                        if (acct != null) {
+                                                            scope.launch {
+                                                                try {
+                                                                    val updated =
+                                                                        FollowListEvent.add(
+                                                                            pack,
+                                                                            UserTag(pubKeyHex, null),
+                                                                            acct.signer,
+                                                                        )
+                                                                    relayManager.broadcastToAll(updated)
+                                                                    profileSnackbar?.showSnackbar("Added to list")
+                                                                } catch (e: Exception) {
+                                                                    profileSnackbar?.showSnackbar("Failed to add: ${e.message}")
+                                                                }
+                                                            }
+                                                        }
+                                                        showAddToListMenu = false
+                                                    },
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                                 Spacer(Modifier.width(4.dp))

@@ -37,6 +37,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -103,6 +104,15 @@ fun DesktopMessagesScreen(
     val selectedRoom by listState.selectedRoom.collectAsState()
     val listFocusRequester = remember { FocusRequester() }
     var showNewDmDialog by remember { mutableStateOf(false) }
+
+    // Honor "message this user" requests from elsewhere (e.g. the profile screen).
+    val pendingDmTarget by DesktopDmRoute.pendingTarget.collectAsState()
+    LaunchedEffect(pendingDmTarget, account) {
+        pendingDmTarget?.let { target ->
+            listState.selectRoom(ChatroomKey(setOf(target)))
+            DesktopDmRoute.consume()
+        }
+    }
 
     // Shared keyboard shortcuts
     val keyHandler =

@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.desktop.ui.LocalBlossomServers
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
+import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopDmRoute
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawer
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
@@ -298,6 +299,21 @@ fun main(args: Array<String>) {
         var composeEditScheduledForSec by remember { mutableStateOf<Long?>(null) }
         val deckScope = rememberCoroutineScope()
         val deckState = remember { DeckState(deckScope).also { it.load() } }
+
+        // Open/focus the Messages column when a "message this user" request arrives
+        // (e.g. from the profile screen's Message action). The Messages screen then
+        // selects the 1:1 room from the same DesktopDmRoute target.
+        LaunchedEffect(deckState) {
+            DesktopDmRoute.pendingTarget.collect { target ->
+                if (target != null) {
+                    if (deckState.hasColumnOfType(DeckColumnType.Messages)) {
+                        deckState.focusExistingColumn(DeckColumnType.Messages)
+                    } else {
+                        deckState.addColumn(DeckColumnType.Messages)
+                    }
+                }
+            }
+        }
         val workspaceManager = remember { WorkspaceManager(deckScope).also { it.load() } }
         val accountManager = remember { AccountManager.create() }
         val accountState by accountManager.accountState.collectAsState()
