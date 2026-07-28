@@ -87,6 +87,28 @@ actual class SecureKeyStorage private actual constructor() {
     private var fallbackPassword: String? = null
     private val fallbackMutex = Mutex() // Protects concurrent access to fallback file
 
+    /**
+     * Cached Keyring instance. Opening a Keyring session is expensive and, on
+     * some OSes (notably macOS and locked GNOME/KWallet sessions), triggers a
+     * user-visible unlock prompt every time. Callers hit the storage at least
+     * twice on cold start (metadata AES key, then active account nsec), so a
+     * per-call [Keyring.create] would prompt the user twice on startup — the
+     * exact bug this cache fixes.
+     *
+     * Guarded by [keyringLock] so probing/opening the backend happens exactly
+     * once per process; the [Keyring] itself is thread-safe once obtained.
+     */
+    @Volatile
+    private var cachedKeyring: KeyringHandle? = null
+    private val keyringLock = Any()
+
+    /**
+     * Package-private factory used by tests to inject a stub Keyring backend
+     * and count backend-open invocations. Production code always defers to
+     * [Keyring.create] through [RealKeyringHandle].
+     */
+    internal var keyringFactory: () -> KeyringHandle = { RealKeyringHandle(Keyring.create()) }
+
     actual suspend fun savePrivateKey(
         npub: String,
         privKeyHex: String,
@@ -146,26 +168,40 @@ actual class SecureKeyStorage private actual constructor() {
     actual suspend fun hasPrivateKey(npub: String): Boolean = getPrivateKey(npub) != null
 
     // Keyring-based storage
+
+    /**
+     * Returns the process-wide [Keyring] instance, opening the OS-native
+     * backend on first call. Subsequent calls reuse the same handle so the
+     * user is only prompted (macOS Keychain Access, Secret Service unlock,
+     * KWallet unlock) once per app run.
+     *
+     * Callers must handle [BackendNotSupportedException] — it can escape on
+     * the very first call if no backend is available at all.
+     */
+    private fun keyring(): KeyringHandle {
+        cachedKeyring?.let { return it }
+        return synchronized(keyringLock) {
+            cachedKeyring ?: keyringFactory().also { cachedKeyring = it }
+        }
+    }
+
     private fun saveToKeyring(
         npub: String,
         privKeyHex: String,
     ) {
-        val keyring = Keyring.create()
-        keyring.setPassword(SERVICE_NAME, npub, privKeyHex)
+        keyring().setPassword(SERVICE_NAME, npub, privKeyHex)
     }
 
     private fun getFromKeyring(npub: String): String? =
         try {
-            val keyring = Keyring.create()
-            keyring.getPassword(SERVICE_NAME, npub)
+            keyring().getPassword(SERVICE_NAME, npub)
         } catch (e: PasswordAccessException) {
             null
         }
 
     private fun deleteFromKeyring(npub: String): Boolean =
         try {
-            val keyring = Keyring.create()
-            keyring.deletePassword(SERVICE_NAME, npub)
+            keyring().deletePassword(SERVICE_NAME, npub)
             true
         } catch (e: PasswordAccessException) {
             false
@@ -395,5 +431,61 @@ actual class SecureKeyStorage private actual constructor() {
         val decrypted = cipher.doFinal(encrypted)
 
         return String(decrypted)
+    }
+}
+
+/**
+ * Small package-private abstraction over `com.github.javakeyring.Keyring`,
+ * mirroring the three operations `SecureKeyStorage` actually uses. The real
+ * implementation is a thin delegator; tests substitute an in-memory version
+ * so the desktop unit test suite doesn't touch the OS Keychain (which would
+ * be non-hermetic and slow, and on macOS would surface a user-visible prompt
+ * during test runs).
+ *
+ * Not part of the public API — kept in this file so it stays private to the
+ * keystorage package.
+ */
+internal interface KeyringHandle {
+    @Throws(PasswordAccessException::class)
+    fun getPassword(
+        service: String,
+        account: String,
+    ): String
+
+    @Throws(PasswordAccessException::class)
+    fun setPassword(
+        service: String,
+        account: String,
+        password: String,
+    )
+
+    @Throws(PasswordAccessException::class)
+    fun deletePassword(
+        service: String,
+        account: String,
+    )
+}
+
+internal class RealKeyringHandle(
+    private val keyring: Keyring,
+) : KeyringHandle {
+    override fun getPassword(
+        service: String,
+        account: String,
+    ): String = keyring.getPassword(service, account)
+
+    override fun setPassword(
+        service: String,
+        account: String,
+        password: String,
+    ) {
+        keyring.setPassword(service, account, password)
+    }
+
+    override fun deletePassword(
+        service: String,
+        account: String,
+    ) {
+        keyring.deletePassword(service, account)
     }
 }
