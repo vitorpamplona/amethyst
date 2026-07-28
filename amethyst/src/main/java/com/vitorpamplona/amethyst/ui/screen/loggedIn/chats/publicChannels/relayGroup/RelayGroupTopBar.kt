@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
@@ -35,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -117,6 +119,8 @@ fun RelayGroupTopBar(
     val canPop = nav.canPop()
     var showInvite by remember { mutableStateOf(false) }
     var showJoinCode by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    val isBuzzRelay = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
 
     TopBarExtensibleWithBackButton(
         title = {
@@ -184,7 +188,6 @@ fun RelayGroupTopBar(
             // outright. So a DM shows the icon only when a canvas already exists — which is also what
             // keeps us from advertising "start a shared doc" in a two-person conversation.
             val hasCanvas by observeBuzzCanvas(channel.groupId.id)
-            val isBuzzRelay = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
             if (isBuzzRelay && (!isDm || hasCanvas)) {
                 IconButton(onClick = { nav.nav(Route.BuzzCanvas(channel.groupId.id, channel.groupId.relayUrl.url)) }) {
                     Icon(
@@ -318,6 +321,23 @@ fun RelayGroupTopBar(
                                 if (canPop) nav.popBack()
                             },
                         )
+                        // Deleting the whole channel/group (kind-9008) is destructive for everyone, so it's
+                        // shown ONLY to an admin/owner — the same authorization gate as Edit above — and
+                        // routed through a confirmation dialog rather than firing on tap.
+                        if (displayMembership == RelayGroupMembership.ADMIN) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringRes(if (isBuzzRelay) R.string.buzz_channel_delete else R.string.relay_group_delete),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                onClick = {
+                                    menuOpen = false
+                                    confirmDelete = true
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -337,6 +357,36 @@ fun RelayGroupTopBar(
             accountViewModel = accountViewModel,
             onJoined = { requested = true },
             onDismiss = { showJoinCode = false },
+        )
+    }
+
+    if (confirmDelete) {
+        val deleteLabel = stringRes(if (isBuzzRelay) R.string.buzz_channel_delete else R.string.relay_group_delete)
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(deleteLabel) },
+            text = {
+                Text(
+                    stringRes(
+                        if (isBuzzRelay) R.string.buzz_channel_delete_confirm else R.string.relay_group_delete_confirm,
+                        channel.toBestDisplayName(),
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    accountViewModel.deleteRelayGroup(channel)
+                    if (canPop) nav.popBack()
+                }) {
+                    Text(deleteLabel, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) {
+                    Text(stringRes(R.string.cancel))
+                }
+            },
         )
     }
 }
