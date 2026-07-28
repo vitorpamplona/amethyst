@@ -3362,7 +3362,6 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="buzz_dm_empty_title">Ni še zasebnih sporočil</string>
     <string name="buzz_dm_empty_body">Začnite zasebni pogovor s komerkoli v delovnem prostoru Buzz.</string>
     <string name="buzz_dm_more">Več</string>
-    <string name="buzz_dm_hide">Skrij pogovore</string>
     <string name="buzz_dm_add_member">Dodaj člana</string>
     <string name="buzz_dm_add_member_title">Dodaj nekoga v to ZS</string>
     <string name="buzz_dm_add_member_invalid">Neveljaven npub ali hex ključ </string>
