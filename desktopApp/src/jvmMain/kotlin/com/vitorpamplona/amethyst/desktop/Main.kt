@@ -1262,10 +1262,31 @@ private fun AppInner(
                 // Auto-dispatcher: subscribes to newEventBundles and fires OS toasts.
                 // Only starts once the user is logged in — pubKey and settings must exist.
                 val loggedIn = accountState as? AccountState.LoggedIn
+                // Single, process-wide NotificationSettings instance. Hoisted here (not
+                // inside NotificationSettingsScreen / NotificationsScreen) so the
+                // settings UI, the inbox column's OS-toasts banner, and the auto-
+                // dispatcher all read + write the same MutableStateFlow. Without this,
+                // each screen fell back to its own PreferencesNotificationSettings()
+                // instance — the disk-backed prefs stayed in sync, but the in-memory
+                // StateFlow updates never crossed instances, so toggling the master
+                // switch or granting permission never actually notified the auto-
+                // dispatcher until the app restarted.
                 val notifSettings =
                     remember {
                         com.vitorpamplona.amethyst.commons.moderation.notifications
                             .PreferencesNotificationSettings()
+                    }
+                // Per-account read-state for the notification inbox. Keyed on
+                // pubKey so switching accounts gets a fresh cursor. `remember` here
+                // is intentionally keyed on pubKeyHex; a null pubKey (Loading /
+                // LoggedOut branches never render the settings screen anyway, but
+                // guard against a stale ReadState leaking between accounts).
+                val notifReadState =
+                    remember(loggedIn?.pubKeyHex) {
+                        loggedIn?.pubKeyHex?.let { pk ->
+                            com.vitorpamplona.amethyst.commons.moderation.notifications
+                                .PreferencesNotificationReadState(pk)
+                        }
                     }
                 DisposableEffect(loggedIn?.pubKeyHex, notifDispatcher, localCache) {
                     val myPk = loggedIn?.pubKeyHex
@@ -1294,6 +1315,8 @@ private fun AppInner(
                     com.vitorpamplona.amethyst.desktop.service.drafts.LocalNoteDraftStore provides noteDraftStore,
                     LocalHashtagSpamSettings provides hashtagSpamSettings,
                     com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationDispatcher provides notifDispatcher,
+                    com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationSettings provides notifSettings,
+                    com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationReadState provides notifReadState,
                 ) {
                     when (accountState) {
                         is AccountState.Loading -> {

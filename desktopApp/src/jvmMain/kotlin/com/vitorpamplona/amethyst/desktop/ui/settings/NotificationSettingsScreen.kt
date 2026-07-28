@@ -183,9 +183,20 @@ fun NotificationSettingsScreen(onBack: (() -> Unit)? = null) {
                                         } finally {
                                             requestingPermission = false
                                         }
+                                    // Match the button label: "Enable OS notifications"
+                                    // must actually enable them end-to-end. Prior to this,
+                                    // clicking through the OS prompt granted permission
+                                    // but left the master toggle OFF, so the auto-
+                                    // dispatcher stayed muted and the user had to hunt
+                                    // for the switch above. Flip it here on grant — the
+                                    // switch UI observes settings.enabled and
+                                    // recomposes automatically.
+                                    if (newState == PermissionState.Granted && !enabled) {
+                                        settings.setEnabled(true)
+                                    }
                                     testStatus =
                                         when (newState) {
-                                            PermissionState.Granted -> "Permission granted. Try the test toast below."
+                                            PermissionState.Granted -> "Permission granted. Notifications are on — try the test toast below."
                                             PermissionState.Denied -> "Permission denied. Enable in System Settings if you change your mind."
                                             PermissionState.BundleRequired -> "Notifications need a bundled app — run `./gradlew :desktopApp:runDistributable`."
                                             else -> null
