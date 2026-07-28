@@ -46,9 +46,19 @@ import java.util.concurrent.ConcurrentSkipListSet
  * on it.
  *
  * So the sort key is snapshotted into an immutable [Entry] when the note first
- * enters and never read live again; the ordered set is keyed on that snapshot
- * (stable), and an idHex index keeps membership unique and makes removal reliable
- * regardless of later created_at changes.
+ * enters and never read live again; [sorted] is ordered on that snapshot
+ * (stable) and [byId] is the membership source of truth, keyed by the stable
+ * idHex.
+ *
+ * Observer callbacks fire concurrently from several consume threads (relay
+ * ingest + UI-side justConsume), and this observer is used everywhere, so it
+ * stays lock-free: [byId] is a ConcurrentHashMap and every write to [sorted] for
+ * a given idHex happens INSIDE that key's `compute` critical section.
+ * ConcurrentHashMap stripes per key, so same-idHex ops serialize while different
+ * keys run fully in parallel. The invariant that prevents duplicates: an entry
+ * is added to [sorted] only while its key is absent from [byId], and every path
+ * that makes a key absent removes its entry from [sorted] first — so [sorted]
+ * can never hold two entries for one idHex.
  */
 class NoteListMatchingFilter(
     private val filter: Filter,
@@ -87,39 +97,45 @@ class NoteListMatchingFilter(
 
         if (!filter.match(event)) return
 
-        val entry = entryFor(note)
-
-        // putIfAbsent gates uniqueness atomically: new versions of an already
-        // listed addressable return here without touching the sorted set.
-        if (byId.putIfAbsent(note.idHex, entry) != null) return
-
-        sorted.add(entry)
+        // Add to [sorted] atomically with claiming the idHex slot. New versions
+        // of an already listed note return the existing entry untouched.
+        var added = false
+        byId.compute(note.idHex) { _, existing ->
+            existing ?: entryFor(note).also {
+                sorted.add(it)
+                added = true
+            }
+        }
+        if (!added) return
 
         val limit = filter.limit
         if (limit != null && sorted.size > limit) {
+            // Drop the oldest (sorts last under [order]).
             sorted.pollLast()?.let { byId.remove(it.note.idHex, it) }
         }
 
-        update(snapshot())
+        update(sorted.map { it.note })
     }
 
     override fun remove(note: Note) {
-        val entry = byId.remove(note.idHex) ?: return
-        sorted.remove(entry)
-        update(snapshot())
+        // Remove from [sorted] atomically with releasing the idHex slot.
+        var removed = false
+        byId.compute(note.idHex) { _, existing ->
+            if (existing != null) {
+                sorted.remove(existing)
+                removed = true
+            }
+            null
+        }
+        if (removed) update(sorted.map { it.note })
     }
 
     fun init() {
         sorted.clear()
         byId.clear()
         atOnce(filter).forEach { note ->
-            val entry = entryFor(note)
-            if (byId.putIfAbsent(note.idHex, entry) == null) {
-                sorted.add(entry)
-            }
+            byId.computeIfAbsent(note.idHex) { entryFor(note).also { sorted.add(it) } }
         }
-        update(snapshot())
+        update(sorted.map { it.note })
     }
-
-    private fun snapshot(): List<Note> = sorted.map { it.note }
 }

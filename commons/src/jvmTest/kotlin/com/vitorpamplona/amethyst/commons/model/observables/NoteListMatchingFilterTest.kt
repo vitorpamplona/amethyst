@@ -28,8 +28,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import java.util.TreeSet
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class NoteListMatchingFilterTest {
     private val author = "d0d0a746b44c9de8422165aef520b1fe041eedf5794f7592505477eeac122c18"
@@ -58,12 +62,14 @@ class NoteListMatchingFilterTest {
         event = appDefinition(dTag(), createdAt)
     }
 
-    private fun newFilter(sink: (List<Note>) -> Unit) =
-        NoteListMatchingFilter(
-            filter = filter,
-            atOnce = { TreeSet(CreatedAtIdHexComparator) },
-            update = sink,
-        )
+    private fun newFilter(
+        withFilter: Filter = filter,
+        sink: (List<Note>) -> Unit,
+    ) = NoteListMatchingFilter(
+        filter = withFilter,
+        atOnce = { TreeSet(CreatedAtIdHexComparator) },
+        update = sink,
+    )
 
     @Test
     fun newerVersionOfAnAddressableDoesNotDuplicateTheKey() {
@@ -120,6 +126,64 @@ class NoteListMatchingFilterTest {
         subject.new(c.event!!, c)
 
         assertEquals(listOf(b.idHex, a.idHex, c.idHex), last.map { it.idHex })
+    }
+
+    @Test
+    fun concurrentNewRemoveNeverEmitsDuplicateKeys() {
+        // No limit: exercises the compute/remove per-key critical sections.
+        assertNoDuplicateUnderConcurrency(filter)
+    }
+
+    @Test
+    fun concurrentNewRemoveWithLimitNeverEmitsDuplicateKeys() {
+        // With a limit: also exercises the cross-key eviction (pollLast + byId.remove).
+        assertNoDuplicateUnderConcurrency(Filter(kinds = listOf(AppDefinitionEvent.KIND), limit = 5))
+    }
+
+    private fun assertNoDuplicateUnderConcurrency(withFilter: Filter) {
+        // Observer callbacks fire from several consume threads at once (relay
+        // ingest + UI-side justConsume). new()/remove() for the same idHex must
+        // keep the sorted index and the membership map consistent, or a duplicate
+        // idHex leaks into an emission and crashes the LazyColumn.
+        val firstViolation = AtomicReference<List<String>?>(null)
+        val subject =
+            newFilter(withFilter) { emitted ->
+                val ids = emitted.map { it.idHex }
+                if (ids.size != ids.toSet().size) {
+                    firstViolation.compareAndSet(null, ids)
+                }
+            }
+        subject.init()
+
+        val addresses = (0 until 12).map { "app-$it" }
+        val notes = addresses.associateWith { noteFor(it) }
+        val threadCount = 8
+        val iterations = 5_000
+        val start = CountDownLatch(1)
+
+        val threads =
+            (0 until threadCount).map { t ->
+                thread {
+                    start.await()
+                    var seed = t * 31 + 7
+                    repeat(iterations) { i ->
+                        seed = seed * 1103515245 + 12345
+                        val note = notes.getValue(addresses[(seed ushr 16) % addresses.size])
+                        // Move created_at around so the sort key keeps changing under the set.
+                        note.event = appDefinition(note.dTag(), 1_000L + (i % 9))
+                        if ((seed ushr 8) % 3 == 0) {
+                            subject.remove(note)
+                        } else {
+                            subject.new(note.event!!, note)
+                        }
+                    }
+                }
+            }
+
+        start.countDown()
+        threads.forEach { it.join() }
+
+        assertNull(firstViolation.get(), "an emission carried a duplicate idHex: ${firstViolation.get()}")
     }
 
     @Test
