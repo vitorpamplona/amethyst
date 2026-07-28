@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntr
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.HomeFeedType
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
@@ -188,6 +189,10 @@ private object PrefKeys {
     // Stores the DISABLED chat feed types (comma-joined codes) so absence = all-on and any newly
     // added type defaults enabled for accounts that customized before it existed.
     const val DISABLED_CHAT_FEEDS = "disabled_chat_feeds"
+
+    // Same convention as DISABLED_CHAT_FEEDS but for the Home feed's event-kind groups: stores the
+    // DISABLED codes so absence = all-on and any newly added group defaults enabled.
+    const val DISABLED_HOME_FEED_TYPES = "disabled_home_feed_types"
     const val RELAY_AUTH_TRUST_MY_RELAYS = "relay_auth_trust_my_relays_and_venues"
     const val RELAY_AUTH_TRUST_READ_FOLLOWS = "relay_auth_trust_read_follows"
     const val RELAY_AUTH_TRUST_MESSAGE_FOLLOWS = "relay_auth_trust_message_follows"
@@ -604,6 +609,7 @@ object LocalPreferences {
                     putString(PrefKeys.RELAY_GROUP_VIEW_MODE, settings.relayGroupViewMode.value.name)
                     putString(PrefKeys.CONCORD_VIEW_MODE, settings.concordViewMode.value.name)
                     putString(PrefKeys.DISABLED_CHAT_FEEDS, ChatFeedType.encode(ChatFeedType.ALL - settings.enabledChatFeeds.value))
+                    putString(PrefKeys.DISABLED_HOME_FEED_TYPES, HomeFeedType.encode(HomeFeedType.ALL - settings.enabledHomeFeedTypes.value))
                     putBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, settings.relayAuthTrustMyRelaysAndVenues.value)
                     putBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, settings.relayAuthTrustReadFollows.value)
                     putBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, settings.relayAuthTrustMessageFollows.value)
@@ -731,17 +737,10 @@ object LocalPreferences {
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
                     val callsEnabled = getBoolean(PrefKeys.CALLS_ENABLED, true)
                     val alwaysOnNotificationService = getBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, false)
-                    val defaultRelayAuthPolicy =
-                        getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
-                            ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
-                            ?: RelayAuthPolicy.CUSTOM
-                    val relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null))
-                    val concordViewMode = ConcordViewMode.fromName(getString(PrefKeys.CONCORD_VIEW_MODE, null))
-                    val enabledChatFeeds = ChatFeedType.ALL - ChatFeedType.decode(getString(PrefKeys.DISABLED_CHAT_FEEDS, null))
-                    val relayAuthTrustMyRelays = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, true)
-                    val relayAuthTrustReadFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, true)
-                    val relayAuthTrustMessageFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, true)
-                    val relayAuthTrustMessageStrangers = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, false)
+                    // Read as a group via a helper: this load lambda sits right at the JVM's
+                    // per-method bytecode limit (see the note above the awaits below), so keeping
+                    // these heavy string/enum decodes out of it preserves headroom.
+                    val inboxPrefs = readInboxPrefs()
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
                     val showMessagesInNotifications = getBoolean(PrefKeys.SHOW_MESSAGES_IN_NOTIFICATIONS, true)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
@@ -968,14 +967,15 @@ object LocalPreferences {
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,
                         alwaysOnNotificationService = MutableStateFlow(alwaysOnNotificationService),
-                        defaultRelayAuthPolicy = MutableStateFlow(defaultRelayAuthPolicy),
-                        relayGroupViewMode = MutableStateFlow(relayGroupViewMode),
-                        concordViewMode = MutableStateFlow(concordViewMode),
-                        enabledChatFeeds = MutableStateFlow(enabledChatFeeds),
-                        relayAuthTrustMyRelaysAndVenues = MutableStateFlow(relayAuthTrustMyRelays),
-                        relayAuthTrustReadFollows = MutableStateFlow(relayAuthTrustReadFollows),
-                        relayAuthTrustMessageFollows = MutableStateFlow(relayAuthTrustMessageFollows),
-                        relayAuthTrustMessageStrangers = MutableStateFlow(relayAuthTrustMessageStrangers),
+                        defaultRelayAuthPolicy = MutableStateFlow(inboxPrefs.defaultRelayAuthPolicy),
+                        relayGroupViewMode = MutableStateFlow(inboxPrefs.relayGroupViewMode),
+                        concordViewMode = MutableStateFlow(inboxPrefs.concordViewMode),
+                        enabledChatFeeds = MutableStateFlow(inboxPrefs.enabledChatFeeds),
+                        enabledHomeFeedTypes = MutableStateFlow(inboxPrefs.enabledHomeFeedTypes),
+                        relayAuthTrustMyRelaysAndVenues = MutableStateFlow(inboxPrefs.relayAuthTrustMyRelays),
+                        relayAuthTrustReadFollows = MutableStateFlow(inboxPrefs.relayAuthTrustReadFollows),
+                        relayAuthTrustMessageFollows = MutableStateFlow(inboxPrefs.relayAuthTrustMessageFollows),
+                        relayAuthTrustMessageStrangers = MutableStateFlow(inboxPrefs.relayAuthTrustMessageStrangers),
                         splitNotificationsEnabled = MutableStateFlow(splitNotificationsEnabled),
                         showMessagesInNotifications = MutableStateFlow(showMessagesInNotifications),
                         backupUserMetadata = latestUserMetadataResolved,
@@ -1184,3 +1184,36 @@ object LocalPreferences {
         }
     }
 }
+
+/**
+ * The inbox / relay-auth / feed-type preferences, read as one group. Extracted out of
+ * [LocalPreferences]' account-load lambda (which is right at the JVM's per-method bytecode limit)
+ * so these enum/set decodes don't count against that method's budget.
+ */
+private class InboxPrefs(
+    val defaultRelayAuthPolicy: RelayAuthPolicy,
+    val relayGroupViewMode: RelayGroupViewMode,
+    val concordViewMode: ConcordViewMode,
+    val enabledChatFeeds: Set<ChatFeedType>,
+    val enabledHomeFeedTypes: Set<HomeFeedType>,
+    val relayAuthTrustMyRelays: Boolean,
+    val relayAuthTrustReadFollows: Boolean,
+    val relayAuthTrustMessageFollows: Boolean,
+    val relayAuthTrustMessageStrangers: Boolean,
+)
+
+private fun SharedPreferences.readInboxPrefs() =
+    InboxPrefs(
+        defaultRelayAuthPolicy =
+            getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
+                ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
+                ?: RelayAuthPolicy.CUSTOM,
+        relayGroupViewMode = RelayGroupViewMode.fromName(getString(PrefKeys.RELAY_GROUP_VIEW_MODE, null)),
+        concordViewMode = ConcordViewMode.fromName(getString(PrefKeys.CONCORD_VIEW_MODE, null)),
+        enabledChatFeeds = ChatFeedType.ALL - ChatFeedType.decode(getString(PrefKeys.DISABLED_CHAT_FEEDS, null)),
+        enabledHomeFeedTypes = HomeFeedType.ALL - HomeFeedType.decode(getString(PrefKeys.DISABLED_HOME_FEED_TYPES, null)),
+        relayAuthTrustMyRelays = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MY_RELAYS, true),
+        relayAuthTrustReadFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_READ_FOLLOWS, true),
+        relayAuthTrustMessageFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, true),
+        relayAuthTrustMessageStrangers = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, false),
+    )

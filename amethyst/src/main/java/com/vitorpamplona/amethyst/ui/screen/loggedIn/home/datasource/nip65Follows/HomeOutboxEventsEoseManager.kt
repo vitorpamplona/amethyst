@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows
 
+import com.vitorpamplona.amethyst.model.HomeFeedType
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
@@ -49,6 +50,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
@@ -63,19 +65,24 @@ class HomeOutboxEventsEoseManager(
         val feedSettings = key.followsPerRelay()
         val newThreadSince = key.feedState.homeNewThreads.lastNoteCreatedAtIfFilled()
         val repliesSince = key.feedState.homeReplies.lastNoteCreatedAtIfFilled()
-        return when (feedSettings) {
-            is AllCommunitiesTopNavPerRelayFilterSet -> filterHomePostsByAllCommunities(feedSettings, since, newThreadSince)
-            is AllFollowsTopNavPerRelayFilterSet -> filterHomePostsByAllFollows(feedSettings, since, newThreadSince, repliesSince)
-            is AuthorsTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
-            is GlobalTopNavPerRelayFilterSet -> filterHomePostsByGlobal(feedSettings, since, newThreadSince, repliesSince)
-            is HashtagTopNavPerRelayFilterSet -> filterHomePostsByHashtags(feedSettings, since, newThreadSince)
-            is LocationTopNavPerRelayFilterSet -> filterHomePostsByGeohashes(feedSettings, since, newThreadSince)
-            is MutedAuthorsTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
-            is RelayTopNavPerRelayFilterSet -> filterHomePostsByRelay(feedSettings, since, newThreadSince, repliesSince)
-            is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since, newThreadSince)
-            is FavoriteAlgoFeedTopNavPerRelayFilterSet -> filterHomePostsByAlgoFeedIds(feedSettings, since, newThreadSince)
-            else -> emptyList()
-        }
+        val base =
+            when (feedSettings) {
+                is AllCommunitiesTopNavPerRelayFilterSet -> filterHomePostsByAllCommunities(feedSettings, since, newThreadSince)
+                is AllFollowsTopNavPerRelayFilterSet -> filterHomePostsByAllFollows(feedSettings, since, newThreadSince, repliesSince)
+                is AuthorsTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
+                is GlobalTopNavPerRelayFilterSet -> filterHomePostsByGlobal(feedSettings, since, newThreadSince, repliesSince)
+                is HashtagTopNavPerRelayFilterSet -> filterHomePostsByHashtags(feedSettings, since, newThreadSince)
+                is LocationTopNavPerRelayFilterSet -> filterHomePostsByGeohashes(feedSettings, since, newThreadSince)
+                is MutedAuthorsTopNavPerRelayFilterSet -> filterHomePostsByAuthors(feedSettings, since, newThreadSince, repliesSince)
+                is RelayTopNavPerRelayFilterSet -> filterHomePostsByRelay(feedSettings, since, newThreadSince, repliesSince)
+                is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since, newThreadSince)
+                is FavoriteAlgoFeedTopNavPerRelayFilterSet -> filterHomePostsByAlgoFeedIds(feedSettings, since, newThreadSince)
+                else -> emptyList()
+            }
+
+        // Drop the kinds the user turned off in Settings › Home from every home relay filter, so a
+        // disabled group is never downloaded regardless of which top-nav strategy built the filters.
+        return base.removeDisabledHomeKinds(HomeFeedType.disabledKinds(key.account.settings.enabledHomeFeedTypes.value))
     }
 
     override fun user(key: HomeQueryState) = key.account.userProfile()
@@ -108,6 +115,13 @@ class HomeOutboxEventsEoseManager(
                         invalidateFilters()
                     }
                 },
+                key.scope.launch(Dispatchers.IO) {
+                    // Re-arm the home subscriptions when a content-type toggle flips, so a disabled
+                    // group leaves the live REQ and a re-enabled one comes back without a restart.
+                    key.account.settings.enabledHomeFeedTypes
+                        .drop(1)
+                        .collectLatest { invalidateFilters() }
+                },
                 key.account.scope.launch(Dispatchers.IO) {
                     key.feedState.homeNewThreads.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
@@ -129,5 +143,23 @@ class HomeOutboxEventsEoseManager(
     ) {
         super.endSub(key, subId)
         userJobMap[key]?.forEach { it.cancel() }
+    }
+}
+
+/**
+ * Removes the [disabled] kinds from each home filter. A filter with no `kinds` (e.g. an
+ * algo-feed id/address fetch) is left untouched; a filter whose kinds all become disabled is
+ * dropped entirely, since sending it with an empty `kinds` would wrongly match every kind.
+ */
+private fun List<RelayBasedFilter>.removeDisabledHomeKinds(disabled: Set<Int>): List<RelayBasedFilter> {
+    if (disabled.isEmpty()) return this
+    return mapNotNull { relayFilter ->
+        val kinds = relayFilter.filter.kinds ?: return@mapNotNull relayFilter
+        val kept = kinds.filterNot { it in disabled }
+        when {
+            kept.size == kinds.size -> relayFilter
+            kept.isEmpty() -> null
+            else -> RelayBasedFilter(relayFilter.relay, relayFilter.filter.copy(kinds = kept))
+        }
     }
 }

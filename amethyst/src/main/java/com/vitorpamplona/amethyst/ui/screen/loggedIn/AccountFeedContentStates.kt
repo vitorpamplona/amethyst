@@ -248,6 +248,19 @@ class AccountFeedContentStates(
                 }
         }
 
+        // Toggling a Home content type on/off in Settings › Home changes which event kinds the tabs
+        // render, but no event flows through LocalCache — force a rebuild of all three home feeds so
+        // hidden kinds disappear (and re-enabled ones reappear from cache) immediately.
+        scope.launch(Dispatchers.IO) {
+            account.settings.enabledHomeFeedTypes
+                .drop(1)
+                .collect {
+                    homeNewThreads.invalidateData()
+                    homeReplies.invalidateData()
+                    homeEverything.invalidateData()
+                }
+        }
+
         // Pinning/unpinning a room only changes sort order, not membership, so no
         // chat event flows through LocalCache. Force a rebuild to re-sort. This
         // also fires when pins arrive via the synced AppSpecificData event.

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
 import com.vitorpamplona.amethyst.commons.ui.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.HomeFeedType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
@@ -93,18 +94,19 @@ class HomeNewThreadFeedFilter(
 
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
 
         val notes =
             LocalCache.notes.filterIntoSet { _, note ->
                 // Avoids processing addressables twice.
-                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams)
+                (note.event?.kind ?: 99999) < 10000 && acceptableEvent(note, filterParams, disabledKinds)
             }
 
         val longFormNotes =
             LocalCache.addressables.filterIntoSet(
                 kinds = ADDRESSABLE_KINDS,
             ) { _, note ->
-                acceptableEvent(note, filterParams)
+                acceptableEvent(note, filterParams, disabledKinds)
             }
 
         return sort(notes + longFormNotes)
@@ -114,17 +116,20 @@ class HomeNewThreadFeedFilter(
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
 
         return collection.filterTo(HashSet()) {
-            acceptableEvent(it, filterParams)
+            acceptableEvent(it, filterParams, disabledKinds)
         }
     }
 
     private fun acceptableEvent(
         it: Note,
         filterParams: FilterByListParams,
+        disabledKinds: Set<Int>,
     ): Boolean {
-        val noteEvent = it.event
+        val noteEvent = it.event ?: return false
+        if (noteEvent.kind in disabledKinds) return false
         return (
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
