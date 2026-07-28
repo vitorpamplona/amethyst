@@ -4747,4 +4747,6 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
+    <string name="buzz_workflow_def_name_hint">build-a-test</string>
+    <string name="concord_dissolved_read_only">Tato komunita byla rozpuštěna a je nyní pouze pro čtení. Její historii si stále můžete přečíst, ale nové zprávy už nelze odesílat.</string>
 </resources>

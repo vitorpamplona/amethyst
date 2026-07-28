@@ -4581,4 +4581,6 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
+    <string name="buzz_workflow_def_name_hint">build-e-teste</string>
+    <string name="concord_dissolved_read_only">Esta comunidade foi dissolvida e agora é somente leitura. Você ainda pode ler o histórico, mas não é possível publicar novas mensagens.</string>
 </resources>

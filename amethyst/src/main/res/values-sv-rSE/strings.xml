@@ -4582,4 +4582,6 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
+    <string name="buzz_workflow_def_name_hint">build-och-testa</string>
+    <string name="concord_dissolved_read_only">Den här gemenskapen har upplösts och är nu skrivskyddad. Du kan fortfarande läsa dess historik, men inga nya meddelanden kan publiceras.</string>
 </resources>

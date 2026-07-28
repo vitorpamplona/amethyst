@@ -4579,4 +4579,6 @@
     <string name="buzz_persona_avatar">Avatar-URL (optional)</string>
     <string name="buzz_persona_publishing">Wird veröffentlicht…</string>
     <string name="buzz_persona_publish">Persona veröffentlichen</string>
+    <string name="buzz_workflow_def_name_hint">build-und-test</string>
+    <string name="concord_dissolved_read_only">Diese Community wurde aufgelöst und ist jetzt schreibgeschützt. Du kannst ihren Verlauf weiterhin lesen, aber es können keine neuen Nachrichten mehr gepostet werden.</string>
 </resources>
