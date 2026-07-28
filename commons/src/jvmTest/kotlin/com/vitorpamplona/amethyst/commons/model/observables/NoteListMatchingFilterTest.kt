@@ -187,6 +187,27 @@ class NoteListMatchingFilterTest {
     }
 
     @Test
+    fun ignoresTheVersionNoteThatHoldsAnAddressableEvent() {
+        // consumeBaseReplaceable also notifies observers with the "version" note:
+        // getOrCreateNote(event.id), a regular Note (not AddressableNote) carrying
+        // the AddressableEvent. It must never enter the addressable list.
+        var last: List<Note> = emptyList()
+        val subject = newFilter { last = it }
+        subject.init()
+
+        val event = appDefinition("nostr-dvm-labeler", 1000)
+        val versionNote = Note(event.id).apply { this.event = event }
+        subject.new(event, versionNote)
+
+        assertEquals(emptyList(), last)
+
+        // The addressable note for the same event, however, is listed.
+        val addressable = noteFor("nostr-dvm-labeler").apply { this.event = event }
+        subject.new(event, addressable)
+        assertEquals(listOf(addressable.idHex), last.map { it.idHex })
+    }
+
+    @Test
     fun removeDropsTheNoteEvenAfterCreatedAtChanged() {
         var last: List<Note> = emptyList()
         val subject = newFilter { last = it }
