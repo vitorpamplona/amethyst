@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -174,10 +174,14 @@ fun BuzzImportRow(
                 accountViewModel = accountViewModel,
             )
         }
+    // A plain row on the screen background, not a filled Card. Each row used to be its own Card, and
+    // because they stack with no gaps their container colour merged into one grey slab behind the
+    // whole Channels section — reading as a box around the channels that the Direct Messages rows
+    // right below (plain rows) didn't have. Matches [BuzzDmInlineRow] and the Concord server list.
     if (onOpen != null) {
-        Card(onClick = onOpen, modifier = Modifier.fillMaxWidth()) { content() }
+        Box(Modifier.fillMaxWidth().clickable(onClick = onOpen)) { content() }
     } else {
-        Card(modifier = Modifier.fillMaxWidth()) { content() }
+        Box(Modifier.fillMaxWidth()) { content() }
     }
 }
 
