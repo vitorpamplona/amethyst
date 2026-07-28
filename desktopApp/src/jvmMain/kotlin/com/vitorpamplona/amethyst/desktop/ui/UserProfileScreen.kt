@@ -58,6 +58,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,6 +129,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -744,6 +746,29 @@ fun UserProfileScreen(
         zapTotalSats = byUser.values.fold(BigDecimal.ZERO) { a, b -> a + b }
     }
 
+    // Fetch kind-0 metadata for the Followers/Following user lists so their
+    // names + avatars render (re-runs when Following loads and as Followers grow
+    // in ~25-item buckets, capped to keep the request bounded).
+    rememberSubscription(
+        connectedRelays,
+        followingList.size,
+        followerList.size / 25,
+        relayManager = relayManager,
+    ) {
+        val pubkeys = (followingList.toList() + followerList.toList()).distinct().take(400)
+        if (connectedRelays.isNotEmpty() && pubkeys.isNotEmpty()) {
+            SubscriptionConfig(
+                subId = generateSubId("umeta-${pubKeyHex.take(8)}"),
+                filters = listOf(FilterBuilders.userMetadataMultiple(pubkeys)),
+                relays = connectedRelays,
+                onEvent = { event, _, relay, _ -> subscriptionsCoordinator?.consumeEvent(event, relay) },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
     // Scroll state for detecting scroll direction
     val listState = rememberLazyListState()
     var showFloatingHeader by remember { mutableStateOf(false) }
@@ -820,217 +845,151 @@ fun UserProfileScreen(
                                 )
                             }
 
-                            // Edit button for own profile — compact IconButton to match
-                            // the action-icon pattern every other screen's header uses.
-                            if (isOwnProfile && account.isReadOnly == false) {
-                                IconButton(
-                                    onClick = { showEditProfile = true },
-                                    modifier = Modifier.size(32.dp),
-                                ) {
-                                    Icon(
-                                        MaterialSymbols.Edit,
-                                        contentDescription = "Edit Profile",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                }
-                            }
-
-                            // Moderation overflow (mute / report) for other profiles.
-                            if (iAccount != null && iAccount.isWriteable() && pubKeyHex != iAccount.pubKey) {
-                                Box {
+                            // Trailing actions, grouped in their own Row so they stay
+                            // together on the right. (The outer Row is SpaceBetween; without
+                            // this grouping the overflow menu floated toward the center.)
+                            // Order follows convention: primary action (Follow) first, then
+                            // the overflow "⋮" menu last.
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Edit button for own profile — compact IconButton to match
+                                // the action-icon pattern every other screen's header uses.
+                                if (isOwnProfile && account.isReadOnly == false) {
                                     IconButton(
-                                        onClick = { showProfileModMenu = true },
+                                        onClick = { showEditProfile = true },
                                         modifier = Modifier.size(32.dp),
                                     ) {
                                         Icon(
-                                            MaterialSymbols.MoreVert,
-                                            contentDescription = "Moderation actions",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            MaterialSymbols.Edit,
+                                            contentDescription = "Edit Profile",
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(20.dp),
                                         )
                                     }
-                                    DropdownMenu(
-                                        expanded = showProfileModMenu,
-                                        onDismissRequest = { showProfileModMenu = false },
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Message") },
-                                            onClick = {
-                                                DesktopDmRoute.request(pubKeyHex)
-                                                showProfileModMenu = false
-                                            },
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Add to list…") },
-                                            onClick = {
-                                                showProfileModMenu = false
-                                                showAddToListMenu = true
-                                            },
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Share (copy link)") },
-                                            onClick = {
-                                                pubKeyHex.hexToByteArrayOrNull()?.toNpub()?.let { npub ->
-                                                    Toolkit
-                                                        .getDefaultToolkit()
-                                                        .systemClipboard
-                                                        .setContents(StringSelection("nostr:$npub"), null)
-                                                    scope.launch { profileSnackbar?.showSnackbar("Profile link copied") }
-                                                }
-                                                showProfileModMenu = false
-                                            },
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text(if (isUserMuted) "Unmute user" else "Mute user") },
-                                            onClick = {
-                                                scope.launch {
-                                                    if (isUserMuted) {
-                                                        iAccount.showUser(pubKeyHex)
-                                                        profileSnackbar?.showSnackbar("Unmuted user")
-                                                    } else {
-                                                        iAccount.hideUser(pubKeyHex)
-                                                        profileSnackbar?.showSnackbar("Muted user")
-                                                    }
-                                                }
-                                                showProfileModMenu = false
-                                            },
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Report…") },
-                                            onClick = {
-                                                showProfileReportDialog = true
-                                                showProfileModMenu = false
-                                            },
-                                        )
-                                    }
-                                    // Add-to-list pack picker (opened from the menu above).
-                                    DropdownMenu(
-                                        expanded = showAddToListMenu,
-                                        onDismissRequest = { showAddToListMenu = false },
-                                    ) {
-                                        if (followPacks.isEmpty()) {
-                                            DropdownMenuItem(
-                                                text = { Text("No lists yet") },
-                                                enabled = false,
-                                                onClick = { showAddToListMenu = false },
+                                }
+
+                                // Follow/Unfollow button (primary action) for other profiles.
+                                FollowButtonRegion(
+                                    account = account,
+                                    pubKeyHex = pubKeyHex,
+                                    followState = followState,
+                                    contactListLoaded = contactListLoaded,
+                                    scope = scope,
+                                    relayManager = relayManager,
+                                    myContactList = myContactList,
+                                    onContactListUpdated = { myContactList = it },
+                                )
+
+                                // Moderation / actions overflow (⋮) — trailing, per convention.
+                                if (iAccount != null && iAccount.isWriteable() && pubKeyHex != iAccount.pubKey) {
+                                    Spacer(Modifier.width(4.dp))
+                                    Box {
+                                        IconButton(
+                                            onClick = { showProfileModMenu = true },
+                                            modifier = Modifier.size(32.dp),
+                                        ) {
+                                            Icon(
+                                                MaterialSymbols.MoreVert,
+                                                contentDescription = "Moderation actions",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp),
                                             )
-                                        } else {
-                                            followPacks.forEach { pack ->
+                                        }
+                                        DropdownMenu(
+                                            expanded = showProfileModMenu,
+                                            onDismissRequest = { showProfileModMenu = false },
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("Message") },
+                                                onClick = {
+                                                    DesktopDmRoute.request(pubKeyHex)
+                                                    showProfileModMenu = false
+                                                },
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text("Add to list…") },
+                                                onClick = {
+                                                    showProfileModMenu = false
+                                                    showAddToListMenu = true
+                                                },
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text("Share (copy link)") },
+                                                onClick = {
+                                                    pubKeyHex.hexToByteArrayOrNull()?.toNpub()?.let { npub ->
+                                                        Toolkit
+                                                            .getDefaultToolkit()
+                                                            .systemClipboard
+                                                            .setContents(StringSelection("nostr:$npub"), null)
+                                                        scope.launch { profileSnackbar?.showSnackbar("Profile link copied") }
+                                                    }
+                                                    showProfileModMenu = false
+                                                },
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text(if (isUserMuted) "Unmute user" else "Mute user") },
+                                                onClick = {
+                                                    scope.launch {
+                                                        if (isUserMuted) {
+                                                            iAccount.showUser(pubKeyHex)
+                                                            profileSnackbar?.showSnackbar("Unmuted user")
+                                                        } else {
+                                                            iAccount.hideUser(pubKeyHex)
+                                                            profileSnackbar?.showSnackbar("Muted user")
+                                                        }
+                                                    }
+                                                    showProfileModMenu = false
+                                                },
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text("Report…") },
+                                                onClick = {
+                                                    showProfileReportDialog = true
+                                                    showProfileModMenu = false
+                                                },
+                                            )
+                                        }
+                                        // Add-to-list pack picker (opened from the menu above).
+                                        DropdownMenu(
+                                            expanded = showAddToListMenu,
+                                            onDismissRequest = { showAddToListMenu = false },
+                                        ) {
+                                            if (followPacks.isEmpty()) {
                                                 DropdownMenuItem(
-                                                    text = { Text(pack.title() ?: "Untitled list") },
-                                                    onClick = {
-                                                        val acct = account
-                                                        if (acct != null) {
-                                                            scope.launch {
-                                                                try {
-                                                                    val updated =
-                                                                        FollowListEvent.add(
-                                                                            pack,
-                                                                            UserTag(pubKeyHex, null),
-                                                                            acct.signer,
-                                                                        )
-                                                                    relayManager.broadcastToAll(updated)
-                                                                    profileSnackbar?.showSnackbar("Added to list")
-                                                                } catch (e: Exception) {
-                                                                    profileSnackbar?.showSnackbar("Failed to add: ${e.message}")
+                                                    text = { Text("No lists yet") },
+                                                    enabled = false,
+                                                    onClick = { showAddToListMenu = false },
+                                                )
+                                            } else {
+                                                followPacks.forEach { pack ->
+                                                    DropdownMenuItem(
+                                                        text = { Text(pack.title() ?: "Untitled list") },
+                                                        onClick = {
+                                                            val acct = account
+                                                            if (acct != null) {
+                                                                scope.launch {
+                                                                    try {
+                                                                        val updated =
+                                                                            FollowListEvent.add(
+                                                                                pack,
+                                                                                UserTag(pubKeyHex, null),
+                                                                                acct.signer,
+                                                                            )
+                                                                        relayManager.broadcastToAll(updated)
+                                                                        profileSnackbar?.showSnackbar("Added to list")
+                                                                    } catch (e: Exception) {
+                                                                        profileSnackbar?.showSnackbar("Failed to add: ${e.message}")
+                                                                    }
                                                                 }
                                                             }
-                                                        }
-                                                        showAddToListMenu = false
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                Spacer(Modifier.width(4.dp))
-                            }
-
-                            // Follow/Unfollow button for other profiles — compact to
-                            // match the header row height (32dp); primary-coloured
-                            // text button so the affordance is still legible.
-                            if (account != null && !account.isReadOnly && pubKeyHex != account.pubKeyHex) {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Button(
-                                        onClick = {
-                                            scope.launch {
-                                                val currentStatus = followState.currentStatusOrNull()
-
-                                                followState.setFollowLoading()
-                                                try {
-                                                    val updatedEvent =
-                                                        if (currentStatus?.isFollowing == true) {
-                                                            unfollowUser(pubKeyHex, account, relayManager, myContactList)
-                                                        } else {
-                                                            followUser(pubKeyHex, account, relayManager, myContactList)
-                                                        }
-
-                                                    // Update both stored contact list and followState
-                                                    myContactList = updatedEvent
-                                                    followState.setFollowSuccess(updatedEvent, pubKeyHex)
-                                                } catch (e: Exception) {
-                                                    e.printStackTrace()
-                                                    followState.setFollowError(e.message ?: "Failed to update follow status", e)
+                                                            showAddToListMenu = false
+                                                        },
+                                                    )
                                                 }
                                             }
-                                        },
-                                        enabled = contactListLoaded && followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
-                                        modifier = Modifier.height(32.dp),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                                    ) {
-                                        val state = followState.state.collectAsState().value
-                                        val isFollowing = (state as? com.vitorpamplona.amethyst.commons.state.LoadingState.Success)?.data?.isFollowing ?: false
-                                        val isLoading = state is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading
-
-                                        when {
-                                            !contactListLoaded -> {
-                                                androidx.compose.material3.CircularProgressIndicator(
-                                                    modifier = Modifier.size(16.dp),
-                                                    strokeWidth = 2.dp,
-                                                    color = MaterialTheme.colorScheme.onPrimary,
-                                                )
-                                                Spacer(Modifier.width(8.dp))
-                                                Text("Loading...")
-                                            }
-
-                                            isLoading -> {
-                                                androidx.compose.material3.CircularProgressIndicator(
-                                                    modifier = Modifier.size(16.dp),
-                                                    strokeWidth = 2.dp,
-                                                    color = MaterialTheme.colorScheme.onPrimary,
-                                                )
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(if (isFollowing) "Unfollowing..." else "Following...")
-                                            }
-
-                                            else -> {
-                                                Icon(
-                                                    if (isFollowing) MaterialSymbols.PersonRemove else MaterialSymbols.PersonAdd,
-                                                    contentDescription = if (isFollowing) "Unfollow" else "Follow",
-                                                    modifier = Modifier.size(18.dp),
-                                                )
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(if (isFollowing) "Unfollow" else "Follow")
-                                            }
                                         }
                                     }
-
-                                    val errorMessage =
-                                        followState.state
-                                            .collectAsState()
-                                            .value
-                                            .errorOrNull()
-                                    errorMessage?.let { error ->
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            error,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.error,
-                                        )
-                                    }
                                 }
-                            }
+                            } // end trailing-actions Row
                         }
                     }
 
@@ -1543,7 +1502,9 @@ fun UserProfileScreen(
                             } else {
                                 items(followerList.toList(), key = { "follower-$it" }) { pk ->
                                     val user = remember(pk) { localCache.getOrCreateUser(pk) }
-                                    UserSearchCard(user = user, onClick = { onNavigateToProfile(pk) })
+                                    // Observe kind-0 so the row updates when metadata arrives.
+                                    val meta by user.metadata().flow.collectAsState()
+                                    key(meta) { UserSearchCard(user = user, onClick = { onNavigateToProfile(pk) }) }
                                 }
                             }
                         }
@@ -1554,7 +1515,9 @@ fun UserProfileScreen(
                             } else {
                                 items(followingList.toList(), key = { "following-$it" }) { pk ->
                                     val user = remember(pk) { localCache.getOrCreateUser(pk) }
-                                    UserSearchCard(user = user, onClick = { onNavigateToProfile(pk) })
+                                    // Observe kind-0 so the row updates when metadata arrives.
+                                    val meta by user.metadata().flow.collectAsState()
+                                    key(meta) { UserSearchCard(user = user, onClick = { onNavigateToProfile(pk) }) }
                                 }
                             }
                         }
@@ -1795,6 +1758,101 @@ private suspend fun unfollowUser(
             throw IllegalStateException("Cannot unfollow: No contact list available")
         }
     }
+
+/**
+ * Follow/Unfollow primary action for another user's profile. Extracted so the
+ * header's trailing-actions Row can place it before the overflow "⋮" menu.
+ */
+@Composable
+private fun FollowButtonRegion(
+    account: AccountState.LoggedIn?,
+    pubKeyHex: String,
+    followState: FollowState,
+    contactListLoaded: Boolean,
+    scope: CoroutineScope,
+    relayManager: DesktopRelayConnectionManager,
+    myContactList: ContactListEvent?,
+    onContactListUpdated: (ContactListEvent?) -> Unit,
+) {
+    if (account == null || account.isReadOnly || pubKeyHex == account.pubKeyHex) return
+
+    Column(horizontalAlignment = Alignment.End) {
+        Button(
+            onClick = {
+                scope.launch {
+                    val currentStatus = followState.currentStatusOrNull()
+                    followState.setFollowLoading()
+                    try {
+                        val updatedEvent =
+                            if (currentStatus?.isFollowing == true) {
+                                unfollowUser(pubKeyHex, account, relayManager, myContactList)
+                            } else {
+                                followUser(pubKeyHex, account, relayManager, myContactList)
+                            }
+                        onContactListUpdated(updatedEvent)
+                        followState.setFollowSuccess(updatedEvent, pubKeyHex)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        followState.setFollowError(e.message ?: "Failed to update follow status", e)
+                    }
+                }
+            },
+            enabled = contactListLoaded && followState.state.value !is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading,
+            modifier = Modifier.height(32.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+        ) {
+            val state = followState.state.collectAsState().value
+            val isFollowing = (state as? com.vitorpamplona.amethyst.commons.state.LoadingState.Success)?.data?.isFollowing ?: false
+            val isLoading = state is com.vitorpamplona.amethyst.commons.state.LoadingState.Loading
+
+            when {
+                !contactListLoaded -> {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Loading...")
+                }
+
+                isLoading -> {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (isFollowing) "Unfollowing..." else "Following...")
+                }
+
+                else -> {
+                    Icon(
+                        if (isFollowing) MaterialSymbols.PersonRemove else MaterialSymbols.PersonAdd,
+                        contentDescription = if (isFollowing) "Unfollow" else "Follow",
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (isFollowing) "Unfollow" else "Follow")
+                }
+            }
+        }
+
+        val errorMessage =
+            followState.state
+                .collectAsState()
+                .value
+                .errorOrNull()
+        errorMessage?.let { error ->
+            Spacer(Modifier.height(4.dp))
+            Text(
+                error,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
 
 @Composable
 private fun ProfileTabMessage(text: String) {
