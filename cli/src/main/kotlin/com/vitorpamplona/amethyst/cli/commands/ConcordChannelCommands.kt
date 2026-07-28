@@ -50,6 +50,8 @@ object ConcordChannelCommands {
                 mapOf(
                     "name" to state.metadata?.name,
                     "description" to state.metadata?.description,
+                    // CORD-02 §9: once dissolved the community is sealed read-only (history only, no new posts).
+                    "dissolved" to state.dissolved,
                     "icon" to state.metadata?.icon?.let { mapOf("url" to it.url, "key" to it.key, "nonce" to it.nonce, "hash" to it.hash) },
                     "banner" to state.metadata?.banner?.let { mapOf("url" to it.url, "key" to it.key, "nonce" to it.nonce, "hash" to it.hash) },
                     "channels" to
@@ -75,6 +77,11 @@ object ConcordChannelCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
+            // CORD-02 §9: a dissolved community is sealed read-only — held keys still open history, but
+            // nothing new is honored, so refuse to post before we ever build/publish a wrap.
+            if (foldState(ctx, sc).dissolved) {
+                return Output.error("dissolved", "community '$handle' has been dissolved and is read-only (CORD-02 §9)")
+            }
             val channelId = resolve(ctx, sc, channelRef) ?: return Output.error("not_found", "no channel '$channelRef'")
             val channel = ConcordActions.publicChannel(sc.root.hexToByteArray(), channelId.hexToByteArray(), sc.rootEpoch)
             val wrap = ConcordActions.buildChannelMessage(ctx.signer, channel, channelId, sc.rootEpoch, text, TimeUtils.now())

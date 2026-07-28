@@ -79,6 +79,16 @@ class ConcordChannel(
         private set
 
     /**
+     * True once the community has been dissolved by an owner-signed tombstone (CORD-02 §9). On sight
+     * the client seals the Community read-only: held keys still open history, but nothing new is
+     * honored, so no member — not even the owner — may post. Terminal and one-way (there is no
+     * un-dissolve). The one carve-out (a member's delete of their own past message stays honored even
+     * post-seal) runs through the note context menu, not the composer, so this gate never blocks it.
+     */
+    var dissolved: Boolean = false
+        private set
+
+    /**
      * Per-relay backward-pagination cursors for this channel's history (CORD-03). The live
      * subscription only holds the recent tail the relay serves for the channel plane; older
      * messages are paged in on demand by `until`+`limit` as the user scrolls, exactly like the
@@ -110,6 +120,7 @@ class ConcordChannel(
         val newCommunityIcon = state.metadata?.icon
         val newCommunityBanner = state.metadata?.banner
         val newMembership = ConcordMembership.of(state.authority, myPubKey)
+        val newDissolved = state.dissolved
 
         val changed =
             channelName != newChannelName ||
@@ -118,7 +129,8 @@ class ConcordChannel(
                 communityName != newCommunityName ||
                 communityIcon != newCommunityIcon ||
                 communityBanner != newCommunityBanner ||
-                membership != newMembership
+                membership != newMembership ||
+                dissolved != newDissolved
 
         channelName = newChannelName
         isVoice = newVoice
@@ -128,6 +140,7 @@ class ConcordChannel(
         communityBanner = newCommunityBanner
         communityRelays = relays
         membership = newMembership
+        dissolved = newDissolved
         return changed
     }
 
@@ -136,7 +149,13 @@ class ConcordChannel(
 
     override fun toBestDisplayName(): String = channelName ?: channelId.channelId
 
-    fun canPost(): Boolean = membership.isMember()
+    /**
+     * Whether this account may post to the channel: it must hold a live standing in the community
+     * ([ConcordMembership.isMember]) **and** the community must not have been dissolved (CORD-02 §9 —
+     * a tombstone seals it read-only for everyone). Deleting one's own past message stays allowed even
+     * after dissolution and does not go through this gate.
+     */
+    fun canPost(): Boolean = membership.isMember() && !dissolved
 
     // Synthetic note representing this channel in the Messages list before any
     // message has loaded (so a just-joined channel appears immediately). Mirrors
