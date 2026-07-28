@@ -50,8 +50,11 @@ class DualHttpClientManager(
     // Resource-usage ledger counter, installed on the shared base client so
     // every derived client is accounted. See [OkHttpClientFactory].
     usageInterceptor: Interceptor? = null,
+    // Signs BUD-01 read-auth to retry auth-gated Blossom downloads on 401.
+    // See [BlossomReadAuthInterceptor].
+    blossomReadAuth: Interceptor? = null,
 ) : IHttpClientManager {
-    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache, usageInterceptor)
+    val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache, onionCache, usageInterceptor, blossomReadAuth)
 
     val defaultHttpClient: StateFlow<OkHttpClient> =
         combine(proxyPortProvider, isMobileDataProvider) { proxy, mobile ->

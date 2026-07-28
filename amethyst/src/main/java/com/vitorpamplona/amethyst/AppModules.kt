@@ -73,6 +73,8 @@ import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServ
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
+import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthInterceptor
+import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
@@ -424,6 +426,16 @@ class AppModules(
             },
             onionCache = onionLocationCache,
             usageInterceptor = httpUsageInterceptor,
+            // Retries auth-gated Blossom blob downloads (e.g. Buzz's private
+            // media relay) with a BUD-01 read-auth token signed by the current
+            // account on a 401. Reads the signer at call time so it always
+            // tracks the logged-in account.
+            blossomReadAuth =
+                BlossomReadAuthInterceptor(
+                    BlossomReadAuthTokenProvider(
+                        signerProvider = { sessionManager.loggedInAccount()?.signer },
+                    )::authHeader,
+                ),
         )
 
     // Offers easy methods to know when connections are happening through Tor or not
