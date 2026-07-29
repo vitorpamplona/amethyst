@@ -51,6 +51,8 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip71Video.image
+import com.vitorpamplona.quartz.nip73ExternalIds.scope
+import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
@@ -313,10 +315,10 @@ private class WarmTargets {
 
 /**
  * Collects everything worth warming for this note. Reads NIP-92 imeta tags (every
- * kind), then the free-text body: text notes and comments go through the shared
- * render cache — which both warms the renderer and yields a fully classified body
- * — while every other kind gets a cheap URL scan. Returns null only when the note
- * has no event.
+ * kind), the NIP-73 external-content scope (kind 1111 only), then the free-text
+ * body: text notes and comments go through the shared render cache — which both
+ * warms the renderer and yields a fully classified body — while every other kind
+ * gets a cheap URL scan. Returns null only when the note has no event.
  */
 private fun Note.collectWarmTargets(): WarmTargets? {
     val ev = event ?: return null
@@ -334,6 +336,13 @@ private fun Note.collectWarmTargets(): WarmTargets? {
     // `m`/`dim`, not imeta (FileHeaderEvent and the gallery/file kinds). The generic
     // imetas() above misses these entirely.
     targets.addFileHeaderMedia(ev)
+
+    // NIP-73 external-content scope. Only kind 1111 carries one, so the type check
+    // keeps every other kind out of the tag walk. Reuses scope() — the same accessor
+    // the renderer uses — so we only warm a URL that will actually be shown.
+    if (ev is CommentEvent) {
+        (ev.scope() as? UrlId)?.let { targets.link(it.url) }
+    }
 
     // Free-text body. The reproducible-key kinds parse through the shared cache
     // (which also warms the render); everything else is scanned for URLs only.
