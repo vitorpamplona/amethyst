@@ -1,17 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
+    <string name="login_title">Welkom bij Amethyst</string>
+    <string name="login_subtitle">Meld je aan bij je Nostr-account</string>
+    <string name="login_subtitle_desktop">Een Nostr-client voor desktop</string>
+    <string name="login_card_title">Inloggen met je Nostr-sleutel</string>
+    <string name="login_card_subtitle">nsec voor volledige toegang, bunker:// voor remote signer, of npub voor alleen-lezen</string>
+    <string name="login_with_key">Inloggen met sleutel</string>
+    <string name="login_button">Inloggen</string>
+    <string name="login_generate_new">Nieuwe sleutel genereren</string>
+    <string name="login_generate_button">Nieuwe genereren</string>
+    <string name="login_key_hint">Voer je privésleutel (nsec) of openbare sleutel (npub) in</string>
+    <string name="login_key_label">nsec, bunker:// of npub</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
+    <string name="login_show_key">Sleutel tonen</string>
+    <string name="login_hide_key">Sleutel verbergen</string>
     <!-- New Key Warning -->
+    <string name="new_key_warning_title">BELANGRIJK: Bewaar je sleutels!</string>
+    <string name="new_key_warning_message">Je geheime sleutel (nsec) is de ENIGE manier om toegang te krijgen tot je account. Als je hem kwijtraakt, is je account voorgoed weg. Bewaar hem op een veilige plek!</string>
+    <string name="new_key_public_label">Openbare sleutel (deelbaar):</string>
+    <string name="new_key_secret_label">Geheime sleutel (deel dit NOOIT!):</string>
+    <string name="new_key_continue_button">Ik heb mijn sleutels bewaard, doorgaan</string>
     <!-- Common Actions -->
+    <string name="action_copy">Kopiëren</string>
+    <string name="action_paste">Plakken</string>
+    <string name="action_cancel">Annuleren</string>
+    <string name="action_ok">OK</string>
+    <string name="action_save">Opslaan</string>
+    <string name="action_delete">Verwijderen</string>
+    <string name="action_share">Delen</string>
     <!-- Errors -->
+    <string name="error_invalid_key">Ongeldig sleutelformaat. Controleer het en probeer opnieuw.</string>
+    <string name="error_network">Netwerkfout. Controleer je verbinding.</string>
+    <string name="error_generic">Er is een fout opgetreden. Probeer het opnieuw.</string>
     <!-- Loading & Empty States -->
+    <string name="action_refresh">Vernieuwen</string>
+    <string name="action_try_again">Opnieuw proberen</string>
+    <string name="feed_empty">Feed is empty</string>
+    <string name="error_loading_feed">Error loading feed: %s</string>
     <!-- Placeholder Screens -->
+    <string name="screen_search_title">Zoeken</string>
+    <string name="screen_search_description">Zoek naar gebruikers, notes en hashtags.</string>
+    <string name="screen_messages_title">Berichten</string>
+    <string name="screen_messages_description">Je versleutelde directe berichten verschijnen hier.</string>
+    <string name="screen_notifications_title">Meldingen</string>
+    <string name="screen_notifications_description">Vermeldingen, antwoorden en reacties verschijnen hier.</string>
     <!-- Accessibility -->
+    <string name="accessibility_user_avatar">Avatar van gebruiker</string>
+    <string name="accessibility_navigate">Navigeren</string>
     <!-- Relay history paging (shared feed markers + status card) -->
+    <string name="chats_history_loading_label">Laden:</string>
+    <string name="chats_history_fully_loaded_label">Volledig geladen:</string>
+    <string name="chats_history_fully_loaded">(volledig geladen)</string>
+    <string name="chats_history_by_relay">Geschiedenis per relay</string>
+    <string name="chats_history_stalled_retry">Wordt opnieuw geprobeerd als je dit scherm opnieuw opent</string>
+    <string name="chats_history_older">Oudere %1$s berichten</string>
+    <string name="chats_history_all_caught_up">Helemaal bij</string>
+    <string name="chats_history_reached_start">Begin van je %1$s berichten bereikt</string>
+    <string name="chats_history_subtitle">%1$s · %2$s · geladen sinds %3$s</string>
+    <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
+    <string name="chats_history_waiting">waiting on %1$s</string>
+    <string name="chats_history_incomplete">Sommige relays reageerden niet</string>
+    <string name="chats_history_incomplete_sub">%1$s onbereikbaar · tik om te zien welke</string>
+    <string name="chats_history_relays_title">%1$s · geschiedenis per relay</string>
+    <string name="chats_history_relay_since">sinds %1$s</string>
+    <string name="action_dismiss">Negeren</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
     <!-- Notes & Replies -->
+    <string name="replying_to">replying to </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_kind">nApplet</string>
+    <string name="nsite_website_kind">nSite</string>
+    <string name="napplet_card_permissions">Waar het toegang toe heeft</string>
+    <string name="nsite_root_site">Root Site</string>
+    <string name="nsite_source">Bron:</string>
+    <string name="nsite_servers">Servers:</string>
+    <string name="nsite_open">Openen</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Directe URL gebruiken</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_title">Bijnaam</string>
+    <string name="nickname_dialog_explainer">Wordt aan jou getoond in plaats van de naam van deze gebruiker, overal in de app. Het wordt versleuteld opgeslagen in je contactkaart: alleen jij kunt het lezen. Typ : om je eigen emoji\'s te gebruiken.</string>
+    <string name="nickname_label">Bijnaam</string>
+    <string name="nickname_summary_label">Privénote over deze gebruiker</string>
+    <string name="nickname_save">Opslaan</string>
+    <string name="nickname_cancel">Annuleren</string>
     <string name="git_status_open">Openen</string>
     <string name="git_status_merged">Samengevoegd</string>
     <string name="git_status_closed">Gesloten</string>
@@ -53,11 +131,16 @@
     <string name="road_event_traffic_jam">File</string>
     <string name="road_event_unknown">Weggebeurtenis</string>
     <string name="podcast_value_zap_split_hint">Zaps hiervoor worden verdeeld over:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
+    <string name="podcast_value_for_value">Value-for-Value</string>
+    <string name="relay_monitor_rtt_open">Openen</string>
     <string name="relay_monitor_rtt_read">Lezen</string>
     <string name="relay_monitor_rtt_write">Schrijven</string>
     <string name="relay_monitor_network">Netwerk</string>
+    <string name="relay_monitor_relay_type">Type</string>
     <string name="relay_monitor_requirements">Vereisten</string>
     <string name="relay_monitor_supported_nips">Ondersteunde NIPs</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Geaccepteerde kinds</string>
     <string name="relay_discovery_geohash">Locatie</string>
     <string name="calendar_rsvp_going">Ga</string>

@@ -341,6 +341,7 @@
     <string name="concord_leave_message">Chcesz opuścić %1$s? Zostaniesz usunięty z listy członków tej społeczności, a synchronizacja z Twoimi urządzeniami zostanie wstrzymana. Społeczność nie zostanie o tym powiadomiona, a Ty nie zostaniesz usunięty z listy jej członków. Wiadomości, których nie będziesz już mógł odszyfrować, mogą okazać się nie do odzyskania, a powrót do społeczności będzie możliwy wyłącznie po otrzymaniu nowego zaproszenia.</string>
     <string name="concord_leave_owner_warning">To Ty stworzyłeś tę społeczność. Odejście nie powoduje jej usunięcia ani przekazania komukolwiek innemu, ale powoduje usunięcie klucza właściciela przechowywanego na Twojej liście — nie będziesz mógł już nią zarządzać.</string>
     <string name="concord_edit_relays_desc">Miejsce, w którym publikowane i czytane są zaszyfrowane plany tej społeczności.</string>
+    <string name="concord_dissolved_read_only">Ta społeczność została rozwiązana i jest tylko do odczytu. Nadal możesz przeczytać jej historię, ale nie można opublikować żadnych nowych wiadomości.</string>
     <string name="concord_typing_one">%1$s pisze…</string>
     <string name="concord_typing_two">%1$s i %2$s piszą…</string>
     <string name="concord_typing_many">Kilka osób pisze…</string>
@@ -457,6 +458,8 @@
     <string name="refresh">Odśwież</string>
     <string name="changed_chat_profile_to">Nowy profil czatu:</string>
     <string name="leave">Wyjdź</string>
+    <string name="remove_from_messages">Usuń z wiadomości</string>
+    <string name="add_to_messages">Dodaj do wiadomości</string>
     <string name="unfollow">Nie obserwuj</string>
     <string name="channel_created">Kanał utworzony</string>
     <string name="channel_information_changed_to">"Informacje o kanale zmienione na"</string>
@@ -790,6 +793,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="workout_suggestion_connect_button">Połącz</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Z Health Connect</string>
+    <plurals name="workout_suggestion_combined_sessions">
+        <item quantity="one">%1$d aktywność</item>
+        <item quantity="few">%1$d aktywności</item>
+        <item quantity="many">%1$d aktywności</item>
+        <item quantity="other">%1$d aktywności</item>
+    </plurals>
     <string name="exercise_running">Bieganie</string>
     <string name="exercise_walking">Spacer</string>
     <string name="exercise_cycling">Jazda na rowerze</string>
@@ -2209,6 +2218,29 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="settings_section_tor_routing">Przejście przez Tor</string>
     <string name="settings_section_profile_sections">Sekcje &amp; Wątki</string>
     <string name="settings_section_home_tabs">Widoczne karty</string>
+    <string name="settings_section_home_content_types">Zawartość kanału</string>
+    <string name="home_content_type_text_notes">Notatki tekstowe</string>
+    <string name="home_content_type_reposts">Reposty</string>
+    <string name="home_content_type_comments">Komentarze &amp; odpowiedzi</string>
+    <string name="home_content_type_pictures">Zdjęcia</string>
+    <string name="home_content_type_videos">Filmy wideo</string>
+    <string name="home_content_type_shorts">Filmiki</string>
+    <string name="home_content_type_articles">Artykuły</string>
+    <string name="home_content_type_wiki">Strony Wiki</string>
+    <string name="home_content_type_highlights">Wyróżnienia</string>
+    <string name="home_content_type_polls">Ankiety</string>
+    <string name="home_content_type_classifieds">Ogłoszenia</string>
+    <string name="home_content_type_torrents">Torrenty</string>
+    <string name="home_content_type_voice">Wiadomości głosowe</string>
+    <string name="home_content_type_live_activities">Bieżąca aktywność</string>
+    <string name="home_content_type_ephemeral_chat">Czaty efemeryczne</string>
+    <string name="home_content_type_interactive_stories">Interaktywne opowieści</string>
+    <string name="home_content_type_chess">Szachy</string>
+    <string name="home_content_type_attestations">Świadectwa</string>
+    <string name="home_content_type_nips">Szkice NIP</string>
+    <string name="home_content_type_music">Muzyka &amp; audio</string>
+    <string name="home_content_type_podcasts">Podcasty</string>
+    <string name="home_content_type_fundraisers">Zbiórki funduszy</string>
     <string name="settings_section_reminders">Przypomnienia</string>
     <string name="wallet_connect">Podłącz portfel</string>
     <string name="language">Język</string>
@@ -2406,6 +2438,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="chat_type_ephemeral_desc">Lekkie pokoje, które nie utrzymują się w historii.</string>
     <string name="relay_group_create_title">Utwórz grupę</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
+    <string name="buzz_channel_create_title">Nowy kanał</string>
+    <string name="buzz_forum_create_title">Nowe forum</string>
+    <string name="buzz_channel_flag_private">Kanał prywatny</string>
+    <string name="buzz_channel_flag_private_desc">Ukryty na liście kanałów i dostępny wyłącznie na zaproszenie. Opcja „Wyłączone” oznacza, że każdy użytkownik tego transmitera może go znaleźć i dołączyć do niego.</string>
+    <string name="buzz_channel_flag_forum">Kanał forum</string>
+    <string name="buzz_channel_flag_forum_desc">Wpisy w wątku zamiast osi czasu czatu. Nie można tego później zmienić.</string>
     <string name="relay_group_relay_no_nip29">Ten transmiter nie obsługuje grup zgodnych ze standardem NIP-29. Grupa utworzona tutaj nie będzie działać — transmiter nie będzie zarządzał jej nazwą, członkami ani wiadomościami. Wybierz transmiter, który obsługuje grupy oparte na rekomendacjach.</string>
     <string name="relay_group_create_name">Nazwa grupy</string>
     <string name="relay_group_create_topic">Temat (opcjonalnie)</string>
@@ -2440,6 +2478,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_edit_confirm">Zapisz</string>
     <string name="relay_group_menu_members">Członkowie</string>
     <string name="relay_group_menu_edit">Edytuj grupę</string>
+    <string name="relay_group_delete">Usuń grupę</string>
+    <string name="relay_group_delete_confirm">Usunąć \"%1$s\"? To usuwa grupę i jej historię dla wszystkich i nie może być cofnięte.</string>
+    <string name="buzz_channel_delete">Usuń kanał</string>
+    <string name="buzz_channel_delete_confirm">Usunąć \"%1$s\"? To usuwa kanał i jego wiadomości dla wszystkich i nie może być cofnięte.</string>
+    <string name="buzz_channel_archive">Archiwizuj kanał</string>
+    <string name="buzz_channel_unarchive">Odarchiwizuj kanał</string>
     <string name="relay_group_threads_title">Wątki</string>
     <string name="relay_group_pin_message">Przypnij wiadomość</string>
     <string name="relay_group_unpin_message">Odepnij wiadomość</string>
@@ -2502,6 +2546,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_favorite_relay">Faworyzuj ten transmiter</string>
     <string name="relay_group_threads_empty">Brak wątków. Zacznij od przycisku +.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
+    <string name="relay_group_threads_empty_read_only">Brak wątków.</string>
     <string name="relay_group_threads_loading_older">Ładowanie starych wątków…</string>
     <string name="relay_group_threads_all_caught_up">Brak starszych wątków</string>
     <string name="relay_group_thread_new">Nowy wątek</string>
@@ -2519,6 +2564,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_browse_your_relays">Transmitery, których używasz</string>
     <string name="relay_group_browse_popular">Popularne transmitery</string>
     <string name="relay_group_no_messages_yet">Brak wiadomości</string>
+    <string name="channel_invite_title">Dodano do %1$s</string>
+    <string name="channel_invite_body">%1$s dodał Cię do tego kanału na %2$s. Pokazać go w wiadomościach?</string>
+    <string name="channel_invite_unknown_actor">Ktoś</string>
+    <string name="channel_invite_accept">Pokaż</string>
+    <string name="channel_invite_ignore">Ignoruj</string>
+    <string name="channel_invite_leave">Wyjdź</string>
     <string name="relay_group_join_to_post">Dołącz do tej grupy, aby wysyłać wiadomości.</string>
     <string name="relay_group_invite_only_to_post">Ta grupa jest dostępna wyłącznie dla zaproszonych osób — aby móc publikować posty, potrzebujesz zaproszenia.</string>
     <plurals name="relay_group_member_count">
@@ -2587,6 +2638,14 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="share_target_as_dm">Wyślij jako DM</string>
     <string name="share_to_dm_title">Wyślij do…</string>
     <string name="share_to_dm_start_new">Nowa wiadomość</string>
+    <string name="share_target_as_highlight">Nowe wyróżnienie</string>
+    <string name="new_highlight_title">Nowe wyróżnienie</string>
+    <string name="new_highlight_passage_label">Wyróżniony tekst</string>
+    <string name="new_highlight_passage_placeholder">Co szczególnie zwróciło twoją uwagę?</string>
+    <string name="new_highlight_source_label">Adres źródła</string>
+    <string name="new_highlight_note_label">Twoja notatka (opcjonalnie)</string>
+    <string name="new_highlight_note_placeholder">Dodaj swoje przemyślenia…</string>
+    <string name="highlight_action">Wyróżnienie</string>
     <string name="copy_url_to_clipboard">Skopiuj adres do schowka</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiuj ID wpisu do schowka</string>
     <string name="add_media_to_gallery">Dodaj pliki do Galerii</string>
@@ -3259,7 +3318,28 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_message_edited">(edytowane)</string>
     <string name="buzz_diff_truncated">(diff skrócony)</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <string name="buzz_system_member_joined">%1$s dołączył(a)</string>
+    <string name="buzz_system_member_added">%1$s został(a) dodany(a) przez %2$s</string>
+    <string name="buzz_system_member_left">%1$s zostało</string>
+    <string name="buzz_system_member_removed">%1$s został usunięty przez %2$s</string>
+    <string name="buzz_system_topic_changed">%1$s ustawił(a) temat na \"%2$s\"</string>
+    <string name="buzz_system_topic_cleared">%1$s wyczyszczono temat</string>
+    <string name="buzz_system_purpose_changed">%1$s ustawił cel na \"%2$s\"</string>
+    <string name="buzz_system_purpose_cleared">%1$s doprecyzował cel</string>
+    <string name="buzz_system_visibility_open">%1$s otworzył ten kanał — każdy może go znaleźć i dołączyć do niego</string>
+    <string name="buzz_system_visibility_private">%1$s ustawił ten kanał jako prywatny — dostępny tylko dla zaproszonych osób</string>
+    <string name="buzz_system_visibility_other">%1$s zmieniono widoczność na %2$s</string>
+    <string name="buzz_system_ttl_set">%1$s ustawił wiadomości do zniknięcia po %2$s</string>
+    <string name="buzz_system_ttl_cleared">%1$s wyłączył(a) funkcję znikających wiadomości</string>
+    <string name="buzz_system_channel_archived">%1$s zarchiwizował ten kanał</string>
+    <string name="buzz_system_channel_unarchived">%1$s przywrócił ten kanał</string>
+    <string name="buzz_system_channel_created">%1$s utworzył ten kanał</string>
+    <string name="buzz_system_channel_deleted">%1$s usunął ten kanał</string>
+    <string name="buzz_system_message_deleted">%1$s usunął wiadomość</string>
+    <string name="buzz_system_message_deleted_reason">%1$s usunął wiadomość: %2$s</string>
+    <string name="buzz_system_dm_created">%1$s rozpoczął tę rozmowę</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
     <!-- Buzz forum votes (kind 45002). -->
@@ -3519,6 +3599,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="git_repo_settings_topics">Tematy (oddzielone przecinkami)</string>
     <string name="git_repo_settings_save">Zapisz</string>
     <string name="git_repositories">Repozytoria Git</string>
+    <string name="highlights">Wyróżnienia</string>
     <string name="nsite_title">Statyczna Witryna: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Uprawnienia:</string>
@@ -3916,7 +3997,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="kind_git_pr_update">Aktualizacja PR</string>
     <string name="kind_zap_goals">Cele Zap-a</string>
     <string name="kind_hashtag_follows">Obserwowane hashtagi</string>
-    <string name="kind_highlights">Najważniejsze informacje</string>
+    <string name="kind_highlights">Wyróżnienia</string>
     <string name="kind_http_auth">Autoryzacja http</string>
     <string name="kind_index_relay_list">Indeks listy transmiterów</string>
     <string name="kind_adventure_prologue">Wstęp do przygody</string>
@@ -4600,6 +4681,51 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="new_conversation_location_pro_2">Kompatybilny z Bitchatem; dociera do pobliskich użytkowników na tych samych transmiterach.</string>
     <string name="new_conversation_location_con_1">Publiczny i efemeryczny – brak historii, każdy uczestnik może go odczytać.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_workflow_section_active">Pracuje teraz</string>
+    <string name="buzz_workflow_section_shipped">Wysłano</string>
+    <string name="buzz_workflow_section_closed">Zamknięte</string>
+    <string name="buzz_workflow_gate_needs_you">Wymaga zatwierdzenia</string>
+    <string name="buzz_workflow_gate_awaiting">Oczekiwanie na zatwierdzenie</string>
+    <string name="buzz_workflow_no_description">(brak opisu)</string>
+    <string name="buzz_workflow_by">przez</string>
+    <string name="buzz_workflow_cancel">Anuluj</string>
+    <string name="buzz_workflow_trigger_failed_toast">Nie udało się uruchomić zadania — sprawdź, czy możesz publikować posty w tej przestrzeni roboczej</string>
+    <string name="buzz_workflow_approved_toast">Zatwierdzono — autor tworzy pull request</string>
+    <string name="buzz_workflow_denied_toast">Odmowa – prace zostały odrzucone</string>
+    <string name="buzz_workflow_decision_failed_toast">Nie można opublikować Twojej decyzji — sprawdź, czy możesz publikować posty w tej przestrzeni roboczej</string>
+    <string name="buzz_workflow_view_pr">Zobacz PR</string>
+    <string name="buzz_workflow_closed_denied">Odmowa – odrzucona praca</string>
+    <string name="buzz_workflow_closed_cancelled">Anulowano</string>
+    <string name="buzz_workflow_closed_failed_prefix">Nieudane: %1$s</string>
+    <string name="buzz_workflow_closed_failed">Niepowodzenie</string>
+    <string name="buzz_workflow_pill_queued">W kolejce</string>
+    <string name="buzz_workflow_pill_working">Pracuję</string>
+    <string name="buzz_workflow_pill_needs_approval">Wymaga zatwierdzenia</string>
+    <string name="buzz_workflow_pill_approved">Zatwierdzono</string>
+    <string name="buzz_workflow_pill_shipped">Wysłano</string>
+    <string name="buzz_workflow_pill_failed">Niepowodzenie</string>
+    <string name="buzz_workflow_pill_cancelled">Anulowano</string>
+    <string name="buzz_workflow_pill_denied">Odmowa</string>
+    <string name="buzz_workflow_trigger_title">Uruchom proces</string>
+    <string name="buzz_workflow_trigger_desc">Program wykonuje zadanie, a następnie wstrzymuje się, czekając na zatwierdzenie przez użytkownika, zanim utworzy zgłoszenie PR. Cały kanał ma wgląd w przebieg zadania.</string>
+    <string name="buzz_workflow_no_defs_hint">Nie ma jeszcze żadnych przepływów pracy. Otwórz menu powyżej i wybierz opcję „Nowa definicja…”, aby utworzyć przepływ pracy, a następnie go uruchom.</string>
+    <string name="buzz_workflow_task_label">Co należy zrobić?</string>
+    <string name="buzz_workflow_trigger_run">Uruchom</string>
+    <string name="buzz_workflow_picker_label">Proces</string>
+    <string name="buzz_workflow_picker_empty">Nie zdefiniowano jeszcze procesów</string>
+    <string name="buzz_workflow_picker_choose">Wybierz proces</string>
+    <string name="buzz_workflow_new_definition">Nowa definicja…</string>
+    <string name="buzz_workflow_def_title">Nowa definicja procesu</string>
+    <string name="buzz_workflow_def_desc">Nadaje nazwę dla kanału i publikuje jego recepturę YAML (kind-30620). Rzeczywisty transmiter Buzz uruchamia YAML. W przypadku hostingu własnego moduł uruchamiający wykonuje skonfigurowane polecenie — w tym przypadku definicja służy jedynie do nazwania i skatalogowania uruchomienia.</string>
+    <string name="buzz_workflow_def_name">Nazwa</string>
+    <string name="buzz_workflow_def_name_hint">zbuduj i przetestuj</string>
+    <string name="buzz_workflow_def_yaml">Receptura YAML</string>
+    <string name="buzz_workflow_def_publish_failed">Nie można opublikować definicji — sprawdź czy możesz opublikować wpis w tym obszarze roboczym.</string>
+    <string name="buzz_workflow_publishing">Publikowanie…</string>
+    <string name="buzz_workflow_create_definition">Utwórz definicję</string>
+    <string name="buzz_workflow_empty_title">Jeszcze nie uruchomiono</string>
+    <string name="buzz_workflow_empty_desc">Naciśnij „Nowe uruchomienie” w celu uruchomienia procesu. Moduł wykonawczy realizuje zadanie i zatrzymuje się na etapie zatwierdzenia — przed wysłaniem jakichkolwiek danych zatwierdzenie musi udzielić osoba.</string>
     <!-- Buzz agent attestation -->
+    <string name="buzz_attest_topbar">Świadectwa</string>
     <!-- Buzz agent persona editor -->
 </resources>
