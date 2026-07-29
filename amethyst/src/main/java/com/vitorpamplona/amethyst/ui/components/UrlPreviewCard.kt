@@ -21,22 +21,29 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.components.util.setText
@@ -53,6 +60,7 @@ fun UrlPreviewCard(
     url: String,
     previewInfo: UrlInfoItem,
     onUrlComments: (() -> Unit)? = null,
+    onCardClick: (() -> Unit)? = null,
 ) {
     val uri = LocalUriHandler.current
     val popupExpanded =
@@ -95,7 +103,11 @@ fun UrlPreviewCard(
             MaterialTheme.colorScheme.innerPostModifier
                 .combinedClickable(
                     onClick = {
-                        runCatching { uri.openUri(url) }
+                        if (onCardClick != null) {
+                            onCardClick()
+                        } else {
+                            runCatching { uri.openUri(url) }
+                        }
                     },
                     onLongClick = {
                         popupExpanded.value = true
@@ -109,14 +121,31 @@ fun UrlPreviewCard(
             modifier = previewCardImageModifier,
         )
 
-        Text(
-            text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
-            style = MaterialTheme.typography.bodySmall,
+        Row(
             modifier = MaxWidthWithHorzPadding,
-            color = Color.Gray,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f, fill = false),
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            Spacer(modifier = Modifier.size(4.dp))
+
+            Icon(
+                symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                contentDescription = stringRes(R.string.url_preview_open_in_browser),
+                modifier =
+                    Modifier
+                        .size(14.dp)
+                        .clickable { runCatching { uri.openUri(url) } },
+                tint = Color.Gray,
+            )
+        }
 
         Text(
             text = previewInfo.title,

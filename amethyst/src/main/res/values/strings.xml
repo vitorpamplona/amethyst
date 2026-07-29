@@ -2426,8 +2426,10 @@
 
     <string name="hashtag_exclusive">Hashtag-exclusive Post</string>
 
+    <string name="external_content_title">External Content</string>
     <string name="external_url_scope">Comment on a website</string>
     <string name="external_id_scope">Comment on an external resource</string>
+    <string name="url_preview_open_in_browser">Open in browser</string>
 
     <string name="long_form_reading_minutes">%1$d min read</string>
 

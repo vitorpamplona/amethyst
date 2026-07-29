@@ -52,13 +52,10 @@ fun LoadUrlPreview(
 }
 
 @Composable
-fun LoadUrlPreviewDirect(
+fun rememberUrlPreviewState(
     url: String,
-    urlText: String,
-    callbackUri: String? = null,
     accountViewModel: AccountViewModel,
-    nav: INav? = null,
-) {
+): UrlPreviewState {
     @Suppress("ProduceStateDoesNotAssignValue")
     val urlPreviewState by
         produceState(
@@ -69,6 +66,18 @@ fun LoadUrlPreviewDirect(
                 accountViewModel.urlPreview(url) { value = it }
             }
         }
+    return urlPreviewState
+}
+
+@Composable
+fun LoadUrlPreviewDirect(
+    url: String,
+    urlText: String,
+    callbackUri: String? = null,
+    accountViewModel: AccountViewModel,
+    nav: INav? = null,
+) {
+    val urlPreviewState = rememberUrlPreviewState(url, accountViewModel)
 
     CrossfadeIfEnabled(
         targetState = urlPreviewState,
