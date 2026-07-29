@@ -246,7 +246,7 @@ internal fun SingleNotificationsBody(
                 ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
                 // "X added you to #channel" prompts sit above the feed rather than inside it: they are a
                 // standing decision, not a dated event, so they must not scroll away into history.
-                ChannelInvitesSection(accountViewModel)
+                ChannelInvitesSection(accountViewModel, nav)
             },
         )
     }

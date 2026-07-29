@@ -2565,9 +2565,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_browse_popular">Popularne transmitery</string>
     <string name="relay_group_no_messages_yet">Brak wiadomości</string>
     <string name="channel_invite_title">Dodano do %1$s</string>
-    <string name="channel_invite_body">%1$s dodał Cię do tego kanału na %2$s. Pokazać go w wiadomościach?</string>
     <string name="channel_invite_unknown_actor">Ktoś</string>
-    <string name="channel_invite_accept">Pokaż</string>
     <string name="channel_invite_ignore">Ignoruj</string>
     <string name="channel_invite_leave">Wyjdź</string>
     <string name="relay_group_join_to_post">Dołącz do tej grupy, aby wysyłać wiadomości.</string>

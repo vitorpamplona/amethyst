@@ -2473,9 +2473,7 @@
     <string name="relay_group_browse_popular">लोकप्रिय पुनःप्रसारक</string>
     <string name="relay_group_no_messages_yet">कोई सन्देश नहीं अब तक</string>
     <string name="channel_invite_title">%1$s में जोडा गया</string>
-    <string name="channel_invite_body">%1$s ने आपको इस प्रणाली में जोडा %2$s पर। क्या इसे सन्देशों में दिखाया जाए।</string>
     <string name="channel_invite_unknown_actor">कोई व्यक्ति</string>
-    <string name="channel_invite_accept">दिखाएँ</string>
     <string name="channel_invite_ignore">उपेक्षा करें</string>
     <string name="channel_invite_leave">छोडें</string>
     <string name="relay_group_join_to_post">इस समूह से जुडें सन्देशों को भेजने के लिए।</string>

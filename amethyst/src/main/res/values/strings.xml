@@ -2702,9 +2702,7 @@
     <string name="relay_group_browse_popular">Popular relays</string>
     <string name="relay_group_no_messages_yet">No messages yet</string>
     <string name="channel_invite_title">Added to %1$s</string>
-    <string name="channel_invite_body">%1$s added you to this channel on %2$s. Show it in Messages?</string>
     <string name="channel_invite_unknown_actor">Someone</string>
-    <string name="channel_invite_accept">Show</string>
     <string name="channel_invite_ignore">Ignore</string>
     <string name="channel_invite_leave">Leave</string>
     <string name="relay_group_join_to_post">Join this group to send messages.</string>
