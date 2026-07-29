@@ -25,12 +25,19 @@ die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 cd "$BUZZ_WORKTREE" || die "cannot cd into worktree $BUZZ_WORKTREE"
 
 # The PR base = the repo's default branch. Never operate on it directly.
-base_branch="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || echo main)"
+# `gh` can also succeed while printing nothing (or a literal "null") for a repo it can't
+# resolve, so fall back on the value, not just on the exit status.
+base_branch="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || true)"
+[[ -n "$base_branch" && "$base_branch" != "null" ]] || base_branch="main"
 case "$BUZZ_BRANCH" in
     "$base_branch" | main | master) die "refusing to operate on the default branch ($BUZZ_BRANCH)" ;;
+    # Anything else is a per-run branch — the only thing this script is allowed to push.
+    *) : ;;
 esac
 
-title="$(git log -1 --format='%s' 2>/dev/null | cut -c1-72)"
+# `|| true` keeps `set -e` from killing the script when the worktree has no commits yet —
+# without it the fallback below is unreachable and the run fails with an empty stderr.
+title="$(git log -1 --format='%s' 2>/dev/null | cut -c1-72)" || true
 [[ -n "$title" ]] || title="Buzz run ${BUZZ_RUN:-}"
 
 log "[workflow-ship] pushing $BUZZ_BRANCH"
