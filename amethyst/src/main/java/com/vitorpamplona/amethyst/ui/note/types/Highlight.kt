@@ -43,7 +43,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.highlights.HighlightQuote
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteIndent
 import com.vitorpamplona.amethyst.commons.ui.note.HighlightQuoteSpacing
@@ -91,6 +93,7 @@ fun RenderHighlight(
 
     DisplayHighlight(
         comment = noteEvent.comment(),
+        commentTags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() },
         highlight = noteEvent.quote(),
         context = noteEvent.contextOrReconstructed(),
         authorHex = noteEvent.author(),
@@ -160,6 +163,7 @@ fun DisplayHighlightPreviewNewLine() {
 @Composable
 fun DisplayHighlight(
     comment: String?,
+    commentTags: ImmutableListOfLists<String> = EmptyTagList,
     highlight: String,
     context: String?,
     authorHex: String?,
@@ -181,7 +185,7 @@ fun DisplayHighlight(
             canPreview = canPreview && !makeItShort,
             quotesLeft = quotesLeft,
             modifier = Modifier.fillMaxWidth(),
-            tags = EmptyTagList,
+            tags = commentTags,
             backgroundColor = backgroundColor,
             id = it,
             callbackUri = null,
