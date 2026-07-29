@@ -30,7 +30,6 @@ import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
-import com.vitorpamplona.amethyst.service.playback.HLS_VERIFY_TAG
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.HlsLivenessCache
@@ -166,11 +165,6 @@ class CustomMediaSourceFactory(
 
         // Logs the routing inputs directly rather than a re-derived label, so it can't drift from
         // shouldBypassCache.
-        // TEMPORARY HlsVerify — see HlsVerifyLog.kt. Remove before merge.
-        Log.e(HLS_VERIFY_TAG) {
-            "ROUTE hls=$hls bypassCache=$bypassCache flaggedLive=$flaggedLive knownOnDemand=$knownOnDemand " +
-                "mime=${mediaItem.localConfiguration?.mimeType} -> ${source::class.java.simpleName} id=$id"
-        }
         Log.d(PLAYBACK_DIAG_TAG) {
             "SOURCE ${if (bypassCache) "BYPASS" else "CACHE"} flaggedLive=$flaggedLive hls=$hls knownOnDemand=$knownOnDemand " +
                 "mime=${mediaItem.localConfiguration?.mimeType} -> ${source::class.java.simpleName} id=$id"
