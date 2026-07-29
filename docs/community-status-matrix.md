@@ -205,9 +205,73 @@ composer enabled, messages streaming) while your Messages list shows no row for 
 
 ---
 
-## 7. Gaps found while mapping this
+## 7. Is each status reflected in the UI?
 
-Statuses that exist in the protocol/Quartz layer with no client behavior behind them:
+Three tiers: **shown** (an explicit label, badge or notice names the state), **implied**
+(only the presence/absence of an affordance signals it — correct for some, silent for
+others), and **invisible** (nothing renders it at all).
+
+### Buzz / NIP-29
+
+| Status | UI | Tier |
+|---|---|---|
+| `ADMIN` / `MODERATOR` | `RoleBadge` chip in `RelayGroupTopBar`, primary-container colored; unlocks Edit, Delete, Archive, Invite | **shown** |
+| `PENDING` | "Requested" — both as the badge and as the text replacing the Join button | **shown** |
+| `MEMBER` | no badge, deliberately: "the lack of a Join button already says it" | implied (fine) |
+| `NONE` (gated channel) | Join button; a `closed` channel opens the invite-code sheet instead | implied (fine) |
+| `NONE` (open Buzz channel) | nothing — composer simply stays enabled, which is correct | implied (fine) |
+| `private` | Lock icon next to the relay url in the top bar | **shown** |
+| `archived` | its own "Archived" section in the channel list + Archive/Unarchive menu label + a 40099 system row ("X archived this channel") | **shown** |
+| channel type (`stream`/`forum`/`dm`/`workflow`) | drives the workspace list's sections, icons and DM titling | **shown** |
+| `closed` / `restricted` / `hidden` / `livekit` | editable toggles in `RelayGroupMetadataScreen`; not surfaced as reader-facing state | implied |
+| Agent (NIP-OA) virtual membership | `AgentAttestationScreen` shows held/issued attestations; the channel still reports `NONE` | partial |
+| Tenant **banned** (9040) / **timed out** (9042) | **nothing.** Consumed into `LocalCache` as generic regular events — no state object, no UI. And no send path surfaces the relay's `OK false`: `NotifyCoordinator` only routes NIP-42-billed NOTIFYs, `BroadcastTracker` only backs the explicit Broadcast action. A banned member's message just never lands. | **invisible** |
+| Tenant role (owner/admin/member) | `BuzzCommunityMembership` drops the role by design and there is no community roster view. "Add people" exists (9030); `removeCommunityMember` (9031) has **no caller**; change-role (9032), ban/unban, timeout/untimeout have **no send path at all** | **invisible** |
+| **Presence** (online/away/offline) | nothing — 20001 is still the geohash-presence slot in `EventFactory` | **invisible** |
+| **Archived identity** (8002 / 13535) | nothing | **invisible** |
+| **Typing** (20002) | `BuzzTypingIndicator` row above the composer | **shown** |
+
+### Concord
+
+| Status | UI | Tier |
+|---|---|---|
+| `OWNER` / `ADMIN` / `BANNED` / custom role name | `MemberBadge` in `ConcordMembersScreen` — banned in `errorContainer` — for **other** members | **shown** |
+| My own `OWNER`/`ADMIN` | only via affordances: the create-channel FAB, the Edit icon, the roster's promote/ban items | implied |
+| My own `BANNED` | **nothing.** `canPost()` goes false and the composer vanishes, but the explanatory branch is `else if (channel.dissolved)` — so a banned member gets an empty space and no reason. This is the case where the user most needs to be told. | **invisible** |
+| `dissolved` | `ConcordDissolvedNotice` replaces the composer, inside an opened channel only — not on the community row, the channel list, or the Messages inbox. (There is also **no write path** to dissolve: an owner cannot do it from Amethyst.) | partial |
+| **stranded / excluded epoch** | nothing. `recoverStrandedConcordCommunities()` runs at startup, `Log.w` on failure. A stranded community renders as an ordinary *empty* one. | **invisible** |
+| current epoch / `heldRoots` | nothing | **invisible** |
+| `private` channel | `Lock` icon in the channel list — but the row navigates like any other into a permanently empty room, because the plane key is never derived (see §8.1). No "you don't hold this key" state. | misleading |
+| `voice` channel | `Mic` icon + preview-line suppression in the list; the opened channel has no voice affordance | partial |
+| **kicked** (3309) | nothing — unwired | **invisible** |
+| Guestbook join/leave | feeds the members roster; the motion itself isn't shown | implied |
+| **Typing** (23311) | `ConcordTypingIndicator` | **shown** |
+
+The Concord channel top bar is also markedly barer than its NIP-29 sibling: **name +
+community name only** — no role badge, no lock, no member count, no overflow menu.
+
+### Local / device-side
+
+Essentially all of it is reflected, because each local status *is* a control:
+
+| Status | UI | Tier |
+|---|---|---|
+| On my Messages list | the menu item's label flips Add ↔ Remove off the live kind-10009 | **shown** |
+| Hidden Buzz DM | same flip, off the 30622 snapshot | **shown** |
+| Starred channel | Pin/Unpin label + primary-tinted icon | **shown** |
+| Pending channel invite | card in Notifications + Messages "New Requests", with Accept / Ignore / Leave | **shown** |
+| Dismissed invite | implied — the card is gone | implied |
+| Protocol enabled, view mode | switches + selection cards in Messages settings | **shown** |
+| Unread / last read | badges + previews per channel | **shown** |
+| Joined workspace | the Workspaces tab groups by relay | **shown** |
+| Relay speaks Buzz | implied via the Buzz-only affordances (canvas, agent work, forum FAB) | implied |
+| Held attestation | listed in `AgentAttestationScreen` | **shown** |
+
+## 8. Gaps found while mapping this
+
+Statuses that exist in the protocol/Quartz layer with no client behavior behind them.
+§8.1–8.2 are the two that look like defects rather than unfinished features; §8.7–8.8 are
+UI-only (the state is tracked correctly, nothing tells the user):
 
 1. **Concord private channels are listed but never opened.** `ConcordPlaneRegistry.registerChannels`
    derives only `ConcordChannelKeys.publicChannel`; the per-member keys in
@@ -228,3 +292,14 @@ Statuses that exist in the protocol/Quartz layer with no client behavior behind 
    NIP-43 role, so a tenant *admin* with no per-channel 39001 row reads as channel `MEMBER`.
    Correct as a safety default (it avoids over-granting), but it means the community-admin
    status has no channel-level expression.
+7. **A ban is never explained to the person banned.** In Concord the composer disappears with
+   no notice (the explanatory branch only covers `dissolved`); on Buzz a tenant ban/timeout
+   produces an `OK false` that no send path surfaces, so the message silently never lands.
+   Both are the moment the user most needs to be told.
+8. **Stranding is silent.** Recovery is automatic and log-only, so a member left out of a
+   Refounding sees an ordinary empty community rather than "you were left behind on epoch N".
+9. **Buzz tenant moderation has no write path.** 9031 remove-member has no caller; 9032
+   change-role, 9040/9041 ban/unban and 9042/9043 timeout/untimeout have no builder call at
+   all. Only 9030 add-member is reachable (the "Add people" dialog).
+10. **Concord dissolution is read-only.** `dissolved` is detected and honored, but no code
+    authors a `DISSOLVED` edition — an owner cannot dissolve a community from Amethyst.
