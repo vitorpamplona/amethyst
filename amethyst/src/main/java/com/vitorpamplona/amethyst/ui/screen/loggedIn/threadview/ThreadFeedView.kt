@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.CheckAndDisplayEditStatus
@@ -512,7 +513,23 @@ fun RenderThreadFeed(
                         if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
                     }
 
-                val onCollapse = remember(item) { { viewModel.toggleCollapsed(item.idHex) } }
+                // Tapping a reply collapses/expands its children, except for the user's own
+                // drafts: those open the edit-draft screen so the post can be resumed, matching
+                // the behavior everywhere else a draft is tapped.
+                val onClick =
+                    remember(item) {
+                        {
+                            if (item.isDraft()) {
+                                nav.nav {
+                                    withContext(Dispatchers.IO) {
+                                        routeEditDraftTo(item, accountViewModel.account)
+                                    }
+                                }
+                            } else {
+                                viewModel.toggleCollapsed(item.idHex)
+                            }
+                        }
+                    }
 
                 NoteCompose(
                     baseNote = item,
@@ -523,7 +540,7 @@ fun RenderThreadFeed(
                     parentBackgroundColor = background,
                     accountViewModel = accountViewModel,
                     nav = nav,
-                    onClick = onCollapse,
+                    onClick = onClick,
                 )
             }
 
