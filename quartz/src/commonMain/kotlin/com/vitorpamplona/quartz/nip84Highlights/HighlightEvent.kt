@@ -198,12 +198,18 @@ class HighlightEvent(
          * highlight composer) produces. The highlighted passage becomes the event `content`;
          * the remaining inputs are emitted as their NIP-84 tags when present:
          *
+         * - [address] → an `a` reference to a nostr addressable source (e.g. a NIP-23 article),
+         * - [event] → an `e` reference to a specific nostr event version highlighted,
+         * - [author] → a `p` attribution to the highlighted content's author,
          * - [url] → an `r` source reference (normalized by [ReferenceTag]; clean it of
          *   trackers with [com.vitorpamplona.quartz.nip84Highlights.parse.UrlTrackerCleaner] first),
          * - [prefix]/[suffix] → a `textquoteselector` anchor (the `exact` field stays a
          *   placeholder since the passage already lives in `content`),
          * - [context] → the surrounding paragraph as a `context` tag,
          * - [comment] → the user's own note as a `comment` tag (turns it into a quote highlight).
+         *
+         * This covers every NIP-84 source: a web page ([url]), a nostr article ([address]),
+         * a nostr note ([event]), each with optional author attribution and the user's note.
          */
         suspend fun create(
             quote: String,
@@ -212,9 +218,12 @@ class HighlightEvent(
             suffix: String? = null,
             comment: String? = null,
             context: String? = null,
+            address: String? = null,
+            event: String? = null,
+            author: String? = null,
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): HighlightEvent = signer.sign(createdAt, KIND, assembleTags(url, prefix, suffix, comment, context), quote)
+        ): HighlightEvent = signer.sign(createdAt, KIND, assembleTags(url, prefix, suffix, comment, context, address, event, author), quote)
 
         /**
          * The unsigned [EventTemplate] counterpart of [create], for the app's
@@ -228,10 +237,13 @@ class HighlightEvent(
             suffix: String? = null,
             comment: String? = null,
             context: String? = null,
+            address: String? = null,
+            event: String? = null,
+            author: String? = null,
             createdAt: Long = TimeUtils.now(),
         ): EventTemplate<HighlightEvent> =
             eventTemplate(KIND, quote, createdAt) {
-                addAll(assembleTags(url, prefix, suffix, comment, context))
+                addAll(assembleTags(url, prefix, suffix, comment, context, address, event, author))
             }
 
         private fun assembleTags(
@@ -240,9 +252,23 @@ class HighlightEvent(
             suffix: String?,
             comment: String?,
             context: String?,
+            address: String? = null,
+            event: String? = null,
+            author: String? = null,
         ): Array<Array<String>> {
             val tags = mutableListOf<Array<String>>()
 
+            if (!address.isNullOrBlank()) {
+                tags.add(ATag.assemble(address, null))
+            }
+            if (!event.isNullOrBlank()) {
+                tags.add(ETag.assemble(event, null, null))
+            }
+            if (!author.isNullOrBlank()) {
+                // Mark the role so [author] attributes to this p tag even when the highlight also
+                // carries `mention` p tags — the producer-side counterpart of that reader logic.
+                tags.add(arrayOf(PTag.TAG_NAME, author, "", AUTHOR_MARKER))
+            }
             if (!url.isNullOrBlank()) {
                 tags.add(ReferenceTag.assemble(url))
             }

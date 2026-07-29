@@ -1001,6 +1001,12 @@ sealed class Route {
         val prefix: String? = null,
         val suffix: String? = null,
         val comment: String? = null,
+        val context: String? = null,
+        // A nostr source (set when highlighting a nostr article/note rather than a web page):
+        // an addressable coordinate (`a`), a specific event id (`e`) and the author (`p`).
+        val sourceAddress: String? = null,
+        val sourceEventId: String? = null,
+        val author: String? = null,
     ) : Route()
 
     @Serializable data object NewHlsVideo : Route()

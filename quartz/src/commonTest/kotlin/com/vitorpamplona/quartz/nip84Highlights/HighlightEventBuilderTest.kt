@@ -118,6 +118,29 @@ class HighlightEventBuilderTest {
         }
 
     @Test
+    fun buildsNostrSourceTags() =
+        runTest {
+            val article = "30023:6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93:my-article"
+            val author = "6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93"
+            val version = "8d7ae10a57ef178a17563a6ecbf9a399bb1796a2e032ca72703b00913b4cfd42"
+
+            val event =
+                HighlightEvent.create(
+                    quote = "a passage from an article",
+                    address = article,
+                    event = version,
+                    author = author,
+                    signer = signer,
+                )
+
+            assertEquals(article, event.inPostAddress()?.toValue())
+            assertEquals(version, event.inPostVersion()?.eventId)
+            assertEquals(author, event.author())
+            // The p tag carries the NIP-84 "author" role so attribution survives mention p tags.
+            assertTrue(event.tags.any { it[0] == "p" && it[1] == author && it.getOrNull(3) == "author" })
+        }
+
+    @Test
     fun buildProducesUnsignedTemplateWithSameTags() {
         val template =
             HighlightEvent.build(

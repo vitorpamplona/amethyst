@@ -947,6 +947,10 @@ fun BuildNavigation(
                 prefix = it.prefix,
                 suffix = it.suffix,
                 comment = it.comment,
+                context = it.context,
+                sourceAddress = it.sourceAddress,
+                sourceEventId = it.sourceEventId,
+                author = it.author,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

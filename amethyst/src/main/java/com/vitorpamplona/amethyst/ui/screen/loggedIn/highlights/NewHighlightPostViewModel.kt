@@ -52,8 +52,14 @@ class NewHighlightPostViewModel : ViewModel() {
     /** The user's own note about the passage — becomes a `comment` tag (a quote highlight). */
     var comment by mutableStateOf("")
 
+    // Carried through from the share/source but not shown as editable fields — page-scraped
+    // anchors and nostr-source references, not something the user would meaningfully edit.
     private var prefix: String? = null
     private var suffix: String? = null
+    private var context: String? = null
+    private var sourceAddress: String? = null
+    private var sourceEventId: String? = null
+    private var author: String? = null
 
     private var loaded = false
 
@@ -62,7 +68,7 @@ class NewHighlightPostViewModel : ViewModel() {
     }
 
     /**
-     * Applies the parsed share once. Guarded so a recomposition (or a config change that
+     * Applies the incoming source once. Guarded so a recomposition (or a config change that
      * re-runs the loading effect) can't clobber edits the user already made.
      */
     fun load(
@@ -71,6 +77,10 @@ class NewHighlightPostViewModel : ViewModel() {
         prefix: String?,
         suffix: String?,
         comment: String?,
+        context: String?,
+        sourceAddress: String?,
+        sourceEventId: String?,
+        author: String?,
     ) {
         if (loaded) return
         loaded = true
@@ -80,6 +90,10 @@ class NewHighlightPostViewModel : ViewModel() {
         this.comment = comment.orEmpty()
         this.prefix = prefix
         this.suffix = suffix
+        this.context = context
+        this.sourceAddress = sourceAddress
+        this.sourceEventId = sourceEventId
+        this.author = author
     }
 
     fun canPost(): Boolean = quote.isNotBlank()
@@ -95,6 +109,10 @@ class NewHighlightPostViewModel : ViewModel() {
                 prefix = prefix,
                 suffix = suffix,
                 comment = comment.trim().ifBlank { null },
+                context = context,
+                address = sourceAddress,
+                event = sourceEventId,
+                author = author,
             ),
         )
     }

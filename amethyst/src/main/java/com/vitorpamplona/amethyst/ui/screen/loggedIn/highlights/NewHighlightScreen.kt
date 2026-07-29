@@ -20,35 +20,70 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.note.HighlightedQuote
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.stringRes
+
+/** A warm highlighter amber — the highlight metaphor reads as yellow regardless of theme. */
+private val MarkerAccent = Color(0xFFF5C518)
 
 /**
  * The "New Highlight" composer. Reached either from the "Add highlight" action or when a
- * browser shares a text selection to Amethyst (routed in as [Route.NewHighlight]). It is a
- * deliberately small subset of the short-note composer — no polls, zaps, media, scheduling,
- * etc. — because a NIP-84 highlight is just a passage, its source, and an optional note.
+ * browser (or a nostr article/note) shares a passage to Amethyst, routed in as
+ * [com.vitorpamplona.amethyst.ui.navigation.routes.Route.NewHighlight].
+ *
+ * It is a deliberately small subset of the short-note composer — no polls, zaps, media,
+ * scheduling — because a NIP-84 highlight is just a passage, its source, and an optional
+ * note. The passage is presented as a pull-quote you craft: an accent bar, a quotation-mark
+ * watermark, and a live highlighter-pen preview of exactly how it will appear in the feed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +93,10 @@ fun NewHighlightScreen(
     prefix: String? = null,
     suffix: String? = null,
     comment: String? = null,
+    context: String? = null,
+    sourceAddress: String? = null,
+    sourceEventId: String? = null,
+    author: String? = null,
     accountViewModel: AccountViewModel,
     nav: Nav,
 ) {
@@ -65,7 +104,7 @@ fun NewHighlightScreen(
     postViewModel.init(accountViewModel)
 
     LaunchedEffect(Unit) {
-        postViewModel.load(quote, url, prefix, suffix, comment)
+        postViewModel.load(quote, url, prefix, suffix, comment, context, sourceAddress, sourceEventId, author)
     }
 
     Scaffold(
@@ -85,45 +124,176 @@ fun NewHighlightScreen(
             )
         },
     ) { pad ->
-        Surface(
+        Column(
             modifier =
                 Modifier
                     .padding(pad)
                     .consumeWindowInsets(pad)
-                    .imePadding(),
+                    .imePadding()
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Column(
+            HighlightEditorCard(
+                passage = postViewModel.quote,
+                onPassageChange = { postViewModel.quote = it },
+            )
+
+            if (postViewModel.quote.isNotBlank()) {
+                HighlightPreview(passage = postViewModel.quote)
+            }
+
+            IconField(
+                symbol = MaterialSymbols.Link,
+                value = postViewModel.url,
+                onValueChange = { postViewModel.url = it },
+                label = stringRes(R.string.new_highlight_source_label),
+                placeholder = "https://example.com/article",
+                singleLine = true,
+            )
+
+            IconField(
+                symbol = MaterialSymbols.EditNote,
+                value = postViewModel.comment,
+                onValueChange = { postViewModel.comment = it },
+                label = stringRes(R.string.new_highlight_note_label),
+                placeholder = stringRes(R.string.new_highlight_note_placeholder),
+                singleLine = false,
+                minLines = 2,
+            )
+        }
+    }
+}
+
+/**
+ * The hero: a rounded, tonal card carrying a quotation-mark watermark, a highlighter-yellow
+ * accent bar, and the editable passage set in a large, comfortable type.
+ */
+@Composable
+private fun HighlightEditorCard(
+    passage: String,
+    onPassageChange: (String) -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Oversized quotation mark watermark, tucked behind the passage.
+            Icon(
+                symbol = MaterialSymbols.FormatQuote,
+                contentDescription = null,
+                tint = MarkerAccent.copy(alpha = 0.20f),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .offset(x = 8.dp, y = (-6).dp)
+                        .size(80.dp),
+            )
+
+            Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(Size10dp),
-                verticalArrangement = Arrangement.spacedBy(Size10dp),
+                        .height(IntrinsicSize.Min)
+                        .padding(20.dp),
             ) {
-                OutlinedTextField(
-                    value = postViewModel.quote,
-                    onValueChange = { postViewModel.quote = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.new_highlight_passage_label)) },
-                    minLines = 3,
+                Spacer(
+                    Modifier
+                        .width(4.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MarkerAccent),
                 )
-
-                OutlinedTextField(
-                    value = postViewModel.url,
-                    onValueChange = { postViewModel.url = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.new_highlight_source_label)) },
-                    singleLine = true,
-                )
-
-                OutlinedTextField(
-                    value = postViewModel.comment,
-                    onValueChange = { postViewModel.comment = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.new_highlight_note_label)) },
-                    minLines = 2,
-                )
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    BasicTextField(
+                        value = passage,
+                        onValueChange = onPassageChange,
+                        textStyle =
+                            LocalTextStyle.current.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 20.sp,
+                                lineHeight = 1.4.em,
+                                fontWeight = FontWeight.Medium,
+                            ),
+                        cursorBrush = SolidColor(MarkerAccent),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
+                        decorationBox = { inner ->
+                            if (passage.isEmpty()) {
+                                Text(
+                                    text = stringRes(R.string.new_highlight_passage_placeholder),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    fontSize = 20.sp,
+                                    lineHeight = 1.4.em,
+                                )
+                            }
+                            inner()
+                        },
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = "${passage.length}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }
+}
+
+/** A live render of the passage exactly as it will appear in the feed — the highlighter pen. */
+@Composable
+private fun HighlightPreview(passage: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringRes(R.string.new_highlight_preview_label),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 1.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            HighlightedQuote(
+                text = passage,
+                highlight = passage.indices,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IconField(
+    symbol: MaterialSymbol,
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String,
+    singleLine: Boolean,
+    minLines: Int = 1,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        placeholder = { Text(placeholder) },
+        leadingIcon = {
+            Icon(symbol = symbol, contentDescription = null, modifier = Modifier.size(20.dp))
+        },
+        singleLine = singleLine,
+        minLines = minLines,
+        shape = RoundedCornerShape(16.dp),
+    )
 }
