@@ -22,13 +22,16 @@ package com.vitorpamplona.quartz.nip84Highlights
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.firstTaggedAddress
@@ -190,5 +193,99 @@ class HighlightEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): HighlightEvent = signer.sign(createdAt, KIND, emptyArray(), msg)
+
+        /**
+         * Builds a fully-tagged NIP-84 highlight from the pieces a browser share (or the
+         * highlight composer) produces. The highlighted passage becomes the event `content`;
+         * the remaining inputs are emitted as their NIP-84 tags when present:
+         *
+         * - [address] → an `a` reference to a nostr addressable source (e.g. a NIP-23 article),
+         * - [event] → an `e` reference to a specific nostr event version highlighted,
+         * - [author] → a `p` attribution to the highlighted content's author,
+         * - [url] → an `r` source reference (normalized by [ReferenceTag]; clean it of
+         *   trackers with [com.vitorpamplona.quartz.nip84Highlights.parse.UrlTrackerCleaner] first),
+         * - [prefix]/[suffix] → a `textquoteselector` anchor (the `exact` field stays a
+         *   placeholder since the passage already lives in `content`),
+         * - [context] → the surrounding paragraph as a `context` tag,
+         * - [comment] → the user's own note as a `comment` tag (turns it into a quote highlight).
+         *
+         * This covers every NIP-84 source: a web page ([url]), a nostr article ([address]),
+         * a nostr note ([event]), each with optional author attribution and the user's note.
+         */
+        suspend fun create(
+            quote: String,
+            url: String? = null,
+            prefix: String? = null,
+            suffix: String? = null,
+            comment: String? = null,
+            context: String? = null,
+            address: String? = null,
+            event: String? = null,
+            author: String? = null,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): HighlightEvent = signer.sign(createdAt, KIND, assembleTags(url, prefix, suffix, comment, context, address, event, author), quote)
+
+        /**
+         * The unsigned [EventTemplate] counterpart of [create], for the app's
+         * sign-and-broadcast pipeline (`account.signAndComputeBroadcast(...)`). Same tag
+         * assembly; the caller supplies the signer.
+         */
+        fun build(
+            quote: String,
+            url: String? = null,
+            prefix: String? = null,
+            suffix: String? = null,
+            comment: String? = null,
+            context: String? = null,
+            address: String? = null,
+            event: String? = null,
+            author: String? = null,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<HighlightEvent>.() -> Unit = {},
+        ): EventTemplate<HighlightEvent> =
+            eventTemplate(KIND, quote, createdAt) {
+                addAll(assembleTags(url, prefix, suffix, comment, context, address, event, author))
+                initializer()
+            }
+
+        private fun assembleTags(
+            url: String?,
+            prefix: String?,
+            suffix: String?,
+            comment: String?,
+            context: String?,
+            address: String? = null,
+            event: String? = null,
+            author: String? = null,
+        ): Array<Array<String>> {
+            val tags = mutableListOf<Array<String>>()
+
+            if (!address.isNullOrBlank()) {
+                tags.add(ATag.assemble(address, null))
+            }
+            if (!event.isNullOrBlank()) {
+                tags.add(ETag.assemble(event, null, null))
+            }
+            if (!author.isNullOrBlank()) {
+                // Mark the role so [author] attributes to this p tag even when the highlight also
+                // carries `mention` p tags — the producer-side counterpart of that reader logic.
+                tags.add(arrayOf(PTag.TAG_NAME, author, "", AUTHOR_MARKER))
+            }
+            if (!url.isNullOrBlank()) {
+                tags.add(ReferenceTag.assemble(url))
+            }
+            if (!prefix.isNullOrEmpty() || !suffix.isNullOrEmpty()) {
+                tags.add(TextQuoteSelectorTag.assemble(null, prefix, suffix))
+            }
+            if (!context.isNullOrBlank()) {
+                tags.add(ContextTag.assemble(context))
+            }
+            if (!comment.isNullOrBlank()) {
+                tags.add(CommentTag.assemble(comment))
+            }
+
+            return tags.toTypedArray()
+        }
     }
 }

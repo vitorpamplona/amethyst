@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.navigation
 
 /**
- * Distinguishes the "Send as DM" share target from the default "New Post" share
- * target. Both intent-filters resolve to MainActivity; they are told apart by the
- * component class name of the launching intent (the activity-alias name).
+ * Distinguishes the extra share targets ("Send as DM", "New Highlight") from the default
+ * "New Post" share target. Every SEND intent-filter resolves to MainActivity; they are told
+ * apart by the component class name of the launching intent (the activity-alias name).
  */
 object ShareIntentRouting {
     /**
@@ -34,5 +34,14 @@ object ShareIntentRouting {
      */
     const val SHARE_AS_DM_ALIAS_SIMPLE_NAME = "ShareAsDMAlias"
 
+    /**
+     * Simple class name of the `<activity-alias>` declared in AndroidManifest.xml
+     * (android:name=".ui.ShareAsHighlightAlias"). MUST stay in sync with the manifest —
+     * see the caveat on [SHARE_AS_DM_ALIAS_SIMPLE_NAME].
+     */
+    const val SHARE_AS_HIGHLIGHT_ALIAS_SIMPLE_NAME = "ShareAsHighlightAlias"
+
     fun isShareAsDm(componentClassName: String?): Boolean = componentClassName?.endsWith(".$SHARE_AS_DM_ALIAS_SIMPLE_NAME") == true
+
+    fun isShareAsHighlight(componentClassName: String?): Boolean = componentClassName?.endsWith(".$SHARE_AS_HIGHLIGHT_ALIAS_SIMPLE_NAME") == true
 }

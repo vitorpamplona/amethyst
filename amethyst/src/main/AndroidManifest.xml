@@ -295,6 +295,24 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- "New Highlight" share target: a browser (or reader) shares a selected passage of
+             text and it opens the NIP-84 highlight composer. Text-only — a highlight is a text
+             passage, so no image/video filters here. The android:name simple class
+             ("ShareAsHighlightAlias") is matched at runtime by
+             ShareIntentRouting.SHARE_AS_HIGHLIGHT_ALIAS_SIMPLE_NAME; keep the two in sync. -->
+        <activity-alias
+            android:name=".ui.ShareAsHighlightAlias"
+            android:exported="true"
+            android:label="@string/share_target_as_highlight"
+            android:targetActivity=".ui.MainActivity">
+
+            <intent-filter android:label="@string/share_target_as_highlight">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Health Connect privacy-policy rationale on Android 14+. Without this activity-alias
              the permission request fails silently (no dialog appears). The system launches it,
              guarded by START_VIEW_PERMISSION_USAGE, to show our privacy policy; it routes into

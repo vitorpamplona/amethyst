@@ -251,6 +251,7 @@ class AccountSettings(
     val defaultNsitesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultWorkoutsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultGitRepositoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultHighlightsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCalendarsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -891,6 +892,17 @@ class AccountSettings(
     fun changeDefaultGitRepositoriesFollowList(name: TopFilter) {
         if (defaultGitRepositoriesFollowList.value != name) {
             defaultGitRepositoriesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultHighlightsFollowList(name: FeedDefinition) {
+        changeDefaultHighlightsFollowList(name.code)
+    }
+
+    fun changeDefaultHighlightsFollowList(name: TopFilter) {
+        if (defaultHighlightsFollowList.value != name) {
+            defaultHighlightsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

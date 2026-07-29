@@ -2764,6 +2764,14 @@
     <string name="share_target_as_dm">Send as DM</string>
     <string name="share_to_dm_title">Send to…</string>
     <string name="share_to_dm_start_new">New message</string>
+    <string name="share_target_as_highlight">New Highlight</string>
+    <string name="new_highlight_title">New Highlight</string>
+    <string name="new_highlight_passage_label">Highlighted text</string>
+    <string name="new_highlight_passage_placeholder">What stood out to you?</string>
+    <string name="new_highlight_source_label">Source URL</string>
+    <string name="new_highlight_note_label">Your note (optional)</string>
+    <string name="new_highlight_note_placeholder">Add your thoughts…</string>
+    <string name="highlight_action">Highlight</string>
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
     <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
     <string name="add_media_to_gallery">Add Media to Gallery</string>
@@ -3807,6 +3815,7 @@
     <string name="git_repo_settings_topics">Topics (comma separated)</string>
     <string name="git_repo_settings_save">Save</string>
     <string name="git_repositories">Git Repositories</string>
+    <string name="highlights">Highlights</string>
     <string name="nsite_title">nSite: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Permissions:</string>

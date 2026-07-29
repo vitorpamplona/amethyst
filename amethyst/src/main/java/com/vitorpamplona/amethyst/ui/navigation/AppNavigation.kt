@@ -193,6 +193,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.GitRepositoriesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.HighlightsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.NewHighlightScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.VoiceReplyScreen
@@ -310,6 +312,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip84Highlights.parse.SharedHighlightParser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URI
@@ -439,6 +442,8 @@ fun BuildNavigation(
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
         composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
+
+        composableFromEnd<Route.Highlights> { HighlightsScreen(accountViewModel, nav) }
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
@@ -935,6 +940,22 @@ fun BuildNavigation(
             )
         }
 
+        composableFromBottomArgs<Route.NewHighlight> {
+            NewHighlightScreen(
+                quote = it.quote,
+                url = it.url,
+                prefix = it.prefix,
+                suffix = it.suffix,
+                comment = it.comment,
+                context = it.context,
+                sourceAddress = it.sourceAddress,
+                sourceEventId = it.sourceEventId,
+                author = it.author,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
         composableFromBottomArgs<Route.VoiceReply> {
             VoiceReplyScreen(
                 replyToNoteId = it.replyToNoteId,
@@ -967,10 +988,13 @@ private fun NavigateIfIntentRequested(
 
     if (activity.intent.action == Intent.ACTION_SEND) {
         val isShareAsDm = ShareIntentRouting.isShareAsDm(activity.intent.component?.className)
+        val isShareAsHighlight = ShareIntentRouting.isShareAsHighlight(activity.intent.component?.className)
 
         // avoids restarting the destination screen when the intent is for the screen.
         // Microsoft's swift key sends Gifs as new actions
-        if (isShareAsDm) {
+        if (isShareAsHighlight) {
+            if (isBaseRoute<Route.NewHighlight>(nav.controller)) return
+        } else if (isShareAsDm) {
             if (isBaseRoute<Route.ShareToDM>(nav.controller)) return
         } else {
             if (isBaseRoute<Route.NewShortNote>(nav.controller)) return
@@ -991,7 +1015,17 @@ private fun NavigateIfIntentRequested(
             )
         }
 
-        if (isShareAsDm) {
+        if (isShareAsHighlight) {
+            val parsed = message?.let { SharedHighlightParser.parse(it) }
+            nav.newStack(
+                Route.NewHighlight(
+                    quote = parsed?.quote,
+                    url = parsed?.url,
+                    prefix = parsed?.prefix,
+                    suffix = parsed?.suffix,
+                ),
+            )
+        } else if (isShareAsDm) {
             nav.newStack(Route.ShareToDM(message = message, attachment = media?.toString()))
         } else {
             nav.newStack(Route.NewShortNote(message = message, attachment = media.toString()))
@@ -1063,9 +1097,22 @@ private fun NavigateIfIntentRequested(
                 Consumer<Intent> { intent ->
                     if (intent.action == Intent.ACTION_SEND) {
                         val isShareAsDm = ShareIntentRouting.isShareAsDm(intent.component?.className)
+                        val isShareAsHighlight = ShareIntentRouting.isShareAsHighlight(intent.component?.className)
                         // avoids restarting the destination screen when the intent is for the screen.
                         // Microsoft's swift key sends Gifs as new actions
-                        if (isShareAsDm) {
+                        if (isShareAsHighlight) {
+                            if (!isBaseRoute<Route.NewHighlight>(nav.controller)) {
+                                val parsed = intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }?.let { SharedHighlightParser.parse(it) }
+                                nav.newStack(
+                                    Route.NewHighlight(
+                                        quote = parsed?.quote,
+                                        url = parsed?.url,
+                                        prefix = parsed?.prefix,
+                                        suffix = parsed?.suffix,
+                                    ),
+                                )
+                            }
+                        } else if (isShareAsDm) {
                             if (!isBaseRoute<Route.ShareToDM>(nav.controller)) {
                                 val message = intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }
                                 val attachment =
