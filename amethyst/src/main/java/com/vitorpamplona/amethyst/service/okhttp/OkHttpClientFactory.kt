@@ -69,6 +69,13 @@ class OkHttpClientFactory(
      * tests / pre-configuration call sites.
      */
     private val usageInterceptor: Interceptor? = null,
+    /**
+     * Retries auth-gated Blossom blob downloads with a signed BUD-01 `t=get`
+     * token when the host answers `401` (e.g. Buzz's private media relay). Null
+     * in tests / pre-configuration call sites, in which case such downloads stay
+     * anonymous. See [BlossomReadAuthInterceptor].
+     */
+    private val blossomReadAuth: Interceptor? = null,
 ) {
     // val logging = LoggingInterceptor()
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
@@ -115,6 +122,12 @@ class OkHttpClientFactory(
             .addInterceptor(DefaultContentTypeInterceptor(userAgent))
             .apply {
                 blossomCacheRedirect?.let { addInterceptor(it) }
+            }
+            // Sits outside the network interceptors so its retry re-runs the
+            // full stack (content-type, blossom cache, key decryptor) for the
+            // authenticated response. Only signs on an actual 401.
+            .apply {
+                blossomReadAuth?.let { addInterceptor(it) }
             }
             // .addNetworkInterceptor(logging)
             .addNetworkInterceptor(keyDecryptor)

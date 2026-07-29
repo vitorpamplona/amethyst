@@ -25,6 +25,20 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 
 object BlossomAuth {
+    /**
+     * BUD-01 read auth (`t=get`). Servers that gate downloads (e.g. Buzz's
+     * private media relay) require this on `GET /<sha256>`. The [servers] list
+     * adds BUD-11 `server` tags so a single token can be scoped to a whole host
+     * (which also covers derived blobs like `.thumb.jpg` whose hash differs
+     * from [hash]).
+     */
+    suspend fun createGetAuth(
+        hash: HexKey,
+        alt: String,
+        signer: NostrSigner,
+        servers: List<String> = emptyList(),
+    ): String = BlossomAuthorizationEvent.createGetAuth(hash, alt, signer, servers).toAuthorizationHeader()
+
     suspend fun createUploadAuth(
         hash: HexKey,
         size: Long,
