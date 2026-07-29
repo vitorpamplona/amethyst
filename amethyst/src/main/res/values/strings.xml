@@ -2334,11 +2334,14 @@
     <string name="home_content_type_text_notes">Text notes</string>
     <string name="home_content_type_reposts">Reposts</string>
     <string name="home_content_type_comments">Comments &amp; replies</string>
+    <string name="home_content_type_pictures">Pictures</string>
+    <string name="home_content_type_videos">Videos</string>
     <string name="home_content_type_articles">Articles</string>
     <string name="home_content_type_wiki">Wiki pages</string>
     <string name="home_content_type_highlights">Highlights</string>
     <string name="home_content_type_polls">Polls</string>
     <string name="home_content_type_classifieds">Classifieds</string>
+    <string name="home_content_type_torrents">Torrents</string>
     <string name="home_content_type_voice">Voice messages</string>
     <string name="home_content_type_live_activities">Live activities</string>
     <string name="home_content_type_ephemeral_chat">Ephemeral chats</string>
