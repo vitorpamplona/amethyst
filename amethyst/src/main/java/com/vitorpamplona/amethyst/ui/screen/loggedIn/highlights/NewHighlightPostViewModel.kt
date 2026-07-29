@@ -20,40 +20,71 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
+import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
+import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
+import com.vitorpamplona.quartz.nip01Core.tags.references.references
+import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
+import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 
 /**
- * Backs the "New Highlight" composer — a trimmed-down cousin of the short-note composer that
- * only carries the fields a NIP-84 kind:9802 highlight needs. It is pre-filled from a browser
- * share (parsed by [com.vitorpamplona.quartz.nip84Highlights.parse.SharedHighlightParser] in
- * the navigation layer) and lets the user confirm/edit before signing.
+ * Backs the "New Highlight" composer. A NIP-84 highlight is a quoted passage (the event
+ * `content`), its source, and an optional annotation. The annotation reuses the short-note
+ * composer's rich [message] field via [IMessageField], so it gets @-mention and custom-emoji
+ * autocomplete and inline previews; on publish it becomes the highlight's `comment` tag with
+ * the mentions, emoji, URLs, hashtags and quotes it references emitted as their own tags.
  *
- * The `textquoteselector` prefix/suffix anchors are carried through from the share but not
- * shown as editable fields — they are page-scraped positioning data, not something the user
- * would meaningfully edit.
+ * The passage, the `textquoteselector` prefix/suffix, the surrounding `context`, and the
+ * nostr source (`a`/`e`/`p`) are carried through from the share or the "Highlight this note"
+ * action. When a nostr event is the source, [originalNote] is resolved so the screen can
+ * render it as a reply-style preview instead of showing a URL field.
  */
 @Stable
-class NewHighlightPostViewModel : ViewModel() {
+class NewHighlightPostViewModel :
+    ViewModel(),
+    IMessageField {
+    private var accountViewModel: AccountViewModel? = null
     private var account: Account? = null
 
     /** The highlighted passage — becomes the event `content`. */
     var quote by mutableStateOf("")
 
-    /** The source URL — becomes an `r` tag. */
+    /** The source URL — becomes an `r` tag. Hidden when a nostr event is the source. */
     var url by mutableStateOf("")
 
-    /** The user's own note about the passage — becomes a `comment` tag (a quote highlight). */
-    var comment by mutableStateOf("")
+    /** The user's annotation — the rich comment field; becomes a `comment` tag. */
+    override val message = TextFieldState()
 
-    // Carried through from the share/source but not shown as editable fields — page-scraped
-    // anchors and nostr-source references, not something the user would meaningfully edit.
+    /** The source note, when highlighting a nostr article/note, for the reply-style preview. */
+    var originalNote by mutableStateOf<Note?>(null)
+        private set
+
+    var userSuggestions: UserSuggestionState? = null
+    var emojiSuggestions: EmojiSuggestionState? = null
+
     private var prefix: String? = null
     private var suffix: String? = null
     private var context: String? = null
@@ -64,12 +95,16 @@ class NewHighlightPostViewModel : ViewModel() {
     private var loaded = false
 
     fun init(accountViewModel: AccountViewModel) {
-        account = accountViewModel.account
+        if (this.accountViewModel == accountViewModel) return
+        this.accountViewModel = accountViewModel
+        this.account = accountViewModel.account
+        userSuggestions = UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
+        emojiSuggestions = EmojiSuggestionState(accountViewModel.account.emoji)
     }
 
     /**
-     * Applies the incoming source once. Guarded so a recomposition (or a config change that
-     * re-runs the loading effect) can't clobber edits the user already made.
+     * Applies the incoming source once, and resolves [originalNote] for a nostr source. Guarded
+     * so a recomposition can't clobber edits the user already made.
      */
     fun load(
         quote: String?,
@@ -87,20 +122,72 @@ class NewHighlightPostViewModel : ViewModel() {
 
         this.quote = quote.orEmpty()
         this.url = url.orEmpty()
-        this.comment = comment.orEmpty()
+        comment?.ifBlank { null }?.let { message.setTextAndPlaceCursorAtEnd(it) }
         this.prefix = prefix
         this.suffix = suffix
         this.context = context
         this.sourceAddress = sourceAddress
         this.sourceEventId = sourceEventId
         this.author = author
+
+        val accountViewModel = accountViewModel
+        if (accountViewModel != null) {
+            originalNote =
+                when {
+                    !sourceAddress.isNullOrBlank() -> Address.parse(sourceAddress)?.let { accountViewModel.getOrCreateAddressableNote(it) }
+                    !sourceEventId.isNullOrBlank() -> accountViewModel.getOrCreateNote(sourceEventId)
+                    else -> null
+                }
+        }
+    }
+
+    override fun onMessageChanged() {
+        if (message.selection.collapsed) {
+            val lastWord = message.currentWord()
+            if (lastWord.startsWith("@")) {
+                userSuggestions?.processCurrentWord(lastWord)
+            } else {
+                userSuggestions?.reset()
+            }
+            emojiSuggestions?.processCurrentWord(lastWord)
+        }
+    }
+
+    fun autocompleteWithUser(item: User) {
+        userSuggestions?.let {
+            val lastWord = message.currentWord()
+            it.replaceCurrentWord(message, lastWord, item)
+            it.reset()
+        }
+    }
+
+    fun autocompleteWithEmoji(item: EmojiMedia) {
+        emojiSuggestions?.autocompleteInto(message, item)
+    }
+
+    fun autocompleteWithEmojiUrl(item: EmojiMedia) {
+        message.replaceCurrentWord(item.link + " ")
+        emojiSuggestions?.reset()
     }
 
     fun canPost(): Boolean = quote.isNotBlank()
 
     suspend fun sendHighlight() {
         val account = account ?: return
+        val dao = accountViewModel ?: return
         if (!canPost()) return
+
+        // Resolve @mentions, nostr: refs, emoji, URLs and hashtags out of the annotation the same
+        // way the short-note composer does, so a highlight comment behaves like any other note.
+        val tagger = NewMessageTagger(message.text.toString().trim(), null, null, dao)
+        tagger.run()
+
+        val commentText = tagger.message.ifBlank { null }
+        val mentions = tagger.directMentionsUsers.map { it.toPTag() }
+        val emojiTags = account.emoji.findEmojiTags(tagger.message)
+        val urls = findURLs(tagger.message)
+        val tags = findHashtags(tagger.message)
+        val quotes = findNostrUris(tagger.message)
 
         account.signAndComputeBroadcast(
             HighlightEvent.build(
@@ -108,12 +195,18 @@ class NewHighlightPostViewModel : ViewModel() {
                 url = url.trim().ifBlank { null },
                 prefix = prefix,
                 suffix = suffix,
-                comment = comment.trim().ifBlank { null },
+                comment = commentText,
                 context = context,
                 address = sourceAddress,
                 event = sourceEventId,
                 author = author,
-            ),
+            ) {
+                if (mentions.isNotEmpty()) pTags(mentions)
+                references(urls)
+                hashtags(tags)
+                quotes(quotes)
+                emojis(emojiTags)
+            },
         )
     }
 }

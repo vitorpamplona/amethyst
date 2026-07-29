@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip84Highlights
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -241,9 +242,11 @@ class HighlightEvent(
             event: String? = null,
             author: String? = null,
             createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<HighlightEvent>.() -> Unit = {},
         ): EventTemplate<HighlightEvent> =
             eventTemplate(KIND, quote, createdAt) {
                 addAll(assembleTags(url, prefix, suffix, comment, context, address, event, author))
+                initializer()
             }
 
         private fun assembleTags(

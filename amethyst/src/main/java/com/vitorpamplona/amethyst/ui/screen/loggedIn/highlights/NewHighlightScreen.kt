@@ -66,23 +66,32 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
+import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 
 /** A warm highlighter amber — the highlight metaphor reads as yellow regardless of theme. */
 private val MarkerAccent = Color(0xFFF5C518)
 
 /**
- * The "New Highlight" composer. Reached either from the "Add highlight" action or when a
- * browser (or a nostr article/note) shares a passage to Amethyst, routed in as
+ * The "New Highlight" composer. Reached either from the "Add highlight" action, a browser
+ * share, or the "Highlight" note-action, routed in as
  * [com.vitorpamplona.amethyst.ui.navigation.routes.Route.NewHighlight].
  *
- * It is a deliberately small subset of the short-note composer — no polls, zaps, media,
- * scheduling — because a NIP-84 highlight is just a passage, its source, and an optional
- * note. The passage is presented as a pull-quote you craft: an accent bar, a quotation-mark
- * watermark, and a live highlighter-pen preview of exactly how it will appear in the feed.
+ * A NIP-84 highlight is a quoted passage, its source, and an optional annotation:
+ * - the passage is a pull-quote you craft (accent bar + quotation-mark watermark),
+ * - the source is either a nostr event — rendered as a reply-style preview — or a web URL,
+ * - the annotation is the same rich composer field the short-note screen uses, so it gets
+ *   @-mention and custom-emoji autocomplete and inline previews.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,6 +110,8 @@ fun NewHighlightScreen(
 ) {
     val postViewModel: NewHighlightPostViewModel = viewModel()
     postViewModel.init(accountViewModel)
+
+    WatchAndLoadMyEmojiList(accountViewModel)
 
     LaunchedEffect(Unit) {
         postViewModel.load(quote, url, prefix, suffix, comment, context, sourceAddress, sourceEventId, author)
@@ -129,34 +140,83 @@ fun NewHighlightScreen(
                     .padding(pad)
                     .consumeWindowInsets(pad)
                     .imePadding()
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+                    .fillMaxSize(),
         ) {
-            HighlightEditorCard(
-                passage = postViewModel.quote,
-                onPassageChange = { postViewModel.quote = it },
-            )
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                HighlightEditorCard(
+                    passage = postViewModel.quote,
+                    onPassageChange = { postViewModel.quote = it },
+                )
 
-            IconField(
-                symbol = MaterialSymbols.Link,
-                value = postViewModel.url,
-                onValueChange = { postViewModel.url = it },
-                label = stringRes(R.string.new_highlight_source_label),
-                placeholder = "https://example.com/article",
-                singleLine = true,
-            )
+                val source = postViewModel.originalNote
+                if (source != null) {
+                    NoteCompose(
+                        baseNote = source,
+                        modifier = MaterialTheme.colorScheme.replyModifier,
+                        isQuotedNote = true,
+                        unPackReply = ReplyRenderType.NONE,
+                        makeItShort = true,
+                        quotesLeft = 1,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                } else {
+                    IconField(
+                        symbol = MaterialSymbols.Link,
+                        value = postViewModel.url,
+                        onValueChange = { postViewModel.url = it },
+                        label = stringRes(R.string.new_highlight_source_label),
+                        placeholder = "https://example.com/article",
+                        singleLine = true,
+                    )
+                }
 
-            IconField(
-                symbol = MaterialSymbols.EditNote,
-                value = postViewModel.comment,
-                onValueChange = { postViewModel.comment = it },
-                label = stringRes(R.string.new_highlight_note_label),
-                placeholder = stringRes(R.string.new_highlight_note_placeholder),
-                singleLine = false,
-                minLines = 2,
-            )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        symbol = MaterialSymbols.EditNote,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringRes(R.string.new_highlight_note_label),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                MessageField(
+                    placeholder = R.string.new_highlight_note_placeholder,
+                    viewModel = postViewModel,
+                    requestFocus = false,
+                )
+            }
+
+            postViewModel.userSuggestions?.let {
+                ShowUserSuggestionList(
+                    it,
+                    postViewModel::autocompleteWithUser,
+                    accountViewModel,
+                    modifier = SuggestionListDefaultHeightPage,
+                )
+            }
+
+            postViewModel.emojiSuggestions?.let {
+                ShowEmojiSuggestionList(
+                    it,
+                    postViewModel::autocompleteWithEmoji,
+                    postViewModel::autocompleteWithEmojiUrl,
+                    modifier = SuggestionListDefaultHeightPage,
+                )
+            }
         }
     }
 }
@@ -177,7 +237,6 @@ private fun HighlightEditorCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            // Oversized quotation mark watermark, tucked behind the passage.
             Icon(
                 symbol = MaterialSymbols.FormatQuote,
                 contentDescription = null,
