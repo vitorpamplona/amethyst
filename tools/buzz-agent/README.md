@@ -98,7 +98,23 @@ merges it on GitHub.
 
 ## Testing
 
-`agent-exec.sh` is verified end-to-end against a throwaway repo with a stubbed `gh` + agent
+### `./test-workflow-ship.sh` — the ship step, end to end
+
+```bash
+./tools/buzz-agent/test-workflow-ship.sh                    # the sibling workflow-ship.sh
+./tools/buzz-agent/test-workflow-ship.sh /path/to/other.sh  # or any other copy
+```
+
+Runs the real script against a throwaway repo with a local bare `origin` (so `git push` genuinely
+pushes) and a stub `gh` each case configures. No network, no GitHub, no credentials; exits non-zero
+on the first failing case. It covers the happy path, PR reuse, all four default-branch refusals, the
+empty-worktree failure mode, and `base_branch` resolution when `gh` answers oddly (`null`, empty, or
+non-zero) — the paths that otherwise only fail on someone else's machine, unattended, via a
+kind-46007 whose stderr is the only clue.
+
+### `agent-exec.sh`
+
+Verified end-to-end against a throwaway repo with a stubbed `gh` + agent
 (reads task → runs agent → commits the diff → pushes the feature branch → prints the PR URL;
 and errors cleanly when the agent makes no changes). Point `AGENT_CMD` at a stub to dry-run the
 git/PR plumbing without invoking a real agent.
