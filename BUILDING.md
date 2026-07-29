@@ -325,15 +325,29 @@ Quartz library in one pipeline.
 
 3. **Wait** for the `Create Release Assets` workflow to finish (~25–30 min).
 
-4. **Verify**:
-   - GH Release contains 8 desktop assets + 12 Android assets
+4. **Verify** — the GH Release should hold **31 assets**:
+   - **8 desktop** — `dmg` (macOS arm64), `msi` + `zip` (Windows), `deb`, `rpm`,
+     `AppImage`, `flatpak`, `tar.gz` (Linux). There is **no Intel/x64 macOS
+     DMG** — `jpackage` cannot cross-compile and no Intel runner leg is
+     configured, so macOS ships arm64-only.
+   - **13 Android** — 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the
+     F-Droid `.apks` set built for Accrescent.
+   - **5 amy** + **5 geode** bundles.
    - Asset sizes look sane (see §Enforce asset size budget — CI auto-fails at 1 GB/asset)
-   - Intel + ARM DMGs both present
    - Android flow unchanged
 
+   Quick diff against the previous release, which catches a silently-dropped
+   matrix leg better than any count:
+
+   ```bash
+   diff <(gh release view v1.13.0 --json assets --jq '.assets[].name' | sed 's/1\.13\.0/VER/g' | sort) \
+        <(gh release view v1.13.1 --json assets --jq '.assets[].name' | sed 's/1\.13\.1/VER/g' | sort)
+   ```
+
 5. **Stable vs prerelease** — a tag containing `-rc`, `-beta`, `-alpha`, `-dev`,
-   or `-snapshot` is auto-classified as prerelease. Stable tags trigger the
-   Homebrew + Winget bump workflows.
+   or `-snapshot` is auto-classified as prerelease. Only stable tags run the
+   Homebrew + Winget bump workflows (and those are no-ops until the one-time
+   bootstrap PRs land — see § Bootstrap).
 
 ### Dry-run (no tag push)
 
@@ -473,11 +487,11 @@ distributes; the official Amethyst rollout for each is in
 | Channel | How it ships | Push or pull |
 |---|---|---|
 | **GitHub Releases** | The release workflow builds + signs all assets and attaches them to the tag's Release | Automatic (CI) |
-| **Maven Central** | Same workflow runs `publishAllPublicationsToMavenCentral` for `quartz` | Automatic (CI) |
+| **Maven Central** | Same workflow runs `publishAllPublicationsToMavenCentral` for `quartz` — a *step* at the end of the `deploy-android` job, not a job of its own, so it does not appear in a job list | Automatic (CI) |
 | **Google Play** | Download the signed `amethyst-googleplay-<version>.aab` from the GH Release and upload it in Play Console | **Manual push** |
 | **F-Droid** | F-Droid's build server detects the new tag and **builds the `fdroid` flavor from source** per its recipe in the external [`fdroiddata`](https://gitlab.com/fdroid/fdroiddata) repo, then signs + publishes itself | **Pull (build-from-source)** |
 | **Zapstore** | The [`zsp`](https://zapstore.dev/) CLI reads [`zapstore.yaml`](zapstore.yaml) and publishes a Nostr software-release event signed with the app's nsec | **Manual push (Nostr)** |
-| **Homebrew + Winget** | `bump-homebrew.yml` / `bump-winget.yml` open version-bump PRs on stable tags | Automatic (CI) |
+| **Homebrew + Winget** | `bump-homebrew.yml` / `bump-winget.yml` open version-bump PRs on stable tags — **currently no-ops**: neither package has been bootstrapped upstream yet (§ Bootstrap) | Automatic (CI), inactive |
 
 Two channels need the build to stay split into product flavors (see
 `amethyst/build.gradle.kts` → `productFlavors`):
@@ -498,6 +512,15 @@ reads an optional per-release changelog from
 
 ## Bootstrap runbook (one-time)
 
+> **Status as of v1.13.1: neither Homebrew nor Winget has been bootstrapped.**
+> `https://formulae.brew.sh/api/cask/amethyst-nostr.json` and
+> `microsoft/winget-pkgs/manifests/v/VitorPamplona/Amethyst` both 404, so
+> **Amethyst does not currently ship through either channel.** The bump
+> workflows detect this and skip with a `::warning::` instead of failing, so a
+> green release run does *not* mean Homebrew/Winget shipped. The two subsections
+> below are the work that activates them; until then treat the desktop app as
+> GitHub-Releases-only on macOS and Windows.
+
 ### Secrets to provision in GitHub repo settings
 
 The full secret inventory is in [§ Secrets the CI needs](#secrets-the-ci-needs).
@@ -510,8 +533,11 @@ their token type and scope:
 | `WINGET_TOKEN` | Submit Winget manifests | Classic PAT — `public_repo` — 90d expiry (dedicated bot account preferred; `vedantmgoyal9/winget-releaser` does not support fine-grained) |
 
 Rotate both on a 90-day cadence. Owner: assigned via `RELEASE_OPS.md`
-or equivalent issue tracker. On rotation, paste new token and run
-`gh workflow run bump-homebrew.yml` on the most recent stable tag to verify.
+or equivalent issue tracker. On rotation, paste the new token and run
+`gh workflow run bump-homebrew.yml -f tag=<most-recent-stable-tag>` to verify
+(the `tag` input is required — that dispatch path exists for exactly this).
+Note the verification is only meaningful once the cask exists upstream;
+before that the run skips the token-using step entirely.
 
 ### Homebrew cask (one-time initial PR)
 

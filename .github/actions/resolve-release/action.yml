@@ -1,0 +1,73 @@
+name: Resolve Release
+description: >-
+  Resolve a bump workflow's target tag and that release's real published state.
+  Companion to assert-stable-release: this one FETCHES the facts, that one
+  ENFORCES them. Split so the enforcement stays a pure function of its inputs.
+
+  Handles both entry points of the bump workflows:
+    - workflow_run  -> tag comes from the triggering run's head_branch
+    - workflow_dispatch (manual recovery) -> tag comes from the input
+  In both cases draft/prerelease are read back from the GitHub API rather than
+  inferred, so a draft or prerelease can never slip through to a third-party
+  package repo just because the trigger payload lacked the flags.
+
+inputs:
+  tag:
+    description: "Release tag to resolve (e.g. vX.Y.Z)"
+    required: true
+  github_token:
+    description: "Token used to read the release via the GH API"
+    required: true
+
+outputs:
+  tag:
+    description: "The resolved tag, verbatim (e.g. v1.13.1)"
+    value: ${{ steps.resolve.outputs.tag }}
+  ver:
+    description: "The tag with the leading 'v' stripped (e.g. 1.13.1)"
+    value: ${{ steps.resolve.outputs.ver }}
+  is_prerelease:
+    description: "'true' if the GH Release is flagged prerelease"
+    value: ${{ steps.resolve.outputs.is_prerelease }}
+  is_draft:
+    description: "'true' if the GH Release is still a draft"
+    value: ${{ steps.resolve.outputs.is_draft }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve tag and release state
+      id: resolve
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        GH_TOKEN: ${{ inputs.github_token }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+
+        if [[ -z "$TAG" ]]; then
+          echo "::error::No tag to resolve (neither workflow_run.head_branch nor the dispatch input was set)"
+          exit 1
+        fi
+
+        # A missing release here is a real fault, not something to paper over:
+        # every caller is about to publish this version to an external package
+        # manager. Fail loudly and let the caller's Report-failure step file it.
+        if ! META=$(gh release view "$TAG" --repo "$REPO" --json isDraft,isPrerelease 2>&1); then
+          echo "::error::No GH Release found for tag $TAG in $REPO -- refusing to bump"
+          echo "$META"
+          exit 1
+        fi
+
+        IS_DRAFT=$(echo "$META" | jq -r '.isDraft')
+        IS_PRERELEASE=$(echo "$META" | jq -r '.isPrerelease')
+
+        {
+          echo "tag=$TAG"
+          echo "ver=${TAG#v}"
+          echo "is_draft=$IS_DRAFT"
+          echo "is_prerelease=$IS_PRERELEASE"
+        } >> "$GITHUB_OUTPUT"
+
+        echo "resolved tag=$TAG ver=${TAG#v} draft=$IS_DRAFT prerelease=$IS_PRERELEASE"

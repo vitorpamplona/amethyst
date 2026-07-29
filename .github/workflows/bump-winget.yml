@@ -1,8 +1,16 @@
 name: Bump Winget Manifest
 
+# Fires after "Create Release Assets" finishes successfully for a tag push.
+#
+# NOT `release: types: [released]`. That event never fires here: the release is
+# created by create-release.yml using GITHUB_TOKEN, and GitHub does not raise
+# workflow-triggering events for GITHUB_TOKEN actions. This workflow sat
+# silently dead through every release up to v1.13.1 for exactly that reason.
+# See the longer note in bump-homebrew.yml.
 on:
-  release:
-    types: [released]
+  workflow_run:
+    workflows: ["Create Release Assets"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -18,30 +26,62 @@ permissions:
   issues: write
 
 concurrency:
-  group: bump-winget-${{ github.event.release.tag_name || inputs.tag }}
+  group: bump-winget-${{ github.event.workflow_run.head_branch || inputs.tag }}
   cancel-in-progress: false
 
 jobs:
   bump:
-    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    # See bump-homebrew.yml for why these three conditions: successful, tag-push
+    # (not a dry-run dispatch), v-prefixed. Exact format enforced downstream.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Resolve release
+        id: rel
+        uses: ./.github/actions/resolve-release
+        with:
+          tag: ${{ github.event.workflow_run.head_branch || inputs.tag }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Re-assert stable release
         uses: ./.github/actions/assert-stable-release
         with:
-          tag: ${{ github.event.release.tag_name || inputs.tag }}
-          is_prerelease: ${{ github.event.release.prerelease || 'false' }}
-          is_draft: ${{ github.event.release.draft || 'false' }}
+          tag: ${{ steps.rel.outputs.tag }}
+          is_prerelease: ${{ steps.rel.outputs.is_prerelease }}
+          is_draft: ${{ steps.rel.outputs.is_draft }}
+
+      # winget-releaser UPDATES an existing package; `VitorPamplona.Amethyst`
+      # has never been submitted to microsoft/winget-pkgs. Until the one-time
+      # new-package PR lands (BUILDING.md § Bootstrap), no-op instead of failing
+      # every release with a spurious [release-ops] issue.
+      - name: Check the package exists in winget-pkgs
+        id: pkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL=https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/v/VitorPamplona/Amethyst
+          if curl -fsSL -o /dev/null -H "Accept: application/vnd.github+json" "$URL"; then
+            echo "bootstrapped=true" >> "$GITHUB_OUTPUT"
+            echo "VitorPamplona.Amethyst found in winget-pkgs; proceeding with submission"
+          else
+            echo "bootstrapped=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Package 'VitorPamplona.Amethyst' is not in microsoft/winget-pkgs yet, so there is nothing to update for ${{ steps.rel.outputs.tag }}. Amethyst is NOT shipping via Winget. Submit the one-time new-package PR (BUILDING.md § Bootstrap) to activate this channel."
+          fi
 
       - name: Submit manifest to winget-pkgs
+        if: steps.pkg.outputs.bootstrapped == 'true'
         uses: vedantmgoyal9/winget-releaser@4ffc7888bffd451b357355dc214d43bb9f23917e  # v2
         with:
           identifier: VitorPamplona.Amethyst
-          version: ${{ github.event.release.tag_name || inputs.tag }}
+          version: ${{ steps.rel.outputs.tag }}
           # Asset naming contract: scripts/asset-name.sh
           installers-regex: '^amethyst-desktop-.*-windows-x64\.msi$'
           token: ${{ secrets.WINGET_TOKEN }}
@@ -51,7 +91,7 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const tag = context.payload.release?.tag_name || context.payload.inputs?.tag || 'unknown';
+            const tag = context.payload.workflow_run?.head_branch || context.payload.inputs?.tag || 'unknown';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.create({
               owner: context.repo.owner,

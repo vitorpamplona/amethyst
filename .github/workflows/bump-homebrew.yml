@@ -1,11 +1,25 @@
 name: Bump Homebrew Cask
 
-# Fires when a GH Release is published (not draft, not prerelease).
-# `release.types: [released]` event fires only for stable releases — still
-# double-checked by .github/actions/assert-stable-release for defense-in-depth.
+# Fires after "Create Release Assets" finishes successfully for a tag push.
+#
+# NOT `release: types: [released]`. That event never fires here: the release is
+# created by create-release.yml using GITHUB_TOKEN, and GitHub deliberately does
+# not raise workflow-triggering events for actions taken by GITHUB_TOKEN (the
+# recursion guard). This workflow sat silently dead through every release up to
+# v1.13.1 for exactly that reason.
+#
+# `workflow_run` has no such restriction, and it is also strictly better timed:
+# it fires once ALL upload legs have finished, whereas `released` fired while
+# assets were still uploading (hence the download retry loops in the sibling
+# formula workflows).
+#
+# Draft/prerelease state is not in the workflow_run payload, so it is read back
+# from the API by .github/actions/resolve-release and enforced by
+# .github/actions/assert-stable-release.
 on:
-  release:
-    types: [released]
+  workflow_run:
+    workflows: ["Create Release Assets"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -22,39 +36,72 @@ permissions:
 
 concurrency:
   # Serialize bumps per tag; do not cancel in-progress bumps.
-  group: bump-homebrew-${{ github.event.release.tag_name || inputs.tag }}
+  group: bump-homebrew-${{ github.event.workflow_run.head_branch || inputs.tag }}
   cancel-in-progress: false
 
 jobs:
   bump:
-    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    # On workflow_run, filter down to a SUCCESSFUL TAG build. `event == 'push'`
+    # excludes create-release.yml's workflow_dispatch dry-runs (which carry a
+    # synthetic test_tag and publish nothing), and the head_branch prefix keeps
+    # non-tag runs out. Exact tag format is still enforced downstream.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest   # brew runs on Linux — saves macOS runner quota
     timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Resolve release
+        id: rel
+        uses: ./.github/actions/resolve-release
+        with:
+          tag: ${{ github.event.workflow_run.head_branch || inputs.tag }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Re-assert stable release
         uses: ./.github/actions/assert-stable-release
         with:
-          tag: ${{ github.event.release.tag_name || inputs.tag }}
-          is_prerelease: ${{ github.event.release.prerelease || 'false' }}
-          is_draft: ${{ github.event.release.draft || 'false' }}
+          tag: ${{ steps.rel.outputs.tag }}
+          is_prerelease: ${{ steps.rel.outputs.is_prerelease }}
+          is_draft: ${{ steps.rel.outputs.is_draft }}
+
+      # `brew bump-cask-pr` can only bump a cask that ALREADY EXISTS in the tap.
+      # `amethyst-nostr` has never been submitted to Homebrew/homebrew-cask, so
+      # until the one-time bootstrap PR lands (BUILDING.md § Bootstrap) this
+      # workflow must no-op rather than fail — otherwise every single release
+      # files a spurious [release-ops] issue.
+      - name: Check the cask exists in homebrew-cask
+        id: cask
+        run: |
+          set -euo pipefail
+          if curl -fsSL -o /dev/null https://formulae.brew.sh/api/cask/amethyst-nostr.json; then
+            echo "bootstrapped=true" >> "$GITHUB_OUTPUT"
+            echo "cask amethyst-nostr found in homebrew-cask; proceeding with bump"
+          else
+            echo "bootstrapped=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Cask 'amethyst-nostr' is not in Homebrew/homebrew-cask yet, so there is nothing to bump for ${{ steps.rel.outputs.tag }}. Amethyst is NOT shipping via Homebrew. Submit the one-time new-cask PR (BUILDING.md § Bootstrap) to activate this channel."
+          fi
 
       - name: Bump cask (push-or-update PR)
+        if: steps.cask.outputs.bootstrapped == 'true'
         uses: macauley/action-homebrew-bump-cask@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
         with:
           token: ${{ secrets.HOMEBREW_TOKEN }}
           tap: homebrew/cask
           cask: amethyst-nostr
-          tag: ${{ github.event.release.tag_name || inputs.tag }}
+          tag: ${{ steps.rel.outputs.tag }}
 
       - name: Report failure
         if: failure()
         uses: actions/github-script@v9
         with:
           script: |
-            const tag = context.payload.release?.tag_name || context.payload.inputs?.tag || 'unknown';
+            const tag = context.payload.workflow_run?.head_branch || context.payload.inputs?.tag || 'unknown';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.create({
               owner: context.repo.owner,

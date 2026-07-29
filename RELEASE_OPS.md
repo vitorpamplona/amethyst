@@ -14,7 +14,7 @@ specific to shipping the official Amethyst artifacts.
 
 ## At a glance
 
-A release is one tag push that fans out to five distribution channels:
+A release is one tag push that fans out to four live distribution channels:
 
 | Channel | Mechanism | Who pushes |
 |---|---|---|
@@ -22,10 +22,11 @@ A release is one tag push that fans out to five distribution channels:
 | **Google Play** | **Manual** — download the signed AAB from the GH Release, upload in Play Console | Maintainer |
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
 | **Zapstore** | `zsp publish` reads `zapstore.yaml`, signs a Nostr release event with Amethyst's nsec | Maintainer |
-| **Homebrew + Winget** | Automatic — `bump-homebrew.yml` / `bump-winget.yml` fire on stable tags | CI |
+| **Homebrew + Winget** | ⚠️ **Not shipping.** The bump workflows run, but skip: neither package exists upstream yet | Nobody (see § 3) |
 
 Maven Central (the `quartz` library) also publishes automatically from the same
-workflow.
+workflow — as a *step* at the end of the `deploy-android` job, not a job of its
+own, so don't expect to find it in the run's job list.
 
 ---
 
@@ -61,8 +62,10 @@ workflow.
    `scripts/translators.sh --seed` with `CROWDIN_PROJECT_ID` /
    `CROWDIN_PERSONAL_TOKEN` set, which refreshes the file.)
 
-3. **Publish the release-notes note on Nostr** with Amethyst's account and paste
-   its event id into `amethyst/build.gradle.kts`:
+3. **Publish the release-notes note on Nostr** — *minor releases only.* In
+   practice this id has only ever been bumped on `x.y.0` (1.11.0, 1.12.0,
+   1.13.0); patch releases leave it pointing at their minor's note. Publish with
+   Amethyst's account and paste the event id into `amethyst/build.gradle.kts`:
    ```kotlin
    buildConfigField("String", "RELEASE_NOTES_ID", "\"<new-event-id-hex>\"")
    ```
@@ -85,17 +88,33 @@ workflow.
 Commit, tag, push — see [`BUILDING.md` § Release runbook](BUILDING.md#release-runbook)
 for the exact commands. The tag must equal `app` from the catalog (the workflow
 asserts this and fails fast otherwise). A clean `vMAJOR.MINOR.PATCH` tag is
-classified **stable** and triggers the Homebrew/Winget bumps; anything with a
-`-rc`/`-beta`/`-alpha`/`-dev` suffix is a prerelease and skips them.
+classified **stable** and runs the Homebrew/Winget bump workflows; anything with
+a `-rc`/`-beta`/`-alpha`/`-dev` suffix is a prerelease and skips them.
+
+Heads-up on the `git push`: this repo has `git-credential-manager` configured as
+a credential helper, and it blocks on an interactive prompt (a plain
+`GIT_TERMINAL_PROMPT=0` does **not** stop it — the push just hangs). If that
+happens, push using `gh`'s helper for the one command:
+
+```bash
+git -c credential.helper= -c credential.helper='!gh auth git-credential' push upstream main
+```
 
 When the `Create Release Assets` workflow finishes (~25–30 min) the GH Release
-holds, per the asset-name contract:
+holds **31 assets**, per the asset-name contract:
 
-- **Android:** 5 Google Play APKs + 5 F-Droid APKs + 2 AABs
-  (`amethyst-googleplay-*-v…apk` / `.aab`, `amethyst-fdroid-*-v…apk` / `.aab`)
-- **Desktop:** 8 assets (DMG/MSI/DEB/RPM/AppImage/zip/tar.gz)
-- **CLI:** the `amy` artifacts
-- **Maven Central:** `com.vitorpamplona.quartz:quartz:<version>` published
+- **Android (13):** 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the F-Droid
+  `.apks` set for Accrescent
+  (`amethyst-googleplay-*-v…apk` / `.aab`, `amethyst-fdroid-*-v…apk` / `.aab` / `.apks`)
+- **Desktop (8):** DMG (macOS **arm64 only** — there is no Intel DMG),
+  MSI + zip, DEB, RPM, AppImage, flatpak, tar.gz
+- **CLI (5):** the `amy` artifacts
+- **Relay (5):** the `geode` artifacts, plus the geode Docker image
+- **Maven Central:** `com.vitorpamplona.quartz:quartz:<version>` published.
+  `repo1.maven.org` lags the publish by tens of minutes — a 404 right after the
+  run is normal. Confirm the step's log says "Deployment is being published to
+  Maven Central", and compare against the *previous* version's POM before
+  concluding anything is broken.
 
 ---
 
@@ -165,11 +184,36 @@ RELAY_URLS="wss://relay.zapstore.dev,wss://relay.damus.io,wss://nos.lol,wss://vi
 Keep `wss://relay.zapstore.dev` in the list — that is the relay the Zapstore app
 itself reads from.
 
-### Homebrew + Winget — automatic
-`bump-homebrew.yml` and `bump-winget.yml` fire on stable tags and open PRs
-against `Homebrew/homebrew-cask` (cask `amethyst-nostr`) and
-`microsoft/winget-pkgs` (`VitorPamplona.Amethyst`). No action unless one fails —
-then see BUILDING.md § Bootstrap and § Incident response.
+### Homebrew + Winget — ⚠️ not shipping yet
+
+`bump-homebrew.yml` and `bump-winget.yml` are wired to open PRs against
+`Homebrew/homebrew-cask` (cask `amethyst-nostr`) and `microsoft/winget-pkgs`
+(`VitorPamplona.Amethyst`) — but **neither package has ever been submitted
+upstream**, so both workflows detect that and skip with a `::warning::`. As of
+**v1.13.1** these two channels deliver nothing; macOS and Windows users get the
+desktop app from GitHub Releases only.
+
+Two separate faults kept this invisible until v1.13.1, both now fixed:
+
+1. **The workflows never ran at all** — for *any* release. They triggered on
+   `release: types: [released]`, and GitHub does not raise workflow-triggering
+   events for a release created by `GITHUB_TOKEN`, which is exactly how
+   `create-release.yml` creates it. They now trigger on `workflow_run` after
+   `Create Release Assets` succeeds, which also fixes a latent race — the old
+   event fired while assets were still uploading.
+2. **Nothing exists upstream to bump.** `brew bump-cask-pr` and
+   `winget-releaser` can only *update* an existing package. The first
+   submission is a manual, human-reviewed PR: BUILDING.md § Homebrew cask
+   (one-time initial PR) and § Winget (one-time initial submission).
+
+Until someone does that bootstrap, a green release run means the bump workflows
+*skipped cleanly* — not that Homebrew/Winget shipped. Check the run's warnings
+if you want to confirm which case you're in.
+
+The two `amy` / `geode` Homebrew **formula** workflows are different: they only
+sync the in-repo reference `.rb` files and open a PR against *this* repo, so
+they do real work on every release. Merge those PRs to keep the formulae ready
+for their eventual homebrew-core submission.
 
 ---
 
@@ -222,13 +266,19 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 
 ## 6. Post-release verification
 
-- [ ] GH Release: expected asset count, Intel + ARM DMGs, sizes sane.
-- [ ] Maven Central: `quartz:<version>` resolves (allow propagation time).
+- [ ] GH Release: 31 assets, sizes sane, and the asset-name set matches the
+      previous release (see the `diff` one-liner in BUILDING.md § Release
+      runbook). macOS is arm64-only — do **not** look for an Intel DMG.
+- [ ] Maven Central: `quartz:<version>` resolves (allow tens of minutes of
+      propagation; the publish step's log is the authoritative signal).
 - [ ] Play Console: rollout started, no policy rejection.
 - [ ] Zapstore: release event visible.
 - [ ] F-Droid: new version detected (may lag days).
-- [ ] Homebrew + Winget bump PRs opened (stable only).
-- [ ] In-app "Release Notes" link opens the note matching `RELEASE_NOTES_ID`.
+- [ ] `amy` / `geode` Homebrew formula-sync PRs opened against this repo — merge them.
+- [ ] Homebrew + Winget: **expected to skip** until bootstrapped (§ 3). If they
+      ever start opening real PRs, that means someone landed the bootstrap.
+- [ ] In-app "Release Notes" link opens the note matching `RELEASE_NOTES_ID`
+      (only bumped on minor releases — patches keep pointing at the x.y.0 note).
 - [ ] Push still works on a `play` build (only if the push contract changed —
       see § 4); UnifiedPush still works on an `fdroid` build.
 
