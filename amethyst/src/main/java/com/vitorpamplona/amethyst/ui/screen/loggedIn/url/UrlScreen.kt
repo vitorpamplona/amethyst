@@ -23,19 +23,28 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.url
 import android.annotation.SuppressLint
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
+import com.vitorpamplona.amethyst.ui.components.rememberUrlPreviewState
+import com.vitorpamplona.amethyst.ui.feeds.FeedLoaded
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarExtensibleWithBackButton
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.LocalCurrentExternalScope
 import com.vitorpamplona.amethyst.ui.screen.RefresheableFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.dal.UrlFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.datasource.UrlFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 
 @Composable
@@ -85,7 +94,7 @@ fun UrlScreen(
         topBar = {
             TopBarExtensibleWithBackButton(
                 title = {
-                    DisplayUrlHeader(url, Modifier.weight(1f))
+                    Text(stringRes(R.string.external_content_title))
                 },
                 popBack = nav::popBack,
             )
@@ -97,12 +106,47 @@ fun UrlScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        RefresheableFeedView(
-            feedViewModel,
-            null,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        CompositionLocalProvider(LocalCurrentExternalScope provides url) {
+            RefresheableFeedView(
+                feedViewModel,
+                null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onLoaded = { state, listState ->
+                    FeedLoaded(
+                        state,
+                        listState,
+                        null,
+                        accountViewModel,
+                        nav,
+                        header = { UrlScreenPreview(url, accountViewModel) },
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+fun UrlScreenPreview(
+    url: String,
+    accountViewModel: AccountViewModel,
+) {
+    // Respect the data-saver/privacy gate: fetching the preview reaches out to the
+    // third-party page, so when previews are off this stays the plain URL header.
+    if (!accountViewModel.settings.showUrlPreview()) {
+        DisplayUrlHeader(url, MaxWidthWithHorzPadding)
+        return
+    }
+
+    when (val state = rememberUrlPreviewState(url, accountViewModel)) {
+        is UrlPreviewState.Loaded -> {
+            UrlPreviewCard(url, state.previewInfo)
+        }
+
+        else -> {
+            DisplayUrlHeader(url, MaxWidthWithHorzPadding)
+        }
     }
 }
 

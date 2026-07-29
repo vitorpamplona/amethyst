@@ -28,6 +28,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.LinkAnnotation
@@ -41,6 +42,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.ui.components.UrlPreviewCard
+import com.vitorpamplona.amethyst.ui.components.rememberUrlPreviewState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -51,6 +55,14 @@ import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
+
+/**
+ * The normalized scope (e.g. [ExternalId.toScope]) of the external content a screen is
+ * currently dedicated to, if any. A screen built entirely around one external scope (e.g.
+ * the URL thread screen) provides this so nested comments sharing that same scope don't
+ * redundantly repeat the preview the screen itself already shows.
+ */
+val LocalCurrentExternalScope = staticCompositionLocalOf<String?> { null }
 
 @Composable
 fun DisplayExternalId(
@@ -68,7 +80,7 @@ fun DisplayExternalId(
         }
 
         is UrlId -> {
-            DisplayUrlExternalId(externalId, nav)
+            DisplayUrlExternalId(externalId, accountViewModel, nav)
         }
 
         else -> {
@@ -80,14 +92,36 @@ fun DisplayExternalId(
 @Composable
 fun DisplayUrlExternalId(
     externalId: UrlId,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    DisplayExternalIdChip(
-        symbol = MaterialSymbols.Link,
-        contentDescription = stringRes(id = R.string.external_url_scope),
-        label = externalId.url,
-        linkInteractionListener = { nav.nav(Route.Url(externalId.url)) },
-    )
+    val url = externalId.url
+    val chip =
+        @Composable {
+            DisplayExternalIdChip(
+                symbol = MaterialSymbols.Link,
+                contentDescription = stringRes(id = R.string.external_url_scope),
+                label = url,
+                linkInteractionListener = { nav.nav(Route.Url(url)) },
+            )
+        }
+
+    // Respect the data-saver/privacy gate: fetching the preview reaches out to the
+    // third-party page, so when previews are off this stays a plain link chip.
+    if (!accountViewModel.settings.showUrlPreview()) {
+        chip()
+        return
+    }
+
+    when (val state = rememberUrlPreviewState(url, accountViewModel)) {
+        is UrlPreviewState.Loaded -> {
+            UrlPreviewCard(url, state.previewInfo, onCardClick = { nav.nav(Route.Url(url)) })
+        }
+
+        else -> {
+            chip()
+        }
+    }
 }
 
 @Composable

@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.LocalCurrentExternalScope
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
@@ -142,9 +143,11 @@ fun RenderTextEvent(
             }
         } else if (!makeItShort && noteEvent is CommentEvent) {
             // A comment scoped to an external identifier (`I` tag) has no in-cache parent
-            // note. Show the scope itself as the reply context.
+            // note. Show the scope itself as the reply context -- unless the screen we're
+            // in is already dedicated to this exact scope (e.g. the URL thread screen),
+            // in which case every row would otherwise redundantly repeat the same preview.
             val scope = remember(note) { noteEvent.scope() }
-            if (scope != null) {
+            if (scope != null && scope.toScope() != LocalCurrentExternalScope.current) {
                 DisplayExternalId(scope, accountViewModel, nav)
                 Spacer(modifier = StdVertSpacer)
             }

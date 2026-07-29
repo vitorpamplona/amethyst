@@ -23,13 +23,17 @@ package com.vitorpamplona.amethyst.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
@@ -37,12 +41,14 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.previewCardImageModifier
 import kotlinx.coroutines.launch
@@ -53,6 +59,7 @@ fun UrlPreviewCard(
     url: String,
     previewInfo: UrlInfoItem,
     onUrlComments: (() -> Unit)? = null,
+    onCardClick: (() -> Unit)? = null,
 ) {
     val uri = LocalUriHandler.current
     val popupExpanded =
@@ -95,7 +102,11 @@ fun UrlPreviewCard(
             MaterialTheme.colorScheme.innerPostModifier
                 .combinedClickable(
                     onClick = {
-                        runCatching { uri.openUri(url) }
+                        if (onCardClick != null) {
+                            onCardClick()
+                        } else {
+                            runCatching { uri.openUri(url) }
+                        }
                     },
                     onLongClick = {
                         popupExpanded.value = true
@@ -109,14 +120,34 @@ fun UrlPreviewCard(
             modifier = previewCardImageModifier,
         )
 
-        Text(
-            text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
-            style = MaterialTheme.typography.bodySmall,
+        Row(
             modifier = MaxWidthWithHorzPadding,
-            color = Color.Gray,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = previewInfo.verifiedUrl?.host ?: previewInfo.url,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f, fill = false),
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            // Only meaningful when the card's own tap does something else (e.g. opening the
+            // comment thread); otherwise it would duplicate the card's open-in-browser tap.
+            if (onCardClick != null) {
+                IconButton(
+                    onClick = { runCatching { uri.openUri(url) } },
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                        contentDescription = stringRes(R.string.url_preview_open_in_browser),
+                        modifier = Size14Modifier,
+                        tint = Color.Gray,
+                    )
+                }
+            }
+        }
 
         Text(
             text = previewInfo.title,
