@@ -40,12 +40,18 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -72,11 +78,15 @@ enum class HomeFeedType(
     TEXT_NOTES("text_notes", listOf(TextNoteEvent.KIND)),
     REPOSTS("reposts", listOf(RepostEvent.KIND, GenericRepostEvent.KIND)),
     COMMENTS("comments", listOf(CommentEvent.KIND)),
+    PICTURES("pictures", listOf(PictureEvent.KIND)),
+    VIDEOS("videos", listOf(VideoNormalEvent.KIND, VideoHorizontalEvent.KIND)),
+    SHORTS("shorts", listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND)),
     ARTICLES("articles", listOf(LongTextNoteEvent.KIND)),
     WIKI("wiki", listOf(WikiNoteEvent.KIND)),
     HIGHLIGHTS("highlights", listOf(HighlightEvent.KIND)),
     POLLS("polls", listOf(PollEvent.KIND, ZapPollEvent.KIND, PollResponseEvent.KIND)),
     CLASSIFIEDS("classifieds", listOf(ClassifiedsEvent.KIND)),
+    TORRENTS("torrents", listOf(TorrentEvent.KIND)),
     VOICE("voice", listOf(VoiceEvent.KIND, VoiceReplyEvent.KIND)),
     LIVE_ACTIVITIES("live_activities", listOf(LiveActivitiesEvent.KIND, LiveActivitiesChatMessageEvent.KIND)),
     EPHEMERAL_CHAT("ephemeral_chat", listOf(EphemeralChatEvent.KIND)),
