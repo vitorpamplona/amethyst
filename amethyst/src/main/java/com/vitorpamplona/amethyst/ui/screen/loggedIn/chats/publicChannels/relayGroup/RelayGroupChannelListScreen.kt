@@ -107,7 +107,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -208,22 +207,13 @@ fun RelayGroupChannelListScreen(
     // your kind-10009 list (so it then shows in Messages / Relay Groups). Same screen, one Browse.
     val isBuzz = BuzzRelayDialect.isBuzz(relay) || relayInfo.software?.contains("buzz", ignoreCase = true) == true
 
-    // Who may create a channel/forum here — the gate for the section "+" buttons. A Buzz relay lets
-    // any community member create one (the creator becomes its owner); a non-member's 9007 is
-    // rejected, so we only offer the "+" to members of this community's NIP-43 roster. Reactive: the
-    // relay-signed roster snapshot (kind 13534, republished after every membership change) may land
-    // after first composition, so re-read [BuzzCommunityMembership] whenever one does.
+    // A Buzz relay lets any community member create a channel/forum (the creator becomes its owner),
+    // and the relay rejects a non-member's kind-9007. We don't hard-gate the "+" on membership: the
+    // NIP-43 roster (kind 13534) isn't fetched on this screen, so gating on it hid the "+" even from
+    // admins. Instead we offer it on any Buzz community and let the relay enforce — the same approach
+    // as the workspace overflow menu (Add people / Invite), whose own doc notes "any member sees them,
+    // the relay only serves the owner/admin ones."
     val myPubkey = accountViewModel.account.signer.pubKey
-    val canCreateChannels by produceState(
-        initialValue = BuzzCommunityMembership.isMember(relay, myPubkey),
-        relay,
-        myPubkey,
-    ) {
-        value = BuzzCommunityMembership.isMember(relay, myPubkey)
-        LocalCache
-            .observeEvents<RelayMembershipListEvent>(Filter(kinds = listOf(RelayMembershipListEvent.KIND)))
-            .collect { value = BuzzCommunityMembership.isMember(relay, myPubkey) }
-    }
 
     val buzzVm: BuzzRelayImportViewModel = viewModel(key = "BuzzImport-${relay.url}")
     LaunchedEffect(relay, isBuzz) { if (isBuzz) buzzVm.bind(accountViewModel.account, relay.url) }
@@ -448,8 +438,7 @@ fun RelayGroupChannelListScreen(
                     // -- CHANNELS -- The label carries a "+" to create a channel (the community's FAB
                     // moved here, like Direct Messages). Add-all lives in the top-bar overflow menu.
                     // The header always shows so the "+" is available even before any channel loads;
-                    // the collapse toggle is offered only when there's something to collapse. The "+"
-                    // is offered only to community members, who are the ones the relay lets create.
+                    // the collapse toggle is offered only when there's something to collapse.
                     run {
                         val channelsCollapsed = "channels" in collapsedSections
                         item(key = "sec-channels") {
@@ -457,17 +446,11 @@ fun RelayGroupChannelListScreen(
                                 title = stringRes(R.string.relay_group_section_channels),
                                 collapsed = channelsCollapsed,
                                 onToggle = if (buzzChatChannels.isNotEmpty()) ({ toggleSection("channels") }) else null,
-                                trailing =
-                                    if (canCreateChannels) {
-                                        {
-                                            SectionAddButton(stringRes(R.string.buzz_channel_create_title)) {
-                                                nav.nav(Route.RelayGroupCreate(relay.url))
-                                            }
-                                        }
-                                    } else {
-                                        null
-                                    },
-                            )
+                            ) {
+                                SectionAddButton(stringRes(R.string.buzz_channel_create_title)) {
+                                    nav.nav(Route.RelayGroupCreate(relay.url))
+                                }
+                            }
                         }
                         if (buzzChatChannels.isNotEmpty() && !channelsCollapsed) {
                             itemsIndexed(buzzChatChannels, key = { _, it -> "chat-${it.id}" }) { index, groupId ->
@@ -491,17 +474,11 @@ fun RelayGroupChannelListScreen(
                                 title = stringRes(R.string.relay_group_section_forums),
                                 collapsed = forumsCollapsed,
                                 onToggle = if (buzzForumChannels.isNotEmpty()) ({ toggleSection("forums") }) else null,
-                                trailing =
-                                    if (canCreateChannels) {
-                                        {
-                                            SectionAddButton(stringRes(R.string.buzz_forum_create_title)) {
-                                                nav.nav(Route.RelayGroupCreate(relay.url, isForum = true))
-                                            }
-                                        }
-                                    } else {
-                                        null
-                                    },
-                            )
+                            ) {
+                                SectionAddButton(stringRes(R.string.buzz_forum_create_title)) {
+                                    nav.nav(Route.RelayGroupCreate(relay.url, isForum = true))
+                                }
+                            }
                         }
                         if (buzzForumChannels.isNotEmpty() && !forumsCollapsed) {
                             itemsIndexed(buzzForumChannels, key = { _, it -> "forum-${it.id}" }) { index, groupId ->
