@@ -79,15 +79,8 @@ enum class HomeFeedType(
     REPOSTS("reposts", listOf(RepostEvent.KIND, GenericRepostEvent.KIND)),
     COMMENTS("comments", listOf(CommentEvent.KIND)),
     PICTURES("pictures", listOf(PictureEvent.KIND)),
-    VIDEOS(
-        "videos",
-        listOf(
-            VideoNormalEvent.KIND,
-            VideoShortEvent.KIND,
-            VideoHorizontalEvent.KIND,
-            VideoVerticalEvent.KIND,
-        ),
-    ),
+    VIDEOS("videos", listOf(VideoNormalEvent.KIND, VideoHorizontalEvent.KIND)),
+    SHORTS("shorts", listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND)),
     ARTICLES("articles", listOf(LongTextNoteEvent.KIND)),
     WIKI("wiki", listOf(WikiNoteEvent.KIND)),
     HIGHLIGHTS("highlights", listOf(HighlightEvent.KIND)),

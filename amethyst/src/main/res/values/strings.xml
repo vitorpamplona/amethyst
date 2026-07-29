@@ -2336,6 +2336,7 @@
     <string name="home_content_type_comments">Comments &amp; replies</string>
     <string name="home_content_type_pictures">Pictures</string>
     <string name="home_content_type_videos">Videos</string>
+    <string name="home_content_type_shorts">Shorts</string>
     <string name="home_content_type_articles">Articles</string>
     <string name="home_content_type_wiki">Wiki pages</string>
     <string name="home_content_type_highlights">Highlights</string>

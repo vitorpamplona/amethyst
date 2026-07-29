@@ -72,24 +72,20 @@ class HomeFeedTypeTest {
     }
 
     @Test
-    fun picturesVideosAndTorrentsOwnTheirKinds() {
+    fun picturesVideosShortsAndTorrentsOwnTheirKinds() {
         assertEquals(listOf(PictureEvent.KIND), HomeFeedType.PICTURES.kinds)
-        assertEquals(
-            listOf(
-                VideoNormalEvent.KIND,
-                VideoShortEvent.KIND,
-                VideoHorizontalEvent.KIND,
-                VideoVerticalEvent.KIND,
-            ),
-            HomeFeedType.VIDEOS.kinds,
-        )
+        // Long-form videos are the horizontal/normal kinds; vertical/short kinds belong to Shorts.
+        assertEquals(listOf(VideoNormalEvent.KIND, VideoHorizontalEvent.KIND), HomeFeedType.VIDEOS.kinds)
+        assertEquals(listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND), HomeFeedType.SHORTS.kinds)
         assertEquals(listOf(TorrentEvent.KIND), HomeFeedType.TORRENTS.kinds)
     }
 
     @Test
-    fun disablingVideosDropsEveryVideoKind() {
+    fun disablingVideosLeavesShortsUntouched() {
         val disabled = HomeFeedType.disabledKinds(HomeFeedType.ALL - HomeFeedType.VIDEOS)
         HomeFeedType.VIDEOS.kinds.forEach { assertTrue(it in disabled) }
+        // Shorts is a separate toggle, so its kinds stay live.
+        HomeFeedType.SHORTS.kinds.forEach { assertFalse(it in disabled) }
         assertFalse(PictureEvent.KIND in disabled)
     }
 

@@ -133,6 +133,7 @@ private val HOME_FEED_TYPES =
         HomeFeedTypeUi(HomeFeedType.COMMENTS, R.string.home_content_type_comments, MaterialSymbols.Chat),
         HomeFeedTypeUi(HomeFeedType.PICTURES, R.string.home_content_type_pictures, MaterialSymbols.Image),
         HomeFeedTypeUi(HomeFeedType.VIDEOS, R.string.home_content_type_videos, MaterialSymbols.Videocam),
+        HomeFeedTypeUi(HomeFeedType.SHORTS, R.string.home_content_type_shorts, MaterialSymbols.SmartDisplay),
         HomeFeedTypeUi(HomeFeedType.ARTICLES, R.string.home_content_type_articles, MaterialSymbols.AutoMirrored.Article),
         HomeFeedTypeUi(HomeFeedType.WIKI, R.string.home_content_type_wiki, MaterialSymbols.MenuBook),
         HomeFeedTypeUi(HomeFeedType.HIGHLIGHTS, R.string.home_content_type_highlights, MaterialSymbols.FormatQuote),
