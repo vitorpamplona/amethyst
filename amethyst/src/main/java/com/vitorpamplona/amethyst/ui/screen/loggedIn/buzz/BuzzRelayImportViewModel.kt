@@ -23,11 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
+import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -154,21 +156,36 @@ class BuzzRelayImportViewModel : ViewModel() {
                     false
                 }
 
-                // 2. Fetch each channel's NIP-29 metadata (39000-39003) so its name + Buzz `t` type load.
+                // 2. Fetch each channel's NIP-29 metadata (39000-39003, `#d`-scoped) so its name + Buzz
+                //    `t` type load, AND the relay's kind-40099 system messages (`#h`-scoped) so a
+                //    `channel_deleted` one is seen. The relay soft-deletes a deleted channel's 39000
+                //    and never retracts the kind-44100 that seeded `channelIds`, so without pulling the
+                //    40099 a deleted channel — its metadata now blank — would show optimistically here
+                //    forever. LocalCache records the delete into RelayGroupDeletions on consume.
                 if (channelIds.isNotEmpty()) {
                     account.client.fetchAllWithHooks(
-                        filters = mapOf(relay to listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to channelIds.toList())))),
+                        filters =
+                            mapOf(
+                                relay to
+                                    listOf(
+                                        Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to channelIds.toList())),
+                                        Filter(kinds = listOf(SystemMessageEvent.KIND), tags = mapOf("h" to channelIds.toList())),
+                                    ),
+                            ),
                         timeoutMs = 8_000,
                         pendingOnAuthRequired = true,
                     ) { _, _ -> false }
                 }
 
                 // 3. Keep only non-DM workspace channels; a channel whose metadata hasn't arrived
-                //    (type unknown) is optimistically shown as a workspace channel.
+                //    (type unknown) is optimistically shown as a workspace channel. Deleted channels
+                //    (kind-40099 `channel_deleted`, recorded above) are dropped — the relay keeps
+                //    re-announcing their kind-44100, so this is the only place they leave the list.
                 _channels.value =
                     channelIds
                         .mapNotNull { id ->
                             val groupId = GroupId(id, relay)
+                            if (RelayGroupDeletions.isDeleted(groupId)) return@mapNotNull null
                             val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
                             if (channel.event?.isBuzzDm() == true) null else groupId
                         }.sortedBy { it.id }
