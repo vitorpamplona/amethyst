@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.Hex
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
@@ -112,18 +113,20 @@ class BlossomReadAuthInterceptor(
             .build()
 
     companion object {
-        private val SHA256_HEX = Regex("^[0-9a-f]{64}$")
-
         /**
          * Extracts the sha256 blob id from a Blossom URL path. The blob is the
          * last path segment, up to its first `.` — so both `<hash>.png` and the
          * derived `<hash>.thumb.jpg` resolve to `<hash>`. Returns `null` when the
-         * segment isn't a lowercase 64-char hex string.
+         * segment isn't a 64-char hex string.
+         *
+         * Uses Quartz's unrolled [Hex.isHex64] rather than a regex — this runs on
+         * every media URL the feed loads. [Hex.isHex64] only checks the first 64
+         * chars and doesn't verify total length, so the `length == 64` guard is
+         * what rejects longer segments.
          */
         fun blossomHashOrNull(encodedPath: String): HexKey? {
-            val lastSegment = encodedPath.substringAfterLast('/')
-            val base = lastSegment.substringBefore('.').lowercase()
-            return if (SHA256_HEX.matches(base)) base else null
+            val base = encodedPath.substringAfterLast('/').substringBefore('.').lowercase()
+            return if (base.length == 64 && Hex.isHex64(base)) base else null
         }
     }
 }

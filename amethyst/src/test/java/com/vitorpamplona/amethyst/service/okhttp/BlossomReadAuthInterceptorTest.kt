@@ -66,6 +66,8 @@ class BlossomReadAuthInterceptorTest {
         assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/media/avatar.png"))
         assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/media/nostr.build_$sha.jpg"))
         assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/media/${sha}_thumb.jpg"))
+        // 65 hex chars: isHex64 checks only the first 64, so the length guard must reject it.
+        assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/media/${sha}a.png"))
         assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/"))
     }
 
