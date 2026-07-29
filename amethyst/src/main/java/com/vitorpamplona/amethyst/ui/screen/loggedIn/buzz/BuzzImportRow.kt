@@ -58,26 +58,21 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordAuthorFacepile
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordUnreadBadge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupCardWarmupSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.newestTimelineNote
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.recentAuthorHexes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.relayGroupChannelUnreadCountFlow
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-
-/** How many recent-poster avatars a channel row's facepile shows at most. */
-private const val FACEPILE_MAX = 4
 
 /** A first screen's worth of recent messages to prefetch per visible card, so previews fill in. */
 private const val CARD_WARMUP_LIMIT = 10
 
 /**
  * One channel row in a Buzz workspace's community view: a channel the user is a member of (via
- * kind-44100), rendered like the Concord server view — a colored monogram, the channel name with a
- * recent-posters facepile, a preview of the last message (author + snippet, or the Buzz activity
- * summary for system/diff/job rows), the relative time of that message, and an unread-count badge.
+ * kind-44100), rendered like the Concord server view — a colored monogram, the channel name with the
+ * last message's relative time, and below it a preview of the last message (author + snippet, or the
+ * Buzz activity summary for system/diff/job rows) with an unread-count badge.
  * Tapping the card opens the channel ([onOpen]); the row itself is a clean tap-to-open target — its
  * per-channel actions (Pin/Unpin, Add/Remove-from-Messages) live in the opened channel's/forum's
  * top-bar overflow, not on the row. A pinned channel still shows a pin marker here ([isStarred]).
@@ -85,10 +80,10 @@ private const val CARD_WARMUP_LIMIT = 10
  * Reused by the relay group-list screen where Buzz membership discovery is folded in.
  *
  * [showActivityPreview] gates the chat-activity machinery — the recent-message warmup, the
- * last-message preview, the recent-posters facepile and the unread badge. Enable it for **chat**
- * channels (whose content lives in [RelayGroupChannel.notes]); leave it off for **forum** channels,
- * whose posts are threads (a separate store), so the row doesn't open a kind-9 chat subscription that
- * would return nothing and drives a member-count summary instead.
+ * last-message preview and the unread badge. Enable it for **chat** channels (whose content lives in
+ * [RelayGroupChannel.notes]); leave it off for **forum** channels, whose posts are threads (a
+ * separate store), so the row doesn't open a kind-9 chat subscription that would return nothing and
+ * drives a member-count summary instead.
  */
 @Composable
 fun BuzzImportRow(
@@ -122,11 +117,10 @@ fun BuzzImportRow(
     val memberCount = channel.memberCount()
     val isPrivate = channel.isPrivate()
 
-    // The channel's own notes flow drives the preview/facepile so they update the moment a message
-    // folds in, independent of the metadata-scoped [observeChannel] above. Only collected for chat
-    // channels; a forum row shows a member-count summary with no facepile/unread.
+    // The channel's own notes flow drives the preview so it updates the moment a message folds in,
+    // independent of the metadata-scoped [observeChannel] above. Only collected for chat channels; a
+    // forum row shows a member-count summary with no unread.
     val lastNote: Note?
-    val faceAuthors: List<String>
     val unread: Int
     if (showActivityPreview) {
         val notesState by channel
@@ -134,14 +128,12 @@ fun BuzzImportRow(
             .notes.stateFlow
             .collectAsStateWithLifecycle()
         lastNote = remember(notesState) { channel.newestTimelineNote(account) }
-        faceAuthors = remember(notesState) { channel.recentAuthorHexes(account, FACEPILE_MAX) }
         unread =
             remember(groupId) { relayGroupChannelUnreadCountFlow(account, groupId) }
                 .collectAsStateWithLifecycle(0)
                 .value
     } else {
         lastNote = null
-        faceAuthors = emptyList()
         unread = 0
     }
     val hasUnread = unread > 0
@@ -154,7 +146,6 @@ fun BuzzImportRow(
                 isPrivate = isPrivate,
                 memberCount = memberCount,
                 lastNote = lastNote,
-                faceAuthors = faceAuthors,
                 unread = unread,
                 hasUnread = hasUnread,
                 isStarred = isStarred,
@@ -179,7 +170,6 @@ private fun BuzzImportRowContent(
     isPrivate: Boolean,
     memberCount: Int,
     lastNote: Note?,
-    faceAuthors: List<String>,
     unread: Int,
     hasUnread: Boolean,
     isStarred: Boolean,
@@ -192,8 +182,8 @@ private fun BuzzImportRowContent(
         BuzzImportAvatar(name = name, seed = seed)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            // Line 1: a lock (private), the channel name, a pin marker (starred), and the recent-
-            // posters facepile pushed to the right.
+            // Line 1: a lock (private), the channel name, a pin marker (starred), and the last-message
+            // time pushed to the right.
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (isPrivate) {
                     Icon(
@@ -219,13 +209,6 @@ private fun BuzzImportRowContent(
                         modifier = Modifier.size(14.dp),
                     )
                 }
-                ConcordAuthorFacepile(faceAuthors, accountViewModel)
-            }
-            // Line 2: the last-message preview, then the time + unread badge.
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f)) {
-                    BuzzChannelPreviewLine(lastNote, memberCount, accountViewModel)
-                }
                 lastNote?.createdAt()?.let { ts ->
                     Text(
                         timeAgo(ts, LocalContext.current, prefix = ""),
@@ -233,6 +216,12 @@ private fun BuzzImportRowContent(
                         color = if (hasUnread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
+                }
+            }
+            // Line 2: the last-message preview, then the unread-message badge.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f)) {
+                    BuzzChannelPreviewLine(lastNote, memberCount, accountViewModel)
                 }
                 ConcordUnreadBadge(unread)
             }
