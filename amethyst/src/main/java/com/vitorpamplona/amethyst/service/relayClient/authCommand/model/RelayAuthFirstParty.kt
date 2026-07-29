@@ -34,7 +34,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  *  - it is publishing its own event there ([pendingEvents] authored by it — e.g. delivering a DM to
  *    the recipient's inbox relay), or
  *  - the relay is one it configured itself ([myRelays] — its NIP-65 / DM / search / … lists, which
- *    is where its own inbox/outbox reads are routed anyway).
+ *    is where its own inbox/outbox reads are routed anyway), or
+ *  - the relay hosts a NIP-29 relay group the account explicitly joined ([myGroupRelays], from its
+ *    kind-10009 list). A private/closed group's content (kind-9 chat, kind-11 threads, …) is
+ *    `#h`-scoped and served only to authenticated members; that read never names the user, so it
+ *    can't qualify via [pendingEvents], and a group host relay is not one of the account's own
+ *    NIP-65/DM/… lists, so it can't qualify via [myRelays] either. Without this, a joined private
+ *    group is refused with `auth-required` and renders empty — the group's own metadata (39000) is
+ *    public and still loads, so the group appears but shows no messages.
  *
  * Crucially, an active subscription merely *naming* the account (a `#p` tag or `authors` entry) is
  * NOT a first-party reason: the app packs several accounts' pubkeys into one merged filter and fans
@@ -49,8 +56,10 @@ object RelayAuthFirstParty {
         relayUrl: NormalizedRelayUrl,
         pendingEvents: List<Event>,
         myRelays: Set<NormalizedRelayUrl>,
+        myGroupRelays: Set<NormalizedRelayUrl> = emptySet(),
     ): Boolean {
         if (pendingEvents.any { it.pubKey == me }) return true
-        return relayUrl in myRelays
+        if (relayUrl in myRelays) return true
+        return relayUrl in myGroupRelays
     }
 }

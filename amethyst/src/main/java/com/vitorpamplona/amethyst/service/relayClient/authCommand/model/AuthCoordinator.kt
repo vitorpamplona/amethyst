@@ -221,6 +221,13 @@ class AuthCoordinator(
                 relayUrl = relayUrl,
                 pendingEvents = client.activeOutboxEvents(relayUrl),
                 myRelays = account.trustedRelays.flow.value,
+                // A NIP-29 relay group the user explicitly joined (kind-10009) is a first-party reason
+                // to authenticate with its host relay: private/closed group content is `#h`-scoped and
+                // never names the user, so it fails the pubkey checks above — without this, a joined
+                // private group's messages are refused with `auth-required` and the group stays empty.
+                myGroupRelays =
+                    account.relayGroupList.liveRelayGroupIds.value
+                        .mapTo(mutableSetOf()) { it.relayUrl },
             )
 
     fun destroy() {
