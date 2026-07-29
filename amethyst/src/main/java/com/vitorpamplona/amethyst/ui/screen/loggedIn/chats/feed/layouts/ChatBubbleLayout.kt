@@ -56,6 +56,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -180,6 +181,12 @@ fun ChatBubbleLayout(
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var settleJob by remember { mutableStateOf<Job?>(null) }
     val swipeScope = rememberCoroutineScope()
+    // The caller passes a fresh onSwipeReply lambda every recomposition (it captures
+    // the note), so read it through updated-state and key pointerInput on the stable
+    // isLoggedInUser instead. Keying on the lambda would tear down and restart the
+    // detector on every recomposition — stranding an in-flight drag and churning the
+    // gesture coroutine on every idle row update.
+    val latestOnSwipeReply by rememberUpdatedState(onSwipeReply)
     val density = LocalDensity.current
     val swipeThresholdPx = remember(density) { with(density) { SwipeReplyThreshold.toPx() } }
     val swipeMaxPx = remember(density) { with(density) { SwipeReplyMaxDrag.toPx() } }
@@ -219,7 +226,7 @@ fun ChatBubbleLayout(
             if (onSwipeReply != null) {
                 Modifier
                     .graphicsLayer { translationX = dragOffset }
-                    .pointerInput(onSwipeReply) {
+                    .pointerInput(isLoggedInUser) {
                         // Drag toward the screen center only; a haptic tick marks the
                         // commit point, releasing past it fires the reply.
                         var crossedThreshold = false
@@ -247,8 +254,6 @@ fun ChatBubbleLayout(
 
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
-                            settleJob?.cancel()
-                            crossedThreshold = false
 
                             // Claim the pointer only once the motion is clearly more
                             // horizontal than vertical; a mostly-vertical drag leaves the
@@ -264,16 +269,30 @@ fun ChatBubbleLayout(
                                 }
 
                             if (drag != null) {
+                                // Take over from any in-flight settle only now that we've
+                                // committed to a horizontal drag. Cancelling earlier (on
+                                // the down) would strand dragOffset when the gesture turns
+                                // out to be a vertical scroll, since settleBack() below
+                                // only runs on this path.
+                                settleJob?.cancel()
+                                crossedThreshold = false
                                 applyDrag(overSlop.x)
-                                val completed =
-                                    horizontalDrag(drag.id) { change ->
-                                        applyDrag(change.positionChange().x)
-                                        change.consume()
+                                try {
+                                    val completed =
+                                        horizontalDrag(drag.id) { change ->
+                                            applyDrag(change.positionChange().x)
+                                            change.consume()
+                                        }
+                                    if (completed && abs(dragOffset) >= swipeThresholdPx) {
+                                        latestOnSwipeReply?.invoke()
                                     }
-                                if (completed && abs(dragOffset) >= swipeThresholdPx) {
-                                    onSwipeReply()
+                                } finally {
+                                    // Settle even if the drag coroutine is cancelled (e.g.
+                                    // the bubble leaves composition mid-swipe); settleBack
+                                    // launches on swipeScope, not this pointer coroutine,
+                                    // so it still runs while that scope is alive.
+                                    settleBack()
                                 }
-                                settleBack()
                             }
                         }
                     }
