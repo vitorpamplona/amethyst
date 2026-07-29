@@ -113,6 +113,22 @@ class SharedHighlightParserTest {
     }
 
     @Test
+    fun keepsBalancedTrailingParenInUrl() {
+        // A Wikipedia article whose slug ends in "(planet)" — the closing paren is part of
+        // the URL, not sentence punctuation.
+        val result =
+            SharedHighlightParser.parse("Mercury is small.\n\nhttps://en.wikipedia.org/wiki/Mercury_(planet)")
+        assertEquals("https://en.wikipedia.org/wiki/Mercury_(planet)", result.url)
+    }
+
+    @Test
+    fun stripsOnlyTheWrappingParenNotTheSlugParen() {
+        val result =
+            SharedHighlightParser.parse("(https://en.wikipedia.org/wiki/Mercury_(planet))")
+        assertEquals("https://en.wikipedia.org/wiki/Mercury_(planet)", result.url)
+    }
+
+    @Test
     fun urlInsideSelectionStaysWithQuoteWhenSourceAppended() {
         // The last URL is treated as the source; an earlier URL inside the passage is kept.
         val result =

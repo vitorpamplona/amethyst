@@ -44,7 +44,11 @@ object SharedHighlightParser {
     private val URL_REGEX = Regex("""https?://\S+""", RegexOption.IGNORE_CASE)
 
     // Trailing punctuation that is part of the surrounding sentence, not the URL token.
-    private const val URL_TRAILING_TRIM = ".,;:!?)]}>\"'»”’"
+    // Closing brackets are handled separately (balance-aware) so a Wikipedia URL such as
+    // `.../wiki/Mercury_(planet)` keeps its trailing `)`.
+    private const val URL_TRAILING_TRIM = ".,;:!?>\"'»”’"
+
+    private val OPEN_TO_CLOSE = mapOf('(' to ')', '[' to ']', '{' to '}')
 
     // Quote marks a browser may wrap around a shared selection (straight, curly, guillemets).
     private const val QUOTE_CHARS = "\"'“”‘’«»"
@@ -65,7 +69,7 @@ object SharedHighlightParser {
 
         if (match != null) {
             val rawToken = match.value
-            val rawUrl = rawToken.trimEnd(*URL_TRAILING_TRIM.toCharArray())
+            val rawUrl = trimUrlEnd(rawToken)
 
             val fragment = TextFragmentParser.parse(rawUrl)
             prefix = fragment?.prefix
@@ -87,6 +91,29 @@ object SharedHighlightParser {
             prefix = prefix,
             suffix = suffix,
         )
+    }
+
+    /**
+     * Strips trailing sentence punctuation the URL token accidentally swallowed. A closing
+     * bracket is only stripped when it is unbalanced within the token — so a wrapping
+     * `(https://example.com)` loses its `)`, but `.../Mercury_(planet)` keeps it.
+     */
+    private fun trimUrlEnd(token: String): String {
+        var end = token.length
+        while (end > 0) {
+            val c = token[end - 1]
+            when {
+                c in URL_TRAILING_TRIM -> end--
+                c == ')' || c == ']' || c == '}' -> {
+                    val open = OPEN_TO_CLOSE.entries.first { it.value == c }.key
+                    val opens = token.count { it == open }
+                    val closes = token.take(end).count { it == c }
+                    if (closes > opens) end-- else return token.substring(0, end)
+                }
+                else -> return token.substring(0, end)
+            }
+        }
+        return token.substring(0, end)
     }
 
     /** Trims surrounding whitespace and matching quote marks; returns null when nothing is left. */
