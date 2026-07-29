@@ -2570,6 +2570,7 @@
     <string name="relay_group_create_title">Create a group</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="buzz_channel_create_title">New channel</string>
+    <string name="buzz_forum_create_title">New forum</string>
     <string name="buzz_channel_flag_private">Private channel</string>
     <string name="buzz_channel_flag_private_desc">Hidden from the channel list and invite-only. Off means anyone on this relay can find and join it.</string>
     <string name="buzz_channel_flag_forum">Forum channel</string>

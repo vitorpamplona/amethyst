@@ -338,13 +338,17 @@ fun RelayGroupChannelListScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }, shape = CircleShape) {
-                Icon(
-                    symbol = MaterialSymbols.Add,
-                    contentDescription =
-                        stringRes(if (isBuzz) R.string.buzz_channel_create_title else R.string.relay_group_create_title),
-                    modifier = Modifier.size(24.dp),
-                )
+            // A Buzz community creates channels/forums from the per-section "+" in their labels (like
+            // Direct Messages), so no FAB there. A vanilla NIP-29 relay is a flat directory with no
+            // sections, so it keeps the FAB to create a group.
+            if (!isBuzz) {
+                FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }, shape = CircleShape) {
+                    Icon(
+                        symbol = MaterialSymbols.Add,
+                        contentDescription = stringRes(R.string.relay_group_create_title),
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
             }
         },
     ) { padding ->
@@ -378,9 +382,11 @@ fun RelayGroupChannelListScreen(
             // overlays content by design, so clearing it is the list's job. As contentPadding (not a
             // modifier) so rows scroll *through* that strip and only come to rest clear of it; the
             // modifier form would shrink the viewport and leave the FAB floating over dead space.
+            // Only the vanilla NIP-29 path has a FAB now; a Buzz community creates from its section
+            // headers, so it needs no bottom clearance.
             LazyColumn(
                 modifier = Modifier.padding(padding),
-                contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+                contentPadding = PaddingValues(bottom = if (isBuzz) 0.dp else FAB_CLEARANCE),
             ) {
                 if (showTorHint) {
                     item(key = "tor-hint") {
@@ -394,16 +400,15 @@ fun RelayGroupChannelListScreen(
                 }
 
                 if (isBuzz) {
+                    // While the membership fetch is still running and nothing has loaded, show a
+                    // "Loading…" line. The old "you're not a member — accept the invite in the browser"
+                    // empty text is gone: the section labels below now each carry a "+" to create a
+                    // channel/forum, so an empty community is a starting point, not a dead end.
                     val noChannelsYet = buzzChatChannels.isEmpty() && buzzForumChannels.isEmpty()
-                    if (noChannelsYet) {
-                        item(key = "buzz-no-channels") {
+                    if (noChannelsYet && buzzStatus is BuzzRelayImportViewModel.Status.Loading) {
+                        item(key = "buzz-loading") {
                             Text(
-                                text =
-                                    if (buzzStatus is BuzzRelayImportViewModel.Status.Loading) {
-                                        stringRes(R.string.buzz_import_loading)
-                                    } else {
-                                        stringRes(R.string.buzz_import_empty_body)
-                                    },
+                                text = stringRes(R.string.buzz_import_loading),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.fillMaxWidth().padding(24.dp),
@@ -411,17 +416,24 @@ fun RelayGroupChannelListScreen(
                         }
                     }
 
-                    // -- CHANNELS -- (Add-all now lives in the community's top-bar overflow menu)
-                    if (buzzChatChannels.isNotEmpty()) {
+                    // -- CHANNELS -- The label carries a "+" to create a channel (the community's FAB
+                    // moved here, like Direct Messages). Add-all lives in the top-bar overflow menu.
+                    // The header always shows so the "+" is available even before any channel loads;
+                    // the collapse toggle is offered only when there's something to collapse.
+                    run {
                         val channelsCollapsed = "channels" in collapsedSections
                         item(key = "sec-channels") {
                             RelayGroupSectionHeader(
                                 title = stringRes(R.string.relay_group_section_channels),
                                 collapsed = channelsCollapsed,
-                                onToggle = { toggleSection("channels") },
-                            )
+                                onToggle = if (buzzChatChannels.isNotEmpty()) ({ toggleSection("channels") }) else null,
+                            ) {
+                                SectionAddButton(stringRes(R.string.buzz_channel_create_title)) {
+                                    nav.nav(Route.RelayGroupCreate(relay.url))
+                                }
+                            }
                         }
-                        if (!channelsCollapsed) {
+                        if (buzzChatChannels.isNotEmpty() && !channelsCollapsed) {
                             itemsIndexed(buzzChatChannels, key = { _, it -> "chat-${it.id}" }) { index, groupId ->
                                 RowHairline(index)
                                 BuzzImportRow(
@@ -438,17 +450,22 @@ fun RelayGroupChannelListScreen(
                         }
                     }
 
-                    // -- FORUMS --
-                    if (buzzForumChannels.isNotEmpty()) {
+                    // -- FORUMS -- Same treatment: an always-visible label with a "+" that starts the
+                    // create flow on a forum channel (threaded posts) instead of a chat one.
+                    run {
                         val forumsCollapsed = "forums" in collapsedSections
                         item(key = "sec-forums") {
                             RelayGroupSectionHeader(
                                 title = stringRes(R.string.relay_group_section_forums),
                                 collapsed = forumsCollapsed,
-                                onToggle = { toggleSection("forums") },
-                            )
+                                onToggle = if (buzzForumChannels.isNotEmpty()) ({ toggleSection("forums") }) else null,
+                            ) {
+                                SectionAddButton(stringRes(R.string.buzz_forum_create_title)) {
+                                    nav.nav(Route.RelayGroupCreate(relay.url, isForum = true))
+                                }
+                            }
                         }
-                        if (!forumsCollapsed) {
+                        if (buzzForumChannels.isNotEmpty() && !forumsCollapsed) {
                             itemsIndexed(buzzForumChannels, key = { _, it -> "forum-${it.id}" }) { index, groupId ->
                                 RowHairline(index)
                                 BuzzImportRow(
@@ -649,6 +666,25 @@ private fun RelayGroupSectionHeader(
             modifier = Modifier.weight(1f),
         )
         trailing?.invoke()
+    }
+}
+
+/**
+ * The trailing "+" for a section label (Channels / Forums), matching the Direct Messages header's
+ * New-message icon: a primary-tinted Add glyph that creates a new item of that section's type.
+ */
+@Composable
+private fun SectionAddButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            symbol = MaterialSymbols.Add,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp),
+        )
     }
 }
 

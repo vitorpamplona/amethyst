@@ -741,6 +741,9 @@ sealed class Route {
 
     @Serializable data class RelayGroupCreate(
         val relayUrl: String,
+        // Buzz only: start the create flow on a `forum` channel (threaded posts) instead of a
+        // `stream` (chat) one — set by the community screen's per-section "+" buttons.
+        val isForum: Boolean = false,
     ) : Route()
 
     @Serializable data class RelayGroupEdit(

@@ -97,10 +97,15 @@ fun RelayGroupCreateScreen(
     relayUrl: String,
     accountViewModel: AccountViewModel,
     nav: INav,
+    // Buzz only: pre-select the `forum` channel type (the Forums section's "+" routes here with true).
+    isForum: Boolean = false,
 ) {
     val relay = remember(relayUrl) { RelayUrlNormalizer.normalizeOrNull(relayUrl) } ?: return
     val viewModel: RelayGroupMetadataViewModel = viewModel(key = "RelayGroupCreate:$relayUrl")
-    LaunchedEffect(relay) { viewModel.initCreate(accountViewModel, relay) }
+    LaunchedEffect(relay) {
+        viewModel.initCreate(accountViewModel, relay)
+        if (isForum) viewModel.isForum = true
+    }
 
     // A group only works if the relay actually runs NIP-29 (otherwise it stores our 9007/9002 as
     // ordinary events, never emits metadata/roster, and the "group" is a dead hex id). Gate creation
