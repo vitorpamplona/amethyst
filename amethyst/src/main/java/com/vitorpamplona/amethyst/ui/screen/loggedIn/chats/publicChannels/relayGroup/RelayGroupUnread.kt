@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
@@ -111,29 +110,6 @@ fun RelayGroupChannel.newestTimelineNote(account: Account): Note? =
         .filter { _, note -> isRelayGroupTimelineMessage(note, account) }
         .sortedByDefaultFeedOrder()
         .firstOrNull()
-
-/**
- * The pubkeys of the [limit] most-recent distinct posters in this group, newest first — the facepile
- * shown on a channel row. One O(notes) pass keeps each author's latest post time, so a chatty author
- * counts once (at their newest message) rather than crowding out quieter voices.
- */
-fun RelayGroupChannel.recentAuthorHexes(
-    account: Account,
-    limit: Int,
-): List<HexKey> {
-    val latestByAuthor = HashMap<HexKey, Long>()
-    for (note in notes.values()) {
-        if (!isRelayGroupTimelineMessage(note, account)) continue
-        val author = note.author?.pubkeyHex ?: continue
-        val at = note.createdAt() ?: continue
-        val prev = latestByAuthor[author]
-        if (prev == null || at > prev) latestByAuthor[author] = at
-    }
-    return latestByAuthor.entries
-        .sortedByDescending { it.value }
-        .take(limit)
-        .map { it.key }
-}
 
 /** Whether this group's message store holds any acceptable timeline message created after [sinceSecs]. */
 private fun RelayGroupChannel.hasChatNewerThan(
