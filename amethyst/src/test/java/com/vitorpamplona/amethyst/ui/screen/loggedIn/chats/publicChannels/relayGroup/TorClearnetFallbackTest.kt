@@ -20,39 +20,39 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
+import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
+import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
+import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.torDefaultPreset
+import com.vitorpamplona.amethyst.commons.tor.torFullyPrivate
+import com.vitorpamplona.amethyst.commons.tor.torSmallPayloadsPreset
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * The "Can't reach this relay over Tor" banner used to be driven by a bare 6s timer, so it appeared on
- * a relay that was connected and delivering. These pin the liveness gates that replaced it.
+ * a relay that was connected and delivering. These pin the gates that replaced it.
  */
 class TorClearnetFallbackTest {
     private fun offer(
         usesTor: Boolean = true,
         torIsUp: Boolean = true,
-        isConnected: Boolean = false,
-        hasLoadedContent: Boolean = false,
-        graceElapsed: Boolean = true,
-    ) = shouldOfferTorClearnetFallback(usesTor, torIsUp, isConnected, hasLoadedContent, graceElapsed)
+        trustingMovesToClearnet: Boolean = true,
+        disconnectedLongEnough: Boolean = true,
+    ) = shouldOfferTorClearnetFallback(usesTor, torIsUp, trustingMovesToClearnet, disconnectedLongEnough)
 
     @Test
-    fun offersWhenTorRoutedRelayNeverAnswers() {
+    fun offersWhenTorRoutedRelayStaysSilent() {
         assertTrue(offer())
     }
 
     @Test
-    fun silentWhileTheRelayIsConnected() {
+    fun silentWhileTheRelayIsReachable() {
         // The regression: the socket is open and the relay is replying, so there is nothing to escape.
-        assertFalse(offer(isConnected = true))
-        assertFalse(offer(isConnected = true, hasLoadedContent = true))
-    }
-
-    @Test
-    fun silentWhenContentFromTheRelayIsOnScreen() {
-        // A momentary disconnect over a loaded channel list is a reconnect, not an unreachable relay.
-        assertFalse(offer(hasLoadedContent = true))
+        // The screen models that as the debounce never completing.
+        assertFalse(offer(disconnectedLongEnough = false))
     }
 
     @Test
@@ -69,7 +69,41 @@ class TorClearnetFallbackTest {
     }
 
     @Test
-    fun silentDuringTheStartupGrace() {
-        assertFalse(offer(graceElapsed = false))
+    fun silentWhenTrustingWouldNotChangeRouting() {
+        assertFalse(offer(trustingMovesToClearnet = false))
+    }
+
+    // --- the routing inputs the screen feeds the predicate, read off the real presets ---
+
+    private val relay = NormalizedRelayUrl("wss://buzz.example.com/")
+
+    private fun evaluation(preset: TorSettings) =
+        TorRelayEvaluation(
+            torSettings =
+                TorRelaySettings(
+                    torType = preset.torType,
+                    onionRelaysViaTor = preset.onionRelaysViaTor,
+                    dmRelaysViaTor = preset.dmRelaysViaTor,
+                    newRelaysViaTor = preset.newRelaysViaTor,
+                    trustedRelaysViaTor = preset.trustedRelaysViaTor,
+                    moneyOperationsViaTor = preset.moneyOperationsViaTor,
+                ),
+            trustedRelayList = emptySet(),
+            dmRelayList = emptySet(),
+        )
+
+    @Test
+    fun defaultPresetRoutesANewRelayOverTorAndTrustingEscapesIt() {
+        val eval = evaluation(torDefaultPreset)
+        assertTrue(eval.useTor(relay))
+        assertTrue(!eval.torSettings.trustedRelaysViaTor)
+    }
+
+    @Test
+    fun privacyPresetsKeepTrustedRelaysOnTorSoTheOfferIsWithheld() {
+        // Both keep trusted relays on Tor: adding this relay to the Trusted list would move nothing,
+        // so the banner must not offer it (the button would be inert).
+        assertTrue(evaluation(torSmallPayloadsPreset).torSettings.trustedRelaysViaTor)
+        assertTrue(evaluation(torFullyPrivate).torSettings.trustedRelaysViaTor)
     }
 }

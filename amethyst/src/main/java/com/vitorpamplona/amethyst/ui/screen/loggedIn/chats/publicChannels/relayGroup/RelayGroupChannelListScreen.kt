@@ -114,34 +114,36 @@ import kotlinx.coroutines.launch
 /** A first screen's worth of recent messages to prefetch per visible group card, ahead of a tap. */
 private const val CHANNEL_LIST_WARMUP_LIMIT = 10
 
-/** Grace period before offering the Tor→clearnet escape hatch, so a slow-but-working relay isn't nagged. */
+/**
+ * How long this relay's socket must stay down before the Tor→clearnet escape hatch is offered, so a
+ * slow first connect (or a reconnect) isn't mistaken for a relay that blocks Tor exits.
+ */
 private const val TOR_CLEARNET_HINT_DELAY_MS = 6_000L
 
 /**
  * Whether to offer the Tor→clearnet escape hatch for this relay ([TorClearnetBanner]).
  *
- * All five conditions are required, and the first four are the ones that keep the offer honest —
- * the banner accuses *this relay* of blocking Tor exits, so every other explanation is ruled out first:
+ * The banner accuses *this relay* of blocking Tor exits and offers a privacy downgrade to work
+ * around it, so it has to rule out every other explanation — and be able to deliver:
  *
  * - [usesTor]: this relay is *actually* routed over Tor right now (`TorRelayEvaluation.useTor`, the
  *   same predicate the pool dials with). Tor being enabled globally says nothing about one relay —
  *   onion, localhost and the per-role presets (trusted / DM / new) each decide independently.
  * - [torIsUp]: the SOCKS proxy is Active. While Tor is still bootstrapping *nothing* Tor-routed
  *   connects, which is Tor's problem (and its own dialog's), not this relay's.
- * - [isConnected]: the socket is open. A relay that answers is reachable *by definition*, so no
- *   clearnet offer, no matter how long the screen has been open.
- * - [hasLoadedContent]: something from this relay is on screen. Proof the socket answered at least
- *   once, so a momentary reconnect doesn't flash "can't reach this relay" over a live channel list.
- * - [graceElapsed]: the startup grace period is over, so a slow-but-working relay isn't nagged
- *   during its first connect.
+ * - [trustingMovesToClearnet]: the action on offer — adding the relay to the kind-10089 Trusted list —
+ *   would actually change its routing. Under a preset that keeps trusted relays on Tor it wouldn't,
+ *   and the button would be inert.
+ * - [disconnectedLongEnough]: the socket has been continuously down for [TOR_CLEARNET_HINT_DELAY_MS].
+ *   A relay that answers is reachable by definition, and one that merely reconnects is not a relay
+ *   that blocks Tor — only a sustained silence is.
  */
 internal fun shouldOfferTorClearnetFallback(
     usesTor: Boolean,
     torIsUp: Boolean,
-    isConnected: Boolean,
-    hasLoadedContent: Boolean,
-    graceElapsed: Boolean,
-): Boolean = usesTor && torIsUp && graceElapsed && !isConnected && !hasLoadedContent
+    trustingMovesToClearnet: Boolean,
+    disconnectedLongEnough: Boolean,
+): Boolean = usesTor && torIsUp && trustingMovesToClearnet && disconnectedLongEnough
 
 /**
  * Bottom room the list leaves for the floating action button: a 56dp FAB + the Scaffold's 16dp margin
@@ -351,6 +353,11 @@ fun RelayGroupChannelListScreen(
         .collectAsStateWithLifecycle()
     val torIsUp = torStatus is TorServiceStatus.Active
 
+    // The offer adds the relay to the kind-10089 Trusted list, which only moves it to clearnet while
+    // trusted relays are *off* Tor. Under the Small-Payloads / Full-Privacy presets they are on Tor,
+    // so the button would add an entry and change no routing at all — don't offer what can't help.
+    val trustingMovesToClearnet by remember { derivedStateOf { !torEvaluation.value.torSettings.trustedRelaysViaTor } }
+
     // Global flow (any relay's connect/disconnect re-emits), so derive this relay's boolean.
     val connectedRelays =
         accountViewModel.account.client
@@ -358,16 +365,21 @@ fun RelayGroupChannelListScreen(
             .collectAsStateWithLifecycle()
     val isConnected by remember(relay) { derivedStateOf { relay in connectedRelays.value } }
 
-    var graceElapsed by remember(relay) { mutableStateOf(false) }
-    LaunchedEffect(relay) {
-        delay(TOR_CLEARNET_HINT_DELAY_MS)
-        graceElapsed = true
+    // Debounced on the *connection* rather than armed once per screen: the countdown restarts every
+    // time the socket drops and clears the moment it comes back, so a reconnect can't flash the
+    // banner, and circuits that die mid-session still surface it. Keying the wait on cached content
+    // instead would have hidden the offer exactly when a working relay went dark with a full screen.
+    var disconnectedLongEnough by remember(relay) { mutableStateOf(false) }
+    LaunchedEffect(relay, isConnected) {
+        if (isConnected) {
+            disconnectedLongEnough = false
+        } else {
+            delay(TOR_CLEARNET_HINT_DELAY_MS)
+            disconnectedLongEnough = true
+        }
     }
     val scope = rememberCoroutineScope()
-    // Anything on screen is proof the socket answered, even if it has since dropped — the offer is
-    // for a relay we cannot reach, not for one that is merely reconnecting.
-    val hasLoadedContent = allChannels.isNotEmpty() || buzzChannels.isNotEmpty() || dmRows.isNotEmpty()
-    val showTorHint = shouldOfferTorClearnetFallback(usesTor, torIsUp, isConnected, hasLoadedContent, graceElapsed)
+    val showTorHint = shouldOfferTorClearnetFallback(usesTor, torIsUp, trustingMovesToClearnet, disconnectedLongEnough)
 
     // A pinned relay works both as a pushed detail (from the drawer or another screen) and as a
     // bottom-nav tab. Read once here (it is @Composable): the back arrow shows only when pushed;
