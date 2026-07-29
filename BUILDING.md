@@ -529,8 +529,31 @@ their token type and scope:
 
 | Secret | Purpose | Scope |
 |---|---|---|
-| `HOMEBREW_TOKEN` | Bump Homebrew cask | Fine-grained PAT — `Homebrew/homebrew-cask` only — `Contents: write` + `Pull requests: write` — 90d expiry |
+| `HOMEBREW_TOKEN` | Bump Homebrew cask | **Classic** PAT — `repo` scope — 90d expiry (dedicated bot account strongly preferred; see below) |
 | `WINGET_TOKEN` | Submit Winget manifests | Classic PAT — `public_repo` — 90d expiry (dedicated bot account preferred; `vedantmgoyal9/winget-releaser` does not support fine-grained) |
+
+**Why `HOMEBREW_TOKEN` must be a classic PAT, not fine-grained.** `brew
+bump-cask-pr` forks `Homebrew/homebrew-cask` **into the token owner's account**
+(`POST /repos/Homebrew/homebrew-cask/forks`), pushes a branch to that fork, and
+opens the PR upstream. Two consequences:
+
+- A fine-grained PAT cannot express this. Its "Repository access" selector only
+  lists repos owned by the resource owner, so `Homebrew/homebrew-cask` can never
+  be selected — and Homebrew's API layer authorises against classic OAuth scopes
+  (`x-oauth-scopes`), which fine-grained tokens do not emit.
+- Homebrew declares the requirement in source as
+  `CREATE_ISSUE_FORK_OR_PR_SCOPES = ["repo"]` (`utils/github.rb`), so the scope
+  is `repo`.
+
+Create it at
+<https://github.com/settings/tokens/new?scopes=repo&description=Homebrew%20cask%20bump>.
+
+**Use a dedicated bot account.** The `repo` scope grants write to *every*
+repository the account can reach — including `vitorpamplona/amethyst` itself. A
+bot account whose only asset is a fork of `homebrew-cask` bounds the blast
+radius of a leaked CI secret to that fork. (`WINGET_TOKEN` has the same
+property, which is why a bot account is already recommended for it.) The bot
+must have forked `Homebrew/homebrew-cask`, or be able to.
 
 Rotate both on a 90-day cadence. Owner: assigned via `RELEASE_OPS.md`
 or equivalent issue tracker. On rotation, paste the new token and run
