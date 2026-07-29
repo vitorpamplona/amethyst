@@ -404,7 +404,7 @@ provided automatically; everything else you set yourself.)
 | `MAC_NOTARY_PASSWORD` | **App-specific** password for that Apple ID (not the login password) | Same |
 | `MAC_NOTARY_TEAM_ID` | 10-char Apple Developer **Team ID** | Same |
 | ~~`HOMEBREW_TOKEN`~~ | *Not used.* The cask bump runs on a maintainer's machine — see § Homebrew cask | — |
-| `WINGET_TOKEN` | PAT for `microsoft/winget-pkgs` | Desktop winget bump (stable tags) |
+| ~~`WINGET_TOKEN`~~ | *Not used.* The winget bump runs on a maintainer's machine — see § Winget | — |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Crowdin API creds | Translation sync (separate workflow, not the release) |
 
 Note the **three distinct signing identities** people often conflate:
@@ -521,19 +521,15 @@ reads an optional per-release changelog from
 > below are the work that activates them; until then treat the desktop app as
 > GitHub-Releases-only on macOS and Windows.
 
-### Secrets to provision in GitHub repo settings
+### Package-manager credentials (and why there are none)
 
 The full secret inventory is in [§ Secrets the CI needs](#secrets-the-ci-needs).
-The two that need the most setup care are the package-manager PATs, because of
-their token type and scope:
+Neither package-manager channel adds anything to it:
 
-| Secret | Purpose | Scope |
-|---|---|---|
-| `WINGET_TOKEN` | Submit Winget manifests | Classic PAT — `public_repo` — 90d expiry (dedicated bot account preferred; `vedantmgoyal9/winget-releaser` does not support fine-grained) |
-
-**There is deliberately no `HOMEBREW_TOKEN`.** The cask bump is the one release
-step that runs on a maintainer's machine rather than in CI. The reasoning is
-worth keeping, because the same trade-off applies to `WINGET_TOKEN`:
+**There are deliberately no package-manager PATs in CI.** Both the Homebrew
+cask and the Winget manifest bumps run on a maintainer's machine. The reasoning
+is worth keeping, because it is the reason this repo has no third secret to
+rotate:
 
 `brew bump-cask-pr` forks `Homebrew/homebrew-cask` **into the token owner's
 account** (`POST /repos/Homebrew/homebrew-cask/forks`), pushes a branch to that
@@ -575,8 +571,29 @@ Create one at
 Prefer a dedicated bot account whose only asset is a fork of `homebrew-cask`, so
 a leak reaches nothing else.
 
-Rotate `WINGET_TOKEN` on a 90-day cadence. Owner: assigned via `RELEASE_OPS.md`
-or equivalent issue tracker.
+### Winget
+
+Same split, and it needs **no token at all**. `scripts/bump-winget.sh` drives
+`gh`, which a maintainer is already authenticated with, and it does not need
+`wingetcreate` (Windows-only) because winget manifests are plain YAML — so it
+runs fine from macOS or Linux:
+
+```bash
+scripts/bump-winget.sh v1.13.2
+```
+
+CI (`bump-winget.yml`, `GITHUB_TOKEN` only) does the bookkeeping: downloads the
+MSI, computes the sha256, reads the `ProductCode` out of the MSI Property table
+with `msitools`, and opens an in-repo PR syncing
+`desktopApp/packaging/winget/*.yaml`. The script re-verifies the sha256 against
+the live asset, then forks `microsoft/winget-pkgs`, commits the three manifests
+to `manifests/v/VitorPamplona/Amethyst/<version>/`, and opens the PR.
+
+The previous design stored a classic `public_repo` PAT as `WINGET_TOKEN` and
+passed it to the third-party `vedantmgoyal9/winget-releaser` action — a token
+with write access to every public repo the account owns, handed to code we do
+not control, in a place any push-access collaborator could read it from. None of
+that is needed.
 
 ### Homebrew cask (one-time initial PR)
 
