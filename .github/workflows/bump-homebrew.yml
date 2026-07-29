@@ -1,75 +1,181 @@
-name: Bump Homebrew Cask
+name: Sync Homebrew Cask Reference
 
-# Fires when a GH Release is published (not draft, not prerelease).
-# `release.types: [released]` event fires only for stable releases — still
-# double-checked by .github/actions/assert-stable-release for defense-in-depth.
+# Sibling of bump-homebrew-formula.yml (amy) and bump-homebrew-geode-formula.yml
+# (geode). Same mechanism, third artifact:
+#   - this workflow -> Cask `amethyst-nostr` (the desktop GUI app / DMG)
+#
+# What it does: after a stable release, download the published macOS DMG, assert
+# it is notarized + stapled, compute its sha256, and open a PR syncing
+# `desktopApp/packaging/homebrew/amethyst-nostr.rb` to that release.
+#
+# What it does NOT do: open a PR against Homebrew/homebrew-cask. That step is
+# deliberately MANUAL and runs on a maintainer's machine —
+# `scripts/bump-homebrew-cask.sh`. Reason: `brew bump-cask-pr` forks
+# homebrew-cask into the token owner's account, which requires a CLASSIC PAT
+# with the `repo` scope; that scope grants write to every repository the account
+# can reach, and stored as a CI secret it would be usable by anyone with push
+# access to this repo. Keeping it in a maintainer's shell instead of a CI secret
+# removes that blast radius entirely, at the cost of one command per release.
+# See BUILDING.md § Homebrew cask.
+#
+# Consequence: this workflow needs NO external token. GITHUB_TOKEN is enough,
+# exactly like the two formula workflows.
+#
+# Trigger: after "Create Release Assets" succeeds for a tag push. NOT
+# `release: types: [released]` — that event never fires, because the release is
+# created by create-release.yml under GITHUB_TOKEN and GitHub suppresses
+# workflow-triggering events for it. See the note in bump-homebrew-formula.yml.
 on:
-  release:
-    types: [released]
+  workflow_run:
+    workflows: ["Create Release Assets"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to bump (for manual recovery)'
+        description: 'Release tag to sync (for manual recovery)'
         required: true
         type: string
 
 permissions:
-  contents: read
-  # The "Report failure" step below opens a [release-ops] issue via
-  # github.rest.issues.create; that needs issues:write. Without it the failure
-  # reporter itself 403s and no alert is ever filed.
+  contents: write
+  pull-requests: write
+  # The "Report failure" step opens a [release-ops] issue via
+  # github.rest.issues.create, which needs issues:write.
   issues: write
 
 concurrency:
-  # Serialize bumps per tag; do not cancel in-progress bumps.
-  group: bump-homebrew-${{ github.event.release.tag_name || inputs.tag }}
+  # Serialize per tag; do not cancel in-progress runs.
+  group: bump-homebrew-${{ github.event.workflow_run.head_branch || inputs.tag }}
   cancel-in-progress: false
 
 jobs:
-  bump:
-    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
-    runs-on: ubuntu-latest   # brew runs on Linux — saves macOS runner quota
-    timeout-minutes: 30
+  sync-cask:
+    # See bump-homebrew-formula.yml for why these three conditions: successful,
+    # tag-push (not a dry-run dispatch), v-prefixed. Format enforced downstream.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    # macOS runner: `xcrun stapler` is the only way to verify the notarization
+    # ticket, and shipping an unnotarized DMG to the cask is the failure mode
+    # this whole channel is most exposed to.
+    runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Resolve release
+        id: rel
+        uses: ./.github/actions/resolve-release
+        with:
+          tag: ${{ github.event.workflow_run.head_branch || inputs.tag }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Re-assert stable release
         uses: ./.github/actions/assert-stable-release
         with:
-          tag: ${{ github.event.release.tag_name || inputs.tag }}
-          is_prerelease: ${{ github.event.release.prerelease || 'false' }}
-          is_draft: ${{ github.event.release.draft || 'false' }}
+          tag: ${{ steps.rel.outputs.tag }}
+          is_prerelease: ${{ steps.rel.outputs.is_prerelease }}
+          is_draft: ${{ steps.rel.outputs.is_draft }}
 
-      - name: Bump cask (push-or-update PR)
-        uses: macauley/action-homebrew-bump-cask@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+      - name: Download DMG, verify notarization, compute sha256
+        id: asset
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.rel.outputs.tag }}"
+          VER="${{ steps.rel.outputs.ver }}"
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/amethyst-desktop-${VER}-macos-arm64.dmg"
+          echo "Fetching $URL"
+          # workflow_run fires only after every upload leg has finished, so the
+          # asset should already be there. Retry anyway for release-CDN
+          # propagation (mirrors the repo's push/pull retry ethos).
+          ok=0
+          for i in 1 2 3 4 5; do
+            if curl -fsSL -o amethyst.dmg "$URL"; then ok=1; break; fi
+            wait=$(( 2 ** i ))
+            echo "attempt $i failed; retrying in ${wait}s"
+            sleep "$wait"
+          done
+          [[ "$ok" == 1 ]] || { echo "::error::could not download $URL"; exit 1; }
+          test -s amethyst.dmg
+
+          # A cask must point at a notarized+stapled DMG or every user hits a
+          # Gatekeeper block. Refuse to advertise one that is not.
+          if ! xcrun stapler validate amethyst.dmg; then
+            echo "::error::${TAG} DMG has no stapled notarization ticket -- refusing to sync the cask. Check the notarizeReleaseDmg step in create-release.yml."
+            exit 1
+          fi
+
+          SHA=$(shasum -a 256 amethyst.dmg | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "amethyst-desktop-${VER}-macos-arm64.dmg -> $SHA"
+
+      - name: Update reference cask
+        run: |
+          set -euo pipefail
+          CASK=desktopApp/packaging/homebrew/amethyst-nostr.rb
+          VER="${{ steps.rel.outputs.ver }}"
+          SHA="${{ steps.asset.outputs.sha256 }}"
+          # Anchor on the 2-space indent so the header comment's example lines
+          # are never touched.
+          sed -i '' -E "s|^(  version ).*|\1\"${VER}\"|" "$CASK"
+          sed -i '' -E "s|^(  sha256 ).*|\1\"${SHA}\"|" "$CASK"
+          echo "----- $CASK -----"
+          grep -E "^  (version|sha256) " "$CASK"
+
+      - name: Open or update the cask-sync PR
+        # peter-evans/create-pull-request is MIT-licensed CI-only tooling (not
+        # linked into any shipped artifact). It no-ops when there is no diff.
+        uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.HOMEBREW_TOKEN }}
-          tap: homebrew/cask
-          cask: amethyst-nostr
-          tag: ${{ github.event.release.tag_name || inputs.tag }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: chore/bump-amethyst-cask-${{ steps.rel.outputs.tag }}
+          add-paths: desktopApp/packaging/homebrew/amethyst-nostr.rb
+          commit-message: 'chore: sync amethyst-nostr cask to ${{ steps.rel.outputs.tag }}'
+          title: 'chore: sync amethyst-nostr cask to ${{ steps.rel.outputs.tag }}'
+          body: |
+            Auto-synced `desktopApp/packaging/homebrew/amethyst-nostr.rb` to the
+            `${{ steps.rel.outputs.tag }}` release:
+
+            - `version` -> `${{ steps.rel.outputs.ver }}`
+            - `sha256`  -> `${{ steps.asset.outputs.sha256 }}`
+
+            The DMG was verified notarized + stapled before this PR was opened.
+
+            **Merge this, then push it upstream from a maintainer machine:**
+
+            ```bash
+            scripts/bump-homebrew-cask.sh ${{ steps.rel.outputs.tag }}
+            ```
+
+            That step is manual on purpose — it needs a classic PAT with the
+            `repo` scope, which is deliberately NOT stored as a CI secret. See
+            BUILDING.md § Homebrew cask.
 
       - name: Report failure
         if: failure()
         uses: actions/github-script@v9
         with:
           script: |
-            const tag = context.payload.release?.tag_name || context.payload.inputs?.tag || 'unknown';
+            const tag = context.payload.workflow_run?.head_branch || context.payload.inputs?.tag || 'unknown';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `[release-ops] bump-homebrew failed for ${tag}`,
+              title: `[release-ops] sync-homebrew-cask failed for ${tag}`,
               body: [
-                `Homebrew cask bump failed for release \`${tag}\`.`,
+                `amethyst-nostr cask sync failed for release \`${tag}\`.`,
                 ``,
                 `- Run: ${runUrl}`,
                 `- Channel: Homebrew Cask (\`amethyst-nostr\`)`,
                 ``,
                 `Recovery options:`,
-                `1. Re-run the workflow once underlying issue is fixed`,
-                `2. Manually run \`brew bump-cask-pr amethyst-nostr --version ${tag.replace(/^v/, '')}\``,
-                `3. File PR directly against Homebrew/homebrew-cask`
+                `1. Re-run the workflow once the underlying issue is fixed`,
+                `2. Check the DMG is notarized: \`xcrun stapler validate\` on the release asset`,
+                `3. Manually update \`desktopApp/packaging/homebrew/amethyst-nostr.rb\` (version + sha256)`
               ].join('\n'),
               labels: ['release-ops', 'bug']
             });

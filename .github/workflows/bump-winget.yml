@@ -1,72 +1,214 @@
-name: Bump Winget Manifest
+name: Sync Winget Manifest Reference
 
+# Fourth sibling of the three Homebrew sync workflows, same shape:
+#   bump-homebrew-formula.yml       -> Formula `amy`
+#   bump-homebrew-geode-formula.yml -> Formula `geode`
+#   bump-homebrew.yml               -> Cask    `amethyst-nostr`
+#   this workflow                   -> Winget  `VitorPamplona.Amethyst`
+#
+# What it does: after a stable release, download the published Windows MSI,
+# compute its sha256, read its ProductCode, and open a PR syncing
+# desktopApp/packaging/winget/*.yaml to that release.
+#
+# What it does NOT do: open a PR against microsoft/winget-pkgs. That step is
+# deliberately MANUAL and runs on a maintainer's machine —
+# `scripts/bump-winget.sh`. Reason: submitting requires push access to a fork of
+# winget-pkgs. The previous design stored a classic `public_repo` PAT as
+# WINGET_TOKEN and handed it to a third-party action; that scope grants write to
+# every public repo the account can reach, and as an Actions secret it was
+# usable by anyone with push access to this repo. The local script uses the
+# maintainer's existing `gh` auth instead, so no PAT is created at all.
+# See BUILDING.md § Winget.
+#
+# Consequence: this workflow needs NO external token and no third-party action.
+#
+# Trigger: after "Create Release Assets" succeeds for a tag push. NOT
+# `release: types: [released]` — that event never fires, because the release is
+# created by create-release.yml under GITHUB_TOKEN and GitHub suppresses
+# workflow-triggering events for it. See the note in bump-homebrew-formula.yml.
 on:
-  release:
-    types: [released]
+  workflow_run:
+    workflows: ["Create Release Assets"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to submit (for manual recovery)'
+        description: 'Release tag to sync (for manual recovery)'
         required: true
         type: string
 
 permissions:
-  contents: read
-  # The "Report failure" step below opens a [release-ops] issue via
-  # github.rest.issues.create; that needs issues:write. Without it the failure
-  # reporter itself 403s and no alert is ever filed.
+  contents: write
+  pull-requests: write
+  # The "Report failure" step opens a [release-ops] issue via
+  # github.rest.issues.create, which needs issues:write.
   issues: write
 
 concurrency:
-  group: bump-winget-${{ github.event.release.tag_name || inputs.tag }}
+  group: bump-winget-${{ github.event.workflow_run.head_branch || inputs.tag }}
   cancel-in-progress: false
 
 jobs:
-  bump:
-    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
-    runs-on: windows-latest
-    timeout-minutes: 30
+  sync-manifest:
+    # See bump-homebrew-formula.yml for why these three conditions: successful,
+    # tag-push (not a dry-run dispatch), v-prefixed. Format enforced downstream.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    # Linux, not Windows: msitools reads the MSI Property table just as well, and
+    # this leg is billed 1x instead of 2x.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Resolve release
+        id: rel
+        uses: ./.github/actions/resolve-release
+        with:
+          tag: ${{ github.event.workflow_run.head_branch || inputs.tag }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Re-assert stable release
         uses: ./.github/actions/assert-stable-release
         with:
-          tag: ${{ github.event.release.tag_name || inputs.tag }}
-          is_prerelease: ${{ github.event.release.prerelease || 'false' }}
-          is_draft: ${{ github.event.release.draft || 'false' }}
+          tag: ${{ steps.rel.outputs.tag }}
+          is_prerelease: ${{ steps.rel.outputs.is_prerelease }}
+          is_draft: ${{ steps.rel.outputs.is_draft }}
 
-      - name: Submit manifest to winget-pkgs
-        uses: vedantmgoyal9/winget-releaser@4ffc7888bffd451b357355dc214d43bb9f23917e  # v2
+      - name: Install msitools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq msitools
+
+      - name: Download MSI, compute sha256 + ProductCode
+        id: asset
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.rel.outputs.tag }}"
+          VER="${{ steps.rel.outputs.ver }}"
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/amethyst-desktop-${VER}-windows-x64.msi"
+          echo "Fetching $URL"
+          # workflow_run fires only after every upload leg has finished, so the
+          # asset should already be there. Retry anyway for release-CDN
+          # propagation (mirrors the repo's push/pull retry ethos).
+          ok=0
+          for i in 1 2 3 4 5; do
+            if curl -fsSL -o amethyst.msi "$URL"; then ok=1; break; fi
+            wait=$(( 2 ** i ))
+            echo "attempt $i failed; retrying in ${wait}s"
+            sleep "$wait"
+          done
+          [[ "$ok" == 1 ]] || { echo "::error::could not download $URL"; exit 1; }
+          test -s amethyst.msi
+
+          SHA=$(sha256sum amethyst.msi | awk '{print $1}' | tr '[:lower:]' '[:upper:]')
+
+          # ProductCode is the ARP key winget uses to detect an existing install.
+          # jpackage regenerates it per build, so read it rather than pin it.
+          PRODUCT_CODE=$(msiinfo export amethyst.msi Property \
+            | awk -F'\t' '$1 == "ProductCode" { print $2 }' | tr -d '\r')
+          if [[ ! "$PRODUCT_CODE" =~ ^\{[0-9A-Fa-f-]{36}\}$ ]]; then
+            echo "::error::could not read a valid ProductCode from the MSI (got: '${PRODUCT_CODE}')"
+            exit 1
+          fi
+
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "product_code=$PRODUCT_CODE" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA"
+          echo "ProductCode=$PRODUCT_CODE"
+
+      - name: Update reference manifests
+        run: |
+          set -euo pipefail
+          DIR=desktopApp/packaging/winget
+          TAG="${{ steps.rel.outputs.tag }}"
+          VER="${{ steps.rel.outputs.ver }}"
+          SHA="${{ steps.asset.outputs.sha256 }}"
+          URL="${{ steps.asset.outputs.url }}"
+          PC="${{ steps.asset.outputs.product_code }}"
+
+          # Anchored substitutions so the header comments are never touched.
+          sed -i -E "s|^(PackageVersion: ).*|\1${VER}|" \
+            "$DIR/VitorPamplona.Amethyst.yaml" \
+            "$DIR/VitorPamplona.Amethyst.installer.yaml" \
+            "$DIR/VitorPamplona.Amethyst.locale.en-US.yaml"
+          sed -i -E "s|^(  InstallerUrl: ).*|\1${URL}|"    "$DIR/VitorPamplona.Amethyst.installer.yaml"
+          # Quoted: an all-digit 64-char digest would otherwise parse as a YAML
+          # integer and fail the schema's `string` type.
+          sed -i -E "s|^(  InstallerSha256: ).*|\1'${SHA}'|" "$DIR/VitorPamplona.Amethyst.installer.yaml"
+          sed -i -E "s|^(  ProductCode: ).*|\1'${PC}'|"    "$DIR/VitorPamplona.Amethyst.installer.yaml"
+          sed -i -E "s|^(ReleaseNotesUrl: ).*|\1https://github.com/${{ github.repository }}/releases/tag/${TAG}|" \
+            "$DIR/VitorPamplona.Amethyst.locale.en-US.yaml"
+
+          echo "----- synced -----"
+          grep -hE "^(PackageVersion|  InstallerUrl|  InstallerSha256|  ProductCode|ReleaseNotesUrl): " "$DIR"/*.yaml
+
+      - name: Sanity-check the manifests still parse
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, sys, yaml
+          for f in sorted(glob.glob('desktopApp/packaging/winget/*.yaml')):
+              d = yaml.safe_load(open(f))
+              assert d['PackageIdentifier'] == 'VitorPamplona.Amethyst', f
+              assert d['PackageVersion'], f
+              print('OK', f, d['ManifestType'])
+          PY
+
+      - name: Open or update the manifest-sync PR
+        # peter-evans/create-pull-request is MIT-licensed CI-only tooling (not
+        # linked into any shipped artifact). It no-ops when there is no diff.
+        uses: peter-evans/create-pull-request@v8
         with:
-          identifier: VitorPamplona.Amethyst
-          version: ${{ github.event.release.tag_name || inputs.tag }}
-          # Asset naming contract: scripts/asset-name.sh
-          installers-regex: '^amethyst-desktop-.*-windows-x64\.msi$'
-          token: ${{ secrets.WINGET_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: chore/bump-winget-manifest-${{ steps.rel.outputs.tag }}
+          add-paths: desktopApp/packaging/winget
+          commit-message: 'chore: sync winget manifests to ${{ steps.rel.outputs.tag }}'
+          title: 'chore: sync winget manifests to ${{ steps.rel.outputs.tag }}'
+          body: |
+            Auto-synced `desktopApp/packaging/winget/` to the
+            `${{ steps.rel.outputs.tag }}` release:
+
+            - `PackageVersion`  -> `${{ steps.rel.outputs.ver }}`
+            - `InstallerSha256` -> `${{ steps.asset.outputs.sha256 }}`
+            - `ProductCode`     -> `${{ steps.asset.outputs.product_code }}`
+
+            **Merge this, then push it upstream from a maintainer machine:**
+
+            ```bash
+            scripts/bump-winget.sh ${{ steps.rel.outputs.tag }}
+            ```
+
+            That step is manual on purpose — it needs push access to a fork of
+            `microsoft/winget-pkgs`, which is deliberately NOT stored as a CI
+            secret. The script uses your existing `gh` auth. See
+            BUILDING.md § Winget.
 
       - name: Report failure
         if: failure()
         uses: actions/github-script@v9
         with:
           script: |
-            const tag = context.payload.release?.tag_name || context.payload.inputs?.tag || 'unknown';
+            const tag = context.payload.workflow_run?.head_branch || context.payload.inputs?.tag || 'unknown';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `[release-ops] bump-winget failed for ${tag}`,
+              title: `[release-ops] sync-winget-manifest failed for ${tag}`,
               body: [
-                `Winget manifest submission failed for release \`${tag}\`.`,
+                `Winget manifest sync failed for release \`${tag}\`.`,
                 ``,
                 `- Run: ${runUrl}`,
                 `- Channel: Winget (\`VitorPamplona.Amethyst\`)`,
                 ``,
                 `Recovery options:`,
-                `1. Re-run the workflow once underlying issue is fixed`,
-                `2. Manually submit via \`wingetcreate update VitorPamplona.Amethyst -v ${tag.replace(/^v/, '')}\``,
-                `3. File PR directly against microsoft/winget-pkgs`
+                `1. Re-run the workflow once the underlying issue is fixed`,
+                `2. Check the release actually published \`amethyst-desktop-${tag.replace(/^v/, '')}-windows-x64.msi\``,
+                `3. Manually update \`desktopApp/packaging/winget/*.yaml\` (version, sha256, ProductCode)`
               ].join('\n'),
               labels: ['release-ops', 'bug']
             });

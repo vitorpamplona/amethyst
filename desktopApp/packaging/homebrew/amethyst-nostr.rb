@@ -16,13 +16,12 @@
 #     https://github.com/vitorpamplona/amethyst/releases/download/vX.Y.Z/amethyst-desktop-X.Y.Z-macos-arm64.dmg
 #   shasum -a 256 amethyst.dmg
 cask "amethyst-nostr" do
-  version "1.12.6"
-  sha256 "69882e83ebcec6723e1ad5655ec2c9d1fa151b9d1a8ae51b869a9d62feabf093"
+  version "1.13.1"
+  sha256 "ead8f4f6263417d661b0d24be3853ec3284b330abc14748ebd77a2c2afcd2789"
 
-  url "https://github.com/vitorpamplona/amethyst/releases/download/v#{version}/amethyst-desktop-#{version}-macos-arm64.dmg",
-      verified: "github.com/vitorpamplona/amethyst/"
+  url "https://github.com/vitorpamplona/amethyst/releases/download/v#{version}/amethyst-desktop-#{version}-macos-arm64.dmg"
   name "Amethyst"
-  desc "Nostr client for desktop"
+  desc "Nostr client"
   homepage "https://github.com/vitorpamplona/amethyst"
 
   livecheck do
@@ -30,9 +29,25 @@ cask "amethyst-nostr" do
     strategy :github_latest
   end
 
+  # The unrelated tiling window manager (cask `amethyst`, ianyh/Amethyst) also
+  # installs `Amethyst.app`, so the two cannot coexist in /Applications.
+  conflicts_with cask: "amethyst"
   depends_on arch: :arm64
+  depends_on :macos
 
   app "Amethyst.app"
 
-  zap trash: "~/.amethyst"
+  # Verified against the source, not the docs:
+  #   ~/.amethyst                            DesktopAccountStorage (accounts + keys)
+  #   ~/Library/Application Support/Amethyst DesktopTorManager (tor/)
+  #   ~/Library/Caches/AmethystDesktop       Coil image cache
+  #
+  # Deliberately NOT zapped: ~/Library/Preferences/com.apple.java.util.prefs.plist.
+  # The app uses the Java Preferences API, which writes to that single SHARED
+  # plist — deleting it would wipe every other Java app's preferences too.
+  zap trash: [
+    "~/.amethyst",
+    "~/Library/Application Support/Amethyst",
+    "~/Library/Caches/AmethystDesktop",
+  ]
 end

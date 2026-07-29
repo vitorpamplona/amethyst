@@ -46,7 +46,10 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -147,7 +150,7 @@ object BuzzCommands {
             ctx.prepare()
             val me = ctx.identity.pubKeyHex
             val relays = relaysFor(ctx, relaysFlag)
-            if (relays.isEmpty()) return Output.error("no_relays", NO_RELAYS_MSG)
+            if (relays.isEmpty()) return Output.error("no_relays", noRelaysMsg(relaysFlag))
 
             // The deployed Buzz relay does NOT emit kind-41001; instead it (a) confirms a DM's
             // channel id synchronously in the open OK, and (b) addresses each member a kind-44100
@@ -177,25 +180,9 @@ object BuzzCommands {
                     .sortedByDescending { it.createdAt }
                     .take(limit)
                     .map { sys ->
-                        // The relay's dm_created content carries a `participants` array our
-                        // SystemMessagePayload model drops; read it from the raw content.
-                        val participants =
-                            runCatching {
-                                jsonParser
-                                    .parseToJsonElement(sys.content)
-                                    .jsonObject["participants"]
-                                    ?.let { arr ->
-                                        arr
-                                            .toString()
-                                            .trim('[', ']')
-                                            .split(",")
-                                            .map { it.trim().trim('"') }
-                                            .filter { it.isNotBlank() }
-                                    }
-                            }.getOrNull().orEmpty()
                         mapOf(
                             "dm_id" to sys.channel(),
-                            "participants" to participants,
+                            "participants" to participantsOf(sys.content),
                             "created_at" to sys.createdAt,
                         )
                     }
@@ -518,7 +505,7 @@ object BuzzCommands {
             ctx.prepare()
             val me = ctx.identity.pubKeyHex
             val relays = relaysFor(ctx, relaysFlag)
-            if (relays.isEmpty()) return Output.error("no_relays", NO_RELAYS_MSG)
+            if (relays.isEmpty()) return Output.error("no_relays", noRelaysMsg(relaysFlag))
 
             val filter = Filter(kinds = listOf(AgentTurnMetricEvent.KIND), tags = mapOf("p" to listOf(me)))
             val decrypted =
@@ -572,7 +559,7 @@ object BuzzCommands {
             ctx.prepare()
             val me = ctx.identity.pubKeyHex
             val relays = relaysFor(ctx, relaysFlag)
-            if (relays.isEmpty()) return Output.error("no_relays", NO_RELAYS_MSG)
+            if (relays.isEmpty()) return Output.error("no_relays", noRelaysMsg(relaysFlag))
 
             val filter = Filter(kinds = listOf(PersonaEvent.KIND), authors = listOf(me))
             val personas =
@@ -600,8 +587,35 @@ object BuzzCommands {
         }
     }
 
-    /** Message for the `no_relays` error: neither `--relays` nor the account's outbox had one. */
-    private const val NO_RELAYS_MSG = "no relays: pass --relays ws://…"
+    /**
+     * The relay's `dm_created` content carries a `participants` array our [SystemMessageEvent]
+     * payload model drops, so read it off the raw content.
+     *
+     * Decoded as JSON, not string-munged: anything that isn't a flat array of non-blank strings is
+     * dropped rather than stringified into a plausible-looking pubkey. A pubkey is hex so it can't
+     * itself contain a comma, but a nested object or a non-array `participants` used to come back
+     * as garbage entries the caller had no way to tell from real ones.
+     */
+    internal fun participantsOf(content: String): List<String> =
+        runCatching {
+            jsonParser
+                .parseToJsonElement(content)
+                .jsonObject["participants"]
+                ?.jsonArray
+                ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank) }
+        }.getOrNull().orEmpty()
+
+    /**
+     * The `no_relays` detail. Passing `--relays` and having every entry rejected also lands here
+     * (the flag wins, so the outbox is never consulted), and telling that user to pass the flag
+     * they just passed is useless — name the real problem instead.
+     */
+    private fun noRelaysMsg(relaysFlag: String?) =
+        if (relaysFlag == null) {
+            "no relays: pass --relays ws://…"
+        } else {
+            "no usable relays in --relays: expected comma-separated ws:// or wss:// urls, got '$relaysFlag'"
+        }
 
     /** The `--relays` set if given, else the account's outbox relays. */
     private suspend fun relaysFor(

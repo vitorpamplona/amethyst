@@ -29,7 +29,10 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -47,20 +50,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -174,6 +181,12 @@ fun ChatBubbleLayout(
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var settleJob by remember { mutableStateOf<Job?>(null) }
     val swipeScope = rememberCoroutineScope()
+    // The caller passes a fresh onSwipeReply lambda every recomposition (it captures
+    // the note), so read it through updated-state and key pointerInput on the stable
+    // isLoggedInUser instead. Keying on the lambda would tear down and restart the
+    // detector on every recomposition — stranding an in-flight drag and churning the
+    // gesture coroutine on every idle row update.
+    val latestOnSwipeReply by rememberUpdatedState(onSwipeReply)
     val density = LocalDensity.current
     val swipeThresholdPx = remember(density) { with(density) { SwipeReplyThreshold.toPx() } }
     val swipeMaxPx = remember(density) { with(density) { SwipeReplyMaxDrag.toPx() } }
@@ -187,13 +200,18 @@ fun ChatBubbleLayout(
             },
     ) {
         if (onSwipeReply != null) {
-            val progress = (abs(dragOffset) / swipeThresholdPx).coerceIn(0f, 1f)
-            if (progress > 0f) {
+            // Gate composition on a boolean that flips only at the 0<->non-0 edges, so
+            // the icon is added/removed twice per gesture instead of recomposing every
+            // frame; the fade/scale reads dragOffset inside graphicsLayer (layer phase),
+            // so the whole swipe animates without recomposing ChatBubbleLayout.
+            val swiping by remember { derivedStateOf { dragOffset != 0f } }
+            if (swiping) {
                 Box(
                     modifier =
                         Modifier
                             .align(if (isLoggedInUser) Alignment.CenterEnd else Alignment.CenterStart)
                             .graphicsLayer {
+                                val progress = (abs(dragOffset) / swipeThresholdPx).coerceIn(0f, 1f)
                                 alpha = progress
                                 scaleX = 0.6f + 0.4f * progress
                                 scaleY = 0.6f + 0.4f * progress
@@ -208,7 +226,7 @@ fun ChatBubbleLayout(
             if (onSwipeReply != null) {
                 Modifier
                     .graphicsLayer { translationX = dragOffset }
-                    .pointerInput(onSwipeReply) {
+                    .pointerInput(isLoggedInUser) {
                         // Drag toward the screen center only; a haptic tick marks the
                         // commit point, releasing past it fires the reply.
                         var crossedThreshold = false
@@ -220,20 +238,7 @@ fun ChatBubbleLayout(
                                 }
                         }
 
-                        detectHorizontalDragGestures(
-                            onDragStart = {
-                                settleJob?.cancel()
-                                crossedThreshold = false
-                            },
-                            onDragEnd = {
-                                if (abs(dragOffset) >= swipeThresholdPx) {
-                                    onSwipeReply()
-                                }
-                                settleBack()
-                            },
-                            onDragCancel = { settleBack() },
-                        ) { change, dragAmount ->
-                            change.consume()
+                        val applyDrag = { dragAmount: Float ->
                             val newOffset =
                                 if (isLoggedInUser) {
                                     (dragOffset + dragAmount).coerceIn(-swipeMaxPx, 0f)
@@ -245,6 +250,50 @@ fun ChatBubbleLayout(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             }
                             dragOffset = newOffset
+                        }
+
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+
+                            // Claim the pointer only once the motion is clearly more
+                            // horizontal than vertical; a mostly-vertical drag leaves the
+                            // pointer unconsumed so the enclosing scroll keeps it and the
+                            // bubble never moves while you scroll.
+                            var overSlop = Offset.Zero
+                            val drag =
+                                awaitTouchSlopOrCancellation(down.id) { change, over ->
+                                    if (abs(over.x) > abs(over.y)) {
+                                        change.consume()
+                                        overSlop = over
+                                    }
+                                }
+
+                            if (drag != null) {
+                                // Take over from any in-flight settle only now that we've
+                                // committed to a horizontal drag. Cancelling earlier (on
+                                // the down) would strand dragOffset when the gesture turns
+                                // out to be a vertical scroll, since settleBack() below
+                                // only runs on this path.
+                                settleJob?.cancel()
+                                crossedThreshold = false
+                                applyDrag(overSlop.x)
+                                try {
+                                    val completed =
+                                        horizontalDrag(drag.id) { change ->
+                                            applyDrag(change.positionChange().x)
+                                            change.consume()
+                                        }
+                                    if (completed && abs(dragOffset) >= swipeThresholdPx) {
+                                        latestOnSwipeReply?.invoke()
+                                    }
+                                } finally {
+                                    // Settle even if the drag coroutine is cancelled (e.g.
+                                    // the bubble leaves composition mid-swipe); settleBack
+                                    // launches on swipeScope, not this pointer coroutine,
+                                    // so it still runs while that scope is alive.
+                                    settleBack()
+                                }
+                            }
                         }
                     }
             } else {

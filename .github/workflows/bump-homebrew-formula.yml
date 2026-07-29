@@ -19,9 +19,14 @@ name: Bump Homebrew Formula (amy CLI)
 # auto-bump here (symmetric to the cask action in bump-homebrew.yml) — see the
 # "TODO(bootstrap)" note at the bottom of this file.
 
+# Trigger: after "Create Release Assets" succeeds for a tag push. NOT
+# `release: types: [released]` — that event never fires, because the release is
+# created by create-release.yml under GITHUB_TOKEN and GitHub suppresses
+# workflow-triggering events for it. See the full note in bump-homebrew.yml.
 on:
-  release:
-    types: [released]
+  workflow_run:
+    workflows: ["Create Release Assets"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -38,44 +43,49 @@ permissions:
 
 concurrency:
   # Serialize per tag; do not cancel in-progress runs.
-  group: bump-homebrew-formula-${{ github.event.release.tag_name || inputs.tag }}
+  group: bump-homebrew-formula-${{ github.event.workflow_run.head_branch || inputs.tag }}
   cancel-in-progress: false
 
 jobs:
   sync-formula:
-    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    # See bump-homebrew.yml for why these three conditions: successful, tag-push
+    # (not a dry-run dispatch), v-prefixed. Exact format enforced downstream.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Resolve release
+        id: rel
+        uses: ./.github/actions/resolve-release
+        with:
+          tag: ${{ github.event.workflow_run.head_branch || inputs.tag }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Re-assert stable release
         uses: ./.github/actions/assert-stable-release
         with:
-          tag: ${{ github.event.release.tag_name || inputs.tag }}
-          is_prerelease: ${{ github.event.release.prerelease || 'false' }}
-          is_draft: ${{ github.event.release.draft || 'false' }}
-
-      - name: Resolve version
-        id: ver
-        run: |
-          set -euo pipefail
-          TAG="${{ github.event.release.tag_name || inputs.tag }}"
-          VER="${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          tag: ${{ steps.rel.outputs.tag }}
+          is_prerelease: ${{ steps.rel.outputs.is_prerelease }}
+          is_draft: ${{ steps.rel.outputs.is_draft }}
 
       - name: Download jvm bundle and compute sha256
         id: asset
         run: |
           set -euo pipefail
-          TAG="${{ steps.ver.outputs.tag }}"
-          VER="${{ steps.ver.outputs.ver }}"
+          TAG="${{ steps.rel.outputs.tag }}"
+          VER="${{ steps.rel.outputs.ver }}"
           URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/amy-${VER}-jvm.tar.gz"
           echo "Fetching $URL"
-          # The `released` event can fire a hair before every matrix leg finishes
-          # uploading; retry with backoff (mirrors the repo's push/pull retry ethos).
+          # workflow_run fires only after every upload leg has finished, so the
+          # asset should already be there. Retry anyway for release-CDN
+          # propagation (mirrors the repo's push/pull retry ethos).
           ok=0
           for i in 1 2 3 4 5; do
             if curl -fsSL -o amy-jvm.tar.gz "$URL"; then ok=1; break; fi
@@ -110,13 +120,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: main
-          branch: chore/bump-amy-formula-${{ steps.ver.outputs.tag }}
+          branch: chore/bump-amy-formula-${{ steps.rel.outputs.tag }}
           add-paths: cli/packaging/homebrew/amy.rb
-          commit-message: 'chore: sync amy Homebrew formula to ${{ steps.ver.outputs.tag }}'
-          title: 'chore: sync amy Homebrew formula to ${{ steps.ver.outputs.tag }}'
+          commit-message: 'chore: sync amy Homebrew formula to ${{ steps.rel.outputs.tag }}'
+          title: 'chore: sync amy Homebrew formula to ${{ steps.rel.outputs.tag }}'
           body: |
             Auto-synced `cli/packaging/homebrew/amy.rb` to the
-            `${{ steps.ver.outputs.tag }}` release:
+            `${{ steps.rel.outputs.tag }}` release:
 
             - `url`    -> `${{ steps.asset.outputs.url }}`
             - `sha256` -> `${{ steps.asset.outputs.sha256 }}`
@@ -124,19 +134,21 @@ jobs:
             Opened by `.github/workflows/bump-homebrew-formula.yml`. Merge to keep
             the reference formula ready for the homebrew-core submission/bump.
 
-      # TODO(bootstrap): once `amy` is accepted into Homebrew/homebrew-core, add a
-      # step here that opens the homebrew-core bump PR automatically — symmetric to
-      # the cask bump in bump-homebrew.yml (a pinned macauley/action-homebrew-bump-
-      # formula, or `brew bump-formula-pr amy --url=<url> --sha256=<sha>` with a
-      # HOMEBREW_TOKEN). It is intentionally omitted until then because
-      # bump-formula-pr errors on a formula that is not yet in the tap.
+      # TODO(bootstrap): once `amy` is accepted into Homebrew/homebrew-core, add
+      # a LOCAL script mirroring scripts/bump-homebrew-cask.sh that runs `brew
+      # bump-formula-pr amy --url=<url> --sha256=<sha>` from a maintainer's
+      # machine. Do NOT wire that into CI: bump-formula-pr forks homebrew-core
+      # into the token owner's account, which needs a classic `repo`-scoped PAT,
+      # and that scope grants write to every repo the account can reach —
+      # including this one — to anyone with push access here. See
+      # BUILDING.md § Homebrew cask for the full reasoning.
 
       - name: Report failure
         if: failure()
         uses: actions/github-script@v9
         with:
           script: |
-            const tag = context.payload.release?.tag_name || context.payload.inputs?.tag || 'unknown';
+            const tag = context.payload.workflow_run?.head_branch || context.payload.inputs?.tag || 'unknown';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.create({
               owner: context.repo.owner,

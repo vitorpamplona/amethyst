@@ -24,12 +24,10 @@ import com.vitorpamplona.quic.frame.StreamFrame
 import com.vitorpamplona.quic.stream.StreamId
 import com.vitorpamplona.quic.tls.InProcessTlsServer
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -123,8 +121,30 @@ class PeerUniStreamDrainTest {
             pipe.drive(maxRounds = 16)
             assertEquals(QuicConnection.Status.CONNECTED, client.status)
 
-            // Wire the explicit drainer BEFORE pushing the bytes.
-            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            // Run the drainer on THIS runBlocking coroutine's own
+            // single-threaded event loop rather than the shared
+            // Dispatchers.Default pool.
+            //
+            // Why this matters for flakiness: the black-hole drainer only has
+            // to keep the 64-deep per-stream `incomingChannel` from filling.
+            // On Dispatchers.Default that is a race against the pool — when the
+            // rest of the JVM test suite saturates every Default worker thread,
+            // the drainer coroutine can be denied a scheduling slot long enough
+            // for the synchronous feed loop below to push more than 64 chunks
+            // ahead of it. That trips the audit-4 #3 slow-consumer teardown and
+            // the test fails under parallel load while passing in isolation —
+            // classic shared-pool starvation flakiness.
+            //
+            // Confining the drainer to the producer's event loop makes the
+            // hand-off deterministic: each cooperative `yield()` below parks the
+            // feed loop and lets the drainer empty the channel before more
+            // chunks are pushed, so the buffer never approaches its bound
+            // regardless of machine load. The drain contract under test (parser
+            // `trySend` -> `incomingChannel` -> collect -> discard) is exercised
+            // identically; only the scheduling is pinned. The private
+            // SupervisorJob keeps `scope.cancel()` in the finally block from
+            // ever touching the runBlocking job itself.
+            val scope = CoroutineScope(coroutineContext + SupervisorJob())
             try {
                 client.drainPeerInitiatedUniStreamsIntoBlackHole(scope)
 
@@ -142,16 +162,16 @@ class PeerUniStreamDrainTest {
                     offset += chunk.size.toLong()
                     val packet = pipe.buildServerApplicationDatagram(listOf(frame))!!
                     feedDatagram(client, packet, nowMillis = 0L)
-                    // Yield occasionally so the drainer coroutine actually
-                    // gets a chance to consume — feedDatagram is synchronous
-                    // and the drainer launched with Dispatchers.Default needs
-                    // a scheduling tick.
-                    if (i % 16 == 15) {
-                        withTimeout(2_000) { delay(1) }
-                    }
+                    // Hand the confined drainer a turn every few chunks so it
+                    // drains the buffer well before it can reach the 64-chunk
+                    // bound. feedDatagram is synchronous; yield() on the shared
+                    // event loop deterministically runs the drainer's queued
+                    // channel-receive continuation before the producer resumes.
+                    if (i % 16 == 15) yield()
                 }
-                // Ensure the drainer has caught up before we sample status.
-                withTimeout(2_000) { delay(50) }
+                // Let the drainer consume anything still buffered before we
+                // sample status.
+                yield()
 
                 assertEquals(
                     QuicConnection.Status.CONNECTED,

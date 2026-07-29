@@ -178,6 +178,9 @@ class RelayGroupChannel(
 
     fun isPrivate(): Boolean = event?.isPrivate() ?: false
 
+    /** Buzz-only: the relay has archived this channel (hidden from the sidebar, but not deleted). */
+    fun isArchived(): Boolean = event?.isArchived() ?: false
+
     fun isRestricted(): Boolean = event?.isRestricted() ?: false
 
     fun isClosed(): Boolean = event?.isClosed() ?: false

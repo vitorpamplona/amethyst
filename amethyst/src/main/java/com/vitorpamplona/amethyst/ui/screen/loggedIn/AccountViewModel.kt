@@ -1676,6 +1676,15 @@ class AccountViewModel(
     fun deleteRelayGroup(channel: RelayGroupChannel) = launchSigner { account.deleteRelayGroup(channel) }
 
     /**
+     * Archive/unarchive a Buzz channel (kind-9002 `archived` tag) — hides it from the sidebar without
+     * destroying it, and is reversible. Owner/admin only; the relay enforces it.
+     */
+    fun archiveRelayGroup(
+        channel: RelayGroupChannel,
+        archived: Boolean,
+    ) = launchSigner { account.archiveRelayGroup(channel, archived) }
+
+    /**
      * Take a relay group off Messages WITHOUT leaving it: drop it from my kind-10009 list so it stops
      * showing, but send no kind-9022 — I stay in the relay roster and can still read/post, and re-joining
      * re-surfaces it instantly. Also records it in `dismissedChannelInvites` so a Buzz relay re-announcing
@@ -1707,6 +1716,22 @@ class AccountViewModel(
      * the channel opens and accepts posts today).
      */
     fun acceptChannelInvite(channel: RelayGroupChannel) = addRelayGroupToMessages(channel)
+
+    /**
+     * Hide a Buzz DM from Messages (kind-41012). DM-specific — a DM has no kind-10009 entry; the relay
+     * republishes my per-viewer 30622 hidden snapshot, dropping it from the inbox until I re-open it.
+     */
+    fun hideBuzzDm(channel: RelayGroupChannel) = launchSigner { account.hideBuzzDm(channel) }
+
+    /**
+     * Bring a hidden Buzz DM back to Messages: Buzz has no "unhide", so re-open the conversation with
+     * the same [participants] (a kind-41010 resolving to the same canonical channel), which drops it
+     * from the 30622 hidden snapshot.
+     */
+    fun unhideBuzzDm(
+        relay: NormalizedRelayUrl,
+        participants: List<HexKey>,
+    ) = launchSigner { account.openBuzzDm(relay, participants) }
 
     /**
      * Keep the channel off Messages without touching membership. Local and reversible — I stay in the

@@ -325,15 +325,29 @@ Quartz library in one pipeline.
 
 3. **Wait** for the `Create Release Assets` workflow to finish (~25–30 min).
 
-4. **Verify**:
-   - GH Release contains 8 desktop assets + 12 Android assets
+4. **Verify** — the GH Release should hold **31 assets**:
+   - **8 desktop** — `dmg` (macOS arm64), `msi` + `zip` (Windows), `deb`, `rpm`,
+     `AppImage`, `flatpak`, `tar.gz` (Linux). There is **no Intel/x64 macOS
+     DMG** — `jpackage` cannot cross-compile and no Intel runner leg is
+     configured, so macOS ships arm64-only.
+   - **13 Android** — 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the
+     F-Droid `.apks` set built for Accrescent.
+   - **5 amy** + **5 geode** bundles.
    - Asset sizes look sane (see §Enforce asset size budget — CI auto-fails at 1 GB/asset)
-   - Intel + ARM DMGs both present
    - Android flow unchanged
 
+   Quick diff against the previous release, which catches a silently-dropped
+   matrix leg better than any count:
+
+   ```bash
+   diff <(gh release view v1.13.0 --json assets --jq '.assets[].name' | sed 's/1\.13\.0/VER/g' | sort) \
+        <(gh release view v1.13.1 --json assets --jq '.assets[].name' | sed 's/1\.13\.1/VER/g' | sort)
+   ```
+
 5. **Stable vs prerelease** — a tag containing `-rc`, `-beta`, `-alpha`, `-dev`,
-   or `-snapshot` is auto-classified as prerelease. Stable tags trigger the
-   Homebrew + Winget bump workflows.
+   or `-snapshot` is auto-classified as prerelease. Only stable tags run the
+   Homebrew + Winget bump workflows (and those are no-ops until the one-time
+   bootstrap PRs land — see § Bootstrap).
 
 ### Dry-run (no tag push)
 
@@ -389,8 +403,8 @@ provided automatically; everything else you set yourself.)
 | `MAC_NOTARY_APPLE_ID` | Apple ID email of the notarization account | Apple notarization (`notarytool`) |
 | `MAC_NOTARY_PASSWORD` | **App-specific** password for that Apple ID (not the login password) | Same |
 | `MAC_NOTARY_TEAM_ID` | 10-char Apple Developer **Team ID** | Same |
-| `HOMEBREW_TOKEN` | PAT for `Homebrew/homebrew-cask` | Desktop cask bump (stable tags) |
-| `WINGET_TOKEN` | PAT for `microsoft/winget-pkgs` | Desktop winget bump (stable tags) |
+| ~~`HOMEBREW_TOKEN`~~ | *Not used.* The cask bump runs on a maintainer's machine — see § Homebrew cask | — |
+| ~~`WINGET_TOKEN`~~ | *Not used.* The winget bump runs on a maintainer's machine — see § Winget | — |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Crowdin API creds | Translation sync (separate workflow, not the release) |
 
 Note the **three distinct signing identities** people often conflate:
@@ -473,11 +487,11 @@ distributes; the official Amethyst rollout for each is in
 | Channel | How it ships | Push or pull |
 |---|---|---|
 | **GitHub Releases** | The release workflow builds + signs all assets and attaches them to the tag's Release | Automatic (CI) |
-| **Maven Central** | Same workflow runs `publishAllPublicationsToMavenCentral` for `quartz` | Automatic (CI) |
+| **Maven Central** | Same workflow runs `publishAllPublicationsToMavenCentral` for `quartz` — a *step* at the end of the `deploy-android` job, not a job of its own, so it does not appear in a job list | Automatic (CI) |
 | **Google Play** | Download the signed `amethyst-googleplay-<version>.aab` from the GH Release and upload it in Play Console | **Manual push** |
 | **F-Droid** | F-Droid's build server detects the new tag and **builds the `fdroid` flavor from source** per its recipe in the external [`fdroiddata`](https://gitlab.com/fdroid/fdroiddata) repo, then signs + publishes itself | **Pull (build-from-source)** |
 | **Zapstore** | The [`zsp`](https://zapstore.dev/) CLI reads [`zapstore.yaml`](zapstore.yaml) and publishes a Nostr software-release event signed with the app's nsec | **Manual push (Nostr)** |
-| **Homebrew + Winget** | `bump-homebrew.yml` / `bump-winget.yml` open version-bump PRs on stable tags | Automatic (CI) |
+| **Homebrew + Winget** | `bump-homebrew.yml` / `bump-winget.yml` open version-bump PRs on stable tags — **currently no-ops**: neither package has been bootstrapped upstream yet (§ Bootstrap) | Automatic (CI), inactive |
 
 Two channels need the build to stay split into product flavors (see
 `amethyst/build.gradle.kts` → `productFlavors`):
@@ -498,20 +512,88 @@ reads an optional per-release changelog from
 
 ## Bootstrap runbook (one-time)
 
-### Secrets to provision in GitHub repo settings
+> **Status as of v1.13.1: neither Homebrew nor Winget has been bootstrapped.**
+> `https://formulae.brew.sh/api/cask/amethyst-nostr.json` and
+> `microsoft/winget-pkgs/manifests/v/VitorPamplona/Amethyst` both 404, so
+> **Amethyst does not currently ship through either channel.** The bump
+> workflows detect this and skip with a `::warning::` instead of failing, so a
+> green release run does *not* mean Homebrew/Winget shipped. The two subsections
+> below are the work that activates them; until then treat the desktop app as
+> GitHub-Releases-only on macOS and Windows.
+
+### Package-manager credentials (and why there are none)
 
 The full secret inventory is in [§ Secrets the CI needs](#secrets-the-ci-needs).
-The two that need the most setup care are the package-manager PATs, because of
-their token type and scope:
+Neither package-manager channel adds anything to it:
 
-| Secret | Purpose | Scope |
-|---|---|---|
-| `HOMEBREW_TOKEN` | Bump Homebrew cask | Fine-grained PAT — `Homebrew/homebrew-cask` only — `Contents: write` + `Pull requests: write` — 90d expiry |
-| `WINGET_TOKEN` | Submit Winget manifests | Classic PAT — `public_repo` — 90d expiry (dedicated bot account preferred; `vedantmgoyal9/winget-releaser` does not support fine-grained) |
+**There are deliberately no package-manager PATs in CI.** Both the Homebrew
+cask and the Winget manifest bumps run on a maintainer's machine. The reasoning
+is worth keeping, because it is the reason this repo has no third secret to
+rotate:
 
-Rotate both on a 90-day cadence. Owner: assigned via `RELEASE_OPS.md`
-or equivalent issue tracker. On rotation, paste new token and run
-`gh workflow run bump-homebrew.yml` on the most recent stable tag to verify.
+`brew bump-cask-pr` forks `Homebrew/homebrew-cask` **into the token owner's
+account** (`POST /repos/Homebrew/homebrew-cask/forks`), pushes a branch to that
+fork, then opens the PR upstream. That shape forces a **classic** PAT with the
+`repo` scope:
+
+- A fine-grained PAT cannot express it. Its "Repository access" selector only
+  lists repos owned by the resource owner, so `Homebrew/homebrew-cask` can never
+  be selected — and Homebrew's API layer authorises against classic OAuth scopes
+  (`x-oauth-scopes`), which fine-grained tokens do not emit.
+- Homebrew declares the requirement in source as
+  `CREATE_ISSUE_FORK_OR_PR_SCOPES = ["repo"]` (`utils/github.rb`).
+
+And `repo` cannot be narrowed: it grants write to *every* repository the owning
+account can reach — including `vitorpamplona/amethyst` itself. Stored as an
+Actions secret it would be usable by **anyone with push access to this repo**,
+since a pushed branch containing a workflow runs with repo secrets. That is a
+strict escalation for a channel that ships one DMG a month.
+
+So the split is:
+
+- **CI** (`bump-homebrew.yml`, `GITHUB_TOKEN` only) does the error-prone
+  bookkeeping: downloads the DMG, asserts it is notarized + stapled, computes
+  the sha256, and opens an in-repo PR syncing
+  `desktopApp/packaging/homebrew/amethyst-nostr.rb`.
+- **A maintainer** merges that PR and runs `scripts/bump-homebrew-cask.sh`,
+  which re-verifies the sha256 and the notarization ticket against the live
+  asset before calling `brew bump-cask-pr`.
+
+The token then lives only in that maintainer's shell:
+
+```bash
+export HOMEBREW_GITHUB_API_TOKEN=ghp_...   # classic PAT, `repo` scope
+scripts/bump-homebrew-cask.sh v1.13.2
+```
+
+Create one at
+<https://github.com/settings/tokens/new?scopes=repo&description=Homebrew%20cask%20bump>.
+Prefer a dedicated bot account whose only asset is a fork of `homebrew-cask`, so
+a leak reaches nothing else.
+
+### Winget
+
+Same split, and it needs **no token at all**. `scripts/bump-winget.sh` drives
+`gh`, which a maintainer is already authenticated with, and it does not need
+`wingetcreate` (Windows-only) because winget manifests are plain YAML — so it
+runs fine from macOS or Linux:
+
+```bash
+scripts/bump-winget.sh v1.13.2
+```
+
+CI (`bump-winget.yml`, `GITHUB_TOKEN` only) does the bookkeeping: downloads the
+MSI, computes the sha256, reads the `ProductCode` out of the MSI Property table
+with `msitools`, and opens an in-repo PR syncing
+`desktopApp/packaging/winget/*.yaml`. The script re-verifies the sha256 against
+the live asset, then forks `microsoft/winget-pkgs`, commits the three manifests
+to `manifests/v/VitorPamplona/Amethyst/<version>/`, and opens the PR.
+
+The previous design stored a classic `public_repo` PAT as `WINGET_TOKEN` and
+passed it to the third-party `vedantmgoyal9/winget-releaser` action — a token
+with write access to every public repo the account owns, handed to code we do
+not control, in a place any push-access collaborator could read it from. None of
+that is needed.
 
 ### Homebrew cask (one-time initial PR)
 
@@ -636,11 +718,18 @@ by any other channel.
 
 | OS | App location | State directories |
 |---|---|---|
-| macOS | `/Applications/Amethyst.app` | `~/Library/Application Support/Amethyst`<br>`~/Library/Preferences/com.vitorpamplona.amethyst.desktop.plist`<br>`~/Library/Caches/Amethyst` |
+| macOS | `/Applications/Amethyst.app` | `~/.amethyst` (accounts + keys)<br>`~/Library/Application Support/Amethyst` (Tor)<br>`~/Library/Caches/AmethystDesktop` (image cache)<br>`~/Library/Preferences/com.apple.java.util.prefs.plist` (**shared** — see below) |
 | Windows | `%LOCALAPPDATA%\Amethyst` or `C:\Program Files\Amethyst` | `%APPDATA%\Amethyst`<br>`%LOCALAPPDATA%\Amethyst` |
 | Linux (deb/rpm) | `/opt/amethyst` | `~/.config/amethyst`<br>`~/.local/share/amethyst`<br>`~/.cache/amethyst` |
 | Linux (AppImage/tar.gz) | user-chosen | Same as above |
 | Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst.Desktop/` |
+
+**macOS preferences are in a SHARED file.** `DesktopPreferences` uses the Java
+Preferences API, which on macOS writes into
+`~/Library/Preferences/com.apple.java.util.prefs.plist` — one plist for *every*
+Java application on the machine, not a per-app file. Never delete it to "reset
+Amethyst": that wipes unrelated apps' settings. This is why the Homebrew cask's
+`zap` stanza deliberately omits it.
 
 Uninstall:
 

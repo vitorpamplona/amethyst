@@ -155,8 +155,44 @@ jobs:
           AMETHYST_NOTARY_TEAM_ID: ${{ secrets.MAC_NOTARY_TEAM_ID }}
         with:
           max_attempts: 2
-          timeout_minutes: 15
-          command: ./gradlew --no-daemon :desktopApp:${{ matrix.tasks }}
+          # macOS needs far longer: notarizeReleaseDmg blocks on `notarytool
+          # submit --wait`, which is minutes-to-tens-of-minutes on Apple's side.
+          timeout_minutes: ${{ matrix.family == 'macos' && 45 || 15 }}
+          # Append notarization on the macOS leg. `packageReleaseDmg` only SIGNS
+          # the DMG — notarization is a separate Compose task, and because it was
+          # never invoked every release up to v1.13.1 shipped a signed but
+          # UNNOTARIZED DMG that Gatekeeper blocks on first launch. The task runs
+          # `notarytool submit --wait` and then `stapler staple`, in place, so the
+          # asset-collection step below still finds the same file.
+          #
+          # Gated on the cert AND all three notary secrets being present, so forks
+          # and credential-less runs keep producing a plain unsigned DMG exactly as
+          # before instead of failing.
+          command: ./gradlew --no-daemon :desktopApp:${{ matrix.tasks }}${{ (matrix.family == 'macos' && steps.mac_keychain.outputs.signing == 'true' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' && secrets.MAC_NOTARY_TEAM_ID != '') && ' :desktopApp:notarizeReleaseDmg' || '' }}
+
+      # Regression guard. The missing-notarization bug was invisible for many
+      # releases precisely because nothing ever asserted the outcome; assert it
+      # now so a silently-dropped notarization step can never ship again.
+      - name: Verify the DMG is notarized and stapled (macOS leg)
+        if: matrix.family == 'macos'
+        env:
+          EXPECT_NOTARIZED: ${{ (steps.mac_keychain.outputs.signing == 'true' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' && secrets.MAC_NOTARY_TEAM_ID != '') && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          DMG=$(find desktopApp/build/compose/binaries -name "*.dmg" -print -quit)
+          [[ -n "$DMG" ]] || { echo "::error::no DMG produced"; exit 1; }
+          echo "Checking $DMG"
+
+          if [[ "$EXPECT_NOTARIZED" != "true" ]]; then
+            echo "::warning::Apple signing/notary credentials are not configured; this DMG is unsigned and unnotarized. Gatekeeper will block it, and it is not eligible for the Homebrew cask."
+            exit 0
+          fi
+
+          if ! xcrun stapler validate "$DMG"; then
+            echo "::error::$DMG has no stapled notarization ticket -- notarizeReleaseDmg did not run or failed"
+            exit 1
+          fi
+          echo "notarization ticket stapled OK"
 
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.

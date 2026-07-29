@@ -36,8 +36,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -73,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -172,6 +171,11 @@ fun RelayGroupChannelListScreen(
             }
     }
 
+    // Channels this device has deleted (kind-9008). A delete is terminal — the relay drops the group —
+    // but our cached 39000 (and a Buzz relay's stale re-announced 44100) would keep it in the list, so
+    // filter them out everywhere below. Collected as a StateFlow so a delete removes the row live.
+    val deletedChannels by RelayGroupDeletions.flow.collectAsStateWithLifecycle()
+
     // Prefer the relay's own genuine, relay-signed groups (39000 author == the NIP-11 `self`).
     // Recomputes as the NIP-11 doc resolves so real groups fill in and fakes stay hidden. But if
     // NIP-11 is unreachable (e.g. a Cloudflare-fronted relay that resets the plain HTTP GET while
@@ -179,20 +183,22 @@ fun RelayGroupChannelListScreen(
     // its de-facto signer — so its relay-signed groups still show while a stray user-published 39000
     // (a different author) stays filtered.
     val channels =
-        remember(allChannels, relayInfo) {
+        remember(allChannels, relayInfo, deletedChannels) {
             val nip11Known = relayInfo.self != null || relayInfo.supported_nips != null
-            if (nip11Known) {
-                allChannels.filter { isRelaySignedRelayGroup(it, relayInfo) }
-            } else {
-                val dominantSigner =
-                    allChannels
-                        .mapNotNull { it.event?.pubKey }
-                        .groupingBy { it }
-                        .eachCount()
-                        .maxByOrNull { it.value }
-                        ?.key
-                if (dominantSigner != null) allChannels.filter { it.event?.pubKey == dominantSigner } else allChannels
-            }
+            val signed =
+                if (nip11Known) {
+                    allChannels.filter { isRelaySignedRelayGroup(it, relayInfo) }
+                } else {
+                    val dominantSigner =
+                        allChannels
+                            .mapNotNull { it.event?.pubKey }
+                            .groupingBy { it }
+                            .eachCount()
+                            .maxByOrNull { it.value }
+                            ?.key
+                    if (dominantSigner != null) allChannels.filter { it.event?.pubKey == dominantSigner } else allChannels
+                }
+            signed.filterNot { it.groupId.toKey() in deletedChannels }
         }
 
     // Buzz relays expose no public group directory (membership is server-side), so `channels` above
@@ -200,6 +206,15 @@ fun RelayGroupChannelListScreen(
     // (kind-44100) so browsing the relay lists the channels you already belong to — each addable to
     // your kind-10009 list (so it then shows in Messages / Relay Groups). Same screen, one Browse.
     val isBuzz = BuzzRelayDialect.isBuzz(relay) || relayInfo.software?.contains("buzz", ignoreCase = true) == true
+
+    // A Buzz relay lets any community member create a channel/forum (the creator becomes its owner),
+    // and the relay rejects a non-member's kind-9007. We don't hard-gate the "+" on membership: the
+    // NIP-43 roster (kind 13534) isn't fetched on this screen, so gating on it hid the "+" even from
+    // admins. Instead we offer it on any Buzz community and let the relay enforce — the same approach
+    // as the workspace overflow menu (Add people / Invite), whose own doc notes "any member sees them,
+    // the relay only serves the owner/admin ones."
+    val myPubkey = accountViewModel.account.signer.pubKey
+
     val buzzVm: BuzzRelayImportViewModel = viewModel(key = "BuzzImport-${relay.url}")
     LaunchedEffect(relay, isBuzz) { if (isBuzz) buzzVm.bind(accountViewModel.account, relay.url) }
     val buzzChannels by buzzVm.channels.collectAsStateWithLifecycle()
@@ -226,9 +241,13 @@ fun RelayGroupChannelListScreen(
     // ids so nothing the old flat list showed disappears.
     val channelsById = remember(allChannels) { allChannels.associateBy { it.groupId.id } }
     val buzzGroupIds =
-        remember(buzzChannels, channels) {
+        remember(buzzChannels, channels, deletedChannels) {
             val seen = LinkedHashSet<String>()
-            (buzzChannels + channels.map { it.groupId }).filter { seen.add(it.id) }
+            // `channels` is already delete-filtered; also drop deleted ids from the membership-scoped
+            // `buzzChannels` (kind-44100), which the relay can keep re-announcing after a delete.
+            (buzzChannels + channels.map { it.groupId })
+                .filterNot { it.toKey() in deletedChannels }
+                .filter { seen.add(it.id) }
         }
 
     fun buzzTypeOf(groupId: GroupId): String? = channelsById[groupId.id]?.event?.buzzChannelType()
@@ -245,21 +264,34 @@ fun RelayGroupChannelListScreen(
 
     fun buzzSortKey(groupId: GroupId): String = channelsById[groupId.id]?.toBestDisplayName()?.lowercase() ?: groupId.id
 
+    // Archived channels (relay-signed `archived` tag on the 39000) drop out of their normal section and
+    // gather in a collapsed "Archived" tail — the same hide-from-the-sidebar behavior the Buzz client
+    // has. They stay reachable there so an admin can open one and Unarchive it from the top bar.
+    fun isArchived(groupId: GroupId): Boolean = channelsById[groupId.id]?.isArchived() == true
+
     val buzzChatChannels =
         remember(buzzGroupIds, channelsById, starred) {
             buzzGroupIds
-                .filter { buzzTypeOf(it).let { t -> t != BUZZ_CHANNEL_TYPE_FORUM && t != BUZZ_CHANNEL_TYPE_DM } }
+                .filter { buzzTypeOf(it).let { t -> t != BUZZ_CHANNEL_TYPE_FORUM && t != BUZZ_CHANNEL_TYPE_DM } && !isArchived(it) }
                 .sortedWith(compareByDescending<GroupId> { it.id in starred }.thenBy { buzzSortKey(it) })
         }
     val buzzForumChannels =
         remember(buzzGroupIds, channelsById, starred) {
             buzzGroupIds
-                .filter { buzzTypeOf(it) == BUZZ_CHANNEL_TYPE_FORUM }
+                .filter { buzzTypeOf(it) == BUZZ_CHANNEL_TYPE_FORUM && !isArchived(it) }
                 .sortedWith(compareByDescending<GroupId> { it.id in starred }.thenBy { buzzSortKey(it) })
         }
+    // Every archived non-DM channel (chat + forum together), newest section at the bottom.
+    val buzzArchivedChannels =
+        remember(buzzGroupIds, channelsById) {
+            buzzGroupIds
+                .filter { buzzTypeOf(it) != BUZZ_CHANNEL_TYPE_DM && isArchived(it) }
+                .sortedBy { buzzSortKey(it) }
+        }
 
-    // Which sections the user has collapsed (session-scoped). Keyed by section id below.
-    var collapsedSections by remember { mutableStateOf(emptySet<String>()) }
+    // Which sections the user has collapsed (session-scoped). Keyed by section id below. Archived
+    // starts collapsed — it's the out-of-the-way tail, expanded only when someone goes looking.
+    var collapsedSections by remember { mutableStateOf(setOf("archived")) }
 
     fun toggleSection(key: String) {
         collapsedSections = if (key in collapsedSections) collapsedSections - key else collapsedSections + key
@@ -326,17 +358,20 @@ fun RelayGroupChannelListScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }, shape = CircleShape) {
-                Icon(
-                    symbol = MaterialSymbols.Add,
-                    contentDescription =
-                        stringRes(if (isBuzz) R.string.buzz_channel_create_title else R.string.relay_group_create_title),
-                    modifier = Modifier.size(24.dp),
-                )
+            // A Buzz community creates channels/forums from the per-section "+" in their labels (like
+            // Direct Messages), so no FAB there. A vanilla NIP-29 relay is a flat directory with no
+            // sections, so it keeps the FAB to create a group.
+            if (!isBuzz) {
+                FloatingActionButton(onClick = { nav.nav(Route.RelayGroupCreate(relay.url)) }, shape = CircleShape) {
+                    Icon(
+                        symbol = MaterialSymbols.Add,
+                        contentDescription = stringRes(R.string.relay_group_create_title),
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
             }
         },
     ) { padding ->
-        val myPubkey = accountViewModel.userProfile().pubkeyHex
         // A Buzz relay is a community, so always render its sectioned list (Channels, Forums, Direct
         // Messages, Agent Console) even before anything loads, rather than the generic "empty" text.
         if (channels.isEmpty() && !isBuzz) {
@@ -366,9 +401,11 @@ fun RelayGroupChannelListScreen(
             // overlays content by design, so clearing it is the list's job. As contentPadding (not a
             // modifier) so rows scroll *through* that strip and only come to rest clear of it; the
             // modifier form would shrink the viewport and leave the FAB floating over dead space.
+            // Only the vanilla NIP-29 path has a FAB now; a Buzz community creates from its section
+            // headers, so it needs no bottom clearance.
             LazyColumn(
                 modifier = Modifier.padding(padding),
-                contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
+                contentPadding = PaddingValues(bottom = if (isBuzz) 0.dp else FAB_CLEARANCE),
             ) {
                 if (showTorHint) {
                     item(key = "tor-hint") {
@@ -382,16 +419,15 @@ fun RelayGroupChannelListScreen(
                 }
 
                 if (isBuzz) {
+                    // While the membership fetch is still running and nothing has loaded, show a
+                    // "Loading…" line. The old "you're not a member — accept the invite in the browser"
+                    // empty text is gone: the section labels below now each carry a "+" to create a
+                    // channel/forum, so an empty community is a starting point, not a dead end.
                     val noChannelsYet = buzzChatChannels.isEmpty() && buzzForumChannels.isEmpty()
-                    if (noChannelsYet) {
-                        item(key = "buzz-no-channels") {
+                    if (noChannelsYet && buzzStatus is BuzzRelayImportViewModel.Status.Loading) {
+                        item(key = "buzz-loading") {
                             Text(
-                                text =
-                                    if (buzzStatus is BuzzRelayImportViewModel.Status.Loading) {
-                                        stringRes(R.string.buzz_import_loading)
-                                    } else {
-                                        stringRes(R.string.buzz_import_empty_body)
-                                    },
+                                text = stringRes(R.string.buzz_import_loading),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.fillMaxWidth().padding(24.dp),
@@ -399,60 +435,96 @@ fun RelayGroupChannelListScreen(
                         }
                     }
 
-                    // -- CHANNELS -- (Add-all now lives in the community's top-bar overflow menu)
-                    if (buzzChatChannels.isNotEmpty()) {
+                    // -- CHANNELS -- The label carries a "+" to create a channel (the community's FAB
+                    // moved here, like Direct Messages). Add-all lives in the top-bar overflow menu.
+                    // The header always shows so the "+" is available even before any channel loads;
+                    // the collapse toggle is offered only when there's something to collapse.
+                    run {
                         val channelsCollapsed = "channels" in collapsedSections
                         item(key = "sec-channels") {
                             RelayGroupSectionHeader(
                                 title = stringRes(R.string.relay_group_section_channels),
                                 collapsed = channelsCollapsed,
-                                onToggle = { toggleSection("channels") },
-                            )
+                                onToggle = if (buzzChatChannels.isNotEmpty()) ({ toggleSection("channels") }) else null,
+                            ) {
+                                SectionAddButton(stringRes(R.string.buzz_channel_create_title)) {
+                                    nav.nav(Route.RelayGroupCreate(relay.url))
+                                }
+                            }
                         }
-                        if (!channelsCollapsed) {
+                        if (buzzChatChannels.isNotEmpty() && !channelsCollapsed) {
                             itemsIndexed(buzzChatChannels, key = { _, it -> "chat-${it.id}" }) { index, groupId ->
                                 RowHairline(index)
                                 BuzzImportRow(
                                     groupId = groupId,
-                                    isAdded = groupId.id in buzzAdded,
-                                    onAdd = { buzzVm.add(groupId) },
-                                    onRemove = { buzzVm.remove(groupId) },
                                     accountViewModel = accountViewModel,
                                     onOpen = { nav.nav(Route.RelayGroup(groupId.id, relay.url)) },
                                     isStarred = groupId.id in starred,
-                                    onToggleStar = { BuzzChannelStars.toggle(groupId.id) },
                                 )
                             }
                         }
                     }
 
-                    // -- FORUMS --
-                    if (buzzForumChannels.isNotEmpty()) {
+                    // -- FORUMS -- Same treatment: an always-visible label with a "+" that starts the
+                    // create flow on a forum channel (threaded posts) instead of a chat one.
+                    run {
                         val forumsCollapsed = "forums" in collapsedSections
                         item(key = "sec-forums") {
                             RelayGroupSectionHeader(
                                 title = stringRes(R.string.relay_group_section_forums),
                                 collapsed = forumsCollapsed,
-                                onToggle = { toggleSection("forums") },
-                            )
+                                onToggle = if (buzzForumChannels.isNotEmpty()) ({ toggleSection("forums") }) else null,
+                            ) {
+                                SectionAddButton(stringRes(R.string.buzz_forum_create_title)) {
+                                    nav.nav(Route.RelayGroupCreate(relay.url, isForum = true))
+                                }
+                            }
                         }
-                        if (!forumsCollapsed) {
+                        if (buzzForumChannels.isNotEmpty() && !forumsCollapsed) {
                             itemsIndexed(buzzForumChannels, key = { _, it -> "forum-${it.id}" }) { index, groupId ->
                                 RowHairline(index)
                                 BuzzImportRow(
                                     groupId = groupId,
-                                    isAdded = groupId.id in buzzAdded,
-                                    onAdd = { buzzVm.add(groupId) },
-                                    onRemove = { buzzVm.remove(groupId) },
                                     accountViewModel = accountViewModel,
                                     // A forum channel's primary content is its threads (kind-45001 posts), not a
                                     // kind-9 chat, so open the forum/threads view directly instead of the chat.
                                     onOpen = { nav.nav(Route.RelayGroupThreads(groupId.id, relay.url)) },
                                     isStarred = groupId.id in starred,
-                                    onToggleStar = { BuzzChannelStars.toggle(groupId.id) },
                                     // Forum posts live in a separate thread store, not the chat notes the
                                     // activity preview reads — so don't warm a kind-9 sub that returns nothing.
                                     showActivityPreview = false,
+                                )
+                            }
+                        }
+                    }
+
+                    // -- ARCHIVED -- Channels the relay has archived (chat + forum), tucked into a
+                    // collapsed tail. Opening one and using the top-bar Unarchive brings it back.
+                    if (buzzArchivedChannels.isNotEmpty()) {
+                        val archivedCollapsed = "archived" in collapsedSections
+                        item(key = "sec-archived") {
+                            RelayGroupSectionHeader(
+                                title = stringRes(R.string.relay_group_section_archived),
+                                collapsed = archivedCollapsed,
+                                onToggle = { toggleSection("archived") },
+                            )
+                        }
+                        if (!archivedCollapsed) {
+                            itemsIndexed(buzzArchivedChannels, key = { _, it -> "archived-${it.id}" }) { index, groupId ->
+                                RowHairline(index)
+                                val isForum = buzzTypeOf(groupId) == BUZZ_CHANNEL_TYPE_FORUM
+                                BuzzImportRow(
+                                    groupId = groupId,
+                                    accountViewModel = accountViewModel,
+                                    onOpen = {
+                                        if (isForum) {
+                                            nav.nav(Route.RelayGroupThreads(groupId.id, relay.url))
+                                        } else {
+                                            nav.nav(Route.RelayGroup(groupId.id, relay.url))
+                                        }
+                                    },
+                                    isStarred = groupId.id in starred,
+                                    showActivityPreview = !isForum,
                                 )
                             }
                         }
@@ -488,7 +560,6 @@ fun RelayGroupChannelListScreen(
                                 row = row,
                                 myPubkey = myPubkey,
                                 isHidden = false,
-                                onToggleMessages = { dmVm.removeFromMessages(row) },
                                 accountViewModel = accountViewModel,
                                 nav = nav,
                             ) {
@@ -520,7 +591,6 @@ fun RelayGroupChannelListScreen(
                                     row = row,
                                     myPubkey = myPubkey,
                                     isHidden = true,
-                                    onToggleMessages = { dmVm.addToMessages(row) },
                                     accountViewModel = accountViewModel,
                                     nav = nav,
                                 ) {
@@ -641,26 +711,43 @@ private fun RelayGroupSectionHeader(
 }
 
 /**
+ * The trailing "+" for a section label (Channels / Forums), matching the Direct Messages header's
+ * New-message icon: a primary-tinted Add glyph that creates a new item of that section's type.
+ */
+@Composable
+private fun SectionAddButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            symbol = MaterialSymbols.Add,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+/**
  * One inline Direct-Message conversation row inside the community view: the counterpart's avatar +
- * name (or a "+N" cluster label for a group DM), a preview of the last message, a compact
- * last-activity time, and an overflow holding the Add/Remove-from-Messages toggle. The channel's
- * recent content is warmed while the row is visible so the preview fills in ahead of a tap. Tapping
- * opens the DM as its relay-group chat.
+ * name (or a "+N" cluster label for a group DM), a preview of the last message, and a compact
+ * last-activity time. The channel's recent content is warmed while the row is visible so the preview
+ * fills in ahead of a tap. Tapping opens the DM as its relay-group chat; the Add/Remove-from-Messages
+ * (hide/unhide) action lives in that chat screen's top-bar overflow, not on this row.
  *
- * [isHidden] renders the row faded and flips the overflow to "Add to Messages" — a hidden DM is a
- * live conversation the viewer merely parked, so it stays openable and reversible.
+ * [isHidden] renders the row faded — a hidden DM is a live conversation the viewer merely parked, so
+ * it stays openable and reversible from the opened conversation.
  */
 @Composable
 private fun BuzzDmInlineRow(
     row: BuzzDmListViewModel.DmRow,
     myPubkey: HexKey,
     isHidden: Boolean,
-    onToggleMessages: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
     onClick: () -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
     val others = row.others.ifEmpty { listOf(myPubkey) }
     val leadHex = others.first()
     val leadUser = remember(leadHex) { LocalCache.getOrCreateUser(leadHex) }
@@ -689,7 +776,7 @@ private fun BuzzDmInlineRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp)
                 .alpha(if (isHidden) 0.55f else 1f),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -717,33 +804,6 @@ private fun BuzzDmInlineRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        Box {
-            IconButton(onClick = { menuOpen = true }) {
-                Icon(
-                    symbol = MaterialSymbols.MoreVert,
-                    contentDescription = stringRes(R.string.more_options),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                DropdownMenuItem(
-                    leadingIcon = {
-                        Icon(
-                            symbol = if (isHidden) MaterialSymbols.Add else MaterialSymbols.VisibilityOff,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    },
-                    text = { Text(stringRes(if (isHidden) R.string.add_to_messages else R.string.remove_from_messages)) },
-                    onClick = {
-                        menuOpen = false
-                        onToggleMessages()
-                    },
-                )
-            }
         }
     }
 }

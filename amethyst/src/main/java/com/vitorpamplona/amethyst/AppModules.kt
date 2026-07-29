@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.model.preferences.BuzzChannelStarPreferences
 import com.vitorpamplona.amethyst.model.preferences.BuzzWorkspacePreferences
 import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
+import com.vitorpamplona.amethyst.model.preferences.RelayGroupDeletionPreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -286,6 +287,11 @@ class AppModules(
 
     // Restore + persist the user's starred Buzz workspace channels across restarts (device-global).
     val buzzChannelStarPrefs = BuzzChannelStarPreferences(appContext, applicationIOScope)
+
+    // Restore + persist the set of relay-group channels deleted (kind-9008) on this device, so a
+    // deleted channel stays hidden across a restart even if the host relay re-announces a stale
+    // kind-44100 for it (device-global; a delete is authoritative and terminal for everyone).
+    val relayGroupDeletionPrefs = RelayGroupDeletionPreferences(appContext, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()

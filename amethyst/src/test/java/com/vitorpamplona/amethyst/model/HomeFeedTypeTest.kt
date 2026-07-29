@@ -21,6 +21,12 @@
 package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -63,6 +69,24 @@ class HomeFeedTypeTest {
         val decoded = HomeFeedType.decode("chess,future-kind")
         assertEquals(setOf(HomeFeedType.CHESS), decoded)
         assertNull(HomeFeedType.fromCode("future-kind"))
+    }
+
+    @Test
+    fun picturesVideosShortsAndTorrentsOwnTheirKinds() {
+        assertEquals(listOf(PictureEvent.KIND), HomeFeedType.PICTURES.kinds)
+        // Long-form videos are the horizontal/normal kinds; vertical/short kinds belong to Shorts.
+        assertEquals(listOf(VideoNormalEvent.KIND, VideoHorizontalEvent.KIND), HomeFeedType.VIDEOS.kinds)
+        assertEquals(listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND), HomeFeedType.SHORTS.kinds)
+        assertEquals(listOf(TorrentEvent.KIND), HomeFeedType.TORRENTS.kinds)
+    }
+
+    @Test
+    fun disablingVideosLeavesShortsUntouched() {
+        val disabled = HomeFeedType.disabledKinds(HomeFeedType.ALL - HomeFeedType.VIDEOS)
+        HomeFeedType.VIDEOS.kinds.forEach { assertTrue(it in disabled) }
+        // Shorts is a separate toggle, so its kinds stay live.
+        HomeFeedType.SHORTS.kinds.forEach { assertFalse(it in disabled) }
+        assertFalse(PictureEvent.KIND in disabled)
     }
 
     @Test

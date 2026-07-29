@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
@@ -114,6 +115,7 @@ import com.vitorpamplona.quartz.buzz.stream.StreamMessageScheduledEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.stream.StreamReminderEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.buzz.stream.SystemMessagePayload
 import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
 import com.vitorpamplona.quartz.buzz.teams.TeamEvent
@@ -2221,6 +2223,30 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         consumeRegularEvent(event, relay, wasVerified).also {
             markBuzzIfVerified(event, relay)
             attachToRelayGroupIfScoped(event, relay)
+        }
+
+    /**
+     * A Buzz kind-40099 system message. It renders as a narration row in the channel feed (via
+     * [consumeBuzzTimelineEvent]), but a `channel_deleted` one is also the **authoritative signal that
+     * a channel is gone**: the relay soft-deletes the channel and its 39000/39001/39002 discovery
+     * events but emits no member-removed notification and never retracts the kind-44100 that seeds the
+     * browse list — so without this the deleted channel keeps re-appearing (a stale 44100 re-announced
+     * every restart, its metadata now blank so it shows optimistically). Recording the delete in
+     * [RelayGroupDeletions] filters it out of every list and persists it across restarts.
+     *
+     * Gated on [isRelaySignedGroupEvent] (the 40099 is signed by the relay keypair) so a spoofed
+     * system message from a stray author can't hide a channel. Cross-device by construction: the relay
+     * replays this on subscribe, so a channel deleted on Buzz web/desktop is honored here too.
+     */
+    private fun consume(
+        event: SystemMessageEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean =
+        consumeBuzzTimelineEvent(event, relay, wasVerified).also {
+            if (relay != null && isRelaySignedGroupEvent(event, relay) && event.payload()?.type == SystemMessagePayload.CHANNEL_DELETED) {
+                event.channel()?.let { channelId -> RelayGroupDeletions.markDeleted(GroupId(channelId, relay)) }
+            }
         }
 
     /** Store-only consume for Buzz kinds that carry no channel timeline row. */
@@ -4798,7 +4824,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is StreamMessageV2Event -> consumeBuzzTimelineEvent(event, relay, wasVerified)
                 is StreamMessageEditEvent -> consume(event, relay, wasVerified)
                 is StreamMessageDiffEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is SystemMessageEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+                is SystemMessageEvent -> consume(event, relay, wasVerified)
                 is CanvasEvent -> consume(event, relay, wasVerified)
                 // Forum root (45001) is a thread, not a chat row → Threads collection. Comments (45003)
                 // and votes (45002) are store-only: the forum-thread detail loads them on demand by root.

@@ -327,10 +327,7 @@ import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
-import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
-import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
-import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -1514,19 +1511,9 @@ private fun RenderNoteRow(
             FileHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
         }
 
-        is VideoHorizontalEvent -> {
-            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
-        }
-
-        is VideoVerticalEvent -> {
-            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
-        }
-
-        is VideoNormalEvent -> {
-            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
-        }
-
-        is VideoShortEvent -> {
+        // Covers every NIP-71 video kind (21, 22, 34235, 34236) via the shared interface,
+        // so new video subtypes render automatically instead of falling through to text.
+        is VideoEvent -> {
             VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
         }
 

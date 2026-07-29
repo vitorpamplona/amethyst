@@ -1,0 +1,15 @@
+# Reference Winget version manifest for the Amethyst desktop app.
+#
+# Not consumed by any build here. `scripts/bump-winget.sh` copies this directory
+# into a fork of microsoft/winget-pkgs at
+# manifests/v/VitorPamplona/Amethyst/<version>/ and opens the PR.
+#
+# PackageVersion is kept in sync automatically on each stable release by
+# .github/workflows/bump-winget.yml.
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.12.0.schema.json
+
+PackageIdentifier: VitorPamplona.Amethyst
+PackageVersion: 1.13.1
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.12.0

@@ -58,6 +58,14 @@ class GroupMetadataEvent(
     fun picture() = tags.firstTagValue("picture")
 
     /**
+     * Buzz-only: whether the relay has marked this channel **archived** — a hide-from-the-sidebar
+     * state, distinct from a delete (the channel and its history live on). The Buzz relay stamps an
+     * `["archived","true"]` tag onto the 39000 for an archived channel and clients hide it; a plain
+     * NIP-29 relay has no such concept, so this is false there.
+     */
+    fun isArchived() = tags.firstTagValue("archived") == "true"
+
+    /**
      * Topic hashtags (`t` tags) the relay advertises for this group, used by the
      * discovery feed's hashtag filter. NIP-29 doesn't define these; a group only
      * carries them if its host relay copies the requested `t` tags onto the 39000.
