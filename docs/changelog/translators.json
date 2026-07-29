@@ -75,17 +75,12 @@
     "rchk": ""
   },
   "sinceLastTag": {
-    "tag": "v1.13.0",
-    "since": "2026-07-28T10:52:38-04:00",
+    "tag": "v1.13.1",
+    "since": "2026-07-28T23:17:02-04:00",
     "translators": [
       {
         "user": "vitorpamplona",
-        "languages": [
-          "Czech",
-          "German",
-          "Portuguese, Brazilian",
-          "Swedish"
-        ]
+        "languages": []
       },
       {
         "user": "greenart7c3",
