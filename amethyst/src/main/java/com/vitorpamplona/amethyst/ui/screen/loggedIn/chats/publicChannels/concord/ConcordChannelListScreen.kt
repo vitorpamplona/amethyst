@@ -46,7 +46,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -74,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreviewLoader
@@ -223,7 +223,7 @@ fun ConcordChannelListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ShorterTopAppBar(
                 title = { Text(communityName, maxLines = 1) },
                 navigationIcon = {
                     // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
@@ -403,8 +403,6 @@ private fun ConcordChannelListRow(
         remember(communityId, channelKey) { concordChannelUnreadCountFlow(account, communityId, channelKey) }
             .collectAsStateWithLifecycle(0)
     val hasUnread = unread > 0
-    // The recent posters' faces — recomputed as the channel's notes change (keyed on channelState).
-    val faceAuthors = remember(channelState) { channel.recentAuthorHexes(FACEPILE_MAX) }
 
     Row(
         Modifier
@@ -421,7 +419,7 @@ private fun ConcordChannelListRow(
             tint = if (hasUnread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            // Line 1: channel name + the recent-posters facepile pushed to the right.
+            // Line 1: channel name + the last-message time pushed to the right.
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     channelName,
@@ -431,13 +429,6 @@ private fun ConcordChannelListRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                ConcordAuthorFacepile(faceAuthors, accountViewModel)
-            }
-            // Line 2: the last-message preview (or a live "typing…"), then the time + unread badge.
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f)) {
-                    ConcordChannelPreviewLine(lastNote, isVoice, typingAuthors, accountViewModel)
-                }
                 lastNote?.createdAt()?.let { ts ->
                     Text(
                         timeAgo(ts, LocalContext.current, prefix = ""),
@@ -445,6 +436,12 @@ private fun ConcordChannelListRow(
                         color = if (hasUnread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
+                }
+            }
+            // Line 2: the last-message preview (or a live "typing…"), then the unread-message badge.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f)) {
+                    ConcordChannelPreviewLine(lastNote, isVoice, typingAuthors, accountViewModel)
                 }
                 ConcordUnreadBadge(unread)
             }
@@ -457,9 +454,6 @@ private fun ConcordChannelListRow(
         }
     }
 }
-
-/** How many recent-poster avatars a channel row's facepile shows at most. */
-private const val FACEPILE_MAX = 4
 
 /**
  * Bottom room the list leaves for the floating action button: a 56dp FAB + the Scaffold's 16dp margin

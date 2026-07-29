@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -135,22 +134,3 @@ private fun ConcordChannel.newMessagesSince(
     notes.count { _, note ->
         (note.createdAt() ?: 0L) > sinceSecs && isConcordTimelineMessage(note, account)
     }
-
-/**
- * The pubkeys of the [limit] most-recent distinct posters in this channel, newest first — the
- * facepile shown on a channel row. One O(notes) pass keeps each author's latest post time, so a
- * chatty author counts once (at their newest message) rather than crowding out quieter voices.
- */
-fun ConcordChannel.recentAuthorHexes(limit: Int): List<HexKey> {
-    val latestByAuthor = HashMap<HexKey, Long>()
-    for (note in notes.values()) {
-        val author = note.author?.pubkeyHex ?: continue
-        val at = note.createdAt() ?: continue
-        val prev = latestByAuthor[author]
-        if (prev == null || at > prev) latestByAuthor[author] = at
-    }
-    return latestByAuthor.entries
-        .sortedByDescending { it.value }
-        .take(limit)
-        .map { it.key }
-}
