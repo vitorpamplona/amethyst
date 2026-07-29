@@ -370,6 +370,19 @@ fun RelayGroupTopBar(
                                 if (canPop) nav.popBack()
                             },
                         )
+                        // Archive/Unarchive (kind-9002 `archived` tag) — a reversible hide-from-the-sidebar,
+                        // Buzz-only and admin-gated like Delete but NOT destructive, so no confirm dialog.
+                        // A DM is never archived (it has its own hide), so this is channels/forums only.
+                        if (isBuzzRelay && !isDm && displayMembership == RelayGroupMembership.ADMIN) {
+                            val archived = channel.isArchived()
+                            DropdownMenuItem(
+                                text = { Text(stringRes(if (archived) R.string.buzz_channel_unarchive else R.string.buzz_channel_archive)) },
+                                onClick = {
+                                    menuOpen = false
+                                    accountViewModel.archiveRelayGroup(channel, !archived)
+                                },
+                            )
+                        }
                         // Deleting the whole channel/group (kind-9008) is destructive for everyone, so it's
                         // shown ONLY to an admin/owner — the same authorization gate as Edit above — and
                         // routed through a confirmation dialog rather than firing on tap.

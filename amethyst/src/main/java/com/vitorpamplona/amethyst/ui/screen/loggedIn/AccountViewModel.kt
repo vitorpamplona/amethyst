@@ -1676,6 +1676,15 @@ class AccountViewModel(
     fun deleteRelayGroup(channel: RelayGroupChannel) = launchSigner { account.deleteRelayGroup(channel) }
 
     /**
+     * Archive/unarchive a Buzz channel (kind-9002 `archived` tag) — hides it from the sidebar without
+     * destroying it, and is reversible. Owner/admin only; the relay enforces it.
+     */
+    fun archiveRelayGroup(
+        channel: RelayGroupChannel,
+        archived: Boolean,
+    ) = launchSigner { account.archiveRelayGroup(channel, archived) }
+
+    /**
      * Take a relay group off Messages WITHOUT leaving it: drop it from my kind-10009 list so it stops
      * showing, but send no kind-9022 — I stay in the relay roster and can still read/post, and re-joining
      * re-surfaces it instantly. Also records it in `dismissedChannelInvites` so a Buzz relay re-announcing

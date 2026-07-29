@@ -82,6 +82,12 @@ class EditMetadataEvent(
             parent: String? = null,
             children: List<String> = emptyList(),
             previousEvents: List<String> = emptyList(),
+            // Buzz-only channel-settings tags (a Buzz relay reads these on 9002; a plain NIP-29 relay
+            // ignores them). [visibility] is "open"/"private" — Buzz's own vocabulary, which it reads
+            // instead of the NIP-29 `private` status flag, so editing visibility on a Buzz channel needs
+            // this tag to take. [archived] toggles the channel's archived state ("true"/"false").
+            visibility: String? = null,
+            archived: Boolean? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<EditMetadataEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, "", createdAt) {
@@ -90,6 +96,8 @@ class EditMetadataEvent(
             about?.let { add(arrayOf("about", it)) }
             picture?.let { add(arrayOf("picture", it)) }
             status.forEach { add(arrayOf(it.code)) }
+            visibility?.let { add(arrayOf("visibility", it)) }
+            archived?.let { add(arrayOf("archived", if (it) "true" else "false")) }
             addAll(HashtagTag.assemble(hashtags))
             // Mip-map each geohash into every prefix so a coarser followed geohash still matches.
             geohashes.forEach { addAll(GeoHashTag.assemble(it).toList()) }

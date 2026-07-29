@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -61,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -172,10 +174,12 @@ private fun RelayGroupThreads(
                 },
                 actions = {
                     // The forum's per-item actions, moved off the community-list row into this screen's
-                    // top-bar overflow: Pin/Unpin and the Add/Remove-from-Messages toggle. Buzz-only,
-                    // which every forum channel is.
+                    // top-bar overflow: Pin/Unpin and the Add/Remove-from-Messages toggle, plus the
+                    // admin-only Archive/Unarchive (so an archived forum can be brought back from here).
+                    // Buzz-only, which every forum channel is.
                     if (isBuzz) {
                         var menuOpen by remember { mutableStateOf(false) }
+                        val isAdmin = channel.membershipOf(accountViewModel.userProfile().pubkeyHex) == RelayGroupMembership.ADMIN
                         IconButton(onClick = { menuOpen = true }) {
                             Icon(
                                 symbol = MaterialSymbols.MoreVert,
@@ -186,6 +190,16 @@ private fun RelayGroupThreads(
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             BuzzPinDropdownItem(channel.groupId) { menuOpen = false }
                             RelayGroupMessagesDropdownItem(channel, accountViewModel) { menuOpen = false }
+                            if (isAdmin) {
+                                val archived = channel.isArchived()
+                                DropdownMenuItem(
+                                    text = { Text(stringRes(if (archived) R.string.buzz_channel_unarchive else R.string.buzz_channel_archive)) },
+                                    onClick = {
+                                        menuOpen = false
+                                        accountViewModel.archiveRelayGroup(channel, !archived)
+                                    },
+                                )
+                            }
                         }
                     }
                 },

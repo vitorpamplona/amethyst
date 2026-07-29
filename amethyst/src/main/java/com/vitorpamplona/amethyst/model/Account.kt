@@ -3676,6 +3676,10 @@ class Account(
         parent: String? = channel.parentGroupId(),
         children: List<String> = channel.childGroupIds(),
     ) {
+        // On a Buzz relay, visibility rides a `visibility` ("open"/"private") tag — the relay does NOT
+        // read NIP-29's `private` status flag — so a Buzz channel's visibility only actually changes on
+        // edit when we send that tag. A plain NIP-29 relay ignores it and honours the status flag.
+        val isBuzz = BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)
         val template =
             EditMetadataEvent.build(
                 channel.groupId.id,
@@ -3687,7 +3691,21 @@ class Account(
                 geohashes = geohashes,
                 parent = parent,
                 children = children,
+                visibility = if (isBuzz) (if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN) else null,
             )
+        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
+    }
+
+    /**
+     * Archive or unarchive a Buzz channel (a minimal kind-9002 carrying only the `archived` tag). The
+     * relay hides an archived channel from the sidebar and stamps the 39000, but keeps it and its
+     * history — the reversible counterpart to [deleteRelayGroup]. Admin/owner only; the relay enforces.
+     */
+    suspend fun archiveRelayGroup(
+        channel: RelayGroupChannel,
+        archived: Boolean,
+    ) {
+        val template = EditMetadataEvent.build(channel.groupId.id, archived = archived)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
     }
 

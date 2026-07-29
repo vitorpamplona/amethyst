@@ -274,21 +274,34 @@ fun RelayGroupChannelListScreen(
 
     fun buzzSortKey(groupId: GroupId): String = channelsById[groupId.id]?.toBestDisplayName()?.lowercase() ?: groupId.id
 
+    // Archived channels (relay-signed `archived` tag on the 39000) drop out of their normal section and
+    // gather in a collapsed "Archived" tail — the same hide-from-the-sidebar behavior the Buzz client
+    // has. They stay reachable there so an admin can open one and Unarchive it from the top bar.
+    fun isArchived(groupId: GroupId): Boolean = channelsById[groupId.id]?.isArchived() == true
+
     val buzzChatChannels =
         remember(buzzGroupIds, channelsById, starred) {
             buzzGroupIds
-                .filter { buzzTypeOf(it).let { t -> t != BUZZ_CHANNEL_TYPE_FORUM && t != BUZZ_CHANNEL_TYPE_DM } }
+                .filter { buzzTypeOf(it).let { t -> t != BUZZ_CHANNEL_TYPE_FORUM && t != BUZZ_CHANNEL_TYPE_DM } && !isArchived(it) }
                 .sortedWith(compareByDescending<GroupId> { it.id in starred }.thenBy { buzzSortKey(it) })
         }
     val buzzForumChannels =
         remember(buzzGroupIds, channelsById, starred) {
             buzzGroupIds
-                .filter { buzzTypeOf(it) == BUZZ_CHANNEL_TYPE_FORUM }
+                .filter { buzzTypeOf(it) == BUZZ_CHANNEL_TYPE_FORUM && !isArchived(it) }
                 .sortedWith(compareByDescending<GroupId> { it.id in starred }.thenBy { buzzSortKey(it) })
         }
+    // Every archived non-DM channel (chat + forum together), newest section at the bottom.
+    val buzzArchivedChannels =
+        remember(buzzGroupIds, channelsById) {
+            buzzGroupIds
+                .filter { buzzTypeOf(it) != BUZZ_CHANNEL_TYPE_DM && isArchived(it) }
+                .sortedBy { buzzSortKey(it) }
+        }
 
-    // Which sections the user has collapsed (session-scoped). Keyed by section id below.
-    var collapsedSections by remember { mutableStateOf(emptySet<String>()) }
+    // Which sections the user has collapsed (session-scoped). Keyed by section id below. Archived
+    // starts collapsed — it's the out-of-the-way tail, expanded only when someone goes looking.
+    var collapsedSections by remember { mutableStateOf(setOf("archived")) }
 
     fun toggleSection(key: String) {
         collapsedSections = if (key in collapsedSections) collapsedSections - key else collapsedSections + key
@@ -503,6 +516,38 @@ fun RelayGroupChannelListScreen(
                                     // Forum posts live in a separate thread store, not the chat notes the
                                     // activity preview reads — so don't warm a kind-9 sub that returns nothing.
                                     showActivityPreview = false,
+                                )
+                            }
+                        }
+                    }
+
+                    // -- ARCHIVED -- Channels the relay has archived (chat + forum), tucked into a
+                    // collapsed tail. Opening one and using the top-bar Unarchive brings it back.
+                    if (buzzArchivedChannels.isNotEmpty()) {
+                        val archivedCollapsed = "archived" in collapsedSections
+                        item(key = "sec-archived") {
+                            RelayGroupSectionHeader(
+                                title = stringRes(R.string.relay_group_section_archived),
+                                collapsed = archivedCollapsed,
+                                onToggle = { toggleSection("archived") },
+                            )
+                        }
+                        if (!archivedCollapsed) {
+                            itemsIndexed(buzzArchivedChannels, key = { _, it -> "archived-${it.id}" }) { index, groupId ->
+                                RowHairline(index)
+                                val isForum = buzzTypeOf(groupId) == BUZZ_CHANNEL_TYPE_FORUM
+                                BuzzImportRow(
+                                    groupId = groupId,
+                                    accountViewModel = accountViewModel,
+                                    onOpen = {
+                                        if (isForum) {
+                                            nav.nav(Route.RelayGroupThreads(groupId.id, relay.url))
+                                        } else {
+                                            nav.nav(Route.RelayGroup(groupId.id, relay.url))
+                                        }
+                                    },
+                                    isStarred = groupId.id in starred,
+                                    showActivityPreview = !isForum,
                                 )
                             }
                         }
