@@ -49,13 +49,16 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.RelayNameChip
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /**
@@ -100,7 +103,14 @@ fun RenderRelayGroupMessage(
     }
 }
 
-/** A compact, tappable header naming the Buzz group (or DM participant) a message belongs to. */
+/**
+ * A compact, tappable header naming the Buzz group (or DM participant) a message belongs to, plus a
+ * [RelayNameChip] naming its host relay — the same pairing the Messages row uses, and the NIP-29
+ * analog of the [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCommunityPill]
+ * a Concord message wears on these same cards. A group id is only unique within its host relay, so
+ * without the relay a notification from `#general` doesn't say *which* `#general` it came from. The
+ * chip taps through to the relay's channel list, while the name/avatar open the room itself.
+ */
 @Composable
 fun RelayGroupChannelHeader(
     channel: RelayGroupChannel,
@@ -129,16 +139,21 @@ fun RelayGroupChannelHeader(
         )
 
         if (dmOther != null) {
-            RelayGroupDmName(dmOther, channel, accountViewModel, Modifier.weight(1f))
+            RelayGroupDmName(dmOther, channel, accountViewModel, Modifier.weight(1f, fill = false))
         } else {
             Text(
                 text = channel.toBestDisplayName(),
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f, fill = false),
             )
         }
+
+        RelayNameChip(
+            label = channel.groupId.relayUrl.displayUrl(),
+            onClick = { nav.nav(Route.RelayGroupServer(channel.groupId.relayUrl.url)) },
+        )
     }
 }
 
