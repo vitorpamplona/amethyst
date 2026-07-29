@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -41,6 +42,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * - Platform-agnostic model layer
  */
 interface ICacheProvider {
+    /**
+     * NIP-hints index (event/address/pubkey → relay) accumulated from consumed
+     * events. Used by the shared user/event finder assemblers to discover which
+     * relays are likely to hold a given user's metadata or a missing event.
+     */
+    val relayHints: HintIndexer
+
     /**
      * Gets a channel by Note reference.
      * Used for resolving relay hints for channel messages.

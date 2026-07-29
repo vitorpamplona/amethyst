@@ -479,7 +479,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     @Volatile
     var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
-    val relayHints = HintIndexer()
+    override val relayHints = HintIndexer()
 
     /**
      * Cashu mint URL directory, populated passively as
