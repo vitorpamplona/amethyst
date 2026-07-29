@@ -63,8 +63,8 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.PictureIn
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
-import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
@@ -349,7 +349,7 @@ fun RenderTopButtonsForVoice(
     accountViewModel: AccountViewModel,
 ) {
     Row(modifier) {
-        if (!isLiveStreaming(mediaData.videoUri)) {
+        if (!isHlsMedia(mediaData.videoUri, mediaData.mimeType)) {
             AnimatedShareButton(controllerVisible) { popupExpanded, toggle ->
                 ShareMediaAction(
                     popupExpanded = popupExpanded,

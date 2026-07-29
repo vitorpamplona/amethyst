@@ -53,9 +53,9 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTop
 import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.fullscreenSwipeControls
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.AudioPlayingAnimation
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.rememberIsAudioTrack
-import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
@@ -105,7 +105,7 @@ fun RenderVideoPlayer(
     // unnecessary recomposition of the whole player tree just to update a value that is only
     // ever read inside the onDoubleTap callback below.
     val containerWidth = remember { intArrayOf(0) }
-    val isLive = remember(mediaItem.src.videoUri) { isLiveStreaming(mediaItem.src.videoUri) }
+    val isLive = remember(mediaItem.src.videoUri, mediaItem.src.mimeType) { isHlsMedia(mediaItem.src.videoUri, mediaItem.src.mimeType) }
 
     val swipeState = remember { FullscreenSwipeControlsState() }
     val context = LocalContext.current

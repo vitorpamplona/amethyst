@@ -25,7 +25,6 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.amethyst.service.playback.diskCache.HlsLivenessCache
-import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -66,7 +65,7 @@ internal fun livenessVerdictToRecord(
  * reliable live/on-demand discriminator (`#EXT-X-ENDLIST`) is inside the playlist, so it is knowable
  * only once ExoPlayer has loaded it — hence learning it here rather than from the URL.
  *
- * Only `.m3u8` items are considered; progressive media is unambiguous and never routed by liveness.
+ * Only HLS items are considered; progressive media is unambiguous and never routed by liveness.
  */
 class HlsLivenessRecorder(
     private val player: Player,
@@ -85,8 +84,11 @@ class HlsLivenessRecorder(
 
     private fun maybeRecord(allowOnDemand: Boolean) {
         if (player.currentTimeline.isEmpty) return
-        val url = player.currentMediaItem?.mediaId ?: return
-        if (!isLiveStreaming(url)) return
+        val mediaItem = player.currentMediaItem ?: return
+        // Must be the same predicate CustomMediaSourceFactory routes on — see isHlsMediaItem for
+        // what goes wrong when the two disagree.
+        if (!isHlsMediaItem(mediaItem)) return
+        val url = mediaItem.mediaId
 
         val known = HlsLivenessCache.verdict(url)
         val toRecord =
