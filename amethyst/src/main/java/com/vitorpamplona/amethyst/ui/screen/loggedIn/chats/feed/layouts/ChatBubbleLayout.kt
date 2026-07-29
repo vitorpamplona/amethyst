@@ -29,7 +29,10 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -56,11 +59,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -220,20 +225,7 @@ fun ChatBubbleLayout(
                                 }
                         }
 
-                        detectHorizontalDragGestures(
-                            onDragStart = {
-                                settleJob?.cancel()
-                                crossedThreshold = false
-                            },
-                            onDragEnd = {
-                                if (abs(dragOffset) >= swipeThresholdPx) {
-                                    onSwipeReply()
-                                }
-                                settleBack()
-                            },
-                            onDragCancel = { settleBack() },
-                        ) { change, dragAmount ->
-                            change.consume()
+                        val applyDrag = { dragAmount: Float ->
                             val newOffset =
                                 if (isLoggedInUser) {
                                     (dragOffset + dragAmount).coerceIn(-swipeMaxPx, 0f)
@@ -245,6 +237,38 @@ fun ChatBubbleLayout(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             }
                             dragOffset = newOffset
+                        }
+
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            settleJob?.cancel()
+                            crossedThreshold = false
+
+                            // Claim the pointer only once the motion is clearly more
+                            // horizontal than vertical; a mostly-vertical drag leaves the
+                            // pointer unconsumed so the enclosing scroll keeps it and the
+                            // bubble never moves while you scroll.
+                            var overSlop = Offset.Zero
+                            val drag =
+                                awaitTouchSlopOrCancellation(down.id) { change, over ->
+                                    if (abs(over.x) > abs(over.y)) {
+                                        change.consume()
+                                        overSlop = over
+                                    }
+                                }
+
+                            if (drag != null) {
+                                applyDrag(overSlop.x)
+                                val completed =
+                                    horizontalDrag(drag.id) { change ->
+                                        applyDrag(change.positionChange().x)
+                                        change.consume()
+                                    }
+                                if (completed && abs(dragOffset) >= swipeThresholdPx) {
+                                    onSwipeReply()
+                                }
+                                settleBack()
+                            }
                         }
                     }
             } else {
