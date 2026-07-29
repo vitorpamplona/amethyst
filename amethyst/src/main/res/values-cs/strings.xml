@@ -458,6 +458,8 @@
     <string name="refresh">Obnovit</string>
     <string name="changed_chat_profile_to">Nový chatový profil:</string>
     <string name="leave">Opustit</string>
+    <string name="remove_from_messages">Odebrat ze Zpráv</string>
+    <string name="add_to_messages">Přidat do Zpráv</string>
     <string name="unfollow">Přestat sledovat</string>
     <string name="channel_created">Kanál vytvořen</string>
     <string name="channel_information_changed_to">"Informace kanálu změněna na"</string>
@@ -2216,6 +2218,30 @@
     <string name="settings_section_tor_routing">Směrovat přes Tor</string>
     <string name="settings_section_profile_sections">Sekce a kanály</string>
     <string name="settings_section_home_tabs">Viditelné karty</string>
+    <string name="settings_section_home_content_types">Obsah v kanálu</string>
+    <string name="home_content_type_text_notes">Textové poznámky</string>
+    <string name="home_content_type_reposts">Sdílení</string>
+    <string name="home_content_type_comments">Komentáře a odpovědi</string>
+    <string name="home_content_type_pictures">Obrázky</string>
+    <string name="home_content_type_videos">Videa</string>
+    <string name="home_content_type_shorts">Krátká videa</string>
+    <string name="home_content_type_articles">Články</string>
+    <string name="home_content_type_wiki">Wiki stránky</string>
+    <string name="home_content_type_highlights">Zvýraznění</string>
+    <string name="home_content_type_polls">Ankety</string>
+    <string name="home_content_type_classifieds">Inzeráty</string>
+    <string name="home_content_type_torrents">Torrenty</string>
+    <string name="home_content_type_voice">Hlasové zprávy</string>
+    <string name="home_content_type_live_activities">Živé aktivity</string>
+    <string name="home_content_type_ephemeral_chat">Dočasné chaty</string>
+    <string name="home_content_type_interactive_stories">Interaktivní příběhy</string>
+    <string name="home_content_type_chess">Šachové partie</string>
+    <string name="home_content_type_birds">Pozorování ptáků</string>
+    <string name="home_content_type_attestations">Atestace</string>
+    <string name="home_content_type_nips">Návrhy NIP</string>
+    <string name="home_content_type_music">Hudba a zvuk</string>
+    <string name="home_content_type_podcasts">Podcasty</string>
+    <string name="home_content_type_fundraisers">Sbírky</string>
     <string name="settings_section_reminders">Připomenutí</string>
     <string name="wallet_connect">Připojení peněženky</string>
     <string name="language">Jazyk</string>
@@ -2452,6 +2478,10 @@
     <string name="relay_group_edit_confirm">Uložit</string>
     <string name="relay_group_menu_members">Členové</string>
     <string name="relay_group_menu_edit">Upravit skupinu</string>
+    <string name="relay_group_delete">Smazat skupinu</string>
+    <string name="relay_group_delete_confirm">Smazat „%1$s“? Odstraní to skupinu a její historii pro všechny a nelze to vrátit zpět.</string>
+    <string name="buzz_channel_delete">Smazat kanál</string>
+    <string name="buzz_channel_delete_confirm">Smazat „%1$s“? Odstraní to kanál a jeho zprávy pro všechny a nelze to vrátit zpět.</string>
     <string name="relay_group_threads_title">Vlákna</string>
     <string name="relay_group_pin_message">Připnout zprávu</string>
     <string name="relay_group_unpin_message">Odepnout zprávu</string>
@@ -2605,6 +2635,14 @@
     <string name="share_target_as_dm">Odeslat jako DM</string>
     <string name="share_to_dm_title">Odeslat…</string>
     <string name="share_to_dm_start_new">Nová zpráva</string>
+    <string name="share_target_as_highlight">Nové zvýraznění</string>
+    <string name="new_highlight_title">Nové zvýraznění</string>
+    <string name="new_highlight_passage_label">Zvýrazněný text</string>
+    <string name="new_highlight_passage_placeholder">Co vás zaujalo?</string>
+    <string name="new_highlight_source_label">URL zdroje</string>
+    <string name="new_highlight_note_label">Vaše poznámka (volitelné)</string>
+    <string name="new_highlight_note_placeholder">Přidejte své myšlenky…</string>
+    <string name="highlight_action">Zvýraznit</string>
     <string name="copy_url_to_clipboard">Kopírovat URL do schránky</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopírovat ID poznámky do schránky</string>
     <string name="add_media_to_gallery">Přidat média do galerie</string>
@@ -3392,6 +3430,12 @@
     <string name="buzz_pin">Připnout kanál</string>
     <string name="buzz_unpin">Odepnout kanál</string>
     <string name="buzz_dm_section_empty">Zatím žádné konverzace</string>
+    <plurals name="buzz_dm_hidden_count">
+        <item quantity="one">%1$d skrytá konverzace</item>
+        <item quantity="few">%1$d skryté konverzace</item>
+        <item quantity="many">%1$d skryté konverzace</item>
+        <item quantity="other">%1$d skrytých konverzací</item>
+    </plurals>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">Zobrazit další %1$d konverzaci</item>
         <item quantity="few">Zobrazit všechny %1$d konverzace</item>
@@ -3572,6 +3616,7 @@
     <string name="git_repo_settings_topics">Témata (oddělená čárkami)</string>
     <string name="git_repo_settings_save">Uložit</string>
     <string name="git_repositories">Git repozitáře</string>
+    <string name="highlights">Zvýraznění</string>
     <string name="nsite_title">Statický web: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Oprávnění:</string>
@@ -4653,6 +4698,7 @@
     <string name="new_conversation_location_pro_2">Kompatibilní s Bitchatem; zasáhne blízké uživatele na stejných relayích.</string>
     <string name="new_conversation_location_con_1">Veřejné a dočasné — žádná historie, může to číst kdokoli v buňce.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_job_board_title">Fronta úloh</string>
     <string name="buzz_workflow_runs_title">Běhy workflow</string>
     <string name="buzz_agent_work_title">Práce agenta</string>
     <string name="buzz_workflow_new_run">Nový běh</string>
