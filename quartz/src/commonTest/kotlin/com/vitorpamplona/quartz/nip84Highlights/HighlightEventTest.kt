@@ -131,4 +131,48 @@ class HighlightEventTest {
         assertNull(bare.textQuoteSelector())
         assertNull(bare.contextOrReconstructed())
     }
+
+    @Test
+    fun prefersTheAuthorMarkedPTagOverEarlierMentions() {
+        // A real kind:9802 highlighting a nostr note: three `mention` p tags precede the
+        // `author`-marked one. author() must return the author, not the first mention.
+        val highlight =
+            HighlightEvent(
+                id = "710dd9bcaa29618ad660db1a10fa0df12e684b161755369e14a459a98f80cc78",
+                pubKey = "7fa56f5d6962ab1e3cd424e758c3002b8665f7b0d8dcee9fe9e288d7751ac194",
+                createdAt = 1772184734,
+                tags =
+                    arrayOf(
+                        arrayOf("p", "0c45d7d45edb0fadda4215d36ca0d9aba0c771b85d3717764b8a128d5e443e4d", "", "mention"),
+                        arrayOf("p", "99bb5591c9116600f845107d31f9b59e2f7c7e09a1ff802e84f1d43da557ca64", "", "mention"),
+                        arrayOf("p", "4d7842051782e0d3feb034d150adc2b6bae4ee3b49786793bffa468b6f5b96b3", "", "mention"),
+                        arrayOf("e", "54f1c0fbc3305dd98b3ce8e63ef04e9f4b149dc8de38b4275fae49beddb794eb", "wss://nos.lol/", "source"),
+                        arrayOf("p", "dd664d5e4016433a8cd69f005ae1480804351789b59de5af06276de65633d319", "", "author"),
+                    ),
+                content = "Family and friendship and faith give men a sense of purpose.",
+                sig = "00",
+            )
+
+        assertEquals("dd664d5e4016433a8cd69f005ae1480804351789b59de5af06276de65633d319", highlight.author())
+    }
+
+    @Test
+    fun fallsBackToTheFirstPTagWhenNoAuthorMarkerIsPresent() {
+        // Amethyst's own highlight publisher tags only the author, with no role marker.
+        val highlight =
+            HighlightEvent(
+                id = "00",
+                pubKey = "00",
+                createdAt = 0,
+                tags =
+                    arrayOf(
+                        arrayOf("a", "30023:eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac:bitcoin-here-now"),
+                        arrayOf("p", "eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac"),
+                    ),
+                content = "a highlight of an article",
+                sig = "00",
+            )
+
+        assertEquals("eaa06714ac905aa5583860391e161edc7a815359b7c3e9b9b202c0558aefbeac", highlight.author())
+    }
 }
