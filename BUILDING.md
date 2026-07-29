@@ -662,11 +662,18 @@ by any other channel.
 
 | OS | App location | State directories |
 |---|---|---|
-| macOS | `/Applications/Amethyst.app` | `~/Library/Application Support/Amethyst`<br>`~/Library/Preferences/com.vitorpamplona.amethyst.desktop.plist`<br>`~/Library/Caches/Amethyst` |
+| macOS | `/Applications/Amethyst.app` | `~/.amethyst` (accounts + keys)<br>`~/Library/Application Support/Amethyst` (Tor)<br>`~/Library/Caches/AmethystDesktop` (image cache)<br>`~/Library/Preferences/com.apple.java.util.prefs.plist` (**shared** — see below) |
 | Windows | `%LOCALAPPDATA%\Amethyst` or `C:\Program Files\Amethyst` | `%APPDATA%\Amethyst`<br>`%LOCALAPPDATA%\Amethyst` |
 | Linux (deb/rpm) | `/opt/amethyst` | `~/.config/amethyst`<br>`~/.local/share/amethyst`<br>`~/.cache/amethyst` |
 | Linux (AppImage/tar.gz) | user-chosen | Same as above |
 | Linux (Flatpak) | `/var/lib/flatpak` or `~/.local/share/flatpak` | `~/.var/app/com.vitorpamplona.amethyst.Desktop/` |
+
+**macOS preferences are in a SHARED file.** `DesktopPreferences` uses the Java
+Preferences API, which on macOS writes into
+`~/Library/Preferences/com.apple.java.util.prefs.plist` — one plist for *every*
+Java application on the machine, not a per-app file. Never delete it to "reset
+Amethyst": that wipes unrelated apps' settings. This is why the Homebrew cask's
+`zap` stanza deliberately omits it.
 
 Uninstall:
 
