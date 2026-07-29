@@ -132,6 +132,27 @@ fun NotificationSettingsScreen(onBack: (() -> Unit)? = null) {
                     }
             }
 
+            // Handle the still-broken case that the previous fix missed:
+            // the user granted OS permission in a prior session (either via
+            // the older "Enable OS notifications" button whose auto-enable
+            // guard I initially forgot, via System Settings directly, or on
+            // Windows/Linux where permissionState defaults to NotApplicable).
+            // When they come back to Settings, permissionState == Granted so
+            // the "Enable OS notifications" button doesn't render, the master
+            // switch is still OFF from first-launch defaults, and there is no
+            // affordance that both tells them what's wrong and fixes it in
+            // one click. Auto-enable once per screen entry when we detect
+            // "permission is fine, but master switch is off and the user
+            // has never explicitly disabled it". PreferencesNotificationSettings
+            // exposes [wasExplicitlyDisabled] so we don't overrule a deliberate
+            // opt-out.
+            androidx.compose.runtime.LaunchedEffect(permissionState, enabled) {
+                val allowed = permissionState == PermissionState.Granted || permissionState == PermissionState.NotApplicable
+                if (allowed && !enabled && !settings.wasExplicitlyDisabled()) {
+                    settings.setEnabled(true)
+                }
+            }
+
             PlatformStatusCard(
                 host = host,
                 nativeAvailable = nativeAvailable,
@@ -219,6 +240,17 @@ fun NotificationSettingsScreen(onBack: (() -> Unit)? = null) {
                         }
                     }
                     PermissionState.Granted, PermissionState.NotApplicable -> {
+                        // Turn-on button: renders only when master switch is
+                        // off *and* the user explicitly disabled it before.
+                        // The LaunchedEffect above auto-enables the switch
+                        // for the common "never touched it" path; this button
+                        // is the recovery for the deliberate-opt-out path.
+                        if (!enabled) {
+                            OutlinedButton(
+                                onClick = { settings.setEnabled(true) },
+                                enabled = true,
+                            ) { Text("Turn on desktop notifications") }
+                        }
                         OutlinedButton(
                             onClick = {
                                 if (sendingTest) return@OutlinedButton
