@@ -2771,7 +2771,7 @@
     <string name="new_highlight_source_label">Source URL</string>
     <string name="new_highlight_note_label">Your note (optional)</string>
     <string name="new_highlight_note_placeholder">Add your thoughts…</string>
-    <string name="new_highlight_preview_label">Preview</string>
+    <string name="highlight_action">Highlight</string>
     <string name="copy_url_to_clipboard">Copy URL to clipboard</string>
     <string name="copy_the_note_id_to_the_clipboard">Copy Note ID to clipboard</string>
     <string name="add_media_to_gallery">Add Media to Gallery</string>

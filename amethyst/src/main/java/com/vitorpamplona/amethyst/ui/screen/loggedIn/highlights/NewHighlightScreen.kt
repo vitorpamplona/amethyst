@@ -66,7 +66,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.ui.note.HighlightedQuote
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -139,10 +138,6 @@ fun NewHighlightScreen(
                 passage = postViewModel.quote,
                 onPassageChange = { postViewModel.quote = it },
             )
-
-            if (postViewModel.quote.isNotBlank()) {
-                HighlightPreview(passage = postViewModel.quote)
-            }
 
             IconField(
                 symbol = MaterialSymbols.Link,
@@ -244,30 +239,6 @@ private fun HighlightEditorCard(
                     )
                 }
             }
-        }
-    }
-}
-
-/** A live render of the passage exactly as it will appear in the feed — the highlighter pen. */
-@Composable
-private fun HighlightPreview(passage: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringRes(R.string.new_highlight_preview_label),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 1.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            HighlightedQuote(
-                text = passage,
-                highlight = passage.indices,
-                modifier = Modifier.padding(16.dp),
-            )
         }
     }
 }

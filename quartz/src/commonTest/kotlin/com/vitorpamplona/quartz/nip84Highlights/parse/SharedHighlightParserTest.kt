@@ -171,4 +171,40 @@ class SharedHighlightParserTest {
         assertNull(result.prefix)
         assertNull(result.suffix)
     }
+
+    @Test
+    fun realWorldChromeCopyLinkWithPrefixSuffixAndEncodedHyphen() {
+        // Chrome "copy link to highlight": a short selection with prefix/suffix anchors, and an
+        // encoded hyphen (%2D "pró-Irã") inside the prefix that must not be read as a delimiter.
+        val result =
+            SharedHighlightParser.parse(
+                "\"baseados\"\n https://g1.globo.com/mundo/noticia/2026/07/28/ira-rompe-tregua-e-lanca-misseis-balisticos-contra-bases-dos-eua-no-oriente-medio.ghtml" +
+                    "#:~:text=Saudita%20lan%C3%A7aram%20ataques%20em%20conjunto%20contra%20militantes%20pr%C3%B3%2DIr%C3%A3-,baseados,-no%20Iraque.",
+            )
+        assertEquals("baseados", result.quote)
+        assertEquals(
+            "https://g1.globo.com/mundo/noticia/2026/07/28/ira-rompe-tregua-e-lanca-misseis-balisticos-contra-bases-dos-eua-no-oriente-medio.ghtml",
+            result.url,
+        )
+        assertEquals("Saudita lançaram ataques em conjunto contra militantes pró-Irã", result.prefix)
+        assertEquals("no Iraque", result.suffix)
+    }
+
+    @Test
+    fun realWorldChromeCopyLinkStartOnlyWithEncodedCommas() {
+        // A long start-only fragment whose commas are encoded (%2C) so they don't split the
+        // directive, and whose apostrophe (’) inside the passage must survive quote-trimming.
+        val passage =
+            "cherish those corners. Geohot’s blog is one such corner that I rediscovered recently. " +
+                "Oh, what a joy to read something human from an actual human. His stuff makes me cry, laugh, and everything in"
+        val result =
+            SharedHighlightParser.parse(
+                "\"$passage\"\n https://dergigi.com/2026/07/28/typing/" +
+                    "#:~:text=cherish%20those%20corners.%20Geohot%E2%80%99s%20blog%20is%20one%20such%20corner%20that%20I%20rediscovered%20recently.%20Oh%2C%20what%20a%20joy%20to%20read%20something%20human%20from%20an%20actual%20human.%20His%20stuff%20makes%20me%20cry%2C%20laugh%2C%20and%20everything%20in",
+            )
+        assertEquals(passage, result.quote)
+        assertEquals("https://dergigi.com/2026/07/28/typing/", result.url)
+        assertNull(result.prefix)
+        assertNull(result.suffix)
+    }
 }

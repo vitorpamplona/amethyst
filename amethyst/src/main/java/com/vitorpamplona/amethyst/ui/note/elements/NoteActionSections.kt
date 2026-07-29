@@ -171,6 +171,25 @@ fun noteActionSections(
                     }
                 },
             )
+            // Highlight this note/article as its source: opens the NIP-84 composer with the
+            // nostr source pre-tagged (`a` for an addressable article, else `e`) plus the author,
+            // and the passage left for the user to type or paste. Prose kinds only, and never a
+            // private rumor (a public highlight would e-tag the unsigned rumor onto relays).
+            if (!isPrivateRumor && (note.event is TextNoteEvent || note.event is LongTextNoteEvent)) {
+                add(
+                    NoteAction(MaterialSymbols.FormatQuote, stringRes(R.string.highlight_action)) {
+                        val author = note.author?.pubkeyHex
+                        val route =
+                            if (note is AddressableNote) {
+                                Route.NewHighlight(sourceAddress = note.address.toValue(), author = author)
+                            } else {
+                                Route.NewHighlight(sourceEventId = note.idHex, author = author)
+                            }
+                        nav.nav(route)
+                        handlers.onDismiss()
+                    },
+                )
+            }
             if (!isPrivateRumor) {
                 add(NoteAction(MaterialSymbols.Share, stringRes(R.string.quick_action_share), onClick = handlers.onShare))
             }
