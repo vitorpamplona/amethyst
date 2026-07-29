@@ -129,6 +129,33 @@ class SharedHighlightParserTest {
     }
 
     @Test
+    fun dropsTheOpenParenOrphanedByTheUrlTrim() {
+        // The wrapping ")" leaves with the URL in trimUrlEnd; the "(" it opened must not be
+        // left dangling as the tail of the published passage.
+        val result = SharedHighlightParser.parse("See this quote (https://example.com/article)")
+        assertEquals("https://example.com/article", result.url)
+        assertEquals("See this quote", result.quote)
+    }
+
+    @Test
+    fun keepsAMatchedBracketPairInThePassage() {
+        // Nothing was orphaned here, so the passage keeps its own parenthetical intact.
+        val result = SharedHighlightParser.parse("He said (see below) https://example.com/a")
+        assertEquals("https://example.com/a", result.url)
+        assertEquals("He said (see below)", result.quote)
+    }
+
+    @Test
+    fun keepsTheSlugParenCaseQuoteIntact() {
+        // Regression guard for the opposite direction: nothing was trimmed off this URL, so
+        // the passage must be untouched too.
+        val result =
+            SharedHighlightParser.parse("Mercury is small.\n\nhttps://en.wikipedia.org/wiki/Mercury_(planet)")
+        assertEquals("https://en.wikipedia.org/wiki/Mercury_(planet)", result.url)
+        assertEquals("Mercury is small.", result.quote)
+    }
+
+    @Test
     fun urlInsideSelectionStaysWithQuoteWhenSourceAppended() {
         // The last URL is treated as the source; an earlier URL inside the passage is kept.
         val result =

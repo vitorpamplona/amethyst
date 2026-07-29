@@ -80,7 +80,7 @@ object SharedHighlightParser {
             url = UrlTrackerCleaner.clean(stripped).takeIf { it.isNotBlank() }
 
             // Remove the whole matched token (incl. any trailing punctuation) from the passage.
-            remainder = input.removeRange(match.range).trim()
+            remainder = dropDanglingOpenBracket(input.removeRange(match.range).trim())
         }
 
         val quote = cleanQuote(remainder) ?: fragmentQuote?.let { cleanQuote(it) }
@@ -114,6 +114,26 @@ object SharedHighlightParser {
             }
         }
         return token.substring(0, end)
+    }
+
+    /**
+     * Drops a bracket left dangling at the end of the passage once the URL token carried its
+     * closing partner away. `See this quote (https://example.com/article)` loses the wrapping `)`
+     * in [trimUrlEnd], which would otherwise publish the passage as `See this quote (`.
+     *
+     * Only an *unbalanced* trailing bracket goes, so `He said (see below) https://…` keeps its
+     * matched pair, and a bracket anywhere but the very end is left alone — the URL removal can
+     * only ever orphan one at the tail.
+     */
+    private fun dropDanglingOpenBracket(text: String): String {
+        var out = text.trimEnd()
+        while (out.isNotEmpty()) {
+            val open = out.last()
+            val close = OPEN_TO_CLOSE[open] ?: return out
+            if (out.count { it == open } <= out.count { it == close }) return out
+            out = out.dropLast(1).trimEnd()
+        }
+        return out
     }
 
     /** Trims surrounding whitespace and matching quote marks; returns null when nothing is left. */
