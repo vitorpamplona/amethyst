@@ -1709,6 +1709,22 @@ class AccountViewModel(
     fun acceptChannelInvite(channel: RelayGroupChannel) = addRelayGroupToMessages(channel)
 
     /**
+     * Hide a Buzz DM from Messages (kind-41012). DM-specific — a DM has no kind-10009 entry; the relay
+     * republishes my per-viewer 30622 hidden snapshot, dropping it from the inbox until I re-open it.
+     */
+    fun hideBuzzDm(channel: RelayGroupChannel) = launchSigner { account.hideBuzzDm(channel) }
+
+    /**
+     * Bring a hidden Buzz DM back to Messages: Buzz has no "unhide", so re-open the conversation with
+     * the same [participants] (a kind-41010 resolving to the same canonical channel), which drops it
+     * from the 30622 hidden snapshot.
+     */
+    fun unhideBuzzDm(
+        relay: NormalizedRelayUrl,
+        participants: List<HexKey>,
+    ) = launchSigner { account.openBuzzDm(relay, participants) }
+
+    /**
      * Keep the channel off Messages without touching membership. Local and reversible — I stay in the
      * roster and can still open and post; [leaveChannelInvite] is the one that actually removes me.
      */

@@ -34,15 +34,19 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -164,6 +168,25 @@ private fun RelayGroupThreads(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
+                    }
+                },
+                actions = {
+                    // The forum's per-item actions, moved off the community-list row into this screen's
+                    // top-bar overflow: Pin/Unpin and the Add/Remove-from-Messages toggle. Buzz-only,
+                    // which every forum channel is.
+                    if (isBuzz) {
+                        var menuOpen by remember { mutableStateOf(false) }
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(
+                                symbol = MaterialSymbols.MoreVert,
+                                contentDescription = stringRes(R.string.more_options),
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            BuzzPinDropdownItem(channel.groupId) { menuOpen = false }
+                            RelayGroupMessagesDropdownItem(channel, accountViewModel) { menuOpen = false }
+                        }
                     }
                 },
                 popBack = nav::popBack,

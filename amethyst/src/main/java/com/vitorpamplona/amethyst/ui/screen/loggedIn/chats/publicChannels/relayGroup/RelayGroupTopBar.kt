@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaceStates
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -117,6 +118,9 @@ fun RelayGroupTopBar(
     // My kind-10009 list, live: drives the Add/Remove-from-Messages toggle in the overflow below.
     val joinedGroupIds by accountViewModel.account.relayGroupList.liveRelayGroupIds
         .collectAsStateWithLifecycle()
+    // A Buzz DM is hidden via its own per-viewer 30622 snapshot, not the kind-10009 list, so the
+    // Messages toggle branches on this for DMs.
+    val hiddenDms by BuzzDmRegistry.hidden.collectAsStateWithLifecycle()
     // Read once here (nav.canPop() is @Composable) so the post-action navigation can pop from a menu
     // callback — leaving a group shouldn't strand the user on the screen of a group they left.
     val canPop = nav.canPop()
@@ -237,7 +241,9 @@ fun RelayGroupTopBar(
             // Buzz `t=stream` channel it is always empty (forum posts live in `t=forum` channels, which
             // the relay's channel list already surfaces in their own section), so it read as a broken
             // feature on every chat. Demoted to the overflow, where the frequency of use actually is.
-            if (!isDm || naddr != null || showMembershipActions) {
+            // A Buzz DM always gets the overflow too — its hide/unhide (below) is the DM row's old
+            // action, and it must be reachable even where the membership actions aren't offered.
+            if (!isDm || naddr != null || showMembershipActions || (isDm && isBuzzRelay)) {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
                         symbol = MaterialSymbols.MoreVert,
@@ -246,6 +252,33 @@ fun RelayGroupTopBar(
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    // Pin/Unpin moved here off the community-list row. A local favorite, so it's offered
+                    // for any Buzz channel/forum regardless of membership; DMs are never pinned.
+                    if (isBuzzRelay && !isDm) {
+                        BuzzPinDropdownItem(channel.groupId) { menuOpen = false }
+                    }
+                    // A DM's Add/Remove-from-Messages, moved off the DM list row. It rides the per-viewer
+                    // 30622 hide snapshot (kind-41012 hide / re-open), not the kind-10009 list, and is
+                    // shown regardless of the membership gate below.
+                    if (isBuzzRelay && isDm) {
+                        val dmHidden = channel.groupId.id in (hiddenDms[myPubkey] ?: emptySet())
+                        DropdownMenuItem(
+                            text = { Text(stringRes(if (dmHidden) R.string.add_to_messages else R.string.remove_from_messages)) },
+                            onClick = {
+                                menuOpen = false
+                                if (dmHidden) {
+                                    val participants =
+                                        channel.event
+                                            ?.buzzParticipants()
+                                            ?.filter { it != myPubkey }
+                                            .orEmpty()
+                                    accountViewModel.unhideBuzzDm(channel.groupId.relayUrl, participants.ifEmpty { listOf(myPubkey) })
+                                } else {
+                                    accountViewModel.hideBuzzDm(channel)
+                                }
+                            },
+                        )
+                    }
                     if (!isDm) {
                         DropdownMenuItem(
                             text = { Text(stringRes(R.string.relay_group_threads_title)) },
@@ -308,6 +341,8 @@ fun RelayGroupTopBar(
                         // Two distinct actions, never conflated: the Messages toggle adds/drops the group
                         // on my kind-10009 list but keeps my relay membership either way; "Leave" sends
                         // the kind-9022 that actually removes me. Same split as the channel-invite card.
+                        // (A DM's Messages toggle is the hide/unhide item above — it rides a different
+                        // mechanism and must show even when these membership actions don't.)
                         //
                         // Reads the live kind-10009 list rather than assuming the group is on it: this
                         // bar also opens for channels reached from the workspace browse (a Buzz relay

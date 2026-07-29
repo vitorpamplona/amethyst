@@ -36,8 +36,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -463,13 +461,9 @@ fun RelayGroupChannelListScreen(
                                 RowHairline(index)
                                 BuzzImportRow(
                                     groupId = groupId,
-                                    isAdded = groupId.id in buzzAdded,
-                                    onAdd = { buzzVm.add(groupId) },
-                                    onRemove = { buzzVm.remove(groupId) },
                                     accountViewModel = accountViewModel,
                                     onOpen = { nav.nav(Route.RelayGroup(groupId.id, relay.url)) },
                                     isStarred = groupId.id in starred,
-                                    onToggleStar = { BuzzChannelStars.toggle(groupId.id) },
                                 )
                             }
                         }
@@ -501,15 +495,11 @@ fun RelayGroupChannelListScreen(
                                 RowHairline(index)
                                 BuzzImportRow(
                                     groupId = groupId,
-                                    isAdded = groupId.id in buzzAdded,
-                                    onAdd = { buzzVm.add(groupId) },
-                                    onRemove = { buzzVm.remove(groupId) },
                                     accountViewModel = accountViewModel,
                                     // A forum channel's primary content is its threads (kind-45001 posts), not a
                                     // kind-9 chat, so open the forum/threads view directly instead of the chat.
                                     onOpen = { nav.nav(Route.RelayGroupThreads(groupId.id, relay.url)) },
                                     isStarred = groupId.id in starred,
-                                    onToggleStar = { BuzzChannelStars.toggle(groupId.id) },
                                     // Forum posts live in a separate thread store, not the chat notes the
                                     // activity preview reads — so don't warm a kind-9 sub that returns nothing.
                                     showActivityPreview = false,
@@ -548,7 +538,6 @@ fun RelayGroupChannelListScreen(
                                 row = row,
                                 myPubkey = myPubkey,
                                 isHidden = false,
-                                onToggleMessages = { dmVm.removeFromMessages(row) },
                                 accountViewModel = accountViewModel,
                                 nav = nav,
                             ) {
@@ -580,7 +569,6 @@ fun RelayGroupChannelListScreen(
                                     row = row,
                                     myPubkey = myPubkey,
                                     isHidden = true,
-                                    onToggleMessages = { dmVm.addToMessages(row) },
                                     accountViewModel = accountViewModel,
                                     nav = nav,
                                 ) {
@@ -721,25 +709,23 @@ private fun SectionAddButton(
 
 /**
  * One inline Direct-Message conversation row inside the community view: the counterpart's avatar +
- * name (or a "+N" cluster label for a group DM), a preview of the last message, a compact
- * last-activity time, and an overflow holding the Add/Remove-from-Messages toggle. The channel's
- * recent content is warmed while the row is visible so the preview fills in ahead of a tap. Tapping
- * opens the DM as its relay-group chat.
+ * name (or a "+N" cluster label for a group DM), a preview of the last message, and a compact
+ * last-activity time. The channel's recent content is warmed while the row is visible so the preview
+ * fills in ahead of a tap. Tapping opens the DM as its relay-group chat; the Add/Remove-from-Messages
+ * (hide/unhide) action lives in that chat screen's top-bar overflow, not on this row.
  *
- * [isHidden] renders the row faded and flips the overflow to "Add to Messages" — a hidden DM is a
- * live conversation the viewer merely parked, so it stays openable and reversible.
+ * [isHidden] renders the row faded — a hidden DM is a live conversation the viewer merely parked, so
+ * it stays openable and reversible from the opened conversation.
  */
 @Composable
 private fun BuzzDmInlineRow(
     row: BuzzDmListViewModel.DmRow,
     myPubkey: HexKey,
     isHidden: Boolean,
-    onToggleMessages: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
     onClick: () -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
     val others = row.others.ifEmpty { listOf(myPubkey) }
     val leadHex = others.first()
     val leadUser = remember(leadHex) { LocalCache.getOrCreateUser(leadHex) }
@@ -768,7 +754,7 @@ private fun BuzzDmInlineRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp)
                 .alpha(if (isHidden) 0.55f else 1f),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -796,33 +782,6 @@ private fun BuzzDmInlineRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        Box {
-            IconButton(onClick = { menuOpen = true }) {
-                Icon(
-                    symbol = MaterialSymbols.MoreVert,
-                    contentDescription = stringRes(R.string.more_options),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                DropdownMenuItem(
-                    leadingIcon = {
-                        Icon(
-                            symbol = if (isHidden) MaterialSymbols.Add else MaterialSymbols.VisibilityOff,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    },
-                    text = { Text(stringRes(if (isHidden) R.string.add_to_messages else R.string.remove_from_messages)) },
-                    onClick = {
-                        menuOpen = false
-                        onToggleMessages()
-                    },
-                )
-            }
         }
     }
 }
