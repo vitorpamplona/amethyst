@@ -40,7 +40,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  bump:
+  # Split in two on purpose. Cask commands are macOS-only (Homebrew on Linux
+  # refuses them), but the bump is gated on a cask that does not exist yet — so
+  # the cheap ubuntu `check` job decides, and the 10x-billed macOS `bump` job is
+  # only created when there is actually something to bump.
+  check:
     # On workflow_run, filter down to a SUCCESSFUL TAG build. `event == 'push'`
     # excludes create-release.yml's workflow_dispatch dry-runs (which carry a
     # synthetic test_tag and publish nothing), and the head_branch prefix keeps
@@ -50,8 +54,12 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
        startsWith(github.event.workflow_run.head_branch, 'v'))
-    runs-on: ubuntu-latest   # brew runs on Linux — saves macOS runner quota
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.rel.outputs.tag }}
+      ver: ${{ steps.rel.outputs.ver }}
+      bootstrapped: ${{ steps.cask.outputs.bootstrapped }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -87,21 +95,64 @@ jobs:
             echo "::warning::Cask 'amethyst-nostr' is not in Homebrew/homebrew-cask yet, so there is nothing to bump for ${{ steps.rel.outputs.tag }}. Amethyst is NOT shipping via Homebrew. Submit the one-time new-cask PR (BUILDING.md § Bootstrap) to activate this channel."
           fi
 
-      - name: Bump cask (push-or-update PR)
-        if: steps.cask.outputs.bootstrapped == 'true'
-        uses: macauley/action-homebrew-bump-cask@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
-        with:
-          token: ${{ secrets.HOMEBREW_TOKEN }}
-          tap: homebrew/cask
-          cask: amethyst-nostr
-          tag: ${{ steps.rel.outputs.tag }}
-
       - name: Report failure
         if: failure()
         uses: actions/github-script@v9
         with:
           script: |
             const tag = context.payload.workflow_run?.head_branch || context.payload.inputs?.tag || 'unknown';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[release-ops] bump-homebrew failed for ${tag}`,
+              body: [
+                `Homebrew cask bump failed for release \`${tag}\`.`,
+                ``,
+                `- Run: ${runUrl}`,
+                `- Channel: Homebrew Cask (\`amethyst-nostr\`)`,
+                ``,
+                `Recovery options:`,
+                `1. Re-run the workflow once underlying issue is fixed`,
+                `2. Manually run \`brew bump-cask-pr amethyst-nostr --version ${tag.replace(/^v/, '')}\``,
+                `3. File PR directly against Homebrew/homebrew-cask`
+              ].join('\n'),
+              labels: ['release-ops', 'bug']
+            });
+
+  bump:
+    needs: check
+    if: needs.check.outputs.bootstrapped == 'true'
+    # Casks are a macOS concept; Homebrew on Linux rejects `bump-cask-pr`.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      # Previously this used macauley/action-homebrew-bump-cask pinned to a SHA
+      # that does not exist in that repo (its only release is v1 from 2021, and
+      # the pin was commented "v4.0.0"). Because GitHub resolves every `uses:`
+      # during "Set up job", that bogus pin failed the whole job before any step
+      # ran — invisible until the trigger was fixed, since the workflow had never
+      # executed. Call brew directly instead: it is the same command BUILDING.md
+      # documents for manual recovery, and it drops an unmaintained third-party
+      # action that would hold a PAT with write access to homebrew-cask.
+      - name: Bump cask (opens PR against Homebrew/homebrew-cask)
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}
+          TAG: ${{ needs.check.outputs.tag }}
+          VER: ${{ needs.check.outputs.ver }}
+        run: |
+          set -euo pipefail
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/amethyst-desktop-${VER}-macos-arm64.dmg"
+          echo "Bumping amethyst-nostr to ${VER} from ${URL}"
+          brew developer on
+          brew bump-cask-pr amethyst-nostr --version "${VER}" --url "${URL}" --no-browse
+
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const tag = '${{ needs.check.outputs.tag }}' || 'unknown';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             await github.rest.issues.create({
               owner: context.repo.owner,
