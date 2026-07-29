@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListState
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
@@ -3465,6 +3466,10 @@ class Account(
         val template = DeleteGroupEvent.build(channel.groupId.id)
         signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
         unfollow(channel)
+        // Remember the deletion so the channel leaves the community's browse list immediately and
+        // stays gone across a restart — the relay drops the group but our cached 39000 metadata (and a
+        // stale re-announced 44100 on a Buzz relay) would otherwise keep it visible.
+        RelayGroupDeletions.markDeleted(channel.groupId)
     }
 
     /**

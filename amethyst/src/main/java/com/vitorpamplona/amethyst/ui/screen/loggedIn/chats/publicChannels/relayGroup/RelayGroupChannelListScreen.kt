@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -172,6 +173,11 @@ fun RelayGroupChannelListScreen(
             }
     }
 
+    // Channels this device has deleted (kind-9008). A delete is terminal — the relay drops the group —
+    // but our cached 39000 (and a Buzz relay's stale re-announced 44100) would keep it in the list, so
+    // filter them out everywhere below. Collected as a StateFlow so a delete removes the row live.
+    val deletedChannels by RelayGroupDeletions.flow.collectAsStateWithLifecycle()
+
     // Prefer the relay's own genuine, relay-signed groups (39000 author == the NIP-11 `self`).
     // Recomputes as the NIP-11 doc resolves so real groups fill in and fakes stay hidden. But if
     // NIP-11 is unreachable (e.g. a Cloudflare-fronted relay that resets the plain HTTP GET while
@@ -179,20 +185,22 @@ fun RelayGroupChannelListScreen(
     // its de-facto signer — so its relay-signed groups still show while a stray user-published 39000
     // (a different author) stays filtered.
     val channels =
-        remember(allChannels, relayInfo) {
+        remember(allChannels, relayInfo, deletedChannels) {
             val nip11Known = relayInfo.self != null || relayInfo.supported_nips != null
-            if (nip11Known) {
-                allChannels.filter { isRelaySignedRelayGroup(it, relayInfo) }
-            } else {
-                val dominantSigner =
-                    allChannels
-                        .mapNotNull { it.event?.pubKey }
-                        .groupingBy { it }
-                        .eachCount()
-                        .maxByOrNull { it.value }
-                        ?.key
-                if (dominantSigner != null) allChannels.filter { it.event?.pubKey == dominantSigner } else allChannels
-            }
+            val signed =
+                if (nip11Known) {
+                    allChannels.filter { isRelaySignedRelayGroup(it, relayInfo) }
+                } else {
+                    val dominantSigner =
+                        allChannels
+                            .mapNotNull { it.event?.pubKey }
+                            .groupingBy { it }
+                            .eachCount()
+                            .maxByOrNull { it.value }
+                            ?.key
+                    if (dominantSigner != null) allChannels.filter { it.event?.pubKey == dominantSigner } else allChannels
+                }
+            signed.filterNot { it.groupId.toKey() in deletedChannels }
         }
 
     // Buzz relays expose no public group directory (membership is server-side), so `channels` above
@@ -226,9 +234,13 @@ fun RelayGroupChannelListScreen(
     // ids so nothing the old flat list showed disappears.
     val channelsById = remember(allChannels) { allChannels.associateBy { it.groupId.id } }
     val buzzGroupIds =
-        remember(buzzChannels, channels) {
+        remember(buzzChannels, channels, deletedChannels) {
             val seen = LinkedHashSet<String>()
-            (buzzChannels + channels.map { it.groupId }).filter { seen.add(it.id) }
+            // `channels` is already delete-filtered; also drop deleted ids from the membership-scoped
+            // `buzzChannels` (kind-44100), which the relay can keep re-announcing after a delete.
+            (buzzChannels + channels.map { it.groupId })
+                .filterNot { it.toKey() in deletedChannels }
+                .filter { seen.add(it.id) }
         }
 
     fun buzzTypeOf(groupId: GroupId): String? = channelsById[groupId.id]?.event?.buzzChannelType()
