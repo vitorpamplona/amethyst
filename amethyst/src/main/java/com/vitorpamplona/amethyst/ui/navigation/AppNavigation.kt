@@ -790,6 +790,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.RelayGroupCreate> {
             RelayGroupCreateScreen(
                 relayUrl = it.relayUrl,
+                isForum = it.isForum,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

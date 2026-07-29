@@ -32,16 +32,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,9 +78,9 @@ private const val CARD_WARMUP_LIMIT = 10
  * kind-44100), rendered like the Concord server view — a colored monogram, the channel name with a
  * recent-posters facepile, a preview of the last message (author + snippet, or the Buzz activity
  * summary for system/diff/job rows), the relative time of that message, and an unread-count badge.
- * Tapping the card opens the channel ([onOpen]); the trailing overflow (3-dot) menu holds the
- * per-channel actions — Pin/Unpin and the Add/Remove-from-Messages toggle ([isAdded] says which half
- * to show, and it must come from the live kind-10009 list) — so the row stays clean.
+ * Tapping the card opens the channel ([onOpen]); the row itself is a clean tap-to-open target — its
+ * per-channel actions (Pin/Unpin, Add/Remove-from-Messages) live in the opened channel's/forum's
+ * top-bar overflow, not on the row. A pinned channel still shows a pin marker here ([isStarred]).
  *
  * Reused by the relay group-list screen where Buzz membership discovery is folded in.
  *
@@ -98,13 +93,9 @@ private const val CARD_WARMUP_LIMIT = 10
 @Composable
 fun BuzzImportRow(
     groupId: GroupId,
-    isAdded: Boolean,
-    onAdd: () -> Unit,
-    onRemove: () -> Unit,
     accountViewModel: AccountViewModel,
     onOpen: (() -> Unit)? = null,
     isStarred: Boolean = false,
-    onToggleStar: (() -> Unit)? = null,
     showActivityPreview: Boolean = true,
 ) {
     val account = accountViewModel.account
@@ -166,11 +157,7 @@ fun BuzzImportRow(
                 faceAuthors = faceAuthors,
                 unread = unread,
                 hasUnread = hasUnread,
-                isAdded = isAdded,
                 isStarred = isStarred,
-                onToggleStar = onToggleStar,
-                onAdd = onAdd,
-                onRemove = onRemove,
                 accountViewModel = accountViewModel,
             )
         }
@@ -195,15 +182,11 @@ private fun BuzzImportRowContent(
     faceAuthors: List<String>,
     unread: Int,
     hasUnread: Boolean,
-    isAdded: Boolean,
     isStarred: Boolean,
-    onToggleStar: (() -> Unit)?,
-    onAdd: () -> Unit,
-    onRemove: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
     Row(
-        modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
+        modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BuzzImportAvatar(name = name, seed = seed)
@@ -254,13 +237,6 @@ private fun BuzzImportRowContent(
                 ConcordUnreadBadge(unread)
             }
         }
-        BuzzChannelRowMenu(
-            isAdded = isAdded,
-            onAdd = onAdd,
-            onRemove = onRemove,
-            isStarred = isStarred,
-            onToggleStar = onToggleStar,
-        )
     }
 }
 
@@ -306,68 +282,6 @@ private fun BuzzChannelPreviewLine(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
-}
-
-/**
- * The per-channel overflow (3-dot) menu: Pin/Unpin and Add-to-my-list. Moved off the row itself so a
- * channel card reads as a clean Concord-style row, with its actions one tap behind the kebab.
- */
-@Composable
-private fun BuzzChannelRowMenu(
-    isAdded: Boolean,
-    onAdd: () -> Unit,
-    onRemove: () -> Unit,
-    isStarred: Boolean,
-    onToggleStar: (() -> Unit)?,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(
-                symbol = MaterialSymbols.MoreVert,
-                contentDescription = stringRes(R.string.more_options),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            if (onToggleStar != null) {
-                DropdownMenuItem(
-                    leadingIcon = {
-                        Icon(
-                            symbol = MaterialSymbols.PushPin,
-                            contentDescription = null,
-                            tint = if (isStarred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    },
-                    text = { Text(stringRes(if (isStarred) R.string.buzz_unpin else R.string.buzz_pin)) },
-                    onClick = {
-                        expanded = false
-                        onToggleStar()
-                    },
-                )
-            }
-            // A toggle, not a one-way "Added" badge: a channel already on the kind-10009 list offers
-            // the way back off it. Neither half touches the relay roster, so the channel stays in this
-            // list (and readable) either way — only whether it shows on Messages changes.
-            DropdownMenuItem(
-                leadingIcon = {
-                    Icon(
-                        symbol = if (isAdded) MaterialSymbols.VisibilityOff else MaterialSymbols.Add,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp),
-                    )
-                },
-                text = { Text(stringRes(if (isAdded) R.string.remove_from_messages else R.string.add_to_messages)) },
-                onClick = {
-                    expanded = false
-                    if (isAdded) onRemove() else onAdd()
-                },
-            )
-        }
-    }
 }
 
 /** A round monogram whose color is derived deterministically from the channel id. */
