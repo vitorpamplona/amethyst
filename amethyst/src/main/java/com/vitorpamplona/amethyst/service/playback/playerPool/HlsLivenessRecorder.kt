@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import com.vitorpamplona.amethyst.service.playback.HLS_VERIFY_TAG
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.amethyst.service.playback.diskCache.HlsLivenessCache
 import com.vitorpamplona.quartz.utils.Log
@@ -105,6 +106,8 @@ class HlsLivenessRecorder(
         // refresh of a live stream, and the verdict is stable once learned, so re-putting the same
         // value would take a ConcurrentHashMap bin lock on every callback for nothing.
         if (known != toRecord) {
+            // TEMPORARY HlsVerify — see HlsVerifyLog.kt. Remove before merge.
+            Log.e(HLS_VERIFY_TAG) { "LIVENESS ${if (toRecord) "LIVE" else "ON-DEMAND"} learned for $url" }
             Log.d(PLAYBACK_DIAG_TAG) { "LIVENESS ${if (toRecord) "LIVE" else "ON-DEMAND"} learned for $url" }
             HlsLivenessCache.record(url, toRecord)
         }

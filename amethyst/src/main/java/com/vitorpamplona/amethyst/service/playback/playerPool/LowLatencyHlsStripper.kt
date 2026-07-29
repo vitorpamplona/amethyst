@@ -28,6 +28,8 @@ import androidx.media3.exoplayer.hls.playlist.HlsMultivariantPlaylist
 import androidx.media3.exoplayer.hls.playlist.HlsPlaylist
 import androidx.media3.exoplayer.hls.playlist.HlsPlaylistParserFactory
 import androidx.media3.exoplayer.upstream.ParsingLoadable
+import com.vitorpamplona.amethyst.service.playback.HLS_VERIFY_TAG
+import com.vitorpamplona.quartz.utils.Log
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
@@ -104,7 +106,19 @@ internal class LowLatencyStrippingParser(
     override fun parse(
         uri: Uri,
         inputStream: InputStream,
-    ): HlsPlaylist = delegate.parse(uri, ByteArrayInputStream(stripLowLatencyTags(inputStream.readBytes())))
+    ): HlsPlaylist {
+        val original = inputStream.readBytes()
+        val stripped = stripLowLatencyTags(original)
+        // TEMPORARY HlsVerify — see HlsVerifyLog.kt. Remove before merge.
+        Log.e(HLS_VERIFY_TAG) {
+            if (stripped === original) {
+                "PARSE no LL tags (${original.size}B) $uri"
+            } else {
+                "PARSE STRIPPED ${original.size - stripped.size}B of ${original.size}B $uri"
+            }
+        }
+        return delegate.parse(uri, ByteArrayInputStream(stripped))
+    }
 }
 
 /**
