@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -192,13 +193,18 @@ fun ChatBubbleLayout(
             },
     ) {
         if (onSwipeReply != null) {
-            val progress = (abs(dragOffset) / swipeThresholdPx).coerceIn(0f, 1f)
-            if (progress > 0f) {
+            // Gate composition on a boolean that flips only at the 0<->non-0 edges, so
+            // the icon is added/removed twice per gesture instead of recomposing every
+            // frame; the fade/scale reads dragOffset inside graphicsLayer (layer phase),
+            // so the whole swipe animates without recomposing ChatBubbleLayout.
+            val swiping by remember { derivedStateOf { dragOffset != 0f } }
+            if (swiping) {
                 Box(
                     modifier =
                         Modifier
                             .align(if (isLoggedInUser) Alignment.CenterEnd else Alignment.CenterStart)
                             .graphicsLayer {
+                                val progress = (abs(dragOffset) / swipeThresholdPx).coerceIn(0f, 1f)
                                 alpha = progress
                                 scaleX = 0.6f + 0.4f * progress
                                 scaleY = 0.6f + 0.4f * progress
