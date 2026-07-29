@@ -22,10 +22,13 @@ package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
 
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.util.concurrent.TimeUnit
@@ -77,33 +80,39 @@ class LocalBlossomCacheProbe(
         cachedAtMs = 0L
     }
 
+    // Confined to Dispatchers.IO because callers reach this through suspend
+    // resolvers invoked from Compose `LaunchedEffect`/`produceState`, which run
+    // on the main dispatcher: building the OkHttp client and issuing the HEAD
+    // must not touch the UI thread.
     private suspend fun probe(): Boolean =
-        try {
-            val baseClient = httpClientBuilder.okHttpClientForPreview(LOCAL_CACHE_BASE)
-            val client =
-                baseClient
-                    .newBuilder()
-                    .connectTimeout(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    .readTimeout(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    .callTimeout(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    .build()
+        withContext(Dispatchers.IO) {
+            try {
+                val baseClient = httpClientBuilder.okHttpClientForPreview(LOCAL_CACHE_BASE)
+                val client =
+                    baseClient
+                        .newBuilder()
+                        .connectTimeout(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .readTimeout(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .callTimeout(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .build()
 
-            val request =
-                Request
-                    .Builder()
-                    .url("$LOCAL_CACHE_BASE/")
-                    .head()
-                    .build()
+                val request =
+                    Request
+                        .Builder()
+                        .url("$LOCAL_CACHE_BASE/")
+                        .head()
+                        .build()
 
-            client.newCall(request).executeAsync().use { response ->
-                // Spec says HEAD / returns 2xx when available. Some implementations
-                // may answer 405 (method not allowed) while still being a working
-                // Blossom cache, so treat that as available too.
-                response.isSuccessful || response.code == 405
+                client.newCall(request).executeAsync().use { response ->
+                    // Spec says HEAD / returns 2xx when available. Some implementations
+                    // may answer 405 (method not allowed) while still being a working
+                    // Blossom cache, so treat that as available too.
+                    response.isSuccessful || response.code == 405
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                false
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            false
         }
 
     private fun currentTimeMs(): Long = System.currentTimeMillis()
