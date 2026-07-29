@@ -29,11 +29,14 @@ import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import com.vitorpamplona.quartz.utils.firstNotNullOrNullAsync
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 
@@ -57,9 +60,16 @@ class BlossomServerResolver(
     suspend fun findServers(uriStr: String): BlossomUriServer? {
         uriToUrlCache[uriStr]?.let { return it }
 
+        // Confined to Dispatchers.IO: this is reached from Compose
+        // `produceState`/`LaunchedEffect` (RichTextViewer, MarmotGroupIconDisplay),
+        // which run on the main dispatcher. The pre-suspension work here —
+        // BlossomUri parsing, LruCache lookups, the local-cache probe's client
+        // build, and the server-list flow setup — must stay off the UI thread.
         val result =
-            withTimeoutOrNull(10000) {
-                findServersInner(uriStr)
+            withContext(Dispatchers.IO) {
+                withTimeoutOrNull(10000) {
+                    findServersInner(uriStr)
+                }
             }
 
         if (result != null) {

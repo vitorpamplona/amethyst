@@ -1230,6 +1230,14 @@ class AppModules(
                         blossomResolver.uriToUrlCache.evictAll()
                         blossomResolver.blossomHitCache.cache.evictAll()
                         localBlossomCacheProbe.invalidate()
+                        // Re-probe immediately so enabling the feature activates it
+                        // this session. Otherwise `available` only advances when a
+                        // `blossom:` URI is resolved, and the common feed-image path
+                        // never routes through the resolver until `available` is
+                        // already true — so a freshly-enabled toggle (or a cache that
+                        // came up after launch) would stay dormant and the settings
+                        // "detected" chip would read stale.
+                        localBlossomCacheProbe.isAvailable()
                     }
                 }
             }
