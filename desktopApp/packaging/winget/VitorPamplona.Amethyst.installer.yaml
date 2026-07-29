@@ -26,7 +26,7 @@ Installers:
   # Quoted deliberately: an all-digit 64-char value is a YAML *integer*, which
   # fails the schema's `string` type. Quoting makes it a string whatever the
   # digest happens to be.
-  InstallerSha256: '0000000000000000000000000000000000000000000000000000000000000000'
-  ProductCode: '{00000000-0000-0000-0000-000000000000}'
+  InstallerSha256: '6D93B945C14FBB08F0267266EF21212CCB64A40D870B7D9F68A815D674BABCC5'
+  ProductCode: '{CEE4E147-245F-3621-8CBD-CCA52C3578B6}'
 ManifestType: installer
 ManifestVersion: 1.12.0
