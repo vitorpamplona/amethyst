@@ -210,10 +210,24 @@ Until someone does that bootstrap, a green release run means the bump workflows
 *skipped cleanly* — not that Homebrew/Winget shipped. Check the run's warnings
 if you want to confirm which case you're in.
 
-The two `amy` / `geode` Homebrew **formula** workflows are different: they only
-sync the in-repo reference `.rb` files and open a PR against *this* repo, so
-they do real work on every release. Merge those PRs to keep the formulae ready
-for their eventual homebrew-core submission.
+**The cask bump is half-manual by design.** CI (`bump-homebrew.yml`) does the
+bookkeeping with `GITHUB_TOKEN` only — verifies the DMG is notarized + stapled,
+computes the sha256, and opens an in-repo PR syncing the reference cask. Pushing
+that upstream needs a classic `repo`-scoped PAT, which is deliberately *not* a
+CI secret (it would grant write to this repo to anyone with push access), so a
+maintainer runs it:
+
+```bash
+export HOMEBREW_GITHUB_API_TOKEN=ghp_...     # classic PAT, `repo` scope
+scripts/bump-homebrew-cask.sh v1.13.2
+```
+
+The script re-verifies sha256 + notarization against the live asset and refuses
+to submit otherwise. See BUILDING.md § Homebrew cask.
+
+The three in-repo sync workflows (`amy` formula, `geode` formula, `amethyst-nostr`
+cask) all open PRs against *this* repo on every release. Merge them to keep the
+reference packaging files current.
 
 ---
 
@@ -255,7 +269,7 @@ ownership:
 | `SIGNING_KEY`, `KEY_ALIAS`, `KEY_STORE_PASSWORD`, `KEY_PASSWORD` | The **Android upload keystore** — losing/leaking it is the worst case; Play app signing identity | Keep the keystore backed up offline; never rotate casually (Play upload key reset is a support process) |
 | `SONATYPE_USERNAME`, `SONATYPE_PASSWORD` | Maven Central namespace `com.vitorpamplona` | On compromise |
 | `SIGNING_PRIVATE_KEY`, `SIGNING_PASSWORD` | The **GPG key** signing Maven artifacts | Per GPG key expiry |
-| `HOMEBREW_TOKEN`, `WINGET_TOKEN` | Cask + winget bump PRs | **90-day cadence** (see BUILDING.md § Bootstrap) |
+| `WINGET_TOKEN` | Winget bump PRs | **90-day cadence** (see BUILDING.md § Bootstrap). No `HOMEBREW_TOKEN` exists — the cask bump runs locally via `scripts/bump-homebrew-cask.sh`, so the `repo`-scoped PAT it needs never becomes a CI secret |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Translation sync | On compromise |
 
 Owner assignments and rotation reminders live with the team (issue tracker).
@@ -274,9 +288,13 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 - [ ] Play Console: rollout started, no policy rejection.
 - [ ] Zapstore: release event visible.
 - [ ] F-Droid: new version detected (may lag days).
-- [ ] `amy` / `geode` Homebrew formula-sync PRs opened against this repo — merge them.
-- [ ] Homebrew + Winget: **expected to skip** until bootstrapped (§ 3). If they
-      ever start opening real PRs, that means someone landed the bootstrap.
+- [ ] `amy` / `geode` formula + `amethyst-nostr` cask sync PRs opened against
+      this repo — merge them.
+- [ ] Cask pushed upstream: `scripts/bump-homebrew-cask.sh vX.Y.Z` (manual, needs
+      `HOMEBREW_GITHUB_API_TOKEN` in your shell). Skips with a clear error until
+      the one-time new-cask PR has been bootstrapped (§ 3).
+- [ ] Winget: **expected to skip** until bootstrapped (§ 3). If it ever starts
+      opening real PRs, that means someone landed the bootstrap.
 - [ ] In-app "Release Notes" link opens the note matching `RELEASE_NOTES_ID`
       (only bumped on minor releases — patches keep pointing at the x.y.0 note).
 - [ ] Push still works on a `play` build (only if the push contract changed —

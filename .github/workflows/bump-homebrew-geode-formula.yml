@@ -132,12 +132,12 @@ jobs:
             Opened by `.github/workflows/bump-homebrew-geode-formula.yml`. Merge to
             keep the reference formula ready for the homebrew-core submission/bump.
 
-      # TODO(bootstrap): once `geode` is accepted into Homebrew/homebrew-core, add
-      # a step here that opens the homebrew-core bump PR automatically (a pinned
-      # macauley/action-homebrew-bump-formula, or `brew bump-formula-pr geode
-      # --url=<url> --sha256=<sha>` with a HOMEBREW_TOKEN). It is intentionally
-      # omitted until then because bump-formula-pr errors on a formula that is not
-      # yet in the tap.
+      # TODO(bootstrap): once `geode` is accepted into Homebrew/homebrew-core,
+      # add a LOCAL script mirroring scripts/bump-homebrew-cask.sh that runs
+      # `brew bump-formula-pr geode --url=<url> --sha256=<sha>` from a
+      # maintainer's machine. Do NOT wire that into CI — it needs a classic
+      # `repo`-scoped PAT, which as a CI secret would hand write access to this
+      # repo to anyone with push access. See BUILDING.md § Homebrew cask.
 
       - name: Report failure
         if: failure()

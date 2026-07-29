@@ -403,7 +403,7 @@ provided automatically; everything else you set yourself.)
 | `MAC_NOTARY_APPLE_ID` | Apple ID email of the notarization account | Apple notarization (`notarytool`) |
 | `MAC_NOTARY_PASSWORD` | **App-specific** password for that Apple ID (not the login password) | Same |
 | `MAC_NOTARY_TEAM_ID` | 10-char Apple Developer **Team ID** | Same |
-| `HOMEBREW_TOKEN` | PAT for `Homebrew/homebrew-cask` | Desktop cask bump (stable tags) |
+| ~~`HOMEBREW_TOKEN`~~ | *Not used.* The cask bump runs on a maintainer's machine — see § Homebrew cask | — |
 | `WINGET_TOKEN` | PAT for `microsoft/winget-pkgs` | Desktop winget bump (stable tags) |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Crowdin API creds | Translation sync (separate workflow, not the release) |
 
@@ -529,38 +529,54 @@ their token type and scope:
 
 | Secret | Purpose | Scope |
 |---|---|---|
-| `HOMEBREW_TOKEN` | Bump Homebrew cask | **Classic** PAT — `repo` scope — 90d expiry (dedicated bot account strongly preferred; see below) |
 | `WINGET_TOKEN` | Submit Winget manifests | Classic PAT — `public_repo` — 90d expiry (dedicated bot account preferred; `vedantmgoyal9/winget-releaser` does not support fine-grained) |
 
-**Why `HOMEBREW_TOKEN` must be a classic PAT, not fine-grained.** `brew
-bump-cask-pr` forks `Homebrew/homebrew-cask` **into the token owner's account**
-(`POST /repos/Homebrew/homebrew-cask/forks`), pushes a branch to that fork, and
-opens the PR upstream. Two consequences:
+**There is deliberately no `HOMEBREW_TOKEN`.** The cask bump is the one release
+step that runs on a maintainer's machine rather than in CI. The reasoning is
+worth keeping, because the same trade-off applies to `WINGET_TOKEN`:
 
-- A fine-grained PAT cannot express this. Its "Repository access" selector only
+`brew bump-cask-pr` forks `Homebrew/homebrew-cask` **into the token owner's
+account** (`POST /repos/Homebrew/homebrew-cask/forks`), pushes a branch to that
+fork, then opens the PR upstream. That shape forces a **classic** PAT with the
+`repo` scope:
+
+- A fine-grained PAT cannot express it. Its "Repository access" selector only
   lists repos owned by the resource owner, so `Homebrew/homebrew-cask` can never
   be selected — and Homebrew's API layer authorises against classic OAuth scopes
   (`x-oauth-scopes`), which fine-grained tokens do not emit.
 - Homebrew declares the requirement in source as
-  `CREATE_ISSUE_FORK_OR_PR_SCOPES = ["repo"]` (`utils/github.rb`), so the scope
-  is `repo`.
+  `CREATE_ISSUE_FORK_OR_PR_SCOPES = ["repo"]` (`utils/github.rb`).
 
-Create it at
+And `repo` cannot be narrowed: it grants write to *every* repository the owning
+account can reach — including `vitorpamplona/amethyst` itself. Stored as an
+Actions secret it would be usable by **anyone with push access to this repo**,
+since a pushed branch containing a workflow runs with repo secrets. That is a
+strict escalation for a channel that ships one DMG a month.
+
+So the split is:
+
+- **CI** (`bump-homebrew.yml`, `GITHUB_TOKEN` only) does the error-prone
+  bookkeeping: downloads the DMG, asserts it is notarized + stapled, computes
+  the sha256, and opens an in-repo PR syncing
+  `desktopApp/packaging/homebrew/amethyst-nostr.rb`.
+- **A maintainer** merges that PR and runs `scripts/bump-homebrew-cask.sh`,
+  which re-verifies the sha256 and the notarization ticket against the live
+  asset before calling `brew bump-cask-pr`.
+
+The token then lives only in that maintainer's shell:
+
+```bash
+export HOMEBREW_GITHUB_API_TOKEN=ghp_...   # classic PAT, `repo` scope
+scripts/bump-homebrew-cask.sh v1.13.2
+```
+
+Create one at
 <https://github.com/settings/tokens/new?scopes=repo&description=Homebrew%20cask%20bump>.
+Prefer a dedicated bot account whose only asset is a fork of `homebrew-cask`, so
+a leak reaches nothing else.
 
-**Use a dedicated bot account.** The `repo` scope grants write to *every*
-repository the account can reach — including `vitorpamplona/amethyst` itself. A
-bot account whose only asset is a fork of `homebrew-cask` bounds the blast
-radius of a leaked CI secret to that fork. (`WINGET_TOKEN` has the same
-property, which is why a bot account is already recommended for it.) The bot
-must have forked `Homebrew/homebrew-cask`, or be able to.
-
-Rotate both on a 90-day cadence. Owner: assigned via `RELEASE_OPS.md`
-or equivalent issue tracker. On rotation, paste the new token and run
-`gh workflow run bump-homebrew.yml -f tag=<most-recent-stable-tag>` to verify
-(the `tag` input is required — that dispatch path exists for exactly this).
-Note the verification is only meaningful once the cask exists upstream;
-before that the run skips the token-using step entirely.
+Rotate `WINGET_TOKEN` on a 90-day cadence. Owner: assigned via `RELEASE_OPS.md`
+or equivalent issue tracker.
 
 ### Homebrew cask (one-time initial PR)
 

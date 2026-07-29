@@ -134,12 +134,14 @@ jobs:
             Opened by `.github/workflows/bump-homebrew-formula.yml`. Merge to keep
             the reference formula ready for the homebrew-core submission/bump.
 
-      # TODO(bootstrap): once `amy` is accepted into Homebrew/homebrew-core, add a
-      # step here that opens the homebrew-core bump PR automatically — symmetric to
-      # the cask bump in bump-homebrew.yml (a pinned macauley/action-homebrew-bump-
-      # formula, or `brew bump-formula-pr amy --url=<url> --sha256=<sha>` with a
-      # HOMEBREW_TOKEN). It is intentionally omitted until then because
-      # bump-formula-pr errors on a formula that is not yet in the tap.
+      # TODO(bootstrap): once `amy` is accepted into Homebrew/homebrew-core, add
+      # a LOCAL script mirroring scripts/bump-homebrew-cask.sh that runs `brew
+      # bump-formula-pr amy --url=<url> --sha256=<sha>` from a maintainer's
+      # machine. Do NOT wire that into CI: bump-formula-pr forks homebrew-core
+      # into the token owner's account, which needs a classic `repo`-scoped PAT,
+      # and that scope grants write to every repo the account can reach —
+      # including this one — to anyone with push access here. See
+      # BUILDING.md § Homebrew cask for the full reasoning.
 
       - name: Report failure
         if: failure()
