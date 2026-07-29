@@ -116,7 +116,26 @@ class HighlightEvent(
 
     fun inUrl() = tags.firstNotNullOfOrNull(ReferenceTag::parse)
 
-    fun author() = firstTaggedUserId()
+    /**
+     * The pubkey of the author of the highlighted content.
+     *
+     * NIP-84 marks that person with an `"author"` role on their `p` tag
+     * (`["p", <pubkey>, <relay>, "author"]`) precisely so it can be told apart from the
+     * `"mention"` p tags a highlight may also carry. Prefer the marked tag; fall back to the
+     * first `p` tag for older/simpler highlights (including Amethyst's own) that tag only the
+     * author and omit the role marker.
+     *
+     * Without this the first `p` tag wins regardless of role, so a highlight that mentions
+     * other users before the author is attributed to a mention instead of the real author.
+     */
+    fun author() =
+        tags.firstNotNullOfOrNull { tag ->
+            if (tag.size > 3 && tag[0] == PTag.TAG_NAME && tag[3] == AUTHOR_MARKER && tag[1].isNotEmpty()) {
+                tag[1]
+            } else {
+                null
+            }
+        } ?: firstTaggedUserId()
 
     fun quote() = content
 
@@ -159,6 +178,9 @@ class HighlightEvent(
 
     companion object {
         const val KIND = 9802
+
+        /** NIP-84 role marker on the `p` tag that identifies the highlighted content's author. */
+        private const val AUTHOR_MARKER = "author"
 
         /** Any run of whitespace (spaces, tabs, newlines) — collapsed to a single space. */
         private val WHITESPACE_RUN = Regex("\\s+")

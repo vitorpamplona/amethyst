@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -56,7 +57,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.CreateClickableTextWithEmoji
-import com.vitorpamplona.amethyst.ui.components.DisplayEvent
 import com.vitorpamplona.amethyst.ui.components.RenderUserAsClickableText
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.measureSpaceWidth
@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
@@ -410,7 +411,11 @@ fun DisplayEntryForNote(
 
     val noteEvent = noteState.note.event as? BaseThreadedEvent ?: return
 
-    val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject", "alt") }
+    // A real title/subject from an article or wiki page describes the source well. `alt`
+    // (NIP-31) is deliberately excluded: it's accessibility fallback text, not a caption, and
+    // clients such as Jumble fill it with a generic "This event was published by …" line that
+    // has nothing to do with the highlighted passage.
+    val description = remember(noteEvent) { noteEvent.tags.firstTagValueFor("title", "subject") }
 
     Text("-", maxLines = 1)
 
@@ -420,7 +425,13 @@ fun DisplayEntryForNote(
             onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
         )
     } else {
-        DisplayEvent(noteEvent.id, note.toNostrUri(), null, accountViewModel, nav)
+        // No title to show — name the source by its event kind (e.g. "Note", "Blogs") rather
+        // than a raw @note1… id, and keep it clickable through to the source event.
+        val kindName = kindNameFor(LocalContext.current, noteEvent.kind)
+        ClickableTextPrimary(
+            text = kindName,
+            onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
+        )
     }
 }
 
