@@ -110,6 +110,84 @@ class EditionFoldFloorTest {
         assertEquals(v3.rumorId, head?.rumorId)
     }
 
+    /**
+     * The cross-epoch case, observed on device: a CORD-06 Refounding re-wraps ONE edition per
+     * entity, so an entity edited *after* the refounding has its successor alone on the new epoch
+     * while the floor edition stays behind on the old one. The offered set therefore never contains
+     * the floor edition — but v3 cites its hash, which is a *stronger* proof the chain connects than
+     * mere presence. Refusing here pins the entity at the floor forever and silently discards the
+     * newer state (a role edit, a channel rename, a banlist entry) on every refold.
+     *
+     * Regression guard: reproduced on device 2026-07-29 (entity e83ee182 pinned at v1 across 21
+     * consecutive refolds while epoch 1 offered v2 citing v1's hash). Mirrors Armada's third
+     * anchor branch, `versions[0] === floor + 1n → bytesEq(lo.prevHash, floorHash)`.
+     */
+    @Test
+    fun advancesWhenOnlyTheConnectingSuccessorIsOffered() {
+        val gaps = mutableListOf<Triple<String, Long, Long>>()
+        val head = EditionFold.foldEntity(listOf(v3), floorAtV2) { e, f, o -> gaps += Triple(e, f, o) }
+
+        assertEquals(v3.rumorId, head?.rumorId, "v3.prev == floor.hash, so the chain connects")
+        assertTrue(gaps.isEmpty(), "a successor citing the floor is not a rollback")
+    }
+
+    /** But a successor that cites something else is still a fork, and still refused. */
+    @Test
+    fun stillRefusesASuccessorThatDoesNotCiteTheFloor() {
+        val forked = edition(3, ByteArray(32) { 0x11 }, """{"member":"a","role_ids":["owner-ish"]}""", rumorId = "id-forked")
+        val gaps = mutableListOf<Triple<String, Long, Long>>()
+        val head = EditionFold.foldEntity(listOf(forked), floorAtV2) { e, f, o -> gaps += Triple(e, f, o) }
+
+        assertEquals(v2.rumorId, head?.rumorId, "an unconnected successor must not be adopted")
+        assertEquals(listOf(Triple(v2.entityIdHex, 2L, 3L)), gaps, "and the refusal must still be reported")
+    }
+
+    // ---- the compaction arm (CORD-06 §3) --------------------------------------
+
+    /**
+     * Behind a Refounding the predecessor is trimmed, so a `prev` that reaches back to the floor
+     * is NOT guaranteed — the compacted head can sit any distance above it. Once the entity is in
+     * the epoch's snapshot the anchor is the version alone, so v3 is adopted over a floor of v1
+     * even though nothing links them. This is the case part 1 alone cannot handle.
+     */
+    @Test
+    fun compactionArmAdoptsTheHighestVersionWithoutAChain() {
+        val gaps = mutableListOf<Triple<String, Long, Long>>()
+        val head =
+            EditionFold.foldEntity(
+                listOf(v3),
+                v1.asFloor(),
+                snapshot = setOf(v3.rumorId),
+            ) { e, f, o -> gaps += Triple(e, f, o) }
+
+        assertEquals(v3.rumorId, head?.rumorId, "version anchors the compaction arm; prev is ignored")
+        assertTrue(gaps.isEmpty(), "a compacted head above the floor is not a gap")
+    }
+
+    /** The floor still holds in the compaction arm: a re-served stale edition cannot downgrade us. */
+    @Test
+    fun compactionArmStillRefusesEverythingBelowTheFloor() {
+        val gaps = mutableListOf<Triple<String, Long, Long>>()
+        val head =
+            EditionFold.foldEntity(
+                listOf(v0, v1),
+                floorAtV2,
+                snapshot = setOf(v0.rumorId, v1.rumorId),
+            ) { e, f, o -> gaps += Triple(e, f, o) }
+
+        assertEquals(v2.rumorId, head?.rumorId, "nothing at or above the floor: keep what we knew")
+        assertEquals(listOf(Triple(v2.entityIdHex, 2L, 1L)), gaps, "and report the refusal")
+    }
+
+    /** An entity this epoch never re-wrapped is not in the snapshot, so it keeps chain-walk semantics. */
+    @Test
+    fun entityAbsentFromTheSnapshotStillChainWalks() {
+        val forked = edition(3, ByteArray(32) { 0x11 }, """{"member":"a","role_ids":["owner-ish"]}""", rumorId = "id-forked")
+        val head = EditionFold.foldEntity(listOf(forked), floorAtV2, snapshot = setOf("some-other-rumor")) { _, _, _ -> }
+
+        assertEquals(v2.rumorId, head?.rumorId, "no snapshot membership -> the chain walk still refuses the fork")
+    }
+
     /** A floor whose known edition we no longer hold still refuses to move down — it adopts nothing. */
     @Test
     fun refusesRollbackWithNoKnownEditionToFallBackOn() {
