@@ -73,6 +73,7 @@ import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -325,6 +326,9 @@ object LocalPreferences {
                     }
 
                 if (!newSystemOfAccounts.isNullOrEmpty()) {
+                    // How many accounts are in play is the first thing you need when reading any
+                    // boot log: nearly every per-account subsystem below multiplies by this number.
+                    Log.i("LocalPreferences") { "Found ${newSystemOfAccounts.size} saved account(s)" }
                     newSystemOfAccounts
                 } else {
                     val oldAccounts = getString(PrefKeys.SAVED_ACCOUNTS, null)?.split(COMMA) ?: listOf()
@@ -712,6 +716,7 @@ object LocalPreferences {
 
     private suspend fun innerLoadCurrentAccountFromEncryptedStorage(npub: String?): AccountSettings? {
         Log.d("LocalPreferences") { "Load account from file $npub" }
+        val startedAtMs = TimeUtils.nowMillis()
         val result =
             withContext(Dispatchers.IO) {
                 return@withContext with(encryptedPreferences(npub)) {
@@ -1017,7 +1022,11 @@ object LocalPreferences {
                     )
                 }
             }
-        Log.d("LocalPreferences") { "Loaded account from file $npub" }
+        // Milestone with its cost attached. Decrypting and parsing one account's settings is one of
+        // the most expensive things a cold start does (it resolves a fan of backup events), it runs
+        // once per account, and "which account was slow" is the first question when a boot drags.
+        // The six intermediate steps above stay at DEBUG.
+        Log.i("LocalPreferences") { "Loaded account $npub in ${TimeUtils.nowMillis() - startedAtMs}ms" }
         return result
     }
 

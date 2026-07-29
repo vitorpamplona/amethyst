@@ -56,7 +56,10 @@ import kotlin.concurrent.thread
  */
 class BootRelayDiagnostics(
     val client: INostrClient,
-    val dumpAtSeconds: List<Long> = listOf(20, 45, 90),
+    // 5s first: the pool is assembled and dialling well before 20s, and the early datapoint is what
+    // distinguishes "slow to connect" from "connected fine, slow to serve". Affordable because the
+    // rollup is now 3 INFO lines rather than 5 — the ===== banners moved to DEBUG.
+    val dumpAtSeconds: List<Long> = listOf(5, 20, 45, 90),
 ) {
     companion object {
         const val TAG = "BootRelayDiag"
@@ -219,17 +222,17 @@ class BootRelayDiagnostics(
             r.closed.forEach { (k, v) -> closedTotals[k] = (closedTotals[k] ?: 0) + v.get() }
         }
 
-        Log.i(TAG, "===== boot census @${atSeconds}s =====")
+        Log.d(TAG, "===== boot census @${atSeconds}s =====")
         Log.i(
             TAG,
-            "pool=${snapshot.size} opened=${opened.size} served_events=${served.size} never_opened=${neverOpened.size} " +
+            "census @${atSeconds}s pool=${snapshot.size} opened=${opened.size} served_events=${served.size} never_opened=${neverOpened.size} " +
                 "dials=${snapshot.values.sumOf { it.tentatives.get() }} " +
                 "events=${snapshot.values.sumOf { it.events.get() }} " +
                 "reqs=${snapshot.values.sumOf { it.reqsSent.get() }} " +
                 "auths=${snapshot.values.sumOf { it.authsSent.get() }}",
         )
-        Log.i(TAG, "failures_by_cause=" + causeTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
-        Log.i(TAG, "closed_by_prefix=" + closedTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
+        Log.i(TAG, "census @${atSeconds}s failures_by_cause=" + causeTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
+        Log.i(TAG, "census @${atSeconds}s closed_by_prefix=" + closedTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
 
         // Relays that cost us dials and gave nothing back, worst first: the wasted-effort list.
         Log.d(TAG, "--- top wasted dials (no events received) ---")
@@ -261,6 +264,6 @@ class BootRelayDiagnostics(
                         "openMs=${r.firstOpenAtMs.get()} eoseMs=${r.firstEoseAtMs.get()} dials=${r.tentatives.get()}",
                 )
             }
-        Log.i(TAG, "===== end census @${atSeconds}s =====")
+        Log.d(TAG, "===== end census @${atSeconds}s =====")
     }
 }

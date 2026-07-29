@@ -108,9 +108,14 @@ class Amethyst : Application() {
         // is self-contained (WebView + IPC), so we skip all app init there and
         // leave `instance` unset; any accidental use fails fast.
         if (isNappletSandbox) {
-            Log.d("AmethystApp") { "Skipping AppModules init in sandbox process" }
+            // Milestone, not chatter: this is the one line that explains why `instance` is unset
+            // and `LocalCache` is empty in this process. Without it a napplet-process log looks
+            // like a broken app rather than a deliberately secret-free sandbox.
+            Log.i("AmethystApp") { "Napplet sandbox process starting — no account, no AppModules" }
             return
         }
+
+        Log.i("AmethystApp") { "Amethyst ${BuildConfig.VERSION_NAME} starting in main process (log level ${Log.minLevel})" }
 
         instance = AppModules(this)
 
