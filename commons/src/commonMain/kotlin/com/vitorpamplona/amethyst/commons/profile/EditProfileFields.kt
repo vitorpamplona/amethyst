@@ -54,6 +54,7 @@ class EditProfileFields {
     val nip05 = MutableStateFlow("")
     val lnAddress = MutableStateFlow("")
     val lnURL = MutableStateFlow("")
+    val clinkOffer = MutableStateFlow("")
 
     // Social proofs (NIP-39)
     val twitter = MutableStateFlow("")
@@ -79,6 +80,7 @@ class EditProfileFields {
             nip05.value = info.nip05 ?: ""
             lnAddress.value = info.lud16 ?: ""
             lnURL.value = info.lud06 ?: ""
+            clinkOffer.value = info.clinkOffer ?: ""
         }
 
         twitter.value = ""
@@ -114,6 +116,7 @@ class EditProfileFields {
         nip05.value = ""
         lnAddress.value = ""
         lnURL.value = ""
+        clinkOffer.value = ""
         twitter.value = ""
         github.value = ""
         mastodon.value = ""
@@ -132,6 +135,7 @@ class EditProfileFields {
             "nip05" to nip05.value,
             "lnAddress" to lnAddress.value,
             "lnURL" to lnURL.value,
+            "clinkOffer" to clinkOffer.value,
             "twitter" to twitter.value,
             "github" to github.value,
             "mastodon" to mastodon.value,

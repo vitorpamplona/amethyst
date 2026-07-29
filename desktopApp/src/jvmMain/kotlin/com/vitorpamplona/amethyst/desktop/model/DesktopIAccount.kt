@@ -61,7 +61,7 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
@@ -193,12 +193,11 @@ class DesktopIAccount(
             override fun isNIP47Author(pubKey: String?): Boolean = false
         }
 
-    override val privateZapsDecryptionCache: IPrivateZapsDecryptionCache =
-        object : IPrivateZapsDecryptionCache {
-            override fun cachedPrivateZap(event: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
-
-            override suspend fun decryptPrivateZap(event: LnZapRequestEvent): com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent? = null
-        }
+    // Real private-zap decryption backed by the account signer. Only decrypts
+    // zaps addressed to (or sent by) this account — i.e. useful on your own
+    // profile; on a third party's profile the zapper falls back to the public
+    // zap-request pubkey. LRU(1000), lazy per event.
+    override val privateZapsDecryptionCache: IPrivateZapsDecryptionCache = PrivateZapCache(signer)
 
     override fun userProfile(): User = localCache.getOrCreateUser(pubKey)
 
