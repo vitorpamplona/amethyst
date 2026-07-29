@@ -2522,7 +2522,7 @@
     <string name="kind_meeting_space">Espaço de reunião</string>
     <string name="kind_profile">Perfil</string>
     <string name="kind_mute_list">Lista de silenciados</string>
-    <string name="kind_nip">NIP</string>
+    <string name="kind_nip">CNPJ</string>
     <string name="kind_dvm_status">Status do DVM</string>
     <string name="kind_dvm_content_req">Solicitação de conteúdo DVM</string>
     <string name="kind_dvm_content_resp">Resposta de conteúdo DVM</string>

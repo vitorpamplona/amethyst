@@ -79,14 +79,19 @@
     "since": "2026-07-28T23:17:02-04:00",
     "translators": [
       {
+        "user": "vitorpamplona",
+        "languages": [
+          "Czech",
+          "German",
+          "Portuguese, Brazilian",
+          "Swedish"
+        ]
+      },
+      {
         "user": "rajs19420616",
         "languages": [
           "Hindi"
         ]
-      },
-      {
-        "user": "vitorpamplona",
-        "languages": []
       },
       {
         "user": "greenart7c3",
