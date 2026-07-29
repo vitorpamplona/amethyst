@@ -341,6 +341,9 @@ class AccountSettings(
     // Which conversation protocols the Messages inbox loads and shows. A disabled type is both hidden
     // from the inbox and dropped from the always-on downloading routes. Defaults to everything on.
     val enabledChatFeeds: MutableStateFlow<Set<ChatFeedType>> = MutableStateFlow(ChatFeedType.ALL),
+    // Which event-kind groups the Home feed downloads (assembler) and renders (DAL). A disabled group
+    // is both dropped from the always-on home relay filters and hidden from the tabs. Everything on by default.
+    val enabledHomeFeedTypes: MutableStateFlow<Set<HomeFeedType>> = MutableStateFlow(HomeFeedType.ALL),
     // The per-situation toggles applied under RelayAuthPolicy.CUSTOM.
     val relayAuthTrustMyRelaysAndVenues: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val relayAuthTrustReadFollows: MutableStateFlow<Boolean> = MutableStateFlow(true),
@@ -387,6 +390,20 @@ class AccountSettings(
         val next = if (enabled) current + type else current - type
         if (next != current) {
             enabledChatFeeds.tryEmit(next)
+            saveAccountSettings()
+        }
+    }
+
+    fun isHomeFeedTypeEnabled(type: HomeFeedType): Boolean = type in enabledHomeFeedTypes.value
+
+    fun setHomeFeedTypeEnabled(
+        type: HomeFeedType,
+        enabled: Boolean,
+    ) {
+        val current = enabledHomeFeedTypes.value
+        val next = if (enabled) current + type else current - type
+        if (next != current) {
+            enabledHomeFeedTypes.tryEmit(next)
             saveAccountSettings()
         }
     }

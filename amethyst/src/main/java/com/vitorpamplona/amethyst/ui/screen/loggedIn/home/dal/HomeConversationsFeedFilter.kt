@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.HomeFeedType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
@@ -50,10 +51,11 @@ class HomeConversationsFeedFilter(
 
     override fun feed(): List<Note> {
         val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
 
         return sort(
             LocalCache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, filterParams)
+                acceptableEvent(it, filterParams, disabledKinds)
             },
         )
     }
@@ -68,9 +70,10 @@ class HomeConversationsFeedFilter(
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val filterParams = buildFilterParams(account)
+        val disabledKinds = HomeFeedType.disabledKinds(account.settings.enabledHomeFeedTypes.value)
 
         return collection.filterTo(HashSet()) {
-            acceptableEvent(it, filterParams)
+            acceptableEvent(it, filterParams, disabledKinds)
         }
     }
 
@@ -78,23 +81,27 @@ class HomeConversationsFeedFilter(
         event: Event?,
         relays: List<NormalizedRelayUrl>,
         filterParams: FilterByListParams,
+        disabledKinds: Set<Int>,
     ): Boolean =
-        (
-            event is TextNoteEvent ||
-                event is ZapPollEvent ||
-                event is PollResponseEvent ||
-                event is ChannelMessageEvent ||
-                event is CommentEvent ||
-                event is VoiceReplyEvent ||
-                event is PublicMessageEvent ||
-                event is LiveActivitiesChatMessageEvent
-        ) &&
+        event != null &&
+            event.kind !in disabledKinds &&
+            (
+                event is TextNoteEvent ||
+                    event is ZapPollEvent ||
+                    event is PollResponseEvent ||
+                    event is ChannelMessageEvent ||
+                    event is CommentEvent ||
+                    event is VoiceReplyEvent ||
+                    event is PublicMessageEvent ||
+                    event is LiveActivitiesChatMessageEvent
+            ) &&
             filterParams.match(event, relays)
 
     fun acceptableEvent(
         note: Note,
         filterParams: FilterByListParams,
-    ): Boolean = acceptableEvent(note.event, note.relays, filterParams) && !note.isNewThread()
+        disabledKinds: Set<Int>,
+    ): Boolean = acceptableEvent(note.event, note.relays, filterParams, disabledKinds) && !note.isNewThread()
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }

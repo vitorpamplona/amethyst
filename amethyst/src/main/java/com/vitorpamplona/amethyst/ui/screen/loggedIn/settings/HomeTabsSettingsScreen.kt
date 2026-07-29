@@ -34,7 +34,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.HomeFeedType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -65,53 +67,106 @@ fun HomeTabsSettingsScreen(
             TopBarWithBackButton(stringRes(id = R.string.home_tabs_settings), nav)
         },
     ) { padding ->
-        HomeTabsSettingsContent(accountViewModel.settings.uiSettingsFlow, Modifier.padding(padding))
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(padding)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            HomeTabsSection(accountViewModel.settings.uiSettingsFlow)
+            HomeContentTypesSection(accountViewModel)
+        }
     }
 }
 
 @Composable
-fun HomeTabsSettingsContent(
-    ui: UiSettingsFlow,
-    modifier: Modifier = Modifier,
-) {
+private fun HomeTabsSection(ui: UiSettingsFlow) {
     val showNewThreads by ui.showHomeNewThreadsTab.collectAsStateWithLifecycle()
     val showConversations by ui.showHomeConversationsTab.collectAsStateWithLifecycle()
     val showEverything by ui.showHomeEverythingTab.collectAsStateWithLifecycle()
 
     val activeCount = listOf(showNewThreads, showConversations, showEverything).count { it }
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        SettingsSection(R.string.settings_section_home_tabs) {
+    SettingsSection(R.string.settings_section_home_tabs) {
+        SettingsSwitchTile(
+            icon = MaterialSymbols.Forum,
+            title = R.string.new_threads,
+            checked = showNewThreads,
+            // Don't allow disabling the last remaining tab.
+            enabled = !(showNewThreads && activeCount == 1),
+            onCheckedChange = { ui.showHomeNewThreadsTab.tryEmit(it) },
+        )
+        SettingsDivider()
+        SettingsSwitchTile(
+            icon = MaterialSymbols.Chat,
+            title = R.string.conversations,
+            checked = showConversations,
+            enabled = !(showConversations && activeCount == 1),
+            onCheckedChange = { ui.showHomeConversationsTab.tryEmit(it) },
+        )
+        SettingsDivider()
+        SettingsSwitchTile(
+            icon = MaterialSymbols.Public,
+            title = R.string.home_tab_everything,
+            checked = showEverything,
+            enabled = !(showEverything && activeCount == 1),
+            onCheckedChange = { ui.showHomeEverythingTab.tryEmit(it) },
+        )
+    }
+}
+
+/** One toggleable Home content group, mapping a [HomeFeedType] to its display title + icon. */
+private data class HomeFeedTypeUi(
+    val type: HomeFeedType,
+    val titleRes: Int,
+    val icon: MaterialSymbol,
+)
+
+// Ordered by how common each group is on a typical home feed (everyday posts first, niche last).
+private val HOME_FEED_TYPES =
+    listOf(
+        HomeFeedTypeUi(HomeFeedType.TEXT_NOTES, R.string.home_content_type_text_notes, MaterialSymbols.EditNote),
+        HomeFeedTypeUi(HomeFeedType.REPOSTS, R.string.home_content_type_reposts, MaterialSymbols.Forward),
+        HomeFeedTypeUi(HomeFeedType.COMMENTS, R.string.home_content_type_comments, MaterialSymbols.Chat),
+        HomeFeedTypeUi(HomeFeedType.ARTICLES, R.string.home_content_type_articles, MaterialSymbols.AutoMirrored.Article),
+        HomeFeedTypeUi(HomeFeedType.WIKI, R.string.home_content_type_wiki, MaterialSymbols.MenuBook),
+        HomeFeedTypeUi(HomeFeedType.HIGHLIGHTS, R.string.home_content_type_highlights, MaterialSymbols.FormatQuote),
+        HomeFeedTypeUi(HomeFeedType.POLLS, R.string.home_content_type_polls, MaterialSymbols.Poll),
+        HomeFeedTypeUi(HomeFeedType.CLASSIFIEDS, R.string.home_content_type_classifieds, MaterialSymbols.Storefront),
+        HomeFeedTypeUi(HomeFeedType.VOICE, R.string.home_content_type_voice, MaterialSymbols.Mic),
+        HomeFeedTypeUi(HomeFeedType.LIVE_ACTIVITIES, R.string.home_content_type_live_activities, MaterialSymbols.Sensors),
+        HomeFeedTypeUi(HomeFeedType.EPHEMERAL_CHAT, R.string.home_content_type_ephemeral_chat, MaterialSymbols.Forum),
+        HomeFeedTypeUi(HomeFeedType.INTERACTIVE_STORIES, R.string.home_content_type_interactive_stories, MaterialSymbols.AutoAwesome),
+        HomeFeedTypeUi(HomeFeedType.CHESS, R.string.home_content_type_chess, MaterialSymbols.ChessKnight),
+        HomeFeedTypeUi(HomeFeedType.BIRDS, R.string.home_content_type_birds, MaterialSymbols.TravelExplore),
+        HomeFeedTypeUi(HomeFeedType.ATTESTATIONS, R.string.home_content_type_attestations, MaterialSymbols.Shield),
+        HomeFeedTypeUi(HomeFeedType.NIPS, R.string.home_content_type_nips, MaterialSymbols.Code),
+        HomeFeedTypeUi(HomeFeedType.MUSIC, R.string.home_content_type_music, MaterialSymbols.MusicNote),
+        HomeFeedTypeUi(HomeFeedType.PODCASTS, R.string.home_content_type_podcasts, MaterialSymbols.Podcasts),
+        HomeFeedTypeUi(HomeFeedType.FUNDRAISERS, R.string.home_content_type_fundraisers, MaterialSymbols.Paid),
+    )
+
+/**
+ * Per-content-type load toggles for the Home feed. Turning one off both drops its event kinds from
+ * the always-on home relay filters AND hides them from the New Threads / Conversations / Everything
+ * tabs. Everything is on by default.
+ */
+@Composable
+private fun HomeContentTypesSection(accountViewModel: AccountViewModel) {
+    val enabled by accountViewModel.account.settings.enabledHomeFeedTypes
+        .collectAsStateWithLifecycle()
+
+    SettingsSection(R.string.settings_section_home_content_types) {
+        HOME_FEED_TYPES.forEachIndexed { index, item ->
+            if (index > 0) SettingsDivider()
             SettingsSwitchTile(
-                icon = MaterialSymbols.Forum,
-                title = R.string.new_threads,
-                checked = showNewThreads,
-                // Don't allow disabling the last remaining tab.
-                enabled = !(showNewThreads && activeCount == 1),
-                onCheckedChange = { ui.showHomeNewThreadsTab.tryEmit(it) },
-            )
-            SettingsDivider()
-            SettingsSwitchTile(
-                icon = MaterialSymbols.Chat,
-                title = R.string.conversations,
-                checked = showConversations,
-                enabled = !(showConversations && activeCount == 1),
-                onCheckedChange = { ui.showHomeConversationsTab.tryEmit(it) },
-            )
-            SettingsDivider()
-            SettingsSwitchTile(
-                icon = MaterialSymbols.Public,
-                title = R.string.home_tab_everything,
-                checked = showEverything,
-                enabled = !(showEverything && activeCount == 1),
-                onCheckedChange = { ui.showHomeEverythingTab.tryEmit(it) },
+                icon = item.icon,
+                title = item.titleRes,
+                checked = item.type in enabled,
+                onCheckedChange = { accountViewModel.account.settings.setHomeFeedTypeEnabled(item.type, it) },
             )
         }
     }
