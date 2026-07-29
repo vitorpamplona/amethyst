@@ -28,7 +28,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.LinkAnnotation
@@ -62,7 +62,7 @@ import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
  * the URL thread screen) provides this so nested comments sharing that same scope don't
  * redundantly repeat the preview the screen itself already shows.
  */
-val LocalCurrentExternalScope = compositionLocalOf<String?> { null }
+val LocalCurrentExternalScope = staticCompositionLocalOf<String?> { null }
 
 @Composable
 fun DisplayExternalId(
@@ -96,18 +96,30 @@ fun DisplayUrlExternalId(
     nav: INav,
 ) {
     val url = externalId.url
-    when (val state = rememberUrlPreviewState(url, accountViewModel)) {
-        is UrlPreviewState.Loaded -> {
-            UrlPreviewCard(url, state.previewInfo, onCardClick = { nav.nav(Route.Url(url)) })
-        }
-
-        else -> {
+    val chip =
+        @Composable {
             DisplayExternalIdChip(
                 symbol = MaterialSymbols.Link,
                 contentDescription = stringRes(id = R.string.external_url_scope),
                 label = url,
                 linkInteractionListener = { nav.nav(Route.Url(url)) },
             )
+        }
+
+    // Respect the data-saver/privacy gate: fetching the preview reaches out to the
+    // third-party page, so when previews are off this stays a plain link chip.
+    if (!accountViewModel.settings.showUrlPreview()) {
+        chip()
+        return
+    }
+
+    when (val state = rememberUrlPreviewState(url, accountViewModel)) {
+        is UrlPreviewState.Loaded -> {
+            UrlPreviewCard(url, state.previewInfo, onCardClick = { nav.nav(Route.Url(url)) })
+        }
+
+        else -> {
+            chip()
         }
     }
 }

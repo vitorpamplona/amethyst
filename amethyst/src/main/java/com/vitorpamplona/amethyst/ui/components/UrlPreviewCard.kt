@@ -21,12 +21,11 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,7 +39,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -50,6 +48,7 @@ import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
+import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.amethyst.ui.theme.previewCardImageModifier
 import kotlinx.coroutines.launch
@@ -134,17 +133,20 @@ fun UrlPreviewCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            Spacer(modifier = Modifier.size(4.dp))
-
-            Icon(
-                symbol = MaterialSymbols.AutoMirrored.OpenInNew,
-                contentDescription = stringRes(R.string.url_preview_open_in_browser),
-                modifier =
-                    Modifier
-                        .size(14.dp)
-                        .clickable { runCatching { uri.openUri(url) } },
-                tint = Color.Gray,
-            )
+            // Only meaningful when the card's own tap does something else (e.g. opening the
+            // comment thread); otherwise it would duplicate the card's open-in-browser tap.
+            if (onCardClick != null) {
+                IconButton(
+                    onClick = { runCatching { uri.openUri(url) } },
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                        contentDescription = stringRes(R.string.url_preview_open_in_browser),
+                        modifier = Size14Modifier,
+                        tint = Color.Gray,
+                    )
+                }
+            }
         }
 
         Text(

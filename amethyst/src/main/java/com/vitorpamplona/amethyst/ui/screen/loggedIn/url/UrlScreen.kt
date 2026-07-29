@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.dal.UrlFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.url.datasource.UrlFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 
 @Composable
@@ -131,13 +132,20 @@ fun UrlScreenPreview(
     url: String,
     accountViewModel: AccountViewModel,
 ) {
+    // Respect the data-saver/privacy gate: fetching the preview reaches out to the
+    // third-party page, so when previews are off this stays the plain URL header.
+    if (!accountViewModel.settings.showUrlPreview()) {
+        DisplayUrlHeader(url, MaxWidthWithHorzPadding)
+        return
+    }
+
     when (val state = rememberUrlPreviewState(url, accountViewModel)) {
         is UrlPreviewState.Loaded -> {
             UrlPreviewCard(url, state.previewInfo)
         }
 
         else -> {
-            DisplayUrlHeader(url, Modifier)
+            DisplayUrlHeader(url, MaxWidthWithHorzPadding)
         }
     }
 }
