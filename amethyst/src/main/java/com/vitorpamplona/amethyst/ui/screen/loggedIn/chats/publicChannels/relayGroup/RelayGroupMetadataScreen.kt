@@ -202,8 +202,15 @@ private fun RelayGroupMetadataScaffold(
     Scaffold(
         topBar = {
             if (viewModel.isNewGroup) {
+                // The type is fixed by the caller (the community's per-section "+"), so the title names
+                // it — "New forum" vs "New channel" on Buzz — rather than offering a toggle to change it.
                 CreatingTopBar(
-                    titleRes = if (viewModel.isBuzzRelay) R.string.buzz_channel_create_title else R.string.relay_group_create_title,
+                    titleRes =
+                        when {
+                            !viewModel.isBuzzRelay -> R.string.relay_group_create_title
+                            viewModel.isForum -> R.string.buzz_forum_create_title
+                            else -> R.string.buzz_channel_create_title
+                        },
                     isActive = { viewModel.canPost && (nip29Support == true || viewModel.isBuzzRelay) },
                     onCancel = nav::popBack,
                     onPost = onSubmit,
@@ -415,21 +422,11 @@ private fun GroupMetadataFields(viewModel: RelayGroupMetadataViewModel) {
         viewModel.markTouched()
     }
 
-    if (viewModel.isBuzzRelay) {
-        // Buzz's `channel_type`. Only offered on create: the relay takes it on the 9007 and its
-        // 9002 handler has no `channel_type` key, so an existing channel cannot be converted.
-        if (viewModel.isNewGroup) {
-            LabeledSwitchRow(
-                label = stringRes(R.string.buzz_channel_flag_forum),
-                description = stringRes(R.string.buzz_channel_flag_forum_desc),
-                checked = viewModel.isForum,
-            ) {
-                viewModel.isForum = it
-                viewModel.markTouched()
-            }
-        }
-        return
-    }
+    // A Buzz channel's type (chat vs forum) is fixed by the caller — the community's per-section "+" —
+    // and isn't editable (the relay's 9002 has no `channel_type` key), so there's no toggle here. The
+    // remaining vanilla NIP-29 flags (invite-only / restricted below) don't apply to Buzz either, so
+    // stop here for a Buzz relay.
+    if (viewModel.isBuzzRelay) return
 
     LabeledSwitchRow(
         label = stringRes(R.string.relay_group_flag_invite_only),
