@@ -29,6 +29,17 @@ tasks.withType<ProcessResources>().configureEach {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
+// BuzzAgentWrapperSyncTest compares the bundled buzz-agent wrappers against their
+// tools/ reference copies. The reference tree lives outside this module, so without
+// declaring it Gradle calls :cli:test up-to-date after a tools/-only edit — exactly the
+// drift the test exists to catch.
+tasks.named<Test>("test") {
+    inputs
+        .dir(rootProject.layout.projectDirectory.dir("tools/buzz-agent"))
+        .withPropertyName("buzzAgentWrapperReference")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 dependencies {
     implementation(project(":quartz"))
     implementation(project(":commons"))

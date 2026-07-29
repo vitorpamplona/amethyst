@@ -112,6 +112,19 @@ empty-worktree failure mode, and `base_branch` resolution when `gh` answers oddl
 non-zero) — the paths that otherwise only fail on someone else's machine, unattended, via a
 kind-46007 whose stderr is the only clue.
 
+### `./test-amy-args.sh` — the `amy` argument surface
+
+```bash
+./gradlew :cli:installDist
+./tools/buzz-agent/test-amy-args.sh
+AMY=/path/to/amy ./tools/buzz-agent/test-amy-args.sh   # or point at another build
+```
+
+Pins the flag names and error strings the wrappers and their operators key on — `--base-ref`, the
+`repo-naddr-or-coordinates` positional, `pass --channel GID`, and the `no_relays` detail. A renamed
+flag or reworded message breaks callers without breaking any compile, and none of it is covered by a
+type. Runs offline against an isolated `~/.amy` (every case is rejected before a relay is dialled).
+
 ### `agent-exec.sh`
 
 Verified end-to-end against a throwaway repo with a stubbed `gh` + agent
