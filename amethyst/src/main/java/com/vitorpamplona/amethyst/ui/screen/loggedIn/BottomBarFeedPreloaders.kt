@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.Discove
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasource.BrowseEmojiSetsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.datasource.FollowPacksFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource.GitRepositoriesFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.datasource.HighlightsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssemblerSubscription
@@ -99,6 +100,8 @@ private fun PreloadFor(
         NavBarItem.WORKOUTS -> WorkoutsFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.GIT_REPOSITORIES -> GitRepositoriesFilterAssemblerSubscription(accountViewModel)
+
+        NavBarItem.HIGHLIGHTS -> HighlightsFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.SOFTWARE_APPS -> SoftwareAppsFilterAssemblerSubscription(accountViewModel)
 

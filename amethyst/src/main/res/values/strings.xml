@@ -3812,6 +3812,7 @@
     <string name="git_repo_settings_topics">Topics (comma separated)</string>
     <string name="git_repo_settings_save">Save</string>
     <string name="git_repositories">Git Repositories</string>
+    <string name="highlights">Highlights</string>
     <string name="nsite_title">nSite: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Permissions:</string>

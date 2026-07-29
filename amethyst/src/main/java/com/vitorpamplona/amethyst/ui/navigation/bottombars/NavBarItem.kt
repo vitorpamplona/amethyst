@@ -55,6 +55,7 @@ enum class NavBarItem {
     PICTURES,
     WORKOUTS,
     GIT_REPOSITORIES,
+    HIGHLIGHTS,
     SOFTWARE_APPS,
     NAPPLETS,
     NSITES,
@@ -245,6 +246,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 labelRes = R.string.git_repositories,
                 icon = MaterialSymbols.Code,
                 resolveRoute = { Route.GitRepositories },
+            ),
+        NavBarItem.HIGHLIGHTS to
+            NavBarItemDef(
+                id = NavBarItem.HIGHLIGHTS,
+                labelRes = R.string.highlights,
+                icon = MaterialSymbols.FormatQuote,
+                resolveRoute = { Route.Highlights },
             ),
         NavBarItem.SOFTWARE_APPS to
             NavBarItemDef(
@@ -534,6 +542,7 @@ val BottomBarCategories: List<NavBarCategory> =
                 NavBarItem.PRODUCTS,
                 NavBarItem.WORKOUTS,
                 NavBarItem.GIT_REPOSITORIES,
+                NavBarItem.HIGHLIGHTS,
                 NavBarItem.COMMUNITIES,
                 NavBarItem.FOLLOW_PACKS,
                 NavBarItem.CALENDARS,
@@ -574,6 +583,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.PRODUCTS,
         NavBarItem.WORKOUTS,
         NavBarItem.GIT_REPOSITORIES,
+        NavBarItem.HIGHLIGHTS,
         NavBarItem.LIVE_STREAMS,
         NavBarItem.NESTS,
         NavBarItem.COMMUNITIES,

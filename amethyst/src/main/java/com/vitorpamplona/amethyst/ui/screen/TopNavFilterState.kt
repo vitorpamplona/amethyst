@@ -337,6 +337,24 @@ class TopNavFilterState(
             )
         }
 
+    private val _highlightsRoutes =
+        combineTransform(
+            livePeopleListsFlow,
+            liveInterestFlows,
+        ) { peopleLists, interests ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    // Highlights can be narrowed by author, hashtag and geohash, so this mirrors
+                    // the kind3 catalog plus "Mine" — the user's own highlights.
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow),
+                    peopleLists,
+                    interests,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     private val _relayGroupsDiscoveryRoutes =
         combineTransform(
             livePeopleListsFlow,
@@ -467,6 +485,11 @@ class TopNavFilterState(
 
     val gitRepositoryRoutes =
         _gitRepositoryRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
+
+    val highlightsRoutes =
+        _highlightsRoutes
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow, mineFollow, muteListFollow))
 

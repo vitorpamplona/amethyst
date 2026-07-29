@@ -193,6 +193,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.GitRepositoryScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.GitRepositoriesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.HashtagScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.HighlightsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.highlights.NewHighlightScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.HomeScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostScreen
@@ -441,6 +442,8 @@ fun BuildNavigation(
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
         composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
+
+        composableFromEnd<Route.Highlights> { HighlightsScreen(accountViewModel, nav) }
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Nsites> { NsitesScreen(accountViewModel, nav) }
