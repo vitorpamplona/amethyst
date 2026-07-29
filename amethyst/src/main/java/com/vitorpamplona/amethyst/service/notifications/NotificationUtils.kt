@@ -389,7 +389,7 @@ object NotificationUtils {
                 PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         return NotificationCompat.Action
-            .Builder(R.drawable.ic_notif_reply, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
+            .Builder(R.drawable.ic_action_reply, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
             .addRemoteInput(replyRemoteInput(applicationContext))
             .setAllowGeneratedReplies(true)
             .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
@@ -460,7 +460,7 @@ object NotificationUtils {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
         return NotificationCompat.Action
-            .Builder(R.drawable.ic_notif_message, stringRes(applicationContext, R.string.app_notification_mark_read_label), markReadPendingIntent)
+            .Builder(R.drawable.ic_action_mark_read, stringRes(applicationContext, R.string.app_notification_mark_read_label), markReadPendingIntent)
             .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ)
             .build()
     }
