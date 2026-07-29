@@ -101,12 +101,20 @@ class RelayLogger(
                 Log.d(logTag(relay.url), "Disconnected")
             }
 
+            /**
+             * Debug, not error: under the outbox model a client dials hundreds of relays per boot,
+             * and a large share of them are dead, unreachable, or refused by the local Tor proxy.
+             * One line per failed socket is a few hundred lines that say the same four things
+             * ("SOCKS: TTL expired", "SSLHandshakeException", "Host unreachable", …) and cannot be
+             * acted on individually. The actionable form is the aggregate — failures bucketed by
+             * cause, which the consumer's boot census already reports.
+             */
             override fun onCannotConnect(
                 relay: IRelayClient,
                 errorMessage: String,
             ) {
                 super.onCannotConnect(relay, errorMessage)
-                Log.e(logTag(relay.url), errorMessage)
+                Log.d(logTag(relay.url), errorMessage)
             }
         }
 

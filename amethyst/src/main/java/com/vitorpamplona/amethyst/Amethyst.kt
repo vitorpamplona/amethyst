@@ -56,11 +56,36 @@ import java.io.File
  */
 class Amethyst : Application() {
     init {
-        Log.minLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.ERROR
+        Log.minLevel = DEFAULT_LOG_LEVEL
         Log.d("AmethystApp") { "Creating App $this" }
     }
 
     companion object {
+        /**
+         * Restores the full firehose in debug builds: per-socket relay lifecycle
+         * (`Connecting…`/`Disconnected`/`OnOpen`), per-second event throughput, per-stream Arti
+         * SOCKS errors and per-relay census detail.
+         *
+         * Off by default. A cold start on the outbox model dials ~400 relays, and those sources
+         * alone emit ~3.7k of the ~6.2k lines an 80s boot produces — which buries the boot
+         * narrative and the relay-protocol warnings (`auth-required`, `rate-limited`,
+         * `unsupported: too many filters`) that are the actionable ones. Flip this, or set
+         * [Log.minLevel] at runtime, when you need the per-socket detail back.
+         */
+        const val VERBOSE_LOGS = false
+
+        /**
+         * Debug defaults to INFO so a boot reads as a narrative plus warnings; release defaults to
+         * WARN rather than ERROR so relay-protocol refusals stay visible in the field — they are
+         * the highest-value-per-line diagnostics we emit and were previously dropped entirely.
+         */
+        val DEFAULT_LOG_LEVEL: LogLevel =
+            when {
+                !BuildConfig.DEBUG -> LogLevel.WARN
+                VERBOSE_LOGS -> LogLevel.DEBUG
+                else -> LogLevel.INFO
+            }
+
         lateinit var instance: AppModules
             private set
     }

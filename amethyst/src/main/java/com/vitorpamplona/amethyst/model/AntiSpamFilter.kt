@@ -89,7 +89,13 @@ class AntiSpamFilter {
                 val link2 = njumpLink(NAddress.create(event.kind, event.pubKey, event.dTag(), relay))
                 val link1 = existingAddress?.let { njumpLink(NAddress.create(it.kind, it.pubKeyHex, it.dTag, relay)) } ?: link2
 
-                Log.w("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
+                // Debug, not warn: a duplicate detection is this filter working, not a fault, and
+                // it is already reported where it can be acted on — relayStats.newSpam below and
+                // the flowSpam emission that drives the UI. On a normal boot this fires ~34 times
+                // with a pair of njump links each, which is the widest line in the log and says
+                // nothing the spam counters don't. Keep the links at DEBUG for when you need to
+                // open the two events and compare them.
+                Log.d("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
 
                 // Log down offenders
                 val spammer = logOffender(hash, event)
@@ -118,7 +124,13 @@ class AntiSpamFilter {
                 // LRU cache while the spammer record still matches this hash.
                 val link1 = existingEvent?.let { njumpLink(NEvent.create(it, null, null, relay)) } ?: link2
 
-                Log.w("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
+                // Debug, not warn: a duplicate detection is this filter working, not a fault, and
+                // it is already reported where it can be acted on — relayStats.newSpam below and
+                // the flowSpam emission that drives the UI. On a normal boot this fires ~34 times
+                // with a pair of njump links each, which is the widest line in the log and says
+                // nothing the spam counters don't. Keep the links at DEBUG for when you need to
+                // open the two events and compare them.
+                Log.d("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
 
                 // Log down offenders
                 val spammer = logOffender(hash, event)
