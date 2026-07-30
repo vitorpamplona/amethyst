@@ -2069,6 +2069,25 @@
         <item quantity="one">Connected to %1$d relay</item>
         <item quantity="other">Connected to %1$d relays</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d relay</item>
+        <item quantity="other">%1$s \u00b7 %2$d relays</item>
+    </plurals>
+    <string name="relay_purpose_notifications">Notifications</string>
+    <string name="relay_purpose_direct_messages">Direct messages</string>
+    <string name="relay_purpose_public_chats">Public chats</string>
+    <string name="relay_purpose_community_chats">Communities</string>
+    <string name="relay_purpose_encrypted_groups">Encrypted groups</string>
+    <string name="relay_purpose_live_rooms">Live rooms</string>
+    <string name="relay_purpose_account_data">Your account</string>
+    <string name="relay_purpose_profiles">Profiles</string>
+    <string name="relay_purpose_relay_lists">Relay lists</string>
+    <string name="relay_purpose_follows">Your follows</string>
+    <string name="relay_purpose_moderation">Moderation</string>
+    <string name="relay_purpose_wallet">Wallet</string>
+    <string name="relay_purpose_browsing">Browsing</string>
     <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
     <string name="always_on_notif_setting_title">Always-on notification service</string>
     <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>

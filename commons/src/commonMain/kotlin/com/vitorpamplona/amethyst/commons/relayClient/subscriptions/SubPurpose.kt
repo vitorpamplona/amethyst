@@ -36,58 +36,58 @@ package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
  *
  * ## Lifetime is the other axis
  *
- * [isBackground] marks the purposes *allowed* to outlive the foreground — the ones the always-on
+ * [runsInBackground] marks the purposes *allowed* to outlive the foreground — the ones the always-on
  * notification is actually about. Read it as a ceiling, not a promise: a background-capable purpose
  * with nothing to fetch is simply absent, so absence proves nothing. The direction that does hold is
- * the other one — **a purpose with `isBackground = false` appearing while backgrounded is a leak**,
+ * the other one — **a purpose with `runsInBackground = false` appearing while backgrounded is a leak**,
  * and that is now assertable.
  *
  * Measured on device (cold start, then HOME): foreground carried 13 purposes; backgrounded carried 9,
- * every one of them `isBackground = true`. `HOME_FEED` (337 relays) and `ENGAGEMENT` (20) — the only
+ * every one of them `runsInBackground = true`. `HOME_FEED` (337 relays) and `ENGAGEMENT` (20) — the only
  * two `false` entries in flight — were both gone, while the transient account loaders
  * ([RELAY_LISTS], [FOLLOW_LISTS]) were idle rather than torn down.
  */
 enum class SubPurpose(
     val group: SubPurposeGroup,
     /** True when this subscription is permitted to stay active while the app is backgrounded. */
-    val isBackground: Boolean = false,
+    val runsInBackground: Boolean = false,
 ) {
     // ---- the account itself: always on -------------------------------------
 
     /** My own profile, settings and app-specific data. */
-    ACCOUNT_DATA(SubPurposeGroup.ACCOUNT, isBackground = true),
+    ACCOUNT_DATA(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
     /** Profiles (kind 0) of everyone we render. */
-    PROFILE_METADATA(SubPurposeGroup.ACCOUNT, isBackground = true),
+    PROFILE_METADATA(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
     /** NIP-65 relay lists, DM relay lists, blocked/trusted relay sets — outbox discovery. */
-    RELAY_LISTS(SubPurposeGroup.ACCOUNT, isBackground = true),
+    RELAY_LISTS(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
     /** Kind-3 follows and the web-of-trust sets derived from them. */
-    FOLLOW_LISTS(SubPurposeGroup.ACCOUNT, isBackground = true),
+    FOLLOW_LISTS(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
     /** Reports (kind 1984), mute lists, spam and ban state. */
-    MODERATION(SubPurposeGroup.ACCOUNT, isBackground = true),
+    MODERATION(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
     /** Cashu wallet, nutzaps, mints and NWC. */
-    WALLET(SubPurposeGroup.ACCOUNT, isBackground = true),
+    WALLET(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
     // ---- things addressed to me: always on ---------------------------------
 
     /** Mentions, reactions, reposts and zaps addressed to me (`#p` = me). Inbox relays. */
-    NOTIFICATIONS(SubPurposeGroup.MESSAGES, isBackground = true),
+    NOTIFICATIONS(SubPurposeGroup.MESSAGES, runsInBackground = true),
 
     /** NIP-17 gift wraps and NIP-04 legacy DMs. DM relays. */
-    DIRECT_MESSAGES(SubPurposeGroup.MESSAGES, isBackground = true),
+    DIRECT_MESSAGES(SubPurposeGroup.MESSAGES, runsInBackground = true),
 
     /** NIP-28/29 public channels and relay groups. */
-    PUBLIC_CHATS(SubPurposeGroup.MESSAGES, isBackground = true),
+    PUBLIC_CHATS(SubPurposeGroup.MESSAGES, runsInBackground = true),
 
     /** Concord and Buzz community planes. */
-    COMMUNITY_CHATS(SubPurposeGroup.MESSAGES, isBackground = true),
+    COMMUNITY_CHATS(SubPurposeGroup.MESSAGES, runsInBackground = true),
 
     /** Marmot / MLS encrypted group messaging. */
-    ENCRYPTED_GROUPS(SubPurposeGroup.MESSAGES, isBackground = true),
+    ENCRYPTED_GROUPS(SubPurposeGroup.MESSAGES, runsInBackground = true),
 
     /** Live audio rooms (NIP-53 nests) and their presence. */
     LIVE_ROOMS(SubPurposeGroup.MESSAGES),

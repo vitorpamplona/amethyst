@@ -348,11 +348,26 @@ class NotificationRelayService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
+        // Expanded only. The collapsed line stays the bare count it has always been — that is all
+        // most people want from an ongoing notification — and the per-job breakdown appears solely
+        // when someone deliberately expands it to ask why the phone is talking to N relays.
+        // Skipped entirely when nothing is attributed yet, so we never render an empty section.
+        val breakdown = RelayPurposeSummary.lines(this).takeIf { it.isNotEmpty() }
+
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.always_on_notif_title))
             .setContentText(contentText)
-            .setSmallIcon(R.drawable.amethyst_service)
+            .apply {
+                breakdown?.let {
+                    setStyle(
+                        NotificationCompat
+                            .BigTextStyle()
+                            .setBigContentTitle(getString(R.string.always_on_notif_title))
+                            .bigText(contentText + "\n\n" + it.joinToString("\n")),
+                    )
+                }
+            }.setSmallIcon(R.drawable.amethyst_service)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setSilent(true)
