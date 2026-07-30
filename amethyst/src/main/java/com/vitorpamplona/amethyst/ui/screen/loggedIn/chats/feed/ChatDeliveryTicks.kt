@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDelivery
 import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.RecipientDelivery
+import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.RelayRejection
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -78,6 +79,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
  * - clock: published, no relay has accepted yet
  * - single check: accepted somewhere (at least one relay OK / seen-on relay)
  * - double check (green): every recipient's / target relay accepted
+ * - error (red): every target relay refused it — the message did not land anywhere
  *
  * Old messages we didn't track this session simply show no tick, but the time still
  * opens the dialog (which lists the relays it was seen on, if any).
@@ -195,6 +197,17 @@ private fun ChatDeliveryDetailDialog(
                         baseNote.inGatherers?.firstNotNullOfOrNull { (it as? Channel)?.relays()?.takeIf { r -> r.isNotEmpty() } } ?: emptySet()
                     }
 
+                // Lead with the verdict when the message didn't land: the per-relay rows below carry
+                // the detail, but the headline answer to "did this send?" should not have to be
+                // inferred from a list of ticks.
+                if (delivery?.isRefused == true) {
+                    Text(
+                        text = stringRes(R.string.chat_delivery_refused_summary),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
                 val recipients = delivery?.recipients
                 when {
                     !recipients.isNullOrEmpty() ->
@@ -207,6 +220,7 @@ private fun ChatDeliveryDetailDialog(
                             RelayDeliveryRow(
                                 relay = relay,
                                 accepted = relay in delivery.acceptedRelays || relay in seenOnRelays,
+                                rejection = delivery.rejectionFor(relay),
                             )
                         }
 
@@ -246,7 +260,13 @@ private fun ChatDeliveryDetailDialog(
                         onDismiss()
                     },
                 ) {
-                    Text(stringRes(R.string.broadcast))
+                    // Same action either way — re-publish the event (or, for a wrapped message, its
+                    // delivering envelope). Only the label changes: after a refusal the user is
+                    // retrying a failed send, not re-broadcasting a delivered one. A refusal the
+                    // relay will repeat verbatim (a ban, an unsupported kind) keeps the neutral
+                    // label, so the button doesn't promise a retry that cannot work.
+                    val retryable = delivery?.isRefused == true && delivery.firstRejection?.isTransient == true
+                    Text(stringRes(if (retryable) R.string.retry else R.string.broadcast))
                 }
             }
         },
@@ -280,7 +300,7 @@ private fun RecipientDeliveryRow(
             }
         }
 
-        DeliveryStatusTick(recipient.isDelivered)
+        DeliveryStatusTick(accepted = recipient.isDelivered, refused = recipient.isRefused)
     }
 }
 
@@ -288,28 +308,44 @@ private fun RecipientDeliveryRow(
 private fun RelayDeliveryRow(
     relay: NormalizedRelayUrl,
     accepted: Boolean,
+    rejection: RelayRejection? = null,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            text = relay.displayUrl(),
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-        )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = relay.displayUrl(),
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+            )
 
-        DeliveryStatusTick(accepted)
+            DeliveryStatusTick(accepted = accepted, refused = !accepted && rejection != null)
+        }
+
+        // The relay's own words. This is the only explanation of a refusal that exists — a Buzz ban
+        // or timeout is enforced at publish time and never arrives as an event we could fold.
+        if (!accepted && rejection != null) {
+            Text(
+                text = stringRes(R.string.chat_delivery_refused_reason, rejection.reason),
+                color = MaterialTheme.colorScheme.error,
+                fontSize = Font12SP,
+            )
+        }
     }
 }
 
 @Composable
-private fun DeliveryStatusTick(delivered: Boolean) {
-    if (delivered) {
-        TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
-    } else {
-        TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
+private fun DeliveryStatusTick(
+    accepted: Boolean,
+    refused: Boolean = false,
+) {
+    when {
+        accepted -> TickIcon(MaterialSymbols.Done, R.string.chat_delivery_accepted, MaterialTheme.colorScheme.allGoodColor)
+        refused -> TickIcon(MaterialSymbols.ErrorOutline, R.string.chat_delivery_refused, MaterialTheme.colorScheme.error)
+        else -> TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
     }
 }
 
@@ -341,6 +377,7 @@ private fun RenderDeliveryTicks(
             DeliveryLadderTick(
                 pending = deliveredCount == 0 && !seenSomewhere,
                 fullyAccepted = delivery.isFullyAccepted,
+                refused = delivery.isRefused && !seenSomewhere,
             )
             Text(
                 text = "$deliveredCount/${others.size}",
@@ -357,16 +394,22 @@ private fun RenderDeliveryTicks(
     DeliveryLadderTick(
         pending = !acceptedSomewhere,
         fullyAccepted = delivery.isFullyAccepted,
+        refused = delivery.isRefused && !seenSomewhere,
     )
 }
 
-/** The shared pending -> accepted-somewhere -> fully-accepted tick selection. */
+/** The shared refused / pending -> accepted-somewhere -> fully-accepted tick selection. */
 @Composable
 private fun DeliveryLadderTick(
     pending: Boolean,
     fullyAccepted: Boolean,
+    refused: Boolean = false,
 ) {
     when {
+        // Checked first: a refusal is the one outcome the clock would misreport as "still trying".
+        refused ->
+            TickIcon(MaterialSymbols.ErrorOutline, R.string.chat_delivery_refused, MaterialTheme.colorScheme.error)
+
         pending ->
             TickIcon(MaterialSymbols.Schedule, R.string.chat_delivery_pending, MaterialTheme.colorScheme.placeholderText)
 

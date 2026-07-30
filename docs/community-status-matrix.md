@@ -225,7 +225,7 @@ others), and **invisible** (nothing renders it at all).
 | channel type (`stream`/`forum`/`dm`/`workflow`) | drives the workspace list's sections, icons and DM titling | **shown** |
 | `closed` / `restricted` / `hidden` / `livekit` | editable toggles in `RelayGroupMetadataScreen`; not surfaced as reader-facing state | implied |
 | Agent (NIP-OA) virtual membership | `AgentAttestationScreen` shows held/issued attestations; the channel still reports `NONE` | partial |
-| Tenant **banned** (9040) / **timed out** (9042) | **nothing.** Consumed into `LocalCache` as generic regular events — no state object, no UI. And no send path surfaces the relay's `OK false`: `NotifyCoordinator` only routes NIP-42-billed NOTIFYs, `BroadcastTracker` only backs the explicit Broadcast action. A banned member's message just never lands. | **invisible** |
+| Tenant **banned** (9040) / **timed out** (9042) | The message's own bubble. The relay enforces both at publish time and answers `OK false`; `ChatDeliveryTracker` records that refusal, the bubble turns to an error tick instead of the pending clock, and the delivery dialog quotes the relay's reason verbatim. Still **no state object** folds 9040/9042, so nothing warns you *before* you type — inherent, since the relay only says so on publish. | **shown** (on send) |
 | Tenant role (owner/admin/member) | `BuzzCommunityMembership` drops the role by design and there is no community roster view. "Add people" exists (9030); `removeCommunityMember` (9031) has **no caller**; change-role (9032), ban/unban, timeout/untimeout have **no send path at all** | **invisible** |
 | **Presence** (online/away/offline) | nothing — 20001 is still the geohash-presence slot in `EventFactory` | **invisible** |
 | **Archived identity** (8002 / 13535) | nothing | **invisible** |
@@ -302,13 +302,20 @@ UI-only (the state is tracked correctly, nothing tells the user):
    NIP-43 role, so a tenant *admin* with no per-channel 39001 row reads as channel `MEMBER`.
    Correct as a safety default (it avoids over-granting), but it means the community-admin
    status has no channel-level expression.
-7. **A ban is never explained to the person banned.** *Concord half fixed:* every reason posting
-   is blocked is now a `PostingGate` (`commons/.../model/chats/PostingGate.kt`) rendered by
-   `PostingGateNotice`, and `canPost()` is defined as `postingGate() == Allowed` so the two can't
-   drift. *Buzz half open:* a tenant ban/timeout produces an `OK false` that no send path
-   surfaces, so the message silently never lands — there is no local state to derive a gate from,
-   which is why it needs the send-receipt work in §8.9's neighborhood rather than a read-side
-   notice. `PostingGate` has no `Banned`/`TimedOut` producer for Buzz until then.
+7. ~~**A ban is never explained to the person banned.**~~ **Fixed, from both ends.** *Concord:*
+   every reason posting is blocked is a `PostingGate` (`commons/.../model/chats/PostingGate.kt`)
+   rendered by `PostingGateNotice`, with `canPost()` defined as `postingGate() == Allowed` so the
+   two can't drift. *Buzz:* the refusal is the only signal that exists — the relay enforces a ban
+   or timeout at publish time and answers `OK false` with no event to fold — so
+   `ChatDeliveryTracker` now records rejections alongside acceptances
+   (`RelayInsertConfirmationCollector` gained an `onRelayRejected` callback; it previously dropped
+   every `OK false` on the floor). The bubble shows an error tick rather than a permanent pending
+   clock, and the delivery dialog quotes the reason. `duplicate:` is normalized to acceptance
+   (relays disagree on which OK flag carries it) and a later acceptance clears an earlier refusal
+   (the auth-required → AUTH → republish round trip). Retry is offered only when the NIP-01 prefix
+   says a resend could work — `rate-limited`, `error`, `auth-required` — not for `blocked` /
+   `restricted`, where the relay would repeat itself. This is a general fix: every relay refusal
+   on a chat message now reaches the sender, with a ban as one case.
 8. **Stranding is silent.** Recovery is automatic and log-only, so a member left out of a
    Refounding sees an ordinary empty community rather than "you were left behind on epoch N".
 9. **Buzz tenant moderation has no write path.** 9031 remove-member has no caller; 9032

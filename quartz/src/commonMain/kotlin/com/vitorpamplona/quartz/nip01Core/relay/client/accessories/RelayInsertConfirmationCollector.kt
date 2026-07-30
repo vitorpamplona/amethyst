@@ -29,10 +29,22 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Listens to INostrClient's onEvent messages for caching purposes.
+ * Listens to a relay's `OK` frames for every event this client publishes.
+ *
+ * [onRelayReceived] fires on `OK true` — the relay stored the event. [onRelayRejected], when
+ * supplied, fires on `OK false` with the relay's verbatim reason (NIP-01 suggests a
+ * machine-readable prefix; parse it with `MachineReadablePrefix.parse`). A refusal is the only
+ * signal a relay ever gives that a published event did not land, so a caller that ignores it
+ * cannot distinguish "refused" from "still in flight".
+ *
+ * The reason is passed through untouched. In particular `duplicate:` is reported as a rejection
+ * here because that is what the frame said, even though it means the relay already holds the
+ * event — callers that care (delivery ticks) treat it as acceptance themselves, since relays
+ * disagree on which OK flag to pair it with.
  */
 class RelayInsertConfirmationCollector(
     val client: INostrClient,
+    val onRelayRejected: ((eventId: HexKey, relay: IRelayClient, reason: String) -> Unit)? = null,
     val onRelayReceived: (eventId: HexKey, relay: IRelayClient) -> Unit,
 ) {
     private val clientListener =
@@ -42,8 +54,11 @@ class RelayInsertConfirmationCollector(
                 msgStr: String,
                 msg: Message,
             ) {
-                if (msg is OkMessage && msg.success) {
+                if (msg !is OkMessage) return
+                if (msg.success) {
                     onRelayReceived(msg.eventId, relay)
+                } else {
+                    onRelayRejected?.invoke(msg.eventId, relay, msg.message)
                 }
             }
         }

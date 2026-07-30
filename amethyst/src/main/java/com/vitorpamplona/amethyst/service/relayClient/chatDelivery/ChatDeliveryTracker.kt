@@ -24,9 +24,38 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * One relay's refusal of a published event — its `OK false` reason, verbatim, plus the NIP-01
+ * machine-readable [prefix] when the relay supplied one.
+ *
+ * This is the only thing a relay ever says about *why* a message didn't land. A Buzz tenant ban
+ * (kind 9040) or timeout (9042) reaches the client here and nowhere else: the relay enforces it at
+ * publish time and answers `restricted: ...`, with no event for the client to fold.
+ */
+@Immutable
+data class RelayRejection(
+    val relay: NormalizedRelayUrl,
+    val reason: String,
+    val prefix: MachineReadablePrefix? = MachineReadablePrefix.parse(reason),
+) {
+    /** True when retrying the same event unchanged could plausibly succeed. */
+    val isTransient: Boolean
+        get() =
+            when (prefix) {
+                MachineReadablePrefix.RATE_LIMITED, MachineReadablePrefix.ERROR -> true
+                // A refusal we can act on: authenticate, then republish.
+                MachineReadablePrefix.AUTH_REQUIRED -> true
+                // blocked/restricted (bans, timeouts, non-members), invalid, unsupported, pow:
+                // resending the identical event changes nothing. Unprefixed reasons are unknown,
+                // and claiming a retry will help would be a guess.
+                else -> false
+            }
+}
 
 /** Delivery progress of one recipient's gift wrap (NIP-17 DMs). */
 @Immutable
@@ -34,6 +63,7 @@ data class RecipientDelivery(
     val recipient: HexKey,
     val targetRelays: Set<NormalizedRelayUrl>,
     val acceptedRelays: Set<NormalizedRelayUrl> = emptySet(),
+    val rejections: List<RelayRejection> = emptyList(),
     // The sender's own self-copy wrap: shown in the delivery detail (it matters
     // for multi-device sync) but excluded from "delivered to everyone" and the
     // k/n count, which describe the OTHER participants.
@@ -41,6 +71,10 @@ data class RecipientDelivery(
 ) {
     val isDelivered: Boolean
         get() = acceptedRelays.isNotEmpty()
+
+    /** Every target relay refused and none accepted — this recipient's wrap did not land. */
+    val isRefused: Boolean
+        get() = acceptedRelays.isEmpty() && rejections.isNotEmpty() && rejections.mapTo(HashSet()) { it.relay }.containsAll(targetRelays)
 }
 
 /**
@@ -52,6 +86,7 @@ data class RecipientDelivery(
 data class ChatDelivery(
     val targetRelays: Set<NormalizedRelayUrl>,
     val acceptedRelays: Set<NormalizedRelayUrl> = emptySet(),
+    val rejections: List<RelayRejection> = emptyList(),
     val recipients: List<RecipientDelivery>? = null,
 ) {
     /** The other participants' wraps (self-copy excluded); null for rooms. */
@@ -67,6 +102,32 @@ data class ChatDelivery(
                 targetRelays.isNotEmpty() && acceptedRelays.containsAll(targetRelays)
             }
         }
+
+    /**
+     * The message reached nobody: every target relay answered `OK false` and none accepted.
+     *
+     * Deliberately strict. A relay that simply hasn't answered yet leaves this false — the message
+     * is still in flight, not refused — and one relay refusing while another accepts is a delivered
+     * message, so the refusal belongs in the detail view rather than on the bubble. The strictness
+     * is what makes the true case worth showing: on a single-relay room (a Buzz workspace channel)
+     * it fires on the first refusal.
+     */
+    val isRefused: Boolean
+        get() {
+            val others = otherRecipients
+            return if (others != null) {
+                others.isNotEmpty() && others.all { it.isRefused }
+            } else {
+                acceptedRelays.isEmpty() && rejections.isNotEmpty() && rejections.mapTo(HashSet()) { it.relay }.containsAll(targetRelays)
+            }
+        }
+
+    /** A representative refusal to show on the bubble; the detail view lists them all. */
+    val firstRejection: RelayRejection?
+        get() = rejections.firstOrNull() ?: otherRecipients?.firstNotNullOfOrNull { it.rejections.firstOrNull() }
+
+    /** Rejections keyed by relay, for the per-relay detail rows. */
+    fun rejectionFor(relay: NormalizedRelayUrl): RelayRejection? = rejections.firstOrNull { it.relay == relay }
 }
 
 /**
@@ -108,7 +169,10 @@ class ChatDeliveryTracker(
     private var knownIds = setOf<HexKey>()
 
     private val okCollector =
-        RelayInsertConfirmationCollector(client) { eventId, relay ->
+        RelayInsertConfirmationCollector(
+            client,
+            onRelayRejected = { eventId, relay, reason -> onRejected(eventId, relay.url, reason) },
+        ) { eventId, relay ->
             onAccepted(eventId, relay.url)
         }
 
@@ -142,6 +206,7 @@ class ChatDeliveryTracker(
                 ChatDelivery(
                     targetRelays = (current?.targetRelays ?: emptySet()) + targetRelays,
                     acceptedRelays = current?.acceptedRelays ?: emptySet(),
+                    rejections = current?.rejections ?: emptyList(),
                     recipients = (current?.recipients ?: emptyList()) + RecipientDelivery(recipient, targetRelays, isSelf = isSelf),
                 )
 
@@ -208,10 +273,17 @@ class ChatDeliveryTracker(
                 flow.value =
                     delivery.copy(
                         acceptedRelays = delivery.acceptedRelays + relay,
+                        // A relay that accepted is no longer refusing: the auth-required -> AUTH ->
+                        // republish round trip refuses first and then stores, and leaving the stale
+                        // refusal behind would report a delivered message as rejected.
+                        rejections = delivery.rejections.filterNot { it.relay == relay },
                         recipients =
                             delivery.recipients?.map {
                                 if (it.recipient == recipient) {
-                                    it.copy(acceptedRelays = it.acceptedRelays + relay)
+                                    it.copy(
+                                        acceptedRelays = it.acceptedRelays + relay,
+                                        rejections = it.rejections.filterNot { r -> r.relay == relay },
+                                    )
                                 } else {
                                     it
                                 }
@@ -220,10 +292,68 @@ class ChatDeliveryTracker(
             } else {
                 val flow = deliveries[eventId] ?: return
                 val delivery = flow.value ?: return
-                flow.value = delivery.copy(acceptedRelays = delivery.acceptedRelays + relay)
+                flow.value =
+                    delivery.copy(
+                        acceptedRelays = delivery.acceptedRelays + relay,
+                        rejections = delivery.rejections.filterNot { it.relay == relay },
+                    )
             }
         }
     }
+
+    /**
+     * A relay refused [eventId]. Recorded per relay so the bubble can say the message didn't land and
+     * the detail view can quote the reason — the only place a relay-side ban, timeout, rate limit or
+     * unsupported kind ever becomes visible to the sender.
+     */
+    private fun onRejected(
+        eventId: HexKey,
+        relay: NormalizedRelayUrl,
+        reason: String,
+    ) {
+        // `duplicate:` means the relay already holds the event, which is delivery, not refusal.
+        // Relays disagree on whether to pair it with OK true or OK false, so normalize here.
+        if (MachineReadablePrefix.parse(reason) == MachineReadablePrefix.DUPLICATE) {
+            onAccepted(eventId, relay)
+            return
+        }
+
+        // Lock-free negative path, as in [onAccepted].
+        if (eventId !in wrapIndex && eventId !in knownIds) return
+
+        synchronized(lock) {
+            val rejection = RelayRejection(relay, reason)
+            val wrapTarget = wrapIndex[eventId]
+            if (wrapTarget != null) {
+                val (noteId, recipient) = wrapTarget
+                val flow = deliveries[noteId] ?: return
+                val delivery = flow.value ?: return
+
+                flow.value =
+                    delivery.copy(
+                        rejections = delivery.rejections.addingOnce(rejection),
+                        recipients =
+                            delivery.recipients?.map {
+                                if (it.recipient == recipient) {
+                                    it.copy(rejections = it.rejections.addingOnce(rejection))
+                                } else {
+                                    it
+                                }
+                            },
+                    )
+            } else {
+                val flow = deliveries[eventId] ?: return
+                val delivery = flow.value ?: return
+                flow.value = delivery.copy(rejections = delivery.rejections.addingOnce(rejection))
+            }
+        }
+    }
+
+    /**
+     * Appends [rejection] unless this relay already has one recorded — a relay can repeat an `OK
+     * false` across reconnects/retries, and the detail view shows one row per relay.
+     */
+    private fun List<RelayRejection>.addingOnce(rejection: RelayRejection): List<RelayRejection> = if (any { it.relay == rejection.relay }) this else this + rejection
 
     // Must run under [lock]. Also creates entries for ids queried by the UI
     // before their send registers (compose can win that race), so both paths

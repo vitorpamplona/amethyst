@@ -3643,6 +3643,9 @@
     <string name="chat_delivery_no_relay_info">No relay information for this message</string>
     <string name="chat_delivery_accepted">Accepted by at least one relay</string>
     <string name="chat_delivery_delivered_all">Delivered to all recipients\' relays</string>
+    <string name="chat_delivery_refused">Refused by the relay — this message was not delivered</string>
+    <string name="chat_delivery_refused_summary">Not delivered. The relay refused this message.</string>
+    <string name="chat_delivery_refused_reason">Relay said: %1$s</string>
 
     <string name="add_expiration_date">Add expiration date</string>
     <string name="remove_expiration_date">Remove expiration date</string>
