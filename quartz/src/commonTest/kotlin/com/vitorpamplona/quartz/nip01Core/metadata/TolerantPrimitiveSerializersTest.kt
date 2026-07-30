@@ -66,7 +66,7 @@ class TolerantPrimitiveSerializersTest {
     fun otherNonStringValuesAreIgnoredFieldByField() {
         val meta =
             metaWith(
-                """{"name":{"first":"A"},"display_name":["A"],"picture":null,"about":"bio","website":{}}""",
+                """{"name":{"first":"A"},"display_name":["A","B"],"picture":null,"about":"bio","website":{}}""",
             ).contactMetaData()
 
         assertIs<UserMetadata>(meta)
@@ -75,6 +75,37 @@ class TolerantPrimitiveSerializersTest {
         assertNull(meta.picture)
         assertNull(meta.website)
         assertEquals("bio", meta.about, "well-formed fields must survive the malformed ones")
+    }
+
+    /**
+     * Regression for profiles that wrap a string field in a one-element array
+     * (seen in the wild as `"nip05":["shoreline@decentnewsroom.com"]`). There is
+     * only one possible reading, so the value must be recovered rather than
+     * silently dropped along with the user's NIP-05 verification.
+     */
+    @Test
+    fun singleElementArrayIsUnwrapped() {
+        val meta = metaWith("""{"name":"A","nip05":["a@b.com"],"lud16":[123]}""").contactMetaData()
+
+        assertIs<UserMetadata>(meta)
+        assertEquals("a@b.com", meta.nip05)
+        assertEquals("123", meta.lud16)
+    }
+
+    @Test
+    fun arraysThatAreNotASinglePrimitiveAreStillIgnored() {
+        listOf(
+            """{"name":"A","nip05":[]}""",
+            """{"name":"A","nip05":["a@b.com","c@d.com"]}""",
+            """{"name":"A","nip05":[{}]}""",
+            """{"name":"A","nip05":[["a@b.com"]]}""",
+            """{"name":"A","nip05":[null]}""",
+        ).forEach { json ->
+            val meta = metaWith(json).contactMetaData()
+            assertIs<UserMetadata>(meta, "profile must survive nip05 in $json")
+            assertEquals("A", meta.name)
+            assertNull(meta.nip05, "ambiguous array nip05 must be dropped in $json")
+        }
     }
 
     /** Pre-existing lenient behavior: bare primitives still decode into string fields. */
@@ -117,7 +148,26 @@ class TolerantPrimitiveSerializersTest {
     @Test
     fun nonJsonContentReturnsNull() {
         assertNull(metaWith("Relay initialized").contactMetaData())
-        assertNull(metaWith("").contactMetaData())
+    }
+
+    /**
+     * An empty content is a valid, empty profile — a user wiping their metadata —
+     * not a parse error. It must decode to a blank [UserMetadata] so the new
+     * (replaceable) event actually replaces the stale profile downstream.
+     */
+    @Test
+    fun blankContentIsAnEmptyProfileNotAnError() {
+        listOf("", " ", "\n", "\t ").forEach { blank ->
+            val meta = metaWith(blank).contactMetaData()
+            assertIs<UserMetadata>(meta, "blank content must decode into an empty profile, not null")
+            assertNull(meta.name)
+            assertNull(meta.displayName)
+            assertNull(meta.picture)
+            assertNull(meta.about)
+            assertNull(meta.nip05)
+
+            assertEquals(emptySet(), metaWith(blank).contactMetadataJson()?.keys, "blank content must decode into an empty json object")
+        }
     }
 
     /** Dropped fields must not leak back into the serialized profile as nulls. */

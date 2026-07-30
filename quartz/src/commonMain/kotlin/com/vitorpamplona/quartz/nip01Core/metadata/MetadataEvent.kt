@@ -88,26 +88,40 @@ class MetadataEvent(
         } ?: ""
 
     fun contactMetadataJson() =
-        try {
-            Json.parseToJsonElement(content) as JsonObject
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("MetadataEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-            null
+        if (content.isBlank()) {
+            // An empty kind-0 is a valid, empty profile — not a parse failure.
+            EMPTY_METADATA_JSON
+        } else {
+            try {
+                Json.parseToJsonElement(content) as JsonObject
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("MetadataEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
+                null
+            }
         }
 
     fun contactMetaData() =
-        try {
-            JsonMapper.fromJson<UserMetadata>(content)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("MetadataEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
-            null
+        if (content.isBlank()) {
+            // Users do publish kind 0s with an empty content to wipe their
+            // profile. That must replace the previous metadata with a blank
+            // one, not be discarded as an error.
+            UserMetadata()
+        } else {
+            try {
+                JsonMapper.fromJson<UserMetadata>(content)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("MetadataEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }
+                null
+            }
         }
 
     companion object {
         const val KIND = 0
         const val FIXED_D_TAG = ""
+
+        private val EMPTY_METADATA_JSON = JsonObject(emptyMap())
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
