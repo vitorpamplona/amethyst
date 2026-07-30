@@ -89,7 +89,13 @@ data class ConcordCommunityState(
             ownerPubKey: String,
             floors: Map<String, EntityFloor> = emptyMap(),
         ): Map<String, EntityFloor> {
-            val pool = EditionFold.admissible(editions, floors)
+            // This call folds exactly one epoch's editions, so they ARE the snapshot: an entity
+            // appearing here has been re-wrapped into this epoch and must anchor on version, not
+            // on a `prev` that necessarily dangles back into the epoch the floor came from. The
+            // known heads `admissible` re-seats are not in the set, so an entity this epoch never
+            // mentioned correctly keeps chain-walk semantics.
+            val snapshot = editions.mapTo(HashSet(editions.size)) { it.rumorId }
+            val pool = EditionFold.admissible(editions, floors, snapshot = snapshot)
             val authority = AuthorityResolver.resolve(pool, ownerPubKey)
             val out = HashMap<String, EntityFloor>(floors)
             for ((kind, list) in pool.groupBy { it.entityKind }) {
@@ -97,7 +103,7 @@ data class ConcordCommunityState(
                 // Gate the CANDIDATES, don't pre-filter the chain: a rejected edition mid-chain must
                 // stay inert instead of orphaning the authorized editions above it (EditionFold.candidates).
                 val heads =
-                    EditionFold.foldGated(list, floors) {
+                    EditionFold.foldGated(list, floors, snapshot = snapshot) {
                         authority.isOwner(it.author) || (bit != null && authority.hasPermission(it.author, bit))
                     }
                 for ((entity, head) in heads) {
@@ -119,10 +125,15 @@ data class ConcordCommunityState(
             // authority chains, the per-kind gated folds), so the anti-rollback floor is applied
             // once, up front, on the shared pool: a rolled-back edition is never seen by any of
             // them, and the head we already folded is re-seated so the entity keeps its state.
-            @Suppress("NAME_SHADOWING")
-            val editions = EditionFold.admissible(editions, floors)
+            // The editions handed in are one epoch's — the current one — so they are the
+            // snapshot that selects the compaction arm. Captured BEFORE `admissible` re-seats
+            // known heads from older epochs, which must not be mistaken for this epoch's.
+            val snapshot = editions.mapTo(HashSet(editions.size)) { it.rumorId }
 
-            val heads = EditionFold.fold(editions, floors).values
+            @Suppress("NAME_SHADOWING")
+            val editions = EditionFold.admissible(editions, floors, snapshot = snapshot)
+
+            val heads = EditionFold.fold(editions, floors, snapshot = snapshot).values
             // Resolve authority from the FULL edition set (not the structural heads): the resolver
             // folds each role/grant chain through authorized editions only, so a rogue higher-version
             // edition can't supersede a legit one before authority is even judged.
@@ -142,7 +153,7 @@ data class ConcordCommunityState(
                 kind: ControlEntityKind,
                 bit: Int,
             ): Map<String, ControlEdition> =
-                EditionFold.foldGated(editions.filter { it.entityKind == kind }, floors) {
+                EditionFold.foldGated(editions.filter { it.entityKind == kind }, floors, snapshot = snapshot) {
                     authority.isOwner(it.author) || authority.hasPermission(it.author, bit)
                 }
 

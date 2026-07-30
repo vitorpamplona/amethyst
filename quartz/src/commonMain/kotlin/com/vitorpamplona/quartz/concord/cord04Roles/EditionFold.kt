@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.concord.cord04Roles
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 
 /**
  * The anti-rollback floor for one Control Plane entity: the [version] and
@@ -98,14 +99,59 @@ object EditionFold {
     private const val TAG = "ConcordEditionFold"
 
     /**
+     * Rollback refusals already reported by [LOG_GAP], keyed by the exact refusal
+     * (entity + floor + offered version) rather than by entity, so a *new* rollback
+     * attempt against the same entity is still reported.
+     *
+     * Bounded in practice: a key is only ever added when an entity is offered a chain
+     * it already refused at a version pair it has not seen, which happens once per real
+     * rotation, not once per fold. Deliberately never cleared and deliberately
+     * fail-open — see [LOG_GAP].
+     */
+    private val reportedGaps = ConcurrentSet<String>()
+
+    /** Above this many distinct refusals, stop deduplicating and just warn. See [LOG_GAP]. */
+    private const val MAX_TRACKED_GAPS = 4096
+
+    /**
      * The default [GapReporter]: a rollback refusal is security-relevant (a rotator
      * tried to revert an entity), so it is warned, never swallowed.
+     *
+     * Warned **once per distinct refusal**, though. Amethyst re-folds the whole buffer
+     * from scratch on every control-plane change, so an entity stuck refusing a rollback
+     * re-reports the identical refusal on every refold — 22 byte-identical warnings in an
+     * 80s cold start, which reads as 22 attacks rather than one unchanged state. The
+     * dedup is on the message's own contents, so nothing a reader could act on is lost.
+     *
+     * Fails **open**: past [MAX_TRACKED_GAPS] distinct refusals it reverts to warning
+     * every time. A flood of distinct rollback attempts is exactly when the warnings
+     * matter most, so the failure mode is a noisy log, never a silenced one.
      */
     val LOG_GAP: GapReporter = { entityIdHex, floorVersion, offeredVersion ->
-        Log.w(TAG) {
-            "Control-plane rollback refused for entity $entityIdHex: already folded v$floorVersion, offered chain tops out at v$offeredVersion and does not connect to it"
+        val firstReport =
+            reportedGaps.size() >= MAX_TRACKED_GAPS ||
+                reportedGaps.add("$entityIdHex@$floorVersion<-$offeredVersion")
+
+        if (firstReport) {
+            Log.w(TAG) {
+                "Control-plane rollback refused for entity $entityIdHex: already folded v$floorVersion, offered chain tops out at v$offeredVersion and does not connect to it"
+            }
         }
     }
+
+    /**
+     * The compaction-era head: the highest-version edition at or above [floorVersion], ties
+     * broken by the lower rumor id — no `prev`, no hash, no contiguity. See the compaction arm
+     * in [foldEntity] for why version is the right (and only sound) anchor behind a Refounding.
+     * Null when nothing at or above the floor was offered, which is the only gap this arm has.
+     */
+    private fun bootstrapHead(
+        editions: List<ControlEdition>,
+        floorVersion: Long,
+    ): ControlEdition? =
+        editions
+            .filter { it.version >= floorVersion }
+            .minWithOrNull(compareByDescending<ControlEdition> { it.version }.thenBy { it.rumorId })
 
     /**
      * Groups mixed [editions] by entity id and folds each to its head, honoring the
@@ -119,12 +165,13 @@ object EditionFold {
     fun fold(
         editions: Collection<ControlEdition>,
         floors: Map<String, EntityFloor> = emptyMap(),
+        snapshot: Set<String>? = null,
         onGap: GapReporter = LOG_GAP,
     ): Map<String, ControlEdition> {
         val byEntity = editions.groupBy { it.entityIdHex }
         val out = HashMap<String, ControlEdition>(byEntity.size)
         for ((entity, list) in byEntity) {
-            foldEntity(list, floors[entity], onGap)?.let { out[entity] = it }
+            foldEntity(list, floors[entity], snapshot, onGap)?.let { out[entity] = it }
         }
         return out
     }
@@ -134,17 +181,43 @@ object EditionFold {
      *
      * With no [floor] this is the fresh-joiner fold: genesis-anchored, falling back
      * to the lowest-version edition present (the compaction bootstrap). With a
-     * [floor] the walk is anchored at the exact edition already folded; if that
-     * edition is not among [editions] the chain is **gapped** and nothing above the
-     * floor is adopted — [EntityFloor.known] is kept instead (or null when we no
-     * longer hold it). A head is therefore never below the floor version.
+     * [floor] the walk is anchored at the edition already folded **or** at its
+     * immediate successor when that successor cites the floor's hash; failing both
+     * the chain is **gapped** and nothing above the floor is adopted —
+     * [EntityFloor.known] is kept instead (or null when we no longer hold it). A head
+     * is therefore never below the floor version.
+     *
+     * [snapshot] is the set of [ControlEdition.rumorId]s belonging to the epoch being
+     * folded, supplied once a community has Refounded. An entity present in it takes
+     * the version-anchored compaction arm instead of the chain walk — see the arm
+     * itself for why. Null (the default) keeps the pure chain walk, which is right for
+     * a single-epoch fold and for every caller that has no epoch to speak of.
      */
     fun foldEntity(
         editions: List<ControlEdition>,
         floor: EntityFloor? = null,
+        snapshot: Set<String>? = null,
         onGap: GapReporter = LOG_GAP,
     ): ControlEdition? {
         if (editions.isEmpty()) return floor?.known
+
+        // Compaction arm (CORD-06 §3). Once this entity has been re-wrapped into the epoch
+        // being folded, `prev` chaining across the epoch boundary is meaningless: a Refounding
+        // trims history and re-wraps the head alone, so the predecessor our floor names stays
+        // behind on the older epoch and every offered `prev` dangles by design. Anchor on
+        // VERSION instead — a re-wrap preserves the original author's signature but cannot
+        // raise the version inside the signed seal, so a re-served stale edition always loses
+        // to the compacted head. Presence of the entity in the snapshot selects the ARM;
+        // version selects the HEAD, over every edition we hold and not just the subset.
+        if (floor != null && snapshot != null && editions.any { it.rumorId in snapshot }) {
+            return bootstrapHead(editions, floor.version)
+                ?: run {
+                    // Nothing at or above the floor was served: the head we already accepted
+                    // vanished from the offered set — withheld, so fail closed.
+                    onGap(editions[0].entityIdHex, floor.version, editions.maxOf { it.version })
+                    floor.known
+                }
+        }
 
         // Index editions by version, keeping the tie-break winner where several
         // share a version (lower rumor id wins).
@@ -153,12 +226,25 @@ object EditionFold {
 
         var head =
             if (floor != null) {
-                // Anchored at what we already folded: the offered set MUST contain that exact
-                // edition (same version AND same hash — a same-version sibling is a fork, not
-                // our chain). Failing that, refuse to move at all rather than accept an
-                // unverifiable jump; walking up from the floor also makes a head below the
-                // floor version structurally impossible.
-                editions.firstOrNull { it.version == floor.version && it.hashHex == floor.hashHex }
+                // Anchored at what we already folded. Below the floor is history we absorbed, so
+                // the anchor is the lowest offered version at or above it, and only two shapes
+                // connect: that edition IS the floor (same version AND hash — a same-version
+                // sibling is a fork, not our chain), or it is the floor's immediate successor and
+                // cites the floor's hash. The latter is the ordinary cross-epoch shape and is a
+                // STRONGER proof of connection than mere presence. Anything else is a jump we
+                // refuse; walking up from the anchor also makes a head below the floor version
+                // structurally impossible.
+                val lowest = byVersion.keys.filter { it >= floor.version }.minOrNull()
+                val winner = lowest?.let { v -> byVersion[v]?.minByOrNull { it.rumorId } }
+                val anchor =
+                    when {
+                        winner == null -> null
+                        lowest == floor.version -> winner.takeIf { it.hashHex == floor.hashHex }
+                        lowest == floor.version + 1 ->
+                            winner.takeIf { it.prevHash != null && it.prevHash.toHexKey() == floor.hashHex }
+                        else -> null
+                    }
+                anchor
                     ?: run {
                         onGap(editions[0].entityIdHex, floor.version, editions.maxOf { it.version })
                         return floor.known
@@ -222,12 +308,21 @@ object EditionFold {
     fun candidates(
         editions: List<ControlEdition>,
         floor: EntityFloor? = null,
+        snapshot: Set<String>? = null,
         onGap: GapReporter = LOG_GAP,
     ): List<ControlEdition> {
-        val head = foldEntity(editions, floor, onGap) ?: return emptyList()
+        // Ask the fold whether it gapped rather than re-deriving the condition here: with the
+        // compaction arm and the successor anchor there are three ways to connect, and a second
+        // copy of that test is a bug waiting to drift out of sync with the first.
+        var gapped = false
+        val head =
+            foldEntity(editions, floor, snapshot) { e, f, o ->
+                gapped = true
+                onGap(e, f, o)
+            } ?: return emptyList()
         // A gap re-seated the known head: nothing from the offered set is admissible above
         // the floor, so the known edition is the only candidate.
-        if (floor != null && editions.none { it.version == floor.version && it.hashHex == floor.hashHex }) {
+        if (floor != null && gapped) {
             return listOf(head)
         }
         val out = ArrayList<ControlEdition>(editions.size)
@@ -247,9 +342,10 @@ object EditionFold {
     fun foldEntityGated(
         editions: List<ControlEdition>,
         floor: EntityFloor? = null,
+        snapshot: Set<String>? = null,
         onGap: GapReporter = LOG_GAP,
         gate: (ControlEdition) -> Boolean,
-    ): ControlEdition? = candidates(editions, floor, onGap).firstOrNull(gate)
+    ): ControlEdition? = candidates(editions, floor, snapshot, onGap).firstOrNull(gate)
 
     /**
      * Groups mixed [editions] by entity id and folds each to the highest-priority
@@ -258,13 +354,14 @@ object EditionFold {
     fun foldGated(
         editions: Collection<ControlEdition>,
         floors: Map<String, EntityFloor> = emptyMap(),
+        snapshot: Set<String>? = null,
         onGap: GapReporter = LOG_GAP,
         gate: (ControlEdition) -> Boolean,
     ): Map<String, ControlEdition> {
         val byEntity = editions.groupBy { it.entityIdHex }
         val out = HashMap<String, ControlEdition>(byEntity.size)
         for ((entity, list) in byEntity) {
-            foldEntityGated(list, floors[entity], onGap, gate)?.let { out[entity] = it }
+            foldEntityGated(list, floors[entity], snapshot, onGap, gate)?.let { out[entity] = it }
         }
         return out
     }
@@ -285,6 +382,7 @@ object EditionFold {
     fun admissible(
         editions: Collection<ControlEdition>,
         floors: Map<String, EntityFloor>,
+        snapshot: Set<String>? = null,
         onGap: GapReporter = LOG_GAP,
     ): List<ControlEdition> {
         if (floors.isEmpty()) return editions.toList()
@@ -298,7 +396,12 @@ object EditionFold {
                 out.addAll(list)
                 continue
             }
-            if (list.any { it.version == floor.version && it.hashHex == floor.hashHex }) {
+            // Same three-way connection test as the fold, asked of the fold itself so the two
+            // can't drift apart: present at the floor, a successor citing it, or the compaction
+            // arm's version anchor.
+            var gapped = false
+            foldEntity(list, floor, snapshot) { _, _, _ -> gapped = true }
+            if (!gapped) {
                 out.addAll(list)
                 continue
             }

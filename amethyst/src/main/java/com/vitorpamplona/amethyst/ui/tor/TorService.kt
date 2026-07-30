@@ -99,6 +99,24 @@ class TorService(
     override val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
 
     /**
+     * Every status change goes through here so the transition is logged exactly once, at INFO, with
+     * the time since bootstrap started.
+     *
+     * Tor state is the single biggest determinant of whether a boot works — a stuck `Connecting`,
+     * an `Active` that took 40s, and a silent drop back to `Off` are three completely different
+     * bugs that used to look identical in the log, because the per-status detail lived only in
+     * Arti's own DEBUG chatter. Self-transitions are not logged: the reset paths reassign `Off`
+     * defensively and repeating it adds nothing.
+     */
+    private fun setStatus(next: TorServiceStatus) {
+        val prev = _status.value
+        _status.value = next
+        if (prev::class == next::class && prev.toString() == next.toString()) return
+        val since = if (bootstrapStartedAtMs > 0) " after ${System.currentTimeMillis() - bootstrapStartedAtMs}ms" else ""
+        Log.i("TorService") { "${prev::class.simpleName} -> ${next::class.simpleName}$since" }
+    }
+
+    /**
      * Runtime detector for a rotten guard sample. Arti logs [ALL_GUARDS_DOWN_MARKER] every time it
      * fails to find a usable guard; [GUARDS_DOWN_THRESHOLD] of those inside [GUARDS_DOWN_WINDOW_MS]
      * means every guard in the sample is unreachable *right now* — which the on-disk check cannot
@@ -218,11 +236,11 @@ class TorService(
         lifecycleMutex.withLock {
             if (proxyRunning.get()) {
                 if (_status.value is TorServiceStatus.Active) return@withLock
-                _status.value = TorServiceStatus.Connecting
+                setStatus(TorServiceStatus.Connecting)
                 return@withLock
             }
 
-            _status.value = TorServiceStatus.Connecting
+            setStatus(TorServiceStatus.Connecting)
 
             withContext(Dispatchers.IO) {
                 // Initialize TorClient once — this bootstraps the Tor network.
@@ -292,7 +310,7 @@ class TorService(
                     if (initResult != 0) {
                         Log.e("TorService") { "Failed to initialize Arti on retry: error $initResult" }
                         initialized.set(false)
-                        _status.value = TorServiceStatus.Off
+                        setStatus(TorServiceStatus.Off)
                         return@withContext
                     }
                 }
@@ -313,7 +331,7 @@ class TorService(
 
                 if (!started) {
                     Log.e("TorService") { "Failed to start SOCKS proxy after $MAX_PORT_RETRIES attempts" }
-                    _status.value = TorServiceStatus.Off
+                    setStatus(TorServiceStatus.Off)
                     return@withContext
                 }
 
@@ -332,7 +350,7 @@ class TorService(
                 // reset/stop can't clobber it.
                 val startedAt = bootstrapStartedAtMs
                 val elapsed = if (startedAt > 0) System.currentTimeMillis() - startedAt else -1
-                _status.value = TorServiceStatus.Active(socksPort)
+                setStatus(TorServiceStatus.Active(socksPort))
                 Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort (bootstrap took ${elapsed}ms)" }
             }
         }
@@ -350,7 +368,7 @@ class TorService(
                 Log.d("TorService") { "SOCKS proxy stopped" }
             }
 
-            _status.value = TorServiceStatus.Off
+            setStatus(TorServiceStatus.Off)
         }
     }
 
@@ -365,7 +383,7 @@ class TorService(
         lifecycleMutex.withLock {
             resetLocked()
         }
-        _status.value = TorServiceStatus.Off
+        setStatus(TorServiceStatus.Off)
     }
 
     /**
@@ -381,7 +399,7 @@ class TorService(
                 clearAllArtiData()
             }
         }
-        _status.value = TorServiceStatus.Off
+        setStatus(TorServiceStatus.Off)
     }
 
     /**

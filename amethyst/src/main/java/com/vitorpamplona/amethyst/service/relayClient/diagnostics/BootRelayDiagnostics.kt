@@ -56,7 +56,10 @@ import kotlin.concurrent.thread
  */
 class BootRelayDiagnostics(
     val client: INostrClient,
-    val dumpAtSeconds: List<Long> = listOf(20, 45, 90),
+    // 5s first: the pool is assembled and dialling well before 20s, and the early datapoint is what
+    // distinguishes "slow to connect" from "connected fine, slow to serve". Affordable because the
+    // rollup is now 3 INFO lines rather than 5 — the ===== banners moved to DEBUG.
+    val dumpAtSeconds: List<Long> = listOf(5, 20, 45, 90),
 ) {
     companion object {
         const val TAG = "BootRelayDiag"
@@ -197,8 +200,13 @@ class BootRelayDiagnostics(
     fun detach() = client.removeConnectionListener(listener)
 
     /**
-     * One line per relay plus a rollup. Kept to a single Log.w per line so the whole census
+     * One line per relay plus a rollup. Kept to a single Log call per line so the whole census
      * survives logcat's per-tag rate limiting on a busy boot.
+     *
+     * The rollup goes out at INFO — it is the one boot line worth reading by default, and it
+     * carries the aggregate that per-socket failure logging used to spell out a few hundred
+     * times. The per-relay WASTE/SERVE tables are DEBUG: useful when you are chasing a specific
+     * relay, too long (up to 45 lines a census) to sit in the default log.
      */
     fun dump(atSeconds: Long) {
         val snapshot = records.toMap()
@@ -214,27 +222,27 @@ class BootRelayDiagnostics(
             r.closed.forEach { (k, v) -> closedTotals[k] = (closedTotals[k] ?: 0) + v.get() }
         }
 
-        Log.w(TAG, "===== boot census @${atSeconds}s =====")
-        Log.w(
+        Log.d(TAG, "===== boot census @${atSeconds}s =====")
+        Log.i(
             TAG,
-            "pool=${snapshot.size} opened=${opened.size} served_events=${served.size} never_opened=${neverOpened.size} " +
+            "census @${atSeconds}s pool=${snapshot.size} opened=${opened.size} served_events=${served.size} never_opened=${neverOpened.size} " +
                 "dials=${snapshot.values.sumOf { it.tentatives.get() }} " +
                 "events=${snapshot.values.sumOf { it.events.get() }} " +
                 "reqs=${snapshot.values.sumOf { it.reqsSent.get() }} " +
                 "auths=${snapshot.values.sumOf { it.authsSent.get() }}",
         )
-        Log.w(TAG, "failures_by_cause=" + causeTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
-        Log.w(TAG, "closed_by_prefix=" + closedTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
+        Log.i(TAG, "census @${atSeconds}s failures_by_cause=" + causeTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
+        Log.i(TAG, "census @${atSeconds}s closed_by_prefix=" + closedTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
 
         // Relays that cost us dials and gave nothing back, worst first: the wasted-effort list.
-        Log.w(TAG, "--- top wasted dials (no events received) ---")
+        Log.d(TAG, "--- top wasted dials (no events received) ---")
         snapshot
             .filter { it.value.events.get() == 0 }
             .entries
             .sortedByDescending { it.value.tentatives.get() }
             .take(25)
             .forEach { (url, r) ->
-                Log.w(
+                Log.d(
                     TAG,
                     "WASTE ${url.url} dials=${r.tentatives.get()} opens=${r.opens.get()} " +
                         "fail=[${r.failures.entries.joinToString { "${it.key}:${it.value.get()}" }}] " +
@@ -245,17 +253,17 @@ class BootRelayDiagnostics(
 
         // The relays actually carrying the boot, so a suppression change can be checked for
         // coverage loss rather than just CLOSED reduction.
-        Log.w(TAG, "--- top event providers ---")
+        Log.d(TAG, "--- top event providers ---")
         served.entries
             .sortedByDescending { it.value.events.get() }
             .take(20)
             .forEach { (url, r) ->
-                Log.w(
+                Log.d(
                     TAG,
                     "SERVE ${url.url} events=${r.events.get()} reqs=${r.reqsSent.get()} eose=${r.eoses.get()} " +
                         "openMs=${r.firstOpenAtMs.get()} eoseMs=${r.firstEoseAtMs.get()} dials=${r.tentatives.get()}",
                 )
             }
-        Log.w(TAG, "===== end census @${atSeconds}s =====")
+        Log.d(TAG, "===== end census @${atSeconds}s =====")
     }
 }

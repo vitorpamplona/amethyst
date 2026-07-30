@@ -608,7 +608,12 @@ class GroupEventHandler(
             return
         }
         if (!manager.isMember(groupId)) {
-            Log.w("MarmotDbg") {
+            // Debug, not warn: relays serve kind:445 for every group they carry, so traffic for
+            // groups we are not in is the expected steady state, not an anomaly — unlike the null
+            // manager and missing 'h' tag above, which stay warnings because they mean we cannot
+            // process a group we *should* be handling. Fires ~22 times a boot (the same handful of
+            // events, re-offered on each pass), which drowns the two real warnings next to it.
+            Log.d("MarmotDbg") {
                 "GroupEventHandler.add: not a member of group=${groupId.take(8)}… — dropping kind:445 ${event.id.take(8)}…"
             }
             return
