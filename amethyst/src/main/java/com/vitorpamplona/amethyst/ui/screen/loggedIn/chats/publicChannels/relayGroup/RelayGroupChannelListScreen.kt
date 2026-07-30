@@ -45,6 +45,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -72,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
-import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.util.sortedBySnapshot
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.isRelaySignedRelayGroup
@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.warningColor
+import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_DM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -113,8 +114,36 @@ import kotlinx.coroutines.launch
 /** A first screen's worth of recent messages to prefetch per visible group card, ahead of a tap. */
 private const val CHANNEL_LIST_WARMUP_LIMIT = 10
 
-/** Grace period before offering the Tor→clearnet escape hatch, so a slow-but-working relay isn't nagged. */
+/**
+ * How long this relay's socket must stay down before the Tor→clearnet escape hatch is offered, so a
+ * slow first connect (or a reconnect) isn't mistaken for a relay that blocks Tor exits.
+ */
 private const val TOR_CLEARNET_HINT_DELAY_MS = 6_000L
+
+/**
+ * Whether to offer the Tor→clearnet escape hatch for this relay ([TorClearnetBanner]).
+ *
+ * The banner accuses *this relay* of blocking Tor exits and offers a privacy downgrade to work
+ * around it, so it has to rule out every other explanation — and be able to deliver:
+ *
+ * - [usesTor]: this relay is *actually* routed over Tor right now (`TorRelayEvaluation.useTor`, the
+ *   same predicate the pool dials with). Tor being enabled globally says nothing about one relay —
+ *   onion, localhost and the per-role presets (trusted / DM / new) each decide independently.
+ * - [torIsUp]: the SOCKS proxy is Active. While Tor is still bootstrapping *nothing* Tor-routed
+ *   connects, which is Tor's problem (and its own dialog's), not this relay's.
+ * - [trustingMovesToClearnet]: the action on offer — adding the relay to the kind-10089 Trusted list —
+ *   would actually change its routing. Under a preset that keeps trusted relays on Tor it wouldn't,
+ *   and the button would be inert.
+ * - [disconnectedLongEnough]: the socket has been continuously down for [TOR_CLEARNET_HINT_DELAY_MS].
+ *   A relay that answers is reachable by definition, and one that merely reconnects is not a relay
+ *   that blocks Tor — only a sustained silence is.
+ */
+internal fun shouldOfferTorClearnetFallback(
+    usesTor: Boolean,
+    torIsUp: Boolean,
+    trustingMovesToClearnet: Boolean,
+    disconnectedLongEnough: Boolean,
+): Boolean = usesTor && torIsUp && trustingMovesToClearnet && disconnectedLongEnough
 
 /**
  * Bottom room the list leaves for the floating action button: a 56dp FAB + the Scaffold's 16dp margin
@@ -303,19 +332,54 @@ fun RelayGroupChannelListScreen(
     var showAddPeople by remember { mutableStateOf(false) }
 
     // Tor-failure escape hatch: a Cloudflare-fronted (or otherwise Tor-hostile) relay times out over
-    // Tor. When Tor is on, the relay isn't an onion, it isn't already trusted, and nothing has loaded
-    // after a grace period, offer to reach it over clearnet — which adds it to the kind-10089 Trusted
-    // Relay List (connected over clearnet even while Tor stays on for everything else).
-    val torType by Amethyst.instance.torPrefs.torType
-        .collectAsStateWithLifecycle(TorType.OFF)
-    val isOnion = remember(relay) { relay.url.contains(".onion") }
-    var connectTimedOut by remember(relay) { mutableStateOf(false) }
-    LaunchedEffect(relay) {
-        delay(TOR_CLEARNET_HINT_DELAY_MS)
-        connectTimedOut = true
+    // Tor. Offer to reach it over clearnet — which adds it to the kind-10089 Trusted Relay List
+    // (connected over clearnet even while Tor stays on for everything else).
+    //
+    // Every input below is a live signal, because a grace timer on its own says nothing about the
+    // relay: the banner used to fire on `torType != OFF && !onion && !trusted` plus a 6s delay, so on
+    // a working, answering relay it appeared after six seconds and never went away — the socket state
+    // was never consulted, and neither was whether this relay is Tor-routed at all (Tor being *on*
+    // doesn't mean this relay goes through it; the per-role presets decide).
+    val torEvaluation =
+        Amethyst.instance.torEvaluatorFlow.flow
+            .collectAsStateWithLifecycle()
+    // The same predicate the relay pool itself dials with, so the banner can't claim Tor for a relay
+    // the app is reaching over clearnet (onion / localhost / trusted-off-Tor are all folded in here).
+    val usesTor by remember(relay) { derivedStateOf { torEvaluation.value.useTor(relay) } }
+
+    // While Tor is bootstrapping every Tor-routed relay is silent — that's Tor's own failure (and its
+    // own dialog), so don't let it read as "this relay blocks Tor exits".
+    val torStatus by Amethyst.instance.torManager.status
+        .collectAsStateWithLifecycle()
+    val torIsUp = torStatus is TorServiceStatus.Active
+
+    // The offer adds the relay to the kind-10089 Trusted list, which only moves it to clearnet while
+    // trusted relays are *off* Tor. Under the Small-Payloads / Full-Privacy presets they are on Tor,
+    // so the button would add an entry and change no routing at all — don't offer what can't help.
+    val trustingMovesToClearnet by remember { derivedStateOf { !torEvaluation.value.torSettings.trustedRelaysViaTor } }
+
+    // Global flow (any relay's connect/disconnect re-emits), so derive this relay's boolean.
+    val connectedRelays =
+        accountViewModel.account.client
+            .connectedRelaysFlow()
+            .collectAsStateWithLifecycle()
+    val isConnected by remember(relay) { derivedStateOf { relay in connectedRelays.value } }
+
+    // Debounced on the *connection* rather than armed once per screen: the countdown restarts every
+    // time the socket drops and clears the moment it comes back, so a reconnect can't flash the
+    // banner, and circuits that die mid-session still surface it. Keying the wait on cached content
+    // instead would have hidden the offer exactly when a working relay went dark with a full screen.
+    var disconnectedLongEnough by remember(relay) { mutableStateOf(false) }
+    LaunchedEffect(relay, isConnected) {
+        if (isConnected) {
+            disconnectedLongEnough = false
+        } else {
+            delay(TOR_CLEARNET_HINT_DELAY_MS)
+            disconnectedLongEnough = true
+        }
     }
     val scope = rememberCoroutineScope()
-    val showTorHint = torType != TorType.OFF && !isOnion && relay !in trustedRelays && connectTimedOut
+    val showTorHint = shouldOfferTorClearnetFallback(usesTor, torIsUp, trustingMovesToClearnet, disconnectedLongEnough)
 
     // A pinned relay works both as a pushed detail (from the drawer or another screen) and as a
     // bottom-nav tab. Read once here (it is @Composable): the back arrow shows only when pushed;
