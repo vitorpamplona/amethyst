@@ -27,7 +27,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -116,29 +115,69 @@ class LocationFlowTest {
         }
 
     @Test
-    fun releasesTheRegistrationWhenCancelledDuringTheSeed() =
+    fun releasesTheRegistrationWhenTheSeedThrows() =
         runTest {
-            // `send` in the seed suspends, so a collector cancelling while the
-            // getLastKnownLocation sweep is in flight unwinds the producer
-            // there. Cleanup must still run, or the refcount sticks at >= 1
-            // forever and the OS registration leaks.
+            // Deterministic discriminator for the try/finally: make the seed
+            // sweep throw. A plain RuntimeException is used rather than
+            // SecurityException, because freshestLastKnownLocation() catches
+            // SecurityException internally per-provider and it would never
+            // propagate out of the try block at all. With cleanup living in
+            // try/finally, onListening(false)/removeUpdates still run even
+            // though the block exits via an exception; if cleanup lived in
+            // awaitClose instead, the throw would unwind past it before
+            // awaitClose is ever reached and the release would be skipped.
             val edges = mutableListOf<Boolean>()
             val lm = mockk<LocationManager>(relaxed = true)
             every { lm.allProviders } returns listOf("network")
+            every { lm.getLastKnownLocation(any()) } throws RuntimeException("boom")
 
-            lateinit var job: Job
-            every { lm.getLastKnownLocation(any()) } answers {
-                // Cancel from inside the sweep, so the subsequent send() throws.
-                job.cancel()
-                mockk<Location> { every { time } returns 1L }
-            }
+            val failure =
+                runCatching {
+                    LocationFlow(lm, sdkInt = 30).get(60_000L, 500f) { edges.add(it) }.collect { }
+                }.exceptionOrNull()
 
-            job = launch { LocationFlow(lm, sdkInt = 30).get(60_000L, 500f) { edges.add(it) }.collect { } }
-            runCurrent()
-            job.join()
-
-            assertEquals("the acquire must be released even on cancellation", listOf(true, false), edges)
+            assertTrue("expected the seed's RuntimeException to surface, got $failure", failure is RuntimeException)
+            assertEquals("the acquire must be released even when the seed throws", listOf(true, false), edges)
             verify { lm.removeUpdates(any<LocationListener>()) }
+        }
+
+    @Test
+    fun emitsNothingBeforeThrowingWhenNoProviderRegisters() =
+        runTest {
+            // Discriminates the seed-after-registration ordering: every
+            // provider is denied, so the registration loop never succeeds and
+            // the flow must throw before ever reaching the seed. A cached fix
+            // is deliberately made available (non-null, with a real `time`)
+            // so that a seed-first implementation — which would emit it before
+            // discovering no provider registers — fails this test.
+            //
+            // The `values` assertion below is necessary but, on its own, is
+            // not sufficient to catch a seed-first regression here: a value
+            // `send`-ed into the callbackFlow channel immediately before the
+            // producer coroutine throws can be dropped by structured-
+            // concurrency teardown before this collector's suspended
+            // `receive` is ever resumed, so the collector may see zero
+            // values purely as a scheduling artifact, independent of
+            // ordering. The `getLastKnownLocation` verify is what actually
+            // discriminates: it fails deterministically whenever the seed is
+            // attempted at all, regardless of whether registration
+            // eventually succeeds — which is exactly what a seed-first
+            // implementation does and what the current try/finally-after-
+            // registration implementation must never do on this path.
+            val values = mutableListOf<Location>()
+            val lm = manager(providers = listOf("fused", "network"), denied = setOf("fused", "network"))
+            val cached = mockk<Location>()
+            every { cached.time } returns 1_000L
+            every { lm.getLastKnownLocation(any()) } returns cached
+
+            val failure =
+                runCatching {
+                    LocationFlow(lm, sdkInt = 37).get(60_000L, 500f).collect { values.add(it) }
+                }.exceptionOrNull()
+
+            assertTrue("expected SecurityException, got $failure", failure is SecurityException)
+            assertEquals("no value should be emitted before the throw", emptyList<Location>(), values)
+            verify(exactly = 0) { lm.getLastKnownLocation(any()) }
         }
 
     @Test

@@ -43,20 +43,25 @@ import kotlinx.coroutines.launch
  * Takes a [LocationManager] rather than a `Context` so the registration
  * behaviour is unit-testable; the caller does the `getSystemService` lookup.
  *
- * [onListening] is fired from inside the flow, after a registration succeeds and
- * again from `awaitClose`, never as an `onStart`/`onCompletion` pair on the
- * returned flow. The distinction matters: an `onStart` fires on collection even
- * when nothing registered, so a device with no usable provider would accrue
- * location time with no location running, and — because the ledger refcounts the
- * two [LocationState] flows together — the unpaired close would steal the other
- * flow's holder.
+ * [onListening] is fired from inside the flow, after a registration succeeds, and
+ * released again from the `try`/`finally` that wraps everything after it, never
+ * as an `onStart`/`onCompletion` pair on the returned flow. The distinction
+ * matters: an `onStart` fires on collection even when nothing registered, so a
+ * device with no usable provider would accrue location time with no location
+ * running, and — because the ledger refcounts the two [LocationState] flows
+ * together — the unpaired close would steal the other flow's holder.
  *
  * The pair is kept honest from both ends. The acquire cannot fire without a
  * registration, because a failure to register throws before reaching it. The
  * release cannot be skipped, because everything after the acquire runs inside a
- * `try`/`finally` rather than inside `awaitClose` — `send` suspends, so a
- * collector that cancels mid-seed would otherwise unwind past an `awaitClose`
- * that never ran.
+ * `try`/`finally` rather than inside `awaitClose` — [freshestLastKnownLocation]
+ * (the seed sweep below) can throw a non-cancellation exception and unwind
+ * before `awaitClose` is ever reached, and `try`/`finally` is what still runs
+ * the release on that path; see `releasesTheRegistrationWhenTheSeedThrows` in
+ * `LocationFlowTest`. (In principle a collector cancelling mid-seed would also
+ * unwind past `awaitClose` the same way, but that path could not be
+ * reproduced — `callbackFlow`'s `send` is buffered and returns without
+ * suspending, so it never observes the cancellation.)
  */
 class LocationFlow(
     private val locationManager: LocationManager,
@@ -106,14 +111,18 @@ class LocationFlow(
             onListening?.invoke(true)
 
             // Everything after the acquire runs under try/finally, not under
-            // awaitClose. `send` below suspends, so it is a cancellation point:
-            // if the collector cancels while the seed is mid-flight, the
-            // producer throws there and `awaitClose` is never entered. Cleanup
-            // parked inside awaitClose would then never run — the registration
-            // would leak and the refcount would stick at >= 1 for the life of
-            // the process, so location.ms would accrue forever with nothing
-            // listening. The finally covers normal close and
-            // cancellation-during-send alike.
+            // awaitClose. freshestLastKnownLocation() just below can throw a
+            // non-cancellation exception and unwind before awaitClose is ever
+            // reached — proven by releasesTheRegistrationWhenTheSeedThrows in
+            // LocationFlowTest, which fails if the release moves into
+            // awaitClose. Cleanup parked inside awaitClose would then never
+            // run — the registration would leak and the refcount would stick
+            // at >= 1 for the life of the process, so location.ms would accrue
+            // forever with nothing listening. (In principle a collector
+            // cancelling mid-seed would unwind the same way, but that path
+            // could not be reproduced: callbackFlow's send is buffered and
+            // returns without suspending, so it never observes the
+            // cancellation.) The finally covers both cases regardless.
             try {
                 // Seeded after registration so the no-provider path throws
                 // without having emitted anything; seeding first would show the
