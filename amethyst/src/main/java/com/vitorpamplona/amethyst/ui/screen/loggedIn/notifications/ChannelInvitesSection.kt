@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,13 +45,13 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.ui.layouts.NoteComposeLayout
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
+import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -87,8 +88,13 @@ fun ChannelInvitesSection(
 
     Column(modifier) {
         invites.forEach { invite ->
-            ChannelInviteCard(invite, accountViewModel, nav)
-            HorizontalDivider(thickness = DividerThickness)
+            // Keyed by channel: the list is sorted newest-first, so an arriving invite shifts every row
+            // below it. Without a key Compose matches children by position and each shifted row would
+            // recompose against a different invite — re-resolving the actor and reloading their avatar.
+            key(invite.channelId) {
+                ChannelInviteCard(invite, accountViewModel, nav)
+                HorizontalDivider(thickness = DividerThickness)
+            }
         }
     }
 }
@@ -110,11 +116,17 @@ fun ChannelInviteCard(
             LocalCache.getOrCreateRelayGroupChannel(GroupId(invite.channelId, invite.relay))
         }
 
-    // Metadata only — the same observer the channel rows use. It resolves the name a stranger's add
-    // arrives without, and never opens the channel's message subscription (which is the whole point of
-    // holding the invite back until the viewer answers).
-    val channelState by observeChannel(baseChannel, accountViewModel)
-    val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
+    // The channel's own metadata flow, collected directly rather than through `observeChannel`. That
+    // helper also registers a ChannelFinder query, and every assembler under it is gated on
+    // `is PublicChatChannel` / `is LiveActivitiesChannel` — a RelayGroupChannel yields no filter at all,
+    // so the registration buys nothing and only churns the app-wide key set on mount/unmount. The flow
+    // still fills the name in when the group's kind-39000 lands from the directory subscription, and
+    // nothing here opens the channel's *message* subscription — holding that back until the viewer
+    // answers is the whole point of the prompt.
+    val channelState by
+        remember(baseChannel) { baseChannel.flow().metadata.stateFlow }
+            .collectAsStateWithLifecycle()
+    val channel = channelState.channel as? RelayGroupChannel ?: baseChannel
 
     val actorUser = remember(invite.actor) { invite.actor?.let { LocalCache.getOrCreateUser(it) } }
 
@@ -125,7 +137,10 @@ fun ChannelInviteCard(
             .compositeOver(MaterialTheme.colorScheme.background)
 
     NoteComposeLayout(
-        modifier = Modifier.drawBehind { drawRect(backgroundColor) }.fillMaxWidth(),
+        modifier =
+            remember(backgroundColor) {
+                Modifier.drawBehind { drawRect(backgroundColor) }.fillMaxWidth()
+            },
         authorPicture = {
             Box(Size55Modifier, contentAlignment = Alignment.BottomEnd) {
                 if (actorUser != null) {
@@ -155,7 +170,9 @@ fun ChannelInviteCard(
                     )
                 }
 
-                TimeAgo(invite.createdAt)
+                // DottedTight, not Dotted: the row's `spacedBy` already supplies the gap, so the
+                // dotted variant's own leading space would double it. Same choice the note header makes.
+                TimeAgo(invite.createdAt, style = TimeAgoStyle.DottedTight)
             }
         },
         secondRow = {},
