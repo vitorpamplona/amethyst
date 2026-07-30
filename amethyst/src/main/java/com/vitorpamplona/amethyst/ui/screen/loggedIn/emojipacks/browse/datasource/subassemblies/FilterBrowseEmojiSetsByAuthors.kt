@@ -43,7 +43,7 @@ fun filterBrowseEmojiSetsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     authors = authors.sorted(),
                     kinds = listOf(EmojiPackEvent.KIND),
                     limit = BROWSE_EMOJI_SETS_FEED_LIMIT,

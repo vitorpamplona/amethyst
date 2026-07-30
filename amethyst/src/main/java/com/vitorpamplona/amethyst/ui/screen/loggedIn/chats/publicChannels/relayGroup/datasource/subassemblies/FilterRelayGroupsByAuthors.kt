@@ -70,7 +70,7 @@ fun filterRelayGroupsByAuthors(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.PUBLIC_CHATS,
                         authors = authorList,
                         kinds = listOf(GroupMetadataEvent.KIND),
                         limit = 200,
@@ -82,7 +82,7 @@ fun filterRelayGroupsByAuthors(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.PUBLIC_CHATS,
                         kinds = listOf(GroupAdminsEvent.KIND, GroupMembersEvent.KIND),
                         tags = mapOf(PTag.TAG_NAME to authorList),
                         limit = 200,
@@ -102,7 +102,7 @@ fun filterRelayGroupsByAuthors(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.PUBLIC_CHATS,
                         kinds = listOf(GroupMetadataEvent.KIND),
                         tags = mapOf(DTag.TAG_NAME to rosterGroupIds),
                         limit = 200,

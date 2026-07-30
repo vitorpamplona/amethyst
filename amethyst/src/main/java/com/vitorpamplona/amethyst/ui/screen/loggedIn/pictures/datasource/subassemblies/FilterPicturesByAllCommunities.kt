@@ -53,7 +53,7 @@ fun filterPicturesFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -69,7 +69,7 @@ fun filterPicturesFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     tags = mapOf("a" to communityList),
                     kinds = PicturesFromCommunityKinds,
                     limit = communityList.size * 20,
@@ -109,7 +109,7 @@ fun filterPicturesFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authors,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
@@ -126,7 +126,7 @@ fun filterPicturesFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authors,
                     tags = mapOf("a" to listOf(community)),
                     kinds = PicturesFromCommunityKinds,

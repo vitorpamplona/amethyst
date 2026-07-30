@@ -37,7 +37,7 @@ fun filterCalendarsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TAG_FEED,
                     kinds = CalendarAppointmentKinds,
                     tags = mapOf("t" to hashtags.toList()),
                     limit = 200,

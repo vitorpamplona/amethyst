@@ -40,7 +40,7 @@ fun filterGitRepositoriesByGeohashes(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TAG_FEED,
                     kinds = listOf(GitRepositoryEvent.KIND),
                     tags = mapOf("g" to geotags.sorted()),
                     limit = 100,

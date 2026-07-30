@@ -46,7 +46,7 @@ fun filterUserProfileZapsReceived(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.USER_PROFILE,
                     kinds = UserProfileZapReceiverKinds,
                     tags = mapOf("p" to listOf(user.pubkeyHex)),
                     limit = 1000,

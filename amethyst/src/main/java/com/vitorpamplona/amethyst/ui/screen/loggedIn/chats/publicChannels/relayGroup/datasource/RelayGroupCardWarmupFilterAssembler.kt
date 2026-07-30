@@ -96,7 +96,7 @@ class RelayGroupCardWarmupSubAssembler(
                 relay = groupId.relayUrl,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.PUBLIC_CHATS,
                         kinds = RELAY_GROUP_CARD_WARMUP_KINDS,
                         tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                         limit = key.contentLimit,

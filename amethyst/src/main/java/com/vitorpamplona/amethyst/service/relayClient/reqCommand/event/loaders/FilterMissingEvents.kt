@@ -135,7 +135,7 @@ fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): 
         if (it.value.isNotEmpty()) {
             RelayBasedFilter(
                 relay = it.key,
-                filter = ExplainedFilter(purpose = SubPurpose.SCREEN_CONTENT, ids = it.value.sorted()),
+                filter = ExplainedFilter(purpose = SubPurpose.REFERENCED_EVENTS, ids = it.value.sorted()),
             )
         } else {
             null

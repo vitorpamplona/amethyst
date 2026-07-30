@@ -43,7 +43,7 @@ fun filterNestsByGeohash(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.LIVE_ROOMS,
                     kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     tags = mapOf("g" to geoHashes),
                     limit = 300,

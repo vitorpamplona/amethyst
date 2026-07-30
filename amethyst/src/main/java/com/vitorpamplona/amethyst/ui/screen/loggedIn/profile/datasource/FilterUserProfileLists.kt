@@ -55,7 +55,7 @@ fun filterUserProfileLists(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.USER_PROFILE,
                     kinds = UserProfileListKinds,
                     authors = it.value.sorted(),
                     limit = 100,

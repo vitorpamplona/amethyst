@@ -54,7 +54,7 @@ fun filterBookmarksAndReportsFromKey(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = ReportsAndBookmarksFromKeyKinds,
                     authors = listOf(pubkey),
                     since = since,

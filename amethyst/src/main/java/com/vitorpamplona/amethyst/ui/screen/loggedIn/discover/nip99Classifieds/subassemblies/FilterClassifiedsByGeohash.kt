@@ -42,7 +42,7 @@ fun filterClassifiedsByGeohash(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     kinds = listOf(ClassifiedsEvent.KIND),
                     tags = mapOf("g" to geoHashes),
                     limit = 300,

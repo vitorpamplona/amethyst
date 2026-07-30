@@ -42,7 +42,7 @@ fun filterPollsGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     kinds = listOf(PollEvent.KIND, ZapPollEvent.KIND),
                     limit = 200,
                     since = since,

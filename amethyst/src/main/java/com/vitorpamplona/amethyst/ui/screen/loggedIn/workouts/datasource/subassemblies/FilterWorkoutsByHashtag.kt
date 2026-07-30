@@ -38,7 +38,7 @@ fun filterWorkoutsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TAG_FEED,
                     kinds = listOf(WorkoutRecordEvent.KIND),
                     tags = mapOf("t" to hashtags.toList()),
                     limit = 200,

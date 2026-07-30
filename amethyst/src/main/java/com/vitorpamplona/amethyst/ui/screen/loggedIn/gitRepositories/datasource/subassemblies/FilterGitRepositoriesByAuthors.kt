@@ -41,7 +41,7 @@ fun filterGitRepositoriesByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     authors = authorList,
                     kinds = listOf(GitRepositoryEvent.KIND),
                     limit = 200,

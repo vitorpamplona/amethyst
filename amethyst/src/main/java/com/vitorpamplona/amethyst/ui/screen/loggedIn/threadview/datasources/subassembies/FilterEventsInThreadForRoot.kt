@@ -44,7 +44,7 @@ fun filterEventsInThreadForRoot(
                         relay = it,
                         filter =
                             ExplainedFilter(
-                                purpose = SubPurpose.SCREEN_CONTENT,
+                                purpose = SubPurpose.THREAD,
                                 tags = mapOf("a" to listOf(addressRoot)),
                                 since = since,
                             ),
@@ -53,7 +53,7 @@ fun filterEventsInThreadForRoot(
                         relay = it,
                         filter =
                             ExplainedFilter(
-                                purpose = SubPurpose.SCREEN_CONTENT,
+                                purpose = SubPurpose.THREAD,
                                 tags = mapOf("A" to listOf(addressRoot)),
                                 since = since,
                             ),
@@ -70,7 +70,7 @@ fun filterEventsInThreadForRoot(
                         relay = it,
                         filter =
                             ExplainedFilter(
-                                purpose = SubPurpose.SCREEN_CONTENT,
+                                purpose = SubPurpose.THREAD,
                                 tags = mapOf("e" to listOf(eventRoot)),
                                 since = since,
                             ),
@@ -79,7 +79,7 @@ fun filterEventsInThreadForRoot(
                         relay = it,
                         filter =
                             ExplainedFilter(
-                                purpose = SubPurpose.SCREEN_CONTENT,
+                                purpose = SubPurpose.THREAD,
                                 tags = mapOf("E" to listOf(eventRoot)),
                                 since = since,
                             ),

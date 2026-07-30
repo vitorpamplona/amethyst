@@ -36,7 +36,7 @@ fun filterMessagesToPublicChat(
             relay = it,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     kinds = listOf(ChannelMessageEvent.KIND),
                     tags = mapOf("e" to listOfNotNull(channel.idHex)),
                     limit = 200,

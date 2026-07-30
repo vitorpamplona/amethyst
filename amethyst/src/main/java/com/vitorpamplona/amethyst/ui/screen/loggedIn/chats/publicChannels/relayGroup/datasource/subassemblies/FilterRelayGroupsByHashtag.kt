@@ -39,7 +39,7 @@ fun filterRelayGroupsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     kinds = listOf(GroupMetadataEvent.KIND),
                     tags = mapOf(HashtagTag.TAG_NAME to hashtags.map { it.lowercase() }),
                     limit = 200,

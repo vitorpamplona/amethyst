@@ -56,7 +56,7 @@ fun filterPollsFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.COMMUNITY_FEED,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -72,7 +72,7 @@ fun filterPollsFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.COMMUNITY_FEED,
                     tags = mapOf("a" to communityList),
                     kinds = PollsFromCommunityKinds,
                     limit = communityList.size * 20,
@@ -112,7 +112,7 @@ fun filterPollsFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.COMMUNITY_FEED,
                     authors = authors,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
@@ -129,7 +129,7 @@ fun filterPollsFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.COMMUNITY_FEED,
                     authors = authors,
                     tags = mapOf("a" to listOf(community)),
                     kinds = PollsFromCommunityKinds,

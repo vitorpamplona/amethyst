@@ -42,7 +42,7 @@ fun filterPostsByUrl(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.OTHER,
                     tags = urlScopeMap,
                     kinds = CommentKinds,
                     limit = 100,

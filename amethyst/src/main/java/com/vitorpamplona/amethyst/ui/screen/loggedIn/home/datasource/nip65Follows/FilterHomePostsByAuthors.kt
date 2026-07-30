@@ -114,7 +114,7 @@ fun filterNewHomePostsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.FOLLOW_LISTS,
+                    purpose = SubPurpose.RELAY_LISTS,
                     kinds = HomePostsNewThreadKinds1,
                     authors = authorList,
                     limit = min(authorList.size * 10, 500),
@@ -125,7 +125,7 @@ fun filterNewHomePostsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.FOLLOW_LISTS,
+                    purpose = SubPurpose.RELAY_LISTS,
                     kinds = HomePostsNewThreadKinds2,
                     authors = authorList,
                     limit = min(authorList.size * 10, 5),
@@ -147,7 +147,7 @@ fun filterReplyHomePostsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.FOLLOW_LISTS,
+                    purpose = SubPurpose.RELAY_LISTS,
                     kinds = HomePostsConversationKinds,
                     authors = authorList,
                     limit = min(authorList.size * 10, 500),

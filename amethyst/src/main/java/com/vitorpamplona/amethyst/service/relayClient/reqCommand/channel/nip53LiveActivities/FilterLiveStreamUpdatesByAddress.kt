@@ -38,7 +38,7 @@ fun filterLiveStreamUpdatesByAddress(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.LIVE_ROOMS,
                     kinds = listOf(LiveActivitiesEvent.KIND),
                     tags = mapOf("d" to channels.map { it.address.dTag }),
                     authors = channels.map { it.address.pubKeyHex },

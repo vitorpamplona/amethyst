@@ -42,7 +42,7 @@ fun filterSoftwareAppsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     authors = authorList,
                     kinds = listOf(SoftwareApplicationEvent.KIND, SoftwareReleaseEvent.KIND),
                     limit = 200,

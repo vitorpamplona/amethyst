@@ -43,7 +43,7 @@ fun filterPublicChatsAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     authors = authorList,
                     kinds =
                         listOf(

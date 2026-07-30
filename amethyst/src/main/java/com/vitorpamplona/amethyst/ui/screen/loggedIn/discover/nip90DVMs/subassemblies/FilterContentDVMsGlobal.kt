@@ -41,7 +41,7 @@ fun filterContentDVMsGlobal(
                 relay = it.key,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.DISCOVER_FEED,
                         kinds = listOf(AppDefinitionEvent.KIND),
                         tags = mapOf("k" to listOf("5300")),
                         limit = 30,

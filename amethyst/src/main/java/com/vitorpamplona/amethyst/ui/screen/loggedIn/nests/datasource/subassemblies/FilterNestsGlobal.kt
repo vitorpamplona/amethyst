@@ -56,7 +56,7 @@ fun filterNestsPresence(relay: NormalizedRelayUrl): RelayBasedFilter =
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.CHATS,
+                purpose = SubPurpose.LIVE_ROOMS,
                 kinds = listOf(MeetingRoomPresenceEvent.KIND),
                 limit = 500,
                 since = TimeUtils.now() - PRESENCE_LOOKBACK_SECONDS,
@@ -78,7 +78,7 @@ fun filterNestsGlobal(
                     relay = it.key,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.CHATS,
+                            purpose = SubPurpose.LIVE_ROOMS,
                             kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                             limit = 300,
                             since = roomsSince ?: TimeUtils.oneWeekAgo(),

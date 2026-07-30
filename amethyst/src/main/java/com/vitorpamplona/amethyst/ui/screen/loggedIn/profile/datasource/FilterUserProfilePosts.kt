@@ -105,7 +105,7 @@ fun filterUserProfilePosts(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.USER_PROFILE,
                         kinds = UserProfilePostKinds1,
                         authors = listOf(user.pubkeyHex),
                         limit = 500,
@@ -116,7 +116,7 @@ fun filterUserProfilePosts(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.USER_PROFILE,
                         kinds = UserProfilePostKinds2,
                         authors = listOf(user.pubkeyHex),
                         limit = 50,
@@ -127,7 +127,7 @@ fun filterUserProfilePosts(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.USER_PROFILE,
                         kinds = UserProfileAppKinds,
                         authors = listOf(user.pubkeyHex),
                         limit = 50,

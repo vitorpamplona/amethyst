@@ -74,7 +74,7 @@ class ReactionsFilterAssembler(
         // Create filter for reactions (Kind 7) targeting these notes via e-tags
         val filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.ENGAGEMENT,
                 purposeDetail = "reactions on notes currently on screen",
                 kinds = listOf(ReactionEvent.KIND),
                 tags = mapOf("e" to noteIdList),

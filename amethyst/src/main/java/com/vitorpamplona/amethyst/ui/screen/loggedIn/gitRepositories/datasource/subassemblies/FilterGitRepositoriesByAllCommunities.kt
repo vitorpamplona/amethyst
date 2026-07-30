@@ -53,7 +53,7 @@ fun filterGitRepositoriesFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.COMMUNITY_FEED,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -69,7 +69,7 @@ fun filterGitRepositoriesFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.COMMUNITY_FEED,
                     tags = mapOf("a" to communityList),
                     kinds = GitRepositoriesFromCommunityKinds,
                     limit = communityList.size * 20,
@@ -109,7 +109,7 @@ fun filterGitRepositoriesFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.COMMUNITY_FEED,
                     authors = authors,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
@@ -126,7 +126,7 @@ fun filterGitRepositoriesFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.COMMUNITY_FEED,
                     authors = authors,
                     tags = mapOf("a" to listOf(community)),
                     kinds = GitRepositoriesFromCommunityKinds,

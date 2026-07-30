@@ -41,7 +41,7 @@ fun filterPodcastEventsByGeohashes(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = kinds,
                     tags = mergeFilterTags(mapOf("g" to geotags.sorted()), additionalTags),
                     limit = 100,

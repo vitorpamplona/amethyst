@@ -93,7 +93,7 @@ class NestRoomFilterSubAssembler(
                     relay = relay,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.CHATS,
+                            purpose = SubPurpose.LIVE_ROOMS,
                             kinds =
                                 listOf(
                                     LiveActivitiesChatMessageEvent.KIND,
@@ -110,7 +110,7 @@ class NestRoomFilterSubAssembler(
                     relay = relay,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.CHATS,
+                            purpose = SubPurpose.LIVE_ROOMS,
                             kinds = listOf(AdminCommandEvent.KIND),
                             tags = mapOf("a" to listOf(key.note.idHex), "p" to listOf(key.account.pubKey)),
                             since = since?.get(relay)?.time,
@@ -129,7 +129,7 @@ class NestRoomFilterSubAssembler(
                     relay = relay,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.CHATS,
+                            purpose = SubPurpose.LIVE_ROOMS,
                             kinds = listOf(MeetingSpaceEvent.KIND),
                             authors = listOf(key.note.address.pubKeyHex),
                             tags = mapOf("d" to listOf(key.note.address.dTag)),

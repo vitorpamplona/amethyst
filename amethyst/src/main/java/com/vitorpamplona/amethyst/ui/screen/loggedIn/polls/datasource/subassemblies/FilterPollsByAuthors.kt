@@ -42,7 +42,7 @@ fun filterPollsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     authors = authorList,
                     kinds = listOf(PollEvent.KIND, ZapPollEvent.KIND),
                     limit = 200,

@@ -66,7 +66,7 @@ class CommunityRulesFilterSubAssembler(
                     relay = relay,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.SCREEN_CONTENT,
+                            purpose = SubPurpose.COMMUNITY_FEED,
                             kinds = listOf(CommunityRulesEvent.KIND),
                             authors = signers.sorted(),
                             tags = mapOf("a" to listOf(commEvent.addressTag())),

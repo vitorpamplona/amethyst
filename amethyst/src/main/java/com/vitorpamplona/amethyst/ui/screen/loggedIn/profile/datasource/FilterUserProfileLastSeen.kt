@@ -37,7 +37,7 @@ fun filterUserProfileLastSeen(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.USER_PROFILE,
                     authors = it.value.sorted(),
                     since = since?.get(it.key)?.time,
                 ),

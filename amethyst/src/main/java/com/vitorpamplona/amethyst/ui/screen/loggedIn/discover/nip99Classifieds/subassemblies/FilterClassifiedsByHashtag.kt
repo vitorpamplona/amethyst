@@ -43,7 +43,7 @@ fun filterClassifiedsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     kinds = listOf(ClassifiedsEvent.KIND),
                     tags = mapOf("t" to hashtags),
                     limit = 300,

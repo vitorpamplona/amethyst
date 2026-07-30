@@ -43,7 +43,7 @@ fun filterCommunitiesGlobal(
                 relay = it.key,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.DISCOVER_FEED,
                         kinds = listOf(CommunityDefinitionEvent.KIND),
                         limit = 200,
                         since = since,
@@ -53,7 +53,7 @@ fun filterCommunitiesGlobal(
                 relay = it.key,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.DISCOVER_FEED,
                         kinds = CommunityPostApprovalEvent.KIND_LIST,
                         limit = 100,
                         since = since ?: TimeUtils.oneMonthAgo(),

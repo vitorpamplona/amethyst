@@ -44,7 +44,7 @@ fun filterNestsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.LIVE_ROOMS,
                     kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     tags = mapOf("t" to hashtags),
                     limit = 300,

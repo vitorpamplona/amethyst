@@ -80,7 +80,7 @@ fun filterPostsByRelay(
             relay = relayUrl,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.RELAY_INFO,
                     kinds = PostsByRelayKinds,
                     limit = 400,
                     since = sinceTime,
@@ -90,7 +90,7 @@ fun filterPostsByRelay(
             relay = relayUrl,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.RELAY_INFO,
                     kinds = PostsByRelayKinds2,
                     limit = 100,
                     since = sinceTime,

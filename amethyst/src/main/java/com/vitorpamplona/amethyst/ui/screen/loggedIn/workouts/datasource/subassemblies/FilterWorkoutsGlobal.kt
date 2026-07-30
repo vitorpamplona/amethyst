@@ -41,7 +41,7 @@ fun filterWorkoutsGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     kinds = listOf(WorkoutRecordEvent.KIND),
                     limit = 200,
                     since = since,

@@ -58,7 +58,7 @@ fun filterFollowsAndMutesFromKey(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.FOLLOW_LISTS,
+                    purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = FollowAndMutesFromKeyKinds,
                     authors = listOf(pubkey),
                     limit = 100,

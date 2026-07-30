@@ -60,7 +60,7 @@ fun filterMyPodcast(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.MEDIA_FEED,
                         authors = authors,
                         kinds = listOf(Podcasting20EpisodeEvent.KIND, Podcasting20TrailerEvent.KIND),
                         since = sinceTime,
@@ -71,7 +71,7 @@ fun filterMyPodcast(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.MEDIA_FEED,
                         authors = authors,
                         kinds = listOf(AppSpecificDataEvent.KIND),
                         tags = mapOf("d" to listOf(Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG)),

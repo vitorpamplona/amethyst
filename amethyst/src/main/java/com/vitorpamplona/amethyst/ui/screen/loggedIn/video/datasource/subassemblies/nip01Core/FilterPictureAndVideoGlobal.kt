@@ -43,7 +43,7 @@ fun filterPictureAndVideoGlobal(
                 relay = it.key,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.MEDIA_FEED,
                         kinds = PictureAndVideoKinds,
                         limit = 50,
                         since = since,
@@ -53,7 +53,7 @@ fun filterPictureAndVideoGlobal(
                 relay = it.key,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.MEDIA_FEED,
                         kinds = PictureAndVideoLegacyKinds,
                         tags = LegacyMimeTypeMap,
                         limit = 50,

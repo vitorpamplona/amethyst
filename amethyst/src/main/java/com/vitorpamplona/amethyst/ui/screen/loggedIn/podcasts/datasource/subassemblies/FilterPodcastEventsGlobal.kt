@@ -43,7 +43,7 @@ fun filterPodcastEventsGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = kinds,
                     tags = additionalTags,
                     limit = 200,

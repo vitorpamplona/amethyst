@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot
 
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
@@ -89,7 +91,7 @@ class MarmotGroupEventsEoseManager(
                     "(metadataRelays=${groupRelays?.size ?: 0}, usingFallback=${groupRelays.isNullOrEmpty()}): ${relaysForGroup.map { it.url }}"
             }
             for (relay in relaysForGroup) {
-                result.add(RelayBasedFilter(relay = relay, filter = filter))
+                result.add(RelayBasedFilter(relay = relay, filter = ExplainedFilter.of(filter, SubPurpose.ENCRYPTED_GROUPS, "MLS group messages")))
             }
         }
 
@@ -97,7 +99,7 @@ class MarmotGroupEventsEoseManager(
         if (fallbackRelays.isNotEmpty()) {
             val ownKeyPackageFilter = manager.subscriptionManager.ownKeyPackageFilter()
             for (relay in fallbackRelays) {
-                result.add(RelayBasedFilter(relay = relay, filter = ownKeyPackageFilter))
+                result.add(RelayBasedFilter(relay = relay, filter = ExplainedFilter.of(ownKeyPackageFilter, SubPurpose.ENCRYPTED_GROUPS, "own MLS key package")))
             }
         }
 

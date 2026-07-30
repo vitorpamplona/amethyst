@@ -43,7 +43,7 @@ class RelayInfoNip66FilterSubAssembler(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.RELAY_INFO,
                         kinds = listOf(RelayDiscoveryEvent.KIND),
                         tags = mapOf("d" to listOf(relayUrl)),
                         limit = 20,

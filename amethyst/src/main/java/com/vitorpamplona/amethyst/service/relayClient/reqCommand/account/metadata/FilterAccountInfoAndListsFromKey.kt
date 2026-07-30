@@ -119,7 +119,7 @@ fun filterAccountInfoAndListsFromKey(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = AccountInfoAndListsFromKeyKinds,
                     authors = listOf(pubkey),
                     limit = 20,
@@ -130,7 +130,7 @@ fun filterAccountInfoAndListsFromKey(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = AccountInfoAndListsFromKeyKinds2,
                     authors = listOf(pubkey),
                     limit = 80,
@@ -148,7 +148,7 @@ fun filterAccountInfoAndListsFromKey(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = AmethystMetadataKinds,
                     authors = listOf(pubkey),
                     tags = AmethystMetadataTagMapFilter,

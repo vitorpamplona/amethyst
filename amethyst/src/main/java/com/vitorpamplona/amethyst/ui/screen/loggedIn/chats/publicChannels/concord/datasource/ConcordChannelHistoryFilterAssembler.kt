@@ -132,7 +132,7 @@ class ConcordChannelHistorySubAssembler(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.COMMUNITY_CHATS,
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         // All epoch planes at once: the relay serves them interleaved by created_at, so
                         // one backward cursor walks across the Refounding boundaries; "exhausted" then

@@ -40,7 +40,7 @@ fun filterReportsToKeysFromTrusted(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.PROFILE_METADATA,
+                purpose = SubPurpose.MODERATION,
                 kinds = ReportKindList,
                 authors = trustedAccounts,
                 tags = mapOf("p" to targets.sorted()),

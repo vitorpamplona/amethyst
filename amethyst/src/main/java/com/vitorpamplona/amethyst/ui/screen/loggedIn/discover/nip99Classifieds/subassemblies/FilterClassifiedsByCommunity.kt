@@ -42,7 +42,7 @@ fun filterClassifiedsByCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     authors = authors,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
@@ -59,7 +59,7 @@ fun filterClassifiedsByCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     authors = authors,
                     tags = mapOf("a" to listOf(community)),
                     kinds = listOf(ClassifiedsEvent.KIND),

@@ -44,7 +44,7 @@ fun filterNestsAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.LIVE_ROOMS,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -60,7 +60,7 @@ fun filterNestsAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.LIVE_ROOMS,
                     tags = mapOf("k" to listOf("5300"), "a" to communityList),
                     kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 300,

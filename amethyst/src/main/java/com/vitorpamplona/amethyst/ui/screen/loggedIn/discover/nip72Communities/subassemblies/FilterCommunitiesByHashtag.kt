@@ -44,7 +44,7 @@ fun filterCommunitiesByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     kinds = listOf(CommunityDefinitionEvent.KIND, CommunityPostApprovalEvent.KIND),
                     tags = mapOf("t" to hashtags),
                     limit = 100,

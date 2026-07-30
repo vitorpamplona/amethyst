@@ -93,7 +93,7 @@ fun filterRepliesAndReactionsToAddresses(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.ENGAGEMENT,
                         kinds = RepliesAndReactionsToAddressesKinds1,
                         tags = mapOf("a" to sortedList),
                         since = since,
@@ -105,7 +105,7 @@ fun filterRepliesAndReactionsToAddresses(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.ENGAGEMENT,
                         kinds = PostsAndChatMessagesToAddresses,
                         tags = mapOf("a" to sortedList),
                         since = since,
@@ -117,7 +117,7 @@ fun filterRepliesAndReactionsToAddresses(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.ENGAGEMENT,
                         kinds = DeletionKindList,
                         tags = mapOf("a" to sortedList),
                         since = since,
@@ -129,7 +129,7 @@ fun filterRepliesAndReactionsToAddresses(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.ENGAGEMENT,
                         kinds = TextNoteKindList,
                         tags = mapOf("q" to sortedList),
                         since = since,

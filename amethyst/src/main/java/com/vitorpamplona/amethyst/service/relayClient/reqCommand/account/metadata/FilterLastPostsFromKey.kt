@@ -38,7 +38,7 @@ fun filterLastPostsFromKey(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.ACCOUNT_DATA,
                     authors = listOf(pubkey),
                     limit = 100,
                     since = since,

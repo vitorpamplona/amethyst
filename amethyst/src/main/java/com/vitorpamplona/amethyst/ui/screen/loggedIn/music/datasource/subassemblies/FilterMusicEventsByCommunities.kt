@@ -49,7 +49,7 @@ fun filterMusicEventsFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -64,7 +64,7 @@ fun filterMusicEventsFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = kinds,
                     tags = mapOf("a" to communityList),
                     limit = communityList.size * 20,
@@ -107,7 +107,7 @@ fun filterMusicEventsFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
@@ -123,7 +123,7 @@ fun filterMusicEventsFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
                     kinds = kinds,
                     tags = mapOf("a" to listOf(community)),

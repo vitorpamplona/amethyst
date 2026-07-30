@@ -79,7 +79,7 @@ fun filterPostsByGeohash(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.TAG_FEED,
                         tags = geohashesToFollowMap,
                         kinds = PostsByGeohashKinds,
                         limit = 100,
@@ -90,7 +90,7 @@ fun filterPostsByGeohash(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.TAG_FEED,
                         tags = geohashesScoreMap,
                         kinds = CommentKinds,
                         limit = 100,

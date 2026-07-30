@@ -44,7 +44,7 @@ fun filterNappletsGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND),
                     limit = NAPPLET_PAGE_LIMIT,
                     since = since?.get(it.key)?.time ?: defaultSince,

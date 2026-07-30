@@ -100,7 +100,7 @@ fun filterRepliesAndReactionsToNotes(
                     relay = relay,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.SCREEN_CONTENT,
+                            purpose = SubPurpose.ENGAGEMENT,
                             kinds = RepliesAndReactionsKinds,
                             tags = mapOf("e" to sortedList),
                             since = since,
@@ -112,7 +112,7 @@ fun filterRepliesAndReactionsToNotes(
                     relay = relay,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.SCREEN_CONTENT,
+                            purpose = SubPurpose.ENGAGEMENT,
                             kinds = RepliesAndReactionsKinds2,
                             tags = mapOf("e" to sortedList),
                             since = since,
@@ -123,7 +123,7 @@ fun filterRepliesAndReactionsToNotes(
                     relay = relay,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.SCREEN_CONTENT,
+                            purpose = SubPurpose.ENGAGEMENT,
                             kinds = listOf(TextNoteEvent.KIND, CommentEvent.KIND),
                             tags = mapOf("q" to sortedList),
                             since = since,

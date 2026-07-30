@@ -44,7 +44,7 @@ fun filterPodcastEventsFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -59,7 +59,7 @@ fun filterPodcastEventsFromAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = kinds,
                     tags = mergeFilterTags(mapOf("a" to communityList), additionalTags),
                     limit = communityList.size * 20,
@@ -104,7 +104,7 @@ fun filterPodcastEventsFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
@@ -120,7 +120,7 @@ fun filterPodcastEventsFromCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
                     kinds = kinds,
                     tags = mergeFilterTags(mapOf("a" to listOf(community)), additionalTags),

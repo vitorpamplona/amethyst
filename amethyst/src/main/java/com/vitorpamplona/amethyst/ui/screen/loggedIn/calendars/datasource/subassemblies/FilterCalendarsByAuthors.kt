@@ -40,7 +40,7 @@ fun filterCalendarsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     authors = authorList,
                     kinds = AllCalendarKinds,
                     limit = 500,

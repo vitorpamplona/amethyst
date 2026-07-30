@@ -55,7 +55,7 @@ fun filterFollowingGeohashChats(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     kinds = listOf(GeohashChatEvent.KIND),
                     tags = mapOf("g" to cells),
                     limit = 100,

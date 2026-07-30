@@ -44,7 +44,7 @@ fun filterDraftsFromKey(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MODERATION,
                     kinds = DraftKinds,
                     authors = listOf(pubkey),
                     since = since,

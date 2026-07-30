@@ -84,7 +84,7 @@ class NestRoomLivenessSubAssembler(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.LIVE_ROOMS,
                         kinds = listOf(MeetingRoomPresenceEvent.KIND),
                         tags = mapOf("a" to listOf(key.note.idHex)),
                         // limit=1: the badge only needs the freshest

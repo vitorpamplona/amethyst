@@ -44,7 +44,7 @@ fun filterNsitesGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     kinds = listOf(RootSiteEvent.KIND, NamedSiteEvent.KIND),
                     limit = NSITE_PAGE_LIMIT,
                     since = since?.get(it.key)?.time ?: defaultSince,

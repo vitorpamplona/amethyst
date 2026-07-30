@@ -56,7 +56,7 @@ fun filterSoftwareAppsGlobal(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     kinds = listOf(SoftwareApplicationEvent.KIND, SoftwareReleaseEvent.KIND),
                     // Keep the limit < 100. Relays such as zapstore's score filter
                     // specificity and treat a limit >= 100 (or none) as too vague,

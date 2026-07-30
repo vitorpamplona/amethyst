@@ -56,7 +56,7 @@ fun filterMissingChannelsById(keys: List<ChannelFinderQueryState>): List<RelayBa
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     kinds = filterMissingPublicChannelsByIdKinds,
                     ids = channelIds.sorted(),
                 ),

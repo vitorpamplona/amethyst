@@ -43,7 +43,7 @@ fun filterNsitesByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     authors = authorList,
                     kinds = listOf(RootSiteEvent.KIND, NamedSiteEvent.KIND),
                     limit = NSITE_PAGE_LIMIT,

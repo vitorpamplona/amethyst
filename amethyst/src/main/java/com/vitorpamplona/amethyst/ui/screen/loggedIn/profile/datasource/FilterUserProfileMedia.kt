@@ -59,7 +59,7 @@ fun filterUserProfileMedia(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.USER_PROFILE,
                         kinds = UserProfileMediaKinds,
                         authors = listOf(user.pubkeyHex),
                         limit = 200,
@@ -72,7 +72,7 @@ fun filterUserProfileMedia(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.USER_PROFILE,
                         kinds = listOf(LiveActivitiesClipEvent.KIND),
                         tags = mapOf("p" to listOf(user.pubkeyHex)),
                         limit = 100,

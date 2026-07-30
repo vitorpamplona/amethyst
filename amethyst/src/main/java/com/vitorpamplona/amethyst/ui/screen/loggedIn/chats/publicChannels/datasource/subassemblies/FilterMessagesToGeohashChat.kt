@@ -43,7 +43,7 @@ fun filterMessagesToGeohashChat(
             relay = it,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     kinds = listOf(GeohashChatEvent.KIND),
                     tags = mapOf("g" to listOf(channel.geohash)),
                     limit = 200,

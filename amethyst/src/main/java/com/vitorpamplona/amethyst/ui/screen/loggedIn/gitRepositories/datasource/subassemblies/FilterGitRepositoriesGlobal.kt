@@ -41,7 +41,7 @@ fun filterGitRepositoriesGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     kinds = listOf(GitRepositoryEvent.KIND),
                     limit = 200,
                     since = since,

@@ -40,7 +40,7 @@ fun filterBrowseEmojiSetsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TAG_FEED,
                     kinds = listOf(EmojiPackEvent.KIND),
                     tags = mapOf("t" to hashtags.toList()),
                     limit = BROWSE_EMOJI_SETS_FEED_LIMIT,

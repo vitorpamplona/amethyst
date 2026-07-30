@@ -42,7 +42,7 @@ fun filterNestsAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.LIVE_ROOMS,
                     authors = authorList,
                     kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 300,
@@ -54,7 +54,7 @@ fun filterNestsAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.LIVE_ROOMS,
                     tags = mapOf("p" to authorList),
                     kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 100,

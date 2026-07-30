@@ -49,7 +49,7 @@ fun filterGoalForLiveActivities(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.PUBLIC_CHATS,
                         kinds = listOf(GoalEvent.KIND),
                         ids = listOf(goalId),
                         limit = 1,
@@ -59,7 +59,7 @@ fun filterGoalForLiveActivities(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.PUBLIC_CHATS,
                         kinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND, Bolt12ZapEvent.KIND),
                         tags = mapOf("e" to listOf(goalId)),
                         limit = 200,

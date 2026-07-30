@@ -60,7 +60,7 @@ fun filterOnePodcast(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.MEDIA_FEED,
                         kinds = OnePodcastKinds,
                         authors = listOf(user.pubkeyHex),
                         limit = 500,
@@ -73,7 +73,7 @@ fun filterOnePodcast(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.MEDIA_FEED,
                         kinds = listOf(AppSpecificDataEvent.KIND),
                         authors = listOf(user.pubkeyHex),
                         tags = mapOf("d" to listOf(Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG)),

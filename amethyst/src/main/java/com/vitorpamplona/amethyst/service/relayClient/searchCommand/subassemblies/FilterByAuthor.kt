@@ -55,7 +55,7 @@ fun filterByAuthor(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.SEARCH,
                     kinds = MetadataKindList,
                     authors = myUser,
                 ),

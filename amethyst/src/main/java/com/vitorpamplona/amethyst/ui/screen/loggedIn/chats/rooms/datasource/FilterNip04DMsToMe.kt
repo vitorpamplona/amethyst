@@ -38,7 +38,7 @@ fun filterNip04DMsToMe(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.CHATS,
+                purpose = SubPurpose.DIRECT_MESSAGES,
                 kinds = listOf(PrivateDmEvent.KIND),
                 tags = mapOf("p" to listOf(user.pubkeyHex)),
                 since = since,

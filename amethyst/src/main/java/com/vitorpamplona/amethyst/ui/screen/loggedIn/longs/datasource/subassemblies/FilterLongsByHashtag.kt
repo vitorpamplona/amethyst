@@ -39,7 +39,7 @@ fun filterLongsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = listOf(VideoNormalEvent.KIND, VideoHorizontalEvent.KIND),
                     tags = mapOf("t" to hashtags.toList()),
                     limit = 200,

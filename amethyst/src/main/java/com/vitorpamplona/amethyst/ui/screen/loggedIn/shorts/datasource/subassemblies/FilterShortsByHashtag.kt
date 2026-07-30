@@ -39,7 +39,7 @@ fun filterShortsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND),
                     tags = mapOf("t" to hashtags.toList()),
                     limit = 200,

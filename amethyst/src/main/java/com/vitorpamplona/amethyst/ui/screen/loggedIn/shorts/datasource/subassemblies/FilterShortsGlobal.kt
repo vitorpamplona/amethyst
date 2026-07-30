@@ -42,7 +42,7 @@ fun filterShortsGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND),
                     limit = 200,
                     since = since,

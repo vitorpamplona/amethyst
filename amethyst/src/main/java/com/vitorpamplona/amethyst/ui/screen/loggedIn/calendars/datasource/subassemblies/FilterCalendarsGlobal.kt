@@ -40,7 +40,7 @@ fun filterCalendarsGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     kinds = AllCalendarKinds,
                     limit = 500,
                     since = sinceForRelay,

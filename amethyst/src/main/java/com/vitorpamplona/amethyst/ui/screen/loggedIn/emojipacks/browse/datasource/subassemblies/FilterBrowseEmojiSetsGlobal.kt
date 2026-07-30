@@ -43,7 +43,7 @@ fun filterBrowseEmojiSetsGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     kinds = listOf(EmojiPackEvent.KIND),
                     limit = BROWSE_EMOJI_SETS_FEED_LIMIT,
                     since = sinceValue,

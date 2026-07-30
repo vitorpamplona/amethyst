@@ -46,7 +46,7 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.PROFILE_METADATA,
                 kinds = ContactCardKindList,
                 authors = trustedAccounts,
                 // kind:30382 addresses the target user in the d-tag
@@ -71,7 +71,7 @@ fun filterContactCardsByAuthorInTheRelay(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.PROFILE_METADATA,
                 kinds = ContactCardKindList,
                 authors = listOf(author),
                 limit = limit,

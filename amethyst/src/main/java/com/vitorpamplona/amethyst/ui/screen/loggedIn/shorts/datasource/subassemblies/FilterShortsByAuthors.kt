@@ -42,7 +42,7 @@ fun filterShortsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
                     kinds = listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND),
                     limit = 200,

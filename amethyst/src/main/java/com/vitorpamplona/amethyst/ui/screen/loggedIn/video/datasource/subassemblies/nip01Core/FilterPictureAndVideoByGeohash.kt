@@ -42,7 +42,7 @@ fun filterPictureAndVideoGeohash(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = PictureAndVideoKinds,
                     tags = mapOf("g" to geoHashes),
                     limit = 200,
@@ -53,7 +53,7 @@ fun filterPictureAndVideoGeohash(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = PictureAndVideoLegacyKinds,
                     tags =
                         mapOf(

@@ -44,7 +44,7 @@ fun filterSoftwareAppsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TAG_FEED,
                     kinds = listOf(SoftwareApplicationEvent.KIND, SoftwareReleaseEvent.KIND),
                     tags = mapOf("t" to expanded),
                     limit = 200,

@@ -75,7 +75,7 @@ private fun filterOnchainZaps(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.WALLET,
                         kinds = listOf(OnchainZapEvent.KIND),
                         tags = mapOf("p" to listOf(pubkey)),
                         limit = PER_FILTER_LIMIT,
@@ -86,7 +86,7 @@ private fun filterOnchainZaps(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.WALLET,
                         kinds = listOf(OnchainZapEvent.KIND),
                         authors = listOf(pubkey),
                         limit = PER_FILTER_LIMIT,

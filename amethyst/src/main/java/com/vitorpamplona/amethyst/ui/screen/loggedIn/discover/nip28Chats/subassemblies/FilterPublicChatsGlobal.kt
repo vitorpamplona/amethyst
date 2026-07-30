@@ -44,7 +44,7 @@ fun filterPublicChatsGlobal(
                 relay = it.key,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.PUBLIC_CHATS,
                         kinds =
                             listOf(
                                 ChannelCreateEvent.KIND,
@@ -58,7 +58,7 @@ fun filterPublicChatsGlobal(
                 relay = it.key,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.PUBLIC_CHATS,
                         kinds =
                             listOf(
                                 ChannelMessageEvent.KIND,

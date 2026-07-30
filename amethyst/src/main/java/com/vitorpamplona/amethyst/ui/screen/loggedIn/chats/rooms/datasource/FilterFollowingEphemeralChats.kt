@@ -54,7 +54,7 @@ fun filterFollowingEphemeralChats(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     kinds = listOf(EphemeralChatEvent.KIND),
                     tags = mapOf("d" to it.value.sorted()),
                     limit = 100,

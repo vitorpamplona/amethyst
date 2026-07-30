@@ -41,7 +41,7 @@ fun filterContentDVMsAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     authors = authorList,
                     kinds = listOf(AppDefinitionEvent.KIND),
                     tags = mapOf("k" to listOf("5300")),

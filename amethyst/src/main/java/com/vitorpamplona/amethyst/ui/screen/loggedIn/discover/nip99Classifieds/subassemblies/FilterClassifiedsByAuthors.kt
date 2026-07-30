@@ -41,7 +41,7 @@ fun filterClassifiedsAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     authors = authorList,
                     kinds = listOf(ClassifiedsEvent.KIND),
                     limit = authorList.size * 10,

@@ -41,7 +41,7 @@ fun filterShortsByGeohashes(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND),
                     tags = mapOf("g" to geotags.sorted()),
                     limit = 100,

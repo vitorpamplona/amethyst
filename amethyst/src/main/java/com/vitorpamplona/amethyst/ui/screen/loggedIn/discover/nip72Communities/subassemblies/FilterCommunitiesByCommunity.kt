@@ -42,7 +42,7 @@ fun filterClassifiedsByCommunity(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     authors = listOf(community.pubKeyHex),
                     kinds = listOf(CommunityDefinitionEvent.KIND),
                     tags = mapOf("d" to listOf(community.dTag)),

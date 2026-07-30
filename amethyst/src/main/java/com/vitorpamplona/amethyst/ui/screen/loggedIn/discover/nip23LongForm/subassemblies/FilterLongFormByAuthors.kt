@@ -41,7 +41,7 @@ fun filterLongFormAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     authors = authorList,
                     kinds = listOf(LongTextNoteEvent.KIND),
                     limit = 200,

@@ -45,7 +45,7 @@ fun filterReceivedBadgeAwards(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     kinds = listOf(BadgeAwardEvent.KIND),
                     tags = mapOf("p" to pTags),
                     limit = 500,

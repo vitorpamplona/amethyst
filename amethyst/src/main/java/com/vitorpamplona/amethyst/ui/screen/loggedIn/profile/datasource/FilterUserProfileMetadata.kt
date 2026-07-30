@@ -51,7 +51,7 @@ fun filterUserProfileMetadata(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.USER_PROFILE,
                     kinds = UserProfileMetadataKinds,
                     authors = it.value.sorted(),
                     since = since?.get(it.key)?.time,

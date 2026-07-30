@@ -42,7 +42,7 @@ fun filterClassifiedsGlobal(
                 relay = it.key,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.DISCOVER_FEED,
                         kinds = listOf(ClassifiedsEvent.KIND),
                         limit = 30,
                         since = since,

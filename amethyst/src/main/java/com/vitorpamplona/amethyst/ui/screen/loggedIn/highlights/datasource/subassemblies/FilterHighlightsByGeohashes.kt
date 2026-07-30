@@ -40,7 +40,7 @@ fun filterHighlightsByGeohashes(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TAG_FEED,
                     kinds = listOf(HighlightEvent.KIND),
                     tags = mapOf("g" to geotags.sorted()),
                     limit = 100,

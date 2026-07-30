@@ -41,7 +41,7 @@ fun filterHighlightsGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     kinds = listOf(HighlightEvent.KIND),
                     limit = 200,
                     since = since,

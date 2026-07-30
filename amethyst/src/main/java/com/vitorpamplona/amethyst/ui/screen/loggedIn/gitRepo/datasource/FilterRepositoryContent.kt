@@ -55,7 +55,7 @@ fun filterRepositoryContent(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.TOPIC_FEED,
                 tags = mapOf("a" to listOf(repository.addressTag())),
                 kinds = RepositoryContentKinds,
                 limit = 500,

@@ -46,7 +46,7 @@ fun filterLiveActivitiesGlobal(
                     relay = it.key,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.SCREEN_CONTENT,
+                            purpose = SubPurpose.DISCOVER_FEED,
                             kinds = listOf(LiveActivitiesEvent.KIND, MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                             limit = 30,
                             since = since ?: TimeUtils.oneWeekAgo(),
@@ -56,7 +56,7 @@ fun filterLiveActivitiesGlobal(
                     relay = it.key,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.SCREEN_CONTENT,
+                            purpose = SubPurpose.DISCOVER_FEED,
                             kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
                             limit = 50,
                             since = since ?: TimeUtils.oneDayAgo(),

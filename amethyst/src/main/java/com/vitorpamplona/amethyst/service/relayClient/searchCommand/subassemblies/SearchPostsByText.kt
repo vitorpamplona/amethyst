@@ -114,7 +114,7 @@ fun searchPostsByText(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.SEARCH,
                 kinds = SearchPostsByTextKinds1,
                 search = searchString,
                 limit = 100,
@@ -124,7 +124,7 @@ fun searchPostsByText(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.SEARCH,
                 kinds = SearchPostsByTextKinds2,
                 search = searchString,
                 limit = 100,
@@ -134,7 +134,7 @@ fun searchPostsByText(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.SEARCH,
                 kinds = SearchPostsByTextKinds3,
                 search = searchString,
                 limit = 100,

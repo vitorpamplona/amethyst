@@ -44,7 +44,7 @@ fun filterUserProfileFollowers(
             relay = it,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.USER_PROFILE,
                     kinds = UserProfileFollowersKinds,
                     tags = mapOf("p" to listOf(user.pubkeyHex)),
                     since = since?.get(it)?.time,

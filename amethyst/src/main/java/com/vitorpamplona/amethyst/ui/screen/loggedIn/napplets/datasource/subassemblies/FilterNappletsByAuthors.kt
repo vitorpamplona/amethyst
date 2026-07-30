@@ -43,7 +43,7 @@ fun filterNappletsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     authors = authorList,
                     kinds = listOf(RootNappletEvent.KIND, NamedNappletEvent.KIND),
                     limit = NAPPLET_PAGE_LIMIT,

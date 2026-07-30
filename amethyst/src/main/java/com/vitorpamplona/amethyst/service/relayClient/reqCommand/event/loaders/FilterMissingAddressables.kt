@@ -107,7 +107,7 @@ fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<A
                     relay = relayEntry.key,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.SCREEN_CONTENT,
+                            purpose = SubPurpose.REFERENCED_EVENTS,
                             kinds = listOf(address.kind),
                             authors = listOf(address.pubKeyHex),
                             limit = 1,
@@ -118,7 +118,7 @@ fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<A
                     relay = relayEntry.key,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.SCREEN_CONTENT,
+                            purpose = SubPurpose.REFERENCED_EVENTS,
                             kinds = listOf(address.kind),
                             tags = mapOf("d" to listOf(address.dTag)),
                             authors = listOf(address.pubKeyHex),

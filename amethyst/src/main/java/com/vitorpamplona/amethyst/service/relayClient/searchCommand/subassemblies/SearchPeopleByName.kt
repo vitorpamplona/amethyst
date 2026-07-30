@@ -35,7 +35,7 @@ fun searchPeopleByName(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.SEARCH,
                 kinds = listOf(MetadataEvent.KIND),
                 search = searchString,
                 limit = 1000,

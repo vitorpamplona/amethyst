@@ -41,7 +41,7 @@ fun filterHighlightsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     authors = authorList,
                     kinds = listOf(HighlightEvent.KIND),
                     limit = 200,

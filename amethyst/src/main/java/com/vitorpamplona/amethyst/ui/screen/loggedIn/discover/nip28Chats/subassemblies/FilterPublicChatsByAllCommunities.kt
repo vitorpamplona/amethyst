@@ -44,7 +44,7 @@ fun filterPublicChatsAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -60,7 +60,7 @@ fun filterPublicChatsAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.CHATS,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     tags = mapOf("k" to listOf("5300"), "a" to communityList),
                     kinds =
                         listOf(

@@ -105,7 +105,7 @@ object ChessFilterBuilder {
     ): List<RelayBasedFilter> {
         val filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.GAMES,
                 kinds = listOf(JESTER_KIND),
                 tags = mapOf("p" to listOf(userPubkey)),
                 limit = 100,
@@ -134,7 +134,7 @@ object ChessFilterBuilder {
     ): List<RelayBasedFilter> {
         val filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.GAMES,
                 kinds = listOf(JESTER_KIND),
                 tags = mapOf("e" to listOf(JesterProtocol.START_POSITION_HASH)),
                 limit = 100,
@@ -174,7 +174,7 @@ object ChessFilterBuilder {
         // This catches all moves/events for these games
         val gameFilter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.GAMES,
                 purposeDetail = "live chess games on screen",
                 kinds = listOf(JESTER_KIND),
                 tags = mapOf("e" to startEventIds.toList()),
@@ -188,7 +188,7 @@ object ChessFilterBuilder {
         // Also filter by p-tag (opponent tagged us) for redundancy
         val tagFilter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.GAMES,
                 purposeDetail = "live chess games on screen",
                 kinds = listOf(JESTER_KIND),
                 tags = mapOf("p" to listOf(userPubkey)),
@@ -203,7 +203,7 @@ object ChessFilterBuilder {
         if (opponentPubkeys.isNotEmpty()) {
             val authorFilter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.GAMES,
                     purposeDetail = "live chess games on screen",
                     kinds = listOf(JESTER_KIND),
                     authors = opponentPubkeys.toList(),
@@ -229,7 +229,7 @@ object ChessFilterBuilder {
     ): List<RelayBasedFilter> {
         val filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.GAMES,
                 kinds = listOf(JESTER_KIND),
                 limit = 100,
             )
@@ -257,7 +257,7 @@ object ChessFilterBuilder {
      */
     fun gameEventsFilter(startEventId: String): Filter =
         ExplainedFilter(
-            purpose = SubPurpose.SCREEN_CONTENT,
+            purpose = SubPurpose.GAMES,
             purposeDetail = "live chess games on screen",
             kinds = listOf(JESTER_KIND),
             tags = mapOf("e" to listOf(startEventId)),
@@ -273,7 +273,7 @@ object ChessFilterBuilder {
     fun challengesFilter(userPubkey: String? = null): Filter {
         val now = TimeUtils.now()
         return ExplainedFilter(
-            purpose = SubPurpose.SCREEN_CONTENT,
+            purpose = SubPurpose.GAMES,
             purposeDetail = "live chess games on screen",
             kinds = listOf(JESTER_KIND),
             tags = mapOf("e" to listOf(JesterProtocol.START_POSITION_HASH)),
@@ -289,7 +289,7 @@ object ChessFilterBuilder {
     fun recentGamesFilter(): Filter {
         val now = TimeUtils.now()
         return ExplainedFilter(
-            purpose = SubPurpose.SCREEN_CONTENT,
+            purpose = SubPurpose.GAMES,
             purposeDetail = "live chess games on screen",
             kinds = listOf(JESTER_KIND),
             since = now - ChessTimeWindows.GAME_EVENT_WINDOW_SECONDS,
@@ -304,7 +304,7 @@ object ChessFilterBuilder {
     fun userGamesFilter(userPubkey: String): Filter {
         val now = TimeUtils.now()
         return ExplainedFilter(
-            purpose = SubPurpose.SCREEN_CONTENT,
+            purpose = SubPurpose.GAMES,
             purposeDetail = "live chess games on screen",
             kinds = listOf(JESTER_KIND),
             authors = listOf(userPubkey),
@@ -320,7 +320,7 @@ object ChessFilterBuilder {
     fun userTaggedFilter(userPubkey: String): Filter {
         val now = TimeUtils.now()
         return ExplainedFilter(
-            purpose = SubPurpose.SCREEN_CONTENT,
+            purpose = SubPurpose.GAMES,
             purposeDetail = "live chess games on screen",
             kinds = listOf(JESTER_KIND),
             tags = mapOf("p" to listOf(userPubkey)),

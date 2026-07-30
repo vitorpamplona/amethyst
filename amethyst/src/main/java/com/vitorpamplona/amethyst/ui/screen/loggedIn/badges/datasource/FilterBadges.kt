@@ -60,7 +60,7 @@ private fun filterBadgesByAuthorsOnRelay(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     kinds = listOf(BadgeDefinitionEvent.KIND),
                     authors = authors.sorted(),
                     limit = BADGE_FEED_LIMIT,
@@ -121,7 +121,7 @@ private fun filterBadgesGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     kinds = listOf(BadgeDefinitionEvent.KIND),
                     limit = BADGE_FEED_LIMIT,
                     since = sinceValue,

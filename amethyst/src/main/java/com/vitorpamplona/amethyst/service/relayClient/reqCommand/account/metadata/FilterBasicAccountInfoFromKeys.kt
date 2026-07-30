@@ -87,7 +87,7 @@ fun filterBasicAccountInfoFromKeys(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = BasicAccountInfoKinds,
                     authors = otherAccounts.toList(),
                     limit = otherAccounts.size * BasicAccountInfoKinds.size,
@@ -98,7 +98,7 @@ fun filterBasicAccountInfoFromKeys(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = BasicAccountInfoKinds2,
                     authors = otherAccounts.toList(),
                     limit = otherAccounts.size * BasicAccountInfoKinds2.size,

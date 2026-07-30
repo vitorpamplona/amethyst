@@ -178,7 +178,7 @@ object ConcordSubscriptionPlanner {
             val filter =
                 if (lastRead > 0L) {
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.COMMUNITY_CHATS,
                         purposeDetail = "concord community planes",
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         authors = authors.toList(),
@@ -189,7 +189,7 @@ object ConcordSubscriptionPlanner {
                     )
                 } else {
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.COMMUNITY_CHATS,
                         purposeDetail = "concord community planes",
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         authors = authors.toList(),
@@ -270,7 +270,7 @@ object ConcordSubscriptionPlanner {
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.CHATS,
+                        purpose = SubPurpose.COMMUNITY_CHATS,
                         // Stored plane wraps (1059) plus ephemeral ones (21059) — the latter carry the
                         // live-only typing heartbeats a relay broadcasts but never stores.
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP, ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL),

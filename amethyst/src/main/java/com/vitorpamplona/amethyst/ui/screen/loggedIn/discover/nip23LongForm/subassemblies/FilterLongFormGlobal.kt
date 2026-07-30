@@ -41,7 +41,7 @@ fun filterLongFormGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     kinds = listOf(LongTextNoteEvent.KIND),
                     limit = 100,
                     since = since,

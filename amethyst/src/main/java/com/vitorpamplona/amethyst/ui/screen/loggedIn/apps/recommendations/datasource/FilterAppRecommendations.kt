@@ -44,7 +44,7 @@ fun filterMyAppRecommendations(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     kinds = listOf(AppRecommendationEvent.KIND),
                     authors = authors,
                     limit = 100,
@@ -64,7 +64,7 @@ fun filterRecentAppDefinitions(relays: Set<NormalizedRelayUrl>): List<RelayBased
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.ADD_ONS,
                     kinds = listOf(AppDefinitionEvent.KIND),
                     limit = 100,
                 ),

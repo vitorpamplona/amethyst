@@ -39,7 +39,7 @@ fun filterChannelMetadataUpdatesById(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PROFILE_METADATA,
+                    purpose = SubPurpose.PUBLIC_CHATS,
                     kinds = channelMetadataKinds,
                     tags = mapOf("e" to channels.map { it.idHex }),
                     since = since,

@@ -41,7 +41,7 @@ fun filterPicturesGlobal(
             relay = it.key,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = listOf(PictureEvent.KIND),
                     limit = 200,
                     since = since,

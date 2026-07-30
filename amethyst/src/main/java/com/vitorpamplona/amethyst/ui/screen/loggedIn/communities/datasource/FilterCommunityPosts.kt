@@ -56,7 +56,7 @@ fun filterCommunityPosts(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.COMMUNITY_FEED,
                 authors = community.moderatorKeys(),
                 tags = mapOf("a" to listOf(community.addressTag())),
                 kinds = CommunityPostKinds,
@@ -75,7 +75,7 @@ fun filterCommunityPostsFromModerators(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.COMMUNITY_FEED,
                 authors = authors.sorted(),
                 tags = mapOf("a" to listOf(community.addressTag())),
                 kinds = CommunityPostKinds,
@@ -93,7 +93,7 @@ fun filterCommunityPostsFromEverybody(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.SCREEN_CONTENT,
+                purpose = SubPurpose.COMMUNITY_FEED,
                 tags = mapOf("a" to listOf(community.addressTag())),
                 kinds = CommunityPostKinds,
                 limit = 100,

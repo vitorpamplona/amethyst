@@ -64,7 +64,7 @@ fun filterHashtagLabels(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.TAG_FEED,
                         kinds = listOf(LabelEvent.KIND),
                         authors = authorList,
                         tags = mapOf("l" to labelValues),

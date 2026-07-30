@@ -39,7 +39,7 @@ fun filterPollsByHashtag(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TAG_FEED,
                     kinds = listOf(PollEvent.KIND, ZapPollEvent.KIND),
                     tags = mapOf("t" to hashtags.toList()),
                     limit = 200,

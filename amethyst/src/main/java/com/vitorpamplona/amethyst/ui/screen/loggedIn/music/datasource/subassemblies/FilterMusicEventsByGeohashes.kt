@@ -40,7 +40,7 @@ fun filterMusicEventsByGeohashes(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = kinds,
                     tags = mapOf("g" to geotags.sorted()),
                     limit = 100,

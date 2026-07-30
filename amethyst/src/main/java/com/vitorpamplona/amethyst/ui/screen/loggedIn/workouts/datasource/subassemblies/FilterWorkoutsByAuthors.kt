@@ -41,7 +41,7 @@ fun filterWorkoutsByAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TOPIC_FEED,
                     authors = authorList,
                     kinds = listOf(WorkoutRecordEvent.KIND),
                     limit = 200,

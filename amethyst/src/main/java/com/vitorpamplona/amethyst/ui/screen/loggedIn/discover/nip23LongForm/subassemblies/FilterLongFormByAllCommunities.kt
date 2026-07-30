@@ -42,7 +42,7 @@ fun filterLongFormAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -58,7 +58,7 @@ fun filterLongFormAllCommunities(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.DISCOVER_FEED,
                     tags = mapOf("k" to listOf("5300"), "a" to communityList),
                     kinds = listOf(LongTextNoteEvent.KIND),
                     limit = 30,

@@ -88,7 +88,7 @@ fun filterPostsByHashtags(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.TAG_FEED,
                         tags = hashtagsToFollowMap,
                         kinds = PostsByHashtagsKinds,
                         limit = 400,
@@ -99,7 +99,7 @@ fun filterPostsByHashtags(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.TAG_FEED,
                         tags = hashtagsToFollowMap,
                         kinds = PostsByHashtagKinds2,
                         limit = 100,
@@ -110,7 +110,7 @@ fun filterPostsByHashtags(
                 relay = relay,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.SCREEN_CONTENT,
+                        purpose = SubPurpose.TAG_FEED,
                         tags = hashtagScoreMap,
                         kinds = CommentKinds,
                         limit = 200,

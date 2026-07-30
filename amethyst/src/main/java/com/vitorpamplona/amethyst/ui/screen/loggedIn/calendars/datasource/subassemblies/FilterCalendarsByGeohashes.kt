@@ -39,7 +39,7 @@ fun filterCalendarsByGeohashes(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.SCREEN_CONTENT,
+                    purpose = SubPurpose.TAG_FEED,
                     kinds = CalendarAppointmentKinds,
                     tags = mapOf("g" to geotags.sorted()),
                     limit = 200,
