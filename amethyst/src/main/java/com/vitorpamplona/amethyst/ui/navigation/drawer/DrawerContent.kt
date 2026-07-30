@@ -63,6 +63,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -105,9 +106,6 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.PermanentDrawerWidth
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerFeedsItems
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerNavigateItems
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.DrawerYouItems
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarCatalog
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItemDef
@@ -584,42 +582,17 @@ fun ListContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Per-account, synced through the NIP-78 app-specific data event, and edited on the
+    // Side Menu settings screen. Empty (the default) means the full stock drawer.
+    val hidden by accountViewModel.hiddenDrawerItemsFlow().collectAsStateWithLifecycle()
+
     Column(modifier) {
-        CatalogSection(R.string.drawer_section_you, DrawerYouItems, accountViewModel, nav)
-        CatalogSection(R.string.drawer_section_navigate, DrawerNavigateItems, accountViewModel, nav)
-        CatalogSection(R.string.drawer_section_feeds, DrawerFeedsItems, accountViewModel, nav)
-
-        CollapsibleSection(title = R.string.drawer_section_create) {
-            NavigationRow(
-                title = R.string.share_hls_video,
-                icon = MaterialSymbols.SettingsInputAntenna,
-                tint = MaterialTheme.colorScheme.onBackground,
-                nav = nav,
-                route = Route.NewHlsVideo,
-            )
-
-            if (isDebug) {
-                NavigationRow(
-                    title = R.string.route_chess,
-                    icon = MaterialSymbols.ChessKnight,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    nav = nav,
-                    route = Route.Chess,
-                )
-            }
-        }
-
-        CollapsibleSection(title = R.string.drawer_section_system) {
-            IconRowRelays(
-                accountViewModel = accountViewModel,
-                onClick = {
-                    nav.closeDrawer()
-                    nav.nav(Route.EditRelays)
-                },
-            )
-
-            NavBarCatalog[NavBarItem.SETTINGS]?.let {
-                CatalogNavigationRow(it, MaterialTheme.colorScheme.onBackground, accountViewModel, nav)
+        DrawerSections.forEach { section ->
+            // Keyed by section: hiding the last row of a section removes it from the drawer
+            // entirely, and without a key the sections below would slide up into its slots and
+            // inherit its CollapsibleSection expanded/collapsed state.
+            key(section.id) {
+                CatalogSection(section, hidden, accountViewModel, nav)
             }
         }
 
@@ -634,22 +607,65 @@ fun ListContent(
     }
 }
 
+/** The Create section's rows — composer entry points, none of which is a catalog destination. */
+@Composable
+private fun CreateRows(nav: INav) {
+    NavigationRow(
+        title = R.string.share_hls_video,
+        icon = MaterialSymbols.SettingsInputAntenna,
+        tint = MaterialTheme.colorScheme.onBackground,
+        nav = nav,
+        route = Route.NewHlsVideo,
+    )
+
+    if (isDebug) {
+        NavigationRow(
+            title = R.string.route_chess,
+            icon = MaterialSymbols.ChessKnight,
+            tint = MaterialTheme.colorScheme.onBackground,
+            nav = nav,
+            route = Route.Chess,
+        )
+    }
+}
+
 /**
- * Renders a drawer section by iterating [ids] and looking each one up in [NavBarCatalog].
- * Profile gets the primary-colored tint; every other item uses onBackground.
+ * Renders one drawer section: its fixed rows, if it has any, then the catalog rows the user hasn't
+ * switched off. Profile gets the primary-colored tint; every other item uses onBackground.
+ *
+ * A section with nothing left to show renders nothing at all — an empty, permanently collapsed
+ * heading is just noise. Two sections always have something: Create is entirely fixed rows, and
+ * System carries the relay-status row (not a catalog destination — it shows a live counter).
  */
 @Composable
 fun CatalogSection(
-    titleRes: Int,
-    ids: List<NavBarItem>,
+    section: DrawerSection,
+    hidden: Set<NavBarItem>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val onBackground = MaterialTheme.colorScheme.onBackground
 
-    CollapsibleSection(title = titleRes) {
-        ids.forEach { id ->
+    val visible = remember(section, hidden) { DrawerItemVisibility.visibleItems(section, hidden) }
+    val hasFixedRows = section.id == DrawerSectionId.CREATE || section.id == DrawerSectionId.SYSTEM
+    if (visible.isEmpty() && !hasFixedRows) return
+
+    CollapsibleSection(title = section.titleRes) {
+        when (section.id) {
+            DrawerSectionId.CREATE -> CreateRows(nav)
+            DrawerSectionId.SYSTEM ->
+                IconRowRelays(
+                    accountViewModel = accountViewModel,
+                    onClick = {
+                        nav.closeDrawer()
+                        nav.nav(Route.EditRelays)
+                    },
+                )
+            else -> {}
+        }
+
+        visible.forEach { id ->
             NavBarCatalog[id]?.let { def ->
                 val tint = if (def.id == NavBarItem.PROFILE) primary else onBackground
                 if (def.id == NavBarItem.SCHEDULED_POSTS) {
