@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -34,13 +33,6 @@ data class BasicRelaySetupInfo(
     val paidRelay: Boolean = false,
     val forcesTor: Boolean = false,
     val users: List<User> = emptyList(),
-    /**
-     * What this relay is currently doing for us, derived from the purposes tagged onto its in-flight
-     * filters. Empty when nothing on this relay has been tagged yet — the assemblers are being
-     * migrated to [com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter]
-     * incrementally, so an empty set means "not yet attributed", never "idle".
-     */
-    val purposes: Set<SubPurpose> = emptySet(),
 )
 
 fun relaySetupInfoBuilder(

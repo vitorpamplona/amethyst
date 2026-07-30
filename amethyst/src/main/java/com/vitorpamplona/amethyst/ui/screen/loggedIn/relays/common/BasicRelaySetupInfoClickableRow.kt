@@ -143,8 +143,6 @@ fun BasicRelaySetupInfoClickableRow(
 
                 UsedBy(item, accountViewModel, nav)
 
-                RelayPurposeRow(item.purposes)
-
                 RelayEventCountRow(
                     countResult = countResult,
                     modifier = ReactionRowHeightChatMaxWidth,

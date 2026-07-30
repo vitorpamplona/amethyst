@@ -80,4 +80,31 @@ object SubPurposeLabels {
      * backgrounding, so itemising them would add noise precisely when nobody is looking.
      */
     fun isWorthNamingInNotification(purpose: SubPurpose): Boolean = purpose.group == SubPurposeGroup.ACCOUNT || purpose.group == SubPurposeGroup.MESSAGES
+
+    /**
+     * How this subscription actually works — the strategy, not the intent.
+     *
+     * Only the jobs whose relay footprint surprises people have one; the rest are self-evident from
+     * their label. Written from the code they describe: `MODERATION` says it asks each relay your
+     * follows publish to because `UserReportsSubAssembler` walks `declaredFollowsPerOutboxRelay`,
+     * and `NOTIFICATIONS` mentions the follows-wide probe because
+     * `AccountNotificationsEoseFromRandomRelaysManager` subscribes to every follows relay.
+     */
+    fun explainerOf(purpose: SubPurpose): Int? =
+        when (purpose) {
+            SubPurpose.NOTIFICATIONS -> R.string.relay_explain_notifications
+            SubPurpose.DIRECT_MESSAGES -> R.string.relay_explain_direct_messages
+            SubPurpose.PUBLIC_CHATS -> R.string.relay_explain_public_chats
+            SubPurpose.COMMUNITY_CHATS -> R.string.relay_explain_community_chats
+            SubPurpose.ENCRYPTED_GROUPS -> R.string.relay_explain_encrypted_groups
+            SubPurpose.LIVE_ROOMS -> R.string.relay_explain_live_rooms
+            SubPurpose.ACCOUNT_DATA -> R.string.relay_explain_account_data
+            SubPurpose.PROFILE_METADATA -> R.string.relay_explain_profiles
+            SubPurpose.RELAY_LISTS -> R.string.relay_explain_relay_lists
+            SubPurpose.FOLLOW_LISTS -> R.string.relay_explain_follows
+            SubPurpose.MODERATION -> R.string.relay_explain_moderation
+            SubPurpose.WALLET -> R.string.relay_explain_wallet
+            SubPurpose.HOME_FEED -> R.string.relay_explain_home
+            else -> null
+        }
 }

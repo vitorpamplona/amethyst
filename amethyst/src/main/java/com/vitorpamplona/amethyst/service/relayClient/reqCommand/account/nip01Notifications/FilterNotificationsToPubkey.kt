@@ -157,6 +157,7 @@ fun filterNotificationsHistoryToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = AllNotificationKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = limit,
@@ -185,6 +186,7 @@ fun filterGroupNotificationsHistoryToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = GroupNotificationKinds,
                     tags = mapOf("p" to listOf(pubkey), "h" to groupIds),
                     limit = limit,
@@ -207,6 +209,7 @@ fun filterSummaryNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = SummaryKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 2000,
@@ -229,6 +232,7 @@ fun filterNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 500,
@@ -240,6 +244,7 @@ fun filterNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 200,
@@ -251,6 +256,7 @@ fun filterNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = NotificationsPerKeyKinds3,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 10,
@@ -280,6 +286,7 @@ fun filterGroupNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = GroupNotificationKinds,
                     tags = mapOf("p" to listOf(pubkey), "h" to groupIds),
                     limit = 200,
@@ -302,6 +309,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = SummaryKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 20,
@@ -313,6 +321,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 20,
@@ -324,6 +333,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 10,
@@ -335,6 +345,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
+                    accountPubKey = pubkey,
                     kinds = NotificationsPerKeyKinds3,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 2,
