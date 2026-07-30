@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -38,6 +39,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Regression tests for PR #3483 review findings on FeedMetadataCoordinator:
@@ -74,33 +78,77 @@ class FeedMetadataCoordinatorTest {
     private fun pubkey(seed: Int): HexKey = seed.toString(16).padStart(64, '0')
 
     /**
+     * Suspends until every coroutine the coordinator launched into [scope] has finished.
+     *
+     * This is what makes the assertions deterministic. The coordinator does its work in
+     * `scope.launch { subscribe(); gate.awaitAll(timeout); unsubscribe(); promote-or-roll-back }`,
+     * so "has call 1 finished?" is a question about the job tree, not about the clock. The tests
+     * used to answer it with `delay(timeoutMs + margin)` and assert straight after — which holds
+     * only while the dispatcher is free to start that coroutine promptly. On a loaded runner
+     * (macOS CI, 1431 tests in the same module) the launch itself can be queued past the margin,
+     * the roll-back lands late, the next call short-circuits, and the assertion fails on a
+     * perfectly healthy coordinator. Waiting on the jobs removes the margin entirely.
+     */
+    private suspend fun awaitCoordinatorIdle(timeoutMs: Long = 30_000) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (scope.coroutineContext.job.children
+                .any { it.isActive }
+        ) {
+            check(System.currentTimeMillis() < deadline) { "coordinator work did not settle within ${timeoutMs}ms" }
+            delay(2)
+        }
+    }
+
+    /** Polls [predicate] to a deadline. For preconditions we cannot express as job completion. */
+    private suspend fun waitUntil(
+        message: String,
+        timeoutMs: Long = 30_000,
+        predicate: () -> Boolean,
+    ) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (!predicate()) {
+            check(System.currentTimeMillis() < deadline) { "timed out waiting for: $message" }
+            delay(2)
+        }
+    }
+
+    /**
      * Fake client that captures subscribe/unsubscribe and lets the test
      * drive EOSE notifications on any dispatcher we choose.
+     *
+     * Every collection here is written from the coordinator's coroutines (`Dispatchers.Default`,
+     * and `Dispatchers.IO` for the concurrent-EOSE test) and read from the test thread, so plain
+     * `mutableMapOf`/`mutableListOf` were two more races: an unsynchronized `size` read can be
+     * stale, and `fireEose` iterating `subscriptions.values` while a coordinator coroutine calls
+     * `unsubscribe` can throw ConcurrentModificationException. Concurrency is the thing under
+     * test here, so the fake must not be the weak link.
      */
     private class ControllableClient(
         private val delegate: INostrClient = EmptyNostrClient(),
     ) : INostrClient by delegate {
-        val subscriptions = mutableMapOf<String, SubscriptionListener?>()
-        val subscribeCalls = mutableListOf<Map<NormalizedRelayUrl, List<Filter>>>()
-        var unsubscribeCallCount = 0
-            private set
+        val subscriptions = ConcurrentHashMap<String, SubscriptionListener>()
+        val subscribeCalls: MutableList<Map<NormalizedRelayUrl, List<Filter>>> =
+            Collections.synchronizedList(mutableListOf())
+        private val unsubscribes = AtomicInteger(0)
+        val unsubscribeCallCount: Int get() = unsubscribes.get()
 
         override fun subscribe(
             subId: String,
             filters: Map<NormalizedRelayUrl, List<Filter>>,
             listener: SubscriptionListener?,
         ) {
-            subscriptions[subId] = listener
+            listener?.let { subscriptions[subId] = it }
             subscribeCalls.add(filters)
         }
 
         override fun unsubscribe(subId: String) {
             subscriptions.remove(subId)
-            unsubscribeCallCount++
+            unsubscribes.incrementAndGet()
         }
 
         fun fireEose(relay: NormalizedRelayUrl) {
-            subscriptions.values.filterNotNull().forEach { it.onEose(relay, forFilters = null) }
+            // Snapshot: a coordinator coroutine may unsubscribe concurrently.
+            subscriptions.values.toList().forEach { it.onEose(relay, forFilters = null) }
         }
     }
 
@@ -119,13 +167,13 @@ class FeedMetadataCoordinatorTest {
 
             // Call 1 — no relay EOSEs; must time out.
             coordinator.loadKind3Batched(pubkeys, timeoutMs = 200)
-            delay(350) // exceed the timeout
+            awaitCoordinatorIdle() // call 1 timed out and rolled back
 
             // Call 2 — the same pubkeys must be re-subscribed since call 1
             // never got a successful EOSE. The old code would silently
             // short-circuit here.
             coordinator.loadKind3Batched(pubkeys, timeoutMs = 200)
-            delay(50) // let the launcher run
+            awaitCoordinatorIdle()
 
             assertEquals(
                 "Zero-EOSE timeout must not permanently dedup pubkeys",
@@ -158,13 +206,13 @@ class FeedMetadataCoordinatorTest {
             val pubkeys = listOf(pubkey(1), pubkey(2))
 
             coordinator.loadKind3Batched(pubkeys, timeoutMs = 1_000)
-            // Give the launcher time to register the listener before we fire.
-            delay(50)
+            // The listener must be registered before we fire, or the EOSEs go nowhere.
+            waitUntil("subscription registered") { client.subscriptions.isNotEmpty() }
             indexRelays.forEach(client::fireEose)
-            delay(200) // let the coordinator finish + promote to queued
+            awaitCoordinatorIdle() // coordinator finished + promoted to queued
 
             coordinator.loadKind3Batched(pubkeys, timeoutMs = 200)
-            delay(50)
+            awaitCoordinatorIdle()
 
             assertEquals(
                 "Successful call must dedup subsequent identical calls",
@@ -187,13 +235,13 @@ class FeedMetadataCoordinatorTest {
             val pubkeys = listOf(pubkey(1))
 
             coordinator.loadKind3Batched(pubkeys, timeoutMs = 300)
-            delay(30)
+            waitUntil("subscription registered") { client.subscriptions.isNotEmpty() }
             // Only 1 of 3 EOSEs — timeout still fires but we made progress.
             client.fireEose(relay1)
-            delay(400)
+            awaitCoordinatorIdle()
 
             coordinator.loadKind3Batched(pubkeys, timeoutMs = 200)
-            delay(50)
+            awaitCoordinatorIdle()
 
             assertEquals(
                 "≥1 EOSE = progress = promote to queued (avoid re-asking)",
@@ -222,7 +270,7 @@ class FeedMetadataCoordinatorTest {
                 )
 
             coordinator.loadKind3Batched(listOf(pubkey(1)), timeoutMs = 2_000)
-            delay(50) // wait for subscription
+            waitUntil("subscription registered") { client.subscriptions.isNotEmpty() }
 
             // Fire EOSEs concurrently from many dispatchers.
             val jobs =
@@ -235,9 +283,9 @@ class FeedMetadataCoordinatorTest {
 
             // The 2nd call must short-circuit — every relay EOSE'd, so
             // pubkey(1) is now in queuedKind3Pubkeys.
-            delay(100)
+            awaitCoordinatorIdle()
             coordinator.loadKind3Batched(listOf(pubkey(1)), timeoutMs = 200)
-            delay(50)
+            awaitCoordinatorIdle()
 
             assertEquals(
                 "Under concurrent EOSE from all relays, aggregator must reach target",
@@ -261,10 +309,10 @@ class FeedMetadataCoordinatorTest {
 
             // Call 1 — zero EOSE, timeout.
             coordinator.loadMetadataBatched(pubkeys, timeoutMs = 200)
-            delay(350)
+            awaitCoordinatorIdle()
             // Call 2 — must re-subscribe.
             coordinator.loadMetadataBatched(pubkeys, timeoutMs = 200)
-            delay(50)
+            awaitCoordinatorIdle()
 
             assertTrue(
                 "Metadata batch also retries on zero-EOSE timeout",
@@ -284,13 +332,13 @@ class FeedMetadataCoordinatorTest {
                 )
 
             coordinator.loadKind3Batched(listOf(pubkey(1)), timeoutMs = 200)
-            delay(50)
+            waitUntil("subscription registered") { client.subscriptions.isNotEmpty() }
             // clear() must drop the in-flight tracker even mid-request.
             coordinator.clear()
-            delay(300) // let call 1 finish + roll back
+            awaitCoordinatorIdle() // call 1 finished + rolled back
 
             coordinator.loadKind3Batched(listOf(pubkey(1)), timeoutMs = 200)
-            delay(50)
+            awaitCoordinatorIdle()
 
             assertTrue(client.subscribeCalls.size >= 2)
         }
