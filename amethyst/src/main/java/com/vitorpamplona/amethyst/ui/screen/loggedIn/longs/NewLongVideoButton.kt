@@ -45,6 +45,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.VideoPostKind
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
@@ -63,6 +64,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Everything posted from here is a NIP-71 kind 21 video, whether it was recorded, picked or shared,
+ * so it always lands in the Longs feed the composer was opened from — portrait footage included.
+ */
 @Composable
 fun NewLongVideoButton(
     accountViewModel: AccountViewModel,
@@ -106,6 +111,7 @@ fun NewLongVideoButton(
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
             nav = nav,
+            videoKind = VideoPostKind.NORMAL,
         )
     }
 

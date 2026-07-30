@@ -34,12 +34,14 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -51,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePicture
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideo
+import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -64,11 +67,20 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * The composer for the Video feed, which renders every media kind. Videos keep the automatic
+ * kind choice (portrait -> NIP-71 kind 22, landscape -> kind 21); either way they show up here.
+ *
+ * @param sharedAttachment content URI of a video handed over by the "New Video" share target. When
+ *   present the composer opens on it right away, so the share lands as a NIP-71 video event in this
+ *   feed instead of a text note.
+ */
 @Composable
 fun NewImageButton(
     accountViewModel: AccountViewModel,
     nav: INav,
     navScrollToTop: () -> Unit,
+    sharedAttachment: String? = null,
 ) {
     var isOpen by remember { mutableStateOf(false) }
 
@@ -88,6 +100,11 @@ fun NewImageButton(
             delay(500)
             withContext(Dispatchers.Main) { navScrollToTop() }
         }
+    }
+
+    val context = LocalContext.current
+    LaunchedEffect(sharedAttachment) {
+        resolveSharedMedia(context, sharedAttachment)?.let { pickedURIs = persistentListOf(it) }
     }
 
     if (wantsToPostFromCamera) {

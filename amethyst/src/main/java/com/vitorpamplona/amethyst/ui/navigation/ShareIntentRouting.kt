@@ -20,10 +20,31 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation
 
+/** Which entry of Android's share sheet the user picked. */
+enum class ShareTarget {
+    /** The default "New Post" target: a kind-1 note with the shared text/media. */
+    NEW_POST,
+
+    /** "Send as DM": a NIP-17 private message. */
+    DIRECT_MESSAGE,
+
+    /** "New Highlight": a NIP-84 highlight of the shared passage. */
+    HIGHLIGHT,
+
+    /** "New Picture": a NIP-68 picture post, straight into the picture feed. */
+    PICTURE,
+
+    /** "New Short": a NIP-71 kind 22 video, straight into the Shorts feed. */
+    SHORT_VIDEO,
+
+    /** "New Video": a NIP-71 video, straight into the Video feed. */
+    VIDEO,
+}
+
 /**
- * Distinguishes the extra share targets ("Send as DM", "New Highlight") from the default
- * "New Post" share target. Every SEND intent-filter resolves to MainActivity; they are told
- * apart by the component class name of the launching intent (the activity-alias name).
+ * Tells the share targets apart. Every SEND intent-filter resolves to MainActivity; which target
+ * the user picked is only visible in the component class name of the launching intent (the
+ * `<activity-alias>` name), so each alias below maps to the composer it opens.
  */
 object ShareIntentRouting {
     /**
@@ -41,7 +62,35 @@ object ShareIntentRouting {
      */
     const val SHARE_AS_HIGHLIGHT_ALIAS_SIMPLE_NAME = "ShareAsHighlightAlias"
 
-    fun isShareAsDm(componentClassName: String?): Boolean = componentClassName?.endsWith(".$SHARE_AS_DM_ALIAS_SIMPLE_NAME") == true
+    /** See the caveat on [SHARE_AS_DM_ALIAS_SIMPLE_NAME]. */
+    const val SHARE_AS_PICTURE_ALIAS_SIMPLE_NAME = "ShareAsPictureAlias"
 
-    fun isShareAsHighlight(componentClassName: String?): Boolean = componentClassName?.endsWith(".$SHARE_AS_HIGHLIGHT_ALIAS_SIMPLE_NAME") == true
+    /** See the caveat on [SHARE_AS_DM_ALIAS_SIMPLE_NAME]. */
+    const val SHARE_AS_SHORT_VIDEO_ALIAS_SIMPLE_NAME = "ShareAsShortVideoAlias"
+
+    /** See the caveat on [SHARE_AS_DM_ALIAS_SIMPLE_NAME]. */
+    const val SHARE_AS_VIDEO_ALIAS_SIMPLE_NAME = "ShareAsVideoAlias"
+
+    private val TARGET_BY_ALIAS =
+        mapOf(
+            SHARE_AS_DM_ALIAS_SIMPLE_NAME to ShareTarget.DIRECT_MESSAGE,
+            SHARE_AS_HIGHLIGHT_ALIAS_SIMPLE_NAME to ShareTarget.HIGHLIGHT,
+            SHARE_AS_PICTURE_ALIAS_SIMPLE_NAME to ShareTarget.PICTURE,
+            SHARE_AS_SHORT_VIDEO_ALIAS_SIMPLE_NAME to ShareTarget.SHORT_VIDEO,
+            SHARE_AS_VIDEO_ALIAS_SIMPLE_NAME to ShareTarget.VIDEO,
+        )
+
+    /**
+     * Resolves the launching component to its target. Flavors can change the resolved package
+     * prefix, so the match is on the simple name; anything that isn't one of our aliases (chiefly
+     * MainActivity itself) is the default New Post target.
+     */
+    fun targetOf(componentClassName: String?): ShareTarget {
+        if (componentClassName == null) return ShareTarget.NEW_POST
+
+        return TARGET_BY_ALIAS.entries
+            .firstOrNull { componentClassName.endsWith(".${it.key}") }
+            ?.value
+            ?: ShareTarget.NEW_POST
+    }
 }

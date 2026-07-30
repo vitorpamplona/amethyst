@@ -35,7 +35,13 @@ sealed class Route {
 
     @Serializable object Message : Route()
 
-    @Serializable object Video : Route()
+    /**
+     * The mixed media feed. [attachment] is set by the "New Video" share target and pre-loads the
+     * media composer with the shared content URI.
+     */
+    @Serializable data class Video(
+        val attachment: String? = null,
+    ) : Route()
 
     @Serializable data class Discover(
         val initialTab: DiscoverTab? = null,
@@ -81,7 +87,13 @@ sealed class Route {
         )
     }
 
-    @Serializable object Pictures : Route()
+    /**
+     * The picture feed. [attachment] is set by the "New Picture" share target and pre-loads the
+     * media composer with the shared content URI.
+     */
+    @Serializable data class Pictures(
+        val attachment: String? = null,
+    ) : Route()
 
     @Serializable object Workouts : Route()
 
@@ -175,7 +187,13 @@ sealed class Route {
 
     @Serializable object Products : Route()
 
-    @Serializable object Shorts : Route()
+    /**
+     * The short-video feed. [attachment] is set by the "New Short" share target and pre-loads the
+     * media composer with the shared content URI.
+     */
+    @Serializable data class Shorts(
+        val attachment: String? = null,
+    ) : Route()
 
     @Serializable object PublicChats : Route()
 

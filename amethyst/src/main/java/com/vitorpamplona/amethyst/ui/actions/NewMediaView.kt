@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.VideoPostKind
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
@@ -79,14 +80,15 @@ fun NewMediaView(
     postViewModel: NewMediaModel,
     accountViewModel: AccountViewModel,
     nav: INav,
+    videoKind: VideoPostKind = VideoPostKind.AUTO,
 ) {
     val account = accountViewModel.account
     val context = LocalContext.current
 
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(uris) {
-        postViewModel.load(account, uris)
+    LaunchedEffect(uris, videoKind) {
+        postViewModel.load(account, uris, videoKind)
     }
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)

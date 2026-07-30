@@ -295,6 +295,57 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- "New Picture" share target: a gallery (or camera) shares an image and it goes straight
+             into the picture feed as a NIP-68 kind-20 post instead of a text note with a link. The
+             android:name simple class ("ShareAsPictureAlias") is matched at runtime by
+             ShareIntentRouting.SHARE_AS_PICTURE_ALIAS_SIMPLE_NAME; keep the two in sync. -->
+        <activity-alias
+            android:name=".ui.ShareAsPictureAlias"
+            android:exported="true"
+            android:label="@string/share_target_as_picture"
+            android:targetActivity=".ui.MainActivity">
+
+            <intent-filter android:label="@string/share_target_as_picture">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- "New Short" share target: a video shared here always becomes a NIP-71 kind-22 short so
+             it lands in the Shorts feed, whatever its orientation. Video-only — a short is a video.
+             The android:name simple class ("ShareAsShortVideoAlias") is matched at runtime by
+             ShareIntentRouting.SHARE_AS_SHORT_VIDEO_ALIAS_SIMPLE_NAME; keep the two in sync. -->
+        <activity-alias
+            android:name=".ui.ShareAsShortVideoAlias"
+            android:exported="true"
+            android:label="@string/share_target_as_short_video"
+            android:targetActivity=".ui.MainActivity">
+
+            <intent-filter android:label="@string/share_target_as_short_video">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- "New Video" share target: opens the Video feed's media composer, which publishes a
+             NIP-71 video event (kind 21 or 22 by orientation) instead of a text note. The
+             android:name simple class ("ShareAsVideoAlias") is matched at runtime by
+             ShareIntentRouting.SHARE_AS_VIDEO_ALIAS_SIMPLE_NAME; keep the two in sync. -->
+        <activity-alias
+            android:name=".ui.ShareAsVideoAlias"
+            android:exported="true"
+            android:label="@string/share_target_as_video"
+            android:targetActivity=".ui.MainActivity">
+
+            <intent-filter android:label="@string/share_target_as_video">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- "New Highlight" share target: a browser (or reader) shares a selected passage of
              text and it opens the NIP-84 highlight composer. Text-only — a highlight is a text
              passage, so no image/video filters here. The android:name simple class

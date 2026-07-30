@@ -34,22 +34,26 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.VideoPostKind
 import com.vitorpamplona.amethyst.ui.actions.NewMediaModel
 import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideo
+import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -63,11 +67,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * @param sharedAttachment content URI of a video handed over by the "New Short" share target. When
+ *   present the composer opens on it right away.
+ *
+ * Everything posted from here is a NIP-71 kind 22 short, whether it was recorded, picked or shared,
+ * so it always lands in the Shorts feed the composer was opened from — landscape footage included.
+ */
 @Composable
 fun NewShortVideoButton(
     accountViewModel: AccountViewModel,
     nav: INav,
     navScrollToTop: () -> Unit,
+    sharedAttachment: String? = null,
 ) {
     var isOpen by remember { mutableStateOf(false) }
     var wantsToRecordVideo by remember { mutableStateOf(false) }
@@ -81,6 +93,11 @@ fun NewShortVideoButton(
             delay(500)
             withContext(Dispatchers.Main) { navScrollToTop() }
         }
+    }
+
+    val context = LocalContext.current
+    LaunchedEffect(sharedAttachment) {
+        resolveSharedMedia(context, sharedAttachment)?.let { pickedURIs = persistentListOf(it) }
     }
 
     if (wantsToRecordVideo) {
@@ -106,6 +123,7 @@ fun NewShortVideoButton(
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
             nav = nav,
+            videoKind = VideoPostKind.SHORT,
         )
     }
 

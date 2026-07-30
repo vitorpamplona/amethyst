@@ -428,7 +428,7 @@ fun BuildNavigation(
     ) {
         composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }
         composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
-        composableCapped<Route.Video> { VideoScreen(accountViewModel, nav) }
+        composableArgs<Route.Video> { VideoScreen(accountViewModel, nav, it.attachment) }
         composableArgs<Route.Discover> { DiscoverScreen(it.initialTab, accountViewModel, nav) }
         composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
@@ -439,7 +439,7 @@ fun BuildNavigation(
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
-        composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.Pictures> { PicturesScreen(accountViewModel, nav, it.attachment) }
         composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
         composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
 
@@ -469,7 +469,7 @@ fun BuildNavigation(
         }
         composableFromBottomArgs<Route.NewCalendarCollection> { NewCalendarCollectionScreen(nav, accountViewModel, it.dTag) }
         composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
-        composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.Shorts> { ShortsScreen(accountViewModel, nav, it.attachment) }
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
         composableFromEnd<Route.RelayGroups> { RelayGroupDiscoveryScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.BuzzDmList> { BuzzDmListScreen(it.relayUrl, accountViewModel, nav) }
@@ -988,21 +988,21 @@ private fun NavigateIfIntentRequested(
     val activity = LocalContext.current.getActivity()
 
     if (activity.intent.action == Intent.ACTION_SEND) {
-        val isShareAsDm = ShareIntentRouting.isShareAsDm(activity.intent.component?.className)
-        val isShareAsHighlight = ShareIntentRouting.isShareAsHighlight(activity.intent.component?.className)
+        val target = ShareIntentRouting.targetOf(activity.intent.component?.className)
 
         // avoids restarting the destination screen when the intent is for the screen.
-        // Microsoft's swift key sends Gifs as new actions
-        if (isShareAsHighlight) {
-            if (isBaseRoute<Route.NewHighlight>(nav.controller)) return
-        } else if (isShareAsDm) {
-            if (isBaseRoute<Route.ShareToDM>(nav.controller)) return
-        } else {
-            if (isBaseRoute<Route.NewShortNote>(nav.controller)) return
+        // Microsoft's swift key sends Gifs as new actions.
+        // The media targets land on a feed the user may well be standing on already, so they can't
+        // guard on the destination — they rely on the intent being consumed below instead.
+        when (target) {
+            ShareTarget.HIGHLIGHT -> if (isBaseRoute<Route.NewHighlight>(nav.controller)) return
+            ShareTarget.DIRECT_MESSAGE -> if (isBaseRoute<Route.ShareToDM>(nav.controller)) return
+            ShareTarget.NEW_POST -> if (isBaseRoute<Route.NewShortNote>(nav.controller)) return
+            ShareTarget.PICTURE, ShareTarget.SHORT_VIDEO, ShareTarget.VIDEO -> Unit
         }
 
         // saves the intent to avoid processing again
-        var message by remember {
+        val message by remember {
             mutableStateOf(
                 activity.intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
                     it.ifBlank { null }
@@ -1010,26 +1010,29 @@ private fun NavigateIfIntentRequested(
             )
         }
 
-        var media by remember {
+        val media by remember {
             mutableStateOf(
                 IntentCompat.getParcelableExtra(activity.intent, Intent.EXTRA_STREAM, Uri::class.java),
             )
         }
 
-        if (isShareAsHighlight) {
-            val parsed = message?.let { SharedHighlightParser.parse(it) }
-            nav.newStack(
-                Route.NewHighlight(
-                    quote = parsed?.quote,
-                    url = parsed?.url,
-                    prefix = parsed?.prefix,
-                    suffix = parsed?.suffix,
-                ),
-            )
-        } else if (isShareAsDm) {
-            nav.newStack(Route.ShareToDM(message = message, attachment = media?.toString()))
-        } else {
-            nav.newStack(Route.NewShortNote(message = message, attachment = media.toString()))
+        when (target) {
+            ShareTarget.HIGHLIGHT -> {
+                val parsed = message?.let { SharedHighlightParser.parse(it) }
+                nav.newStack(
+                    Route.NewHighlight(
+                        quote = parsed?.quote,
+                        url = parsed?.url,
+                        prefix = parsed?.prefix,
+                        suffix = parsed?.suffix,
+                    ),
+                )
+            }
+            ShareTarget.DIRECT_MESSAGE -> nav.newStack(Route.ShareToDM(message = message, attachment = media?.toString()))
+            ShareTarget.PICTURE -> nav.newStack(Route.Pictures(attachment = media?.toString()))
+            ShareTarget.SHORT_VIDEO -> nav.newStack(Route.Shorts(attachment = media?.toString()))
+            ShareTarget.VIDEO -> nav.newStack(Route.Video(attachment = media?.toString()))
+            ShareTarget.NEW_POST -> nav.newStack(Route.NewShortNote(message = message, attachment = media?.toString()))
         }
 
         // Consume the launch intent so a later recomposition can't re-fire
@@ -1097,37 +1100,43 @@ private fun NavigateIfIntentRequested(
             val consumer =
                 Consumer<Intent> { intent ->
                     if (intent.action == Intent.ACTION_SEND) {
-                        val isShareAsDm = ShareIntentRouting.isShareAsDm(intent.component?.className)
-                        val isShareAsHighlight = ShareIntentRouting.isShareAsHighlight(intent.component?.className)
-                        // avoids restarting the destination screen when the intent is for the screen.
-                        // Microsoft's swift key sends Gifs as new actions
-                        if (isShareAsHighlight) {
-                            if (!isBaseRoute<Route.NewHighlight>(nav.controller)) {
-                                val parsed = intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }?.let { SharedHighlightParser.parse(it) }
-                                nav.newStack(
-                                    Route.NewHighlight(
-                                        quote = parsed?.quote,
-                                        url = parsed?.url,
-                                        prefix = parsed?.prefix,
-                                        suffix = parsed?.suffix,
-                                    ),
-                                )
-                            }
-                        } else if (isShareAsDm) {
-                            if (!isBaseRoute<Route.ShareToDM>(nav.controller)) {
-                                val message = intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }
-                                val attachment =
-                                    IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.toString()
-                                nav.newStack(Route.ShareToDM(message = message, attachment = attachment))
-                            }
-                        } else if (!isBaseRoute<Route.NewShortNote>(nav.controller)) {
-                            intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
-                                nav.newStack(Route.NewShortNote(message = it))
-                            }
+                        val target = ShareIntentRouting.targetOf(intent.component?.className)
+                        val message = intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }
+                        val attachment =
+                            IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.toString()
 
-                            IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.let {
-                                nav.newStack(Route.NewShortNote(attachment = it.toString()))
-                            }
+                        // avoids restarting the destination screen when the intent is for the screen.
+                        // Microsoft's swift key sends Gifs as new actions.
+                        // The media targets land on a feed the user may well be standing on already, so
+                        // they always navigate: the route carries the attachment, so the composer opens
+                        // on the newly shared file even when the feed itself is already on screen.
+                        when (target) {
+                            ShareTarget.HIGHLIGHT ->
+                                if (!isBaseRoute<Route.NewHighlight>(nav.controller)) {
+                                    val parsed = message?.let { SharedHighlightParser.parse(it) }
+                                    nav.newStack(
+                                        Route.NewHighlight(
+                                            quote = parsed?.quote,
+                                            url = parsed?.url,
+                                            prefix = parsed?.prefix,
+                                            suffix = parsed?.suffix,
+                                        ),
+                                    )
+                                }
+
+                            ShareTarget.DIRECT_MESSAGE ->
+                                if (!isBaseRoute<Route.ShareToDM>(nav.controller)) {
+                                    nav.newStack(Route.ShareToDM(message = message, attachment = attachment))
+                                }
+
+                            ShareTarget.PICTURE -> nav.newStack(Route.Pictures(attachment = attachment))
+                            ShareTarget.SHORT_VIDEO -> nav.newStack(Route.Shorts(attachment = attachment))
+                            ShareTarget.VIDEO -> nav.newStack(Route.Video(attachment = attachment))
+
+                            ShareTarget.NEW_POST ->
+                                if (!isBaseRoute<Route.NewShortNote>(nav.controller) && (message != null || attachment != null)) {
+                                    nav.newStack(Route.NewShortNote(message = message, attachment = attachment))
+                                }
                         }
                     } else {
                         val uri = intent.data?.toString()
