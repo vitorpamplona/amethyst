@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPlane
+import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPlanner
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
@@ -654,12 +656,16 @@ class Account(
             val state = session.state.value ?: continue
             val communityId = session.entry.id
             val relays = relaysByCommunity[communityId] ?: emptySet()
+            // Every folded channel, openable or not: a channel we hold no key for is hidden from the
+            // display surfaces, but its object still learns the truth so arriving at one anyway (a
+            // stale route) explains itself instead of offering a composer that can't publish.
+            val openable = session.openableChannelIds().toSet()
             for (channelIdHex in state.channels.keys) {
                 val channel = cache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
                 // Invalidate the channel's metadata flow only on a real change so the Messages-row
                 // name + community chip recompose when the fold first resolves them (they observe
                 // metadata.stateFlow via observeChannel), without churning every row every tick.
-                if (channel.updateFrom(state, relays, myPubKey)) channel.updateChannelInfo()
+                if (channel.updateFrom(state, relays, myPubKey, channelIdHex in openable)) channel.updateChannelInfo()
                 channel.notes
                     .filter { _, note -> note.event?.pubKey?.let { state.authority.isBanned(it) } == true }
                     .forEach { channel.removeNote(it) }
@@ -2355,6 +2361,26 @@ class Account(
     }
 
     /**
+     * The community entry plus the plane a message we author on [channelIdHex] must ride, or null when
+     * we may not write there at all.
+     *
+     * Which secret addresses the channel is [ConcordChannelPlanner]'s call: the shared community root
+     * for a public channel, the per-member key delivered in our own kind-13302 bundle for a private
+     * one. Null means the community isn't joined/folded, or it is a private channel we were never
+     * granted — and in that case publishing anyway is not a graceful degradation. Deriving from the
+     * root would put private traffic on the plane every member of the community can read and write,
+     * which is precisely the bug this replaced.
+     */
+    private fun concordWritePlane(
+        communityId: String,
+        channelIdHex: String,
+    ): Pair<ConcordCommunityListEntry, ConcordChannelPlane>? {
+        val session = concordSessions.sessionFor(communityId) ?: return null
+        val plane = ConcordChannelPlanner.writePlane(session.entry, session.state.value, channelIdHex) ?: return null
+        return session.entry to plane
+    }
+
+    /**
      * Post [text] to a Concord channel: derive the channel plane key, build an
      * encrypted-seal kind-1059 wrap authored by that plane key (not our identity),
      * fold it locally for an instant echo, and publish it to the community's relays.
@@ -2371,9 +2397,8 @@ class Account(
         imetas: List<IMetaTag> = emptyList(),
     ): Boolean {
         if (!isWriteable()) return false
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        val entry = session.entry
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val (entry, plane) = concordWritePlane(communityId, channelIdHex) ?: return false
+        val channelKey = plane.key
 
         // NIP-30 custom-emoji tags for any `:shortcode:` the user typed, so the message renders the
         // custom image everywhere (the kind-9 rumor carries them; recipients render via the tags).
@@ -2386,13 +2411,13 @@ class Account(
                 // the user attached media); an inline reply is a kind-9 message quoting the parent; a
                 // fresh post is a plain kind-9 message.
                 parent != null && replyMode == ReplyMode.MINICHAT && imetas.isNotEmpty() ->
-                    ConcordActions.buildChannelImageReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, imetas, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelImageReply(signer, channelKey, channelIdHex, plane.epoch, parent, text, imetas, TimeUtils.now(), emojiTags)
                 parent != null && replyMode == ReplyMode.MINICHAT ->
-                    ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags)
                 parent != null ->
-                    ConcordActions.buildChannelInlineReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelInlineReply(signer, channelKey, channelIdHex, plane.epoch, parent, text, TimeUtils.now(), emojiTags)
                 else ->
-                    ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now(), emojiTags)
+                    ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, plane.epoch, text, TimeUtils.now(), emojiTags)
             }
         trackConcordDelivery(entry, channelKey, wrap)
         publishConcordWrap(entry, wrap)
@@ -2413,12 +2438,11 @@ class Account(
     ): Boolean {
         if (imetas.isEmpty()) return sendConcordChannelMessage(communityId, channelIdHex, text)
         if (!isWriteable()) return false
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        val entry = session.entry
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val (entry, plane) = concordWritePlane(communityId, channelIdHex) ?: return false
+        val channelKey = plane.key
         // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the caption, same as a plain message.
         val emojiTags = emoji.findEmojiTags(text).map { it.toTagArray() }.toTypedArray()
-        val wrap = ConcordActions.buildChannelImageMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, imetas, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelImageMessage(signer, channelKey, channelIdHex, plane.epoch, text, imetas, TimeUtils.now(), emojiTags)
         trackConcordDelivery(entry, channelKey, wrap)
         publishConcordWrap(entry, wrap)
         return true
@@ -2555,13 +2579,12 @@ class Account(
         val target = note.event ?: return false
         val communityId = channel.channelId.communityId
         val channelIdHex = channel.channelId.channelId
-        val entry = concordSessions.sessionFor(communityId)?.entry ?: return false
-
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val (entry, plane) = concordWritePlane(communityId, channelIdHex) ?: return false
+        val channelKey = plane.key
         // A custom-emoji reaction is a `:shortcode:` content that needs its NIP-30 `emoji` tag to
         // resolve to an image on the other side; a plain unicode/`+` reaction yields no tags.
         val emojiTags = emoji.findEmojiTags(reaction).map { it.toTagArray() }.toTypedArray()
-        val wrap = ConcordActions.buildChannelReaction(signer, channelKey, channelIdHex, entry.rootEpoch, target, reaction, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelReaction(signer, channelKey, channelIdHex, plane.epoch, target, reaction, TimeUtils.now(), emojiTags)
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -2587,12 +2610,11 @@ class Account(
 
         val communityId = channel.channelId.communityId
         val channelIdHex = channel.channelId.channelId
-        val entry = concordSessions.sessionFor(communityId)?.entry ?: return false
-
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
+        val (entry, plane) = concordWritePlane(communityId, channelIdHex) ?: return false
+        val channelKey = plane.key
         // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the new text, same as a fresh message.
         val emojiTags = emoji.findEmojiTags(newText).map { it.toTagArray() }.toTypedArray()
-        val wrap = ConcordActions.buildChannelEdit(signer, channelKey, channelIdHex, entry.rootEpoch, target, newText, TimeUtils.now(), emojiTags)
+        val wrap = ConcordActions.buildChannelEdit(signer, channelKey, channelIdHex, plane.epoch, target, newText, TimeUtils.now(), emojiTags)
         publishConcordWrap(entry, wrap)
         return true
     }
@@ -2607,9 +2629,8 @@ class Account(
         channelIdHex: String,
     ) {
         if (!isWriteable()) return
-        val entry = concordSessions.sessionFor(communityId)?.entry ?: return
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-        val wrap = ConcordActions.buildChannelTyping(signer, channelKey, channelIdHex, entry.rootEpoch, TimeUtils.now())
+        val (entry, plane) = concordWritePlane(communityId, channelIdHex) ?: return
+        val wrap = ConcordActions.buildChannelTyping(signer, plane.key, channelIdHex, plane.epoch, TimeUtils.now())
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
         if (relays.isNotEmpty()) client.publish(wrap, relays)
     }

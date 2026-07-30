@@ -102,36 +102,30 @@ object ConcordSubscriptionPlanner {
         }
 
     /**
-     * Chat-plane subscriptions for every live channel in a folded community [state] — at the current
-     * epoch, plus each channel's plane at every prior epoch the account still holds a root for
-     * ([ConcordCommunityListEntry.heldRoots]). A CORD-06 Refounding rotates the root per epoch, so the
-     * pre-refounding history lives under those prior-epoch planes; subscribing to them is what lets the
-     * client fetch messages older than the last Refounding instead of stopping at "All caught up".
+     * Chat-plane subscriptions for every channel of a folded community [state] this account can open
+     * — each channel's current address plus, for a public channel, its plane at every prior epoch the
+     * account still holds a root for ([ConcordCommunityListEntry.heldRoots]). A CORD-06 Refounding
+     * rotates the root per epoch, so the pre-refounding history lives under those prior-epoch planes;
+     * subscribing to them is what lets the client fetch messages older than the last Refounding
+     * instead of stopping at "All caught up".
+     *
+     * Private channels are addressed by their own delivered key, and one whose key we don't hold is
+     * not subscribed at all — see [ConcordChannelPlanner].
      */
     fun channelPlaneSubs(
         entry: ConcordCommunityListEntry,
         state: ConcordCommunityState,
     ): List<ConcordPlaneSub> {
-        val root = entry.root.hexToByteArray()
         val relays = normalize(entry.relays)
-        val current =
-            state.channels.keys.map { channelIdHex ->
-                val ch = ConcordActions.publicChannel(root, channelIdHex.hexToByteArray(), entry.rootEpoch)
-                ConcordPlaneSub(
-                    channelId = ConcordChannelId(entry.id, channelIdHex),
-                    pubKeyHex = ch.publicKeyHex,
-                    relays = relays,
-                )
-            }
-        val historical =
-            ConcordActions.historicalChannelPlanes(entry.heldRoots, state.channels.keys).map { plane ->
+        return ConcordChannelPlanner.channelPlanes(entry, state).flatMap { channel ->
+            channel.reads.map { plane ->
                 ConcordPlaneSub(
                     channelId = ConcordChannelId(entry.id, plane.channelIdHex),
                     pubKeyHex = plane.key.publicKeyHex,
                     relays = relays,
                 )
             }
-        return current + historical
+        }
     }
 
     /**

@@ -63,9 +63,12 @@ sealed interface PostingGate {
     data object Dissolved : Blocked
 
     /**
-     * We cannot place this account in the community at all — no key, no role. Distinct from
-     * [NotAMember] in that there is no roster to join and no relay to ask: in Concord, holding the
-     * key *is* membership.
+     * We hold no key for what we are looking at — either the community itself (no key, no role) or
+     * this specific private channel, whose per-member key was never delivered to us (CORD-03 §1).
+     *
+     * Distinct from [NotAMember] in that there is no roster to join and no relay to ask: in Concord,
+     * holding the key *is* membership. Normally unreachable, because a channel we cannot derive is
+     * not displayed at all — this is the backstop for arriving at one anyway.
      */
     data object NoKey : Blocked
 

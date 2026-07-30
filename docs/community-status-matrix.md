@@ -144,7 +144,7 @@ retrying can ever help):
 | **Exists** | a non-tombstoned `CHANNEL` edition in the fold | Gated by `MANAGE_CHANNELS`. |
 | **Deleted** | `deleted: true` | Terminal — the channel id is never reused. |
 | **Voice** | `voice: true` | Audio channel (`Mic` icon); CORD-07 broker token + kind-23313 voice presence. |
-| **Private** | `private: true` | Derived-key visibility: a separate plane key delivered per member in the kind-13302 entry's `privateChannels`. |
+| **Private** | `private: true` | Derived-key visibility: a separate plane key delivered per member in the kind-13302 entry's `privateChannels`, at that channel's own epoch. Resolved by `ConcordChannelPlanner`; a member holding no key for it sees no channel at all. |
 | **Typing** | ephemeral kind **23311** | Wired, with a staleness window. |
 | **Posting allowed** | `membership.isMember() && !dissolved` | |
 
@@ -241,7 +241,7 @@ others), and **invisible** (nothing renders it at all).
 | `dissolved` | The same `PostingGateNotice` replaces the composer, inside an opened channel only — not on the community row, the channel list, or the Messages inbox. (There is also **no write path** to dissolve: an owner cannot do it from Amethyst.) | partial |
 | **stranded / excluded epoch** | nothing. `recoverStrandedConcordCommunities()` runs at startup, `Log.w` on failure. A stranded community renders as an ordinary *empty* one. | **invisible** |
 | current epoch / `heldRoots` | nothing | **invisible** |
-| `private` channel | `Lock` icon in the channel list — but the row navigates like any other into a permanently empty room, because the plane key is never derived (see §8.1). No "you don't hold this key" state. | misleading |
+| `private` channel | `Lock` icon in the channel list, shown only to members who hold its key; others get no row (and no inbox row). Reaching one anyway explains itself via `PostingGate.NoKey`. | **shown** |
 | `voice` channel | `Mic` icon + preview-line suppression in the list; the opened channel has no voice affordance | partial |
 | **kicked** (3309) | nothing — unwired | **invisible** |
 | Guestbook join/leave | feeds the members roster; the motion itself isn't shown | implied |
@@ -273,12 +273,22 @@ Statuses that exist in the protocol/Quartz layer with no client behavior behind 
 §8.1–8.2 are the two that look like defects rather than unfinished features; §8.7–8.8 are
 UI-only (the state is tracked correctly, nothing tells the user):
 
-1. **Concord private channels are listed but never opened.** `ConcordPlaneRegistry.registerChannels`
-   derives only `ConcordChannelKeys.publicChannel`; the per-member keys in
-   `ConcordCommunityListEntry.privateChannels` are parsed, round-tripped and carried through
-   stranded recovery, but `privateChannel(...)` is called **only from a Quartz test**. The row
-   renders with a `Lock` icon and navigates like any other channel — into a permanently empty
-   timeline, with no "you don't have the key" state either.
+1. ~~**Concord private channels are listed but never opened.**~~ **Fixed.** The read *and* write
+   paths derived every channel — `private: true` included — from the `community_root`, at six
+   independent call sites. So a private channel was addressed on a plane every member of the
+   community could derive: readable **and postable** by people never granted its key, and
+   simultaneously invisible to any conformant client (which addresses it by the delivered key). Now
+   one resolver, `ConcordChannelPlanner`, decides which secret addresses a channel — the root for a
+   public one, the bundle's per-member `channel_key` at the channel's own epoch for a private one —
+   and every consumer (plane registry, subscription planner, session re-fold, five send paths,
+   channel list, Messages inbox) reads it. A private channel we hold no key for is **omitted
+   entirely**, matching Armada's `channelsView` ("omit rather than tease"); arriving at one anyway
+   yields `PostingGate.NoKey`. Note the epoch now travels with the plane: a private channel's wraps
+   bind to its channel epoch, so the old code would have rejected them even with the right key.
+   **Migration:** "private" channels created by earlier Amethyst builds have their history on the
+   root-derived plane, which is no longer read for a private channel. That history is orphaned by
+   design — keeping it would mean continuing to read (and legitimise) traffic on a plane the whole
+   community can write to.
 2. **`RoleScope` is decode-only.** `RoleEntity.scope` distinguishes `{"kind":"server"}` from
    `{"kind":"channel","channel_id":…}`, but `AuthorityResolver.effectivePermissions` unions
    every held role's bits regardless of scope — and nothing else reads it. A channel-scoped

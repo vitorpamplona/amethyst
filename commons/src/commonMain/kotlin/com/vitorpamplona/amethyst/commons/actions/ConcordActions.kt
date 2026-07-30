@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.Guestbook
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookAction
 import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
-import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord02Community.NewConcordCommunity
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
@@ -67,16 +66,6 @@ data class ConcordChatMessage(
 )
 
 /**
- * One channel's Chat Plane at a prior epoch: the epoch-invariant [channelIdHex], the [epoch] the
- * wraps are bound to (for `isBoundTo` validation), and the derived [key] to decrypt them.
- */
-data class HistoricalChannelPlane(
-    val channelIdHex: HexKey,
-    val epoch: Long,
-    val key: GroupKey,
-)
-
-/**
  * Concord community verbs — pure builders, plane-key derivation, relay-filter
  * assembly, and event folding usable from amy CLI, the Android app, and any other
  * non-UI consumer.
@@ -95,11 +84,28 @@ object ConcordActions {
         rootEpoch: Long,
     ): GroupKey = ConcordKeyDerivation.controlPlaneKey(communityRoot, communityId, rootEpoch)
 
+    /**
+     * A **public** channel's Chat Plane: keyed by the shared `community_root`, so every member
+     * derives it with no key distribution. Never use this for a `private: true` channel — see
+     * [privateChannel] — and prefer [ConcordChannelPlanner], which picks between the two.
+     */
     fun publicChannel(
         communityRoot: ByteArray,
         channelId: ByteArray,
         rootEpoch: Long,
     ): GroupKey = ConcordChannelKeys.publicChannel(communityRoot, channelId, rootEpoch)
+
+    /**
+     * A **private** channel's Chat Plane: keyed by the per-member `channel_key` delivered in the
+     * kind-13302 entry ([ConcordCommunityListEntry.privateChannels]) at that channel's own epoch
+     * (CORD-03 §1). Only members granted the key can derive the address at all, which is the whole
+     * of the private-channel ACL — there is no server to enforce one.
+     */
+    fun privateChannel(
+        channelKey: ByteArray,
+        channelId: ByteArray,
+        channelEpoch: Long,
+    ): GroupKey = ConcordChannelKeys.privateChannel(channelKey, channelId, channelEpoch)
 
     /**
      * How many prior epochs of channel history to backfill. A CORD-06 Refounding rotates the
@@ -111,25 +117,6 @@ object ConcordActions {
      * every real community. Set to 0 to disable historical backfill entirely.
      */
     const val MAX_BACKFILL_EPOCHS = 8
-
-    /**
-     * The historical Chat Plane keys for [channelIdsHex] across the prior epochs in [heldRoots]
-     * (newest-held first, bounded to [MAX_BACKFILL_EPOCHS]). The channel id is epoch-invariant, so a
-     * message decrypted under a held root lands in the same channel as the current-epoch ones.
-     */
-    fun historicalChannelPlanes(
-        heldRoots: List<HeldRoot>,
-        channelIdsHex: Collection<HexKey>,
-    ): List<HistoricalChannelPlane> =
-        heldRoots
-            .sortedByDescending { it.epoch }
-            .take(MAX_BACKFILL_EPOCHS)
-            .flatMap { held ->
-                val rootBytes = held.key.hexToByteArray()
-                channelIdsHex.map { channelIdHex ->
-                    HistoricalChannelPlane(channelIdHex, held.epoch, publicChannel(rootBytes, channelIdHex.hexToByteArray(), held.epoch))
-                }
-            }
 
     /** The Guestbook Plane address for a community at [rootEpoch] — where join/leave motions ride. */
     fun guestbookPlane(

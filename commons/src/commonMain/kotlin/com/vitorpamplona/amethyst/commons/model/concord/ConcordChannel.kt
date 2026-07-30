@@ -80,6 +80,18 @@ class ConcordChannel(
         private set
 
     /**
+     * Whether this account holds the key that addresses **this channel's** plane. Always true for a
+     * public channel (the community root derives it); for a private channel it means the per-member
+     * key was delivered in our kind-13302 bundle (CORD-03 §1).
+     *
+     * Optimistic until a fold says otherwise, matching [membership] — a channel we can't open is
+     * normally never displayed at all, so this is the backstop for arriving at one anyway (a stale
+     * route, a link) rather than the primary gate.
+     */
+    var holdsKey: Boolean = true
+        private set
+
+    /**
      * True once the community has been dissolved by an owner-signed tombstone (CORD-02 §9). On sight
      * the client seals the Community read-only: held keys still open history, but nothing new is
      * honored, so no member — not even the owner — may post. Terminal and one-way (there is no
@@ -111,6 +123,7 @@ class ConcordChannel(
         state: ConcordCommunityState,
         relays: Set<NormalizedRelayUrl>,
         myPubKey: HexKey,
+        holdsChannelKey: Boolean = true,
     ): Boolean {
         val def = state.channels[channelId.channelId]?.definition
         // Channel fields keep their prior value until the channel edition folds.
@@ -131,6 +144,7 @@ class ConcordChannel(
                 communityIcon != newCommunityIcon ||
                 communityBanner != newCommunityBanner ||
                 membership != newMembership ||
+                holdsKey != holdsChannelKey ||
                 dissolved != newDissolved
 
         channelName = newChannelName
@@ -141,6 +155,7 @@ class ConcordChannel(
         communityBanner = newCommunityBanner
         communityRelays = relays
         membership = newMembership
+        holdsKey = holdsChannelKey
         dissolved = newDissolved
         return changed
     }
@@ -162,8 +177,10 @@ class ConcordChannel(
         when {
             dissolved -> PostingGate.Dissolved
             membership == ConcordMembership.BANNED -> PostingGate.Banned
-            // NONE — no key and no role, so there is nothing to place this account by.
-            !membership.isMember() -> PostingGate.NoKey
+            // Either we can't be placed in the community at all (NONE — no key, no role), or this is
+            // a private channel whose per-member key we were never granted. Both mean the plane we
+            // would publish to isn't ours to derive.
+            !membership.isMember() || !holdsKey -> PostingGate.NoKey
             else -> PostingGate.Allowed
         }
 

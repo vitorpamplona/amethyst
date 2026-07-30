@@ -191,8 +191,9 @@ class ChatroomListKnownFeedFilter(
                 when (account.settings.concordViewMode.value) {
                     ConcordViewMode.INLINE ->
                         account.concordSessions.sessions().flatMap { session ->
-                            val state = session.state.value ?: return@flatMap emptyList<Note>()
-                            state.channels.keys.map { channelIdHex ->
+                            // Openable channels only: a private channel whose key was never delivered to
+                            // us has no derivable plane, so a row for it could never fill or be posted to.
+                            session.openableChannelIds().map { channelIdHex ->
                                 val channel = LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, channelIdHex))
                                 channel.newestConcordNote(account) ?: channel.placeholderNote()
                             }
@@ -201,9 +202,10 @@ class ChatroomListKnownFeedFilter(
                     ConcordViewMode.GROUPED ->
                         // One row per joined community, carrying the newest message across ALL its channels.
                         account.concordSessions.sessions().mapNotNull { session ->
-                            val state = session.state.value ?: return@mapNotNull null
+                            if (session.state.value == null) return@mapNotNull null
                             val newest =
-                                state.channels.keys
+                                session
+                                    .openableChannelIds()
                                     .mapNotNull { LocalCache.getOrCreateConcordChannel(ConcordChannelId(session.entry.id, it)).newestConcordNote(account) }
                                     .maxByOrNull { it.createdAt() ?: 0L }
                             ConcordServerRoomNote(session.entry.id, newest)

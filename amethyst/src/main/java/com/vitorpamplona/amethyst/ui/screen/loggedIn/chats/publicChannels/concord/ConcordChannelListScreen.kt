@@ -307,12 +307,14 @@ fun ConcordChannelListScreen(
             }
         },
     ) { padding ->
+        // Only channels this account can open. A private channel whose per-member key was never
+        // delivered to us has no derivable plane (CORD-03 §1), so its row would open a room that can
+        // never load — the reference client omits it for the same reason.
         val channels =
-            state
-                ?.channels
-                ?.entries
-                ?.toList()
-                .orEmpty()
+            remember(state, session, revision) {
+                val folded = state?.channels.orEmpty()
+                session?.openableChannelIds().orEmpty().mapNotNull { id -> folded[id]?.let { id to it } }
+            }
         if (channels.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
@@ -331,9 +333,9 @@ fun ConcordChannelListScreen(
                 Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = if (canManageChannels) FAB_CLEARANCE else 0.dp),
             ) {
-                items(channels, key = { it.key }) { entry ->
-                    val def = entry.value.definition
-                    val name = def.name.ifBlank { entry.key }
+                items(channels, key = { it.first }) { entry ->
+                    val def = entry.second.definition
+                    val name = def.name.ifBlank { entry.first }
                     val icon =
                         when {
                             def.voice == true -> MaterialSymbols.Mic
@@ -341,24 +343,24 @@ fun ConcordChannelListScreen(
                             else -> MaterialSymbols.Tag
                         }
                     val typingAuthors =
-                        remember(typingMap, typingNow, entry.key) {
-                            (typingMap[entry.key] ?: emptyMap())
+                        remember(typingMap, typingNow, entry.first) {
+                            (typingMap[entry.first] ?: emptyMap())
                                 .filterValues { typingNow - it <= ConcordCommunitySession.TYPING_STALE_SECS }
                                 .keys
                                 .sorted()
                         }
                     ConcordChannelListRow(
                         communityId = communityId,
-                        channelKey = entry.key,
+                        channelKey = entry.first,
                         channelName = name,
                         icon = icon,
                         isVoice = def.voice == true,
                         typingAuthors = typingAuthors,
                         canManageChannels = canManageChannels,
                         accountViewModel = accountViewModel,
-                        onClick = { nav.nav(Route.Concord(communityId, entry.key)) },
-                        onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
-                        onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.key, initialName = name) },
+                        onClick = { nav.nav(Route.Concord(communityId, entry.first)) },
+                        onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.first, initialName = name) },
+                        onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.first, initialName = name) },
                     )
                     HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }

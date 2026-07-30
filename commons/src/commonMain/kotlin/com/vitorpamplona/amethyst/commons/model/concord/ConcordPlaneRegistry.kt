@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.concord
 
+import com.vitorpamplona.amethyst.commons.actions.ConcordChannelPlanner
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -81,17 +82,23 @@ class ConcordPlaneRegistry {
             }
         }
 
-    /** Registers the Chat Plane address of every channel in a folded community [state]. */
+    /**
+     * Registers every Chat Plane address of every channel in a folded community [state] this account
+     * can open — across held epochs for a public channel, and at its own epoch for a private one.
+     *
+     * A private channel whose key we hold no bundle entry for registers **nothing**: the address is
+     * not derivable from the community root, and deriving it from the root anyway (as this used to)
+     * put private traffic on a plane every member could read and write.
+     */
     fun registerChannels(
         entry: ConcordCommunityListEntry,
         state: ConcordCommunityState,
     ) = lock.withLock {
-        val root = entry.root.hexToByteArray()
-        for (channelIdHex in state.channels.keys) {
-            val ch =
-                com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeys
-                    .publicChannel(root, channelIdHex.hexToByteArray(), entry.rootEpoch)
-            planes[ch.publicKeyHex] = ConcordPlane(ConcordPlaneKind.CHANNEL, entry.id, ConcordChannelId(entry.id, channelIdHex), ch)
+        for (channel in ConcordChannelPlanner.channelPlanes(entry, state)) {
+            for (plane in channel.reads) {
+                planes[plane.key.publicKeyHex] =
+                    ConcordPlane(ConcordPlaneKind.CHANNEL, entry.id, ConcordChannelId(entry.id, channel.channelIdHex), plane.key)
+            }
         }
     }
 

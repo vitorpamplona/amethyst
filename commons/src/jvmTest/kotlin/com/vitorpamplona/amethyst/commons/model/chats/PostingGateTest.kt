@@ -47,10 +47,10 @@ import kotlin.test.assertTrue
  * Concord member got `canPost() == false` and an empty slot, because the only explanatory branch on
  * the screen tested dissolution.
  *
- * [PostingGate.NoKey] has no producer to exercise here: it is the mapping for
- * `ConcordMembership.NONE`, which the channel fold cannot currently reach (it derives membership for
- * communities we already hold the key to). It exists so that enum value cannot silently resolve to
- * "allowed".
+ * [PostingGate.NoKey] covers both "we can't place this account in the community" (the mapping for
+ * `ConcordMembership.NONE`, which the fold cannot currently reach) and "this is a private channel
+ * whose key we were never granted" — the second of which is real, and is the backstop for reaching
+ * such a channel despite it being hidden from every list.
  */
 class PostingGateTest {
     // ---- Concord ------------------------------------------------------------------------------
@@ -107,6 +107,18 @@ class PostingGateTest {
     fun concordDissolvedCommunitySealsEvenTheOwner() {
         val channel = concordChannel(viewer = owner, dissolved = true)
         assertEquals(PostingGate.Dissolved, channel.postingGate())
+        assertFalse(channel.canPost())
+    }
+
+    @Test
+    fun aPrivateChannelWeHoldNoKeyForExplainsItselfInsteadOfOfferingAComposer() {
+        // Such a channel is normally omitted from every list (ConcordChannelPlanner drops it), so this
+        // is the arrive-anyway path: a stale route must not present a composer whose message would
+        // have nowhere valid to go.
+        val channel = ConcordChannel(ConcordChannelId(owner, channelIdHex))
+        channel.updateFrom(concordState(), emptySet(), owner, holdsChannelKey = false)
+
+        assertEquals(PostingGate.NoKey, channel.postingGate())
         assertFalse(channel.canPost())
     }
 
