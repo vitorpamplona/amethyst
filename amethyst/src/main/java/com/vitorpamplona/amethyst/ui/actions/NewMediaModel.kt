@@ -31,6 +31,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.VideoPostKind
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
@@ -73,15 +74,21 @@ open class NewMediaModel : ViewModel() {
     // Strip location and sensitive metadata from files before upload
     var stripMetadata by mutableStateOf(true)
 
+    // Which NIP-71 kind videos in this batch are published as. Set by the composer's host feed.
+    var videoKind: VideoPostKind = VideoPostKind.AUTO
+
     open fun load(
         account: Account,
         uris: ImmutableList<SelectedMedia>,
+        videoKind: VideoPostKind = VideoPostKind.AUTO,
+        caption: String = "",
     ) {
-        this.caption = ""
+        this.caption = caption
         this.account = account
         this.multiOrchestrator = MultiOrchestrator(uris)
         this.selectedServer = defaultServer()
         this.stripMetadata = account.settings.stripLocationOnUpload
+        this.videoKind = videoKind
     }
 
     fun isImage(
@@ -180,6 +187,7 @@ open class NewMediaModel : ViewModel() {
                                 alt = caption,
                                 contentWarningReason = if (sensitiveContent) "" else null,
                                 originalHash = it.uploadedHash,
+                                videoKind = videoKind,
                             )
                         }
                     }

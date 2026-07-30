@@ -2772,6 +2772,9 @@
     <string name="share_to_dm_title">Send to…</string>
     <string name="share_to_dm_start_new">New message</string>
     <string name="share_target_as_highlight">New Highlight</string>
+    <string name="share_target_as_picture">New Picture</string>
+    <string name="share_target_as_short_video">New Short</string>
+    <string name="share_target_as_video">New Video</string>
     <string name="new_highlight_title">New Highlight</string>
     <string name="new_highlight_passage_label">Highlighted text</string>
     <string name="new_highlight_passage_placeholder">What stood out to you?</string>

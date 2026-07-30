@@ -34,12 +34,14 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -50,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.actions.NewMediaView
 import com.vitorpamplona.amethyst.ui.actions.uploads.GallerySelect
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePicture
+import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -63,11 +66,23 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * The picture feed's composer. Images post as NIP-68 kind-20 pictures and land in this feed; a
+ * video picked from the gallery still posts as a NIP-71 video and shows up in the video feeds
+ * instead, since the file's mime type — not the host feed — decides picture vs. video.
+ *
+ * @param sharedAttachments content URIs handed over by the "New Picture" share target. When
+ *   non-empty the composer opens on them right away, so the share lands as a picture post instead
+ *   of a text note with a link.
+ * @param sharedCaption text Android sent alongside the files; pre-fills the caption field.
+ */
 @Composable
 fun NewPictureButton(
     accountViewModel: AccountViewModel,
     nav: INav,
     navScrollToTop: () -> Unit,
+    sharedAttachments: List<String> = emptyList(),
+    sharedCaption: String? = null,
 ) {
     var isOpen by remember { mutableStateOf(false) }
     var wantsToPostFromCamera by remember { mutableStateOf(false) }
@@ -81,6 +96,11 @@ fun NewPictureButton(
             delay(500)
             withContext(Dispatchers.Main) { navScrollToTop() }
         }
+    }
+
+    val context = LocalContext.current
+    LaunchedEffect(sharedAttachments) {
+        resolveSharedMedia(context, sharedAttachments).takeIf { it.isNotEmpty() }?.let { pickedURIs = it }
     }
 
     if (wantsToPostFromCamera) {
@@ -106,6 +126,7 @@ fun NewPictureButton(
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
             nav = nav,
+            initialCaption = sharedCaption.orEmpty(),
         )
     }
 

@@ -21,34 +21,52 @@
 package com.vitorpamplona.amethyst.navigation
 
 import com.vitorpamplona.amethyst.ui.navigation.ShareIntentRouting
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import com.vitorpamplona.amethyst.ui.navigation.ShareTarget
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ShareIntentRoutingTest {
     @Test
     fun detectsAliasByExactClassName() {
-        assertTrue(ShareIntentRouting.isShareAsDm("com.vitorpamplona.amethyst.ui.ShareAsDMAlias"))
+        assertEquals(ShareTarget.DIRECT_MESSAGE, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ShareAsDMAlias"))
     }
 
     @Test
     fun detectsAliasRegardlessOfPackagePrefix() {
         // Flavors can change the resolved package prefix; match on the simple name.
-        assertTrue(ShareIntentRouting.isShareAsDm("com.example.fork.ui.ShareAsDMAlias"))
+        assertEquals(ShareTarget.DIRECT_MESSAGE, ShareIntentRouting.targetOf("com.example.fork.ui.ShareAsDMAlias"))
     }
 
     @Test
-    fun rejectsMainActivity() {
-        assertFalse(ShareIntentRouting.isShareAsDm("com.vitorpamplona.amethyst.ui.MainActivity"))
+    fun detectsEveryAlias() {
+        assertEquals(ShareTarget.HIGHLIGHT, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ShareAsHighlightAlias"))
+        assertEquals(ShareTarget.PICTURE, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ShareAsPictureAlias"))
+        assertEquals(ShareTarget.SHORT_VIDEO, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ShareAsShortVideoAlias"))
+        assertEquals(ShareTarget.VIDEO, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ShareAsVideoAlias"))
     }
 
     @Test
-    fun rejectsNull() {
-        assertFalse(ShareIntentRouting.isShareAsDm(null))
+    fun mainActivityIsTheDefaultNewPostTarget() {
+        assertEquals(ShareTarget.NEW_POST, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.MainActivity"))
+    }
+
+    @Test
+    fun nullIsTheDefaultNewPostTarget() {
+        assertEquals(ShareTarget.NEW_POST, ShareIntentRouting.targetOf(null))
     }
 
     @Test
     fun rejectsSuffixThatIsNotASimpleName() {
-        assertFalse(ShareIntentRouting.isShareAsDm("com.evil.XShareAsDMAlias"))
+        assertEquals(ShareTarget.NEW_POST, ShareIntentRouting.targetOf("com.evil.XShareAsDMAlias"))
+        assertEquals(ShareTarget.NEW_POST, ShareIntentRouting.targetOf("com.evil.XShareAsVideoAlias"))
+    }
+
+    /**
+     * "ShareAsShortVideoAlias" also ends with "VideoAlias", so a sloppier match would route every
+     * short to the plain video composer (kind 21 instead of 22 — the wrong feed).
+     */
+    @Test
+    fun shortVideoAliasDoesNotCollideWithTheVideoAlias() {
+        assertEquals(ShareTarget.SHORT_VIDEO, ShareIntentRouting.targetOf("com.vitorpamplona.amethyst.ui.ShareAsShortVideoAlias"))
     }
 }

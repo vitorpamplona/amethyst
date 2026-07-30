@@ -112,7 +112,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 id = NavBarItem.VIDEO,
                 labelRes = R.string.route_video,
                 icon = MaterialSymbols.Subscriptions,
-                resolveRoute = { Route.Video },
+                resolveRoute = { Route.Video() },
             ),
         NavBarItem.DISCOVER to
             NavBarItemDef(
@@ -231,7 +231,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 id = NavBarItem.PICTURES,
                 labelRes = R.string.pictures,
                 icon = MaterialSymbols.Photo,
-                resolveRoute = { Route.Pictures },
+                resolveRoute = { Route.Pictures() },
             ),
         NavBarItem.WORKOUTS to
             NavBarItemDef(
@@ -308,7 +308,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 id = NavBarItem.SHORTS,
                 labelRes = R.string.shorts,
                 icon = MaterialSymbols.PlayCircle,
-                resolveRoute = { Route.Shorts },
+                resolveRoute = { Route.Shorts() },
             ),
         NavBarItem.MUSIC_TRACKS to
             NavBarItemDef(

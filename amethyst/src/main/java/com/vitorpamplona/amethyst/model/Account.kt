@@ -4145,6 +4145,7 @@ class Account(
         alt: String?,
         contentWarningReason: String?,
         originalHash: String? = null,
+        videoKind: VideoPostKind = VideoPostKind.AUTO,
     ) {
         if (!isWriteable()) return
 
@@ -4188,7 +4189,10 @@ class Account(
                         thumbhash = headerInfo.thumbHash?.thumbhash,
                     )
 
-                if (headerInfo.dim.height > headerInfo.dim.width) {
+                // The composer forces the kind when it was opened from a feed that only reads one of
+                // them (Shorts, Longs) or from that feed's share target, so the post lands where the
+                // user asked for it. Everywhere else the orientation decides.
+                if (videoKind.isShort(headerInfo.dim)) {
                     VideoShortEvent.build(videoMeta, alt ?: "") {
                         contentWarningReason?.let { contentWarning(contentWarningReason) }
                     }
