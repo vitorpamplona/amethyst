@@ -34,17 +34,14 @@ package com.vitorpamplona.amethyst.service.resourceusage
  * off with a holder still active.
  *
  * Takes the setter as a lambda rather than a [SessionTimeIntegrator] because
- * that is all it needs — and because constructing a real integrator drags in a
- * [ResourceUsageAccountant] and a store file to observe one boolean.
+ * that is all it needs, and so tests need no accountant or store file.
  *
- * Reports **transitions only**, not every call. A 1 -> 2 acquire would otherwise
- * re-enter [SessionTimeIntegrator.setActive] with the session already open,
- * splitting one segment into two. That happens to be arithmetically harmless
- * (`account()` adds each piece, and the pieces are contiguous), and it does not
- * inflate a `*.starts` counter either, because [SessionTimeIntegrator] already
- * guards its starts increment on `prev == null`. Transition-only is simply the
- * contract the name implies, and it keeps the class honest for a future caller
- * that reacts to the callback rather than integrating it.
+ * Reports **transitions only**, not every call — the contract the name implies,
+ * and what keeps the class honest for a future caller that reacts to the
+ * callback rather than integrating it. (For [SessionTimeIntegrator] specifically
+ * a 1 -> 2 re-entry would have been harmless: it splits one segment into two
+ * contiguous pieces that `account()` re-adds, and its starts increment is
+ * already guarded on `prev == null`.)
  *
  * Releases must be paired with acquires. This class cannot tell an unpaired
  * release from a real one, so callers guarantee the pairing; see `LocationFlow`,

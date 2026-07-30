@@ -62,7 +62,7 @@ import kotlinx.coroutines.flow.transformLatest
  */
 class LocationState(
     context: Context,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
     private val isForeground: StateFlow<Boolean>,
     /**
      * Resource-ledger hook: true while location updates are actively
@@ -88,9 +88,16 @@ class LocationState(
         /**
          * How long to keep listening after the last activity stops, so a
          * one-second app switch doesn't destroy and rebuild the registration.
-         * Matches the `WhileSubscribed` window below, and is the same intent.
+         * Same intent as [SUBSCRIPTION_STOP_TIMEOUT_MS], on the other axis.
          */
         const val BACKGROUND_GRACE_MS: Long = 5_000L
+
+        /**
+         * How long `stateIn` keeps the upstream alive after the last collector
+         * leaves, so a screen rotation or a tab switch doesn't rebuild the
+         * registration either.
+         */
+        const val SUBSCRIPTION_STOP_TIMEOUT_MS: Long = 5_000L
     }
 
     sealed class LocationResult {
@@ -107,11 +114,12 @@ class LocationState(
 
     private var hasLocationPermission = MutableStateFlow(false)
 
-    // Volatile: R1 below reads these to decide whether to emit Loading, from a
-    // different coroutine than the onEach that writes them.
-    @Volatile private var latestLocation: LocationResult = LocationResult.Loading
+    // Read by R1 below to decide whether to emit Loading, from a different
+    // coroutine than the onEach that writes it — hence a StateFlow rather than
+    // a plain field.
+    private val latestLocation = MutableStateFlow<LocationResult>(LocationResult.Loading)
 
-    @Volatile private var latestPreciseLocation: LocationResult = LocationResult.Loading
+    private val latestPreciseLocation = MutableStateFlow<LocationResult>(LocationResult.Loading)
 
     fun setLocationPermission(newValue: Boolean) {
         if (newValue != hasLocationPermission.value) {
@@ -152,60 +160,59 @@ class LocationState(
         }.distinctUntilChanged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun geohashFlow(
+    private fun buildGeohashStateFlow(
         tag: String,
         charsCount: Int,
         minTimeMs: Long,
         minDistanceM: Float,
-        latest: () -> LocationResult,
-        setLatest: (LocationResult) -> Unit,
-    ): Flow<LocationResult> =
-        gate.transformLatest { state ->
-            when (state) {
-                // Deliberately does NOT write to the cache. Today's code emits
-                // LackPermission without touching latestLocation, and wiping it
-                // here would cost a Loading emission — and so an empty-feed
-                // flash — on every permission flap, which is the regression R1
-                // exists to prevent. Consumers already see LackPermission from
-                // the StateFlow; the cache is internal and only decides whether
-                // Loading is emitted.
-                Gate.NoPermission -> emit(LocationResult.LackPermission)
+        cache: MutableStateFlow<LocationResult>,
+    ): StateFlow<LocationResult> =
+        gate
+            .transformLatest { state ->
+                when (state) {
+                    // Deliberately does NOT write to the cache. Today's code emits
+                    // LackPermission without touching the cache, and wiping it
+                    // here would cost a Loading emission — and so an empty-feed
+                    // flash — on every permission flap, which is the regression R1
+                    // exists to prevent. Consumers already see LackPermission from
+                    // the StateFlow; the cache is internal and only decides whether
+                    // Loading is emitted.
+                    Gate.NoPermission -> emit(LocationResult.LackPermission)
 
-                // Emit nothing: stateIn keeps the last value, so every
-                // synchronous .value reader still sees the last known geohash
-                // while the OS registration is released.
-                Gate.Paused -> Unit
+                    // Emit nothing: stateIn keeps the last value, so every
+                    // synchronous .value reader still sees the last known geohash
+                    // while the OS registration is released.
+                    Gate.Paused -> Unit
 
-                Gate.Listen -> {
-                    // Only when there is nothing cached. Emitting Loading on
-                    // every foreground return would flash the "Around Me" feed
-                    // empty, because AroundMeFeedFlow.convert maps anything
-                    // that is not Success to an empty geotag set.
-                    if (latest() !is LocationResult.Success) emit(LocationResult.Loading)
+                    Gate.Listen -> {
+                        // Only when there is nothing cached. Emitting Loading on
+                        // every foreground return would flash the "Around Me" feed
+                        // empty, because AroundMeFeedFlow.convert maps anything
+                        // that is not Success to an empty geotag set.
+                        if (cache.value !is LocationResult.Success) emit(LocationResult.Loading)
 
-                    emitAll(
-                        locationSource(minTimeMs, minDistanceM)
-                            .map { LocationResult.Success(it.toGeoHash(charsCount)) as LocationResult }
-                            .onEach { setLatest(it) }
-                            .catch { e ->
-                                Log.w(tag, "Exception in the flow", e)
-                                setLatest(LocationResult.LackPermission)
-                                emit(LocationResult.LackPermission)
-                            },
-                    )
+                        emitAll(
+                            locationSource(minTimeMs, minDistanceM)
+                                .map { LocationResult.Success(it.toGeoHash(charsCount)) as LocationResult }
+                                .onEach { cache.value = it }
+                                .catch { e ->
+                                    Log.w(tag, "Exception in the flow", e)
+                                    cache.value = LocationResult.LackPermission
+                                    emit(LocationResult.LackPermission)
+                                },
+                        )
+                    }
                 }
-            }
-        }
+            }.stateIn(scope, SharingStarted.WhileSubscribed(SUBSCRIPTION_STOP_TIMEOUT_MS), cache.value)
 
     val geohashStateFlow: StateFlow<LocationResult> by lazy {
-        geohashFlow(
+        buildGeohashStateFlow(
             tag = "GeohashStateFlow",
             charsCount = GeohashPrecision.KM_5_X_5.digits,
             minTimeMs = COARSE_MIN_TIME,
             minDistanceM = COARSE_MIN_DISTANCE,
-            latest = { latestLocation },
-            setLatest = { latestLocation = it },
-        ).stateIn(scope, SharingStarted.WhileSubscribed(5000), latestLocation)
+            cache = latestLocation,
+        )
     }
 
     /**
@@ -221,13 +228,12 @@ class LocationState(
      * app ever requests `ACCESS_FINE_LOCATION`.
      */
     val preciseGeohashStateFlow: StateFlow<LocationResult> by lazy {
-        geohashFlow(
+        buildGeohashStateFlow(
             tag = "PreciseGeohashStateFlow",
             charsCount = GeohashChannelLevel.BUILDING.chars,
             minTimeMs = PRECISE_MIN_TIME,
             minDistanceM = PRECISE_MIN_DISTANCE,
-            latest = { latestPreciseLocation },
-            setLatest = { latestPreciseLocation = it },
-        ).stateIn(scope, SharingStarted.WhileSubscribed(5000), latestPreciseLocation)
+            cache = latestPreciseLocation,
+        )
     }
 }

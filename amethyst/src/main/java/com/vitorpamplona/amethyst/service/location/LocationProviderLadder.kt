@@ -36,10 +36,13 @@ import android.os.Build
  * Below API 31, `gps`, `passive` and `fused` required `ACCESS_FINE_LOCATION`;
  * only `network` accepted `ACCESS_COARSE_LOCATION`. Approximate location, which
  * lets a coarse-only app request any provider and receive a fuzzed result, is an
- * Android 12 change. Amethyst declares coarse only, so [hasFine] is always false
- * in production — it is a parameter so the function is total over the permission
- * axis and both sides of the API branch are testable, not because fine access is
- * anticipated.
+ * Android 12 change. Amethyst declares coarse only, so the legacy branch is
+ * unconditional below API 31.
+ *
+ * Adding `ACCESS_FINE_LOCATION` later would **not** widen this on its own — the
+ * branch below has no permission input, so pre-31 devices would keep getting
+ * `network` alone and silently lose the precision the new permission was granted
+ * for. Whoever adds it must widen the condition here too.
  *
  * Returns the ordered candidate list rather than a single choice so the caller
  * can fall through to the next rung if a registration is refused. An empty list
@@ -60,15 +63,9 @@ object LocationProviderLadder {
 
     fun chooseProviders(
         sdkInt: Int,
-        hasFine: Boolean,
         exists: (String) -> Boolean,
     ): List<String> {
-        val ladder =
-            if (sdkInt >= Build.VERSION_CODES.S || hasFine) {
-                FULL_LADDER
-            } else {
-                COARSE_ONLY_LEGACY_LADDER
-            }
+        val ladder = if (sdkInt >= Build.VERSION_CODES.S) FULL_LADDER else COARSE_ONLY_LEGACY_LADDER
 
         return ladder.filter(exists)
     }

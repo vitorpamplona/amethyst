@@ -30,7 +30,7 @@ class LocationProviderLadderTest {
     fun modernDevicePrefersFusedThenFallsBackInOrder() {
         assertEquals(
             listOf("fused", "network", "gps", "passive"),
-            LocationProviderLadder.chooseProviders(sdkInt = 31, hasFine = false) { it in all },
+            LocationProviderLadder.chooseProviders(sdkInt = 31) { it in all },
         )
     }
 
@@ -40,25 +40,18 @@ class LocationProviderLadderTest {
 
         assertEquals(
             listOf("network", "passive"),
-            LocationProviderLadder.chooseProviders(sdkInt = 37, hasFine = false) { it in present },
+            LocationProviderLadder.chooseProviders(sdkInt = 37) { it in present },
         )
     }
 
     @Test
     fun coarseOnlyBelowApi31GetsNetworkOnly() {
         // gps, passive and fused all required ACCESS_FINE_LOCATION before
-        // Android 12 (see Hypothesis H1 in the design spec).
+        // Android 12 (see Hypothesis H1 in the design spec), and Amethyst
+        // declares ACCESS_COARSE_LOCATION only.
         assertEquals(
             listOf("network"),
-            LocationProviderLadder.chooseProviders(sdkInt = 30, hasFine = false) { it in all },
-        )
-    }
-
-    @Test
-    fun fineBelowApi31GetsTheFullLadder() {
-        assertEquals(
-            listOf("fused", "network", "gps", "passive"),
-            LocationProviderLadder.chooseProviders(sdkInt = 26, hasFine = true) { it in all },
+            LocationProviderLadder.chooseProviders(sdkInt = 30) { it in all },
         )
     }
 
@@ -68,7 +61,7 @@ class LocationProviderLadderTest {
 
         assertEquals(
             emptyList<String>(),
-            LocationProviderLadder.chooseProviders(sdkInt = 28, hasFine = false) { it in present },
+            LocationProviderLadder.chooseProviders(sdkInt = 28) { it in present },
         )
     }
 
@@ -76,7 +69,7 @@ class LocationProviderLadderTest {
     fun noProvidersAtAllGetsNothing() {
         assertEquals(
             emptyList<String>(),
-            LocationProviderLadder.chooseProviders(sdkInt = 37, hasFine = false) { false },
+            LocationProviderLadder.chooseProviders(sdkInt = 37) { false },
         )
     }
 }

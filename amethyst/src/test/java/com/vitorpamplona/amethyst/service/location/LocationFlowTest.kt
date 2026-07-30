@@ -38,25 +38,10 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LocationFlowTest {
-    /**
-     * A LocationManager that reports [providers] and refuses [denied] with a
-     * SecurityException, mimicking the pre-API-31 fine-location requirement.
-     */
     private fun manager(
         providers: List<String>,
         denied: Set<String> = emptySet(),
-    ): LocationManager {
-        val lm = mockk<LocationManager>(relaxed = true)
-        every { lm.allProviders } returns providers
-        every { lm.getLastKnownLocation(any()) } returns null
-        every {
-            lm.requestLocationUpdates(any<String>(), any<Long>(), any<Float>(), any<LocationListener>(), any())
-        } answers {
-            val provider = firstArg<String>()
-            if (provider in denied) throw SecurityException("denied: $provider")
-        }
-        return lm
-    }
+    ) = mockLocationManager(providers, denied)
 
     @Test
     fun firesNeitherEdgeWhenNoProviderExists() =
@@ -178,6 +163,25 @@ class LocationFlowTest {
             assertTrue("expected SecurityException, got $failure", failure is SecurityException)
             assertEquals("no value should be emitted before the throw", emptyList<Location>(), values)
             verify(exactly = 0) { lm.getLastKnownLocation(any()) }
+        }
+
+    @Test
+    fun seedsOnlyFromTheProvidersTheLadderDeemedUsable() =
+        runTest {
+            // On the coarse-only legacy path the ladder narrows to `network`,
+            // and gps/passive/fused would each throw SecurityException. Sweeping
+            // every provider the device reports would pay those guaranteed
+            // throws — stack trace plus an eagerly-interpolated Log.w — on every
+            // flow start, i.e. on every foreground return.
+            val lm = manager(providers = listOf("fused", "network", "gps", "passive"))
+            val job = launch { LocationFlow(lm, sdkInt = 30).get(60_000L, 500f).collect { } }
+
+            runCurrent()
+
+            verify(exactly = 1) { lm.getLastKnownLocation("network") }
+            verify(exactly = 0) { lm.getLastKnownLocation(neq("network")) }
+
+            job.cancelAndJoin()
         }
 
     @Test
