@@ -2709,6 +2709,8 @@
     <string name="channel_invite_leave">Leave</string>
     <string name="relay_group_join_to_post">Join this group to send messages.</string>
     <string name="relay_group_invite_only_to_post">This group is invite-only — you need an invite to post.</string>
+    <string name="chat_posting_banned">You have been banned from this community. Past messages stay readable, but you can no longer post.</string>
+    <string name="chat_posting_no_key">You do not hold this community\'s key, so you cannot post here.</string>
     <plurals name="relay_group_member_count">
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>

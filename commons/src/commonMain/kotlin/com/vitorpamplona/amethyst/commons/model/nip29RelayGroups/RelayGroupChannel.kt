@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.chats.PostingGate
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -337,12 +338,31 @@ class RelayGroupChannel(
     fun requiresMembershipToPost(): Boolean = !BuzzRelayDialect.isBuzz(groupId.relayUrl) || isPrivate()
 
     /**
+     * Why [pubkey] may or may not post here.
+     *
+     * [PostingGate.InviteOnly] is chosen off [isClosed] — a closed group ignores join requests, so
+     * pointing at the top bar's Join action would be a dead end. Note that Buzz stamps `closed` on
+     * every channel, so on a Buzz relay a gated (private) channel always reports invite-only; that is
+     * accurate there, since Buzz admits people by invite claim rather than by kind-9021.
+     *
+     * A Buzz *tenant* ban (9040) or timeout (9042) is deliberately absent: the relay enforces those at
+     * publish time and reports them in an `OK false` we don't yet track, so no local state can derive
+     * them. See [PostingGate].
+     */
+    fun postingGate(pubkey: HexKey): PostingGate {
+        if (!requiresMembershipToPost()) return PostingGate.Allowed
+        if (membershipOf(pubkey).isMember()) return PostingGate.Allowed
+        return if (isClosed()) PostingGate.InviteOnly else PostingGate.NotAMember
+    }
+
+    /**
      * Whether [pubkey] may post here: a roster member/mod/admin always may; on an open Buzz channel any
      * authenticated relay member may, even without a per-channel join. Mirrors the relay's write gate
      * (`check_channel_membership`: member OR open-visibility), so the composer isn't hidden where the
-     * relay would actually accept the message.
+     * relay would actually accept the message. Derived from [postingGate] so the answer and the reason
+     * shown in the composer's place can never disagree.
      */
-    fun canPost(pubkey: HexKey): Boolean = !requiresMembershipToPost() || membershipOf(pubkey).isMember()
+    fun canPost(pubkey: HexKey): Boolean = postingGate(pubkey) == PostingGate.Allowed
 
     fun anyNameStartsWith(prefix: String): Boolean =
         groupId.id.contains(prefix, true) ||

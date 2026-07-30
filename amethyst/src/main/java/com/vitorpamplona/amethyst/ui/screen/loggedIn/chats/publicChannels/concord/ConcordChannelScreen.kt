@@ -56,6 +56,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.chats.PostingGate
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
@@ -89,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal.Ch
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.PostingGateNotice
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ReplyModeToggle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.toConcordImeta
@@ -164,6 +167,16 @@ fun ConcordChannelScreen(
         }
     ConcordBackfillHistoryToWindow(feedViewModel.feedState, history)
 
+    // The channel's fields (name, membership, dissolution) are refreshed in place by each Control-Plane
+    // fold, which invalidates this flow — collect it so the screen actually recomposes when they change.
+    // Without it the composer gate is read once per visit, and a ban or dissolution landing mid-session
+    // would leave the composer up until the user navigated away and back.
+    val channelState by channel
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+    val liveChannel = channelState.channel as? ConcordChannel ?: channel
+
     val newMessageModel: ConcordNewMessageViewModel = viewModel(key = channel.channelId.toKey() + "ConcordNewMessageViewModel")
     newMessageModel.init(accountViewModel)
     newMessageModel.load(communityId, channelId)
@@ -173,8 +186,8 @@ fun ConcordChannelScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(channel.toBestDisplayName(), maxLines = 1)
-                        channel.communityName?.let {
+                        Text(liveChannel.toBestDisplayName(), maxLines = 1)
+                        liveChannel.communityName?.let {
                             Text(it, style = MaterialTheme.typography.labelSmall, maxLines = 1)
                         }
                     }
@@ -243,35 +256,23 @@ fun ConcordChannelScreen(
 
             ConcordTypingIndicator(communityId, channelId, accountViewModel)
 
-            if (channel.canPost()) {
-                Spacer(modifier = DoubleVertSpacer)
-                ConcordMessageComposer(
-                    newMessageModel = newMessageModel,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    onMessageSent = { feedViewModel.feedState.sendToTop() },
-                )
-            } else if (channel.dissolved) {
-                // CORD-02 §9: an owner-signed tombstone seals the community read-only — the composer is
-                // gone (canPost() is false) and this replaces it so the seal is explained, not silent.
-                ConcordDissolvedNotice()
+            // Every reason posting can be blocked here gets said out loud. This used to explain only
+            // dissolution, so a banned member — the person who most needs telling — got the composer's
+            // empty space and nothing else.
+            when (val gate = liveChannel.postingGate()) {
+                PostingGate.Allowed -> {
+                    Spacer(modifier = DoubleVertSpacer)
+                    ConcordMessageComposer(
+                        newMessageModel = newMessageModel,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        onMessageSent = { feedViewModel.feedState.sendToTop() },
+                    )
+                }
+                is PostingGate.Blocked -> PostingGateNotice(gate)
             }
         }
     }
-}
-
-/**
- * The read-only notice shown where the composer would be once a community is dissolved (CORD-02 §9).
- * The tombstone seals the community: history stays readable, but no member may post again.
- */
-@Composable
-private fun ConcordDissolvedNotice() {
-    Text(
-        text = stringRes(R.string.concord_dissolved_read_only),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.placeholderText,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-    )
 }
 
 /** The number of messages a freshly-opened channel eagerly backfills to before paging goes demand-driven. */

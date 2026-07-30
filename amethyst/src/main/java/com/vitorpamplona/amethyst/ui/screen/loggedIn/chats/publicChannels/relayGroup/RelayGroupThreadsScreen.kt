@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.chats.PostingGate
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReplyCount
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsHistorySubAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsHistorySubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupOpenThreadsSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.postingGateReason
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
@@ -147,11 +149,12 @@ private fun RelayGroupThreads(
     RelayGroupThreadsPaging(threadCount = { threads.size }, listState = listState, history = history)
 
     // Hide the compose FAB where the relay would reject the kind-11: on membership-gated groups
-    // that don't list me. Open Buzz channels accept any authenticated member. See [RelayGroupChannel.canPost].
+    // that don't list me. Open Buzz channels accept any authenticated member. See
+    // [RelayGroupChannel.postingGate]. The gate is kept as a value, not collapsed into the boolean,
+    // so the empty state can name my actual standing instead of a flat "read-only".
     val isBuzz = remember(channel.groupId.relayUrl) { BuzzRelayDialect.isBuzz(channel.groupId.relayUrl) }
-    val canPost =
-        channel.canPost(accountViewModel.userProfile().pubkeyHex) &&
-            canStartThreadHere(channel.event?.buzzChannelType(), isBuzz)
+    val gate = channel.postingGate(accountViewModel.userProfile().pubkeyHex)
+    val canPost = gate == PostingGate.Allowed && canStartThreadHere(channel.event?.buzzChannelType(), isBuzz)
 
     Scaffold(
         topBar = {
@@ -239,10 +242,13 @@ private fun RelayGroupThreads(
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
                     text =
-                        if (canPost) {
-                            stringRes(R.string.relay_group_threads_empty)
-                        } else {
-                            stringRes(R.string.relay_group_threads_empty_read_only)
+                        when {
+                            canPost -> stringRes(R.string.relay_group_threads_empty)
+                            // My standing is what's blocking: say which one, same words the chat
+                            // screen's composer notice uses.
+                            gate is PostingGate.Blocked -> postingGateReason(gate)
+                            // Standing is fine — this channel type just doesn't take new threads.
+                            else -> stringRes(R.string.relay_group_threads_empty_read_only)
                         },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.concord
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.chats.PostingGate
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
@@ -150,12 +151,29 @@ class ConcordChannel(
     override fun toBestDisplayName(): String = channelName ?: channelId.channelId
 
     /**
+     * Why this account may or may not post here. Dissolution is reported ahead of a personal ban
+     * because it is the complete answer: the tombstone seals the community for everyone, so naming
+     * the ban as well would add a fact that changes nothing.
+     *
+     * Deleting one's own past message stays allowed even after dissolution and does not go through
+     * this gate (it runs from the note context menu, not the composer).
+     */
+    fun postingGate(): PostingGate =
+        when {
+            dissolved -> PostingGate.Dissolved
+            membership == ConcordMembership.BANNED -> PostingGate.Banned
+            // NONE — no key and no role, so there is nothing to place this account by.
+            !membership.isMember() -> PostingGate.NoKey
+            else -> PostingGate.Allowed
+        }
+
+    /**
      * Whether this account may post to the channel: it must hold a live standing in the community
      * ([ConcordMembership.isMember]) **and** the community must not have been dissolved (CORD-02 §9 —
-     * a tombstone seals it read-only for everyone). Deleting one's own past message stays allowed even
-     * after dissolution and does not go through this gate.
+     * a tombstone seals it read-only for everyone). Derived from [postingGate] so the answer and the
+     * reason shown in the composer's place can never disagree.
      */
-    fun canPost(): Boolean = membership.isMember() && !dissolved
+    fun canPost(): Boolean = postingGate() == PostingGate.Allowed
 
     // Synthetic note representing this channel in the Messages list before any
     // message has loaded (so a just-joined channel appears immediately). Mirrors

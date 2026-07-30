@@ -237,8 +237,8 @@ others), and **invisible** (nothing renders it at all).
 |---|---|---|
 | `OWNER` / `ADMIN` / `BANNED` / custom role name | `MemberBadge` in `ConcordMembersScreen` — banned in `errorContainer` — for **other** members | **shown** |
 | My own `OWNER`/`ADMIN` | only via affordances: the create-channel FAB, the Edit icon, the roster's promote/ban items | implied |
-| My own `BANNED` | **nothing.** `canPost()` goes false and the composer vanishes, but the explanatory branch is `else if (channel.dissolved)` — so a banned member gets an empty space and no reason. This is the case where the user most needs to be told. | **invisible** |
-| `dissolved` | `ConcordDissolvedNotice` replaces the composer, inside an opened channel only — not on the community row, the channel list, or the Messages inbox. (There is also **no write path** to dissolve: an owner cannot do it from Amethyst.) | partial |
+| My own `BANNED` | `PostingGateNotice` takes the composer's place and names the ban ("Past messages stay readable, but you can no longer post"). Was invisible: the only explanatory branch tested `dissolved`, so a banned member got an empty space and no reason. | **shown** |
+| `dissolved` | The same `PostingGateNotice` replaces the composer, inside an opened channel only — not on the community row, the channel list, or the Messages inbox. (There is also **no write path** to dissolve: an owner cannot do it from Amethyst.) | partial |
 | **stranded / excluded epoch** | nothing. `recoverStrandedConcordCommunities()` runs at startup, `Log.w` on failure. A stranded community renders as an ordinary *empty* one. | **invisible** |
 | current epoch / `heldRoots` | nothing | **invisible** |
 | `private` channel | `Lock` icon in the channel list — but the row navigates like any other into a permanently empty room, because the plane key is never derived (see §8.1). No "you don't hold this key" state. | misleading |
@@ -292,10 +292,13 @@ UI-only (the state is tracked correctly, nothing tells the user):
    NIP-43 role, so a tenant *admin* with no per-channel 39001 row reads as channel `MEMBER`.
    Correct as a safety default (it avoids over-granting), but it means the community-admin
    status has no channel-level expression.
-7. **A ban is never explained to the person banned.** In Concord the composer disappears with
-   no notice (the explanatory branch only covers `dissolved`); on Buzz a tenant ban/timeout
-   produces an `OK false` that no send path surfaces, so the message silently never lands.
-   Both are the moment the user most needs to be told.
+7. **A ban is never explained to the person banned.** *Concord half fixed:* every reason posting
+   is blocked is now a `PostingGate` (`commons/.../model/chats/PostingGate.kt`) rendered by
+   `PostingGateNotice`, and `canPost()` is defined as `postingGate() == Allowed` so the two can't
+   drift. *Buzz half open:* a tenant ban/timeout produces an `OK false` that no send path
+   surfaces, so the message silently never lands — there is no local state to derive a gate from,
+   which is why it needs the send-receipt work in §8.9's neighborhood rather than a read-side
+   notice. `PostingGate` has no `Banned`/`TimedOut` producer for Buzz until then.
 8. **Stranding is silent.** Recovery is automatic and log-only, so a member left out of a
    Refounding sees an ordinary empty community rather than "you were left behind on epoch N".
 9. **Buzz tenant moderation has no write path.** 9031 remove-member has no caller; 9032
