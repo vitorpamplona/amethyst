@@ -38,12 +38,16 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
 
     note.author?.outboxRelays()?.let { set.addAll(it) }
 
-    LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
+    // getChannelToLoadFrom, not getAnyChannel: a note we have never seen has no event to read a
+    // channel off, and the two chat kinds keyed outside the event tags (Concord, NIP-29/Buzz relay
+    // groups) only resolve through the gatherers/provenance it also consults. That is what aims a
+    // missing group message at its host relay instead of the account's default relay set.
+    LocalCache.getChannelToLoadFrom(note)?.relays()?.let { set.addAll(it) }
 
     note.replyTo?.forEach { parentNote ->
         set.addAll(parentNote.relays)
 
-        LocalCache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
+        LocalCache.getChannelToLoadFrom(parentNote)?.relays()?.let { set.addAll(it) }
 
         parentNote.author?.inboxRelays()?.let { set.addAll(it) }
     }
@@ -51,7 +55,7 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
     note.replies.forEach { childNote ->
         set.addAll(childNote.relays)
 
-        LocalCache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
+        LocalCache.getChannelToLoadFrom(childNote)?.relays()?.let { set.addAll(it) }
 
         childNote.author?.outboxRelays()?.let { set.addAll(it) }
     }
@@ -97,13 +101,21 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
     return set
 }
 
+/**
+ * True when [note] can only ever arrive inside a wrapped stream (today: a Concord Chat Plane rumor),
+ * so an `{"ids":[…]}` REQ for it is futile *and* harmful — no relay indexes an id that only exists
+ * after a local decrypt, and asking leaks a private rumor id. [filterMissingConcordRumors] fetches
+ * these off the plane instead.
+ */
+private fun isFetchedByPlane(note: Note) = concordChannelToLoadFrom(note) != null
+
 fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilter> {
     val eventsPerRelay =
         mapOfSet {
             keys.forEach { key ->
                 val default = key.account.followPlusAllMineWithSearch.flow.value
 
-                if (key.note !is AddressableNote && key.note.event == null) {
+                if (key.note !is AddressableNote && key.note.event == null && !isFetchedByPlane(key.note)) {
                     potentialRelaysToFindEvent(key.note).ifEmpty { default }.forEach { relayUrl ->
                         add(relayUrl, key.note.idHex)
                     }
@@ -115,7 +127,7 @@ fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilte
 
                 // loads threading that is event-based
                 key.note.replyTo?.forEach { note ->
-                    if (note !is AddressableNote && note.event == null) {
+                    if (note !is AddressableNote && note.event == null && !isFetchedByPlane(note)) {
                         potentialRelaysToFindEvent(note).ifEmpty { default }.forEach { relayUrl ->
                             add(relayUrl, note.idHex)
                         }

@@ -138,6 +138,7 @@ import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.concordChannel
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -1629,6 +1630,63 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             is GeohashChatEvent -> noteEvent.geohash()?.let { getGeohashChannelIfExists(it) }
             else -> null
         }
+
+    /**
+     * The Concord channel a Chat Plane rumor is bound to, found by its `["channel", <id>]` tag alone
+     * (CORD-03). A rumor commits to only the channel half of a [ConcordChannelId] — the community
+     * half lives on the session whose key opened the wrap — so the pair is recovered from the channel
+     * index. Two joined communities would have to have drawn the same random 32-byte channel id for
+     * this to be ambiguous, so a single match is the answer and anything else counts as unknown.
+     */
+    fun getConcordChannelByChannelId(channelIdHex: HexKey): ConcordChannel? = concordChannels.filter { key, _ -> key.channelId == channelIdHex }.singleOrNull()
+
+    /**
+     * The chat channel a [note] belongs to, using every clue available rather than only the event
+     * tags [getAnyChannel] reads. This is the "where do I fetch this note from" resolver the event
+     * loaders ask (see `potentialRelaysToFindEvent`), so it has to answer for the channel kinds whose
+     * identity is *not* fully in the event:
+     *  - **Concord** — the rumor names its channel but not its community, so the complete
+     *    [ConcordChannelId] only exists on the gatherer the ingest path attached (or, failing that,
+     *    in the channel index keyed by channel id).
+     *  - **NIP-29 / Buzz relay group** — the group is keyed by (host relay, group id) and the host
+     *    relay is the note's provenance, not a tag, so it needs the [Note], not the [Event].
+     *
+     * It also answers for a note whose **own event never arrived** — a reply's unloaded parent, the
+     * usual shape in a notification feed — by borrowing the room from a child that points at it.
+     */
+    fun getChannelToLoadFrom(note: Note): Channel? {
+        channelOfLoadedNote(note)?.let { return it }
+
+        // The event never arrived, so nothing about this note itself says where it lives. Everything
+        // that points AT it, though, was posted in the same room: a Concord rumor is cryptographically
+        // bound to its channel and a NIP-29 message carries the group's `h` tag, so a reply or a
+        // reaction we did consume names the room its parent must be fetched from.
+        if (note.event == null) {
+            note.replies.firstNotNullOfOrNull { channelOfLoadedNote(it) }?.let { return it }
+            note.reactions.values
+                .firstNotNullOfOrNull { sameKind -> sameKind.firstNotNullOfOrNull { channelOfLoadedNote(it) } }
+                ?.let { return it }
+        }
+
+        return null
+    }
+
+    /** The non-recursive half of [getChannelToLoadFrom]: resolves only from the note's own event/gatherers. */
+    private fun channelOfLoadedNote(note: Note): Channel? {
+        // The gatherer the ingest path attached is authoritative (see unlinkAndRemove) and is the only
+        // complete source for a Concord channel.
+        note.inGatherers?.firstNotNullOfOrNull { it as? Channel }?.let { return it }
+
+        val noteEvent = note.event ?: return null
+
+        getAnyChannel(noteEvent)?.let { return it }
+
+        noteEvent.tags.concordChannel()?.let { channelIdHex ->
+            getConcordChannelByChannelId(channelIdHex)?.let { return it }
+        }
+
+        return getRelayGroupChannelForContent(note)
+    }
 
     /**
      * NIP-09 delete of a single targeted event.

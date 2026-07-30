@@ -58,7 +58,14 @@ class EventWatcherSubAssembler(
             return null
         }
 
-        lastNotesOnFilter = keys.map { it.note }
+        // Private rumors are excluded. A rumor (a Concord chat message, a gift-wrapped DM or private
+        // reaction) is unsigned and exists only inside its wrap, so no relay indexes its id and
+        // `#e=<rumor id>` can never return anything — while asking publishes a private rumor id to a
+        // relay, exactly what Note.isPrivateRumor warns against. Their replies and reactions arrive over
+        // the same wrapped plane the message itself did.
+        lastNotesOnFilter = keys.mapNotNull { key -> key.note.takeIf { !it.isPrivateRumor() } }
+
+        if (lastNotesOnFilter.isEmpty()) return null
 
         return groupByRelayPresence(lastNotesOnFilter, latestEOSEs)
             .map { group ->

@@ -32,6 +32,9 @@ class NoteEventLoaderSubAssembler(
         listOfNotNull(
             filterMissingEvents(keys),
             filterMissingAddressables(keys),
+            // Concord chat messages have no fetchable id — they only exist inside a plane wrap — so
+            // they need their own filter shape instead of riding the `ids` REQ above.
+            filterMissingConcordRumors(keys),
         ).flatten()
 
     override fun distinct(key: EventFinderQueryState) = key.note

@@ -38,12 +38,12 @@ fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl>
 
     set.addAll(LocalCache.relayHints.hintsForAddress(note.idHex))
 
-    LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
+    LocalCache.getChannelToLoadFrom(note)?.relays()?.let { set.addAll(it) }
 
     note.replyTo?.forEach { parentNote ->
         set.addAll(parentNote.relays)
 
-        LocalCache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
+        LocalCache.getChannelToLoadFrom(parentNote)?.relays()?.let { set.addAll(it) }
 
         parentNote.author?.inboxRelays()?.let { set.addAll(it) }
     }
@@ -51,7 +51,7 @@ fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl>
     note.replies.forEach { childNote ->
         set.addAll(childNote.relays)
 
-        LocalCache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
+        LocalCache.getChannelToLoadFrom(childNote)?.relays()?.let { set.addAll(it) }
 
         childNote.author?.outboxRelays()?.let { set.addAll(it) }
     }
