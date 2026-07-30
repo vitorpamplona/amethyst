@@ -139,7 +139,7 @@ fun MessagesPager(
             // same state holder, so the two surfaces cannot disagree.
             headerContent =
                 if (tabs[page].resource == R.string.new_requests) {
-                    { ChannelInvitesSection(accountViewModel) }
+                    { ChannelInvitesSection(accountViewModel, nav) }
                 } else {
                     null
                 },

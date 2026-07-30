@@ -2467,9 +2467,7 @@
     <string name="relay_group_browse_popular">Populaire relays</string>
     <string name="relay_group_no_messages_yet">Nog geen berichten</string>
     <string name="channel_invite_title">Toegevoegd aan %1$s</string>
-    <string name="channel_invite_body">%1$s heeft je toegevoegd aan dit kanaal op %2$s. In Berichten tonen?</string>
     <string name="channel_invite_unknown_actor">Iemand</string>
-    <string name="channel_invite_accept">Tonen</string>
     <string name="channel_invite_ignore">Negeren</string>
     <string name="channel_invite_leave">Verlaten</string>
     <string name="relay_group_join_to_post">Neem deel aan deze groep om berichten te sturen.</string>

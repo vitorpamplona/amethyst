@@ -2475,9 +2475,7 @@
     <string name="relay_group_browse_popular">Populära reläer</string>
     <string name="relay_group_no_messages_yet">Inga meddelanden ännu</string>
     <string name="channel_invite_title">Tillagd i %1$s</string>
-    <string name="channel_invite_body">%1$s lade till dig i den här kanalen på %2$s. Visa den i Meddelanden?</string>
     <string name="channel_invite_unknown_actor">Någon</string>
-    <string name="channel_invite_accept">Visa</string>
     <string name="channel_invite_ignore">Ignorera</string>
     <string name="channel_invite_leave">Lämna</string>
     <string name="relay_group_join_to_post">Gå med i den här gruppen för att skicka meddelanden.</string>

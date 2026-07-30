@@ -2472,9 +2472,7 @@
     <string name="relay_group_browse_popular">Beliebte Relays</string>
     <string name="relay_group_no_messages_yet">Noch keine Nachrichten</string>
     <string name="channel_invite_title">Zu %1$s hinzugefügt</string>
-    <string name="channel_invite_body">%1$s hat dich auf %2$s zu diesem Kanal hinzugefügt. In Nachrichten anzeigen?</string>
     <string name="channel_invite_unknown_actor">Jemand</string>
-    <string name="channel_invite_accept">Anzeigen</string>
     <string name="channel_invite_ignore">Ignorieren</string>
     <string name="channel_invite_leave">Verlassen</string>
     <string name="relay_group_join_to_post">Tritt dieser Gruppe bei, um Nachrichten zu senden.</string>
