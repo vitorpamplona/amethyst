@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
 import com.vitorpamplona.amethyst.service.resourceusage.MeteringNostrSigner
 import com.vitorpamplona.amethyst.service.resourceusage.ProcessCpuSampler
 import com.vitorpamplona.amethyst.service.resourceusage.RadioBurstEstimator
+import com.vitorpamplona.amethyst.service.resourceusage.RefCountedSession
 import com.vitorpamplona.amethyst.service.resourceusage.RelayConnectionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.RelayUsageListener
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
@@ -246,10 +247,17 @@ class AppModules(
         OtsSharedPreferences(appContext, applicationIOScope)
     }
 
-    // App services that should be run as soon as there are subscribers to their flows
+    // App services that should be run as soon as there are subscribers to their
+    // flows. Location additionally releases its OS registration whenever no
+    // activity is started — see the foreground gate inside LocationState.
     val locationManager by lazy {
         Log.d("AppModules", "LocationManager Init")
-        LocationState(appContext, applicationIOScope, onListening = { locationSession.setActive(it) })
+        LocationState(
+            appContext,
+            applicationIOScope,
+            isForeground = foregroundTracker.isForeground,
+            onListening = { locationRefCount.setActive(it) },
+        )
     }
     val connManager = ConnectivityManager(appContext, applicationIOScope)
 
@@ -373,6 +381,11 @@ class AppModules(
     private val powSession = SessionTimeIntegrator(resourceUsage, UsageKeys.POW_MS, UsageKeys.POW_SESSIONS).also { it.registerFlushHook() }
     private val torSession = SessionTimeIntegrator(resourceUsage, UsageKeys.TOR_MS, UsageKeys.TOR_STARTS).also { it.registerFlushHook() }
     private val locationSession = SessionTimeIntegrator(resourceUsage, UsageKeys.LOCATION_MS).also { it.registerFlushHook() }
+
+    // LocationState exposes two independent flows that can both be listening at
+    // once (the "Around Me" feed plus an open geohash chat). Refcounting keeps
+    // either one stopping from closing the other's segment.
+    private val locationRefCount = RefCountedSession(locationSession::setActive)
 
     // Time-per-screen (route base names only — arguments never reach the
     // ledger). Fed by the navigation listener in AppNavigation; foreground
