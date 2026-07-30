@@ -67,16 +67,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * @param sharedAttachment content URI of a picture handed over by the "New Picture" share target.
- *   When present the composer opens on it right away, so the share lands as a NIP-68 picture post
- *   in this feed instead of a text note.
+ * The picture feed's composer. Images post as NIP-68 kind-20 pictures and land in this feed; a
+ * video picked from the gallery still posts as a NIP-71 video and shows up in the video feeds
+ * instead, since the file's mime type — not the host feed — decides picture vs. video.
+ *
+ * @param sharedAttachments content URIs handed over by the "New Picture" share target. When
+ *   non-empty the composer opens on them right away, so the share lands as a picture post instead
+ *   of a text note with a link.
+ * @param sharedCaption text Android sent alongside the files; pre-fills the caption field.
  */
 @Composable
 fun NewPictureButton(
     accountViewModel: AccountViewModel,
     nav: INav,
     navScrollToTop: () -> Unit,
-    sharedAttachment: String? = null,
+    sharedAttachments: List<String> = emptyList(),
+    sharedCaption: String? = null,
 ) {
     var isOpen by remember { mutableStateOf(false) }
     var wantsToPostFromCamera by remember { mutableStateOf(false) }
@@ -93,8 +99,8 @@ fun NewPictureButton(
     }
 
     val context = LocalContext.current
-    LaunchedEffect(sharedAttachment) {
-        resolveSharedMedia(context, sharedAttachment)?.let { pickedURIs = persistentListOf(it) }
+    LaunchedEffect(sharedAttachments) {
+        resolveSharedMedia(context, sharedAttachments).takeIf { it.isNotEmpty() }?.let { pickedURIs = it }
     }
 
     if (wantsToPostFromCamera) {
@@ -120,6 +126,7 @@ fun NewPictureButton(
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
             nav = nav,
+            initialCaption = sharedCaption.orEmpty(),
         )
     }
 

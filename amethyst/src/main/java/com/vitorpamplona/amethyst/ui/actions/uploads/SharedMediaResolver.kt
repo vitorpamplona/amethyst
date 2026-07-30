@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.ui.actions.uploads
 
 import android.content.Context
 import androidx.core.net.toUri
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -40,3 +43,20 @@ suspend fun resolveSharedMedia(
             SelectedMedia(uri, context.contentResolver.getType(uri))
         }
     }
+
+/**
+ * Batch form for SEND_MULTIPLE shares: resolves every URI in one trip to the IO dispatcher
+ * instead of one context switch per file. Blank entries are dropped, so an empty list in means
+ * an empty list out and the composer stays closed.
+ */
+suspend fun resolveSharedMedia(
+    context: Context,
+    uriStrings: List<String>,
+): ImmutableList<SelectedMedia> {
+    val uris = uriStrings.mapNotNull { it.ifBlank { null }?.toUri() }
+    if (uris.isEmpty()) return persistentListOf()
+
+    return withContext(Dispatchers.IO) {
+        uris.map { SelectedMedia(it, context.contentResolver.getType(it)) }.toImmutableList()
+    }
+}

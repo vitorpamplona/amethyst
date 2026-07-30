@@ -81,8 +81,9 @@ open class NewMediaModel : ViewModel() {
         account: Account,
         uris: ImmutableList<SelectedMedia>,
         videoKind: VideoPostKind = VideoPostKind.AUTO,
+        caption: String = "",
     ) {
-        this.caption = ""
+        this.caption = caption
         this.account = account
         this.multiOrchestrator = MultiOrchestrator(uris)
         this.selectedServer = defaultServer()

@@ -310,6 +310,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
+
+            <intent-filter android:label="@string/share_target_as_picture">
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
         </activity-alias>
 
         <!-- "New Short" share target: a video shared here always becomes a NIP-71 kind-22 short so
@@ -327,6 +333,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="video/*" />
             </intent-filter>
+
+            <intent-filter android:label="@string/share_target_as_short_video">
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
         </activity-alias>
 
         <!-- "New Video" share target: opens the Video feed's media composer, which publishes a
@@ -341,6 +353,12 @@
 
             <intent-filter android:label="@string/share_target_as_video">
                 <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+
+            <intent-filter android:label="@string/share_target_as_video">
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="video/*" />
             </intent-filter>

@@ -30,18 +30,32 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
 
+/**
+ * A feed whose composer can be pre-loaded from an Android share. [attachments] holds the shared
+ * content URIs and [message] the text sent alongside them; both are empty/null for every other way
+ * of reaching the feed, which is how the share flow tells its own entries apart from an ordinary
+ * bottom-bar visit.
+ */
+sealed interface MediaFeedRoute {
+    val attachments: List<String>
+    val message: String?
+}
+
 sealed class Route {
     @Serializable object Home : Route()
 
     @Serializable object Message : Route()
 
     /**
-     * The mixed media feed. [attachment] is set by the "New Video" share target and pre-loads the
-     * media composer with the shared content URI.
+     * The mixed media feed. [attachments] and [message] are set by the "New Video" share target: the content
+     * URIs of the shared files and the text Android sent alongside them, which pre-load the media
+     * composer and its caption. Empty for every other way of reaching the feed.
      */
     @Serializable data class Video(
-        val attachment: String? = null,
-    ) : Route()
+        override val attachments: List<String> = emptyList(),
+        override val message: String? = null,
+    ) : Route(),
+        MediaFeedRoute
 
     @Serializable data class Discover(
         val initialTab: DiscoverTab? = null,
@@ -88,12 +102,15 @@ sealed class Route {
     }
 
     /**
-     * The picture feed. [attachment] is set by the "New Picture" share target and pre-loads the
-     * media composer with the shared content URI.
+     * The picture feed. [attachments] and [message] are set by the "New Picture" share target: the content
+     * URIs of the shared files and the text Android sent alongside them, which pre-load the media
+     * composer and its caption. Empty for every other way of reaching the feed.
      */
     @Serializable data class Pictures(
-        val attachment: String? = null,
-    ) : Route()
+        override val attachments: List<String> = emptyList(),
+        override val message: String? = null,
+    ) : Route(),
+        MediaFeedRoute
 
     @Serializable object Workouts : Route()
 
@@ -188,12 +205,15 @@ sealed class Route {
     @Serializable object Products : Route()
 
     /**
-     * The short-video feed. [attachment] is set by the "New Short" share target and pre-loads the
-     * media composer with the shared content URI.
+     * The short-video feed. [attachments] and [message] are set by the "New Short" share target: the content
+     * URIs of the shared files and the text Android sent alongside them, which pre-load the media
+     * composer and its caption. Empty for every other way of reaching the feed.
      */
     @Serializable data class Shorts(
-        val attachment: String? = null,
-    ) : Route()
+        override val attachments: List<String> = emptyList(),
+        override val message: String? = null,
+    ) : Route(),
+        MediaFeedRoute
 
     @Serializable object PublicChats : Route()
 

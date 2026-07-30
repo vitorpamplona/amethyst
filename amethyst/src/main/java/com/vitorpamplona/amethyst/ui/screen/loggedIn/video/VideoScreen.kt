@@ -59,13 +59,15 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 fun VideoScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
-    attachment: String? = null,
+    attachments: List<String> = emptyList(),
+    message: String? = null,
 ) {
     VideoScreen(
         accountViewModel.feedStates.videoFeed,
         accountViewModel,
         nav,
-        attachment,
+        attachments,
+        message,
     )
 }
 
@@ -74,7 +76,8 @@ fun VideoScreen(
     videoFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
-    attachment: String? = null,
+    attachments: List<String> = emptyList(),
+    message: String? = null,
 ) {
     WatchLifecycleAndUpdateModel(videoFeedContentState)
     WatchAccountForVideoScreen(videoFeedContentState = videoFeedContentState, accountViewModel = accountViewModel)
@@ -96,7 +99,7 @@ fun VideoScreen(
         },
         floatingButton = {
             FabBottomBarPadded(nav) {
-                NewImageButton(accountViewModel, nav, videoFeedContentState::sendToTop, attachment)
+                NewVideoFeedButton(accountViewModel, nav, videoFeedContentState::sendToTop, attachments, message)
             }
         },
         accountViewModel = accountViewModel,

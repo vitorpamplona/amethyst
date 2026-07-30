@@ -42,13 +42,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.Picture
 fun PicturesScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
-    attachment: String? = null,
+    attachments: List<String> = emptyList(),
+    message: String? = null,
 ) {
     PicturesScreen(
         picturesFeedContentState = accountViewModel.feedStates.picturesFeed,
         accountViewModel = accountViewModel,
         nav = nav,
-        attachment = attachment,
+        attachments = attachments,
+        message = message,
     )
 }
 
@@ -57,7 +59,8 @@ fun PicturesScreen(
     picturesFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
-    attachment: String? = null,
+    attachments: List<String> = emptyList(),
+    message: String? = null,
 ) {
     WatchLifecycleAndUpdateModel(picturesFeedContentState)
     WatchAccountForPicturesScreen(picturesFeedContentState = picturesFeedContentState, accountViewModel = accountViewModel)
@@ -79,7 +82,7 @@ fun PicturesScreen(
         },
         floatingButton = {
             FabBottomBarPadded(nav) {
-                NewPictureButton(accountViewModel, nav, picturesFeedContentState::sendToTop, attachment)
+                NewPictureButton(accountViewModel, nav, picturesFeedContentState::sendToTop, attachments, message)
             }
         },
         accountViewModel = accountViewModel,

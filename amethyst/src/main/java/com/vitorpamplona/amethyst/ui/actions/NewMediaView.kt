@@ -81,14 +81,15 @@ fun NewMediaView(
     accountViewModel: AccountViewModel,
     nav: INav,
     videoKind: VideoPostKind = VideoPostKind.AUTO,
+    initialCaption: String = "",
 ) {
     val account = accountViewModel.account
     val context = LocalContext.current
 
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(uris, videoKind) {
-        postViewModel.load(account, uris, videoKind)
+    LaunchedEffect(uris, videoKind, initialCaption) {
+        postViewModel.load(account, uris, videoKind, initialCaption)
     }
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)

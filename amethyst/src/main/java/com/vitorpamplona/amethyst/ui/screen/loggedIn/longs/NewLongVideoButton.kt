@@ -65,8 +65,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Everything posted from here is a NIP-71 kind 21 video, whether it was recorded, picked or shared,
- * so it always lands in the Longs feed the composer was opened from — portrait footage included.
+ * The Longs feed's composer. Every *video* posted from here is a NIP-71 kind-21 video — recorded or
+ * picked alike — so portrait footage lands in the Longs feed too instead of being routed to kind 22
+ * by its orientation. Images are unaffected: the gallery picker accepts them and they still post as
+ * NIP-68 kind-20 pictures, which the Longs feed does not read.
  */
 @Composable
 fun NewLongVideoButton(

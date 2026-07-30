@@ -42,13 +42,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFil
 fun ShortsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
-    attachment: String? = null,
+    attachments: List<String> = emptyList(),
+    message: String? = null,
 ) {
     ShortsScreen(
         shortsFeedContentState = accountViewModel.feedStates.shortsFeed,
         accountViewModel = accountViewModel,
         nav = nav,
-        attachment = attachment,
+        attachments = attachments,
+        message = message,
     )
 }
 
@@ -57,7 +59,8 @@ fun ShortsScreen(
     shortsFeedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
-    attachment: String? = null,
+    attachments: List<String> = emptyList(),
+    message: String? = null,
 ) {
     WatchLifecycleAndUpdateModel(shortsFeedContentState)
     WatchAccountForShortsScreen(videoFeedState = shortsFeedContentState, accountViewModel = accountViewModel)
@@ -79,7 +82,7 @@ fun ShortsScreen(
         },
         floatingButton = {
             FabBottomBarPadded(nav) {
-                NewShortVideoButton(accountViewModel, nav, shortsFeedContentState::sendToTop, attachment)
+                NewShortVideoButton(accountViewModel, nav, shortsFeedContentState::sendToTop, attachments, message)
             }
         },
         accountViewModel = accountViewModel,

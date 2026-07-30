@@ -68,19 +68,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The composer for the Video feed, which renders every media kind. Videos keep the automatic
- * kind choice (portrait -> NIP-71 kind 22, landscape -> kind 21); either way they show up here.
+ * The Video feed's composer. That feed renders every media kind, so videos keep the automatic kind
+ * choice (portrait -> NIP-71 kind 22, landscape -> kind 21) and pictures post as NIP-68 kind 20 —
+ * all three show up here either way, which is why this is the one media composer that pins nothing.
  *
- * @param sharedAttachment content URI of a video handed over by the "New Video" share target. When
- *   present the composer opens on it right away, so the share lands as a NIP-71 video event in this
- *   feed instead of a text note.
+ * @param sharedAttachments content URIs handed over by the "New Video" share target. When non-empty
+ *   the composer opens on them right away, so the share lands as a NIP-71 video event instead of a
+ *   text note with a link.
+ * @param sharedCaption text Android sent alongside the files; pre-fills the caption field.
  */
 @Composable
-fun NewImageButton(
+fun NewVideoFeedButton(
     accountViewModel: AccountViewModel,
     nav: INav,
     navScrollToTop: () -> Unit,
-    sharedAttachment: String? = null,
+    sharedAttachments: List<String> = emptyList(),
+    sharedCaption: String? = null,
 ) {
     var isOpen by remember { mutableStateOf(false) }
 
@@ -103,8 +106,8 @@ fun NewImageButton(
     }
 
     val context = LocalContext.current
-    LaunchedEffect(sharedAttachment) {
-        resolveSharedMedia(context, sharedAttachment)?.let { pickedURIs = persistentListOf(it) }
+    LaunchedEffect(sharedAttachments) {
+        resolveSharedMedia(context, sharedAttachments).takeIf { it.isNotEmpty() }?.let { pickedURIs = it }
     }
 
     if (wantsToPostFromCamera) {
@@ -137,6 +140,7 @@ fun NewImageButton(
             postViewModel = postViewModel,
             accountViewModel = accountViewModel,
             nav = nav,
+            initialCaption = sharedCaption.orEmpty(),
         )
     }
 

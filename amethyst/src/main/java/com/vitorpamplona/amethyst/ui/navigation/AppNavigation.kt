@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.TabReselectCoordinato
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.favoriteIds
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
+import com.vitorpamplona.amethyst.ui.navigation.routes.MediaFeedRoute
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.navigation.routes.isBaseRoute
@@ -428,7 +429,7 @@ fun BuildNavigation(
     ) {
         composableCapped<Route.Home> { HomeScreen(accountViewModel, nav) }
         composable<Route.Message> { MessagesScreen(accountViewModel, nav) }
-        composableArgs<Route.Video> { VideoScreen(accountViewModel, nav, it.attachment) }
+        composableArgs<Route.Video> { VideoScreen(accountViewModel, nav, it.attachments, it.message) }
         composableArgs<Route.Discover> { DiscoverScreen(it.initialTab, accountViewModel, nav) }
         composableArgs<Route.Notification> { NotificationScreen(it.scrollToEventId, accountViewModel, nav) }
         composableFromEnd<Route.Polls> { PollsScreen(accountViewModel, nav) }
@@ -439,7 +440,7 @@ fun BuildNavigation(
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
-        composableFromEndArgs<Route.Pictures> { PicturesScreen(accountViewModel, nav, it.attachment) }
+        composableFromEndArgs<Route.Pictures> { PicturesScreen(accountViewModel, nav, it.attachments, it.message) }
         composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
         composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
 
@@ -469,7 +470,7 @@ fun BuildNavigation(
         }
         composableFromBottomArgs<Route.NewCalendarCollection> { NewCalendarCollectionScreen(nav, accountViewModel, it.dTag) }
         composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
-        composableFromEndArgs<Route.Shorts> { ShortsScreen(accountViewModel, nav, it.attachment) }
+        composableFromEndArgs<Route.Shorts> { ShortsScreen(accountViewModel, nav, it.attachments, it.message) }
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
         composableFromEnd<Route.RelayGroups> { RelayGroupDiscoveryScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.BuzzDmList> { BuzzDmListScreen(it.relayUrl, accountViewModel, nav) }
@@ -971,6 +972,42 @@ fun BuildNavigation(
     }
 }
 
+/** True for both share flavors: a single file/text (SEND) and a multi-file selection (SEND_MULTIPLE). */
+private fun Intent.isShareAction(): Boolean = action == Intent.ACTION_SEND || action == Intent.ACTION_SEND_MULTIPLE
+
+/** The text Android sent with the share — a caption, a URL, or the whole payload of a text-only share. */
+private fun Intent.sharedText(): String? = getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }
+
+/**
+ * Every content URI the share carries, in the order the sending app listed them. SEND_MULTIPLE
+ * puts them in a parcelable ArrayList; plain SEND has at most one. Only the media targets declare
+ * SEND_MULTIPLE, so every other caller can just take the first.
+ */
+private fun Intent.sharedStreamUris(): List<String> =
+    if (action == Intent.ACTION_SEND_MULTIPLE) {
+        IntentCompat
+            .getParcelableArrayListExtra(this, Intent.EXTRA_STREAM, Uri::class.java)
+            ?.map { it.toString() }
+            .orEmpty()
+    } else {
+        listOfNotNull(IntentCompat.getParcelableExtra(this, Intent.EXTRA_STREAM, Uri::class.java)?.toString())
+    }
+
+/**
+ * Opens a media feed on a share. Sharing again while an earlier share is still on screen replaces
+ * it instead of stacking a second copy of the feed — but only when the entry on top is itself a
+ * share (it carries attachments). A feed the user opened from the bottom bar carries none, so it
+ * stays put underneath and keeps its tab-root marker.
+ */
+private inline fun <reified T> Nav.navToSharedFeed(route: T) where T : Route, T : MediaFeedRoute {
+    val current = getRouteWithArguments(T::class, controller)
+    if (current is MediaFeedRoute && current.attachments.isNotEmpty()) {
+        popUpTo(route, T::class)
+    } else {
+        newStack(route)
+    }
+}
+
 @Composable
 private fun NavigateIfIntentRequested(
     nav: Nav,
@@ -987,7 +1024,7 @@ private fun NavigateIfIntentRequested(
 
     val activity = LocalContext.current.getActivity()
 
-    if (activity.intent.action == Intent.ACTION_SEND) {
+    if (activity.intent.isShareAction()) {
         val target = ShareIntentRouting.targetOf(activity.intent.component?.className)
 
         // avoids restarting the destination screen when the intent is for the screen.
@@ -1002,19 +1039,8 @@ private fun NavigateIfIntentRequested(
         }
 
         // saves the intent to avoid processing again
-        val message by remember {
-            mutableStateOf(
-                activity.intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
-                    it.ifBlank { null }
-                },
-            )
-        }
-
-        val media by remember {
-            mutableStateOf(
-                IntentCompat.getParcelableExtra(activity.intent, Intent.EXTRA_STREAM, Uri::class.java),
-            )
-        }
+        val message = remember { activity.intent.sharedText() }
+        val attachments = remember { activity.intent.sharedStreamUris() }
 
         when (target) {
             ShareTarget.HIGHLIGHT -> {
@@ -1028,11 +1054,13 @@ private fun NavigateIfIntentRequested(
                     ),
                 )
             }
-            ShareTarget.DIRECT_MESSAGE -> nav.newStack(Route.ShareToDM(message = message, attachment = media?.toString()))
-            ShareTarget.PICTURE -> nav.newStack(Route.Pictures(attachment = media?.toString()))
-            ShareTarget.SHORT_VIDEO -> nav.newStack(Route.Shorts(attachment = media?.toString()))
-            ShareTarget.VIDEO -> nav.newStack(Route.Video(attachment = media?.toString()))
-            ShareTarget.NEW_POST -> nav.newStack(Route.NewShortNote(message = message, attachment = media?.toString()))
+            // The single-file composers take the first URI: only the media targets declare
+            // SEND_MULTIPLE, so anything else can only be carrying one.
+            ShareTarget.DIRECT_MESSAGE -> nav.newStack(Route.ShareToDM(message = message, attachment = attachments.firstOrNull()))
+            ShareTarget.PICTURE -> nav.navToSharedFeed(Route.Pictures(attachments = attachments, message = message))
+            ShareTarget.SHORT_VIDEO -> nav.navToSharedFeed(Route.Shorts(attachments = attachments, message = message))
+            ShareTarget.VIDEO -> nav.navToSharedFeed(Route.Video(attachments = attachments, message = message))
+            ShareTarget.NEW_POST -> nav.newStack(Route.NewShortNote(message = message, attachment = attachments.firstOrNull()))
         }
 
         // Consume the launch intent so a later recomposition can't re-fire
@@ -1099,11 +1127,11 @@ private fun NavigateIfIntentRequested(
         DisposableEffect(nav, activity) {
             val consumer =
                 Consumer<Intent> { intent ->
-                    if (intent.action == Intent.ACTION_SEND) {
+                    if (intent.isShareAction()) {
                         val target = ShareIntentRouting.targetOf(intent.component?.className)
-                        val message = intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }
-                        val attachment =
-                            IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.toString()
+                        val message = intent.sharedText()
+                        val attachments = intent.sharedStreamUris()
+                        val attachment = attachments.firstOrNull()
 
                         // avoids restarting the destination screen when the intent is for the screen.
                         // Microsoft's swift key sends Gifs as new actions.
@@ -1129,9 +1157,9 @@ private fun NavigateIfIntentRequested(
                                     nav.newStack(Route.ShareToDM(message = message, attachment = attachment))
                                 }
 
-                            ShareTarget.PICTURE -> nav.newStack(Route.Pictures(attachment = attachment))
-                            ShareTarget.SHORT_VIDEO -> nav.newStack(Route.Shorts(attachment = attachment))
-                            ShareTarget.VIDEO -> nav.newStack(Route.Video(attachment = attachment))
+                            ShareTarget.PICTURE -> nav.navToSharedFeed(Route.Pictures(attachments = attachments, message = message))
+                            ShareTarget.SHORT_VIDEO -> nav.navToSharedFeed(Route.Shorts(attachments = attachments, message = message))
+                            ShareTarget.VIDEO -> nav.navToSharedFeed(Route.Video(attachments = attachments, message = message))
 
                             ShareTarget.NEW_POST ->
                                 if (!isBaseRoute<Route.NewShortNote>(nav.controller) && (message != null || attachment != null)) {

@@ -68,18 +68,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * @param sharedAttachment content URI of a video handed over by the "New Short" share target. When
- *   present the composer opens on it right away.
+ * The Shorts feed's composer. Every *video* posted from here is a NIP-71 kind-22 short — recorded,
+ * picked or shared alike — so landscape footage lands in the Shorts feed too instead of being
+ * routed to kind 21 by its orientation. Images are unaffected: the gallery picker accepts them and
+ * they still post as NIP-68 kind-20 pictures, which the Shorts feed does not read.
  *
- * Everything posted from here is a NIP-71 kind 22 short, whether it was recorded, picked or shared,
- * so it always lands in the Shorts feed the composer was opened from — landscape footage included.
+ * @param sharedAttachments content URIs handed over by the "New Short" share target. When non-empty
+ *   the composer opens on them right away.
+ * @param sharedCaption text Android sent alongside the files; pre-fills the caption field.
  */
 @Composable
 fun NewShortVideoButton(
     accountViewModel: AccountViewModel,
     nav: INav,
     navScrollToTop: () -> Unit,
-    sharedAttachment: String? = null,
+    sharedAttachments: List<String> = emptyList(),
+    sharedCaption: String? = null,
 ) {
     var isOpen by remember { mutableStateOf(false) }
     var wantsToRecordVideo by remember { mutableStateOf(false) }
@@ -96,8 +100,8 @@ fun NewShortVideoButton(
     }
 
     val context = LocalContext.current
-    LaunchedEffect(sharedAttachment) {
-        resolveSharedMedia(context, sharedAttachment)?.let { pickedURIs = persistentListOf(it) }
+    LaunchedEffect(sharedAttachments) {
+        resolveSharedMedia(context, sharedAttachments).takeIf { it.isNotEmpty() }?.let { pickedURIs = it }
     }
 
     if (wantsToRecordVideo) {
@@ -124,6 +128,7 @@ fun NewShortVideoButton(
             accountViewModel = accountViewModel,
             nav = nav,
             videoKind = VideoPostKind.SHORT,
+            initialCaption = sharedCaption.orEmpty(),
         )
     }
 
