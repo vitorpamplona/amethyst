@@ -30,9 +30,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscriptio
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class AccountNotificationsEoseFromRandomRelaysManager(
@@ -42,9 +44,21 @@ class AccountNotificationsEoseFromRandomRelaysManager(
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
     /**
-     * Downloads most notifications from the user's own inbox relays.
-     * But also connects to all the follows relays to check for new notifications that are not in the user's
-     * own inbox.
+     * Most notifications arrive on the user's own inbox relays. This is the straggler probe for the
+     * rest: other clients sometimes deliver a mention to the author's own relays instead of the
+     * recipient's inbox, so those only ever turn up if we go and look.
+     *
+     * It looks at a **rotating window of [RELAYS_PER_PASS] relays**, not at every relay the follows
+     * post to. The whole set was ~330 relays on a normal account, and subscribing to all of them
+     * held roughly 670 filters permanently — by a wide margin the largest thing the client ran, for
+     * a job that only needs to sweep the space eventually, not watch all of it at once. The window
+     * slides every [PASS_DURATION_MS], so every relay is still visited, just never all at the same
+     * time.
+     *
+     * The window is a contiguous slice of a URL-sorted list rather than a random draw: a fresh
+     * random pick on each invalidation would re-REQ a different set every few seconds, which costs
+     * more than the subscriptions it replaced. Deterministic order means the window only moves when
+     * the rotation timer says so.
      */
     override fun updateFilter(
         key: AccountQueryState,
@@ -55,11 +69,25 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         // newest either way — the floor only ever hid notifications older than a week, and since the
         // boundary above needs a full page to arm, a quiet inbox could never page past it.
         val defaultSince = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
-        return (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value).flatMap {
+        val candidates =
+            (key.account.followsPerRelay.value.keys - key.account.notificationRelays.flow.value)
+                .sortedBy { it.url }
+        if (candidates.isEmpty()) return emptyList()
+
+        val start = (passIndex * RELAYS_PER_PASS).mod(candidates.size)
+        val window = List(minOf(RELAYS_PER_PASS, candidates.size)) { candidates[(start + it).mod(candidates.size)] }
+
+        return window.flatMap {
             val since = since?.get(it)?.time ?: defaultSince
             filterJustTheLatestNotificationsToPubkeyFromRandomRelays(it, user(key).pubkeyHex, since)
         }
     }
+
+    /**
+     * Which slice of the sorted relay list the current pass is on. Bumped by the rotation job below;
+     * `mod` at the read site keeps it valid however far it runs.
+     */
+    @Volatile private var passIndex = 0
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 
@@ -80,6 +108,14 @@ class AccountNotificationsEoseFromRandomRelaysManager(
                         invalidateFilters()
                     }
                 },
+                // Slides the window. Cancelled with the others in endSub, so it stops with the account.
+                key.account.scope.launch(Dispatchers.IO) {
+                    while (isActive) {
+                        delay(PASS_DURATION_MS)
+                        passIndex++
+                        invalidateFilters()
+                    }
+                },
             )
 
         return super.newSub(key)
@@ -91,5 +127,16 @@ class AccountNotificationsEoseFromRandomRelaysManager(
     ) {
         super.endSub(key, subId)
         userJobMap[key]?.forEach { it.cancel() }
+    }
+
+    companion object {
+        /**
+         * Relays watched per pass. Small on purpose: this is a background sweep for misdelivered
+         * mentions, and the inbox relays carry the real traffic.
+         */
+        const val RELAYS_PER_PASS = 5
+
+        /** How long a window stays put before sliding. Long enough that re-REQ churn stays negligible. */
+        const val PASS_DURATION_MS = 5 * 60 * 1000L
     }
 }

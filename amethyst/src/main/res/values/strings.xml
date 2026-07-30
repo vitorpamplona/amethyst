@@ -2088,7 +2088,7 @@
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
-    <string name="relay_explain_notifications">Your inbox relays, plus a probe on every relay your follows post to, in case a mention was delivered somewhere else.</string>
+    <string name="relay_explain_notifications">Your inbox relays, plus a small rotating sample of the relays your follows post to, in case a mention was delivered somewhere else.</string>
     <string name="relay_explain_direct_messages">Your DM inbox relays, where gift-wrapped messages are delivered.</string>
     <string name="relay_explain_public_chats">The home relay of each chat you have open or joined.</string>
     <string name="relay_explain_community_chats">The relays each community publishes its planes to.</string>
