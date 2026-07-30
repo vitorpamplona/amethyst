@@ -56,6 +56,8 @@ class ExplainedFilterTest {
             limit = 20,
             purpose = SubPurpose.NOTIFICATIONS,
             purposeDetail = "inbox relays for the active account",
+            entityId = "cafe0000000000000000000000000000000000000000000000000000000000ff",
+            accountPubKey = pubkey,
         )
 
     // ---- the wire must not learn why we asked -------------------------------
@@ -77,6 +79,8 @@ class ExplainedFilterTest {
         assertFalse("purpose leaked to the wire: $json", json.contains("NOTIFICATIONS", ignoreCase = true))
         assertFalse("purpose leaked to the wire: $json", json.contains("purpose", ignoreCase = true))
         assertFalse("detail leaked to the wire: $json", json.contains("inbox relays", ignoreCase = true))
+        assertFalse("entityId leaked to the wire: $json", json.contains("cafe0000", ignoreCase = true))
+        assertFalse("accountPubKey leaked as a field: $json", json.contains("accountPubKey", ignoreCase = true))
     }
 
     /** The filter is serialized as part of a REQ, so check the real command too, not just the filter. */
@@ -102,6 +106,9 @@ class ExplainedFilterTest {
         assertTrue("copy() must stay an ExplainedFilter", advanced is ExplainedFilter)
         assertEquals(SubPurpose.NOTIFICATIONS, advanced.purposeOrNull())
         assertEquals("inbox relays for the active account", (advanced as ExplainedFilter).purposeDetail)
+        // entityId/accountPubKey ride the same path and would vanish just as silently
+        assertEquals("cafe0000000000000000000000000000000000000000000000000000000000ff", advanced.entityId)
+        assertEquals(pubkey, advanced.accountPubKey)
         assertEquals(1_785_379_272L, advanced.since)
         // and the protocol fields came along untouched
         assertEquals(listOf(pubkey), advanced.authors)

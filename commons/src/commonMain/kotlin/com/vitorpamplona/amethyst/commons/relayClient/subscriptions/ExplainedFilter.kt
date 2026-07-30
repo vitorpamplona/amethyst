@@ -65,6 +65,23 @@ class ExplainedFilter(
     val purpose: SubPurpose,
     /** Free-form extra context for [SubPurpose.OTHER] or for narrowing a bucket while debugging. */
     val purposeDetail: String? = null,
+    /**
+     * The thing this filter serves — a community, group, channel or mint id. Deliberately an **id,
+     * not a name**: names change, are not always loaded when the filter is built, and would pin a
+     * stale copy into a long-lived subscription. The UI resolves it against `LocalCache` at render
+     * time, so it always shows the current name and shows nothing gracefully when unknown.
+     */
+    val entityId: HexKey? = null,
+    /**
+     * Which logged-in account asked for this. Several accounts are commonly active at once and they
+     * do not share relay sets, so "why is this relay connected" is only answerable per account —
+     * without it, one account's communities look like another's.
+     *
+     * A pubkey rather than an account reference: filters outlive the objects that created them and
+     * are held by the relay pool for the session, so holding an `Account` here would keep a logged-out
+     * account alive.
+     */
+    val accountPubKey: HexKey? = null,
 ) : Filter(ids, authors, kinds, tags, tagsAll, since, until, limit, search) {
     override fun copy(
         ids: List<String>?,
@@ -76,7 +93,7 @@ class ExplainedFilter(
         until: Long?,
         limit: Int?,
         search: String?,
-    ) = ExplainedFilter(ids, authors, kinds, tags, tagsAll, since, until, limit, search, purpose, purposeDetail)
+    ) = ExplainedFilter(ids, authors, kinds, tags, tagsAll, since, until, limit, search, purpose, purposeDetail, entityId, accountPubKey)
 
     companion object {
         /** Tags [filter] with a [purpose], preserving every protocol field. */
@@ -84,6 +101,8 @@ class ExplainedFilter(
             filter: Filter,
             purpose: SubPurpose,
             detail: String? = null,
+            entityId: HexKey? = null,
+            accountPubKey: HexKey? = null,
         ) = ExplainedFilter(
             filter.ids,
             filter.authors,
@@ -96,6 +115,8 @@ class ExplainedFilter(
             filter.search,
             purpose,
             detail,
+            entityId,
+            accountPubKey,
         )
     }
 }
@@ -105,3 +126,23 @@ fun Filter.purposeOrNull(): SubPurpose? = (this as? ExplainedFilter)?.purpose
 
 /** The purposes behind a relay's in-flight filters, deduplicated — what this relay is doing for us. */
 fun Collection<Filter>.purposes(): Set<SubPurpose> = mapNotNullTo(mutableSetOf()) { it.purposeOrNull() }
+
+/**
+ * One row per (purpose, entity, account) a relay is serving, deduplicated.
+ *
+ * The entity/account pair is what makes a chip answerable — "Communities" alone cannot tell you
+ * *which* community made you connect here, and with several accounts logged in it cannot tell you
+ * whose. Entries with no entity collapse to a single row for that purpose.
+ */
+fun Collection<Filter>.purposeEntities(): Set<PurposeEntity> =
+    mapNotNullTo(mutableSetOf()) { filter ->
+        (filter as? ExplainedFilter)?.let { PurposeEntity(it.purpose, it.entityId, it.accountPubKey, it.purposeDetail) }
+    }
+
+/** A single "this relay is doing X, for Y, on behalf of account Z" fact. Ids only; names resolve in the UI. */
+data class PurposeEntity(
+    val purpose: SubPurpose,
+    val entityId: HexKey? = null,
+    val accountPubKey: HexKey? = null,
+    val detail: String? = null,
+)
