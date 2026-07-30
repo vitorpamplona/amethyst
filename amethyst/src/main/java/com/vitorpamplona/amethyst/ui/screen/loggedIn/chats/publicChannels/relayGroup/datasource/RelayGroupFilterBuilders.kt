@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
 import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
@@ -51,7 +53,6 @@ import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepStartedEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -127,12 +128,12 @@ fun buildRelayGroupLiveStateFilter(groupId: GroupId): List<RelayBasedFilter> =
     listOf(
         RelayBasedFilter(
             relay = groupId.relayUrl,
-            filter = Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id))),
+            filter = ExplainedFilter(purpose = SubPurpose.CHATS, kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id))),
         ),
         // Pins stay in their own filter for the same reason the directory filters split them out.
         RelayBasedFilter(
             relay = groupId.relayUrl,
-            filter = Filter(kinds = RELAY_GROUP_PIN_KINDS, tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id))),
+            filter = ExplainedFilter(purpose = SubPurpose.CHATS, kinds = RELAY_GROUP_PIN_KINDS, tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id))),
         ),
     )
 
@@ -286,8 +287,8 @@ fun buildRelayGroupStateFilters(
         val scope = mapOf(D_TAG to ids.distinct())
         val since = sinceForRelay(relay)
         listOf(
-            RelayBasedFilter(relay = relay, filter = Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = scope, since = since)),
-            RelayBasedFilter(relay = relay, filter = Filter(kinds = RELAY_GROUP_PIN_KINDS, tags = scope, since = since)),
+            RelayBasedFilter(relay = relay, filter = ExplainedFilter(purpose = SubPurpose.CHATS, kinds = RELAY_GROUP_METADATA_KINDS, tags = scope, since = since)),
+            RelayBasedFilter(relay = relay, filter = ExplainedFilter(purpose = SubPurpose.CHATS, kinds = RELAY_GROUP_PIN_KINDS, tags = scope, since = since)),
         )
     }
 
@@ -324,7 +325,8 @@ fun buildRelayGroupJoinedChatTailFilter(
     RelayBasedFilter(
         relay = groupId.relayUrl,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.CHATS,
                 kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,
@@ -359,7 +361,8 @@ fun buildRelayGroupPreviewFilter(
     RelayBasedFilter(
         relay = groupId.relayUrl,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.CHATS,
                 kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,
@@ -379,7 +382,8 @@ fun buildRelayGroupAuxFilter(
     RelayBasedFilter(
         relay = groupId.relayUrl,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.CHATS,
                 kinds = RELAY_GROUP_AUX_KINDS,
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,
@@ -395,7 +399,8 @@ fun buildRelayGroupOpenChatTailFilter(
     RelayBasedFilter(
         relay = groupId.relayUrl,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.CHATS,
                 kinds = RELAY_GROUP_OPEN_TAIL_KINDS,
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,
@@ -418,7 +423,8 @@ fun buildRelayGroupHistoryFilters(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.CHATS,
                     kinds = RELAY_GROUP_ALL_TIMELINE_KINDS,
                     tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                     until = until,
@@ -438,7 +444,8 @@ fun buildRelayGroupDirectoryFilter(
     RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.CHATS,
                 kinds = RELAY_GROUP_DIRECTORY_KINDS,
                 limit = RELAY_GROUP_DIRECTORY_LIMIT,
                 since = sinceEpoch,
@@ -461,7 +468,8 @@ fun buildRelayGroupThreadsHistoryFilters(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.CHATS,
                     kinds = RELAY_GROUP_THREAD_KINDS,
                     tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                     until = until,
@@ -478,7 +486,8 @@ fun buildRelayGroupThreadsFilter(
     RelayBasedFilter(
         relay = groupId.relayUrl,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.CHATS,
                 kinds = RELAY_GROUP_THREAD_KINDS,
                 tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                 since = sinceEpoch,

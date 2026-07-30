@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
@@ -42,7 +43,8 @@ fun filterMyAppRecommendations(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = listOf(AppRecommendationEvent.KIND),
                     authors = authors,
                     limit = 100,
@@ -61,7 +63,8 @@ fun filterRecentAppDefinitions(relays: Set<NormalizedRelayUrl>): List<RelayBased
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = listOf(AppDefinitionEvent.KIND),
                     limit = 100,
                 ),

@@ -22,6 +22,8 @@
 
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -30,7 +32,6 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -154,7 +155,8 @@ fun filterNotificationsHistoryToPubkey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = AllNotificationKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = limit,
@@ -181,7 +183,8 @@ fun filterGroupNotificationsHistoryToPubkey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = GroupNotificationKinds,
                     tags = mapOf("p" to listOf(pubkey), "h" to groupIds),
                     limit = limit,
@@ -202,7 +205,8 @@ fun filterSummaryNotificationsToPubkey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = SummaryKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 2000,
@@ -223,7 +227,8 @@ fun filterNotificationsToPubkey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 500,
@@ -233,7 +238,8 @@ fun filterNotificationsToPubkey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 200,
@@ -243,7 +249,8 @@ fun filterNotificationsToPubkey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = NotificationsPerKeyKinds3,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 10,
@@ -271,7 +278,8 @@ fun filterGroupNotificationsToPubkey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = GroupNotificationKinds,
                     tags = mapOf("p" to listOf(pubkey), "h" to groupIds),
                     limit = 200,
@@ -292,7 +300,8 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = SummaryKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 20,
@@ -302,7 +311,8 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 20,
@@ -312,7 +322,8 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 10,
@@ -322,7 +333,8 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.NOTIFICATIONS,
                     kinds = NotificationsPerKeyKinds3,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 2,

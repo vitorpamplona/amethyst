@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
@@ -51,7 +52,8 @@ fun filterPicturesFromAllCommunities(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -66,7 +68,8 @@ fun filterPicturesFromAllCommunities(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     tags = mapOf("a" to communityList),
                     kinds = PicturesFromCommunityKinds,
                     limit = communityList.size * 20,
@@ -105,7 +108,8 @@ fun filterPicturesFromCommunity(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     authors = authors,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
@@ -121,7 +125,8 @@ fun filterPicturesFromCommunity(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     authors = authors,
                     tags = mapOf("a" to listOf(community)),
                     kinds = PicturesFromCommunityKinds,

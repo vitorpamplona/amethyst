@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterContactCardsByAuthorInTheRelay
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -28,7 +30,6 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -117,7 +118,8 @@ fun filterAccountInfoAndListsFromKey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.PROFILE_METADATA,
                     kinds = AccountInfoAndListsFromKeyKinds,
                     authors = listOf(pubkey),
                     limit = 20,
@@ -127,7 +129,8 @@ fun filterAccountInfoAndListsFromKey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.PROFILE_METADATA,
                     kinds = AccountInfoAndListsFromKeyKinds2,
                     authors = listOf(pubkey),
                     limit = 80,
@@ -144,7 +147,8 @@ fun filterAccountInfoAndListsFromKey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.PROFILE_METADATA,
                     kinds = AmethystMetadataKinds,
                     authors = listOf(pubkey),
                     tags = AmethystMetadataTagMapFilter,

@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -53,7 +54,8 @@ fun filterRepositoryContent(
     RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.SCREEN_CONTENT,
                 tags = mapOf("a" to listOf(repository.addressTag())),
                 kinds = RepositoryContentKinds,
                 limit = 500,

@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip90AlgoFeeds
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
@@ -77,7 +78,8 @@ private fun contentFetchFilters(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.HOME_FEED,
                         ids = filter.ids.toList(),
                         limit = filter.ids.size,
                     ),
@@ -89,7 +91,8 @@ private fun contentFetchFilters(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.HOME_FEED,
                         tags = mapOf("a" to filter.addresses.toList()),
                         limit = filter.addresses.size,
                     ),
@@ -105,7 +108,8 @@ private fun responseListenFilter(
 ) = RelayBasedFilter(
     relay = relay,
     filter =
-        Filter(
+        ExplainedFilter(
+            purpose = SubPurpose.HOME_FEED,
             kinds =
                 listOf(
                     NIP90ContentDiscoveryResponseEvent.KIND,

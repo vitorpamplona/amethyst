@@ -22,13 +22,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.filterRelayGroupState
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 
@@ -94,7 +95,8 @@ class RelayGroupCardWarmupSubAssembler(
             RelayBasedFilter(
                 relay = groupId.relayUrl,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.CHATS,
                         kinds = RELAY_GROUP_CARD_WARMUP_KINDS,
                         tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                         limit = key.contentLimit,

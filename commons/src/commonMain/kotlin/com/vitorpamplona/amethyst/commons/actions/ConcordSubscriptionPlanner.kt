@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
@@ -175,7 +177,9 @@ object ConcordSubscriptionPlanner {
             val lastRead = lastReadFor(channelId.channelId)
             val filter =
                 if (lastRead > 0L) {
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.CHATS,
+                        purposeDetail = "concord community planes",
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         authors = authors.toList(),
                         // -1 so the last-read message (created_at == lastRead) is itself returned:
@@ -184,7 +188,9 @@ object ConcordSubscriptionPlanner {
                         limit = catchUpLimit,
                     )
                 } else {
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.CHATS,
+                        purposeDetail = "concord community planes",
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         authors = authors.toList(),
                         limit = previewLimit,
@@ -263,7 +269,8 @@ object ConcordSubscriptionPlanner {
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.CHATS,
                         // Stored plane wraps (1059) plus ephemeral ones (21059) — the latter carry the
                         // live-only typing heartbeats a relay broadcasts but never stores.
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP, ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL),

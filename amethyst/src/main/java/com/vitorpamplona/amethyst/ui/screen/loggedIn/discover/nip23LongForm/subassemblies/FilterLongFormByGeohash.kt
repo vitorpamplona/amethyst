@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip53LiveActivities.subassemblies.filterLiveActivitiesByGeohash
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 
@@ -41,7 +42,8 @@ fun filterLongFormByGeohash(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = listOf(LongTextNoteEvent.KIND),
                     tags = mapOf("g" to geoHashes),
                     limit = 100,

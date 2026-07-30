@@ -20,13 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindEvent
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
@@ -62,7 +63,8 @@ fun filterHashtagLabels(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.SCREEN_CONTENT,
                         kinds = listOf(LabelEvent.KIND),
                         authors = authorList,
                         tags = mapOf("l" to labelValues),

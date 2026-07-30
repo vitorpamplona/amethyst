@@ -24,7 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
@@ -81,7 +83,8 @@ class NestRoomLivenessSubAssembler(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.CHATS,
                         kinds = listOf(MeetingRoomPresenceEvent.KIND),
                         tags = mapOf("a" to listOf(key.note.idHex)),
                         // limit=1: the badge only needs the freshest

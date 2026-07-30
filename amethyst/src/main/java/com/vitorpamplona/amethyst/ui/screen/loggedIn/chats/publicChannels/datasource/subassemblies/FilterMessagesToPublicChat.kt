@@ -21,9 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 fun filterMessagesToPublicChat(
@@ -34,7 +35,8 @@ fun filterMessagesToPublicChat(
         RelayBasedFilter(
             relay = it,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.CHATS,
                     kinds = listOf(ChannelMessageEvent.KIND),
                     tags = mapOf("e" to listOfNotNull(channel.idHex)),
                     limit = 200,

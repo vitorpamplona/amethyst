@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
@@ -29,7 +31,6 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -78,7 +79,8 @@ fun filterPostsByRelay(
         RelayBasedFilter(
             relay = relayUrl,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = PostsByRelayKinds,
                     limit = 400,
                     since = sinceTime,
@@ -87,7 +89,8 @@ fun filterPostsByRelay(
         RelayBasedFilter(
             relay = relayUrl,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = PostsByRelayKinds2,
                     limit = 100,
                     since = sinceTime,

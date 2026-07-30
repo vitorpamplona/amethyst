@@ -24,11 +24,12 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
@@ -106,7 +107,8 @@ private class CashuWalletSubAssembler(
         if (ownEventRelays.isEmpty() && inboxRelays.isEmpty()) return null
 
         val ownedFilter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.WALLET,
                 kinds =
                     listOf(
                         CashuWalletEvent.KIND,
@@ -124,7 +126,8 @@ private class CashuWalletSubAssembler(
             )
 
         val inboundNutzapsFilter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.WALLET,
                 kinds = listOf(NutzapEvent.KIND),
                 tags = mapOf("p" to listOf(pubkey)),
             )

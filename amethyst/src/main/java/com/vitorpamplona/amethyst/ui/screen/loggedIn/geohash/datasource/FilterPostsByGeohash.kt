@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.CommentKinds
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
@@ -30,7 +32,6 @@ import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfi
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -77,7 +78,8 @@ fun filterPostsByGeohash(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.SCREEN_CONTENT,
                         tags = geohashesToFollowMap,
                         kinds = PostsByGeohashKinds,
                         limit = 100,
@@ -87,7 +89,8 @@ fun filterPostsByGeohash(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.SCREEN_CONTENT,
                         tags = geohashesScoreMap,
                         kinds = CommentKinds,
                         limit = 100,

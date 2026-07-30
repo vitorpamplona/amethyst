@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.IEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -165,7 +167,7 @@ class AccountFollowsLoaderSubAssembler(
             if (users.isNotEmpty()) {
                 RelayBasedFilter(
                     relay = relay,
-                    filter = Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = users.sorted()),
+                    filter = ExplainedFilter(purpose = SubPurpose.FOLLOW_LISTS, kinds = listOf(AdvertisedRelayListEvent.KIND), authors = users.sorted()),
                 )
             } else {
                 null

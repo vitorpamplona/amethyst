@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
@@ -56,7 +57,8 @@ fun filterFollowsAndMutesFromKey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.FOLLOW_LISTS,
                     kinds = FollowAndMutesFromKeyKinds,
                     authors = listOf(pubkey),
                     limit = 100,

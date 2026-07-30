@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
@@ -39,7 +40,8 @@ fun filterPollsByGeohashes(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = listOf(PollEvent.KIND, ZapPollEvent.KIND),
                     tags = mapOf("g" to geotags.sorted()),
                     limit = 100,

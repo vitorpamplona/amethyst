@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -39,7 +40,8 @@ fun filterLongFormGlobal(
         RelayBasedFilter(
             relay = it.key,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = listOf(LongTextNoteEvent.KIND),
                     limit = 100,
                     since = since,

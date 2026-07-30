@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
@@ -44,7 +45,8 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
     return RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.SCREEN_CONTENT,
                 kinds = ContactCardKindList,
                 authors = trustedAccounts,
                 // kind:30382 addresses the target user in the d-tag
@@ -68,7 +70,8 @@ fun filterContactCardsByAuthorInTheRelay(
     RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.SCREEN_CONTENT,
                 kinds = ContactCardKindList,
                 authors = listOf(author),
                 limit = limit,

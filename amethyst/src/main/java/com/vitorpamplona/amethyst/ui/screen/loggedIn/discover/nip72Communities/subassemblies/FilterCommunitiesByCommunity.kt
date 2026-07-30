@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
@@ -40,7 +41,8 @@ fun filterClassifiedsByCommunity(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     authors = listOf(community.pubKeyHex),
                     kinds = listOf(CommunityDefinitionEvent.KIND),
                     tags = mapOf("d" to listOf(community.dTag)),

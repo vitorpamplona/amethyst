@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.filterHomePostsByScopes
@@ -28,7 +30,6 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -71,7 +72,8 @@ fun filterHomePostsByHashtags(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.HOME_FEED,
                     kinds = HomePostsBuHashtagsKinds,
                     tags = mapOf("t" to hashtags),
                     limit = 100,

@@ -20,13 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip01Core
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomePostsConversationKinds
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomePostsNewThreadKinds1
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows.HomePostsNewThreadKinds2
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 fun filterHomePostsByRelay(
     relayFilter: RelayTopNavPerRelayFilterSet,
@@ -41,7 +42,8 @@ fun filterHomePostsByRelay(
         RelayBasedFilter(
             relay = relayUrl,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.HOME_FEED,
                     kinds = HomePostsNewThreadKinds1,
                     limit = 500,
                     since = sinceTime ?: newThreadSince,
@@ -50,7 +52,8 @@ fun filterHomePostsByRelay(
         RelayBasedFilter(
             relay = relayUrl,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.HOME_FEED,
                     kinds = HomePostsNewThreadKinds2,
                     limit = 100,
                     since = sinceTime ?: newThreadSince,
@@ -59,7 +62,8 @@ fun filterHomePostsByRelay(
         RelayBasedFilter(
             relay = relayUrl,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.HOME_FEED,
                     kinds = HomePostsConversationKinds,
                     limit = 500,
                     since = sinceTime ?: repliesSince,

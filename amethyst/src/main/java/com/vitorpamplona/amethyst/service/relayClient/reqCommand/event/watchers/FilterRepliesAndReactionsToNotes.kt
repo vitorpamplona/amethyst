@@ -22,13 +22,14 @@
 
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -98,7 +99,8 @@ fun filterRepliesAndReactionsToNotes(
                 RelayBasedFilter(
                     relay = relay,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.SCREEN_CONTENT,
                             kinds = RepliesAndReactionsKinds,
                             tags = mapOf("e" to sortedList),
                             since = since,
@@ -109,7 +111,8 @@ fun filterRepliesAndReactionsToNotes(
                 RelayBasedFilter(
                     relay = relay,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.SCREEN_CONTENT,
                             kinds = RepliesAndReactionsKinds2,
                             tags = mapOf("e" to sortedList),
                             since = since,
@@ -119,7 +122,8 @@ fun filterRepliesAndReactionsToNotes(
                 RelayBasedFilter(
                     relay = relay,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.SCREEN_CONTENT,
                             kinds = listOf(TextNoteEvent.KIND, CommentEvent.KIND),
                             tags = mapOf("q" to sortedList),
                             since = since,

@@ -21,10 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 
 fun filterMyMessagesToLiveActivities(
@@ -36,7 +37,8 @@ fun filterMyMessagesToLiveActivities(
         RelayBasedFilter(
             relay = it,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.CHATS,
                     kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
                     tags = mapOf("a" to listOfNotNull(channel.address.toValue())),
                     authors = listOf(pubKey),

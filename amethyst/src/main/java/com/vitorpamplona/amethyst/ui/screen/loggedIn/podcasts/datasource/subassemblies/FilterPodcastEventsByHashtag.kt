@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun filterPodcastEventsByHashtag(
@@ -37,7 +38,8 @@ fun filterPodcastEventsByHashtag(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = kinds,
                     tags = mergeFilterTags(mapOf("t" to hashtags.sorted()), additionalTags),
                     limit = 200,

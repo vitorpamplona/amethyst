@@ -21,8 +21,9 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip53LiveActivities
 
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 
@@ -36,7 +37,8 @@ fun filterLiveStreamUpdatesByAddress(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = listOf(LiveActivitiesEvent.KIND),
                     tags = mapOf("d" to channels.map { it.address.dTag }),
                     authors = channels.map { it.address.pubKeyHex },

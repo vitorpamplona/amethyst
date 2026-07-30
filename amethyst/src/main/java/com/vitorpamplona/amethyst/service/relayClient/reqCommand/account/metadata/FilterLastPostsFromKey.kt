@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun filterLastPostsFromKey(
@@ -36,7 +37,8 @@ fun filterLastPostsFromKey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.PROFILE_METADATA,
                     authors = listOf(pubkey),
                     limit = 100,
                     since = since,

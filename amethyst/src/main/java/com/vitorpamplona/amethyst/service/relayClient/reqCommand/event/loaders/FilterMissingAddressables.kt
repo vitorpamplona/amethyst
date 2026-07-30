@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
 
@@ -105,7 +106,8 @@ fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<A
                 RelayBasedFilter(
                     relay = relayEntry.key,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.SCREEN_CONTENT,
                             kinds = listOf(address.kind),
                             authors = listOf(address.pubKeyHex),
                             limit = 1,
@@ -115,7 +117,8 @@ fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<A
                 RelayBasedFilter(
                     relay = relayEntry.key,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.SCREEN_CONTENT,
                             kinds = listOf(address.kind),
                             tags = mapOf("d" to listOf(address.dTag)),
                             authors = listOf(address.pubKeyHex),

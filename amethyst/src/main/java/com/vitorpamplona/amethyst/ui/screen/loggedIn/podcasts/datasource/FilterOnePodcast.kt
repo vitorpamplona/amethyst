@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
@@ -58,7 +59,8 @@ fun filterOnePodcast(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.SCREEN_CONTENT,
                         kinds = OnePodcastKinds,
                         authors = listOf(user.pubkeyHex),
                         limit = 500,
@@ -70,7 +72,8 @@ fun filterOnePodcast(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.SCREEN_CONTENT,
                         kinds = listOf(AppSpecificDataEvent.KIND),
                         authors = listOf(user.pubkeyHex),
                         tags = mapOf("d" to listOf(Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG)),

@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -40,7 +41,8 @@ fun filterNestsAuthors(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.CHATS,
                     authors = authorList,
                     kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 300,
@@ -51,7 +53,8 @@ fun filterNestsAuthors(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.CHATS,
                     tags = mapOf("p" to authorList),
                     kinds = listOf(MeetingSpaceEvent.KIND, MeetingRoomEvent.KIND),
                     limit = 100,

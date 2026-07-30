@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.conco
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
@@ -129,7 +131,8 @@ class ConcordChannelHistorySubAssembler(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.CHATS,
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         // All epoch planes at once: the relay serves them interleaved by created_at, so
                         // one backward cursor walks across the Refounding boundaries; "exhausted" then

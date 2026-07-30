@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip51FollowSets.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
@@ -41,7 +42,8 @@ fun filterFollowSetsByHashtag(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.FOLLOW_LISTS,
                     kinds = listOf(FollowListEvent.KIND),
                     tags = mapOf("t" to hashtags),
                     limit = 300,

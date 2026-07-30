@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
@@ -31,7 +33,6 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -112,7 +113,8 @@ fun searchPostsByText(
     RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.SCREEN_CONTENT,
                 kinds = SearchPostsByTextKinds1,
                 search = searchString,
                 limit = 100,
@@ -121,7 +123,8 @@ fun searchPostsByText(
     RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.SCREEN_CONTENT,
                 kinds = SearchPostsByTextKinds2,
                 search = searchString,
                 limit = 100,
@@ -130,7 +133,8 @@ fun searchPostsByText(
     RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.SCREEN_CONTENT,
                 kinds = SearchPostsByTextKinds3,
                 search = searchString,
                 limit = 100,

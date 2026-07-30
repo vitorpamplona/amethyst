@@ -24,7 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
@@ -90,7 +92,8 @@ class NestRoomFilterSubAssembler(
                 RelayBasedFilter(
                     relay = relay,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.CHATS,
                             kinds =
                                 listOf(
                                     LiveActivitiesChatMessageEvent.KIND,
@@ -106,7 +109,8 @@ class NestRoomFilterSubAssembler(
                 RelayBasedFilter(
                     relay = relay,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.CHATS,
                             kinds = listOf(AdminCommandEvent.KIND),
                             tags = mapOf("a" to listOf(key.note.idHex), "p" to listOf(key.account.pubKey)),
                             since = since?.get(relay)?.time,
@@ -124,7 +128,8 @@ class NestRoomFilterSubAssembler(
                 RelayBasedFilter(
                     relay = relay,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.CHATS,
                             kinds = listOf(MeetingSpaceEvent.KIND),
                             authors = listOf(key.note.address.pubKeyHex),
                             tags = mapOf("d" to listOf(key.note.address.dTag)),

@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip72Communities.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -41,7 +42,8 @@ fun filterCommunitiesGlobal(
             RelayBasedFilter(
                 relay = it.key,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.SCREEN_CONTENT,
                         kinds = listOf(CommunityDefinitionEvent.KIND),
                         limit = 200,
                         since = since,
@@ -50,7 +52,8 @@ fun filterCommunitiesGlobal(
             RelayBasedFilter(
                 relay = it.key,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.SCREEN_CONTENT,
                         kinds = CommunityPostApprovalEvent.KIND_LIST,
                         limit = 100,
                         since = since ?: TimeUtils.oneMonthAgo(),

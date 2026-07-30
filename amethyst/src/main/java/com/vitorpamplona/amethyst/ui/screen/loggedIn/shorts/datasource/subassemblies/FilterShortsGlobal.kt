@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -40,7 +41,8 @@ fun filterShortsGlobal(
         RelayBasedFilter(
             relay = it.key,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.SCREEN_CONTENT,
                     kinds = listOf(VideoShortEvent.KIND, VideoVerticalEvent.KIND),
                     limit = 200,
                     since = since,

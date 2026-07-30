@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip65Follows
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
@@ -32,7 +34,6 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -112,7 +113,8 @@ fun filterNewHomePostsByAuthors(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.FOLLOW_LISTS,
                     kinds = HomePostsNewThreadKinds1,
                     authors = authorList,
                     limit = min(authorList.size * 10, 500),
@@ -122,7 +124,8 @@ fun filterNewHomePostsByAuthors(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.FOLLOW_LISTS,
                     kinds = HomePostsNewThreadKinds2,
                     authors = authorList,
                     limit = min(authorList.size * 10, 5),
@@ -143,7 +146,8 @@ fun filterReplyHomePostsByAuthors(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.FOLLOW_LISTS,
                     kinds = HomePostsConversationKinds,
                     authors = authorList,
                     limit = min(authorList.size * 10, 500),
