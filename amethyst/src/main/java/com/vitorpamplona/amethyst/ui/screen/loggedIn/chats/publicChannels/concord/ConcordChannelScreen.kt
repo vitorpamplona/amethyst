@@ -211,6 +211,10 @@ fun ConcordChannelScreen(
                 .consumeWindowInsets(padding)
                 .imePadding(),
         ) {
+            // Above the feed, because what it reports explains the feed. A stranded community's
+            // channel is not empty-because-quiet, it is empty because every address we derive is dead.
+            ConcordCommunityBanner(communityId, accountViewModel)
+
             Column(Modifier.fillMaxHeight().weight(1f, true)) {
                 RefreshingChatroomFeedView(
                     feedContentState = feedViewModel.feedState,

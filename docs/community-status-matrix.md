@@ -113,7 +113,7 @@ to hold the bit **and strictly outrank** the target ("equal cannot act on equal"
 |---|---|---|
 | **Dissolved** | owner-only `DISSOLVED` tombstone (CORD-02 §9) | Terminal, one-way. The community seals **read-only for everyone including the owner**: held keys still open history, nothing new is honored. `ConcordChannel.canPost() = membership.isMember() && !dissolved`. The one carve-out — deleting your own past message — runs through the note menu, not the composer, so this gate never blocks it. |
 | **Current epoch** | `rootEpoch` + `heldRoots` on the kind-13302 entry | Which epochs' history you can still derive. Prior-epoch roots are kept so pre-Refounding messages stay readable. |
-| **Stranded / excluded** | `excludedAtEpoch`, detected by `ConcordStrandedRecovery` | A Refounding carries **no recipient list**, so a member simply left out hears nothing and sits on a dead epoch forever. The only way back is re-resolving the membership's own `inviteRef` and finding a higher epoch — then `mergeForward` catches up while preserving the anchor and prior roots. |
+| **Stranded / excluded** | Detected live in the rekey drain (`isCompleteBaseRotation` + no blob for us); `excludedAtEpoch` records it after a merge | A Refounding carries **no recipient list**, but the rekey wraps sit at an address every current member derives, so an excluded member *can* see the rotation happen and find no blob addressed to them — which is the detection. The way back is re-resolving the membership's own `inviteRef` and finding a higher epoch; `mergeForward` then catches up while preserving the anchor and prior roots. |
 | **Refounded out** | not receiving the new root | The only *real* eviction Concord has: cryptographic, not a flag. |
 | **Kicked** | kind **3309** Guestbook kick, honored only from a `KICK` holder who outranks the target | Off-consensus and advisory. **Modeled in Quartz, not wired in the client** — nothing calls `Guestbook.kick`/`kickTarget`. |
 | **Guestbook joined / left** | self-signed kind **3306** `join`/`leave` | Best-effort presence for member discovery, explicitly *not* authority. |
@@ -239,7 +239,7 @@ others), and **invisible** (nothing renders it at all).
 | My own `OWNER`/`ADMIN` | only via affordances: the create-channel FAB, the Edit icon, the roster's promote/ban items | implied |
 | My own `BANNED` | `PostingGateNotice` takes the composer's place and names the ban ("Past messages stay readable, but you can no longer post"). Was invisible: the only explanatory branch tested `dissolved`, so a banned member got an empty space and no reason. | **shown** |
 | `dissolved` | The same `PostingGateNotice` replaces the composer, inside an opened channel only — not on the community row, the channel list, or the Messages inbox. (There is also **no write path** to dissolve: an owner cannot do it from Amethyst.) | partial |
-| **stranded / excluded epoch** | nothing. `recoverStrandedConcordCommunities()` runs at startup, `Log.w` on failure. A stranded community renders as an ordinary *empty* one. | **invisible** |
+| **stranded / excluded epoch** | `ConcordCommunityBanner` under the app bar on both the channel list and an open channel, off `ConcordCommunityHealth`: reconnecting / caught up / a dead invite link naming which kind of dead. Detected directly at the rekey address — the rotation's chunks are all there and none carries our blob — not inferred from silence. | **shown** |
 | current epoch / `heldRoots` | nothing | **invisible** |
 | `private` channel | `Lock` icon in the channel list, shown only to members who hold its key; others get no row (and no inbox row). Reaching one anyway explains itself via `PostingGate.NoKey`. | **shown** |
 | `voice` channel | `Mic` icon + preview-line suppression in the list; the opened channel has no voice affordance | partial |
@@ -316,8 +316,16 @@ UI-only (the state is tracked correctly, nothing tells the user):
    says a resend could work — `rate-limited`, `error`, `auth-required` — not for `blocked` /
    `restricted`, where the relay would repeat itself. This is a general fix: every relay refusal
    on a chat message now reaches the sender, with a ban as one case.
-8. **Stranding is silent.** Recovery is automatic and log-only, so a member left out of a
-   Refounding sees an ordinary empty community rather than "you were left behind on epoch N".
+8. ~~**Stranding is silent.**~~ **Fixed.** Two things were missing, not one. *Detection:* the rekey
+   drain treated "no blob for me" as nothing to do, when the rekey wraps sit at an address every
+   current member derives — so an excluded member can watch the rotation happen and find no blob
+   addressed to them. That is now the signal, gated on `ConcordRefounding.isCompleteRotation` so a
+   partial fetch (a relay cap, a dropped socket) can't be mistaken for exclusion. *Reporting:*
+   `ConcordCommunityHealth` per community, rendered by `ConcordCommunityBanner` above the feed —
+   stranded / catching up / recovery failed, plus dissolution, which the composer notice could only
+   show to someone already inside a channel. One value, not a set, so two banners cannot stack. The
+   recovery sweep's four collapsed `continue`s now distinguish revoked / expired / unreadable /
+   no-anchor, and a dead link is only reported once it is actually the thing blocking us.
 9. **Buzz tenant moderation has no write path.** 9031 remove-member has no caller; 9032
    change-role, 9040/9041 ban/unban and 9042/9043 timeout/untimeout have no builder call at
    all. Only 9030 add-member is reachable (the "Add people" dialog).

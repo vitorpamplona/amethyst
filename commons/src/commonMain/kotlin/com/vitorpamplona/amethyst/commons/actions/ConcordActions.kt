@@ -495,4 +495,16 @@ object ConcordActions {
         priorRoot: ByteArray,
         rootEpoch: Long,
     ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, priorRoot, rootEpoch)
+
+    /**
+     * Whether [wraps] hold **every** chunk of a complete base rotation off [rootEpoch] — the guard that
+     * lets [openBaseRekey] returning null mean "I was excluded" rather than "the fetch is incomplete".
+     * See [ConcordRefounding.isCompleteRotation].
+     */
+    fun isCompleteBaseRotation(
+        wraps: List<Event>,
+        baseRekey: GroupKey,
+        priorRoot: ByteArray,
+        rootEpoch: Long,
+    ): Boolean = ConcordRefounding.isCompleteRotation(wraps, baseRekey, priorRoot, rootEpoch)
 }

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstOrNull
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -164,6 +165,51 @@ object ConcordRefounding {
             val rumor = RumorAssembler.assembleRumor<Event>(rotatorSigner.pubKey, createdAt, ConcordRekey.KIND, tags, ConcordRekey.encodeContent(chunk))
             ConcordStreamEnvelope.wrap(rumor, baseRekeyKey, rotatorSigner, encrypted = true, createdAt = createdAt)
         }
+    }
+
+    /**
+     * Whether [wraps] contain **every chunk** of a complete base rotation to `rootEpoch + 1` that
+     * continues the [priorRoot] this member holds.
+     *
+     * This is the guard that turns [findNewRoot] returning null into a conclusion. A rotation's
+     * recipient blobs are chunked ([ConcordRekey.MAX_BLOBS_PER_CHUNK] each), so on a partial fetch —
+     * a relay result cap, a dropped socket, a chunk still in flight — the absence of this member's
+     * blob proves nothing. Only once chunk indices `0 until total` are all present does "my blob is
+     * not here" mean "I was left out".
+     *
+     * Returns false when no matching chunk is present at all: nothing was rotated as far as we know,
+     * which is different from being excluded from something that was.
+     */
+    fun isCompleteRotation(
+        wraps: List<Event>,
+        baseRekeyKey: GroupKey,
+        priorRoot: ByteArray,
+        rootEpoch: Long,
+    ): Boolean {
+        val newEpoch = rootEpoch + 1
+        val expectedScope = ConcordRekey.ROOT_SCOPE.toHexKey()
+        val expectedCommit = ConcordKeyDerivation.epochKeyCommitment(rootEpoch, priorRoot).toHexKey()
+
+        var total = -1
+        val seen = HashSet<Int>()
+        for (wrap in wraps) {
+            val rumor = ConcordStreamEnvelope.openOrNull(wrap, baseRekeyKey)?.rumor ?: continue
+            if (rumor.kind != ConcordRekey.KIND) continue
+            if (rumor.tags.firstTagValue(ConcordRekey.TAG_SCOPE) != expectedScope) continue
+            if (rumor.tags.firstTagValue(ConcordRekey.TAG_NEWEPOCH)?.toLongOrNull() != newEpoch) continue
+            if (rumor.tags.firstTagValue(ConcordRekey.TAG_PREVCOMMIT) != expectedCommit) continue
+
+            val chunk = rumor.tags.fastFirstOrNull { it.size >= 3 && it[0] == ConcordRekey.TAG_CHUNK } ?: continue
+            val index = chunk[1].toIntOrNull() ?: continue
+            val chunkTotal = chunk[2].toIntOrNull() ?: continue
+            if (chunkTotal <= 0 || index < 0 || index >= chunkTotal) continue
+            // Chunks of one rotation agree on the total; a disagreement means we are looking at
+            // mixed or malformed input, so claim nothing.
+            if (total != -1 && total != chunkTotal) return false
+            total = chunkTotal
+            seen.add(index)
+        }
+        return total > 0 && seen.size == total
     }
 
     /**

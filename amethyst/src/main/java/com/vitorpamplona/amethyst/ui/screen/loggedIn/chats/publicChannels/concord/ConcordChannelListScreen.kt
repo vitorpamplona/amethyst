@@ -307,62 +307,68 @@ fun ConcordChannelListScreen(
             }
         },
     ) { padding ->
-        // Only channels this account can open. A private channel whose per-member key was never
-        // delivered to us has no derivable plane (CORD-03 §1), so its row would open a room that can
-        // never load — the reference client omits it for the same reason.
-        val channels =
-            remember(state, session, revision) {
-                val folded = state?.channels.orEmpty()
-                session?.openableChannelIds().orEmpty().mapNotNull { id -> folded[id]?.let { id to it } }
-            }
-        if (channels.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(
-                    stringRes(com.vitorpamplona.amethyst.R.string.concord_channels_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            // Bottom room for the FAB, which the Scaffold's `padding` deliberately doesn't account for
-            // (a FAB overlays content) — without it the last row's manager overflow menu sits under it
-            // and can't be tapped. As contentPadding so rows scroll *through* the strip rather than the
-            // viewport shrinking. Gated on [canManageChannels] because that is what renders the FAB:
-            // a plain member has nothing to clear, and no reason to lose the space.
-            LazyColumn(
-                Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(bottom = if (canManageChannels) FAB_CLEARANCE else 0.dp),
-            ) {
-                items(channels, key = { it.first }) { entry ->
-                    val def = entry.second.definition
-                    val name = def.name.ifBlank { entry.first }
-                    val icon =
-                        when {
-                            def.voice == true -> MaterialSymbols.Mic
-                            def.private == true -> MaterialSymbols.Lock
-                            else -> MaterialSymbols.Tag
-                        }
-                    val typingAuthors =
-                        remember(typingMap, typingNow, entry.first) {
-                            (typingMap[entry.first] ?: emptyMap())
-                                .filterValues { typingNow - it <= ConcordCommunitySession.TYPING_STALE_SECS }
-                                .keys
-                                .sorted()
-                        }
-                    ConcordChannelListRow(
-                        communityId = communityId,
-                        channelKey = entry.first,
-                        channelName = name,
-                        icon = icon,
-                        isVoice = def.voice == true,
-                        typingAuthors = typingAuthors,
-                        canManageChannels = canManageChannels,
-                        accountViewModel = accountViewModel,
-                        onClick = { nav.nav(Route.Concord(communityId, entry.first)) },
-                        onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.first, initialName = name) },
-                        onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.first, initialName = name) },
+        // Community-wide status first: stranding and dissolution explain why the list below may be
+        // empty or frozen, so they belong above it rather than inside a channel.
+        Column(Modifier.padding(padding)) {
+            ConcordCommunityBanner(communityId, accountViewModel)
+
+            // Only channels this account can open. A private channel whose per-member key was never
+            // delivered to us has no derivable plane (CORD-03 §1), so its row would open a room that can
+            // never load — the reference client omits it for the same reason.
+            val channels =
+                remember(state, session, revision) {
+                    val folded = state?.channels.orEmpty()
+                    session?.openableChannelIds().orEmpty().mapNotNull { id -> folded[id]?.let { id to it } }
+                }
+            if (channels.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringRes(com.vitorpamplona.amethyst.R.string.concord_channels_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                }
+            } else {
+                // Bottom room for the FAB, which the Scaffold's `padding` deliberately doesn't account for
+                // (a FAB overlays content) — without it the last row's manager overflow menu sits under it
+                // and can't be tapped. As contentPadding so rows scroll *through* the strip rather than the
+                // viewport shrinking. Gated on [canManageChannels] because that is what renders the FAB:
+                // a plain member has nothing to clear, and no reason to lose the space.
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = if (canManageChannels) FAB_CLEARANCE else 0.dp),
+                ) {
+                    items(channels, key = { it.first }) { entry ->
+                        val def = entry.second.definition
+                        val name = def.name.ifBlank { entry.first }
+                        val icon =
+                            when {
+                                def.voice == true -> MaterialSymbols.Mic
+                                def.private == true -> MaterialSymbols.Lock
+                                else -> MaterialSymbols.Tag
+                            }
+                        val typingAuthors =
+                            remember(typingMap, typingNow, entry.first) {
+                                (typingMap[entry.first] ?: emptyMap())
+                                    .filterValues { typingNow - it <= ConcordCommunitySession.TYPING_STALE_SECS }
+                                    .keys
+                                    .sorted()
+                            }
+                        ConcordChannelListRow(
+                            communityId = communityId,
+                            channelKey = entry.first,
+                            channelName = name,
+                            icon = icon,
+                            isVoice = def.voice == true,
+                            typingAuthors = typingAuthors,
+                            canManageChannels = canManageChannels,
+                            accountViewModel = accountViewModel,
+                            onClick = { nav.nav(Route.Concord(communityId, entry.first)) },
+                            onRename = { channelEditor = ConcordChannelEditor(channelIdHex = entry.first, initialName = name) },
+                            onDelete = { channelToDelete = ConcordChannelEditor(channelIdHex = entry.first, initialName = name) },
+                        )
+                        HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                    }
                 }
             }
         }

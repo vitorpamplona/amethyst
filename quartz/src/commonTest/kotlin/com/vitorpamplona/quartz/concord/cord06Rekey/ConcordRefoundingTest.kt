@@ -37,6 +37,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -87,6 +88,94 @@ class ConcordRefoundingTest {
             assertNotNull(bobRoot)
             assertContentEquals(newRoot, bobRoot.newRoot)
             assertNull(carolRoot) // removed member receives no blob
+        }
+
+    /**
+     * The guard that lets a client conclude it was excluded. [ConcordRefounding.findNewRoot] returning
+     * null is ambiguous on its own — "no blob for me" and "I haven't fetched the chunk my blob is in"
+     * look identical — so exclusion may only be announced once every chunk of the rotation is in hand.
+     */
+    @Test
+    fun aCompleteRotationIsWhatMakesExclusionProvable() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Test", now)
+            val priorRoot = community.communityRoot
+            val build =
+                ConcordRefounding.build(
+                    rotatorSigner = owner,
+                    communityId = community.communityId,
+                    priorRoot = priorRoot,
+                    newRoot = newRoot,
+                    rootEpoch = community.rootEpoch,
+                    priorControlWraps = community.genesisWraps,
+                    priorControlKey = community.controlPlane,
+                    recipientsXOnly = listOf(alice.pubKey, bob.pubKey),
+                    createdAt = now,
+                )
+            val baseRekeyKey = ConcordKeyDerivation.baseRekeyAddress(priorRoot, community.communityId, build.newEpoch)
+
+            // Carol holds the whole rotation and finds no blob: she was left out, and can say so.
+            assertTrue(ConcordRefounding.isCompleteRotation(build.rekeyWraps, baseRekeyKey, priorRoot, community.rootEpoch))
+            assertNull(ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, carol, priorRoot, community.rootEpoch))
+
+            // Having fetched nothing looks the same to findNewRoot, and must NOT read as exclusion.
+            assertFalse(ConcordRefounding.isCompleteRotation(emptyList(), baseRekeyKey, priorRoot, community.rootEpoch))
+        }
+
+    @Test
+    fun aRotationOffADifferentPriorRootOrEpochDoesNotCount() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Test", now)
+            val build =
+                ConcordRefounding.build(
+                    rotatorSigner = owner,
+                    communityId = community.communityId,
+                    priorRoot = community.communityRoot,
+                    newRoot = newRoot,
+                    rootEpoch = community.rootEpoch,
+                    priorControlWraps = community.genesisWraps,
+                    priorControlKey = community.controlPlane,
+                    recipientsXOnly = listOf(alice.pubKey),
+                    createdAt = now,
+                )
+            val baseRekeyKey = ConcordKeyDerivation.baseRekeyAddress(community.communityRoot, community.communityId, build.newEpoch)
+
+            // Same wraps, but checked as though we held a different root: the prevcommit no longer
+            // continues ours, so this is not a rotation of the epoch we are on.
+            val otherRoot = ByteArray(32) { 0x11 }
+            assertFalse(ConcordRefounding.isCompleteRotation(build.rekeyWraps, baseRekeyKey, otherRoot, community.rootEpoch))
+            // And checked at the wrong epoch, the newepoch tag no longer matches.
+            assertFalse(ConcordRefounding.isCompleteRotation(build.rekeyWraps, baseRekeyKey, community.communityRoot, community.rootEpoch + 5))
+        }
+
+    @Test
+    fun aRotationMissingOneOfItsChunksIsIncomplete() =
+        runTest {
+            // Enough recipients to force chunking, so a dropped chunk is a realistic partial fetch.
+            val extras = List(ConcordRekey.MAX_BLOBS_PER_CHUNK) { NostrSignerInternal(KeyPair()).pubKey }
+            val community = ConcordCommunityFactory.create(owner, "Test", now)
+            val priorRoot = community.communityRoot
+            val build =
+                ConcordRefounding.build(
+                    rotatorSigner = owner,
+                    communityId = community.communityId,
+                    priorRoot = priorRoot,
+                    newRoot = newRoot,
+                    rootEpoch = community.rootEpoch,
+                    priorControlWraps = community.genesisWraps,
+                    priorControlKey = community.controlPlane,
+                    recipientsXOnly = listOf(alice.pubKey) + extras,
+                    createdAt = now,
+                )
+            val baseRekeyKey = ConcordKeyDerivation.baseRekeyAddress(priorRoot, community.communityId, build.newEpoch)
+
+            assertTrue(build.rekeyWraps.size > 1, "expected the rotation to be chunked")
+            assertTrue(ConcordRefounding.isCompleteRotation(build.rekeyWraps, baseRekeyKey, priorRoot, community.rootEpoch))
+
+            // Drop the chunk Alice's blob happens to be in and she looks excluded — which is exactly
+            // why the completeness check has to gate that conclusion.
+            val partial = build.rekeyWraps.drop(1)
+            assertFalse(ConcordRefounding.isCompleteRotation(partial, baseRekeyKey, priorRoot, community.rootEpoch))
         }
 
     @Test

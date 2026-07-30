@@ -42,6 +42,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunPayload
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunityHealth
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunityHealthState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatListDecryptionCache
@@ -659,6 +661,11 @@ class Account(
             // Every folded channel, openable or not: a channel we hold no key for is hidden from the
             // display surfaces, but its object still learns the truth so arriving at one anyway (a
             // stale route) explains itself instead of offering a composer that can't publish.
+            // A dissolved community is community-wide and terminal, so the banner is the right place
+            // for it: the composer notice inside a channel only reaches someone already in one.
+            // Never cleared here — nothing un-dissolves, and a tick must not wipe a Stranded verdict.
+            if (state.dissolved) concordHealth.set(communityId, ConcordCommunityHealth.Dissolved)
+
             val openable = session.openableChannelIds().toSet()
             for (channelIdHex in state.channels.keys) {
                 val channel = cache.getOrCreateConcordChannel(ConcordChannelId(communityId, channelIdHex))
@@ -809,6 +816,13 @@ class Account(
     // Per-message publish acceptance (relay OKs), feeding the delivery ticks on
     // own chat bubbles.
     val chatDeliveryTracker = ChatDeliveryTracker(client)
+
+    /**
+     * Per-community Concord health (stranded / catching up / recovery failed / dissolved), written by
+     * [drainConcordRekeys] and [recoverStrandedConcordCommunities] and read by the community banner.
+     * In-memory: a restart re-derives it from the next rekey drain or recovery sweep.
+     */
+    val concordHealth = ConcordCommunityHealthState()
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
@@ -2976,14 +2990,37 @@ class Account(
             val wraps = session.pendingBaseRekeyWraps()
             if (wraps.isEmpty()) continue
             val entry = session.entry
+            val baseRekey = session.nextBaseRekeyKey()
+            val priorRoot = entry.root.hexToByteArray()
             val received =
                 ConcordActions.openBaseRekey(
                     wraps = wraps,
-                    baseRekey = session.nextBaseRekeyKey(),
+                    baseRekey = baseRekey,
                     recipientSigner = signer,
-                    priorRoot = entry.root.hexToByteArray(),
+                    priorRoot = priorRoot,
                     rootEpoch = entry.rootEpoch,
-                ) ?: continue
+                )
+            if (received == null) {
+                // A rotation we can see but were not given: every chunk is present and none carries a
+                // blob for us. That is the stranding signal, and it used to be dropped here — leaving
+                // the community looking merely quiet, because each plane address we still derive is
+                // dead and a dead address returns nothing rather than failing. The completeness guard
+                // matters: with a partial fetch, our blob's absence proves nothing.
+                if (ConcordActions.isCompleteBaseRotation(wraps, baseRekey, priorRoot, entry.rootEpoch)) {
+                    Log.w("Concord", "Stranded: ${entry.id} excluded from the rotation to epoch ${entry.rootEpoch + 1}")
+                    concordHealth.set(
+                        entry.id,
+                        ConcordCommunityHealth.Stranded(
+                            strandedAtEpoch = entry.rootEpoch,
+                            newEpoch = entry.rootEpoch + 1,
+                            // The stored invite link is the only anchor that survives a rotation we
+                            // weren't party to; without one, no automatic way back exists.
+                            recoverable = entry.inviteRef != null,
+                        ),
+                    )
+                }
+                continue
+            }
             if (received.newEpoch <= entry.rootEpoch) continue
             val authority = session.state.value?.authority ?: continue
 
@@ -2992,6 +3029,25 @@ class Account(
             val authorized = authority.isOwner(received.rotator) || authority.hasPermission(received.rotator, ConcordPermissions.BAN)
             if (!authorized) continue
             adoptConcordRoot(entry, received.newRoot, received.newEpoch)
+            // We were included after all (or a later rotation reached us): retract any banner.
+            concordHealth.clearIf(entry.id) { it !is ConcordCommunityHealth.Dissolved }
+        }
+    }
+
+    /**
+     * Escalates a stranded community to [ConcordCommunityHealth.RecoveryFailed].
+     *
+     * Gated on already knowing we are stranded: a dead invite link on a community we are current with
+     * costs us nothing today, and reporting it would be alarming and useless. It only matters once it
+     * is the thing standing between us and getting back in.
+     */
+    private fun reportConcordRecoveryFailure(
+        communityId: String,
+        reason: ConcordCommunityHealth.RecoveryFailed.Reason,
+    ) {
+        val current = concordHealth.currentFor(communityId)
+        if (current is ConcordCommunityHealth.Stranded || current is ConcordCommunityHealth.CatchingUp) {
+            concordHealth.set(communityId, ConcordCommunityHealth.RecoveryFailed(reason))
         }
     }
 
@@ -3030,12 +3086,22 @@ class Account(
         if (!isWriteable()) return
         val now = TimeUtils.nowMillis()
         for (entry in concordChannelList.liveCommunities.value) {
-            val inviteRef = entry.inviteRef ?: continue
+            val inviteRef = entry.inviteRef
+            if (inviteRef == null) {
+                // No anchor to re-resolve. Only worth saying when we already know we were left out —
+                // otherwise it is a latent risk, not a current problem, and belongs in no banner.
+                reportConcordRecoveryFailure(entry.id, ConcordCommunityHealth.RecoveryFailed.Reason.NO_ANCHOR)
+                continue
+            }
             val last = lastConcordRecoveryCheck[entry.id]
             if (last != null && now - last < RECOVERY_CHECK_INTERVAL_MS) continue
             lastConcordRecoveryCheck[entry.id] = now
 
-            val parsed = ConcordActions.parseInviteLink(inviteRef) ?: continue
+            val parsed = ConcordActions.parseInviteLink(inviteRef)
+            if (parsed == null) {
+                reportConcordRecoveryFailure(entry.id, ConcordCommunityHealth.RecoveryFailed.Reason.LINK_UNREADABLE)
+                continue
+            }
             val relays =
                 (
                     parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } +
@@ -3043,16 +3109,49 @@ class Account(
                 ).toSet()
             if (relays.isEmpty()) continue
 
+            // Only show progress once we know there is something to fix: re-resolving the link is a
+            // routine 15-minute check, and a banner on every tick would be noise.
+            val wasStranded = concordHealth.currentFor(entry.id) is ConcordCommunityHealth.Stranded
+            if (wasStranded) concordHealth.set(entry.id, ConcordCommunityHealth.CatchingUp(entry.rootEpoch))
+
             val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
             val wraps = client.fetchAll(filters = filters)
-            // Only a live bundle recovers: an expired/revoked link is not a rotation we missed.
-            val bundle = (ConcordActions.classifyInvite(wraps, parsed.fragment.token) as? InviteBundleStatus.Live)?.invite ?: continue
+            // Only a live bundle recovers: an expired/revoked link is not a rotation we missed. Which
+            // kind of dead it is decides whether the user can do anything about it, so report it
+            // rather than collapsing every case into one silent `continue`.
+            val status = ConcordActions.classifyInvite(wraps, parsed.fragment.token)
+            val bundle = (status as? InviteBundleStatus.Live)?.invite
+            if (bundle == null) {
+                val reason =
+                    when (status) {
+                        is InviteBundleStatus.Revoked -> ConcordCommunityHealth.RecoveryFailed.Reason.LINK_REVOKED
+                        is InviteBundleStatus.Expired -> ConcordCommunityHealth.RecoveryFailed.Reason.LINK_EXPIRED
+                        is InviteBundleStatus.Unreadable -> ConcordCommunityHealth.RecoveryFailed.Reason.LINK_UNREADABLE
+                        // Absent: nothing found on any relay, which is usually transient — leave the
+                        // Stranded banner (or nothing) in place rather than claiming a dead link.
+                        else -> null
+                    }
+                if (reason != null) {
+                    reportConcordRecoveryFailure(entry.id, reason)
+                } else if (wasStranded) {
+                    // Put the stranded verdict back; catching-up implied progress we no longer have.
+                    concordHealth.set(entry.id, ConcordCommunityHealth.Stranded(entry.rootEpoch, entry.rootEpoch + 1, recoverable = true))
+                }
+                continue
+            }
 
-            val merged = ConcordActions.recoverStranded(entry, bundle) ?: continue
+            val merged = ConcordActions.recoverStranded(entry, bundle)
+            if (merged == null) {
+                // The link resolves and we are already at its epoch: nothing was missed after all.
+                if (wasStranded) concordHealth.clearIf(entry.id) { it is ConcordCommunityHealth.CatchingUp }
+                continue
+            }
             if (!adoptedConcordRotations.add("${entry.id}:${merged.rootEpoch}")) continue
             Log.i("Concord", "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}")
             sendMyPublicAndPrivateOutbox(concordChannelList.follow(merged))
             announceConcordGuestbookJoin(merged, inviteCreator = null, inviteLabel = null)
+            // Caught up: the banner has nothing left to report.
+            concordHealth.clearIf(entry.id) { it !is ConcordCommunityHealth.Dissolved }
         }
     }
 
