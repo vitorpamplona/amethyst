@@ -29,6 +29,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.nullable
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
@@ -44,8 +45,10 @@ import kotlinx.serialization.json.booleanOrNull
  * profile (name, picture, about…).
  *
  * This serializer accepts any JSON primitive (matching the pre-existing lenient
- * behavior, where a bare number or boolean decodes into a string field) and
- * treats objects, arrays, and JSON null as absent rather than failing.
+ * behavior, where a bare number or boolean decodes into a string field), unwraps
+ * a single-element array wrapping a primitive (seen in the wild as
+ * `"nip05":["name@domain"]`, where the intended value is unambiguous), and treats
+ * objects, longer arrays, and JSON null as absent rather than failing.
  *
  * Same rationale as [BirthdayTolerantSerializer].
  */
@@ -60,6 +63,17 @@ object TolerantStringSerializer : KSerializer<String?> {
         return when {
             element is JsonNull -> null
             element is JsonPrimitive -> element.content
+            // A one-element array around a primitive has only one possible reading,
+            // so recover the value instead of dropping the field.
+            element is JsonArray -> {
+                val single = element.singleOrNull()
+                if (single is JsonPrimitive && single !is JsonNull) {
+                    single.content
+                } else {
+                    Log.w("TolerantStringSerializer") { "Ignoring array string field with ${element.size} elements" }
+                    null
+                }
+            }
             else -> {
                 // Log the JSON kind only, not the raw (untrusted, network-sourced) value.
                 Log.w("TolerantStringSerializer") { "Ignoring non-primitive string field (${element::class.simpleName})" }
