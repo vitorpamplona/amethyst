@@ -21,12 +21,13 @@
 package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
@@ -72,10 +73,11 @@ class MetadataFilterAssembler(
 
         // Create filter for metadata (Kind 0)
         val filter =
-            Filter(
+            ExplainedFilter(
                 kinds = listOf(MetadataEvent.KIND),
                 authors = pubkeyList,
                 limit = pubkeyList.size,
+                purpose = SubPurpose.PROFILE_METADATA,
             )
 
         // Apply since times per relay

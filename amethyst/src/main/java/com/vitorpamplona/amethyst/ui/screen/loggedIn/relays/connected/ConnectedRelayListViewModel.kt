@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.connected
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.purposes
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
@@ -53,8 +54,12 @@ class ConnectedRelayListViewModel : BasicRelaySetupInfoModel() {
                     }
                 }
 
+                // Every in-flight filter that has been tagged says why this relay is connected.
+                val purposes = reqs.values.flatten().purposes()
+
                 BasicRelaySetupInfo(
                     relay = it,
+                    purposes = purposes,
                     relayStat = Amethyst.instance.relayStats.get(it),
                     forcesTor =
                         Amethyst.instance.torEvaluatorFlow.flow.value

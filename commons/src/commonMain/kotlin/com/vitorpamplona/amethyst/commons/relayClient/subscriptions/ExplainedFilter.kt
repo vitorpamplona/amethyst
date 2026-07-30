@@ -1,0 +1,107 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
+
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+
+/**
+ * A [Filter] that also records **why** the app asked for it.
+ *
+ * The client tracks every in-flight REQ per relay already (`INostrClient.activeRequests`), but a
+ * filter only says *what* is being matched — kinds, authors, tags. That is not enough to answer the
+ * question a user (or a developer chasing relay churn) actually has: *which of my relays are doing
+ * which job?* Carrying [purpose] on the filter itself means the answer travels with the data the
+ * relay screens already read, with no parallel registry to keep in sync or to leak on teardown.
+ *
+ * ## It never reaches a relay
+ *
+ * `FilterSerializer` is registered against [Filter] and writes an explicit protocol field list
+ * (`kinds`/`ids`/`authors`/`#tags`/`&tagsAll`/`since`/`until`/`limit`/`search`). Jackson applies a
+ * serializer registered for a class to its subclasses, so an [ExplainedFilter] serializes to
+ * byte-identical JSON — the purpose is dropped at the wire boundary by construction, not by an
+ * annotation someone can forget. `ExplainedFilterTest` pins that.
+ *
+ * This matters beyond tidiness: telling relays what each REQ is *for* would hand them a
+ * ready-made fingerprint of the client's intent, and correlate subscriptions that are deliberately
+ * kept separate.
+ *
+ * ## Copying
+ *
+ * [copy] is overridden because filters are copied on the live path — assemblers call
+ * `copy(since = …)` after every EOSE to advance the window. Inheriting the base implementation
+ * would downgrade the filter to a plain [Filter] on the first refresh, so the purpose would survive
+ * the opening REQ and then quietly disappear a few seconds later.
+ */
+class ExplainedFilter(
+    ids: List<HexKey>? = null,
+    authors: List<HexKey>? = null,
+    kinds: List<Kind>? = null,
+    tags: Map<String, List<String>>? = null,
+    tagsAll: Map<String, List<String>>? = null,
+    since: Long? = null,
+    until: Long? = null,
+    limit: Int? = null,
+    search: String? = null,
+    val purpose: SubPurpose,
+    /** Free-form extra context for [SubPurpose.OTHER] or for narrowing a bucket while debugging. */
+    val purposeDetail: String? = null,
+) : Filter(ids, authors, kinds, tags, tagsAll, since, until, limit, search) {
+    override fun copy(
+        ids: List<String>?,
+        authors: List<String>?,
+        kinds: List<Int>?,
+        tags: Map<String, List<String>>?,
+        tagsAll: Map<String, List<String>>?,
+        since: Long?,
+        until: Long?,
+        limit: Int?,
+        search: String?,
+    ) = ExplainedFilter(ids, authors, kinds, tags, tagsAll, since, until, limit, search, purpose, purposeDetail)
+
+    companion object {
+        /** Tags [filter] with a [purpose], preserving every protocol field. */
+        fun of(
+            filter: Filter,
+            purpose: SubPurpose,
+            detail: String? = null,
+        ) = ExplainedFilter(
+            filter.ids,
+            filter.authors,
+            filter.kinds,
+            filter.tags,
+            filter.tagsAll,
+            filter.since,
+            filter.until,
+            filter.limit,
+            filter.search,
+            purpose,
+            detail,
+        )
+    }
+}
+
+/** The purpose behind this filter, or null when it was never tagged. */
+fun Filter.purposeOrNull(): SubPurpose? = (this as? ExplainedFilter)?.purpose
+
+/** The purposes behind a relay's in-flight filters, deduplicated — what this relay is doing for us. */
+fun Collection<Filter>.purposes(): Set<SubPurpose> = mapNotNullTo(mutableSetOf()) { it.purposeOrNull() }

@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.pickRelaysToLoadUsers
@@ -116,7 +118,7 @@ class UserOutboxFinderSubAssembler(
                 if (sortedUsers.isNotEmpty()) {
                     RelayBasedFilter(
                         relay = it.key,
-                        filter = Filter(kinds = relayListKinds, authors = sortedUsers),
+                        filter = ExplainedFilter(kinds = relayListKinds, authors = sortedUsers, purpose = SubPurpose.RELAY_LISTS),
                     )
                 } else {
                     null
@@ -146,7 +148,7 @@ class UserOutboxFinderSubAssembler(
             fallbackRelays.map { relay ->
                 RelayBasedFilter(
                     relay = relay,
-                    filter = Filter(kinds = relayListKinds, authors = sortedAbandoned),
+                    filter = ExplainedFilter(kinds = relayListKinds, authors = sortedAbandoned, purpose = SubPurpose.RELAY_LISTS, purposeDetail = "outbox discovery for users whose relay list we lost"),
                 )
             }
 

@@ -46,9 +46,24 @@ import com.vitorpamplona.quartz.utils.Log
  *
  * This class performs validation on construction to ensure all string-based identifiers
  * follow Nostr requirements (64-char hex, onion addresses) and logs errors for invalid inputs.
+ *
+ * ## Subclassing
+ *
+ * `open` so a consumer can carry its own client-side metadata alongside a filter — e.g. Amethyst's
+ * `ExplainedFilter`, which records *why* a subscription exists so the UI can explain which relays
+ * serve which purpose.
+ *
+ * Subclass fields never reach a relay: `FilterSerializer` is registered for this type and writes an
+ * explicit protocol field list, so any extra state is dropped at the wire boundary regardless of the
+ * runtime type. That is deliberate — the purpose of a REQ is exactly the sort of thing a client
+ * should not hand to relays.
+ *
+ * A subclass MUST override [copy]. Filters are copied on the live path (`copy(since = …)` after each
+ * EOSE), so a subclass that inherits the base implementation is silently downgraded to a plain
+ * [Filter] on the first window refresh.
  */
 @Stable
-class Filter(
+open class Filter(
     val ids: List<HexKey>? = null,
     val authors: List<HexKey>? = null,
     val kinds: List<Kind>? = null,
@@ -63,7 +78,7 @@ class Filter(
 
     fun match(event: Event) = FilterMatcher.match(event, ids, authors, kinds, tags, tagsAll, since, until)
 
-    fun copy(
+    open fun copy(
         ids: List<String>? = this.ids,
         authors: List<String>? = this.authors,
         kinds: List<Int>? = this.kinds,
