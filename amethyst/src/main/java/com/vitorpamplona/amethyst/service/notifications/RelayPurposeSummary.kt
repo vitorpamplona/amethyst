@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.purposes
 import com.vitorpamplona.amethyst.ui.pluralStringRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.SubPurposeLabels
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
@@ -44,24 +45,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * matters most, so spelling them out would add noise precisely when the user is least interested.
  */
 object RelayPurposeSummary {
-    /** The jobs worth naming to a user. Everything else is browsing, and transient. */
-    private fun labelOf(purpose: SubPurpose): Int? =
-        when (purpose) {
-            SubPurpose.NOTIFICATIONS -> R.string.relay_purpose_notifications
-            SubPurpose.DIRECT_MESSAGES -> R.string.relay_purpose_direct_messages
-            SubPurpose.PUBLIC_CHATS -> R.string.relay_purpose_public_chats
-            SubPurpose.COMMUNITY_CHATS -> R.string.relay_purpose_community_chats
-            SubPurpose.ENCRYPTED_GROUPS -> R.string.relay_purpose_encrypted_groups
-            SubPurpose.LIVE_ROOMS -> R.string.relay_purpose_live_rooms
-            SubPurpose.ACCOUNT_DATA -> R.string.relay_purpose_account_data
-            SubPurpose.PROFILE_METADATA -> R.string.relay_purpose_profiles
-            SubPurpose.RELAY_LISTS -> R.string.relay_purpose_relay_lists
-            SubPurpose.FOLLOW_LISTS -> R.string.relay_purpose_follows
-            SubPurpose.MODERATION -> R.string.relay_purpose_moderation
-            SubPurpose.WALLET -> R.string.relay_purpose_wallet
-            else -> null
-        }
-
     /**
      * Lines for the expanded notification, busiest first. Empty when nothing is attributed yet —
      * the caller must then fall back to the bare count rather than render an empty section.
@@ -78,7 +61,7 @@ object RelayPurposeSummary {
                 .flatten()
                 .purposes()
                 .forEach { purpose ->
-                    if (labelOf(purpose) != null) {
+                    if (SubPurposeLabels.isWorthNamingInNotification(purpose)) {
                         named.getOrPut(purpose) { mutableSetOf() }.add(relay)
                     } else {
                         browsing.add(relay)
@@ -90,7 +73,7 @@ object RelayPurposeSummary {
             named.entries
                 .sortedWith(compareByDescending<Map.Entry<SubPurpose, Set<NormalizedRelayUrl>>> { it.value.size }.thenBy { it.key.name })
                 .map { (purpose, relays) ->
-                    pluralStringRes(ctx, R.plurals.relay_purpose_line, relays.size, ctx.getString(labelOf(purpose)!!), relays.size)
+                    pluralStringRes(ctx, R.plurals.relay_purpose_line, relays.size, ctx.getString(SubPurposeLabels.labelOf(purpose)), relays.size)
                 }.toMutableList()
 
         if (browsing.isNotEmpty()) {

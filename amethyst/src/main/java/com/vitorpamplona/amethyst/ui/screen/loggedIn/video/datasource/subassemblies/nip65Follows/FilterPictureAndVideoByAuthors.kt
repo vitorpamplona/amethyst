@@ -44,7 +44,7 @@ fun filterPictureAndVideoAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.RELAY_LISTS,
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
                     kinds = PictureAndVideoKinds,
                     limit = if (since == null) max(authorList.size * 20, 200) else null,
@@ -55,7 +55,7 @@ fun filterPictureAndVideoAuthors(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.RELAY_LISTS,
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
                     kinds = PictureAndVideoLegacyKinds,
                     tags = LegacyMimeTypeMap,
