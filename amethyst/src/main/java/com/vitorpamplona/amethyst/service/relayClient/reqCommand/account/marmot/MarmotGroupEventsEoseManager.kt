@@ -91,7 +91,7 @@ class MarmotGroupEventsEoseManager(
                     "(metadataRelays=${groupRelays?.size ?: 0}, usingFallback=${groupRelays.isNullOrEmpty()}): ${relaysForGroup.map { it.url }}"
             }
             for (relay in relaysForGroup) {
-                result.add(RelayBasedFilter(relay = relay, filter = ExplainedFilter.of(filter, SubPurpose.ENCRYPTED_GROUPS, "MLS group messages")))
+                result.add(RelayBasedFilter(relay = relay, filter = ExplainedFilter.of(filter, SubPurpose.ENCRYPTED_GROUPS, "MLS group messages", entityIds = listOf(groupId))))
             }
         }
 

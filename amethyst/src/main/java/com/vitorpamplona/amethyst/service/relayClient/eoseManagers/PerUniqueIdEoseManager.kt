@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relays.EOSEByKey
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -114,7 +116,13 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
 
         uniqueSubscribedAccounts.forEach {
             val mainKey = id(it)
-            val newFilters = updateFilter(it, since(it))?.ifEmpty { null }
+            val newFilters =
+                updateFilter(it, since(it))
+                    ?.ifEmpty { null }
+                    // Attribute to the account that owns this subscription, once, here — rather than
+                    // threading a pubkey through every filter builder underneath. Builders that already
+                    // know their account keep what they set.
+                    ?.let { f -> accountPubKeyOf(it)?.let { pk -> f.attributedTo(pk) } ?: f }
             findOrCreateSubFor(it).updateFilters(newFilters?.groupByRelay())
 
             updated.add(mainKey)
@@ -131,4 +139,13 @@ abstract class PerUniqueIdEoseManager<T, U : Any>(
     ): List<RelayBasedFilter>?
 
     abstract fun id(key: T): U
+
+    /**
+     * The account behind [key], when the key is account-scoped. Null for keys about other users.
+     *
+     * Keyed on [AccountScopedQuery] rather than a concrete query-state type: the home feed uses
+     * HomeQueryState, notifications use AccountQueryState, and checking one concrete class filed the
+     * other under "not attributed" despite both being built from a single account's data.
+     */
+    private fun accountPubKeyOf(key: Any?): String? = (key as? AccountScopedQuery)?.account?.userProfile()?.pubkeyHex
 }

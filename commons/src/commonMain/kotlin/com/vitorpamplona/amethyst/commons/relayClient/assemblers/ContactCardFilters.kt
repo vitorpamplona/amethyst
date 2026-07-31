@@ -40,6 +40,7 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
     trustedAccounts: List<HexKey>,
     relay: NormalizedRelayUrl,
     since: Long?,
+    accountPubKey: HexKey? = null,
 ): RelayBasedFilter? {
     if (targets.isEmpty() || trustedAccounts.isEmpty()) return null
     return RelayBasedFilter(
@@ -47,6 +48,7 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
         filter =
             ExplainedFilter(
                 purpose = SubPurpose.PROFILE_METADATA,
+                accountPubKey = accountPubKey,
                 kinds = ContactCardKindList,
                 authors = trustedAccounts,
                 // kind:30382 addresses the target user in the d-tag
@@ -72,6 +74,8 @@ fun filterContactCardsByAuthorInTheRelay(
         filter =
             ExplainedFilter(
                 purpose = SubPurpose.PROFILE_METADATA,
+                // This variant fetches an account's OWN contact card, so the author is the owner.
+                accountPubKey = author,
                 kinds = ContactCardKindList,
                 authors = listOf(author),
                 limit = limit,

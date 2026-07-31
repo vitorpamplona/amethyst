@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts.AccountDraftsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot.MarmotGroupEventsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
@@ -38,10 +39,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 // This allows multiple screen to be listening to logged-in accounts.
 @Stable
 class AccountQueryState(
-    val account: Account,
+    override val account: Account,
     val feedContentStates: AccountFeedContentStates,
     val otherAccounts: Set<HexKey>,
-)
+) : AccountScopedQuery
 
 /**
  * Always-on account loaders: metadata, gift wraps, drafts, inbox-relay

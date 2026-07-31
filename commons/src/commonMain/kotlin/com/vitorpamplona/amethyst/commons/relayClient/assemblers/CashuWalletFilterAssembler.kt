@@ -95,16 +95,31 @@ private class CashuWalletSubAssembler(
 ) : SingleSubEoseManager<CashuWalletQueryState>(client, allKeys, invalidateAfterEose = true) {
     override fun distinct(key: CashuWalletQueryState): Any = key.pubkey
 
+    /**
+     * One set of filters **per account**, never a merged one.
+     *
+     * [SingleSubEoseManager] hands over every distinct key, so with two wallets logged in this used
+     * to take `keys.first().pubkey` while pooling *both* accounts' relays — the second account's
+     * wallet was never subscribed, and its inbox relays were queried for the first account's
+     * nutzaps. Keeping each account's pubkey with its own relay sets is also what lets the
+     * subscription screen attribute these filters instead of piling them under "not attributed".
+     */
     override fun updateFilter(
         keys: List<CashuWalletQueryState>,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         if (keys.isEmpty()) return null
+        return keys.flatMap { filtersFor(it, since) }.ifEmpty { null }
+    }
 
-        val pubkey = keys.first().pubkey
-        val ownEventRelays = keys.flatMap { it.ownEventRelays }.toSet()
-        val inboxRelays = keys.flatMap { it.inboxRelays }.toSet()
-        if (ownEventRelays.isEmpty() && inboxRelays.isEmpty()) return null
+    private fun filtersFor(
+        key: CashuWalletQueryState,
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter> {
+        val pubkey = key.pubkey
+        val ownEventRelays = key.ownEventRelays
+        val inboxRelays = key.inboxRelays
+        if (ownEventRelays.isEmpty() && inboxRelays.isEmpty()) return emptyList()
 
         val ownedFilter =
             ExplainedFilter(
@@ -123,13 +138,15 @@ private class CashuWalletSubAssembler(
                         MintRecommendationEvent.KIND,
                     ),
                 authors = listOf(pubkey),
+                accountPubKey = pubkey,
             )
 
         val inboundNutzapsFilter =
             ExplainedFilter(
-                purpose = SubPurpose.WALLET,
+                purpose = SubPurpose.NUTZAP_INBOX,
                 kinds = listOf(NutzapEvent.KIND),
                 tags = mapOf("p" to listOf(pubkey)),
+                accountPubKey = pubkey,
             )
 
         // Own NIP-60 events are read from the user's outbox; inbound nutzaps

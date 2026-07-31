@@ -3191,9 +3191,14 @@ class Account(
         val filters =
             entries.flatMap { entry ->
                 val state = concordSessions.sessionFor(entry.id)?.state?.value ?: return@flatMap emptyList()
-                ConcordSubscriptionPlanner.channelPreviewFilters(entry, state, lastReadFor = { channelIdHex ->
-                    loadLastRead(concordChannelLastReadRoute(entry.id, channelIdHex))
-                })
+                ConcordSubscriptionPlanner.channelPreviewFilters(
+                    entry,
+                    state,
+                    lastReadFor = { channelIdHex ->
+                        loadLastRead(concordChannelLastReadRoute(entry.id, channelIdHex))
+                    },
+                    accountPubKey = userProfile().pubkeyHex,
+                )
             }
         if (filters.isEmpty()) return
         val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }

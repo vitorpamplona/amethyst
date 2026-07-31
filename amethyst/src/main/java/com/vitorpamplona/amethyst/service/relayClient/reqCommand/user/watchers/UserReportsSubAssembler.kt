@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
 import com.vitorpamplona.amethyst.commons.model.toHexSet
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
@@ -31,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.utils.mapOfSet
 
 class UserReportsSubAssembler(
     client: INostrClient,
@@ -65,14 +65,19 @@ class UserReportsSubAssembler(
 
         if (lastUsersOnFilter.isEmpty()) return null
 
-        val trustedAccountsPerRelay =
-            mapOfSet {
-                accounts.map { it.declaredFollowsPerOutboxRelay.value }.forEach {
-                    add(it)
-                }
-            }
+        // One pass per account, never a union. "Whose follows wrote this report" is the whole point of
+        // the filter, so merging every logged-in account's follow list into one per-relay map both made
+        // the result unattributable and asked one account's follows of another account's outbox relays.
+        return accounts.flatMap { account -> filtersFor(account, lastUsersOnFilter) }.ifEmpty { null }
+    }
 
-        return trustedAccountsPerRelay
+    private fun filtersFor(
+        account: Account,
+        lastUsersOnFilter: Set<User>,
+    ): List<RelayBasedFilter> {
+        val accountPubKey = account.userProfile().pubkeyHex
+
+        return account.declaredFollowsPerOutboxRelay.value
             .flatMap { (relay, trustedUsersInThisRelay) ->
                 // this relay + accounts are where we could find reports.
                 // we might have already loaded them, so let's separate new targets that were checked before from the others
@@ -84,12 +89,14 @@ class UserReportsSubAssembler(
                         trustedAccounts = trustedAccounts,
                         relay = relay,
                         since = null,
+                        accountPubKey = accountPubKey,
                     ),
                     filterReportsToKeysFromTrusted(
                         targets = groups.usersWithEose.toHexSet(),
                         trustedAccounts = trustedAccounts,
                         relay = relay,
                         since = findMinimumEOSEsForUsers(groups.usersWithEose, relay),
+                        accountPubKey = accountPubKey,
                     ),
                 )
             }

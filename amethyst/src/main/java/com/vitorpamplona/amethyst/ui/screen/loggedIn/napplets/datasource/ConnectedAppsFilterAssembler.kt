@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
@@ -32,9 +33,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
  * been granted permissions in the user's ledger.
  */
 class ConnectedAppsQueryState(
-    val account: Account,
+    override val account: Account,
     val authors: Set<HexKey>,
-)
+) : AccountScopedQuery
 
 /**
  * Live subscription for NIP-5D napplet manifests (kinds 15129/35129) while

@@ -37,6 +37,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 data class MetadataQueryState(
     val pubkeys: Set<HexKey>,
     val indexRelays: Set<NormalizedRelayUrl>,
+    /** Which account is looking. Null when the caller has no account context (kept out of attribution). */
+    val accountPubKey: HexKey? = null,
 )
 
 /**
@@ -69,6 +71,11 @@ class MetadataFilterAssembler(
 
         if (allPubkeys.isEmpty() || allRelays.isEmpty()) return null
 
+        // Attributed only when one account is looking. These pubkeys are whoever is rendered rather
+        // than anything an account owns, and several query states are batched into one filter, so with
+        // more than one asker there is no single honest owner.
+        val soleAccountPubKey = keys.mapNotNullTo(mutableSetOf()) { it.accountPubKey }.singleOrNull()
+
         val pubkeyList = allPubkeys.toList()
 
         // Create filter for metadata (Kind 0)
@@ -78,6 +85,7 @@ class MetadataFilterAssembler(
                 authors = pubkeyList,
                 limit = pubkeyList.size,
                 purpose = SubPurpose.PROFILE_METADATA,
+                accountPubKey = soleAccountPubKey,
             )
 
         // Apply since times per relay

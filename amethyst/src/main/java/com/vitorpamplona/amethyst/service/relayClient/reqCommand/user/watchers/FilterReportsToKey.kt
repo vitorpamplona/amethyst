@@ -34,6 +34,7 @@ fun filterReportsToKeysFromTrusted(
     trustedAccounts: List<HexKey>,
     relay: NormalizedRelayUrl,
     since: Long?,
+    accountPubKey: HexKey? = null,
 ): RelayBasedFilter? {
     if (targets.isEmpty() || trustedAccounts.isEmpty()) return null
     return RelayBasedFilter(
@@ -43,6 +44,7 @@ fun filterReportsToKeysFromTrusted(
                 purpose = SubPurpose.MODERATION,
                 kinds = ReportKindList,
                 authors = trustedAccounts,
+                accountPubKey = accountPubKey,
                 tags = mapOf("p" to targets.sorted()),
                 since = since,
             ),

@@ -103,6 +103,18 @@ class UserOutboxFinderSubAssembler(
         val accounts = keys.mapTo(mutableSetOf()) { it.account }
         val connectedRelays = client.connectedRelaysFlow().value
 
+        // Attributed only when one account is asking. Unlike the reports sweep, the relay choice here
+        // is made from the *union* of every logged-in account's tiers (`pickRelaysToLoadUsers` below),
+        // and the users being resolved are whoever is on screen rather than anyone's follow list — so
+        // with several accounts active there is no single honest owner for a given filter, and
+        // splitting the sweep per account would re-issue the same lookups once per account.
+        // Deduped by pubkey, not by `Account`: that class uses identity equality, so two objects for
+        // the same logged-in user would look like two accounts and suppress attribution entirely.
+        val soleAccountPubKey =
+            accounts
+                .mapTo(mutableSetOf()) { it.userProfile().pubkeyHex }
+                .singleOrNull()
+
         val perRelayKeysBoth =
             pickRelaysToLoadUsers(
                 noOutboxList,
@@ -118,7 +130,13 @@ class UserOutboxFinderSubAssembler(
                 if (sortedUsers.isNotEmpty()) {
                     RelayBasedFilter(
                         relay = it.key,
-                        filter = ExplainedFilter(kinds = relayListKinds, authors = sortedUsers, purpose = SubPurpose.RELAY_LISTS),
+                        filter =
+                            ExplainedFilter(
+                                kinds = relayListKinds,
+                                authors = sortedUsers,
+                                purpose = SubPurpose.RELAY_LISTS,
+                                accountPubKey = soleAccountPubKey,
+                            ),
                     )
                 } else {
                     null
@@ -148,7 +166,14 @@ class UserOutboxFinderSubAssembler(
             fallbackRelays.map { relay ->
                 RelayBasedFilter(
                     relay = relay,
-                    filter = ExplainedFilter(kinds = relayListKinds, authors = sortedAbandoned, purpose = SubPurpose.RELAY_LISTS, purposeDetail = "outbox discovery for users whose relay list we lost"),
+                    filter =
+                        ExplainedFilter(
+                            kinds = relayListKinds,
+                            authors = sortedAbandoned,
+                            purpose = SubPurpose.RELAY_LISTS,
+                            purposeDetail = "outbox discovery for users whose relay list we lost",
+                            accountPubKey = soleAccountPubKey,
+                        ),
                 )
             }
 

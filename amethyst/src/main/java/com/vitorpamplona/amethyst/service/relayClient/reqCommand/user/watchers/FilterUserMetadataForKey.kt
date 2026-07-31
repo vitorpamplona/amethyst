@@ -63,6 +63,7 @@ fun filterUserMetadataForKey(
     indexRelays: Set<NormalizedRelayUrl>,
     cannotConnectRelays: Set<NormalizedRelayUrl>,
     since: EOSEAccountFast<User>,
+    accountPubKey: HexKey? = null,
 ): List<RelayBasedFilter> {
     val perRelayUsers =
         mapOfSet {
@@ -114,6 +115,7 @@ fun filterUserMetadataForKey(
                         filter =
                             ExplainedFilter(
                                 purpose = SubPurpose.PROFILE_METADATA,
+                                accountPubKey = accountPubKey,
                                 kinds = UserMetadataForKeyKinds,
                                 authors = firstTimers.sorted(),
                             ),
@@ -127,6 +129,7 @@ fun filterUserMetadataForKey(
                         filter =
                             ExplainedFilter(
                                 purpose = SubPurpose.PROFILE_METADATA,
+                                accountPubKey = accountPubKey,
                                 kinds = UserMetadataForKeyKinds,
                                 authors = updates.sorted(),
                                 since = minimumTime,

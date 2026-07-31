@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 /**
@@ -66,12 +67,18 @@ class ExplainedFilter(
     /** Free-form extra context for [SubPurpose.OTHER] or for narrowing a bucket while debugging. */
     val purposeDetail: String? = null,
     /**
-     * The thing this filter serves — a community, group, channel or mint id. Deliberately an **id,
-     * not a name**: names change, are not always loaded when the filter is built, and would pin a
-     * stale copy into a long-lived subscription. The UI resolves it against `LocalCache` at render
-     * time, so it always shows the current name and shows nothing gracefully when unknown.
+     * The things this filter serves — community, group, channel or mint ids.
+     *
+     * A **list**, because filters are routinely batched: relay-group state is fetched with one `#d`
+     * filter per host relay carrying every joined group on it, so a single filter can legitimately
+     * serve a dozen chats. Modelling one id would have forced either a wrong answer ("All") or a
+     * filter-per-chat, which is far more REQs than the relays want.
+     *
+     * Ids, not names: names change, are often not loaded when the filter is built, and would pin a
+     * stale copy into a long-lived subscription. The UI resolves them against `LocalCache` at render
+     * time, so it shows the current name and degrades to a short id when unknown.
      */
-    val entityId: HexKey? = null,
+    val entityIds: List<HexKey>? = null,
     /**
      * Which logged-in account asked for this. Several accounts are commonly active at once and they
      * do not share relay sets, so "why is this relay connected" is only answerable per account —
@@ -93,7 +100,7 @@ class ExplainedFilter(
         until: Long?,
         limit: Int?,
         search: String?,
-    ) = ExplainedFilter(ids, authors, kinds, tags, tagsAll, since, until, limit, search, purpose, purposeDetail, entityId, accountPubKey)
+    ) = ExplainedFilter(ids, authors, kinds, tags, tagsAll, since, until, limit, search, purpose, purposeDetail, entityIds, accountPubKey)
 
     companion object {
         /** Tags [filter] with a [purpose], preserving every protocol field. */
@@ -101,7 +108,7 @@ class ExplainedFilter(
             filter: Filter,
             purpose: SubPurpose,
             detail: String? = null,
-            entityId: HexKey? = null,
+            entityIds: List<HexKey>? = null,
             accountPubKey: HexKey? = null,
         ) = ExplainedFilter(
             filter.ids,
@@ -115,7 +122,7 @@ class ExplainedFilter(
             filter.search,
             purpose,
             detail,
-            entityId,
+            entityIds,
             accountPubKey,
         )
     }
@@ -135,8 +142,14 @@ fun Collection<Filter>.purposes(): Set<SubPurpose> = mapNotNullTo(mutableSetOf()
  * whose. Entries with no entity collapse to a single row for that purpose.
  */
 fun Collection<Filter>.purposeEntities(): Set<PurposeEntity> =
-    mapNotNullTo(mutableSetOf()) { filter ->
-        (filter as? ExplainedFilter)?.let { PurposeEntity(it.purpose, it.entityId, it.accountPubKey, it.purposeDetail) }
+    flatMapTo(mutableSetOf()) { filter ->
+        val explained = filter as? ExplainedFilter ?: return@flatMapTo emptyList()
+        val ids = explained.entityIds
+        if (ids.isNullOrEmpty()) {
+            listOf(PurposeEntity(explained.purpose, null, explained.accountPubKey, explained.purposeDetail))
+        } else {
+            ids.map { PurposeEntity(explained.purpose, it, explained.accountPubKey, explained.purposeDetail) }
+        }
     }
 
 /** A single "this relay is doing X, for Y, on behalf of account Z" fact. Ids only; names resolve in the UI. */
@@ -146,3 +159,23 @@ data class PurposeEntity(
     val accountPubKey: HexKey? = null,
     val detail: String? = null,
 )
+
+/**
+ * Stamps [accountPubKey] onto every tagged filter that does not already name one.
+ *
+ * Applied once where a subscription manager knows its account, rather than threading a pubkey
+ * parameter through the ~200 filter builders below it. Filters that already name an account are left
+ * alone, so a builder with better knowledge always wins.
+ */
+fun List<RelayBasedFilter>.attributedTo(accountPubKey: HexKey): List<RelayBasedFilter> =
+    map { relayFilter ->
+        val filter = relayFilter.filter
+        if (filter is ExplainedFilter && filter.accountPubKey == null) {
+            RelayBasedFilter(
+                relay = relayFilter.relay,
+                filter = ExplainedFilter.of(filter, filter.purpose, filter.purposeDetail, filter.entityIds, accountPubKey),
+            )
+        } else {
+            relayFilter
+        }
+    }

@@ -18,34 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource
+package com.vitorpamplona.amethyst.service.relayClient
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import kotlinx.coroutines.CoroutineScope
 
-class NestsQueryState(
-    override val account: Account,
-    val feedStates: AccountFeedContentStates,
-    val scope: CoroutineScope,
-) : AccountScopedQuery
-
-@Stable
-class NestsFilterAssembler(
-    client: INostrClient,
-) : ComposeSubscriptionManager<NestsQueryState>() {
-    val group =
-        listOf(
-            NestsSubAssembler(client, ::allKeys),
-        )
-
-    override fun invalidateKeys() = invalidateFilters()
-
-    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
-
-    override fun destroy() = group.forEach { it.destroy() }
+/**
+ * A subscription query state that belongs to one logged-in account.
+ *
+ * Around 66 query-state classes already carry an `account`, but nothing tied them together, so a
+ * subscription manager could not ask "whose subscription is this?" without knowing the concrete
+ * type. That is why the Active Relay Subscriptions screen filed the home feed under "not attributed"
+ * despite it being built from one specific person's follow list: the base manager checked for
+ * `AccountQueryState` and the home feed uses `HomeQueryState`.
+ *
+ * Implement this on any query state whose subscriptions belong to a single account, and the base
+ * managers attribute them automatically.
+ */
+interface AccountScopedQuery {
+    val account: Account
 }

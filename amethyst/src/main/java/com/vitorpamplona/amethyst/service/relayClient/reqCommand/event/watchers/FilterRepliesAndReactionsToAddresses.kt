@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -72,6 +73,7 @@ val TextNoteKindList = listOf(TextNoteEvent.KIND)
 fun filterRepliesAndReactionsToAddresses(
     keys: List<AddressableNote>,
     since: SincePerRelayMap?,
+    accountPubKey: HexKey? = null,
 ): List<RelayBasedFilter>? {
     if (keys.isEmpty()) return null
 
@@ -94,6 +96,7 @@ fun filterRepliesAndReactionsToAddresses(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.ENGAGEMENT,
+                        accountPubKey = accountPubKey,
                         kinds = RepliesAndReactionsToAddressesKinds1,
                         tags = mapOf("a" to sortedList),
                         since = since,
@@ -106,6 +109,7 @@ fun filterRepliesAndReactionsToAddresses(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.ENGAGEMENT,
+                        accountPubKey = accountPubKey,
                         kinds = PostsAndChatMessagesToAddresses,
                         tags = mapOf("a" to sortedList),
                         since = since,
@@ -118,6 +122,7 @@ fun filterRepliesAndReactionsToAddresses(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.ENGAGEMENT,
+                        accountPubKey = accountPubKey,
                         kinds = DeletionKindList,
                         tags = mapOf("a" to sortedList),
                         since = since,
@@ -130,6 +135,7 @@ fun filterRepliesAndReactionsToAddresses(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.ENGAGEMENT,
+                        accountPubKey = accountPubKey,
                         kinds = TextNoteKindList,
                         tags = mapOf("q" to sortedList),
                         since = since,

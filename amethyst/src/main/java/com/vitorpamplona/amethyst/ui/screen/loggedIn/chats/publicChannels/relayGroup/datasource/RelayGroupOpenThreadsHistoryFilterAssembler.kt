@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -40,9 +41,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** One open NIP-29 group whose older forum threads the Threads tab wants paged in. */
 class RelayGroupOpenThreadsHistoryQueryState(
-    val account: Account,
+    override val account: Account,
     val groupId: GroupId,
-)
+) : AccountScopedQuery
 
 /**
  * Mounts the on-demand **history** pager for whichever NIP-29 group's Threads tab is open. The Threads

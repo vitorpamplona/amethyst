@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwa
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -51,8 +52,8 @@ import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresence
 @Stable
 class NestRoomLivenessQueryState(
     val note: AddressableNote,
-    val account: Account,
-)
+    override val account: Account,
+) : AccountScopedQuery
 
 /**
  * Single per-room sub-assembler for the feed thumbnail liveness

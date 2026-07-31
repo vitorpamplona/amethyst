@@ -23,15 +23,16 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
 
 class PollsQueryState(
-    val account: Account,
+    override val account: Account,
     val feedStates: AccountFeedContentStates,
     val scope: CoroutineScope,
-)
+) : AccountScopedQuery
 
 @Stable
 class PollsFilterAssembler(

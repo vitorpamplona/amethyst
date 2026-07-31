@@ -159,6 +159,15 @@ class AccountFollowsLoaderSubAssembler(
 
         val connectedRelays = client.connectedRelaysFlow().value
 
+        // Attributed only when one account is asking. The follow lists above are unioned across every
+        // logged-in account and the relays are then picked from that union, so with several accounts
+        // active no single one owns a given filter. Deduped by pubkey because `Account` uses identity
+        // equality.
+        val soleAccountPubKey =
+            accounts
+                .mapTo(mutableSetOf()) { it.userProfile().pubkeyHex }
+                .singleOrNull()
+
         val perRelay = pickRelaysToLoadUsers(users, accounts, connectedRelays, failureTracker.cannotConnectRelays, hasTried)
 
         hasTried.removeEveryoneBut(users)
@@ -167,7 +176,13 @@ class AccountFollowsLoaderSubAssembler(
             if (users.isNotEmpty()) {
                 RelayBasedFilter(
                     relay = relay,
-                    filter = ExplainedFilter(purpose = SubPurpose.FOLLOW_LISTS, kinds = listOf(AdvertisedRelayListEvent.KIND), authors = users.sorted()),
+                    filter =
+                        ExplainedFilter(
+                            purpose = SubPurpose.RELAY_LISTS,
+                            kinds = listOf(AdvertisedRelayListEvent.KIND),
+                            authors = users.sorted(),
+                            accountPubKey = soleAccountPubKey,
+                        ),
                 )
             } else {
                 null

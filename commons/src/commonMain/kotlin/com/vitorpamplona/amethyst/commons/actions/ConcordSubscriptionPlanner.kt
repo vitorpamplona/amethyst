@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntr
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -165,6 +166,7 @@ object ConcordSubscriptionPlanner {
         lastReadFor: (channelIdHex: String) -> Long,
         catchUpLimit: Int = 50,
         previewLimit: Int = 10,
+        accountPubKey: HexKey? = null,
     ): List<RelayBasedFilter> {
         val authorsByChannel = LinkedHashMap<ConcordChannelId, MutableSet<String>>()
         val relaysByChannel = HashMap<ConcordChannelId, Set<NormalizedRelayUrl>>()
@@ -180,6 +182,8 @@ object ConcordSubscriptionPlanner {
                     ExplainedFilter(
                         purpose = SubPurpose.COMMUNITY_CHATS,
                         purposeDetail = "concord community planes",
+                        entityIds = listOf(entry.id),
+                        accountPubKey = accountPubKey,
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         authors = authors.toList(),
                         // -1 so the last-read message (created_at == lastRead) is itself returned:
@@ -191,6 +195,8 @@ object ConcordSubscriptionPlanner {
                     ExplainedFilter(
                         purpose = SubPurpose.COMMUNITY_CHATS,
                         purposeDetail = "concord community planes",
+                        entityIds = listOf(entry.id),
+                        accountPubKey = accountPubKey,
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         authors = authors.toList(),
                         limit = previewLimit,
@@ -232,6 +238,7 @@ object ConcordSubscriptionPlanner {
     fun controlIsolatedFilters(
         entries: List<ConcordCommunityListEntry>,
         since: SincePerRelayMap?,
+        accountPubKey: HexKey? = null,
         stateOf: (ConcordCommunityListEntry) -> ConcordCommunityState?,
     ): List<RelayBasedFilter> {
         val controlSubs = controlPlaneSubs(entries)
@@ -243,7 +250,7 @@ object ConcordSubscriptionPlanner {
             otherSubs += channelPlaneSubs(entry, state)
         }
 
-        return relayBasedFilters(controlSubs, since).orEmpty() + relayBasedFilters(otherSubs, since).orEmpty()
+        return relayBasedFilters(controlSubs, since, accountPubKey).orEmpty() + relayBasedFilters(otherSubs, since, accountPubKey).orEmpty()
     }
 
     /**
@@ -258,10 +265,18 @@ object ConcordSubscriptionPlanner {
     fun relayBasedFilters(
         subs: List<ConcordPlaneSub>,
         since: SincePerRelayMap?,
+        accountPubKey: HexKey? = null,
     ): List<RelayBasedFilter>? {
         val authorsByRelay = HashMap<NormalizedRelayUrl, MutableSet<String>>()
+        // Which communities each relay is being asked about. Collapsing planes into one filter per
+        // relay is what makes the subscription screen unable to name them otherwise — the plane
+        // pubkeys are stream keys, not something a user can recognise.
+        val communitiesByRelay = HashMap<NormalizedRelayUrl, MutableSet<String>>()
         for (sub in subs) {
-            for (relay in sub.relays) authorsByRelay.getOrPut(relay) { HashSet() }.add(sub.pubKeyHex)
+            for (relay in sub.relays) {
+                authorsByRelay.getOrPut(relay) { HashSet() }.add(sub.pubKeyHex)
+                sub.channelId?.let { communitiesByRelay.getOrPut(relay) { HashSet() }.add(it.communityId) }
+            }
         }
         if (authorsByRelay.isEmpty()) return null
 
@@ -271,6 +286,9 @@ object ConcordSubscriptionPlanner {
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.COMMUNITY_CHATS,
+                        purposeDetail = "concord live planes",
+                        entityIds = communitiesByRelay[relay]?.sorted(),
+                        accountPubKey = accountPubKey,
                         // Stored plane wraps (1059) plus ephemeral ones (21059) — the latter carry the
                         // live-only typing heartbeats a relay broadcasts but never stores.
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP, ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL),

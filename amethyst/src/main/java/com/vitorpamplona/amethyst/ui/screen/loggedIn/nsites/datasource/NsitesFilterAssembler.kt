@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
 
@@ -33,9 +34,9 @@ import kotlinx.coroutines.CoroutineScope
  * scope.
  */
 class NsitesQueryState(
-    val account: Account,
+    override val account: Account,
     val scope: CoroutineScope,
-)
+) : AccountScopedQuery
 
 /**
  * Subscribes to NIP-5A static-site manifests (kinds 15128/35128) while an nSite screen is open,

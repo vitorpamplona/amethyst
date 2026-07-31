@@ -90,7 +90,7 @@ class NwcNotificationsEoseManager(
                     relay = wallet.uri.relayUri,
                     filter =
                         ExplainedFilter(
-                            purpose = SubPurpose.WALLET,
+                            purpose = SubPurpose.NWC,
                             kinds = listOf(NwcNotificationEvent.KIND, NwcNotificationEvent.LEGACY_KIND),
                             authors = listOf(wallet.uri.pubKeyHex),
                             tags = mapOf("p" to listOf(signer.pubKey)),
