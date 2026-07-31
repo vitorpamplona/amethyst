@@ -21,34 +21,37 @@
 package com.vitorpamplona.quartz.nip44Encryption
 
 import androidx.collection.LruCache
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 class SharedKeyCache {
-    private val sharedKeyCache = LruCache<Int, ByteArray>(200)
+    // Keyed by the full (privateKey || pubKey) content, NOT by a 32-bit hashCode.
+    // A hashCode key silently collides: two distinct peers whose (priv, pub) bytes
+    // hash to the same Int would share a cache slot, so `get` could return one
+    // peer's conversation key for a message meant for the other — a silent
+    // wrong-key encrypt/decrypt. The polynomial hash that was used here collides
+    // independently of the private key, so an attacker could grind a pubkey that
+    // aliases a victim's contact. Keying on the raw bytes removes the collision.
+    private val sharedKeyCache = LruCache<String, ByteArray>(200)
 
     fun clearCache() {
         sharedKeyCache.evictAll()
     }
 
-    fun combinedHashCode(
-        a: ByteArray,
-        b: ByteArray,
-    ): Int {
-        var result = 1
-        for (element in a) result = 31 * result + element
-        for (element in b) result = 31 * result + element
-        return result
-    }
+    private fun cacheKey(
+        privateKey: ByteArray,
+        pubKey: ByteArray,
+    ): String = privateKey.toHexKey() + pubKey.toHexKey()
 
     fun get(
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): ByteArray? = sharedKeyCache[combinedHashCode(privateKey, pubKey)]
+    ): ByteArray? = sharedKeyCache[cacheKey(privateKey, pubKey)]
 
     fun add(
         privateKey: ByteArray,
         pubKey: ByteArray,
         secret: ByteArray,
     ) {
-        sharedKeyCache.put(combinedHashCode(privateKey, pubKey), secret)
+        sharedKeyCache.put(cacheKey(privateKey, pubKey), secret)
     }
 }
