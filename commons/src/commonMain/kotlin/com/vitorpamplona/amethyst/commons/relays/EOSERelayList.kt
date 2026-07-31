@@ -47,6 +47,17 @@ class EOSERelayList {
         relayList = mutableMapOf()
     }
 
+    /**
+     * Forgets one relay's cursor, so the next filter built for it asks from scratch.
+     *
+     * Needed when a subscription's *scope* widens rather than its contents changing — a merged filter
+     * that starts covering another account has already-EOSE'd relays whose `since` would silence
+     * exactly the history the new account still needs.
+     */
+    fun remove(relayUrl: NormalizedRelayUrl) {
+        relayList.remove(relayUrl)
+    }
+
     fun since() = relayList
 
     fun newEose(

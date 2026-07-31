@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.MergedAuthorTracker
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
@@ -90,6 +91,11 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         return accountsPerRelay.flatMap { (relay, accounts) ->
             val pubkeys = accounts.map { it.account.userProfile().pubkeyHex }
 
+            // An account that joins a relay this subscription already covers would otherwise inherit
+            // the cursor the earlier accounts earned, and never ask for anything older than it.
+            // Dropping the cursor first means `since` below reads null and the merged filter refetches.
+            if (authorsPerRelay.gainedAuthors(relay, pubkeys)) clearEoseFor(relay)
+
             // A cold-start floor, NOT paging — backward paging lives in
             // [AccountNotificationsHistoryEoseManager]. Read only when a relay has no EOSE yet; once it
             // does, the EOSE time wins and this is never consulted.
@@ -140,6 +146,8 @@ class AccountNotificationsEoseFromInboxRelaysManager(
      * gets its own. Re-entrancy is safe — the watchers call `invalidateFilters()`, which lands back
      * here and finds every account already watched.
      */
+    private val authorsPerRelay = MergedAuthorTracker()
+
     private val userJobMap = mutableMapOf<User, List<Job>>()
 
     @OptIn(FlowPreview::class)
@@ -178,6 +186,7 @@ class AccountNotificationsEoseFromInboxRelaysManager(
     }
 
     override fun destroy() {
+        authorsPerRelay.clear()
         userJobMap.values.forEach { jobs -> jobs.forEach { it.cancel() } }
         userJobMap.clear()
         super.destroy()

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.MergedAuthorTracker
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
@@ -67,6 +68,13 @@ class AccountMetadataEoseManager(
 
         return accountsPerRelay.flatMap { (relay, accounts) ->
             val pubkeys = accounts.map { it.account.userProfile().pubkeyHex }
+
+            // An account joining a relay this subscription already covers must not inherit the cursor
+            // the earlier accounts earned — it would never ask for its own profile, follows or lists.
+            // This matters more here than for notifications: there is no backward pager to rescue it,
+            // so the account would go without until the next launch cleared the in-memory cursor.
+            if (authorsPerRelay.gainedAuthors(relay, pubkeys)) clearEoseFor(relay)
+
             val relaySince = since?.get(relay)?.time
 
             // The account-switcher avatars: other logged-in accounts this screen wants to name.
@@ -82,6 +90,8 @@ class AccountMetadataEoseManager(
             ).flatten()
         }
     }
+
+    private val authorsPerRelay = MergedAuthorTracker()
 
     /** Per-account relay watchers, reconciled as accounts come and go. See the notifications manager. */
     private val userJobMap = mutableMapOf<User, List<Job>>()
@@ -108,6 +118,7 @@ class AccountMetadataEoseManager(
     }
 
     override fun destroy() {
+        authorsPerRelay.clear()
         userJobMap.values.forEach { jobs -> jobs.forEach { it.cancel() } }
         userJobMap.clear()
         super.destroy()
