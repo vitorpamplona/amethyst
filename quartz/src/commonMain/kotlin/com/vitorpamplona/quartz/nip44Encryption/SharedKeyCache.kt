@@ -23,32 +23,56 @@ package com.vitorpamplona.quartz.nip44Encryption
 import androidx.collection.LruCache
 
 class SharedKeyCache {
-    private val sharedKeyCache = LruCache<Int, ByteArray>(200)
+    // Keyed by the full (privateKey, pubKey) content via [CacheKey], NOT by a bare
+    // 32-bit hashCode. Using a hashCode as the whole map key silently collides:
+    // two distinct peers whose (priv, pub) bytes hash to the same Int would share a
+    // slot, so `get` could return one peer's conversation key for a message meant
+    // for the other — a silent wrong-key encrypt/decrypt (and the polynomial hash
+    // that was used collides independently of the private key, so a pubkey aliasing
+    // a victim's contact is grindable). [CacheKey] keeps the cheap Int hash only as
+    // a bucket selector and disambiguates collisions with a full contentEquals, so
+    // it stays correct while avoiding the per-lookup allocation of a hex String key.
+    private val sharedKeyCache = LruCache<CacheKey, ByteArray>(200)
 
     fun clearCache() {
         sharedKeyCache.evictAll()
     }
 
-    fun combinedHashCode(
-        a: ByteArray,
-        b: ByteArray,
-    ): Int {
-        var result = 1
-        for (element in a) result = 31 * result + element
-        for (element in b) result = 31 * result + element
-        return result
-    }
-
     fun get(
         privateKey: ByteArray,
         pubKey: ByteArray,
-    ): ByteArray? = sharedKeyCache[combinedHashCode(privateKey, pubKey)]
+    ): ByteArray? = sharedKeyCache[CacheKey(privateKey, pubKey)]
 
     fun add(
         privateKey: ByteArray,
         pubKey: ByteArray,
         secret: ByteArray,
     ) {
-        sharedKeyCache.put(combinedHashCode(privateKey, pubKey), secret)
+        sharedKeyCache.put(CacheKey(privateKey, pubKey), secret)
+    }
+
+    /**
+     * Content-addressed cache key holding the raw key references (no byte copy, no
+     * hex string). The precomputed [hash] is only a bucket selector — [equals] does
+     * the authoritative full-content comparison, so hash collisions can never return
+     * the wrong peer's secret. Callers must treat the passed arrays as immutable
+     * (the same value-type contract [com.vitorpamplona.quartz.marmot.mls.crypto.X25519KeyPair]
+     * relies on when used as a map key).
+     */
+    private class CacheKey(
+        val privateKey: ByteArray,
+        val pubKey: ByteArray,
+    ) {
+        private val hash = privateKey.contentHashCode() * 31 + pubKey.contentHashCode()
+
+        override fun hashCode(): Int = hash
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is CacheKey) return false
+            return hash == other.hash &&
+                privateKey.contentEquals(other.privateKey) &&
+                pubKey.contentEquals(other.pubKey)
+        }
     }
 }

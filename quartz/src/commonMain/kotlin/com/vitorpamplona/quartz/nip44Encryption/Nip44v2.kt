@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20
 import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import com.vitorpamplona.quartz.utils.equalsConstantTime
 import kotlinx.coroutines.CancellationException
 import kotlin.io.encoding.Base64
 import kotlin.math.floor
@@ -104,7 +105,7 @@ class Nip44v2 {
     ) {
         val calculatedMac = hmacAad(messageKey.hmacKey, decoded.ciphertext, decoded.nonce)
 
-        check(calculatedMac.contentEquals(decoded.mac)) {
+        check(calculatedMac.equalsConstantTime(decoded.mac)) {
             "Invalid Mac: Calculated ${calculatedMac.toHexKey()}, decoded: ${decoded.mac.toHexKey()}"
         }
     }
