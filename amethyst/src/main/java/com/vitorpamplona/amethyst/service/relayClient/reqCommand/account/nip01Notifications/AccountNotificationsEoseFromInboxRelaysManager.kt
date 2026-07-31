@@ -49,9 +49,13 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        // Backward-paging boundary: once the feed has filled a page, ask for everything older than
-        // its oldest card. It stays null until then — see the note on the missing week floor below,
-        // which is what let it stay null forever on a quiet inbox.
+        // A cold-start floor, NOT paging — backward paging lives in
+        // [AccountNotificationsHistoryEoseManager]. Read only when a relay has no EOSE yet; once it
+        // does, the EOSE time wins and this is never consulted.
+        //
+        // `since` means *newer than*, so this floors the query at the depth the feed already reaches
+        // rather than asking all-time again. It stays null until the feed holds a full page — and is
+        // therefore always null for an account with no UI, since nothing fills that feed.
         val pagingBoundary = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
 
         val inbox =
