@@ -872,8 +872,6 @@ class AppModules(
         AccountCacheState(
             geolocationFlow = { locationManager.geohashStateFlow },
             nwcFilterAssembler = { sources.nwc },
-            cashuWalletFilterAssembler = { sources.cashuWallet },
-            subscribedAccounts = { sources.account.subscribedAccounts },
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
             okHttpClientForMoney = roleBasedHttpClientBuilder::okHttpClientForMoney,
             contentResolverFn = { appContext.contentResolver },

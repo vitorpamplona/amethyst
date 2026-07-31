@@ -32,11 +32,10 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01No
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip47WalletConnect.NwcNotificationsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip60Cashu.CashuWalletEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 // This allows multiple screen to be listening to logged-in accounts.
 //
@@ -107,6 +106,9 @@ class AccountFilterAssembler(
             notificationsHistory,
             // Live tail: NIP-47 wallet notifications (payment_received) on each connected wallet's own relay.
             NwcNotificationsEoseManager(client, ::preferredKeys),
+            // NIP-60 wallet + NIP-61 nutzap inbox. Mounted here rather than run from a collector
+            // inside CashuWalletState, so it starts and stops with every other account-level loader.
+            CashuWalletEoseManager(client, ::preferredKeys),
             MarmotGroupEventsEoseManager(client, ::preferredKeys),
         )
 
@@ -128,24 +130,7 @@ class AccountFilterAssembler(
                 keys.firstOrNull { it.feedContentStates != null } ?: keys.first()
             }
 
-    private val subscribedAccountsInternal = MutableStateFlow<Set<HexKey>>(emptySet())
-
-    /**
-     * The accounts whose always-on subscriptions are mounted right now, from
-     * either mount path: a screen's [AccountFilterAssemblerSubscription] or the
-     * headless [AccountSubscriptionRegistry].
-     *
-     * This is the answer to "does this account currently pull from relays?", so
-     * account-scoped loaders that live outside this assembler — the Cashu wallet
-     * — can follow it instead of running for every [Account] object that happens
-     * to be loaded in memory.
-     */
-    val subscribedAccounts = subscribedAccountsInternal.asStateFlow()
-
-    override fun invalidateKeys() {
-        subscribedAccountsInternal.value = allKeys().mapTo(mutableSetOf()) { it.account.userProfile().pubkeyHex }
-        invalidateFilters()
-    }
+    override fun invalidateKeys() = invalidateFilters()
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 

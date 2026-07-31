@@ -59,8 +59,6 @@ import java.io.File
 class AccountCacheState(
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
-    val cashuWalletFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler,
-    val subscribedAccounts: () -> StateFlow<Set<HexKey>>,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
     val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
     val contentResolverFn: () -> ContentResolver,
@@ -267,8 +265,6 @@ class AccountCacheState(
             signer = signerWithClientTag,
             geolocationFlow = geolocationFlow,
             nwcFilterAssembler = nwcFilterAssembler,
-            cashuWalletFilterAssembler = cashuWalletFilterAssembler,
-            subscribedAccounts = subscribedAccounts,
             cashuMintDirectoryFilterAssembler = cashuMintDirectoryFilterAssembler,
             okHttpClientForMoney = okHttpClientForMoney,
             otsResolverBuilder = otsResolverBuilder,

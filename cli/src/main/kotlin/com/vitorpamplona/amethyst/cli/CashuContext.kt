@@ -100,7 +100,7 @@ class CashuContext(
      */
     suspend fun snapshot(): CashuWalletReader.WalletSnapshot {
         val pk = ctx.identity.pubKeyHex
-        // Mirror commons' CashuWalletFilterAssembler exactly: authored wallet
+        // Mirror commons' cashuWalletFilters exactly: authored wallet
         // kinds by authors=[pk], inbound nutzaps by #p — so amy projects the
         // same event set the Android app subscribes to.
         val authored =
