@@ -282,6 +282,58 @@ Manual: 12-person list into a private note with an external signer — confirm t
 approval count matches the disclosed number, and that recipients without a DM
 inbox relay were flagged before send.
 
+## Visual direction — the row itself needs a redesign
+
+Bolting a second chip onto today's Notify row makes an already weak surface
+worse, so the picker should land together with a redesign of the row. The
+governing idea: **when the note is sealed, the composer should look like an
+envelope, and the audience should be the flap.** Seven moves, each independently
+shippable, each using a component the app already has:
+
+1. **A container, not a row.** Today the bold grey label and the chips are
+   siblings in one `FlowRow` — same weight class, no boundary, so it reads as
+   loose fragments floating above the message. Wrap them in a tinted rounded
+   Surface that sits flush on top of the message body. Public mode leaves it
+   untinted and borderless, so ordinary posts gain nothing they didn't ask for.
+2. **Faces at rest, chips only while editing.** A chip is avatar + display name +
+   bell ≈ 180dp; three people wrap the row and twelve bury the message field.
+   At rest show a **facepile** — overlapping 24dp avatars plus "Alice, Bruno & 7
+   others" — identical in height at 3 people or 90. `Poll.kt`'s `UserGallery`
+   (`take(4)`, `spacedBy((-10).dp)`, "+N" bubble) already does exactly this.
+3. **Muted must not look broken.** `Modifier.alpha(0.4f)` is Android's universal
+   *disabled* signal; using it for a deliberate, reversible state makes a working
+   feature look like a rendering bug. Use an unfilled chip with a struck bell and
+   full-contrast text — "switched off", not "greyed out".
+4. **One way in, not two competing chips.** `Add` is an `AssistChip` of the same
+   weight as the people beside it, so the action competes with the data — and the
+   list feature would add a second one. Collapse both into a single `＋` on the
+   flap that opens the one sheet (search + lists + per-person switches).
+   `Notifying(onManage: () -> Unit)` replaces `onAddUser`/`onAddList`.
+5. **The empty state is an invitation, not a paragraph.**
+   `R.string.private_note_no_receivers` is two lines of grey body copy where a
+   button belongs. Replace with one accent-coloured tappable line sitting exactly
+   where the faces will appear: *"Nobody yet — choose who can see this."*
+6. **Make the mode change a moment.** Going from "broadcast to the network" to
+   "encrypted to nine people" currently tints one 22dp icon among eleven
+   identical siblings. Choreograph it once, ~300ms: flap expands and tints, lock
+   glyph closes, the strip's lock takes a filled pill, the send button relabels to
+   **Send privately**, one haptic tick. `AnimatedVisibility` +
+   `animateColorAsState` + `LocalHapticFeedback` — all already used in the app.
+7. **A whole list arriving should feel like an arrival.** Twelve chips appearing
+   at once feels like a paste; twelve faces landing 40ms apart feels like a guest
+   list filling up. Pair it with the removable group chip from the provenance
+   section so the whole add is one tap to undo.
+
+No new icons: `Lock`, `LockOpen`, `Groups`, `PersonAdd`, `NotificationsOff` and
+`Check` are all already referenced in `MaterialSymbols.kt`, so the bundled subset
+font does not need regenerating.
+
+Ship order: **01–03** stand alone and fix the ugliness without any new feature;
+**04–05** land with the picker; **06–07** are the polish pass.
+
+Interactive mockups (before/after, live private-mode transition):
+<https://claude.ai/code/artifact/b4f8941f-b787-4355-9c12-c1b238538fe9>
+
 ## Open questions
 
 1. Should the private-member opt-in be per-user (as proposed) or a single
