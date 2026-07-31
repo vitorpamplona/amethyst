@@ -1319,7 +1319,7 @@
     <string name="podcast_author_verified">सत्यापित कर्ता</string>
     <string name="podcast_value_error_title">मूल्य के लिए मूल्य अपक्रम</string>
     <string name="podcast_value_no_recipients">इस पुटप्रसार का कोई भुगतान सम्भाव्य मूल्य प्राप्तकर्ता नहीं।</string>
-    <string name="podcast_value_keysend_requires_nwc">एक नोस्टर धनकोष संयोजन जोडें कुंचिकाप्रेषण (कडी) प्राप्तकर्ताओं को भेजने के लिए।</string>
+    <string name="podcast_value_keysend_requires_nwc">एक नोस्टर धनकोष संयोजन जोडें कुंचिकाप्रेषण (जालबिन्दु) प्राप्तकर्ताओं को भेजने के लिए।</string>
     <string name="podcast_value_stream">साट्स प्रवाह</string>
     <string name="podcast_value_stream_rate">%1$d साट्स प्रति मिनुट</string>
     <string name="podcast_value_stream_hint">स्वचालित रूप से मूल्य भेजता है जब आप सुन रहे हैं।</string>
@@ -1395,10 +1395,10 @@
     <string name="podcast_value_remove_recipient">प्राप्तकर्ता हटाएँ</string>
     <string name="podcast_value_recipient_name">नाम (विकल्पात्मक)</string>
     <string name="podcast_value_type_lnaddress">लैटनिंग॰ पता</string>
-    <string name="podcast_value_type_node">कडी (कुंचिकाप्रेषण)</string>
+    <string name="podcast_value_type_node">जालबिन्दु (कुंचिकाप्रेषण)</string>
     <string name="podcast_value_lnaddress">लैटनिंग॰ पता</string>
     <string name="podcast_value_lnaddress_hint">name@example.com</string>
-    <string name="podcast_value_node_pubkey">कडी ख्याप्यकुंचिका</string>
+    <string name="podcast_value_node_pubkey">जालबिन्दु ख्याप्यकुंचिका</string>
     <string name="podcast_value_node_pubkey_hint">02abc… (३३ अष्टक षोडशांक)</string>
     <string name="podcast_value_weight">भार</string>
     <string name="podcast_value_fee">शुल्क</string>
@@ -2140,11 +2140,15 @@
     <string name="home_content_type_text_notes">लेखीय टीकाएँ</string>
     <string name="home_content_type_reposts">पुनःप्रकाशन</string>
     <string name="home_content_type_comments">टिप्पणियाँ तथा प्रत्युत्तर</string>
+    <string name="home_content_type_pictures">चित्र</string>
+    <string name="home_content_type_videos">चलचित्र</string>
+    <string name="home_content_type_shorts">लघु चलचित्र</string>
     <string name="home_content_type_articles">लेख</string>
     <string name="home_content_type_wiki">समूहसम्पाद्य पृष्ठ</string>
     <string name="home_content_type_highlights">प्रमुखताएँ</string>
     <string name="home_content_type_polls">मतदान</string>
     <string name="home_content_type_classifieds">वर्गीकृत विज्ञापन</string>
+    <string name="home_content_type_torrents">अनेकत्रावरोहण</string>
     <string name="home_content_type_voice">ध्वनि सन्देश</string>
     <string name="home_content_type_live_activities">वर्तमान गतिविधियाँ</string>
     <string name="home_content_type_ephemeral_chat">अस्थायी चर्चाएँ</string>
@@ -2217,8 +2221,10 @@
     <string name="geohash_exclusive">स्थल विशेष पत्र</string>
     <string name="geohash_exclusive_explainer">स्थल के अनुचर ही देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
     <string name="hashtag_exclusive">विषयसूचक विशेष पत्र</string>
+    <string name="external_content_title">बाहरी विषयवस्तु</string>
     <string name="external_url_scope">जालस्थान पर टिप्पणी</string>
     <string name="external_id_scope">बाहरी संसाधन पर टिप्पणी</string>
+    <string name="url_preview_open_in_browser">जालवीक्षक मे खोलें</string>
     <string name="long_form_reading_minutes">%1$d मिन॰ पठन</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d अभिलेख</item>
@@ -2350,6 +2356,7 @@
     <string name="relay_group_create_title">समूह बनाएँ</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="buzz_channel_create_title">नयी प्रणाली</string>
+    <string name="buzz_forum_create_title">नया मंच</string>
     <string name="buzz_channel_flag_private">निजी प्रणाली</string>
     <string name="buzz_channel_flag_private_desc">प्रणाली सूची में छिपाया गया तथा आमन्त्रण सीमित। निष्क्रिय अर्थात इस पुनःप्रसारक पर कोई भी इसे खोज सकेगा तथा जुड सकेगा।</string>
     <string name="buzz_channel_flag_forum">मंच प्रणाली</string>
@@ -2392,6 +2399,8 @@
     <string name="relay_group_delete_confirm">क्या %1$s को मिटा दें। यह इस समूह को तथा इसके इतिहास को हटा देगा सब के लिए। इसे पूर्ववत नहीं किया जा सकता।</string>
     <string name="buzz_channel_delete">प्रणाली मिटाएँ</string>
     <string name="buzz_channel_delete_confirm">क्या %1$s को मिटा दें। यह इस प्रणाली को तथा इसके सन्देशों को हटा देगा सब के लिए। इसे पूर्ववत नहीं किया जा सकता।</string>
+    <string name="buzz_channel_archive">प्रणाली संग्रहण</string>
+    <string name="buzz_channel_unarchive">प्रणाली संग्रह अवस्था हटाएँ</string>
     <string name="relay_group_threads_title">सूत्र</string>
     <string name="relay_group_pin_message">सन्देश टाँकें</string>
     <string name="relay_group_unpin_message">सन्देश से टाँका हटाएँ</string>
@@ -2467,7 +2476,7 @@
     <string name="relay_group_browse_relay_label">पुनःप्रसारक पता</string>
     <string name="relay_group_browse_go">वीक्षण</string>
     <string name="relay_tor_clearnet_title">यह पुनःप्रसारक अभिगम्य नहीं टोर॰ पर</string>
-    <string name="relay_tor_clearnet_body">%1$s से कोई प्रत्युत्तर नहीं टोर॰ द्वारा। इसका जालनिवास सम्भाव्यतः टोर॰ निर्गमन स्थानों को अवरुद्ध कर रहा है। क्या इसके स्थान पर स्पष्टजाल पर संयोजन करें।</string>
+    <string name="relay_tor_clearnet_body">%1$s से कोई प्रत्युत्तर नहीं टोर॰ द्वारा। इसका जालनिवास सम्भाव्यतः टोर॰ निर्गमन जालबिन्दुओं को अवरुद्ध कर रहा है। क्या इसके स्थान पर स्पष्टजाल पर संयोजन करें।</string>
     <string name="relay_tor_clearnet_action">स्पष्टजाल का उपयोग करें</string>
     <string name="relay_group_browse_your_relays">पुनःप्रसारक जिन पर आप हैं</string>
     <string name="relay_group_browse_popular">लोकप्रिय पुनःप्रसारक</string>
@@ -2535,6 +2544,9 @@
     <string name="share_to_dm_title">को भेजें…</string>
     <string name="share_to_dm_start_new">नया सन्देश</string>
     <string name="share_target_as_highlight">नया उद्दीप्तव्य</string>
+    <string name="share_target_as_picture">नया चित्र</string>
+    <string name="share_target_as_short_video">नया लघु चलचित्र</string>
+    <string name="share_target_as_video">नया चलचित्र</string>
     <string name="new_highlight_title">नया उद्दीप्तव्य</string>
     <string name="new_highlight_passage_label">उद्दीप्त लेख</string>
     <string name="new_highlight_passage_placeholder">क्या था प्रमुख आपके लिए।</string>
@@ -3207,7 +3219,7 @@
     <string name="buzz_system_visibility_other">%1$s ने दृश्यमानता को %2$s कर दिया</string>
     <string name="buzz_system_ttl_set">%1$s ने %2$s पश्चात सन्देश अदृश्यकरण सक्षम किया</string>
     <string name="buzz_system_ttl_cleared">%1$s ने सन्देश अदृश्यकरण अक्षम किया</string>
-    <string name="buzz_system_channel_archived">%1$s ने इस प्रणाली को संग्रहित किया</string>
+    <string name="buzz_system_channel_archived">%1$s ने इस प्रणाली को संगृहीत किया</string>
     <string name="buzz_system_channel_unarchived">%1$s ने इस प्रणाली को पुनःस्थापित किया</string>
     <string name="buzz_system_channel_created">%1$s ने इस प्रणाली को बनाया</string>
     <string name="buzz_system_channel_deleted">%1$s ने इस प्रणाली को मिटाया</string>
@@ -3297,6 +3309,7 @@
     <string name="buzz_import_empty_body">आप इस पुनःप्रसारक के किसी भी प्रणाली के सदस्य प्रतीत नहीं होते अब तक। पहले वीक्षक में कार्यशाला आमन्त्रण स्वीकार करें। तत्पश्चात पुनःप्रयास करें।</string>
     <string name="relay_group_section_channels">प्रणालियाँ</string>
     <string name="relay_group_section_forums">मंच</string>
+    <string name="relay_group_section_archived">संगृहीत</string>
     <string name="buzz_agent_working">कार्य मध्य…</string>
     <string name="relay_group_add_member">सदस्य जोडें</string>
     <string name="buzz_community_add_people">इस कार्यशाला में लोगों को जोडें</string>
@@ -3560,10 +3573,10 @@
     <string name="add_a_blossom_server">ब्लोस्सम॰ प्रसारसंगणक जोडें</string>
     <string name="delete_all">सब मिटाएँ</string>
     <string name="delete_all_drafts_confirmation">क्या आप निश्चित रूप से सभी पाण्डुलिपियाँ मिटाना चाहते हैं।</string>
-    <string name="torrent_file">उग्रप्रवाह अभिलेख</string>
+    <string name="torrent_file">अनेकत्रावरोहण अभिलेख</string>
     <string name="torrent_download">अवरोहण</string>
     <string name="torrent_failure">अभिलेख खोलने में असफल</string>
-    <string name="torrent_no_apps">कोई उग्रप्रवाह क्रमक स्थापित नहीं अभिलेख खोलने तथा अवरोहण करने के लिए।</string>
+    <string name="torrent_no_apps">कोई अनेकत्रावरोहण क्रमक स्थापित नहीं अभिलेख खोलने तथा अवरोहण करने के लिए।</string>
     <string name="torrent_no_info">अभिलेखविभेदक युक्त जालनिर्देशक बनाने के लिए पर्याप्त जानकारी नहीं है घटना में</string>
     <string name="my_lists">मेरे सूचियाँ</string>
     <string name="select_list_to_filter">सूचनावली छानने के लिए सूची चुनें</string>
@@ -3936,8 +3949,8 @@
     <string name="kind_user_status">उपयोगकर्ता स्थिति</string>
     <string name="kind_notes">टीकाएँ</string>
     <string name="kind_edits">सम्पादन</string>
-    <string name="kind_torrents">उग्रप्रवाह</string>
-    <string name="kind_torrent_comments">उग्रप्रवाह टिप्पणियाँ</string>
+    <string name="kind_torrents">अनेकत्रावरोहण</string>
+    <string name="kind_torrent_comments">अनेकत्रावरोहण टिप्पणियाँ</string>
     <string name="kind_trusted_relays">विश्वसनीय पुनःप्रसारक</string>
     <string name="kind_trusted_providers">विश्वसनीय प्रदाता</string>
     <string name="kind_video_repl">चलचित्र (अनु)</string>
