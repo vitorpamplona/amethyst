@@ -1,6 +1,26 @@
 # Adding a whole people-list to a post's Notify / "Visible to" audience
 
-Proposal — not yet implemented.
+**Status: shipped** (P1 + P2, plus the visual direction below). Landed as
+`AudienceSelection.kt` / `AudienceFlap.kt` / `AudienceSheet.kt` in
+`amethyst/…/ui/note/creators/notify/`, with bulk mutators on
+`ShortNotePostViewModel` and 13 JVM tests in `AudienceSelectionTest`.
+
+Still open, in rough priority order:
+
+- **P3 — "Last private note" entry** in the sheet, reusing the previous send's
+  audience. The most-requested shape ("same people as last time") and the
+  cheapest remaining win.
+- **P3 — the other composers.** `Notifying()` is untouched, so the comment
+  composer (`GenericCommentPostScreen`) and the group DM composer's To row
+  (`SendDirectMessageTo`) still use the old flat row. They can adopt
+  `AudienceFlap` unchanged.
+- **Provenance is compose-session-only** — it resets on draft load, so a
+  bulk-added group chip does not survive a draft round trip (open question 2
+  below, answered "session-only" for now). The audience itself round-trips
+  fine; only the chip's undo affordance is lost.
+- **Kind-3 follows are not offered** as a catalog entry. The sheet's search
+  finds individuals, but "everyone I follow" is deliberately absent given the
+  caps.
 
 ## Goal
 
@@ -330,6 +350,22 @@ font does not need regenerating.
 
 Ship order: **01–03** stand alone and fix the ugliness without any new feature;
 **04–05** land with the picker; **06–07** are the polish pass.
+
+All seven shipped together, with two deviations worth recording:
+
+- **Move 05 kept a fact the short copy would have dropped.** The old paragraph
+  said "only you will be able to see this note" — true, since `canPost()` does
+  not gate a private note on having recipients, so a sealed note with an empty
+  audience really does go only to its author. The invitation therefore reads
+  *"Only you — choose who else can see this"* rather than *"Nobody yet"*, and
+  the same line now covers the everyone-muted case, which is the same situation
+  by a different route.
+- **Move 07's stagger is not implemented.** The group chip and the one-tap undo
+  shipped; the sequenced arrival of the faces did not, because the facepile is
+  a plain `Row` rather than a lazy list, so there is no `animateItem` to hang it
+  on. It needs a keyed `AnimatedVisibility` per face — worth doing, but it is
+  decoration, and the rest of the move (provenance, undo) is the part that
+  carries meaning.
 
 Interactive mockups (before/after, live private-mode transition):
 <https://claude.ai/code/artifact/b4f8941f-b787-4355-9c12-c1b238538fe9>
