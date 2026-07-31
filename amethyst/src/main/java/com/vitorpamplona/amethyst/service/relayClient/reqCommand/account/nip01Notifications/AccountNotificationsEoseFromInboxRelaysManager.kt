@@ -92,9 +92,11 @@ class AccountNotificationsEoseFromInboxRelaysManager(
             val pubkeys = accounts.map { it.account.userProfile().pubkeyHex }
 
             // An account that joins a relay this subscription already covers would otherwise inherit
-            // the cursor the earlier accounts earned, and never ask for anything older than it.
-            // Dropping the cursor first means `since` below reads null and the merged filter refetches.
-            if (authorsPerRelay.gainedAuthors(relay, pubkeys)) clearEoseFor(relay)
+            // the cursor the earlier accounts earned, and never ask for anything older than it. Drop
+            // the stored cursor AND ignore it for this pass — not just the former, which would leave
+            // the refetch depending on `since` being a live view of the map we just mutated.
+            val gained = authorsPerRelay.gainedAuthors(relay, pubkeys)
+            if (gained) clearEoseFor(relay)
 
             // A cold-start floor, NOT paging — backward paging lives in
             // [AccountNotificationsHistoryEoseManager]. Read only when a relay has no EOSE yet; once it
@@ -119,7 +121,7 @@ class AccountNotificationsEoseFromInboxRelaysManager(
             // could never rescue it — it only arms once the feed holds a full page, and the feed
             // could not fill because the query only ever asked for a week. A fresh install of an
             // established account hit the same deadlock.
-            val notificationSince = since?.get(relay)?.time ?: pagingBoundary
+            val notificationSince = (if (gained) null else since?.get(relay)?.time) ?: pagingBoundary
 
             // NIP-29 group activity (reactions/replies to my messages) is deliberately NOT requested
             // here. It lives on the group's host relay and used to be one `#h` filter per relay carrying

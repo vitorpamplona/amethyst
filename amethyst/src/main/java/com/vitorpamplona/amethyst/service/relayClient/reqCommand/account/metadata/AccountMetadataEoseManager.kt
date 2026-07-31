@@ -73,9 +73,12 @@ class AccountMetadataEoseManager(
             // the earlier accounts earned — it would never ask for its own profile, follows or lists.
             // This matters more here than for notifications: there is no backward pager to rescue it,
             // so the account would go without until the next launch cleared the in-memory cursor.
-            if (authorsPerRelay.gainedAuthors(relay, pubkeys)) clearEoseFor(relay)
+            // Drop the stored cursor AND ignore it for this pass, so the refetch does not depend on
+            // `since` being a live view of the map we just mutated.
+            val gained = authorsPerRelay.gainedAuthors(relay, pubkeys)
+            if (gained) clearEoseFor(relay)
 
-            val relaySince = since?.get(relay)?.time
+            val relaySince = if (gained) null else since?.get(relay)?.time
 
             // The account-switcher avatars: other logged-in accounts this screen wants to name.
             // Screens supply them; the background registry does not, so this is usually empty.

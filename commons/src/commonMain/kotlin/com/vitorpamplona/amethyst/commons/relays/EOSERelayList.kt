@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.relays
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 typealias SincePerRelayMap = MutableMap<NormalizedRelayUrl, MutableTime>
@@ -31,10 +33,21 @@ typealias SincePerRelayMap = MutableMap<NormalizedRelayUrl, MutableTime>
 class EOSERelayList {
     var relayList: SincePerRelayMap = mutableMapOf()
 
+    /**
+     * Writers are serialized because they are not all on one thread: [addOrUpdate] runs on each
+     * relay's own socket-reader thread as EOSE frames land, so a client holding a few hundred relays
+     * has that many potential writers to one plain map. [EOSEAccountFast] wraps its lists in a lock
+     * for the same reason; a bare list handed to [SingleSubEoseManager] had none.
+     *
+     * Reads still go through the map returned by [since] — deliberately live rather than a snapshot,
+     * since callers clear a relay and then re-read it inside one assembly pass.
+     */
+    private val lock = KmpLock()
+
     fun addOrUpdate(
         relayUrl: NormalizedRelayUrl,
         time: Long,
-    ) {
+    ) = lock.withLock {
         val eose = relayList[relayUrl]
         if (eose == null) {
             relayList[relayUrl] = MutableTime(time)
@@ -43,9 +56,10 @@ class EOSERelayList {
         }
     }
 
-    fun clear() {
-        relayList = mutableMapOf()
-    }
+    fun clear() =
+        lock.withLock {
+            relayList = mutableMapOf()
+        }
 
     /**
      * Forgets one relay's cursor, so the next filter built for it asks from scratch.
@@ -54,9 +68,10 @@ class EOSERelayList {
      * that starts covering another account has already-EOSE'd relays whose `since` would silence
      * exactly the history the new account still needs.
      */
-    fun remove(relayUrl: NormalizedRelayUrl) {
-        relayList.remove(relayUrl)
-    }
+    fun remove(relayUrl: NormalizedRelayUrl) =
+        lock.withLock {
+            relayList.remove(relayUrl)
+        }
 
     fun since() = relayList
 
