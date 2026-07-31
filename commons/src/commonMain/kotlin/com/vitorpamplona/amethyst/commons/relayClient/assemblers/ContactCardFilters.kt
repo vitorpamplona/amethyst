@@ -59,9 +59,14 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
 }
 
 /**
- * Every kind:30382 card *written by* [author] — the account's own nicknames —
- * for the bulk download at login from the account's relays. Addressable events:
+ * Every kind:30382 card *written by* [authors] — the accounts' own nicknames —
+ * for the bulk download at login from the accounts' own relays. Addressable events:
  * one card per target user, hence the larger limit.
+ *
+ * [SubPurpose.ACCOUNT_DATA], not [SubPurpose.PROFILE_METADATA] like its sibling above: nobody has to
+ * be on screen for this to run. It is part of the login-time account load, so filing it under
+ * "Observing Profiles" — explained as *"profiles of the people currently on screen"* — made every
+ * logged-in account look like it was watching somebody.
  */
 fun filterContactCardsByAuthorInTheRelay(
     relay: NormalizedRelayUrl,
@@ -73,8 +78,8 @@ fun filterContactCardsByAuthorInTheRelay(
         relay = relay,
         filter =
             ExplainedFilter(
-                purpose = SubPurpose.PROFILE_METADATA,
-                // This variant fetches an account's OWN contact card, so the author is the owner.
+                purpose = SubPurpose.ACCOUNT_DATA,
+                // This variant fetches the accounts' OWN contact cards, so the authors are the owners.
                 accountPubKeys = authors,
                 kinds = ContactCardKindList,
                 authors = authors,
