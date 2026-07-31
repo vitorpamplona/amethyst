@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEose
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -50,6 +49,19 @@ import kotlinx.coroutines.launch
  * to the relay, so it cannot rate-limit them per recipient; a merged query would let one spammed
  * account consume the shared `limit` and starve every other account's DMs. Each account keeps its own
  * budget there — see [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager].
+ *
+ * ## The `limit` here is shared, and deliberately not scaled
+ *
+ * [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager]
+ * multiplies its limits by the number of merged accounts; this one does not, and the difference is the
+ * kind of event. Metadata is replaceable, so the limit is a safety bound and widening it costs nothing.
+ * Notifications are a stream, so the limit is a page size: scaling it by four accounts would ask four
+ * times the data of every relay on every cold start, and most would clamp it anyway (`max_limit` is 500
+ * on strfry — already below the 2000 the summary filter asks for).
+ *
+ * So on a cold start a busy account can crowd a quiet one out of the shared newest-N. What recovers it
+ * is [AccountNotificationsHistoryEoseManager], which pages backward per account and stays unmerged for
+ * exactly that reason.
  */
 class AccountNotificationsEoseFromInboxRelaysManager(
     client: INostrClient,
@@ -170,7 +182,4 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         userJobMap.clear()
         super.destroy()
     }
-
-    /** Unused here, but kept so callers reading a key's owner do not reach into the account. */
-    fun pubkeyOf(key: AccountQueryState): HexKey = key.account.userProfile().pubkeyHex
 }

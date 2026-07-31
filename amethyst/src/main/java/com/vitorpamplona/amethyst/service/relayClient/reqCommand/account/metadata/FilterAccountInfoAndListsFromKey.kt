@@ -155,7 +155,7 @@ fun filterAccountInfoAndListsFromKey(
                     kinds = AmethystMetadataKinds,
                     authors = pubkeys,
                     tags = AmethystMetadataTagMapFilter,
-                    limit = 1 * pubkeys.size,
+                    limit = pubkeys.size,
                     since = since,
                 ),
         ),
