@@ -25,51 +25,50 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Mounts the always-on account loaders — notifications, DMs, gift wraps, drafts,
- * metadata — for accounts that have no screen.
+ * Mounts the account-level loaders — notifications, DMs, gift wraps, drafts,
+ * metadata — for accounts that have no screen of their own.
  *
  * Every other mount of [AccountFilterAssembler] comes from a composable holding an
  * `AccountViewModel`, which means it only ever covers the account the user is
- * looking at. Accounts the user asked to "keep active in the background" had no
- * such mount: they were merely loaded into memory so pushed gift wraps could be
- * decrypted by their owner, and everything else about them depended on a push
- * message arriving. On a device with no push (no Play Services, no UnifiedPush
- * distributor, Pokey not installed) those accounts pulled nothing at all.
+ * looking at. Every other logged-in account was merely resident in memory so pushed
+ * gift wraps could be decrypted by their owner; everything else about them depended
+ * on a push message arriving. On a device with no push (no Play Services, no
+ * UnifiedPush distributor, Pokey not installed) they pulled nothing at all.
  *
- * This registry is the pull side of that promise. It holds one
- * [AccountQueryState] per participating account and drives
- * [AccountFilterAssembler.subscribe] / [AccountFilterAssembler.unsubscribe]
- * directly — those are plain functions, not composables, so no UI has to exist.
+ * This registry is the pull side. It holds one [AccountQueryState] per account it is
+ * given and drives [AccountFilterAssembler.subscribe] /
+ * [AccountFilterAssembler.unsubscribe] directly — those are plain functions, not
+ * composables, so no UI has to exist.
  *
  * The keys carry no feed states (see [AccountQueryState.feedContentStates]) and no
- * `otherAccounts` — populating the account switcher's avatars is a screen's job,
- * and these accounts have no screen.
+ * `otherAccounts` — populating the account switcher's avatars is a screen's job, and
+ * these accounts have no screen.
  *
- * Ownership of the participating set lives in
+ * It deliberately decides nothing about *which* accounts those are: it mounts exactly
+ * the set it is handed, so the foreground/background rule lives in one place, in
  * [com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager],
- * which already watches the two flags that define it, and calls [sync] on every
- * change.
+ * which already watches the switches that define it and calls [sync] on every change.
  */
-class BackgroundAccountSubscriptionRegistry(
+class AccountSubscriptionRegistry(
     private val assembler: AccountFilterAssembler,
 ) {
     companion object {
-        private const val TAG = "BackgroundAccountSubs"
+        private const val TAG = "AccountSubscriptions"
     }
 
     private val mounted = mutableMapOf<HexKey, AccountQueryState>()
 
     /**
-     * Makes the mounted set match [participants] exactly: subscribes accounts that
-     * just opted in, unsubscribes accounts that opted out or were unloaded, and
-     * leaves untouched the ones already mounted.
+     * Makes the mounted set match [accounts] exactly: subscribes the ones that just
+     * joined it, unsubscribes the ones that left or were unloaded, and leaves the
+     * rest untouched.
      *
-     * Idempotent, so callers can hand it the same set on every emission of the
-     * flags flow without churning subscriptions.
+     * Idempotent, so callers can hand it the same set on every emission of the flows
+     * behind it without churning subscriptions.
      */
     @Synchronized
-    fun sync(participants: Collection<Account>) {
-        val wanted = participants.associateBy { it.userProfile().pubkeyHex }
+    fun sync(accounts: Collection<Account>) {
+        val wanted = accounts.associateBy { it.userProfile().pubkeyHex }
 
         // Unmount accounts that dropped out, and accounts whose Account object was
         // replaced (re-login rebuilds it) — the stale instance holds the old
@@ -91,11 +90,11 @@ class BackgroundAccountSubscriptionRegistry(
         }
 
         if (added > 0 || stale.isNotEmpty()) {
-            Log.d(TAG) { "Background account subscriptions: ${mounted.size} mounted (+$added, -${stale.size})" }
+            Log.d(TAG) { "Account subscriptions: ${mounted.size} mounted (+$added, -${stale.size})" }
         }
     }
 
-    /** Unmounts everything. Used when the master switch goes off, and on logout. */
+    /** Unmounts everything. Used when the app goes away with the master off, and on logout. */
     @Synchronized
     fun clear() = sync(emptyList())
 }

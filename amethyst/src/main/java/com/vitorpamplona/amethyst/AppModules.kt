@@ -95,7 +95,7 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoor
 import com.vitorpamplona.amethyst.service.relayClient.diagnostics.BootRelayDiagnostics
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.BackgroundAccountSubscriptionRegistry
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
@@ -963,7 +963,7 @@ class AppModules(
     // account-level subscriptions (notifications, DMs, gift wraps, wallet), with no
     // AccountViewModel behind it. Driven by alwaysOnNotificationServiceManager below,
     // which already tracks which accounts opted in.
-    val backgroundAccountSubscriptions = BackgroundAccountSubscriptionRegistry(sources.account)
+    val accountSubscriptions = AccountSubscriptionRegistry(sources.account)
 
     // Manages always-on notification service lifecycle. Preloads every saved
     // writable account while enabled so GiftWraps for non-active accounts still
@@ -974,7 +974,8 @@ class AppModules(
             scope = applicationIOScope,
             accountsCache = accountsCache,
             localPreferences = LocalPreferences,
-            backgroundSubscriptions = backgroundAccountSubscriptions,
+            subscriptions = accountSubscriptions,
+            isForeground = foregroundTracker.isForeground,
             activePubKeyProvider = { sessionManager.loggedInAccount()?.pubKey },
         )
 

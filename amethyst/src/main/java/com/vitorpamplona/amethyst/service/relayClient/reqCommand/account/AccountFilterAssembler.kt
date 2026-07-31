@@ -133,7 +133,7 @@ class AccountFilterAssembler(
     /**
      * The accounts whose always-on subscriptions are mounted right now, from
      * either mount path: a screen's [AccountFilterAssemblerSubscription] or the
-     * headless [BackgroundAccountSubscriptionRegistry].
+     * headless [AccountSubscriptionRegistry].
      *
      * This is the answer to "does this account currently pull from relays?", so
      * account-scoped loaders that live outside this assembler — the Cashu wallet
