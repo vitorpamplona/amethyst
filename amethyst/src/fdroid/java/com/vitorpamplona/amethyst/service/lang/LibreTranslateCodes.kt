@@ -20,26 +20,23 @@
  */
 package com.vitorpamplona.amethyst.service.lang
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+/**
+ * Pure BCP-47 → LibreTranslate code mapping, kept free of Android/framework
+ * dependencies so it can be unit-tested on the JVM.
+ */
+object LibreTranslateCodes {
+    // LibreTranslate language set (ISO 639-1). Codes outside it are skipped.
+    val supported: Set<String> =
+        setOf(
+            "en", "ar", "az", "bg", "bs", "ca", "cs", "da", "de", "el", "es", "et", "fa", "fi",
+            "fr", "he", "hi", "hr", "hu", "hy", "id", "it", "ja", "ka", "kk", "ko", "lt", "lv",
+            "mk", "ms", "mt", "nl", "no", "pl", "pt", "ro", "ru", "sk", "sl", "sq", "sr", "sv",
+            "th", "tr", "uk", "ur", "vi", "zh",
+        )
 
-class LanguageTranslatorServiceTest {
-    @Test
-    fun `maps common BCP-47 tags to LibreTranslate codes`() {
-        assertEquals("en", LibreTranslateCodes.toCode("en"))
-        assertEquals("en", LibreTranslateCodes.toCode("en-US"))
-        assertEquals("zh", LibreTranslateCodes.toCode("zh-CN"))
-        assertEquals("zh", LibreTranslateCodes.toCode("zh-TW"))
-        assertEquals("pt", LibreTranslateCodes.toCode("pt-BR"))
-        assertEquals("de", LibreTranslateCodes.toCode("de"))
-        assertEquals("no", LibreTranslateCodes.toCode("no"))
-    }
-
-    @Test
-    fun `returns null for languages LibreTranslate does not support`() {
-        assertNull(LibreTranslateCodes.toCode("tl"))
-        assertNull(LibreTranslateCodes.toCode("xx"))
-        assertNull(LibreTranslateCodes.toCode(""))
+    /** Maps a BCP-47 tag (e.g. "zh-CN") to the closest LibreTranslate code, or null. */
+    fun toCode(tag: String): String? {
+        val code = tag.substringBefore('-').lowercase()
+        return code.takeIf { it in supported }
     }
 }

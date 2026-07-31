@@ -57,24 +57,12 @@ object LanguageTranslatorService {
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
 
-    // LibreTranslate language set (ISO 639-1). Codes outside it are skipped.
-    private val supportedLanguages =
-        setOf(
-            "en", "ar", "az", "bg", "bs", "ca", "cs", "da", "de", "el", "es", "et", "fa", "fi",
-            "fr", "he", "hi", "hr", "hu", "hy", "id", "it", "ja", "ka", "kk", "ko", "lt", "lv",
-            "mk", "ms", "mt", "nl", "no", "pl", "pt", "ro", "ru", "sk", "sl", "sq", "sr", "sv",
-            "th", "tr", "uk", "ur", "vi", "zh",
-        )
-
     fun clear() {
         TranslationsCache.clear()
     }
 
     /** Maps a BCP-47 tag (e.g. "zh-CN") to the closest LibreTranslate code, or null. */
-    fun toLibreTranslateCode(tag: String): String? {
-        val code = tag.substringBefore('-').lowercase()
-        return code.takeIf { it in supportedLanguages }
-    }
+    fun toLibreTranslateCode(tag: String): String? = LibreTranslateCodes.toCode(tag)
 
     suspend fun identifyLanguage(context: Context, text: String): String? {
         val body = FormBody.Builder().add("q", text).build()
