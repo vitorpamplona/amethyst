@@ -110,6 +110,8 @@ fun UserSettingsScreen(
                 DontTranslateFromSetting(accountViewModel)
                 HorizontalDivider(thickness = DividerThickness)
                 LanguagePreferencesSetting(accountViewModel)
+                HorizontalDivider(thickness = DividerThickness)
+                TranslationServerSettingsSection()
             }
         }
     }

@@ -5016,4 +5016,15 @@
     <string name="buzz_persona_avatar">Avatar URL (optional)</string>
     <string name="buzz_persona_publishing">Publishing…</string>
     <string name="buzz_persona_publish">Publish persona</string>
+
+    <string name="translations_server_title">Translation Server</string>
+    <string name="translations_server_description">This build translates posts with your own LibreTranslate server. It is off by default so no content leaves your device until you enable it.</string>
+    <string name="translations_server_enable">Enable translation</string>
+    <string name="translations_server_enable_description">Send the posts you choose to translate to the server below.</string>
+    <string name="translations_server_url">Server URL</string>
+    <string name="translations_server_url_description">For example https://libretranslate.com or your self-hosted instance.</string>
+    <string name="translations_server_api_key">API key (optional)</string>
+    <string name="translations_server_api_key_description">Only needed if your server requires one.</string>
+    <string name="translations_show_original">Show original</string>
+    <string name="translations_show_translation">Show translation</string>
 </resources>
