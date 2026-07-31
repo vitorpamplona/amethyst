@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayF
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,7 +65,15 @@ data class SubscriptionEntityRow(
     val scope: IFeedTopNavPerRelayFilter?,
     val detail: String?,
     val relays: List<NormalizedRelayUrl>,
-    val filterCount: Int,
+    /**
+     * How many in-flight filters name this entity.
+     *
+     * **Not summable across entities.** One batched filter names every chat its relay serves, so it
+     * counts once for each of them — summing these to get a purpose's total is how "6 chats on 6
+     * relays" once read as 144 filters when 24 were on the wire. [SubscriptionPurposeRow.filterCount]
+     * counts filters, and is the only number that belongs next to a total.
+     */
+    val namedInFilters: Int,
 )
 
 /**
@@ -83,10 +92,24 @@ private data class EntityKey(
 @Immutable
 data class SubscriptionPurposeRow(
     val purpose: SubPurpose,
+    /** Filters actually in flight for this purpose — the same unit as [ActiveSubscriptionsState.totalFilters]. */
     val filterCount: Int,
     val relays: List<NormalizedRelayUrl>,
     val entities: List<SubscriptionEntityRow>,
 )
+
+/**
+ * One purpose's tally for one account, accumulated in a single pass.
+ *
+ * [filters] is incremented once per filter; [entities] records the same filter against every entity
+ * it names. Keeping both means the card can report a real filter count while still breaking down
+ * which chats or communities that filter is for.
+ */
+private class PurposeTally {
+    var filters = 0
+    val relays = mutableSetOf<NormalizedRelayUrl>()
+    val entities = mutableMapOf<EntityKey, MutableList<NormalizedRelayUrl>>()
+}
 
 @Immutable
 data class SubscriptionAccountRow(
@@ -126,88 +149,114 @@ class ActiveSubscriptionsViewModel : ViewModel() {
     private suspend fun snapshot(): ActiveSubscriptionsState =
         withContext(Dispatchers.Default) {
             val client = Amethyst.instance.client
-
-            // account -> purpose -> entity -> relays / count
-            val byAccount = mutableMapOf<HexKey?, MutableMap<SubPurpose, MutableMap<EntityKey, MutableList<NormalizedRelayUrl>>>>()
-            val detailOf = mutableMapOf<Pair<SubPurpose, EntityKey>, String?>()
-            val scopeOf = mutableMapOf<Pair<SubPurpose, EntityKey>, IFeedTopNavPerRelayFilter>()
-            var total = 0
-            var untagged = 0
-            val allRelays = mutableSetOf<NormalizedRelayUrl>()
-
-            client.connectedRelaysFlow().value.forEach { relay ->
-                client.activeRequests(relay).values.flatten().forEach { filter ->
-                    total++
-                    val explained = filter as? ExplainedFilter
-                    if (explained == null) {
-                        untagged++
-                        return@forEach
-                    }
-                    allRelays.add(relay)
-                    // Discovery filters name no entity — they go looking for things rather than
-                    // serving known ones — but they do carry the selection they search within, which
-                    // is what keeps them from collapsing into one nameless row per purpose.
-                    val scopeKey = explained.scope?.let { it::class.simpleName }
-                    // A batched filter serves several entities at once — relay-group state is one #d
-                    // filter per host relay carrying every joined group on it — so it contributes a
-                    // row to each of them rather than collapsing to "All".
-                    val entities: List<HexKey?> = explained.entityIds?.takeIf { it.isNotEmpty() } ?: listOf(null)
-                    entities.forEach { entityId ->
-                        val key = EntityKey(entityId, scopeKey)
-                        byAccount
-                            .getOrPut(explained.accountPubKey) { mutableMapOf() }
-                            .getOrPut(explained.purpose) { mutableMapOf() }
-                            .getOrPut(key) { mutableListOf() }
-                            .add(relay)
-                        detailOf[explained.purpose to key] = explained.purposeDetail
-                        explained.scope?.let { scopeOf.getOrPut(explained.purpose to key) { it } }
-                    }
-                }
-            }
-
-            val accounts =
-                byAccount
-                    .map { (account, purposes) ->
-                        val purposeRows =
-                            purposes
-                                .map { (purpose, entities) ->
-                                    val entityRows =
-                                        entities
-                                            .map { (key, relays) ->
-                                                SubscriptionEntityRow(
-                                                    entityId = key.entityId,
-                                                    scope = scopeOf[purpose to key],
-                                                    detail = detailOf[purpose to key],
-                                                    relays = relays.distinct().sortedBy { it.url },
-                                                    filterCount = relays.size,
-                                                )
-                                            }.sortedByDescending { it.filterCount }
-                                    SubscriptionPurposeRow(
-                                        purpose = purpose,
-                                        filterCount = entityRows.sumOf { it.filterCount },
-                                        relays = entityRows.flatMap { it.relays }.distinct(),
-                                        entities = entityRows,
-                                    )
-                                }.sortedByDescending { it.filterCount }
-                        SubscriptionAccountRow(
-                            accountPubKey = account,
-                            filterCount = purposeRows.sumOf { it.filterCount },
-                            relays = purposeRows.flatMap { it.relays }.distinct(),
-                            purposes = purposeRows,
-                        )
-                    }
-                    // unattributed group last, so it reads as a remainder rather than a headline
-                    .sortedWith(compareBy<SubscriptionAccountRow> { it.accountPubKey == null }.thenByDescending { it.filterCount })
-
-            ActiveSubscriptionsState(
-                accounts = accounts,
-                totalFilters = total,
-                totalRelays = allRelays.size,
-                untaggedFilters = untagged,
+            aggregateSubscriptions(
+                client.connectedRelaysFlow().value.associateWith { relay ->
+                    client.activeRequests(relay).values.flatten()
+                },
             )
         }
 
     companion object {
-        const val REFRESH_MS = 2_000L
+        private const val REFRESH_MS = 2000L
     }
+}
+
+/**
+ * Folds the in-flight filters into the screen's rows.
+ *
+ * Pure and separate from the ViewModel so the invariant it exists to keep — every tagged filter
+ * counted **exactly once**, so a purpose's count shares a unit with the total it is drawn against —
+ * is testable without a relay pool. It did not hold before: purposes summed their per-entity rows,
+ * and a batched filter naming six chats counted six times.
+ */
+fun aggregateSubscriptions(filtersByRelay: Map<NormalizedRelayUrl, List<Filter>>): ActiveSubscriptionsState {
+    // account -> purpose -> tally (real filter count + relays + per-entity breakdown)
+    val byAccount = mutableMapOf<HexKey?, MutableMap<SubPurpose, PurposeTally>>()
+    val detailOf = mutableMapOf<Pair<SubPurpose, EntityKey>, String?>()
+    val scopeOf = mutableMapOf<Pair<SubPurpose, EntityKey>, IFeedTopNavPerRelayFilter>()
+    var total = 0
+    var untagged = 0
+    val allRelays = mutableSetOf<NormalizedRelayUrl>()
+
+    filtersByRelay.forEach { (relay, filters) ->
+        filters.forEach { filter ->
+            total++
+            val explained = filter as? ExplainedFilter
+            if (explained == null) {
+                untagged++
+                return@forEach
+            }
+            allRelays.add(relay)
+            // Discovery filters name no entity — they go looking for things rather than
+            // serving known ones — but they do carry the selection they search within, which
+            // is what keeps them from collapsing into one nameless row per purpose.
+            val scopeKey = explained.scope?.let { it::class.simpleName }
+
+            val tally =
+                byAccount
+                    .getOrPut(explained.accountPubKey) { mutableMapOf() }
+                    .getOrPut(explained.purpose) { PurposeTally() }
+
+            // The filter counts ONCE, here — before it is fanned out below. This is the
+            // number that shares a unit with `total`, so a card's share of the whole is a
+            // comparison of like with like.
+            tally.filters++
+            tally.relays.add(relay)
+
+            // A batched filter serves several entities at once — relay-group state is one #d
+            // filter per host relay carrying every joined group on it — so it contributes a
+            // row to each of them rather than collapsing to "All". These rows are a
+            // breakdown, never a total: see [SubscriptionEntityRow.namedInFilters].
+            val entities: List<HexKey?> = explained.entityIds?.takeIf { it.isNotEmpty() } ?: listOf(null)
+            entities.forEach { entityId ->
+                val key = EntityKey(entityId, scopeKey)
+                tally.entities.getOrPut(key) { mutableListOf() }.add(relay)
+                detailOf[explained.purpose to key] = explained.purposeDetail
+                explained.scope?.let { scopeOf.getOrPut(explained.purpose to key) { it } }
+            }
+        }
+    }
+
+    val accounts =
+        byAccount
+            .map { (account, purposes) ->
+                val purposeRows =
+                    purposes
+                        .map { (purpose, tally) ->
+                            val entityRows =
+                                tally.entities
+                                    .map { (key, relays) ->
+                                        SubscriptionEntityRow(
+                                            entityId = key.entityId,
+                                            scope = scopeOf[purpose to key],
+                                            detail = detailOf[purpose to key],
+                                            relays = relays.distinct().sortedBy { it.url },
+                                            namedInFilters = relays.size,
+                                        )
+                                    }.sortedByDescending { it.namedInFilters }
+                            SubscriptionPurposeRow(
+                                purpose = purpose,
+                                // The tally, NOT the sum of the entity rows — a batched filter
+                                // appears in one row per entity it names.
+                                filterCount = tally.filters,
+                                relays = tally.relays.sortedBy { it.url },
+                                entities = entityRows,
+                            )
+                        }.sortedByDescending { it.filterCount }
+                SubscriptionAccountRow(
+                    accountPubKey = account,
+                    filterCount = purposeRows.sumOf { it.filterCount },
+                    relays = purposeRows.flatMap { it.relays }.distinct(),
+                    purposes = purposeRows,
+                )
+            }
+            // unattributed group last, so it reads as a remainder rather than a headline
+            .sortedWith(compareBy<SubscriptionAccountRow> { it.accountPubKey == null }.thenByDescending { it.filterCount })
+
+    return ActiveSubscriptionsState(
+        accounts = accounts,
+        totalFilters = total,
+        totalRelays = allRelays.size,
+        untaggedFilters = untagged,
+    )
 }
