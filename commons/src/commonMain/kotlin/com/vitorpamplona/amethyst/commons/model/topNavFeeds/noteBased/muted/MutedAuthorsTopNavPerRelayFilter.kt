@@ -18,15 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.hashtag
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
 
 @Immutable
-class HashtagTopNavPerRelayFilter(
-    val hashtags: Set<String>,
-) : IFeedTopNavPerRelayFilter {
-    val hashtagScopes: Set<String> = hashtags.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
-}
+class MutedAuthorsTopNavPerRelayFilter(
+    val authors: Set<String>,
+) : IFeedTopNavPerRelayFilter

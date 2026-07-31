@@ -18,14 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommunities
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-@Immutable
-class FavoriteAlgoFeedTopNavPerRelayFilter(
-    val ids: Set<HexKey>,
-    val addresses: Set<String>,
-) : IFeedTopNavPerRelayFilter
+class AllCommunitiesTopNavPerRelayFilterSet(
+    val set: Map<NormalizedRelayUrl, AllCommunitiesTopNavPerRelayFilter>,
+) : IFeedTopNavPerRelayFilterSet

@@ -18,16 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
+import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 
 @Immutable
-class SingleCommunityTopNavPerRelayFilter(
-    val community: String,
-    val authors: Set<String>?,
+class LocationTopNavPerRelayFilter(
+    val geotags: Set<String>,
 ) : IFeedTopNavPerRelayFilter {
-    val communityAddress = Address.parse(community)
+    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
 }

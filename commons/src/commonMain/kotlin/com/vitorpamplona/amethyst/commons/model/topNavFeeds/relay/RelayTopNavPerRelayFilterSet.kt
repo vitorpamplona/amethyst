@@ -18,12 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-@Immutable
-class MutedAuthorsTopNavPerRelayFilter(
-    val authors: Set<String>,
-) : IFeedTopNavPerRelayFilter
+class RelayTopNavPerRelayFilterSet(
+    val relayUrl: NormalizedRelayUrl,
+) : IFeedTopNavPerRelayFilterSet

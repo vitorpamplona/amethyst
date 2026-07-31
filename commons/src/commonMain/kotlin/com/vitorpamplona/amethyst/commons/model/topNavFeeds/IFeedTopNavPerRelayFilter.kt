@@ -18,10 +18,6 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
-
-class AllCommunitiesTopNavPerRelayFilter(
-    val communities: Set<String>,
-) : IFeedTopNavPerRelayFilter
+interface IFeedTopNavPerRelayFilter

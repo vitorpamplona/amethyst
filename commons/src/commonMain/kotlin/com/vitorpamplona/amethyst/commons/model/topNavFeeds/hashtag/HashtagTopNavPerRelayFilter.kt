@@ -18,8 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 
-object UnknownTopNavPerRelayFilterSet : IFeedTopNavPerRelayFilterSet
+@Immutable
+class HashtagTopNavPerRelayFilter(
+    val hashtags: Set<String>,
+) : IFeedTopNavPerRelayFilter {
+    val hashtagScopes: Set<String> = hashtags.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
+}

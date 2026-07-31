@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.allFollows
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.topNavFeeds.CommunityRelayLoader
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter

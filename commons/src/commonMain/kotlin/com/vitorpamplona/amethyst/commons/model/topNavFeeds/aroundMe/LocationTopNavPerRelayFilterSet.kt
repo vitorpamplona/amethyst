@@ -18,11 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-class AuthorsTopNavPerRelayFilterSet(
-    val set: Map<NormalizedRelayUrl, AuthorsTopNavPerRelayFilter>,
+class LocationTopNavPerRelayFilterSet(
+    val set: Map<NormalizedRelayUrl, LocationTopNavPerRelayFilter>,
 ) : IFeedTopNavPerRelayFilterSet

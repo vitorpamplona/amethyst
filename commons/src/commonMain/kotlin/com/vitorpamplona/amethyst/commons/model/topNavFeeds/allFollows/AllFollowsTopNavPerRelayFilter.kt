@@ -18,15 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
+package com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
+import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 
+/**
+ * This is a big OR filter.
+ */
 @Immutable
-class LocationTopNavPerRelayFilter(
-    val geotags: Set<String>,
+class AllFollowsTopNavPerRelayFilter(
+    val authors: Set<String>? = null,
+    val hashtags: Set<String>? = null,
+    val geotags: Set<String>? = null,
+    val communities: Set<String>? = null,
 ) : IFeedTopNavPerRelayFilter {
-    val geotagScopes: Set<String> = geotags.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
+    val geotagScopes: Set<String>? = geotags?.mapTo(mutableSetOf()) { GeohashId.toScope(it) }
+    val hashtagScopes: Set<String>? = hashtags?.mapTo(mutableSetOf()) { HashtagId.toScope(it) }
 }
