@@ -739,11 +739,46 @@ Caveat: the benchmark client's round-the-clock always-on service makes its
 battery figures non-comparable to a stock install. The relay and `net.other`
 figures do match the release client's original report closely.
 
-Not verified by this run: **R1** (no `Loading` flash on return to foreground) is
-a visual property and needs an observer at the screen; the unit test
-`doesNotReemitLoadingWhenReturningToForegroundWithACachedFix` covers it and
-mutation-fails correctly without the guard. The `location.ms ≤ app.fgms + 5 s ×
-transitions` invariant needs a day of accumulated ledger data.
+### Smoke test on a clean install (2026-07-31, benchmark client)
+
+Uninstalled and reinstalled from branch HEAD so the account, ledger and
+permission grant all started empty — which is what makes the first-grant and
+empty-cache paths reachable. UID changed 10805 → 10806, cleanly separating the
+new data.
+
+- **R1 — no `Loading` flash on return to foreground: PASS.** Observed directly:
+  granted the permission, set a feed to Around Me, backgrounded for 10 s,
+  reopened — the geohash was present immediately with no blank feed. This was the
+  last open acceptance criterion on the branch and the only one no test could
+  cover. `dumpsys` shows why it works: the fix is delivered 1–6 ms after each
+  re-registration.
+- **Precise profile live and distinct: PASS.** Geohash screens produce
+  `@+10s0ms BALANCED, minUpdateDistance=100.0`, and the aggregate's `min/max
+  interval` moved from `60s/60s` to `10s/60s`. Both profiles are real in
+  production, not just in the unit tests.
+- **Refcount under concurrent flows: PASS.** The coarse registration `766C58A4`
+  came up at 15:49:10 and survived **four complete precise-flow cycles**
+  untouched (15:49:41–46, 15:50:47–52, 15:52:07–15:53:05, 15:53:17–22), with
+  both live simultaneously during the first. Opening and closing geohash chats
+  never closes the "Around Me" registration — `RefCountedSession` doing on a real
+  device what `LocationLedgerCompositionTest` asserts.
+- **No hang in the location picker.** Every precise registration received a fix
+  within ~1 ms; none stuck open. That path does
+  `preciseGeohashStateFlow.first { it is Success }`, which would hang rather than
+  crash if the gate failed to yield.
+- **Aggregate:** total 6m7.553s / active 6m7.401s (152 ms apart) / foreground
+  5m49.441s. Foreground trails total by 18.1 s across ~7 background transitions,
+  ≈ 2.6 s each — the grace period, visible at a scale where it is easy to check.
+
+**Measurement note:** counting listeners with `grep -c` on the package name is
+unreliable — the `service: ProviderRequest[…]` summary line also names the
+package when it is the only requester, inflating the count by one. List the rows
+and exclude that line instead. A count of zero is unambiguous either way.
+
+Still not verified: nothing on the gate itself. The `location.ms ≤ app.fgms +
+5 s × transitions` invariant was separately confirmed from accumulated ledger
+data (see above); the clean install reset that counter, so it will need another
+day of use to re-check at scale.
 
 ## Follow-ups (not in this change)
 
