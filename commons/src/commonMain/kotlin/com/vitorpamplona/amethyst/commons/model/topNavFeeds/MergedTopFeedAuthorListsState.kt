@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -100,6 +101,9 @@ class MergedTopFeedAuthorListsState(
                     notificationNavFilter.value,
                 ),
             )
+            // `kotlinx.coroutines.IO` must stay imported: `Dispatchers.IO` is an internal member in
+            // common, and the public form on Kotlin/Native is that extension. Drop the import and this
+            // still builds on JVM/Android, failing only the iOS targets.
         }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
