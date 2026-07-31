@@ -85,7 +85,10 @@ data class ActiveSubscriptionsState(
     val totalRelays: Int = 0,
     /** Filters in flight that carry no purpose — assemblers not yet migrated. Honesty, not a bug. */
     val untaggedFilters: Int = 0,
-)
+) {
+    /** The largest purpose, so every card can draw its share against a common scale. */
+    val busiestPurposeFilters: Int = accounts.flatMap { it.purposes }.maxOfOrNull { it.filterCount } ?: 0
+}
 
 class ActiveSubscriptionsViewModel : ViewModel() {
     private val _state = MutableStateFlow(ActiveSubscriptionsState())
@@ -121,12 +124,18 @@ class ActiveSubscriptionsViewModel : ViewModel() {
                         return@forEach
                     }
                     allRelays.add(relay)
-                    byAccount
-                        .getOrPut(explained.accountPubKey) { mutableMapOf() }
-                        .getOrPut(explained.purpose) { mutableMapOf() }
-                        .getOrPut(explained.entityId) { mutableListOf() }
-                        .add(relay)
-                    detailOf[explained.purpose to explained.entityId] = explained.purposeDetail
+                    // A batched filter serves several entities at once — relay-group state is one #d
+                    // filter per host relay carrying every joined group on it — so it contributes a
+                    // row to each of them rather than collapsing to "All".
+                    val entities: List<HexKey?> = explained.entityIds?.takeIf { it.isNotEmpty() } ?: listOf(null)
+                    entities.forEach { entityId ->
+                        byAccount
+                            .getOrPut(explained.accountPubKey) { mutableMapOf() }
+                            .getOrPut(explained.purpose) { mutableMapOf() }
+                            .getOrPut(entityId) { mutableListOf() }
+                            .add(relay)
+                        detailOf[explained.purpose to entityId] = explained.purposeDetail
+                    }
                 }
             }
 

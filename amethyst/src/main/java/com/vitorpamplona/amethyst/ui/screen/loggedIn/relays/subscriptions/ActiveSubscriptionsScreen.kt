@@ -20,15 +20,27 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.subscriptions
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,147 +51,550 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurposeGroup
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.SubPurposeLabels
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
+import com.vitorpamplona.amethyst.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import kotlin.math.roundToInt
 
 /**
  * Explains why the app is holding the number of subscriptions it currently holds.
  *
- * Pivoted on purpose rather than relay, because the relay-shaped view hides exactly the thing worth
- * finding: a probe holding hundreds of filters across hundreds of relays looks like one ordinary
- * entry repeated on every row, while here it is a single line that dwarfs everything under it.
+ * Pivoted on purpose rather than relay: the relay-shaped view hides exactly the thing worth finding,
+ * because a probe holding hundreds of filters across hundreds of relays looks like one ordinary row
+ * repeated hundreds of times. Here it is one card whose share bar runs the full width while
+ * everything under it is a stub.
  *
  * Account is the outer grouping — several are normally logged in, they do not share relay sets, and
  * a mixed total cannot be acted on.
  */
 @Composable
-fun ActiveSubscriptionsScreen(viewModel: ActiveSubscriptionsViewModel = viewModel()) {
+fun ActiveSubscriptionsScreen(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    viewModel: ActiveSubscriptionsViewModel = viewModel(),
+) {
     LaunchedEffect(Unit) { viewModel.startPolling() }
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    LazyColumn(Modifier.fillMaxWidth()) {
-        item {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Scaffold(
+        topBar = { TopBarWithBackButton(stringRes(R.string.active_subs_title), nav) },
+    ) { pad ->
+        LazyColumn(
+            modifier = Modifier.padding(pad).fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            item { TotalsHeader(state) }
+
+            state.accounts.forEach { account ->
+                item(key = "acct-${account.accountPubKey ?: "none"}") { AccountHeader(account) }
+
+                items(account.purposes, key = { "${account.accountPubKey}-${it.purpose.name}" }) { purpose ->
+                    PurposeCard(purpose, state.totalFilters, accountViewModel, nav)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TotalsHeader(state: ActiveSubscriptionsState) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                text = pluralStringResource(R.plurals.active_subs_filters, state.totalFilters, state.totalFilters),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = pluralStringResource(R.plurals.active_subs_relays, state.totalRelays, state.totalRelays),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (state.untaggedFilters > 0) {
+                // Stated rather than hidden: an untagged filter is a subscription this screen cannot
+                // explain, and a total that claims to be fully attributed would defeat the point.
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    countsLine(state.totalFilters, state.totalRelays),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    text = pluralStringResource(R.plurals.active_subs_untagged, state.untaggedFilters, state.untaggedFilters),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
                 )
-                if (state.untaggedFilters > 0) {
-                    // Stated rather than hidden: an untagged filter is a subscription this screen
-                    // cannot explain, and pretending the total is fully attributed would be a lie.
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountHeader(account: SubscriptionAccountRow) {
+    val name = account.accountPubKey?.let { displayNameOf(it) } ?: stringRes(R.string.active_subs_unattributed)
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 10.dp, bottom = 2.dp),
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = pluralStringResource(R.plurals.active_subs_relays, account.relays.size, account.relays.size),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+    }
+}
+
+@Composable
+private fun PurposeCard(
+    row: SubscriptionPurposeRow,
+    totalFilters: Int,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    var expanded by rememberSaveable(row.purpose) { mutableStateOf(false) }
+    val accent = colorOf(row.purpose.group)
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .animateContentSize(),
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(accent))
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringRes(SubPurposeLabels.labelOf(row.purpose)),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = pluralStringResource(R.plurals.active_subs_filters, row.filterCount, row.filterCount),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Share of ALL subscriptions, not of the biggest one: measuring against the biggest
+            // makes one bar permanently full and says nothing about how much of the app's traffic a
+            // purpose actually accounts for.
+            val share = if (totalFilters > 0) row.filterCount / totalFilters.toFloat() else 0f
+            ShareBar(fraction = share, color = accent)
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = pluralStringResource(R.plurals.active_subs_relays, row.relays.size, row.relays.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringRes(R.string.active_subs_share, (share * 100).roundToInt()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+
+            if (expanded) {
+                SubPurposeLabels.explainerOf(row.purpose)?.let {
+                    Spacer(Modifier.height(10.dp))
                     Text(
-                        pluralStringResource(R.plurals.active_subs_untagged, state.untaggedFilters, state.untaggedFilters),
+                        text = stringRes(it),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-            HorizontalDivider()
-        }
 
-        items(state.accounts, key = { it.accountPubKey ?: "unattributed" }) { account ->
-            AccountSection(account)
-            HorizontalDivider()
-        }
-    }
-}
+                // Relay-hosted purposes pivot on the relay instead of listing every entity flat: a
+                // NIP-29 group is keyed by (id, host relay), and one community relay routinely hosts
+                // many of them — measured here, 13 groups across 5 relays, with one hostname repeated
+                // seven times. Grouping folds that repetition away and answers the question the screen
+                // exists for: *this* relay is connected because of *these* groups.
+                if (row.purpose == SubPurpose.RELAY_GROUPS) {
+                    Spacer(Modifier.height(4.dp))
+                    RelayGroupedEntities(row.entities, accountViewModel, nav)
+                } else {
+                    // Community Chats drops its unnamed row: Concord filters that name no community
+                    // are the plane-level machinery (control, guestbook, rekey), and rendering them as
+                    // a nameless "All" alongside real communities read as an unexplained extra rather
+                    // than as detail. The card's own filter count still includes them, so nothing is
+                    // lost from the totals — only from the per-entity list.
+                    val shown =
+                        if (row.purpose == SubPurpose.COMMUNITY_CHATS) {
+                            row.entities.filter { it.entityId != null }
+                        } else {
+                            row.entities
+                        }
 
-@Composable
-private fun AccountSection(account: SubscriptionAccountRow) {
-    val name = account.accountPubKey?.let { displayNameOf(it) } ?: stringRes(R.string.active_subs_unattributed)
-
-    Column(Modifier.padding(vertical = 4.dp)) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-        )
-        account.purposes.forEach { PurposeSection(it) }
-    }
-}
-
-@Composable
-private fun PurposeSection(purposeRow: SubscriptionPurposeRow) {
-    var expanded by rememberSaveable(purposeRow.purpose) { mutableStateOf(false) }
-
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded }
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringRes(SubPurposeLabels.labelOf(purposeRow.purpose)),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = countsLine(purposeRow.filterCount, purposeRow.relays.size),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        if (expanded) {
-            SubPurposeLabels.explainerOf(purposeRow.purpose)?.let {
-                Text(
-                    text = stringRes(it),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
-                )
-            }
-            purposeRow.entities.forEach { entity ->
-                val label =
-                    entity.entityId?.let { displayNameOf(it) }
-                        ?: entity.detail
-                        ?: stringRes(R.string.active_subs_no_entity)
-                Text(
-                    text = stringRes(R.string.active_subs_pair, label, pluralStringResource(R.plurals.active_subs_relays, entity.relays.size, entity.relays.size)),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 12.dp, top = 2.dp),
-                )
+                    shown.forEach { entity ->
+                        Spacer(Modifier.height(12.dp))
+                        EntityBlock(entity, accountViewModel, nav)
+                    }
+                }
             }
         }
     }
 }
 
-/** "N filters · M relays", each noun pluralised on its own count. */
+/** The entity's name, coloured as a link only when tapping it actually goes somewhere. */
 @Composable
-private fun countsLine(
-    filters: Int,
-    relays: Int,
-): String =
-    stringRes(
-        R.string.active_subs_pair,
-        pluralStringResource(R.plurals.active_subs_filters, filters, filters),
-        pluralStringResource(R.plurals.active_subs_relays, relays, relays),
+private fun EntityLabelText(
+    text: String,
+    route: Route?,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Medium,
+        color = if (route != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
     )
+}
 
 /**
- * Resolves an id to whatever name is loaded right now, falling back to a short id.
+ * One row per host relay, expandable to the groups it carries.
  *
- * Deliberately at render time rather than baked into the filter: names arrive after the subscription
- * that needed them, so a name captured at filter-construction would usually be missing and would go
- * stale when the user renames.
+ * Collapsed by default because the relay is the thing that costs a connection — the question "why am
+ * I talking to this host" is answered by the header alone, and the group list is the follow-up only
+ * some people want. The count sits on the header so a busy relay is obvious without opening it.
  */
 @Composable
-private fun displayNameOf(id: HexKey): String {
-    val cached =
-        remember(id) {
-            LocalCache.getUserIfExists(id)?.toBestDisplayName()
-                ?: LocalCache.getNoteIfExists(id)?.event?.let { LocalCache.getUserIfExists(it.pubKey)?.toBestDisplayName() }
+private fun RelayGroupedEntities(
+    entities: List<SubscriptionEntityRow>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // An entity can name several relays in principle; each pairing is its own row under that relay.
+    val byRelay =
+        remember(entities) {
+            entities
+                .flatMap { entity -> entity.relays.map { relay -> relay to entity } }
+                .groupBy({ it.first }, { it.second })
+                .toList()
+                .sortedWith(compareByDescending<Pair<NormalizedRelayUrl, List<SubscriptionEntityRow>>> { it.second.size }.thenBy { it.first.url })
         }
-    return cached ?: id.take(8)
+
+    byRelay.forEach { (relay, hosted) ->
+        var open by rememberSaveable(relay.url) { mutableStateOf(false) }
+
+        Spacer(Modifier.height(10.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable { open = !open },
+        ) {
+            RelayLine(relay, accountViewModel, modifier = Modifier.weight(1f))
+            Text(
+                text = pluralStringResource(R.plurals.active_subs_groups, hosted.size, hosted.size),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
+
+        if (open) {
+            hosted.forEach { entity ->
+                Spacer(Modifier.height(6.dp))
+                // Indented, and without the relay repeated — it is the header directly above.
+                Column(Modifier.padding(start = 28.dp)) {
+                    EntityBlock(entity, accountViewModel, nav, showRelays = false)
+                }
+            }
+        }
+    }
 }
+
+@Composable
+private fun ShareBar(
+    fraction: Float,
+    color: Color,
+) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(fraction.coerceIn(0.02f, 1f))
+                .height(6.dp)
+                .clip(CircleShape)
+                .background(color),
+        )
+    }
+}
+
+/** One colour per family, so the eye groups Messages/Account/Feeds without reading labels. */
+@Composable
+private fun colorOf(group: SubPurposeGroup): Color =
+    when (group) {
+        SubPurposeGroup.MESSAGES -> MaterialTheme.colorScheme.primary
+        SubPurposeGroup.ACCOUNT -> MaterialTheme.colorScheme.allGoodColor
+        SubPurposeGroup.FEEDS -> MaterialTheme.colorScheme.tertiary
+        SubPurposeGroup.CURRENT_SCREEN -> MaterialTheme.colorScheme.warningColor
+        SubPurposeGroup.OTHER -> MaterialTheme.colorScheme.placeholderText
+    }
+
+@Composable
+private fun EntityBlock(
+    entity: SubscriptionEntityRow,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    showRelays: Boolean = true,
+) {
+    // Marmot groups are resolved first and separately: their name and avatar live in per-account
+    // StateFlows (and the avatar is an encrypted Blossom blob needing a cipher registration), so
+    // they cannot come from the plain LocalCache lookup that serves every other entity type.
+    val marmot = entity.entityId?.let { id -> rememberMarmotEntity(id, accountViewModel) }
+    val concord = entity.entityId?.let { id -> rememberConcordEntity(id, accountViewModel) }
+    val resolved = marmot ?: concord ?: entity.entityId?.let { id -> remember(id, entity.relays) { resolveEntity(id, entity.relays) } }
+    // Deliberately not falling back to `entity.detail`: that field is a developer breadcrumb set in
+    // `commons`, where Android string resources do not exist, so it is hardcoded English and could
+    // never be translated. A localized "no entity" line is better than an untranslatable one.
+    val label = resolved?.name ?: stringRes(R.string.active_subs_no_entity)
+
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(
+                        // Only tappable when we know where it goes; a dead tap target is worse than none.
+                        resolved?.route?.let { route -> Modifier.clickable { nav.nav(route) } } ?: Modifier,
+                    ).padding(vertical = 2.dp),
+        ) {
+            if (resolved?.picture != null) {
+                RobohashFallbackAsyncImage(
+                    robot = entity.entityId ?: label,
+                    model = resolved.picture,
+                    contentDescription = label,
+                    modifier = Modifier.size(24.dp).clip(CircleShape),
+                    loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+                    loadRobohash = false,
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            // A geohash cell reads as a place everywhere else in the app, so it does here too. Same
+            // helper the note headers and the geohash screen use, which means the same reverse-geocode
+            // cache and the same graceful fallback to the raw cell on devices with no Geocoder backend.
+            val cell = (resolved?.route as? Route.GeohashChat)?.geohash
+            if (cell != null) {
+                LoadCityName(
+                    geohashStr = cell,
+                    onLoading = { EntityLabelText(label, resolved.route) },
+                ) { city ->
+                    EntityLabelText("#" + city, resolved.route)
+                }
+            } else {
+                EntityLabelText(label, resolved?.route)
+            }
+        }
+        if (showRelays) {
+            entity.relays.forEach { relay -> RelayLine(relay, accountViewModel) }
+        }
+    }
+}
+
+/** A relay with its real icon and the app's own relay-name colour, not a bare URL string. */
+@Composable
+private fun RelayLine(
+    relay: NormalizedRelayUrl,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val info by loadRelayInfo(relay)
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.padding(top = 6.dp, start = 2.dp),
+    ) {
+        // Plain favicon, not RenderRelayIcon: that one overlays a ping-count badge which, at this
+        // size, covers the icon entirely and reads as a random number next to every relay.
+        RobohashFallbackAsyncImage(
+            robot = relay.displayUrl(),
+            model = info.icon,
+            contentDescription = relay.displayUrl(),
+            colorFilter = RelayIconFilter,
+            modifier = Modifier.size(20.dp).clip(CircleShape),
+            loadProfilePicture = accountViewModel.settings.showProfilePictures(),
+            loadRobohash = false,
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = relay.displayUrl(),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * What an entity id resolves to right now: a name, a picture, and where tapping it goes.
+ *
+ * Resolved at render time rather than baked into the filter — names and pictures arrive *after* the
+ * subscription that needed them, so anything captured at filter-construction would usually be empty
+ * and would go stale on rename.
+ *
+ * The relays matter: a NIP-29 group is keyed by [GroupId] (id **and** host relay), so the id alone
+ * cannot find it. Those are exactly the rows that used to render as bare hex.
+ */
+private class ResolvedEntity(
+    val name: String,
+    val picture: String?,
+    val route: Route?,
+)
+
+private fun resolveEntity(
+    id: HexKey,
+    relays: List<NormalizedRelayUrl>,
+): ResolvedEntity {
+    relays.forEach { relay ->
+        LocalCache.getRelayGroupChannelIfExists(GroupId(id, relay))?.let {
+            return ResolvedEntity(it.toBestDisplayName(), it.profilePicture(), Route.RelayGroup(id, relay.url))
+        }
+    }
+    LocalCache.getPublicChatChannelIfExists(id)?.let {
+        return ResolvedEntity(it.toBestDisplayName(), it.profilePicture(), Route.PublicChatChannel(id))
+    }
+    // Geohash cells: the id IS the cell, and it renders as "#cell" everywhere else in the app.
+    LocalCache.getGeohashChannelIfExists(id)?.let {
+        return ResolvedEntity(it.toBestDisplayName(), null, Route.GeohashChat(id))
+    }
+    LocalCache.getUserIfExists(id)?.let {
+        return ResolvedEntity(it.toBestDisplayName(), it.profilePicture(), Route.Profile(id))
+    }
+    // Known-but-unresolvable (a Concord community, a mint) still shows something stable rather than
+    // disappearing — a short id is honest about what we have.
+    return ResolvedEntity(id.take(8), null, null)
+}
+
+/**
+ * A Marmot (MLS) group, or null when [id] names no group this account knows.
+ *
+ * Kept apart from [resolveEntity] because none of it is a plain cache read: the name and avatar are
+ * `StateFlow`s that fill in after the subscription starts, and the avatar is an encrypted Blossom
+ * blob whose decryption cipher `rememberMarmotGroupIconUrl` registers as a side effect. Looking the
+ * room up with `rooms.get` rather than `getOrCreateGroup` keeps an unknown id from minting an empty
+ * room just because a diagnostics screen asked about it.
+ */
+@Composable
+private fun rememberMarmotEntity(
+    id: HexKey,
+    accountViewModel: AccountViewModel,
+): ResolvedEntity? {
+    val chatroom =
+        remember(id) {
+            accountViewModel.account.marmotGroupList.rooms
+                .get(id)
+        } ?: return null
+
+    val displayName by chatroom.displayName.collectAsStateWithLifecycle()
+    val image by chatroom.image.collectAsStateWithLifecycle()
+    val relays by chatroom.relays.collectAsStateWithLifecycle()
+    val adminPubkeys by chatroom.adminPubkeys.collectAsStateWithLifecycle()
+
+    // Same name/icon precedence the chat-rooms list uses, so a group reads identically in both places.
+    val name = displayName?.takeIf { it.isNotBlank() } ?: stringRes(R.string.marmot_group_fallback_name, id.take(8))
+    val picture =
+        if (image != null) {
+            rememberMarmotGroupIconUrl(image, accountViewModel, adminPubkeys)
+        } else {
+            loadMarmotRelayIcon(relays)
+        }
+
+    return ResolvedEntity(name, picture, Route.MarmotGroupChat(id))
+}
+
+/**
+ * A Concord community, or null when [id] names none this account has folded.
+ *
+ * Also not a cache read: the name and icon come from the folded Control Plane, and a fold is
+ * announced by `concordSessions.revision` rather than by the session's own state, so the read has to
+ * be keyed on that counter or the row keeps whatever it saw first. The icon is a CORD-02
+ * [ImagePointer] — usually an encrypted blob — so it goes through `rememberConcordImageModel` rather
+ * than being handed to Coil as a URL.
+ *
+ * Falls back to the joined-list entry's name, which is present before the first fold completes, and
+ * returns null when neither knows the community so the caller can keep looking.
+ */
+@Composable
+private fun rememberConcordEntity(
+    id: HexKey,
+    accountViewModel: AccountViewModel,
+): ResolvedEntity? {
+    val account = accountViewModel.account
+    val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
+    val communities by account.concordChannelList.liveCommunities.collectAsStateWithLifecycle()
+
+    val metadata =
+        remember(id, revision) {
+            account.concordSessions
+                .sessionFor(id)
+                ?.state
+                ?.value
+                ?.metadata
+        }
+    val fallbackName = remember(communities, id) { communities.firstOrNull { it.id == id }?.name?.ifBlank { null } }
+
+    // Resolved unconditionally: bailing out early would make the number of composable calls depend on
+    // whether the community happens to be known yet, which changes as folds land.
+    val model = rememberConcordImageModel(metadata?.icon, accountViewModel)
+    val name = metadata?.name?.takeIf { it.isNotBlank() } ?: fallbackName
+
+    return name?.let { ResolvedEntity(it, model, Route.ConcordServer(id)) }
+}
+
+@Composable
+private fun displayNameOf(id: HexKey): String = remember(id) { resolveEntity(id, emptyList()).name }
