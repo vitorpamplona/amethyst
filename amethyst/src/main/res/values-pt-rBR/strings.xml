@@ -4621,4 +4621,13 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
+    <string name="buzz_channel_archive">Arquivar canal</string>
+    <string name="buzz_channel_unarchive">Desarquivar canal</string>
+    <string name="buzz_forum_create_title">Novo fórum</string>
+    <string name="external_content_title">Conteúdo externo</string>
+    <string name="relay_group_section_archived">Arquivados</string>
+    <string name="share_target_as_picture">Nova Foto</string>
+    <string name="share_target_as_short_video">Novo Vídeo Curto</string>
+    <string name="share_target_as_video">Novo Vídeo</string>
+    <string name="url_preview_open_in_browser">Abrir no navegador</string>
 </resources>

@@ -4624,4 +4624,13 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
+    <string name="buzz_channel_archive">Arkivera kanal</string>
+    <string name="buzz_channel_unarchive">Avarkivera kanal</string>
+    <string name="buzz_forum_create_title">Nytt forum</string>
+    <string name="external_content_title">Externt innehåll</string>
+    <string name="relay_group_section_archived">Arkiverade</string>
+    <string name="share_target_as_picture">Ny bild</string>
+    <string name="share_target_as_short_video">Ny kortfilm</string>
+    <string name="share_target_as_video">Ny video</string>
+    <string name="url_preview_open_in_browser">Öppna i webbläsare</string>
 </resources>

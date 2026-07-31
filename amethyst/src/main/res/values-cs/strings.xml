@@ -4792,4 +4792,13 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
+    <string name="buzz_channel_archive">Archivovat kanál</string>
+    <string name="buzz_channel_unarchive">Zrušit archivaci kanálu</string>
+    <string name="buzz_forum_create_title">Nové fórum</string>
+    <string name="external_content_title">Externí obsah</string>
+    <string name="relay_group_section_archived">Archivované</string>
+    <string name="share_target_as_picture">Nový obrázek</string>
+    <string name="share_target_as_short_video">Nové krátké video</string>
+    <string name="share_target_as_video">Nové video</string>
+    <string name="url_preview_open_in_browser">Otevřít v prohlížeči</string>
 </resources>
