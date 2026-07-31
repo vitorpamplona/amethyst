@@ -35,14 +35,46 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59Gi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 // This allows multiple screen to be listening to logged-in accounts.
+//
+// Carries only what an account can supply with no screen attached, so the
+// background registry can mount the always-on loaders for accounts the user
+// opted into keeping active while the app is away. Screens use the richer
+// [AccountUiQueryState] below.
 @Stable
-class AccountQueryState(
+open class AccountQueryState(
     override val account: Account,
-    val feedContentStates: AccountFeedContentStates,
     val otherAccounts: Set<HexKey>,
-) : AccountScopedQuery
+) : AccountScopedQuery {
+    /**
+     * The feeds this account renders, when a screen is attached — null for
+     * background accounts.
+     *
+     * The only always-on reader is
+     * [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager],
+     * which reads it as a cold-start `since` floor via `lastNoteCreatedAtIfFilled()`.
+     * That floor only arms once the feed holds a full page, and nothing fills a
+     * feed that has no UI — so for a background account it could only ever
+     * return null anyway. Leaving the field off the background key states that
+     * rather than pretending there is a feed to consult.
+     */
+    open val feedContentStates: AccountFeedContentStates? = null
+}
+
+/**
+ * The key for an account with a screen attached. Adds the feed states, which
+ * lets the notification loaders floor their cold-start queries at the depth the
+ * rendered feed already reaches instead of asking all-time again.
+ */
+@Stable
+class AccountUiQueryState(
+    account: Account,
+    override val feedContentStates: AccountFeedContentStates,
+    otherAccounts: Set<HexKey>,
+) : AccountQueryState(account, otherAccounts)
 
 /**
  * Always-on account loaders: metadata, gift wraps, drafts, inbox-relay
@@ -54,31 +86,66 @@ class AccountFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<AccountQueryState>() {
     // Live tail: the recent week of gift wraps, always open at the top for new messages.
-    val giftWraps = AccountGiftWrapsEoseManager(client, ::allKeys)
+    val giftWraps = AccountGiftWrapsEoseManager(client, ::preferredKeys)
 
     // History: older gift wraps, loaded on demand in bounded one-shot slices.
-    val giftWrapsHistory = AccountGiftWrapsHistoryEoseManager(client, ::allKeys)
+    val giftWrapsHistory = AccountGiftWrapsHistoryEoseManager(client, ::preferredKeys)
 
     // Live tail: the recent week of notifications from the inbox + group host relays.
-    val notifications = AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys)
+    val notifications = AccountNotificationsEoseFromInboxRelaysManager(client, ::preferredKeys)
 
     // History: older notifications, paged backward by until+limit per relay, driven by the feed's markers.
-    val notificationsHistory = AccountNotificationsHistoryEoseManager(client, ::allKeys)
+    val notificationsHistory = AccountNotificationsHistoryEoseManager(client, ::preferredKeys)
 
     val group =
         listOf(
-            AccountMetadataEoseManager(client, ::allKeys),
+            AccountMetadataEoseManager(client, ::preferredKeys),
             giftWraps,
             giftWrapsHistory,
-            AccountDraftsEoseManager(client, ::allKeys),
+            AccountDraftsEoseManager(client, ::preferredKeys),
             notifications,
             notificationsHistory,
             // Live tail: NIP-47 wallet notifications (payment_received) on each connected wallet's own relay.
-            NwcNotificationsEoseManager(client, ::allKeys),
-            MarmotGroupEventsEoseManager(client, ::allKeys),
+            NwcNotificationsEoseManager(client, ::preferredKeys),
+            MarmotGroupEventsEoseManager(client, ::preferredKeys),
         )
 
-    override fun invalidateKeys() = invalidateFilters()
+    /**
+     * One key per account, preferring a screen's [AccountUiQueryState] over the
+     * background registry's key.
+     *
+     * An account can be mounted twice — the user is looking at it *and* asked to keep
+     * it running in the background. The managers below all dedup by user, but by
+     * keeping whichever key they meet first, which is just whoever mounted first.
+     * Resolving it here means the account being looked at keeps the feed-backed
+     * cold-start floor instead of losing it to a race.
+     */
+    private fun preferredKeys(): Set<AccountQueryState> =
+        allKeys()
+            .groupBy { it.account.userProfile().pubkeyHex }
+            .values
+            .mapTo(mutableSetOf()) { keys ->
+                keys.firstOrNull { it.feedContentStates != null } ?: keys.first()
+            }
+
+    private val subscribedAccountsInternal = MutableStateFlow<Set<HexKey>>(emptySet())
+
+    /**
+     * The accounts whose always-on subscriptions are mounted right now, from
+     * either mount path: a screen's [AccountFilterAssemblerSubscription] or the
+     * headless [BackgroundAccountSubscriptionRegistry].
+     *
+     * This is the answer to "does this account currently pull from relays?", so
+     * account-scoped loaders that live outside this assembler — the Cashu wallet
+     * — can follow it instead of running for every [Account] object that happens
+     * to be loaded in memory.
+     */
+    val subscribedAccounts = subscribedAccountsInternal.asStateFlow()
+
+    override fun invalidateKeys() {
+        subscribedAccountsInternal.value = allKeys().mapTo(mutableSetOf()) { it.account.userProfile().pubkeyHex }
+        invalidateFilters()
+    }
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 

@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01N
 
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountUiQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -39,9 +39,9 @@ import kotlinx.coroutines.launch
 
 class AccountNotificationsEoseFromRandomRelaysManager(
     client: INostrClient,
-    allKeys: () -> Set<AccountQueryState>,
-) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
-    override fun user(key: AccountQueryState) = key.account.userProfile()
+    allKeys: () -> Set<AccountUiQueryState>,
+) : PerUserEoseManager<AccountUiQueryState>(client, allKeys) {
+    override fun user(key: AccountUiQueryState) = key.account.userProfile()
 
     /**
      * Most notifications arrive on the user's own inbox relays. This is the straggler probe for the
@@ -61,7 +61,7 @@ class AccountNotificationsEoseFromRandomRelaysManager(
      * the rotation timer says so.
      */
     override fun updateFilter(
-        key: AccountQueryState,
+        key: AccountUiQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         // only loads this after the feed is built, so it stays null on a quiet inbox. No week floor
@@ -92,7 +92,7 @@ class AccountNotificationsEoseFromRandomRelaysManager(
     val userJobMap = mutableMapOf<User, List<Job>>()
 
     @OptIn(FlowPreview::class)
-    override fun newSub(key: AccountQueryState): Subscription {
+    override fun newSub(key: AccountUiQueryState): Subscription {
         val user = user(key)
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =

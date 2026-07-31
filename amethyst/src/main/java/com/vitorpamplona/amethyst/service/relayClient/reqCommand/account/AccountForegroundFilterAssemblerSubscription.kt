@@ -39,7 +39,7 @@ fun AccountForegroundFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel) {
-            AccountQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.trustedAccounts.value)
+            AccountUiQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.trustedAccounts.value)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

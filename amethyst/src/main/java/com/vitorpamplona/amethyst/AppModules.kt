@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoor
 import com.vitorpamplona.amethyst.service.relayClient.diagnostics.BootRelayDiagnostics
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.BackgroundAccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
@@ -872,6 +873,7 @@ class AppModules(
             geolocationFlow = { locationManager.geohashStateFlow },
             nwcFilterAssembler = { sources.nwc },
             cashuWalletFilterAssembler = { sources.cashuWallet },
+            subscribedAccounts = { sources.account.subscribedAccounts },
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
             okHttpClientForMoney = roleBasedHttpClientBuilder::okHttpClientForMoney,
             contentResolverFn = { appContext.contentResolver },
@@ -957,6 +959,12 @@ class AppModules(
         )
     }
 
+    // Gives every account that opted into running in the background its own
+    // account-level subscriptions (notifications, DMs, gift wraps, wallet), with no
+    // AccountViewModel behind it. Driven by alwaysOnNotificationServiceManager below,
+    // which already tracks which accounts opted in.
+    val backgroundAccountSubscriptions = BackgroundAccountSubscriptionRegistry(sources.account)
+
     // Manages always-on notification service lifecycle. Preloads every saved
     // writable account while enabled so GiftWraps for non-active accounts still
     // get unwrapped by their owning account's newNotesPreProcessor.
@@ -966,6 +974,7 @@ class AppModules(
             scope = applicationIOScope,
             accountsCache = accountsCache,
             localPreferences = LocalPreferences,
+            backgroundSubscriptions = backgroundAccountSubscriptions,
             activePubKeyProvider = { sessionManager.loggedInAccount()?.pubKey },
         )
 

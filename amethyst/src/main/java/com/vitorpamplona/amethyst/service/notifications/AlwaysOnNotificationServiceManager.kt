@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.notifications
 import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.BackgroundAccountSubscriptionRegistry
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -70,6 +71,7 @@ class AlwaysOnNotificationServiceManager(
     private val scope: CoroutineScope,
     private val accountsCache: AccountCacheState,
     private val localPreferences: LocalPreferences,
+    private val backgroundSubscriptions: BackgroundAccountSubscriptionRegistry,
     private val activePubKeyProvider: () -> HexKey?,
 ) {
     companion object {
@@ -121,16 +123,25 @@ class AlwaysOnNotificationServiceManager(
                             val flags =
                                 accounts.values.map { account ->
                                     account.settings.alwaysOnNotificationService
-                                        .combine(account.settings.nip46SignerEnabled) { alwaysOn, signer -> alwaysOn || signer }
+                                        .combine(account.settings.nip46SignerEnabled) { alwaysOn, signer ->
+                                            if (alwaysOn || signer) account else null
+                                        }
                                 }
                             if (flags.isEmpty()) {
-                                flowOf(false)
+                                flowOf(emptyList())
                             } else {
-                                combine(flags) { values -> values.any { it } }
+                                combine(flags) { values -> values.filterNotNull() }
                             }
                         }.distinctUntilChanged()
-                        .collectLatest { anyParticipating ->
-                            if (anyParticipating) {
+                        .collectLatest { participating ->
+                            // Give every participating account its own account-level
+                            // subscriptions (notifications, DMs, gift wraps, wallet).
+                            // Until this existed, only the account on screen pulled
+                            // anything and the rest waited on a push that may never
+                            // come.
+                            backgroundSubscriptions.sync(participating)
+
+                            if (participating.isNotEmpty()) {
                                 wasEnabled = true
                                 enableServiceLayers()
                             } else if (wasEnabled) {
@@ -145,8 +156,7 @@ class AlwaysOnNotificationServiceManager(
     fun stop() {
         watchJob?.cancel()
         watchJob = null
-        preloadJob?.cancel()
-        preloadJob = null
+        stopMultiAccountPreload()
         // Logout/terminate: tear the layers down explicitly. Otherwise the watchdog alarm
         // and periodic worker stay scheduled and would resurrect the service for a
         // logged-out user (nobody participating).
@@ -211,10 +221,15 @@ class AlwaysOnNotificationServiceManager(
      * Cancels the preload collector and releases every cached account except the
      * currently active one, so users with the master off return to single-account
      * memory/battery footprint.
+     *
+     * Unmounts the background subscriptions too: with the master off, the only
+     * account that should be talking to relays is the one on screen, and its
+     * subscription comes from the screen's own mount.
      */
     private fun stopMultiAccountPreload() {
         preloadJob?.cancel()
         preloadJob = null
+        backgroundSubscriptions.clear()
         // remove this because we don't know which other accounts might be getting used.
         // val active = activePubKeyProvider()
         // if (active != null) {

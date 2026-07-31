@@ -3008,6 +3008,8 @@ fun mockAccountViewModel(): AccountViewModel {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuWalletFilterAssembler(client)
             },
+            // A mock account is always "on screen", so its wallet renders in previews.
+            subscribedAccounts = { MutableStateFlow(setOf(keyPair.pubKey.toHexKey())) },
             cashuMintDirectoryFilterAssembler = {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuMintDirectoryFilterAssembler(client)
@@ -3068,6 +3070,8 @@ fun mockVitorAccountViewModel(): AccountViewModel {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuWalletFilterAssembler(client)
             },
+            // A mock account is always "on screen", so its wallet renders in previews.
+            subscribedAccounts = { MutableStateFlow(setOf(keyPair.pubKey.toHexKey())) },
             cashuMintDirectoryFilterAssembler = {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuMintDirectoryFilterAssembler(client)

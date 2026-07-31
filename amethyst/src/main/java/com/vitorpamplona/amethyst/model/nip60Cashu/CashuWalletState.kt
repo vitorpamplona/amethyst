@@ -103,6 +103,12 @@ class CashuWalletState(
     private val cache: LocalCache,
     private val scope: CoroutineScope,
     private val assembler: CashuWalletFilterAssembler,
+    /**
+     * The accounts whose account-level subscriptions are mounted right now
+     * (`AccountFilterAssembler.subscribedAccounts`). The wallet follows it so it
+     * runs for exactly the accounts that pull from relays at all.
+     */
+    private val subscribedAccounts: StateFlow<Set<HexKey>>,
     private val outboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
     private val inboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
     private val dmRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
@@ -472,17 +478,31 @@ class CashuWalletState(
         jobs +=
             scope.launch(Dispatchers.IO) {
                 combine(
+                    subscribedAccounts,
                     outboxRelaysFlow,
                     inboxRelaysFlow,
                     dmRelaysFlow,
                     _nutzapInfoEvent,
-                ) { outbox, inbox, dm, info ->
-                    CashuWalletQueryState(
-                        pubkey = pubKey,
-                        ownEventRelays = outbox,
-                        inboxRelays = inbox + dm + (info?.relays() ?: emptyList()),
-                    )
-                }.collect { syncSubscription(it) }
+                ) { subscribed, outbox, inbox, dm, info ->
+                    // Only pull a wallet for an account that is actually subscribed: the
+                    // one on screen, or one the user opted into keeping active in the
+                    // background. Other accounts are held in memory purely so pushed
+                    // gift wraps can be decrypted by their owner — asking relays for
+                    // their wallet put a Wallet and a Nutzap Inbox subscription on the
+                    // wire for every saved account, including accounts that have no
+                    // wallet at all.
+                    if (pubKey !in subscribed) {
+                        null
+                    } else {
+                        CashuWalletQueryState(
+                            pubkey = pubKey,
+                            ownEventRelays = outbox,
+                            inboxRelays = inbox + dm + (info?.relays() ?: emptyList()),
+                        )
+                    }
+                }.collect { next ->
+                    if (next == null) clearSubscription() else syncSubscription(next)
+                }
             }
 
         // Reactive incremental update: any new event arrival that matches our
@@ -545,11 +565,15 @@ class CashuWalletState(
     // ============================================================
     // Subscription management
     // ============================================================
+    private fun clearSubscription() {
+        currentSubscription?.let { runCatching { assembler.unsubscribe(it) } }
+        currentSubscription = null
+    }
+
     private fun syncSubscription(next: CashuWalletQueryState) {
         val previous = currentSubscription
         if (next.ownEventRelays.isEmpty() && next.inboxRelays.isEmpty()) {
-            previous?.let { runCatching { assembler.unsubscribe(it) } }
-            currentSubscription = null
+            clearSubscription()
             return
         }
         if (previous == next) return // unchanged

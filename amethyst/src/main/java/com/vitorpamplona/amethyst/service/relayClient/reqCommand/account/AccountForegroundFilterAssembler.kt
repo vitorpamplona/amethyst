@@ -45,7 +45,7 @@ class AccountForegroundFilterAssembler(
     authenticator: IAuthStatus,
     failureTracker: RelayOfflineTracker,
     scope: CoroutineScope,
-) : ComposeSubscriptionManager<AccountQueryState>() {
+) : ComposeSubscriptionManager<AccountUiQueryState>() {
     val group =
         listOf(
             AccountFollowsLoaderSubAssembler(client, cache, scope, authenticator, failureTracker, ::allKeys),

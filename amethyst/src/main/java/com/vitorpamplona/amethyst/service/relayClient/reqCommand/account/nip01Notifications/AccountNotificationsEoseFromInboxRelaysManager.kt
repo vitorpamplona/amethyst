@@ -54,9 +54,10 @@ class AccountNotificationsEoseFromInboxRelaysManager(
         // does, the EOSE time wins and this is never consulted.
         //
         // `since` means *newer than*, so this floors the query at the depth the feed already reaches
-        // rather than asking all-time again. It stays null until the feed holds a full page — and is
-        // therefore always null for an account with no UI, since nothing fills that feed.
-        val pagingBoundary = key.feedContentStates.notifications.lastNoteCreatedAtIfFilled()
+        // rather than asking all-time again. It stays null until the feed holds a full page — and a
+        // background account has no feed at all (no screen ever mounted one), which is why the key
+        // carries none and this reads null there.
+        val pagingBoundary = key.feedContentStates?.notifications?.lastNoteCreatedAtIfFilled()
 
         val inbox =
             key.account.notificationRelays.flow.value.flatMap {
@@ -113,9 +114,15 @@ class AccountNotificationsEoseFromInboxRelaysManager(
                 },
                 // No group/Buzz-DM watchers here any more: those filters moved to the per-channel
                 // subscriptions, which mount and unmount with the channel itself.
-                key.account.scope.launch(Dispatchers.IO) {
-                    key.feedContentStates.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
-                        invalidateFilters()
+            ) +
+            // Only a screen can fill a feed, so there is nothing to watch for a
+            // background account.
+            listOfNotNull(
+                key.feedContentStates?.let { feeds ->
+                    key.account.scope.launch(Dispatchers.IO) {
+                        feeds.notifications.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
+                            invalidateFilters()
+                        }
                     }
                 },
             )

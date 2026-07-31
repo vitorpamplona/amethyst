@@ -442,6 +442,8 @@ class Account(
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cashuWalletFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler,
+    /** Accounts with account-level subscriptions mounted — see [cashuWalletState]. */
+    val subscribedAccounts: () -> StateFlow<Set<HexKey>>,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
     val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
     val otsResolverBuilder: () -> OtsResolver,
@@ -742,6 +744,7 @@ class Account(
             cache = cache,
             scope = scope,
             assembler = cashuWalletFilterAssembler(),
+            subscribedAccounts = subscribedAccounts(),
             outboxRelaysFlow = outboxRelays.flow,
             inboxRelaysFlow = notificationRelays.flow,
             dmRelaysFlow = dmRelays.flow,

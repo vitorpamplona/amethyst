@@ -87,6 +87,7 @@ class NotificationFeedFilterModeOverrideTest {
                 geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
                 nwcFilterAssembler = { NWCPaymentFilterAssembler(client) },
                 cashuWalletFilterAssembler = { CashuWalletFilterAssembler(client) },
+                subscribedAccounts = { MutableStateFlow(emptySet()) },
                 cashuMintDirectoryFilterAssembler = { CashuMintDirectoryFilterAssembler(client) },
                 okHttpClientForMoney = { OkHttpClient() },
                 otsResolverBuilder = { EmptyOtsResolverBuilder.build() },

@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledUpdate
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountUiQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -62,7 +62,7 @@ class AccountFollowsLoaderSubAssembler(
     val scope: CoroutineScope,
     val authStatus: IAuthStatus,
     val failureTracker: RelayOfflineTracker,
-    val allKeys: () -> Set<AccountQueryState>,
+    val allKeys: () -> Set<AccountUiQueryState>,
 ) : IEoseManager {
     private val logTag = "AccountFollowsLoaderSubAssembler"
     private val orchestrator = SubscriptionController(client)
@@ -190,7 +190,7 @@ class AccountFollowsLoaderSubAssembler(
         }
     }
 
-    fun updateSubscriptions(keys: Set<AccountQueryState>) {
+    fun updateSubscriptions(keys: Set<AccountUiQueryState>) {
         val uniqueSubscribedAccounts = keys.associate { it.account.userProfile() to it.account }
 
         val allFilters = updateFilterForAllAccounts(uniqueSubscribedAccounts.values)
