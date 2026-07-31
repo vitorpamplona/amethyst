@@ -1543,7 +1543,7 @@
     <string name="audience_empty_private">Only you \u2014 choose who else can see this</string>
     <string name="audience_empty_public">Add people to notify</string>
     <string name="audience_summary_two">%1$s and %2$s</string>
-    <string name="audience_group_chip">%1$s \u00b7 %2$d</string>
+    <string name="audience_group_chip">%1$s \u00b7 %2$s</string>
     <string name="audience_group_remove">Remove everyone added from %1$s</string>
     <string name="audience_send_privately">Send privately</string>
     <string name="audience_sheet_title">Add people</string>

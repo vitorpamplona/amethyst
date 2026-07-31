@@ -133,11 +133,22 @@ object AudienceSelection {
      * What the review step starts with: every ordinary member, plus the ones
      * already in the audience so the header count tells the truth. Private
      * members and muted people need a deliberate tap.
+     *
+     * A list that would blow the hard cap opens with nothing new selected
+     * instead. Selecting all of it would land the review in a state the confirm
+     * button refuses, leaving the only way out a hundred-odd individual taps.
      */
-    fun defaultSelection(members: List<AudienceMember>): Set<HexKey> =
-        members
-            .filter { it.isAlreadyInAudience || (!it.isPrivateMember && !it.isHidden) }
-            .mapTo(mutableSetOf()) { it.pubkeyHex }
+    fun defaultSelection(
+        members: List<AudienceMember>,
+        currentAudienceSize: Int = 0,
+    ): Set<HexKey> {
+        val alreadyIn = members.filter { it.isAlreadyInAudience }.mapTo(mutableSetOf()) { it.pubkeyHex }
+        val proposed = members.filter { !it.isAlreadyInAudience && !it.isPrivateMember && !it.isHidden }
+
+        if (capFor(currentAudienceSize, proposed.size) is AudienceCap.OverHard) return alreadyIn
+
+        return proposed.mapTo(alreadyIn) { it.pubkeyHex }
+    }
 
     /** The pubkeys a confirm would actually add — the selection minus what is already there. */
     fun pendingAdditions(
@@ -158,6 +169,33 @@ object AudienceSelection {
             total > SOFT_CAP -> AudienceCap.OverSoft(total)
             else -> AudienceCap.Fine
         }
+    }
+
+    /**
+     * Works out what a bulk add changes: who is genuinely new, and what the
+     * provenance map becomes.
+     *
+     * Provenance is recorded for the newcomers only. Recording it for everyone
+     * in the list would let the group chip's undo evict somebody who was in the
+     * audience for an unrelated reason — dropping the author of the note being
+     * replied to, say, just because a list happened to contain them.
+     */
+    fun addToAudience(
+        current: List<User>,
+        incoming: Collection<User>,
+        provenance: Map<HexKey, Set<String>>,
+        fromListTag: String?,
+    ): AudienceAddition {
+        val known = current.mapTo(mutableSetOf()) { it.pubkeyHex }
+        val newcomers = incoming.filter { known.add(it.pubkeyHex) }
+
+        if (fromListTag == null || newcomers.isEmpty()) return AudienceAddition(newcomers, provenance)
+
+        val next = provenance.toMutableMap()
+        newcomers.forEach { user ->
+            next[user.pubkeyHex] = (next[user.pubkeyHex] ?: emptySet()) + fromListTag
+        }
+        return AudienceAddition(newcomers, next)
     }
 
     /** Members that can be bulk-toggled by "select all" — the already-added rows are locked on. */
@@ -214,6 +252,13 @@ object AudienceSelection {
         }
     }
 }
+
+@Immutable
+data class AudienceAddition(
+    /** People the add genuinely introduced — the rest were in the audience already. */
+    val newcomers: List<User>,
+    val provenance: Map<HexKey, Set<String>>,
+)
 
 @Immutable
 data class AudienceGroupChip(

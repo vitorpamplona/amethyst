@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.note.creators.notify
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -51,6 +50,7 @@ import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -61,8 +61,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -136,6 +136,12 @@ fun AudienceFlap(
         label = "audienceFlapAccent",
     )
 
+    // The facepile separates overlapping portraits with a ring punched in the
+    // colour behind them. That is the flap's own tinted surface, not the page:
+    // using colorScheme.background would leave untinted discs floating on the
+    // tint in exactly the mode this design exists for.
+    val flapSurface = background.compositeOver(MaterialTheme.colorScheme.background)
+
     Column(
         modifier =
             Modifier
@@ -164,7 +170,7 @@ fun AudienceFlap(
             )
 
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                AudienceRestState(audience, mutedNotifies, isPrivate, accountViewModel, onManage)
+                AudienceRestState(audience, mutedNotifies, isPrivate, flapSurface, accountViewModel, onManage)
             }
 
             ManageButton(onManage)
@@ -188,19 +194,19 @@ fun AudienceFlap(
 }
 
 /**
- * The lock closing is the one bit of choreography in the composer: it rotates
- * from ajar to shut and settles, so the mode change is impossible to miss.
+ * Marks which of the two modes the flap is in: a bell for an ordinary post's
+ * notify list, a lock once the note is sealed. The lock arrives slightly larger
+ * as well as tinted, so the mode change reads even at a glance.
+ *
+ * Deliberately no rotation: the two states are different glyphs, not one glyph
+ * opening and closing, so rotating would just leave the bell permanently
+ * crooked in public mode.
  */
 @Composable
 private fun FlapLock(
     isPrivate: Boolean,
     accent: Color,
 ) {
-    val rotation by animateFloatAsState(
-        targetValue = if (isPrivate) 0f else -18f,
-        animationSpec = tween(FLAP_TINT_MS),
-        label = "audienceFlapLockRotation",
-    )
     val size by animateDpAsState(
         targetValue = if (isPrivate) 18.dp else 16.dp,
         animationSpec = tween(FLAP_TINT_MS),
@@ -210,7 +216,7 @@ private fun FlapLock(
     Icon(
         symbol = if (isPrivate) MaterialSymbols.Lock else MaterialSymbols.Notifications,
         contentDescription = null,
-        modifier = Modifier.size(size).rotate(rotation),
+        modifier = Modifier.size(size),
         tint = accent,
     )
 }
@@ -220,6 +226,7 @@ private fun ManageButton(onManage: () -> Unit) {
     Box(
         modifier =
             Modifier
+                .minimumInteractiveComponentSize()
                 .size(30.dp)
                 .clip(CircleShape)
                 .border(1.dp, MaterialTheme.colorScheme.placeholderText.copy(alpha = 0.4f), CircleShape)
@@ -273,6 +280,7 @@ private fun AudienceRestState(
     audience: ImmutableList<User>,
     mutedNotifies: ImmutableSet<HexKey>,
     isPrivate: Boolean,
+    flapSurface: Color,
     accountViewModel: AccountViewModel,
     onManage: () -> Unit,
 ) {
@@ -289,7 +297,7 @@ private fun AudienceRestState(
         if (active.isEmpty()) {
             AudienceInvitation(isPrivate, onManage)
         } else {
-            AudienceFacepile(active, accountViewModel)
+            AudienceFacepile(active, flapSurface, accountViewModel)
             AudienceSummary(active, accountViewModel)
         }
     }
@@ -299,6 +307,7 @@ private fun AudienceRestState(
 @Composable
 private fun AudienceFacepile(
     users: List<User>,
+    ringColor: Color,
     accountViewModel: AccountViewModel,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
@@ -308,7 +317,7 @@ private fun AudienceFacepile(
                     Modifier
                         .size(Size24dp + 4.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.background),
+                        .background(ringColor),
                 contentAlignment = Alignment.Center,
             ) {
                 BaseUserPicture(user, Size24dp, accountViewModel)
@@ -322,7 +331,7 @@ private fun AudienceFacepile(
                     Modifier
                         .size(Size24dp + 4.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.background),
+                        .background(ringColor),
                 contentAlignment = Alignment.Center,
             ) {
                 Box(

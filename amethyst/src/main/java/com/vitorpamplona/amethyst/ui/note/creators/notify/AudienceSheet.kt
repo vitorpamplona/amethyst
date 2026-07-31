@@ -43,6 +43,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -154,7 +156,10 @@ private fun AudienceCatalog(
     onPickList: (AudienceList) -> Unit,
 ) {
     val allLists = rememberAudienceLists(accountViewModel)
-
+    // Fixed dp caps (220 + 400) overflow a short screen or a large font scale,
+    // and a bottom sheet clips rather than scrolls — the confirm button would be
+    // unreachable. Budgeting against the actual screen keeps it in view.
+    val screenHeight = LocalConfiguration.current.screenHeightDp
     val query = searchState.text.toString()
 
     val sets =
@@ -205,14 +210,14 @@ private fun AudienceCatalog(
             userSuggestions = userSuggestions,
             onSelect = onAddUser,
             accountViewModel = accountViewModel,
-            modifier = Modifier.heightIn(max = 220.dp),
+            modifier = Modifier.heightIn(max = (screenHeight * 0.28f).dp),
             itemColors = ListItemDefaults.colors(containerColor = Color.Transparent),
             showDividers = false,
         )
     }
 
     LazyColumn(
-        modifier = Modifier.heightIn(max = 400.dp),
+        modifier = Modifier.heightIn(max = (screenHeight * 0.45f).dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         if (sets.isNotEmpty()) {
@@ -304,6 +309,10 @@ private fun AudienceReview(
     val hidden by accountViewModel.account.hiddenUsers.flow
         .collectAsStateWithLifecycle()
 
+    // Leaves room for the header, the select-all row, the cap notes and the
+    // confirm button, which all have to stay on screen for the sheet to work.
+    val listMaxHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
+
     val members =
         remember(list, alreadyInAudience, hidden, isPrivate) {
             AudienceSelection.buildMembers(
@@ -316,7 +325,7 @@ private fun AudienceReview(
             )
         }
 
-    var selected by remember(members) { mutableStateOf(AudienceSelection.defaultSelection(members)) }
+    var selected by remember(members) { mutableStateOf(AudienceSelection.defaultSelection(members, activeAudienceSize)) }
 
     val additions = remember(members, selected) { AudienceSelection.pendingAdditions(members, selected) }
     val cap = AudienceSelection.capFor(activeAudienceSize, additions.size)
@@ -327,7 +336,10 @@ private fun AudienceReview(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(Modifier.size(32.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.minimumInteractiveComponentSize().size(32.dp).clickable(onClick = onBack),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
                 symbol = MaterialSymbols.AutoMirrored.ArrowBack,
                 contentDescription = stringRes(R.string.back),
@@ -372,7 +384,7 @@ private fun AudienceReview(
 
     HorizontalDivider(thickness = DividerThickness)
 
-    LazyColumn(modifier = Modifier.heightIn(max = 340.dp)) {
+    LazyColumn(modifier = Modifier.heightIn(max = listMaxHeight)) {
         items(members, key = { it.pubkeyHex }) { member ->
             AudienceMemberRow(
                 member = member,

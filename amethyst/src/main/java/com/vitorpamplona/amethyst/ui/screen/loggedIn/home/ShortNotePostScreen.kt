@@ -296,7 +296,12 @@ private fun NewPostScreenBody(
 ) {
     val scrollState = rememberScrollState()
     val audienceLists = rememberAudienceLists(accountViewModel)
-    val audience = postViewModel.pTags?.toImmutableList() ?: persistentListOf()
+    // Both conversions are remembered on the ViewModel's own state. Unremembered,
+    // each recomposition minted a fresh PersistentList/Set, which invalidated the
+    // groupChips remember below every single time and handed AudienceFlap new
+    // parameter identities so it could never skip.
+    val audience = remember(postViewModel.pTags) { postViewModel.pTags?.toImmutableList() ?: persistentListOf() }
+    val mutedNotifies = remember(postViewModel.mutedNotifies) { postViewModel.mutedNotifies.toImmutableSet() }
     val groupChips =
         remember(postViewModel.notifyProvenance, audience, audienceLists) {
             AudienceSelection
@@ -318,7 +323,7 @@ private fun NewPostScreenBody(
         if (postViewModel.wantsToManageAudience) {
             AudienceSheet(
                 audience = audience,
-                mutedNotifies = postViewModel.mutedNotifies.toImmutableSet(),
+                mutedNotifies = mutedNotifies,
                 isPrivate = postViewModel.wantsPrivateNote,
                 searchState = postViewModel.notifyUserSearchText,
                 onSearchChanged = postViewModel::onNotifyUserSearchTextChanged,
@@ -373,7 +378,7 @@ private fun NewPostScreenBody(
                     audience = audience,
                     isPrivate = postViewModel.wantsPrivateNote,
                     accountViewModel = accountViewModel,
-                    mutedNotifies = postViewModel.mutedNotifies.toImmutableSet(),
+                    mutedNotifies = mutedNotifies,
                     groupChips = groupChips,
                     onManage = { postViewModel.wantsToManageAudience = true },
                     onRemoveGroup = { postViewModel.removeListFromReplyList(it) },
@@ -684,13 +689,18 @@ private fun NewPostScreenBody(
             }
         }
 
-        postViewModel.userSuggestions?.let {
-            ShowUserSuggestionList(
-                it,
-                postViewModel::autocompleteWithUser,
-                accountViewModel,
-                modifier = SuggestionListDefaultHeightPage,
-            )
+        // Not while the audience sheet is up: it renders its own list off the same
+        // UserSuggestionState, and this copy would sit behind the scrim
+        // re-subscribing every suggested user's metadata for nobody to see.
+        if (!postViewModel.wantsToManageAudience) {
+            postViewModel.userSuggestions?.let {
+                ShowUserSuggestionList(
+                    it,
+                    postViewModel::autocompleteWithUser,
+                    accountViewModel,
+                    modifier = SuggestionListDefaultHeightPage,
+                )
+            }
         }
 
         postViewModel.emojiSuggestions?.let {
@@ -936,7 +946,17 @@ private fun AddPrivateNoteButton(
     IconButton(
         onClick = { onClick() },
         enabled = !isLocked,
-        colors = IconButtonDefaults.iconButtonColors(containerColor = container, contentColor = content),
+        // A reply to an unsealed rumor is locked private. The button is disabled
+        // there, and M3's default disabled colours would erase the filled pill in
+        // exactly the case where the note is most definitely private — so the
+        // disabled colours mirror the enabled ones, dimmed.
+        colors =
+            IconButtonDefaults.iconButtonColors(
+                containerColor = container,
+                contentColor = content,
+                disabledContainerColor = container.copy(alpha = container.alpha * 0.6f),
+                disabledContentColor = content.copy(alpha = 0.8f),
+            ),
     ) {
         Icon(
             symbol = if (isActive) MaterialSymbols.Lock else MaterialSymbols.LockOpen,

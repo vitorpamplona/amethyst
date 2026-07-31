@@ -121,6 +121,27 @@ class AudienceSelectionTest {
     }
 
     @Test
+    fun aListBiggerThanTheHardCapOpensWithNothingNewSelected() {
+        // Selecting all of an oversized list would land the review in a state the
+        // confirm button refuses, and the only way out would be ~100 individual
+        // taps. Start empty instead.
+        val crowd = (1..AudienceSelection.HARD_CAP + 5).map { user("%064x".format(it)) }
+        val rows = members(listOfPeople(public = crowd))
+
+        assertTrue(AudienceSelection.defaultSelection(rows, currentAudienceSize = 0).isEmpty())
+        // The same list is fine once it fits.
+        assertEquals(3, AudienceSelection.defaultSelection(members(listOfPeople(public = crowd.take(3)))).size)
+    }
+
+    @Test
+    fun anOversizedListStillShowsWhoIsAlreadyThere() {
+        val crowd = (1..AudienceSelection.HARD_CAP + 5).map { user("%064x".format(it)) }
+        val rows = members(listOfPeople(public = crowd), alreadyIn = setOf(crowd[0].pubkeyHex))
+
+        assertEquals(setOf(crowd[0].pubkeyHex), AudienceSelection.defaultSelection(rows))
+    }
+
+    @Test
     fun capsDiscloseThenRefuse() {
         assertEquals(AudienceCap.Fine, AudienceSelection.capFor(0, AudienceSelection.SOFT_CAP))
         assertEquals(
@@ -138,6 +159,52 @@ class AudienceSelectionTest {
         // 20 already p-tagged plus 10 more is over the soft cap even though
         // neither number is on its own.
         assertEquals(AudienceCap.OverSoft(30), AudienceSelection.capFor(20, 10))
+    }
+
+    @Test
+    fun addingDedupesAgainstWhoIsAlreadyThere() {
+        val addition = AudienceSelection.addToAudience(listOf(alice), listOf(alice, bruno), emptyMap(), null)
+
+        assertEquals(listOf(bruno.pubkeyHex), addition.newcomers.map { it.pubkeyHex })
+    }
+
+    @Test
+    fun addingRecordsProvenanceOnlyForPeopleTheAddIntroduced() {
+        // Alice is already p-tagged — say she is the author of the note being
+        // replied to. A list that happens to contain her must NOT claim her, or
+        // removing that list's chip would drop her from the reply's p tags.
+        val addition =
+            AudienceSelection.addToAudience(
+                current = listOf(alice),
+                incoming = listOf(alice, bruno),
+                provenance = emptyMap(),
+                fromListTag = "close-friends",
+            )
+
+        assertFalse(alice.pubkeyHex in addition.provenance)
+        assertEquals(setOf("close-friends"), addition.provenance[bruno.pubkeyHex])
+
+        // ...so undoing the list leaves Alice exactly where she was.
+        val removal = AudienceSelection.removeListFromProvenance(addition.provenance, "close-friends")
+        assertEquals(setOf(bruno.pubkeyHex), removal.orphaned)
+        assertFalse(alice.pubkeyHex in removal.orphaned)
+    }
+
+    @Test
+    fun addingTheSameListTwiceDoesNotDuplicateProvenance() {
+        val first = AudienceSelection.addToAudience(emptyList(), listOf(alice), emptyMap(), "work")
+        val second = AudienceSelection.addToAudience(listOf(alice), listOf(alice), first.provenance, "work")
+
+        assertTrue(second.newcomers.isEmpty())
+        assertEquals(setOf("work"), second.provenance[alice.pubkeyHex])
+    }
+
+    @Test
+    fun addingWithoutAListRecordsNoProvenance() {
+        val addition = AudienceSelection.addToAudience(emptyList(), listOf(alice), emptyMap(), null)
+
+        assertEquals(listOf(alice.pubkeyHex), addition.newcomers.map { it.pubkeyHex })
+        assertTrue(addition.provenance.isEmpty())
     }
 
     @Test

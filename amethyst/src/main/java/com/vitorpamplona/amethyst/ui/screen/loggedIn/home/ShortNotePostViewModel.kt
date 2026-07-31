@@ -357,11 +357,10 @@ open class ShortNotePostViewModel :
     // Notify / Visible-to editor: lets the user p-tag people who aren't
     // cited in the message. For private notes the Notify list IS the
     // audience, so this is how receivers are picked.
-    var wantsToAddNotifyUser by mutableStateOf(false)
     val notifyUserSearchText = TextFieldState()
 
-    // The audience sheet: search, people lists, follow packs and the
-    // per-person switches all live behind this one flag.
+    // The audience sheet: search, people lists and follow packs all live
+    // behind this one flag.
     var wantsToManageAudience by mutableStateOf(false)
 
     // Display-only record of which list each pubkey arrived from, so a bulk
@@ -418,10 +417,10 @@ open class ShortNotePostViewModel :
         if (users.isEmpty()) return
 
         val current = pTags ?: emptyList()
-        val known = current.mapTo(mutableSetOf()) { it.pubkeyHex }
-        val newcomers = users.filter { known.add(it.pubkeyHex) }
-        if (newcomers.isNotEmpty()) {
-            pTags = current + newcomers
+        val addition = AudienceSelection.addToAudience(current, users, notifyProvenance, fromListTag)
+
+        if (addition.newcomers.isNotEmpty()) {
+            pTags = current + addition.newcomers
         }
 
         // Anyone re-added by a list gets their bell back: the list says they
@@ -431,24 +430,8 @@ open class ShortNotePostViewModel :
             mutedNotifies = mutedNotifies - addedIds
         }
 
-        if (fromListTag != null) {
-            val next = notifyProvenance.toMutableMap()
-            users.forEach { user ->
-                next[user.pubkeyHex] = (next[user.pubkeyHex] ?: emptySet()) + fromListTag
-            }
-            notifyProvenance = next
-        }
+        notifyProvenance = addition.provenance
 
-        draftTag.newVersion()
-    }
-
-    /** Drops people from the audience entirely (the chip's ✕), provenance included. */
-    fun removeFromReplyList(users: Collection<User>) {
-        if (users.isEmpty()) return
-        val removing = users.mapTo(mutableSetOf()) { it.pubkeyHex }
-        pTags = pTags?.filterNot { it.pubkeyHex in removing }?.ifEmpty { null }
-        mutedNotifies = mutedNotifies - removing
-        notifyProvenance = notifyProvenance.filterKeys { it !in removing }
         draftTag.newVersion()
     }
 
@@ -1665,7 +1648,6 @@ open class ShortNotePostViewModel :
         powOverride = null
         wantsPrivateNote = false
         privateNoteLocked = false
-        wantsToAddNotifyUser = false
         wantsToManageAudience = false
         notifyUserSearchText.clearText()
 
@@ -1731,7 +1713,6 @@ open class ShortNotePostViewModel :
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.NOTIFY) {
                 addToReplyList(item)
                 notifyUserSearchText.clearText()
-                wantsToAddNotifyUser = false
             }
 
             userSuggestionsMainMessage = null
