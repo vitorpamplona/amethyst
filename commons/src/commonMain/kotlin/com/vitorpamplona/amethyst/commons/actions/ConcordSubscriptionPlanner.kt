@@ -183,7 +183,7 @@ object ConcordSubscriptionPlanner {
                         purpose = SubPurpose.COMMUNITY_CHATS,
                         purposeDetail = "concord community planes",
                         entityIds = listOf(entry.id),
-                        accountPubKey = accountPubKey,
+                        accountPubKeys = listOfNotNull(accountPubKey),
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         authors = authors.toList(),
                         // -1 so the last-read message (created_at == lastRead) is itself returned:
@@ -196,7 +196,7 @@ object ConcordSubscriptionPlanner {
                         purpose = SubPurpose.COMMUNITY_CHATS,
                         purposeDetail = "concord community planes",
                         entityIds = listOf(entry.id),
-                        accountPubKey = accountPubKey,
+                        accountPubKeys = listOfNotNull(accountPubKey),
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         authors = authors.toList(),
                         limit = previewLimit,
@@ -288,7 +288,7 @@ object ConcordSubscriptionPlanner {
                         purpose = SubPurpose.COMMUNITY_CHATS,
                         purposeDetail = "concord live planes",
                         entityIds = communitiesByRelay[relay]?.sorted(),
-                        accountPubKey = accountPubKey,
+                        accountPubKeys = listOfNotNull(accountPubKey),
                         // Stored plane wraps (1059) plus ephemeral ones (21059) — the latter carry the
                         // live-only typing heartbeats a relay broadcasts but never stores.
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP, ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL),

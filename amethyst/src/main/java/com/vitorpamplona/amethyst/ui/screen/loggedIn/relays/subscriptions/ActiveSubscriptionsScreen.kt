@@ -128,7 +128,7 @@ fun ActiveSubscriptionsScreen(
                 item(key = "acct-${account.accountPubKey ?: "none"}") { AccountHeader(account) }
 
                 items(account.purposes, key = { "${account.accountPubKey}-${it.purpose.name}" }) { purpose ->
-                    PurposeCard(purpose, state.totalFilters, accountViewModel, nav)
+                    PurposeCard(purpose, state.attributedFilters, accountViewModel, nav)
                 }
             }
         }
@@ -194,7 +194,11 @@ private fun AccountHeader(account: SubscriptionAccountRow) {
 @Composable
 private fun PurposeCard(
     row: SubscriptionPurposeRow,
-    totalFilters: Int,
+    /**
+     * The sum of the per-account counts, not the wire total: a merged filter serving four accounts
+     * contributes to four cards, so dividing by the wire total would overstate every one of them.
+     */
+    attributedFilters: Int,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -233,7 +237,7 @@ private fun PurposeCard(
             // Share of ALL subscriptions, not of the biggest one: measuring against the biggest
             // makes one bar permanently full and says nothing about how much of the app's traffic a
             // purpose actually accounts for.
-            val share = if (totalFilters > 0) row.filterCount / totalFilters.toFloat() else 0f
+            val share = if (attributedFilters > 0) row.filterCount / attributedFilters.toFloat() else 0f
             ShareBar(fraction = share, color = accent)
 
             Spacer(Modifier.height(8.dp))

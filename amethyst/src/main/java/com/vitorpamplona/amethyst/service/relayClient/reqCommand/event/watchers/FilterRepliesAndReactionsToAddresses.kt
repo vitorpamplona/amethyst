@@ -96,7 +96,7 @@ fun filterRepliesAndReactionsToAddresses(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.ENGAGEMENT,
-                        accountPubKey = accountPubKey,
+                        accountPubKeys = listOfNotNull(accountPubKey),
                         kinds = RepliesAndReactionsToAddressesKinds1,
                         tags = mapOf("a" to sortedList),
                         since = since,
@@ -109,7 +109,7 @@ fun filterRepliesAndReactionsToAddresses(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.ENGAGEMENT,
-                        accountPubKey = accountPubKey,
+                        accountPubKeys = listOfNotNull(accountPubKey),
                         kinds = PostsAndChatMessagesToAddresses,
                         tags = mapOf("a" to sortedList),
                         since = since,
@@ -122,7 +122,7 @@ fun filterRepliesAndReactionsToAddresses(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.ENGAGEMENT,
-                        accountPubKey = accountPubKey,
+                        accountPubKeys = listOfNotNull(accountPubKey),
                         kinds = DeletionKindList,
                         tags = mapOf("a" to sortedList),
                         since = since,
@@ -135,7 +135,7 @@ fun filterRepliesAndReactionsToAddresses(
                 filter =
                     ExplainedFilter(
                         purpose = SubPurpose.ENGAGEMENT,
-                        accountPubKey = accountPubKey,
+                        accountPubKeys = listOfNotNull(accountPubKey),
                         kinds = TextNoteKindList,
                         tags = mapOf("q" to sortedList),
                         since = since,

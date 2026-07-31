@@ -115,7 +115,7 @@ fun filterUserMetadataForKey(
                         filter =
                             ExplainedFilter(
                                 purpose = SubPurpose.PROFILE_METADATA,
-                                accountPubKey = accountPubKey,
+                                accountPubKeys = listOfNotNull(accountPubKey),
                                 kinds = UserMetadataForKeyKinds,
                                 authors = firstTimers.sorted(),
                             ),
@@ -129,7 +129,7 @@ fun filterUserMetadataForKey(
                         filter =
                             ExplainedFilter(
                                 purpose = SubPurpose.PROFILE_METADATA,
-                                accountPubKey = accountPubKey,
+                                accountPubKeys = listOfNotNull(accountPubKey),
                                 kinds = UserMetadataForKeyKinds,
                                 authors = updates.sorted(),
                                 since = minimumTime,

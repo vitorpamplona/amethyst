@@ -135,7 +135,7 @@ class UserOutboxFinderSubAssembler(
                                 kinds = relayListKinds,
                                 authors = sortedUsers,
                                 purpose = SubPurpose.RELAY_LISTS,
-                                accountPubKey = soleAccountPubKey,
+                                accountPubKeys = listOfNotNull(soleAccountPubKey),
                             ),
                     )
                 } else {
@@ -172,7 +172,7 @@ class UserOutboxFinderSubAssembler(
                             authors = sortedAbandoned,
                             purpose = SubPurpose.RELAY_LISTS,
                             purposeDetail = "outbox discovery for users whose relay list we lost",
-                            accountPubKey = soleAccountPubKey,
+                            accountPubKeys = listOfNotNull(soleAccountPubKey),
                         ),
                 )
             }

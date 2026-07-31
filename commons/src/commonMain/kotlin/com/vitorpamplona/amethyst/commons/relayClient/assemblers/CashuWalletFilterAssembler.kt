@@ -138,7 +138,7 @@ private class CashuWalletSubAssembler(
                         MintRecommendationEvent.KIND,
                     ),
                 authors = listOf(pubkey),
-                accountPubKey = pubkey,
+                accountPubKeys = listOfNotNull(pubkey),
             )
 
         val inboundNutzapsFilter =
@@ -146,7 +146,7 @@ private class CashuWalletSubAssembler(
                 purpose = SubPurpose.NUTZAP_INBOX,
                 kinds = listOf(NutzapEvent.KIND),
                 tags = mapOf("p" to listOf(pubkey)),
-                accountPubKey = pubkey,
+                accountPubKeys = listOfNotNull(pubkey),
             )
 
         // Own NIP-60 events are read from the user's outbox; inbound nutzaps

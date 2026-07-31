@@ -50,7 +50,7 @@ class AggregateSubscriptionsTest {
             entityIds = chats,
             kinds = listOf(kind),
             tags = mapOf("e" to chats),
-            accountPubKey = account,
+            accountPubKeys = listOfNotNull(account),
         )
 
     /** Six relays, each carrying four batched filters that each name all six chats. */
@@ -97,6 +97,49 @@ class AggregateSubscriptionsTest {
                 .single()
                 .relays.size,
         )
+    }
+
+    /** The merged notifications filter: one REQ per relay naming every account that reads it. */
+    private fun mergedNotifications(vararg accounts: String) =
+        ExplainedFilter(
+            purpose = SubPurpose.NOTIFICATIONS,
+            accountPubKeys = accounts.toList(),
+            kinds = listOf(1),
+            tags = mapOf("p" to accounts.toList()),
+        )
+
+    @Test
+    fun `a merged filter explains itself to every account it serves`() {
+        val a = "aa".repeat(32)
+        val b = "bb".repeat(32)
+        val c = "cc".repeat(32)
+        val state = aggregateSubscriptions(mapOf(relay(1) to listOf(mergedNotifications(a, b, c))))
+
+        // One filter on the wire...
+        assertEquals(1, state.totalFilters)
+        // ...but all three accounts can see why their relay is busy.
+        assertEquals(3, state.accounts.size)
+        state.accounts.forEach { assertEquals(1, it.filterCount) }
+    }
+
+    @Test
+    fun `a card's share is drawn against the attributed total, not the wire total`() {
+        val a = "aa".repeat(32)
+        val b = "bb".repeat(32)
+        val state = aggregateSubscriptions(mapOf(relay(1) to listOf(mergedNotifications(a, b))))
+
+        // Dividing the per-account count by totalFilters would read as 100% for each of two
+        // accounts. attributedFilters is the unit those counts actually belong to.
+        assertEquals(1, state.totalFilters)
+        assertEquals(2, state.attributedFilters)
+        assertEquals(state.attributedFilters, state.accounts.sumOf { it.filterCount })
+    }
+
+    @Test
+    fun `unmerged filters keep attributed and wire totals identical`() {
+        val state = aggregateSubscriptions(sixChatsOnSixRelays())
+
+        assertEquals(state.totalFilters, state.attributedFilters)
     }
 
     @Test

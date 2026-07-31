@@ -127,6 +127,15 @@ data class ActiveSubscriptionsState(
     val totalRelays: Int = 0,
     /** Filters in flight that carry no purpose — assemblers not yet migrated. Honesty, not a bug. */
     val untaggedFilters: Int = 0,
+    /**
+     * The sum of the per-account counts, which is what a card's share must be drawn against.
+     *
+     * It exceeds [totalFilters] when a filter serves several accounts at once — one merged
+     * notifications REQ naming four pubkeys is one filter on the wire but four accounts' worth of
+     * explanation. Dividing a per-account count by [totalFilters] would compare the two units and
+     * overstate every card, which is the mistake the per-entity rows already taught once.
+     */
+    val attributedFilters: Int = 0,
 ) {
     /** The largest purpose, so every card can draw its share against a common scale. */
     val busiestPurposeFilters: Int = accounts.flatMap { it.purposes }.maxOfOrNull { it.filterCount } ?: 0
@@ -192,27 +201,34 @@ fun aggregateSubscriptions(filtersByRelay: Map<NormalizedRelayUrl, List<Filter>>
             // is what keeps them from collapsing into one nameless row per purpose.
             val scopeKey = explained.scope?.let { it::class.simpleName }
 
-            val tally =
-                byAccount
-                    .getOrPut(explained.accountPubKey) { mutableMapOf() }
-                    .getOrPut(explained.purpose) { PurposeTally() }
+            // A merged filter serves several accounts at once — notifications are `#p`-scoped, so
+            // every account reading a relay is asked for in one filter naming all of them. It shows
+            // under each of those accounts, because "why is this relay busy for me" has to be
+            // answerable per account. That makes the per-account counts a breakdown of a shared
+            // filter rather than a partition of the total, which is what [attributedFilters] exists
+            // to keep straight.
+            val accounts: List<HexKey?> = explained.accountPubKeys?.takeIf { it.isNotEmpty() } ?: listOf(null)
+            accounts.forEach { account ->
+                val tally =
+                    byAccount
+                        .getOrPut(account) { mutableMapOf() }
+                        .getOrPut(explained.purpose) { PurposeTally() }
 
-            // The filter counts ONCE, here — before it is fanned out below. This is the
-            // number that shares a unit with `total`, so a card's share of the whole is a
-            // comparison of like with like.
-            tally.filters++
-            tally.relays.add(relay)
+                // Once per account this filter serves, never once per entity it names.
+                tally.filters++
+                tally.relays.add(relay)
 
-            // A batched filter serves several entities at once — relay-group state is one #d
-            // filter per host relay carrying every joined group on it — so it contributes a
-            // row to each of them rather than collapsing to "All". These rows are a
-            // breakdown, never a total: see [SubscriptionEntityRow.namedInFilters].
-            val entities: List<HexKey?> = explained.entityIds?.takeIf { it.isNotEmpty() } ?: listOf(null)
-            entities.forEach { entityId ->
-                val key = EntityKey(entityId, scopeKey)
-                tally.entities.getOrPut(key) { mutableListOf() }.add(relay)
-                detailOf[explained.purpose to key] = explained.purposeDetail
-                explained.scope?.let { scopeOf.getOrPut(explained.purpose to key) { it } }
+                // A batched filter serves several entities at once — relay-group state is one #d
+                // filter per host relay carrying every joined group on it — so it contributes a
+                // row to each of them rather than collapsing to "All". These rows are a
+                // breakdown, never a total: see [SubscriptionEntityRow.namedInFilters].
+                val entities: List<HexKey?> = explained.entityIds?.takeIf { it.isNotEmpty() } ?: listOf(null)
+                entities.forEach { entityId ->
+                    val key = EntityKey(entityId, scopeKey)
+                    tally.entities.getOrPut(key) { mutableListOf() }.add(relay)
+                    detailOf[explained.purpose to key] = explained.purposeDetail
+                    explained.scope?.let { scopeOf.getOrPut(explained.purpose to key) { it } }
+                }
             }
         }
     }
@@ -258,5 +274,6 @@ fun aggregateSubscriptions(filtersByRelay: Map<NormalizedRelayUrl, List<Filter>>
         totalFilters = total,
         totalRelays = allRelays.size,
         untaggedFilters = untagged,
+        attributedFilters = accounts.sumOf { it.filterCount },
     )
 }

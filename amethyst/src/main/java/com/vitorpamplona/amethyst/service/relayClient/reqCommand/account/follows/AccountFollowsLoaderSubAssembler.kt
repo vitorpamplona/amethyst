@@ -181,7 +181,7 @@ class AccountFollowsLoaderSubAssembler(
                             purpose = SubPurpose.RELAY_LISTS,
                             kinds = listOf(AdvertisedRelayListEvent.KIND),
                             authors = users.sorted(),
-                            accountPubKey = soleAccountPubKey,
+                            accountPubKeys = listOfNotNull(soleAccountPubKey),
                         ),
                 )
             } else {

@@ -103,7 +103,7 @@ fun filterRepliesAndReactionsToNotes(
                     filter =
                         ExplainedFilter(
                             purpose = SubPurpose.ENGAGEMENT,
-                            accountPubKey = accountPubKey,
+                            accountPubKeys = listOfNotNull(accountPubKey),
                             kinds = RepliesAndReactionsKinds,
                             tags = mapOf("e" to sortedList),
                             since = since,
@@ -116,7 +116,7 @@ fun filterRepliesAndReactionsToNotes(
                     filter =
                         ExplainedFilter(
                             purpose = SubPurpose.ENGAGEMENT,
-                            accountPubKey = accountPubKey,
+                            accountPubKeys = listOfNotNull(accountPubKey),
                             kinds = RepliesAndReactionsKinds2,
                             tags = mapOf("e" to sortedList),
                             since = since,
@@ -128,7 +128,7 @@ fun filterRepliesAndReactionsToNotes(
                     filter =
                         ExplainedFilter(
                             purpose = SubPurpose.ENGAGEMENT,
-                            accountPubKey = accountPubKey,
+                            accountPubKeys = listOfNotNull(accountPubKey),
                             kinds = listOf(TextNoteEvent.KIND, CommentEvent.KIND),
                             tags = mapOf("q" to sortedList),
                             since = since,

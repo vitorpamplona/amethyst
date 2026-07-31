@@ -48,7 +48,7 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
         filter =
             ExplainedFilter(
                 purpose = SubPurpose.PROFILE_METADATA,
-                accountPubKey = accountPubKey,
+                accountPubKeys = listOfNotNull(accountPubKey),
                 kinds = ContactCardKindList,
                 authors = trustedAccounts,
                 // kind:30382 addresses the target user in the d-tag
@@ -75,7 +75,7 @@ fun filterContactCardsByAuthorInTheRelay(
             ExplainedFilter(
                 purpose = SubPurpose.PROFILE_METADATA,
                 // This variant fetches an account's OWN contact card, so the author is the owner.
-                accountPubKey = author,
+                accountPubKeys = listOfNotNull(author),
                 kinds = ContactCardKindList,
                 authors = listOf(author),
                 limit = limit,

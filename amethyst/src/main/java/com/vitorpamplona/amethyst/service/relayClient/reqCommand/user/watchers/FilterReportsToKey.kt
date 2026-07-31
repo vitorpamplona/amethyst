@@ -44,7 +44,7 @@ fun filterReportsToKeysFromTrusted(
                 purpose = SubPurpose.MODERATION,
                 kinds = ReportKindList,
                 authors = trustedAccounts,
-                accountPubKey = accountPubKey,
+                accountPubKeys = listOfNotNull(accountPubKey),
                 tags = mapOf("p" to targets.sorted()),
                 since = since,
             ),

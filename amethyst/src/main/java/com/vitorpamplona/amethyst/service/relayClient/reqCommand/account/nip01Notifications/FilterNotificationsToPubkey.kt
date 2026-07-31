@@ -157,7 +157,7 @@ fun filterNotificationsHistoryToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = listOfNotNull(pubkey),
                     kinds = AllNotificationKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = limit,
@@ -186,7 +186,7 @@ fun filterGroupNotificationsHistoryToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = listOfNotNull(pubkey),
                     kinds = GroupNotificationKinds,
                     tags = mapOf("p" to listOf(pubkey), "h" to groupIds),
                     limit = limit,
@@ -196,12 +196,12 @@ fun filterGroupNotificationsHistoryToPubkey(
     )
 }
 
-fun filterSummaryNotificationsToPubkey(
+fun filterSummaryNotificationsToPubkeys(
     relay: NormalizedRelayUrl,
-    pubkey: HexKey?,
+    pubkeys: List<HexKey>,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey.isNullOrEmpty()) return emptyList()
+    if (pubkeys.isEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
@@ -209,9 +209,9 @@ fun filterSummaryNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = pubkeys,
                     kinds = SummaryKinds,
-                    tags = mapOf("p" to listOf(pubkey)),
+                    tags = mapOf("p" to pubkeys),
                     limit = 2000,
                     since = since,
                 ),
@@ -219,12 +219,12 @@ fun filterSummaryNotificationsToPubkey(
     )
 }
 
-fun filterNotificationsToPubkey(
+fun filterNotificationsToPubkeys(
     relay: NormalizedRelayUrl,
-    pubkey: HexKey?,
+    pubkeys: List<HexKey>,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey.isNullOrEmpty()) return emptyList()
+    if (pubkeys.isEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
@@ -232,9 +232,9 @@ fun filterNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = pubkeys,
                     kinds = NotificationsPerKeyKinds,
-                    tags = mapOf("p" to listOf(pubkey)),
+                    tags = mapOf("p" to pubkeys),
                     limit = 500,
                     since = since,
                 ),
@@ -244,9 +244,9 @@ fun filterNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = pubkeys,
                     kinds = NotificationsPerKeyKinds2,
-                    tags = mapOf("p" to listOf(pubkey)),
+                    tags = mapOf("p" to pubkeys),
                     limit = 200,
                     since = since,
                 ),
@@ -256,9 +256,9 @@ fun filterNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = pubkeys,
                     kinds = NotificationsPerKeyKinds3,
-                    tags = mapOf("p" to listOf(pubkey)),
+                    tags = mapOf("p" to pubkeys),
                     limit = 10,
                     since = since,
                 ),
@@ -286,7 +286,7 @@ fun filterGroupNotificationsToPubkey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = listOfNotNull(pubkey),
                     kinds = GroupNotificationKinds,
                     tags = mapOf("p" to listOf(pubkey), "h" to groupIds),
                     limit = 200,
@@ -309,7 +309,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = listOfNotNull(pubkey),
                     kinds = SummaryKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 20,
@@ -321,7 +321,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = listOfNotNull(pubkey),
                     kinds = NotificationsPerKeyKinds,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 20,
@@ -333,7 +333,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = listOfNotNull(pubkey),
                     kinds = NotificationsPerKeyKinds2,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 10,
@@ -345,7 +345,7 @@ fun filterJustTheLatestNotificationsToPubkeyFromRandomRelays(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.NOTIFICATIONS,
-                    accountPubKey = pubkey,
+                    accountPubKeys = listOfNotNull(pubkey),
                     kinds = NotificationsPerKeyKinds3,
                     tags = mapOf("p" to listOf(pubkey)),
                     limit = 2,

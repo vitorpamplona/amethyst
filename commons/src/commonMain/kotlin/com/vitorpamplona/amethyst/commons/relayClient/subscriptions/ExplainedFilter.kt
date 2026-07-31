@@ -82,15 +82,20 @@ class ExplainedFilter(
      */
     val entityIds: List<HexKey>? = null,
     /**
-     * Which logged-in account asked for this. Several accounts are commonly active at once and they
+     * Which logged-in accounts asked for this. Several accounts are commonly active at once and they
      * do not share relay sets, so "why is this relay connected" is only answerable per account —
      * without it, one account's communities look like another's.
      *
-     * A pubkey rather than an account reference: filters outlive the objects that created them and
-     * are held by the relay pool for the session, so holding an `Account` here would keep a logged-out
+     * A **list**, because a filter can legitimately serve several accounts at once. Notifications are
+     * `#p`-scoped, so every account reading the same relay can be asked for in one filter naming all
+     * of them — which is what keeps a relay under its `max_subscriptions` cap when the app holds four
+     * accounts open. Filters that serve one account carry a single-element list.
+     *
+     * Pubkeys rather than account references: filters outlive the objects that created them and are
+     * held by the relay pool for the session, so holding an `Account` here would keep a logged-out
      * account alive.
      */
-    val accountPubKey: HexKey? = null,
+    val accountPubKeys: List<HexKey>? = null,
     /**
      * The top-nav selection that produced this filter — Global, the user's follows, a hashtag, a
      * geohash, a community.
@@ -120,7 +125,7 @@ class ExplainedFilter(
         until: Long?,
         limit: Int?,
         search: String?,
-    ) = ExplainedFilter(ids, authors, kinds, tags, tagsAll, since, until, limit, search, purpose, purposeDetail, entityIds, accountPubKey, scope)
+    ) = ExplainedFilter(ids, authors, kinds, tags, tagsAll, since, until, limit, search, purpose, purposeDetail, entityIds, accountPubKeys, scope)
 
     companion object {
         /** Tags [filter] with a [purpose], preserving every protocol field. */
@@ -129,7 +134,7 @@ class ExplainedFilter(
             purpose: SubPurpose,
             detail: String? = null,
             entityIds: List<HexKey>? = null,
-            accountPubKey: HexKey? = null,
+            accountPubKeys: List<HexKey>? = null,
             scope: IFeedTopNavPerRelayFilter? = null,
         ) = ExplainedFilter(
             filter.ids,
@@ -144,7 +149,7 @@ class ExplainedFilter(
             purpose,
             detail,
             entityIds,
-            accountPubKey,
+            accountPubKeys,
             scope,
         )
     }
@@ -168,9 +173,9 @@ fun Collection<Filter>.purposeEntities(): Set<PurposeEntity> =
         val explained = filter as? ExplainedFilter ?: return@flatMapTo emptyList()
         val ids = explained.entityIds
         if (ids.isNullOrEmpty()) {
-            listOf(PurposeEntity(explained.purpose, null, explained.accountPubKey, explained.purposeDetail))
+            listOf(PurposeEntity(explained.purpose, null, explained.accountPubKeys?.firstOrNull(), explained.purposeDetail))
         } else {
-            ids.map { PurposeEntity(explained.purpose, it, explained.accountPubKey, explained.purposeDetail) }
+            ids.map { PurposeEntity(explained.purpose, it, explained.accountPubKeys?.firstOrNull(), explained.purposeDetail) }
         }
     }
 
@@ -192,10 +197,10 @@ data class PurposeEntity(
 fun List<RelayBasedFilter>.attributedTo(accountPubKey: HexKey): List<RelayBasedFilter> =
     map { relayFilter ->
         val filter = relayFilter.filter
-        if (filter is ExplainedFilter && filter.accountPubKey == null) {
+        if (filter is ExplainedFilter && filter.accountPubKeys.isNullOrEmpty()) {
             RelayBasedFilter(
                 relay = relayFilter.relay,
-                filter = ExplainedFilter.of(filter, filter.purpose, filter.purposeDetail, filter.entityIds, accountPubKey, filter.scope),
+                filter = ExplainedFilter.of(filter, filter.purpose, filter.purposeDetail, filter.entityIds, listOf(accountPubKey), filter.scope),
             )
         } else {
             relayFilter
@@ -219,7 +224,7 @@ fun List<RelayBasedFilter>.scopedTo(feedSettings: IFeedTopNavPerRelayFilterSet):
         if (filter is ExplainedFilter && scope != null) {
             RelayBasedFilter(
                 relay = relayFilter.relay,
-                filter = ExplainedFilter.of(filter, filter.purpose, filter.purposeDetail, filter.entityIds, filter.accountPubKey, scope),
+                filter = ExplainedFilter.of(filter, filter.purpose, filter.purposeDetail, filter.entityIds, filter.accountPubKeys, scope),
             )
         } else {
             relayFilter

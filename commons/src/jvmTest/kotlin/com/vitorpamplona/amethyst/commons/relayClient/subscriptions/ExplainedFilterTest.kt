@@ -58,7 +58,7 @@ class ExplainedFilterTest {
             purpose = SubPurpose.NOTIFICATIONS,
             purposeDetail = "inbox relays for the active account",
             entityIds = listOf("cafe0000000000000000000000000000000000000000000000000000000000ff"),
-            accountPubKey = pubkey,
+            accountPubKeys = listOfNotNull(pubkey),
             scope = HashtagTopNavPerRelayFilter(setOf("askednostr")),
         )
 
@@ -115,7 +115,7 @@ class ExplainedFilterTest {
         assertEquals("inbox relays for the active account", (advanced as ExplainedFilter).purposeDetail)
         // entityIds/accountPubKey/scope ride the same path and would vanish just as silently
         assertEquals(listOf("cafe0000000000000000000000000000000000000000000000000000000000ff"), advanced.entityIds)
-        assertEquals(pubkey, advanced.accountPubKey)
+        assertEquals(listOf(pubkey), advanced.accountPubKeys)
         assertEquals(setOf("askednostr"), (advanced.scope as? HashtagTopNavPerRelayFilter)?.hashtags)
         assertEquals(1_785_379_272L, advanced.since)
         // and the protocol fields came along untouched

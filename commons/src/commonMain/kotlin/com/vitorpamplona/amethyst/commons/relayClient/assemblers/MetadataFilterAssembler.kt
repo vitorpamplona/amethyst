@@ -85,7 +85,7 @@ class MetadataFilterAssembler(
                 authors = pubkeyList,
                 limit = pubkeyList.size,
                 purpose = SubPurpose.PROFILE_METADATA,
-                accountPubKey = soleAccountPubKey,
+                accountPubKeys = listOfNotNull(soleAccountPubKey),
             )
 
         // Apply since times per relay
