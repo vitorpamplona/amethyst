@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 
@@ -42,7 +43,8 @@ fun filterDraftsFromKey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = DraftKinds,
                     authors = listOf(pubkey),
                     since = since,

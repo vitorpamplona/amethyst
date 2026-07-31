@@ -23,8 +23,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.conco
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
@@ -42,10 +45,10 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** One open Concord Channel whose older history the screen wants paged in. */
 class ConcordChannelHistoryQueryState(
-    val account: Account,
+    override val account: Account,
     val communityId: String,
     val channelId: String,
-)
+) : AccountScopedQuery
 
 /**
  * Mounts the on-demand **history** pager for whichever Concord Channel screen is open. The live
@@ -129,7 +132,10 @@ class ConcordChannelHistorySubAssembler(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.COMMUNITY_CHATS,
+                        purposeDetail = "concord channel history",
+                        entityIds = listOf(key.communityId),
                         kinds = listOf(ConcordStreamEnvelope.KIND_WRAP),
                         // All epoch planes at once: the relay serves them interleaved by created_at, so
                         // one backward cursor walks across the Refounding boundaries; "exhausted" then

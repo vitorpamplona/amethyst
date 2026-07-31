@@ -2069,6 +2069,97 @@
         <item quantity="one">Connected to %1$d relay</item>
         <item quantity="other">Connected to %1$d relays</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d relay</item>
+        <item quantity="other">%1$s \u00b7 %2$d relays</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Browsing</string>
+    <string name="relay_purpose_media">Media</string>
+    <string name="relay_purpose_tags">Hashtags</string>
+    <string name="relay_purpose_topics">Topics</string>
+    <string name="relay_purpose_thread">Conversation</string>
+    <string name="relay_purpose_search">Search</string>
+    <string name="relay_purpose_referenced">Finding Missing Events</string>
+    <string name="relay_purpose_engagement">Observing Events</string>
+    <string name="relay_explain_referenced">Fetches events by id that something on your screen refers to but you don\'t have yet — a quote, a reply\'s parent, a thread root.</string>
+    <string name="relay_explain_engagement">Watches the events currently rendered for new replies, reactions, reposts, zaps and reports, so counts update while you read.</string>
+    <string name="relay_purpose_add_ons">Add-ons</string>
+    <string name="relay_purpose_relay_info">Relay info</string>
+    <string name="relay_purpose_other">Other</string>
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Relay List Finder</string>
+    <string name="relay_purpose_observing_profiles">Observing Profiles</string>
+    <string name="relay_purpose_your_account">Account\'s data</string>
+    <string name="relay_purpose_home_feed">Home Feed</string>
+    <string name="relay_purpose_relay_groups">Relay Groups</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d group</item>
+        <item quantity="other">%1$d groups</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">Ephemeral Chats</string>
+    <string name="relay_purpose_geohash_chats">Location Chats</string>
+    <string name="relay_purpose_live_chat">Live Stream Chat</string>
+    <string name="relay_explain_relay_groups">NIP-29 groups you joined. Each group lives on one host relay, so the app connects to every relay that hosts a group of yours.</string>
+    <string name="relay_explain_ephemeral_chats">Chat rooms that keep no history — messages exist only while you are connected, so these stay subscribed to receive anything at all.</string>
+    <string name="relay_explain_geohash_chats">Location-based rooms for the areas you follow, asked of the relays that carry them.</string>
+    <string name="relay_explain_live_chat">Chat and zap goals attached to live streams you have open or follow.</string>
+    <string name="relay_purpose_dm_inbox">DM Inbox</string>
+    <string name="relay_purpose_your_wallet">Wallet</string>
+    <string name="relay_purpose_nutzap_inbox">Nutzap Inbox</string>
+    <string name="relay_purpose_mint_directory">Mint Directory</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
+    <string name="relay_purpose_community_chats">Community Chats</string>
+    <string name="relay_purpose_community_feeds">Community Feeds</string>
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <string name="relay_explain_notifications">Your inbox relays, plus a small rotating sample of the relays your follows post to, in case a mention was delivered somewhere else.</string>
+    <string name="relay_explain_direct_messages">Your DM inbox relays, where gift-wrapped messages are delivered.</string>
+    <string name="relay_explain_public_chats">The home relay of each chat you have open or joined.</string>
+    <string name="relay_explain_community_chats">The relays each community publishes its planes to.</string>
+    <string name="relay_explain_encrypted_groups">Group messages and key packages, on each group\'s relays.</string>
+    <string name="relay_explain_live_rooms">The room\'s relays, while it is open.</string>
+    <string name="relay_explain_account_data">Your own profile, settings and drafts, on your home relays.</string>
+    <string name="relay_explain_profiles">Profiles of the people currently on screen.</string>
+    <string name="relay_explain_relay_lists">Finds which relays each person publishes to, so their posts can be fetched from the right place.</string>
+    <string name="relay_explain_follows">Follow lists, used to build your feed and your web of trust.</string>
+    <string name="relay_explain_moderation">Reports your follows wrote about the profiles currently on your screen, asked of each relay those follows post to.</string>
+    <string name="relay_purpose_reports_from_follows">Reports from Follows</string>
+    <string name="relay_explain_wallet">Your own wallet events, read back from the relays you published them to.</string>
+    <string name="relay_explain_nutzap_inbox">Listens on your nutzap relays plus your inbox and DM relays, so a payment cannot slip past.</string>
+    <string name="relay_explain_mint_directory">Looks across relays for which mints exist and which ones people recommend.</string>
+    <string name="relay_explain_nwc">Notifications from your connected wallet.</string>
+    <string name="active_subs_title">Active Relay Subscriptions</string>
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d filter</item>
+        <item quantity="other">%1$d filters</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d filter is not attributed yet</item>
+        <item quantity="other">%1$d filters are not attributed yet</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Not attributed to an account</string>
+    <string name="active_subs_no_entity">All</string>
+    <string name="active_subs_scope_global">Everyone</string>
+    <string name="active_subs_scope_follows">People you follow</string>
+    <string name="active_subs_scope_authors">A chosen list of people</string>
+    <string name="active_subs_scope_muted">Muted people</string>
+    <string name="active_subs_scope_all_communities">Your communities</string>
+    <string name="active_subs_scope_algo">A favorite algo feed</string>
+    <string name="active_subs_share">%1$d%% of all</string>
+    <string name="active_subs_search_keywords">subscriptions filters relays requests reqs connections why diagnostics</string>
+    <string name="relay_explain_home">Posts by people you follow, read from the relays each of them publishes to.</string>
     <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
     <string name="always_on_notif_setting_title">Always-on notification service</string>
     <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>

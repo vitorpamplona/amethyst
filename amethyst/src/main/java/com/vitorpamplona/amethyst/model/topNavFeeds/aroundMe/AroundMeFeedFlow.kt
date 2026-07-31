@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.compute50kmRange
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.service.location.LocationState

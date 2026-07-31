@@ -21,10 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 /**
  * Subscribes to the ephemeral kind-20000 geohash chat for [channel]'s cell on the
@@ -41,7 +42,11 @@ fun filterMessagesToGeohashChat(
         RelayBasedFilter(
             relay = it,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.GEOHASH_CHATS,
+                    // The cell IS the chat's identity, so the screen can list one row per location
+                    // instead of collapsing every joined cell into one unnamed entry.
+                    entityIds = listOf(channel.geohash),
                     kinds = listOf(GeohashChatEvent.KIND),
                     tags = mapOf("g" to listOf(channel.geohash)),
                     limit = 200,

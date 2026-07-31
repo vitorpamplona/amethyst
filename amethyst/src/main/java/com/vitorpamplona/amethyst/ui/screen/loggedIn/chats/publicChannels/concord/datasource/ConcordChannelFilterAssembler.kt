@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
@@ -34,8 +35,8 @@ import kotlinx.coroutines.Job
 
 /** One screen's request to keep the user's joined Concord Channels live. */
 class ConcordChannelQueryState(
-    val account: Account,
-)
+    override val account: Account,
+) : AccountScopedQuery
 
 /**
  * Keeps every joined Concord community's planes live while a Concord-bearing
@@ -81,7 +82,11 @@ class ConcordChannelSubAssembler(
         // per-filter result cap (the "Soapbox shows 1 of 12 channels" bug). See
         // [ConcordSubscriptionPlanner.controlIsolatedFilters].
         val all =
-            ConcordSubscriptionPlanner.controlIsolatedFilters(entries, since = since) { entry ->
+            ConcordSubscriptionPlanner.controlIsolatedFilters(
+                entries,
+                since = since,
+                accountPubKey = account.userProfile().pubkeyHex,
+            ) { entry ->
                 account.concordSessions
                     .sessionFor(entry.id)
                     ?.state

@@ -96,6 +96,13 @@ class UserWatcherSubAssembler(
         }
 
         // assembles all index relays from all accounts
+        // Attributed only when one account is looking: the index relays below are pooled across every
+        // account and the users are whoever is on screen, so with several askers none of them owns it.
+        val soleAccountPubKey =
+            keys
+                .mapTo(mutableSetOf()) { it.account.userProfile().pubkeyHex }
+                .singleOrNull()
+
         val indexRelays = mutableSetOf<NormalizedRelayUrl>()
         keys.mapTo(mutableSetOf()) { it.account }.forEach {
             indexRelays.addAll(
@@ -110,6 +117,7 @@ class UserWatcherSubAssembler(
                 indexRelays,
                 failureTracker.cannotConnectRelays,
                 latestEOSEs,
+                soleAccountPubKey,
             ).ifEmpty { null }
 
         sub.updateFilters(newFilters?.groupByRelay())

@@ -252,6 +252,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScre
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip43.RelayMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.subscriptions.ActiveSubscriptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.RequestToVanishScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.VanishEventsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
@@ -591,6 +592,8 @@ fun BuildNavigation(
         composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
         composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
         composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
+
+        composableFromEndArgs<Route.ActiveSubscriptions> { ActiveSubscriptionsScreen(accountViewModel, nav) }
         composableFromEnd<Route.EventSync> { EventSyncScreen(accountViewModel, nav) }
         composableFromEnd<Route.RequestToVanish> { RequestToVanishScreen(accountViewModel, nav) }
         composableFromEnd<Route.VanishEvents> { VanishEventsScreen(accountViewModel, nav) }

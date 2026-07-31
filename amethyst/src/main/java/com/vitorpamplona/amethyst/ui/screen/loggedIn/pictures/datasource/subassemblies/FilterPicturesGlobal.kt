@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -39,7 +40,8 @@ fun filterPicturesGlobal(
         RelayBasedFilter(
             relay = it.key,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = listOf(PictureEvent.KIND),
                     limit = 200,
                     since = since,

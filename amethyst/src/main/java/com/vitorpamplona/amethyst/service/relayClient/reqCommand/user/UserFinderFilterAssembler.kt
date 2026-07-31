@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.UserOutboxFinderSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserCardsSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserReportsSubAssembler
@@ -36,8 +37,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 @Stable
 class UserFinderQueryState(
     val user: User,
-    val account: Account,
-)
+    override val account: Account,
+) : AccountScopedQuery
 
 @Stable
 class UserFinderFilterAssembler(

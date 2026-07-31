@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.topNavFeeds.unknown
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.unknown.UnknownTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter

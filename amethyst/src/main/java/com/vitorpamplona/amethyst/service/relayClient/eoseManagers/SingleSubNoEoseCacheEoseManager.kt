@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -66,11 +68,26 @@ abstract class SingleSubNoEoseCacheEoseManager<T>(
 
     override fun updateSubscriptions(keys: Set<T>) {
         val uniqueSubscribedAccounts = keys.distinctBy { distinct(it) }
-        val newFilters = updateFilter(uniqueSubscribedAccounts)?.ifEmpty { null }
+        val newFilters =
+            updateFilter(uniqueSubscribedAccounts)
+                ?.ifEmpty { null }
+                // Attribute to the account that owns this subscription, once, here — rather than
+                // threading a pubkey through every filter builder underneath. Builders that already
+                // know their account keep what they set.
+                ?.let { f -> accountPubKeyOf(uniqueSubscribedAccounts.firstOrNull())?.let { pk -> f.attributedTo(pk) } ?: f }
         sub.updateFilters(newFilters?.groupByRelay())
     }
 
     abstract fun updateFilter(keys: List<T>): List<RelayBasedFilter>?
 
     abstract fun distinct(key: T): Any
+
+    /**
+     * The account behind [key], when the key is account-scoped. Null for keys about other users.
+     *
+     * Keyed on [AccountScopedQuery] rather than a concrete query-state type: the home feed uses
+     * HomeQueryState, notifications use AccountQueryState, and checking one concrete class filed the
+     * other under "not attributed" despite both being built from a single account's data.
+     */
+    private fun accountPubKeyOf(key: Any?): String? = (key as? AccountScopedQuery)?.account?.userProfile()?.pubkeyHex
 }

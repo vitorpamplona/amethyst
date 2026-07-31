@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterContactCardsByAuthorInTheRelay
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState.Companion.APP_SPECIFIC_DATA_D_TAG
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -28,7 +30,6 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -108,29 +109,33 @@ val AmethystMetadataTagMapFilter = mapOf("d" to listOf(APP_SPECIFIC_DATA_D_TAG))
 
 fun filterAccountInfoAndListsFromKey(
     relay: NormalizedRelayUrl,
-    pubkey: HexKey,
+    pubkeys: List<HexKey>,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey.isEmpty()) return emptyList()
+    if (pubkeys.isEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
                     kinds = AccountInfoAndListsFromKeyKinds,
-                    authors = listOf(pubkey),
-                    limit = 20,
+                    authors = pubkeys,
+                    limit = 20 * pubkeys.size,
                     since = since,
                 ),
         ),
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
                     kinds = AccountInfoAndListsFromKeyKinds2,
-                    authors = listOf(pubkey),
-                    limit = 80,
+                    authors = pubkeys,
+                    limit = 80 * pubkeys.size,
                     since = since,
                 ),
         ),
@@ -138,17 +143,19 @@ fun filterAccountInfoAndListsFromKey(
         // Addressable — one card per target user — hence its own larger-limit filter.
         filterContactCardsByAuthorInTheRelay(
             relay = relay,
-            author = pubkey,
+            authors = pubkeys,
             since = since,
         ),
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
                     kinds = AmethystMetadataKinds,
-                    authors = listOf(pubkey),
+                    authors = pubkeys,
                     tags = AmethystMetadataTagMapFilter,
-                    limit = 1,
+                    limit = pubkeys.size,
                     since = since,
                 ),
         ),

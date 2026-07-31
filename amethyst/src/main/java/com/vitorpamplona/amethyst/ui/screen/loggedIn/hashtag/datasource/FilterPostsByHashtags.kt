@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments.CommentKinds
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
@@ -30,7 +32,6 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -86,7 +87,8 @@ fun filterPostsByHashtags(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.TAG_FEED,
                         tags = hashtagsToFollowMap,
                         kinds = PostsByHashtagsKinds,
                         limit = 400,
@@ -96,7 +98,8 @@ fun filterPostsByHashtags(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.TAG_FEED,
                         tags = hashtagsToFollowMap,
                         kinds = PostsByHashtagKinds2,
                         limit = 100,
@@ -106,7 +109,8 @@ fun filterPostsByHashtags(
             RelayBasedFilter(
                 relay = relay,
                 filter =
-                    Filter(
+                    ExplainedFilter(
+                        purpose = SubPurpose.TAG_FEED,
                         tags = hashtagScoreMap,
                         kinds = CommentKinds,
                         limit = 200,

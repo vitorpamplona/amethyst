@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun searchPeopleByName(
@@ -33,7 +34,8 @@ fun searchPeopleByName(
     RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.SEARCH,
                 kinds = listOf(MetadataEvent.KIND),
                 search = searchString,
                 limit = 1000,

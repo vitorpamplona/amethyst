@@ -21,8 +21,9 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats
 
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 
@@ -37,7 +38,9 @@ fun filterChannelMetadataUpdatesById(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.PUBLIC_CHATS,
+                    entityIds = channels.map { it.idHex }.sorted(),
                     kinds = channelMetadataKinds,
                     tags = mapOf("e" to channels.map { it.idHex }),
                     since = since,

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies.ThreadEventLoaderSubAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies.ThreadFilterSubAssembler
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -32,8 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 @Stable
 class ThreadQueryState(
     val eventId: HexKey,
-    val account: Account,
-)
+    override val account: Account,
+) : AccountScopedQuery
 
 @Stable
 class ThreadFilterAssembler(

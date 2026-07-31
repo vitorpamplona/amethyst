@@ -441,7 +441,6 @@ class Account(
     override val signer: NostrSigner,
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
-    val cashuWalletFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
     val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
     val otsResolverBuilder: () -> OtsResolver,
@@ -741,7 +740,6 @@ class Account(
             signer = signer,
             cache = cache,
             scope = scope,
-            assembler = cashuWalletFilterAssembler(),
             outboxRelaysFlow = outboxRelays.flow,
             inboxRelaysFlow = notificationRelays.flow,
             dmRelaysFlow = dmRelays.flow,
@@ -3191,9 +3189,14 @@ class Account(
         val filters =
             entries.flatMap { entry ->
                 val state = concordSessions.sessionFor(entry.id)?.state?.value ?: return@flatMap emptyList()
-                ConcordSubscriptionPlanner.channelPreviewFilters(entry, state, lastReadFor = { channelIdHex ->
-                    loadLastRead(concordChannelLastReadRoute(entry.id, channelIdHex))
-                })
+                ConcordSubscriptionPlanner.channelPreviewFilters(
+                    entry,
+                    state,
+                    lastReadFor = { channelIdHex ->
+                        loadLastRead(concordChannelLastReadRoute(entry.id, channelIdHex))
+                    },
+                    accountPubKey = userProfile().pubkeyHex,
+                )
             }
         if (filters.isEmpty()) return
         val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }

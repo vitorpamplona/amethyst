@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.nip17Dm
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -41,7 +42,8 @@ fun filterGiftWrapsToPubkey(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.DIRECT_MESSAGES,
                     kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND),
                     tags = mapOf("p" to listOf(pubkey)),
                     // A gift wrap's outer created_at is randomized up to 2 days before the real

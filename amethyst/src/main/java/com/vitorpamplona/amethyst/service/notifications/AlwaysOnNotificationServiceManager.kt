@@ -22,13 +22,17 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -45,31 +49,45 @@ import kotlinx.coroutines.launch
  * L4 - BootCompletedReceiver (restart on boot)
  * L5 - ServiceWatchdogManager (AlarmManager, 5-min health check)
  *
- * Two switches gate the system:
+ * It also decides **which accounts pull from relays**, which is a different question from
+ * whether the service runs, and the two are deliberately not gated the same way.
  *
- * - The **global master** ([LocalPreferences.notificationServiceEnabledFlow], the
- *   "Background notification service" toggle / Quick Settings tile). When off, every
- *   layer is torn down and nothing restarts, regardless of any account's setting —
- *   this is the battery-saver "airplane mode". Persisted, so an explicit off survives
- *   restarts and crashes.
- * - The **per-account participation** flag ([com.vitorpamplona.amethyst.model.AccountSettings.alwaysOnNotificationService],
- *   "Keep this account active in the background") **or** its NIP-46 signer toggle
- *   ([com.vitorpamplona.amethyst.model.AccountSettings.nip46SignerEnabled]). While the master is
- *   on, the service runs as long as **at least one** writable account has either flag on — the
- *   background signer relies on the same foreground service to keep answering requests.
+ * ## Who subscribes
  *
- * While the master is on, every saved writable account is kept loaded in
- * [AccountCacheState] so (a) its participation flag is observable and (b) GiftWraps
- * addressed to any of them (delivered via open relay subscriptions) get unwrapped by
- * the owning account's `newNotesPreProcessor`. Without this, wraps for non-active
- * accounts would sit in [com.vitorpamplona.amethyst.model.LocalCache] with no
- * subscriber able to decrypt them.
+ * - **While a screen is up: every loaded account.** The user can switch accounts at any moment
+ *   and expects the one they land on to be current, so all of them keep their own notifications,
+ *   DMs and gift wraps live. This costs nothing once the app is away — it ends with the screen.
+ * - **While the app is away: only the accounts that opted in**, via
+ *   [com.vitorpamplona.amethyst.model.AccountSettings.alwaysOnNotificationService] ("Keep this
+ *   account active in the background") or their NIP-46 signer toggle
+ *   ([com.vitorpamplona.amethyst.model.AccountSettings.nip46SignerEnabled]).
+ *
+ * That is what the setting's name promises, and for a while it did not hold: participation gated
+ * subscriptions everywhere, so an account you had not opted in for showed no notifications even
+ * with the app open in front of you.
+ *
+ * ## Whether the service runs
+ *
+ * The five layers are a background concern, so they stay gated on **both** the global master
+ * ([LocalPreferences.notificationServiceEnabledFlow], the "Background notification service"
+ * toggle / Quick Settings tile — the battery-saver "airplane mode", persisted so an explicit off
+ * survives restarts) **and** at least one account having opted in. A foreground-only account must
+ * never start a foreground service that outlives the screen that wanted it.
+ *
+ * Every saved writable account is kept loaded in [AccountCacheState] whenever either condition
+ * holds, so (a) participation flags are observable and (b) GiftWraps addressed to any of them get
+ * unwrapped by the owning account's `newNotesPreProcessor`. Without this, wraps for non-active
+ * accounts would sit in [com.vitorpamplona.amethyst.model.LocalCache] with no subscriber able to
+ * decrypt them.
  */
 class AlwaysOnNotificationServiceManager(
     private val context: Context,
     private val scope: CoroutineScope,
     private val accountsCache: AccountCacheState,
     private val localPreferences: LocalPreferences,
+    private val subscriptions: AccountSubscriptionRegistry,
+    /** True while any activity is STARTED — see [com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker]. */
+    private val isForeground: StateFlow<Boolean>,
     private val activePubKeyProvider: () -> HexKey?,
 ) {
     companion object {
@@ -98,55 +116,84 @@ class AlwaysOnNotificationServiceManager(
         wasEnabled = false
         watchJob =
             scope.launch {
-                localPreferences.notificationServiceEnabledFlow().collectLatest { masterEnabled ->
-                    if (!masterEnabled) {
-                        // Global airplane mode: suppress every layer regardless of
-                        // per-account participation, and stop keeping accounts loaded.
-                        if (wasEnabled) {
-                            disableServiceLayers()
-                            wasEnabled = false
-                        }
-                        stopMultiAccountPreload()
-                        return@collectLatest
-                    }
-
-                    // Master on: keep every writable account loaded so its participation
-                    // flag is observable and its gift wraps can decrypt, then run the
-                    // service only while at least one account is participating. An account
-                    // participates when its always-on setting OR its NIP-46 signer toggle is
-                    // on — the background signer needs the same foreground service alive.
-                    startMultiAccountPreload()
-                    accountsCache.accounts
-                        .flatMapLatest { accounts ->
-                            val flags =
-                                accounts.values.map { account ->
-                                    account.settings.alwaysOnNotificationService
-                                        .combine(account.settings.nip46SignerEnabled) { alwaysOn, signer -> alwaysOn || signer }
-                                }
-                            if (flags.isEmpty()) {
-                                flowOf(false)
-                            } else {
-                                combine(flags) { values -> values.any { it } }
-                            }
-                        }.distinctUntilChanged()
-                        .collectLatest { anyParticipating ->
-                            if (anyParticipating) {
-                                wasEnabled = true
-                                enableServiceLayers()
-                            } else if (wasEnabled) {
+                localPreferences
+                    .notificationServiceEnabledFlow()
+                    .combine(isForeground) { masterEnabled, foreground -> masterEnabled to foreground }
+                    .collectLatest { (masterEnabled, foreground) ->
+                        if (!masterEnabled && !foreground) {
+                            // Nothing wants the accounts: the master is off and no screen is up.
+                            // Suppress every layer and stop keeping accounts loaded.
+                            if (wasEnabled) {
                                 disableServiceLayers()
                                 wasEnabled = false
                             }
+                            stopMultiAccountPreload()
+                            return@collectLatest
                         }
-                }
+
+                        // Keep every writable account loaded — in the foreground so they can all
+                        // pull, and with the master on so participation flags are observable and
+                        // gift wraps can decrypt.
+                        startMultiAccountPreload()
+
+                        accountsAndParticipants()
+                            .distinctUntilChanged()
+                            .collectLatest { (all, participating) ->
+                                // The rule the "keep this account active in the background" setting
+                                // actually describes: while a screen is up, EVERY loaded account
+                                // pulls its own notifications, DMs and gift wraps, because the user
+                                // can switch to any of them and expects them current. The setting
+                                // only decides which ones keep doing it once the app is away.
+                                subscriptions.sync(if (foreground) all else participating)
+
+                                // The service layers are a background concern, so they stay tied to
+                                // the master switch and to somebody having opted in. A foreground-only
+                                // account must not start a foreground service that outlives the screen.
+                                //
+                                // Edge-triggered, deliberately. This flow re-emits whenever the account
+                                // map changes identity or the app crosses foreground — far more often
+                                // than the old boolean did — and ServiceWatchdogManager.schedule()
+                                // replaces its alarm with one starting `now + 5min`. Calling it on every
+                                // emission pushed the watchdog's first fire past every screen-on, so the
+                                // layer that exists to restart a dead service would never have run.
+                                val shouldRun = masterEnabled && participating.isNotEmpty()
+                                if (shouldRun != wasEnabled) {
+                                    if (shouldRun) enableServiceLayers() else disableServiceLayers()
+                                    wasEnabled = shouldRun
+                                }
+                            }
+                    }
             }
     }
+
+    /**
+     * Every loaded account paired with the subset that opted into running in the background.
+     *
+     * Both come from one flow because they change together and the two decisions below — who
+     * subscribes, and whether the service runs — must never be made from different snapshots.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun accountsAndParticipants(): Flow<Pair<List<Account>, List<Account>>> =
+        accountsCache.accounts.flatMapLatest { accounts ->
+            val all = accounts.values.toList()
+            val flags =
+                all.map { account ->
+                    account.settings.alwaysOnNotificationService
+                        .combine(account.settings.nip46SignerEnabled) { alwaysOn, signer ->
+                            if (alwaysOn || signer) account else null
+                        }
+                }
+            if (flags.isEmpty()) {
+                flowOf(all to emptyList())
+            } else {
+                combine(flags) { values -> all to values.filterNotNull() }
+            }
+        }
 
     fun stop() {
         watchJob?.cancel()
         watchJob = null
-        preloadJob?.cancel()
-        preloadJob = null
+        stopMultiAccountPreload()
         // Logout/terminate: tear the layers down explicitly. Otherwise the watchdog alarm
         // and periodic worker stay scheduled and would resurrect the service for a
         // logged-out user (nobody participating).
@@ -211,10 +258,15 @@ class AlwaysOnNotificationServiceManager(
      * Cancels the preload collector and releases every cached account except the
      * currently active one, so users with the master off return to single-account
      * memory/battery footprint.
+     *
+     * Unmounts the background subscriptions too: with the master off, the only
+     * account that should be talking to relays is the one on screen, and its
+     * subscription comes from the screen's own mount.
      */
     private fun stopMultiAccountPreload() {
         preloadJob?.cancel()
         preloadJob = null
+        subscriptions.clear()
         // remove this because we don't know which other accounts might be getting used.
         // val active = activePubKeyProvider()
         // if (active != null) {

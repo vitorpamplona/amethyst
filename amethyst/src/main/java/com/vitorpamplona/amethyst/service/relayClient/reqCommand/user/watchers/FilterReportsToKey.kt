@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 
@@ -33,14 +34,17 @@ fun filterReportsToKeysFromTrusted(
     trustedAccounts: List<HexKey>,
     relay: NormalizedRelayUrl,
     since: Long?,
+    accountPubKey: HexKey? = null,
 ): RelayBasedFilter? {
     if (targets.isEmpty() || trustedAccounts.isEmpty()) return null
     return RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.MODERATION,
                 kinds = ReportKindList,
                 authors = trustedAccounts,
+                accountPubKeys = listOfNotNull(accountPubKey),
                 tags = mapOf("p" to targets.sorted()),
                 since = since,
             ),

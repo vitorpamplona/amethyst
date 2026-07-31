@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -111,7 +112,8 @@ private fun toMeFilter(
 ) = RelayBasedFilter(
     relay = relay,
     filter =
-        Filter(
+        ExplainedFilter(
+            purpose = SubPurpose.DIRECT_MESSAGES,
             kinds = listOf(PrivateDmEvent.KIND),
             authors = authors.toList(),
             tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
@@ -131,7 +133,8 @@ private fun fromMeFilter(
 ) = RelayBasedFilter(
     relay = relay,
     filter =
-        Filter(
+        ExplainedFilter(
+            purpose = SubPurpose.DIRECT_MESSAGES,
             kinds = listOf(PrivateDmEvent.KIND),
             authors = listOf(account.userProfile().pubkeyHex),
             tags = mapOf("p" to pTags.toList()),

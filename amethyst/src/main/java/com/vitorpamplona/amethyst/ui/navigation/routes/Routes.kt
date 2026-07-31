@@ -497,6 +497,9 @@ sealed class Route {
 
     @Serializable object EditRelays : Route()
 
+    /** Diagnostic: explains why the app currently holds the subscriptions it holds. */
+    @Serializable object ActiveSubscriptions : Route()
+
     @Serializable object EventSync : Route()
 
     @Serializable object RequestToVanish : Route()

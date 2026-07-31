@@ -21,13 +21,14 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
 
@@ -134,7 +135,7 @@ fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): 
         if (it.value.isNotEmpty()) {
             RelayBasedFilter(
                 relay = it.key,
-                filter = Filter(ids = it.value.sorted()),
+                filter = ExplainedFilter(purpose = SubPurpose.REFERENCED_EVENTS, ids = it.value.sorted()),
             )
         } else {
             null

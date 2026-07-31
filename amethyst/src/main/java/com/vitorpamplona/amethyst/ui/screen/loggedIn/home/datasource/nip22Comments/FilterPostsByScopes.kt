@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.nip22Comments
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 
@@ -38,7 +39,8 @@ fun filterHomePostsByScopes(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.HOME_FEED,
                     kinds = CommentKinds,
                     tags = mapOf("I" to scopesToLoad.toList()),
                     limit = 100,

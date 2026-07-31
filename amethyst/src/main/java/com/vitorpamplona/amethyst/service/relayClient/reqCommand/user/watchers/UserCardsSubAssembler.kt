@@ -70,6 +70,13 @@ class UserCardsSubAssembler(
 
         val accounts = keys.mapTo(mutableSetOf()) { it.account }
 
+        // Attributed only when one account is asking: the trusted-author sets below are pooled across
+        // accounts, so with several active none of them owns a given filter.
+        val soleAccountPubKey =
+            accounts
+                .mapTo(mutableSetOf()) { it.userProfile().pubkeyHex }
+                .singleOrNull()
+
         val trustedAccounts: Map<NormalizedRelayUrl, Set<HexKey>> =
             mapOfSet {
                 accounts.forEach { account ->
@@ -92,12 +99,14 @@ class UserCardsSubAssembler(
                 val trustedAccounts = trustedUsersInThisRelay.sorted()
                 listOfNotNull(
                     filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
+                        accountPubKey = soleAccountPubKey,
                         targets = groups.usersWithoutEose.toHexSet(),
                         trustedAccounts = trustedAccounts,
                         relay = relay,
                         since = null,
                     ),
                     filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
+                        accountPubKey = soleAccountPubKey,
                         targets = groups.usersWithEose.toHexSet(),
                         trustedAccounts = trustedAccounts,
                         relay = relay,

@@ -24,10 +24,11 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
@@ -83,7 +84,9 @@ private class CashuMintDirectorySubAssembler(
                 .ifEmpty { return null }
 
         val mintAnnouncements =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.MINT_DIRECTORY,
+                purposeDetail = "mint directory",
                 kinds = listOf(CashuMintEvent.KIND),
             )
 
@@ -91,7 +94,9 @@ private class CashuMintDirectorySubAssembler(
         // recommended event's kind as a string. We only want cashu mint
         // recommendations here.
         val cashuRecommendations =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.MINT_DIRECTORY,
+                purposeDetail = "mint directory",
                 kinds = listOf(MintRecommendationEvent.KIND),
                 tags = mapOf("k" to listOf(CashuMintEvent.KIND.toString())),
             )

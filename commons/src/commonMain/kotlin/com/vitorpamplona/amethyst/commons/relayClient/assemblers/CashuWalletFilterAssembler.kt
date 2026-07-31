@@ -21,14 +21,11 @@
 package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
@@ -62,8 +59,7 @@ data class CashuWalletQueryState(
 )
 
 /**
- * Subscribes to all NIP-60 / NIP-61 events that participate in this
- * account's Cashu wallet:
+ * Every NIP-60 / NIP-61 filter for one account's Cashu wallet:
  *
  *  - kind 17375 — the wallet event (replaceable)
  *  - kind 7375  — unspent proofs (token events)
@@ -72,83 +68,69 @@ data class CashuWalletQueryState(
  *  - kind 10019 — nutzap info (replaceable, for incoming nutzaps)
  *  - kind 9321  — inbound nutzaps tagged with the user's pubkey
  *
- * All authored events are queried by `authors=[pubkey]`; nutzaps are queried by
- * `#p=[pubkey]` (we receive them, not send them, from this filter's perspective).
+ * Authored events are queried by `authors=[pubkey]`; nutzaps by `#p=[pubkey]`, since we receive
+ * those rather than send them.
+ *
+ * A plain function rather than a subscription manager: the wallet's lifetime belongs to the account,
+ * so it is mounted by the account-level assembler alongside notifications, DMs and NWC, and this only
+ * has to describe the query.
  */
-@Stable
-class CashuWalletFilterAssembler(
-    client: INostrClient,
-) : ComposeSubscriptionManager<CashuWalletQueryState>() {
-    private val sub = CashuWalletSubAssembler(client, ::allKeys)
+fun cashuWalletFilters(
+    key: CashuWalletQueryState,
+    since: SincePerRelayMap?,
+): List<RelayBasedFilter> {
+    val pubkey = key.pubkey
+    val ownEventRelays = key.ownEventRelays
+    val inboxRelays = key.inboxRelays
+    if (ownEventRelays.isEmpty() && inboxRelays.isEmpty()) return emptyList()
 
-    override fun invalidateFilters() = sub.invalidateFilters()
+    val ownedFilter =
+        ExplainedFilter(
+            purpose = SubPurpose.WALLET,
+            kinds =
+                listOf(
+                    CashuWalletEvent.KIND,
+                    CashuTokenEvent.KIND,
+                    CashuSpendingHistoryEvent.KIND,
+                    CashuMintQuoteEvent.KIND,
+                    NutzapInfoEvent.KIND,
+                    // NIP-87 mint recommendations the user has published.
+                    // Pulled here (instead of relying on the general
+                    // account filter) so the Cashu Settings screen can
+                    // list and retract them without any extra subscription.
+                    MintRecommendationEvent.KIND,
+                ),
+            authors = listOf(pubkey),
+            accountPubKeys = listOfNotNull(pubkey),
+        )
 
-    override fun invalidateKeys() = invalidateFilters()
+    val inboundNutzapsFilter =
+        ExplainedFilter(
+            purpose = SubPurpose.NUTZAP_INBOX,
+            kinds = listOf(NutzapEvent.KIND),
+            tags = mapOf("p" to listOf(pubkey)),
+            accountPubKeys = listOfNotNull(pubkey),
+        )
 
-    override fun destroy() = sub.destroy()
-}
-
-private class CashuWalletSubAssembler(
-    client: INostrClient,
-    allKeys: () -> Set<CashuWalletQueryState>,
-) : SingleSubEoseManager<CashuWalletQueryState>(client, allKeys, invalidateAfterEose = true) {
-    override fun distinct(key: CashuWalletQueryState): Any = key.pubkey
-
-    override fun updateFilter(
-        keys: List<CashuWalletQueryState>,
-        since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? {
-        if (keys.isEmpty()) return null
-
-        val pubkey = keys.first().pubkey
-        val ownEventRelays = keys.flatMap { it.ownEventRelays }.toSet()
-        val inboxRelays = keys.flatMap { it.inboxRelays }.toSet()
-        if (ownEventRelays.isEmpty() && inboxRelays.isEmpty()) return null
-
-        val ownedFilter =
-            Filter(
-                kinds =
-                    listOf(
-                        CashuWalletEvent.KIND,
-                        CashuTokenEvent.KIND,
-                        CashuSpendingHistoryEvent.KIND,
-                        CashuMintQuoteEvent.KIND,
-                        NutzapInfoEvent.KIND,
-                        // NIP-87 mint recommendations the user has published.
-                        // Pulled here (instead of relying on the general
-                        // account filter) so the Cashu Settings screen can
-                        // list and retract them without any extra subscription.
-                        MintRecommendationEvent.KIND,
-                    ),
-                authors = listOf(pubkey),
+    // Own NIP-60 events are read from the user's outbox; inbound nutzaps
+    // from the user's inbox set. A relay that appears in both gets both
+    // filters.
+    val ownedSubs =
+        ownEventRelays.map { relay ->
+            val sinceTime = since?.get(relay)?.time
+            RelayBasedFilter(
+                relay,
+                if (sinceTime != null) ownedFilter.copy(since = sinceTime) else ownedFilter,
             )
-
-        val inboundNutzapsFilter =
-            Filter(
-                kinds = listOf(NutzapEvent.KIND),
-                tags = mapOf("p" to listOf(pubkey)),
+        }
+    val inboundSubs =
+        inboxRelays.map { relay ->
+            val sinceTime = since?.get(relay)?.time
+            RelayBasedFilter(
+                relay,
+                if (sinceTime != null) inboundNutzapsFilter.copy(since = sinceTime) else inboundNutzapsFilter,
             )
+        }
 
-        // Own NIP-60 events are read from the user's outbox; inbound nutzaps
-        // from the user's inbox set. A relay that appears in both gets both
-        // filters.
-        val ownedSubs =
-            ownEventRelays.map { relay ->
-                val sinceTime = since?.get(relay)?.time
-                RelayBasedFilter(
-                    relay,
-                    if (sinceTime != null) ownedFilter.copy(since = sinceTime) else ownedFilter,
-                )
-            }
-        val inboundSubs =
-            inboxRelays.map { relay ->
-                val sinceTime = since?.get(relay)?.time
-                RelayBasedFilter(
-                    relay,
-                    if (sinceTime != null) inboundNutzapsFilter.copy(since = sinceTime) else inboundNutzapsFilter,
-                )
-            }
-
-        return ownedSubs + inboundSubs
-    }
+    return ownedSubs + inboundSubs
 }

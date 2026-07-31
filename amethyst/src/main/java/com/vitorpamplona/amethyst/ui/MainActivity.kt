@@ -203,6 +203,13 @@ fun isWalletConnectRoute(uri: String) = uri.startsWith("dlnwc?value=") || uri.st
 
 fun isMarmotGroupRoute(uri: String) = uri.startsWith("marmot:")
 
+/**
+ * Tapping the always-on service notification. That notification's whole subject is the relay
+ * connections it is holding open, so it lands on the screen that explains them rather than on
+ * whatever tab happened to be last open.
+ */
+fun isActiveSubscriptionsRoute(uri: String) = uri.startsWith("activesubs", true) || uri.startsWith("nostr:activesubs", true)
+
 private val MARMOT_HEX = Regex("^[0-9a-fA-F]+$")
 
 fun uriToRoute(
@@ -212,6 +219,9 @@ fun uriToRoute(
     if (isNotificationRoute(uri)) {
         val scrollTo = runCatching { java.net.URI(uri.removePrefix(NOSTR_URI_PREFIX)).findParameterValue("scrollTo") }.getOrNull()
         return Route.Notification(scrollToEventId = scrollTo)
+    }
+    if (isActiveSubscriptionsRoute(uri)) {
+        return Route.ActiveSubscriptions
     }
     if (isHashtagRoute(uri)) {
         return Route.Hashtag(uri.removePrefix(NOSTR_URI_PREFIX).removePrefix("hashtag?id=").lowercase())

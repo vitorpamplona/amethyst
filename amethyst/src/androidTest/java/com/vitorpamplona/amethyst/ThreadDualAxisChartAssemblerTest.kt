@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
-import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -77,7 +76,6 @@ class ThreadDualAxisChartAssemblerTest {
                 signer = NostrSignerInternal(keyPair),
                 geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
                 nwcFilterAssembler = { NWCPaymentFilterAssembler(client) },
-                cashuWalletFilterAssembler = { CashuWalletFilterAssembler(client) },
                 cashuMintDirectoryFilterAssembler = { CashuMintDirectoryFilterAssembler(client) },
                 okHttpClientForMoney = { OkHttpClient() },
                 otsResolverBuilder = { EmptyOtsResolverBuilder.build() },

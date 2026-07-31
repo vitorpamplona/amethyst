@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 
@@ -42,7 +43,8 @@ fun filterPodcastEventsFromAllCommunities(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
                         mapOf(
@@ -56,7 +58,8 @@ fun filterPodcastEventsFromAllCommunities(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.MEDIA_FEED,
                     kinds = kinds,
                     tags = mergeFilterTags(mapOf("a" to communityList), additionalTags),
                     limit = communityList.size * 20,
@@ -100,7 +103,8 @@ fun filterPodcastEventsFromCommunity(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
                     kinds = CommunityPostApprovalEvent.KIND_LIST,
                     tags =
@@ -115,7 +119,8 @@ fun filterPodcastEventsFromCommunity(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.MEDIA_FEED,
                     authors = authorList,
                     kinds = kinds,
                     tags = mergeFilterTags(mapOf("a" to listOf(community)), additionalTags),

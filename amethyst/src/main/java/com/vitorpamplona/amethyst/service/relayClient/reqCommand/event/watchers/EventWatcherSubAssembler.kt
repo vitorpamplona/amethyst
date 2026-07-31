@@ -60,6 +60,16 @@ class EventWatcherSubAssembler(
 
         lastNotesOnFilter = keys.map { it.note }
 
+        // Attributed only when one account is watching. The notes here are whatever is rendered, not
+        // anything an account owns, so with several accounts active no single one is the honest owner —
+        // and splitting would re-request the same replies/zaps once per account.
+        // Deduped by pubkey, not by `Account`: that class uses identity equality, so two objects for
+        // the same logged-in user would look like two accounts and suppress attribution entirely.
+        val soleAccountPubKey =
+            keys
+                .mapTo(mutableSetOf()) { it.account.userProfile().pubkeyHex }
+                .singleOrNull()
+
         return groupByRelayPresence(lastNotesOnFilter, latestEOSEs)
             .map { group ->
                 if (group.isNotEmpty()) {
@@ -67,8 +77,8 @@ class EventWatcherSubAssembler(
                     val events = group.mapNotNull { if (it !is AddressableNote) it else null }
 
                     listOfNotNull(
-                        filterRepliesAndReactionsToNotes(events, findMinimumEOSEs(events, latestEOSEs)),
-                        filterRepliesAndReactionsToAddresses(addressables, findMinimumEOSEs(addressables, latestEOSEs)),
+                        filterRepliesAndReactionsToNotes(events, findMinimumEOSEs(events, latestEOSEs), soleAccountPubKey),
+                        filterRepliesAndReactionsToAddresses(addressables, findMinimumEOSEs(addressables, latestEOSEs), soleAccountPubKey),
                     ).flatten()
                 } else {
                     emptyList()
