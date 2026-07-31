@@ -24,6 +24,8 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +41,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -46,6 +49,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -65,7 +69,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -90,7 +96,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizationSection
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview
-import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
@@ -109,7 +114,10 @@ import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequest
 import com.vitorpamplona.amethyst.ui.note.creators.location.AddGeoHashButton
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
-import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
+import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceFlap
+import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceSelection
+import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceSheet
+import com.vitorpamplona.amethyst.ui.note.creators.notify.rememberAudienceLists
 import com.vitorpamplona.amethyst.ui.note.creators.polls.PollOptionsField
 import com.vitorpamplona.amethyst.ui.note.creators.pow.PowOverrideButton
 import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
@@ -247,6 +255,7 @@ internal fun NewPostScreenInner(
         topBar = {
             PostingTopBar(
                 isActive = postViewModel::canPost,
+                postRes = if (postViewModel.wantsPrivateNote) R.string.audience_send_privately else R.string.post,
                 onPost = {
                     // uses the accountViewModel scope to avoid cancelling this
                     // function when the postViewModel is released
@@ -286,11 +295,48 @@ private fun NewPostScreenBody(
     nav: Nav,
 ) {
     val scrollState = rememberScrollState()
+    val audienceLists = rememberAudienceLists(accountViewModel)
+    val audience = postViewModel.pTags?.toImmutableList() ?: persistentListOf()
+    val groupChips =
+        remember(postViewModel.notifyProvenance, audience, audienceLists) {
+            AudienceSelection
+                .activeGroupChips(
+                    provenance = postViewModel.notifyProvenance,
+                    audience = audience.mapTo(mutableSetOf()) { it.pubkeyHex },
+                    lists = audienceLists,
+                ).toImmutableList()
+        }
+
     Column(
         modifier =
             Modifier.fillMaxSize(),
     ) {
         ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
+
+        // Hosted outside the scrolling content: the sheet is its own window, and
+        // keeping it here means it survives wherever the composer scrolls to.
+        if (postViewModel.wantsToManageAudience) {
+            AudienceSheet(
+                audience = audience,
+                mutedNotifies = postViewModel.mutedNotifies.toImmutableSet(),
+                isPrivate = postViewModel.wantsPrivateNote,
+                searchState = postViewModel.notifyUserSearchText,
+                onSearchChanged = postViewModel::onNotifyUserSearchTextChanged,
+                userSuggestions = postViewModel.userSuggestions,
+                accountViewModel = accountViewModel,
+                onAddUser = {
+                    postViewModel.addAllToReplyList(listOf(it))
+                    postViewModel.notifyUserSearchText.clearText()
+                    postViewModel.userSuggestions?.reset()
+                },
+                onAddList = { list, users -> postViewModel.addAllToReplyList(users, list.id) },
+                onDismiss = {
+                    postViewModel.wantsToManageAudience = false
+                    postViewModel.notifyUserSearchText.clearText()
+                    postViewModel.userSuggestions?.reset()
+                },
+            )
+        }
 
         Row(
             modifier =
@@ -323,43 +369,16 @@ private fun NewPostScreenBody(
                     }
                 }
 
-                Row {
-                    Notifying(
-                        baseMentions = postViewModel.pTags?.toImmutableList(),
-                        accountViewModel = accountViewModel,
-                        label = if (postViewModel.wantsPrivateNote) stringRes(R.string.private_note_visible_to) else null,
-                        showWhenEmpty = postViewModel.wantsPrivateNote,
-                        mutedNotifies = postViewModel.mutedNotifies.toImmutableSet(),
-                        onAddUser = { postViewModel.wantsToAddNotifyUser = !postViewModel.wantsToAddNotifyUser },
-                    ) {
-                        postViewModel.toggleNotify(it)
-                    }
-                }
-
-                if (postViewModel.wantsToAddNotifyUser) {
-                    Spacer(modifier = StdVertSpacer)
-                    OutlinedThinPaddingTextField(
-                        state = postViewModel.notifyUserSearchText,
-                        onTextChanged = postViewModel::onNotifyUserSearchTextChanged,
-                        label = { Text(text = stringRes(R.string.notify_search_and_add_user)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                text = stringRes(R.string.zap_split_search_and_add_user_placeholder),
-                                color = MaterialTheme.colorScheme.placeholderText,
-                            )
-                        },
-                        singleLine = true,
-                    )
-                }
-
-                if (postViewModel.wantsPrivateNote && postViewModel.activeNotifies().isNullOrEmpty()) {
-                    Text(
-                        text = stringRes(R.string.private_note_no_receivers),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.placeholderText,
-                    )
-                }
+                AudienceFlap(
+                    audience = audience,
+                    isPrivate = postViewModel.wantsPrivateNote,
+                    accountViewModel = accountViewModel,
+                    mutedNotifies = postViewModel.mutedNotifies.toImmutableSet(),
+                    groupChips = groupChips,
+                    onManage = { postViewModel.wantsToManageAudience = true },
+                    onRemoveGroup = { postViewModel.removeListFromReplyList(it) },
+                    onToggleNotify = { postViewModel.toggleNotify(it) },
+                )
 
                 if (postViewModel.wantsSubject || postViewModel.groupThreadTarget != null) {
                     // Styled like the "To"/"Subject" rows in the new-DM composer: an inline label
@@ -799,11 +818,15 @@ private fun BottomRowActions(
         // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a
         // NIP-29 group thread (it publishes plainly to the host relay), so hide both there.
         if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll && postViewModel.groupThreadTarget == null) {
+            val haptic = LocalHapticFeedback.current
             AddPrivateNoteButton(
                 isActive = postViewModel.wantsPrivateNote,
                 isLocked = postViewModel.privateNoteLocked,
             ) {
                 postViewModel.togglePrivateNote()
+                // Sealing a note changes what Send is about to do, so the change
+                // is confirmed in the hand as well as on screen.
+                haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
             }
         }
 
@@ -888,18 +911,35 @@ private fun BottomRowActionsPreview() {
     }
 }
 
+/**
+ * The private-note toggle. Unlike its neighbours in the strip it takes a filled
+ * pill when it is on: this is the one control that changes what Send does, so
+ * "tinted glyph among eleven identical siblings" is not enough of a signal.
+ */
 @Composable
 private fun AddPrivateNoteButton(
     isActive: Boolean,
     isLocked: Boolean,
     onClick: () -> Unit,
 ) {
+    val container by animateColorAsState(
+        targetValue = if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent,
+        animationSpec = tween(280),
+        label = "privateNoteContainer",
+    )
+    val content by animateColorAsState(
+        targetValue = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground,
+        animationSpec = tween(280),
+        label = "privateNoteContent",
+    )
+
     IconButton(
         onClick = { onClick() },
         enabled = !isLocked,
+        colors = IconButtonDefaults.iconButtonColors(containerColor = container, contentColor = content),
     ) {
         Icon(
-            symbol = MaterialSymbols.Lock,
+            symbol = if (isActive) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
             contentDescription =
                 stringRes(
                     id =
@@ -910,7 +950,7 @@ private fun AddPrivateNoteButton(
                         },
                 ),
             modifier = Modifier.height(22.dp),
-            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+            tint = content,
         )
     }
 }

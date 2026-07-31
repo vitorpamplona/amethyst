@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceSelection
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
@@ -359,6 +360,15 @@ open class ShortNotePostViewModel :
     var wantsToAddNotifyUser by mutableStateOf(false)
     val notifyUserSearchText = TextFieldState()
 
+    // The audience sheet: search, people lists, follow packs and the
+    // per-person switches all live behind this one flag.
+    var wantsToManageAudience by mutableStateOf(false)
+
+    // Display-only record of which list each pubkey arrived from, so a bulk
+    // add can be undone as a unit (the group chip's ✕). Never read when
+    // building the event — the p tags always come from [activeNotifies].
+    var notifyProvenance by mutableStateOf<Map<HexKey, Set<String>>>(emptyMap())
+
     fun onNotifyUserSearchTextChanged() {
         if (notifyUserSearchText.selection.collapsed) {
             val lastWord = notifyUserSearchText.text.toString()
@@ -390,6 +400,71 @@ open class ShortNotePostViewModel :
             pTags = (pTags ?: emptyList()).plus(user)
         }
         mutedNotifies = mutedNotifies - user.pubkeyHex
+    }
+
+    /**
+     * Bulk sibling of [addToReplyList], used when a whole people list or follow
+     * pack is added at once. Deliberately one state write per field: calling
+     * [addToReplyList] N times would recompose the audience row N times and
+     * bump the draft version N times, saving N drafts for one user gesture.
+     *
+     * [fromListTag] records provenance so the group chip can undo exactly this
+     * batch later; pass null for people picked one at a time.
+     */
+    fun addAllToReplyList(
+        users: Collection<User>,
+        fromListTag: String? = null,
+    ) {
+        if (users.isEmpty()) return
+
+        val current = pTags ?: emptyList()
+        val known = current.mapTo(mutableSetOf()) { it.pubkeyHex }
+        val newcomers = users.filter { known.add(it.pubkeyHex) }
+        if (newcomers.isNotEmpty()) {
+            pTags = current + newcomers
+        }
+
+        // Anyone re-added by a list gets their bell back: the list says they
+        // are part of the audience, and a muted chip would silently drop them.
+        val addedIds = users.mapTo(mutableSetOf()) { it.pubkeyHex }
+        if (mutedNotifies.any { it in addedIds }) {
+            mutedNotifies = mutedNotifies - addedIds
+        }
+
+        if (fromListTag != null) {
+            val next = notifyProvenance.toMutableMap()
+            users.forEach { user ->
+                next[user.pubkeyHex] = (next[user.pubkeyHex] ?: emptySet()) + fromListTag
+            }
+            notifyProvenance = next
+        }
+
+        draftTag.newVersion()
+    }
+
+    /** Drops people from the audience entirely (the chip's ✕), provenance included. */
+    fun removeFromReplyList(users: Collection<User>) {
+        if (users.isEmpty()) return
+        val removing = users.mapTo(mutableSetOf()) { it.pubkeyHex }
+        pTags = pTags?.filterNot { it.pubkeyHex in removing }?.ifEmpty { null }
+        mutedNotifies = mutedNotifies - removing
+        notifyProvenance = notifyProvenance.filterKeys { it !in removing }
+        draftTag.newVersion()
+    }
+
+    /**
+     * Removes a whole bulk add. People who also arrived from another list, or
+     * who were added by hand, stay — only the ones this list alone brought in
+     * are dropped.
+     */
+    fun removeListFromReplyList(listId: String) {
+        val removal = AudienceSelection.removeListFromProvenance(notifyProvenance, listId)
+        notifyProvenance = removal.provenance
+        if (removal.orphaned.isNotEmpty()) {
+            pTags = pTags?.filterNot { it.pubkeyHex in removal.orphaned }?.ifEmpty { null }
+            mutedNotifies = mutedNotifies - removal.orphaned
+        }
+        draftTag.newVersion()
     }
 
     // A single ephemeral signer reused for the whole compose session so that media
@@ -589,6 +664,7 @@ open class ShortNotePostViewModel :
             privateNoteLocked = replyingTo?.isPrivateRumor() == true
             wantsPrivateNote = privateNoteLocked
             mutedNotifies = emptySet()
+            notifyProvenance = emptyMap()
             replyingTo?.let { replyNote ->
                 if (replyNote.event is BaseThreadedEvent) {
                     this.eTags = (replyNote.replyTo ?: emptyList()).plus(replyNote)
@@ -884,6 +960,7 @@ open class ShortNotePostViewModel :
                 LocalCache.checkGetOrCreateUser(it[1])
             }
         mutedNotifies = emptySet()
+        notifyProvenance = emptyMap()
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
@@ -958,6 +1035,7 @@ open class ShortNotePostViewModel :
                 LocalCache.checkGetOrCreateUser(it[1])
             }
         mutedNotifies = emptySet()
+        notifyProvenance = emptyMap()
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
@@ -1555,6 +1633,7 @@ open class ShortNotePostViewModel :
         voiceOrchestrator = null
         pTags = null
         mutedNotifies = emptySet()
+        notifyProvenance = emptyMap()
 
         wantsPoll = false
         pollOptions = newStateMapPollOptions()
@@ -1587,6 +1666,7 @@ open class ShortNotePostViewModel :
         wantsPrivateNote = false
         privateNoteLocked = false
         wantsToAddNotifyUser = false
+        wantsToManageAudience = false
         notifyUserSearchText.clearText()
 
         forwardZapTo.value = SplitBuilder()

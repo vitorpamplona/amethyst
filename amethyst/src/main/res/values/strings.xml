@@ -1537,6 +1537,49 @@
     <string name="private_note_locked">Replies to a private note always stay private</string>
     <string name="private_note_visible_to">Visible to</string>
     <string name="private_note_no_receivers">No receivers yet: only you will be able to see this note. Add people to share it with.</string>
+
+    <!-- Composer audience control (Notify / "Visible to") -->
+    <string name="audience_manage">Manage who sees this</string>
+    <string name="audience_empty_private">Only you \u2014 choose who else can see this</string>
+    <string name="audience_empty_public">Add people to notify</string>
+    <string name="audience_summary_two">%1$s and %2$s</string>
+    <string name="audience_group_chip">%1$s \u00b7 %2$d</string>
+    <string name="audience_group_remove">Remove everyone added from %1$s</string>
+    <string name="audience_send_privately">Send privately</string>
+    <string name="audience_sheet_title">Add people</string>
+    <string name="audience_sheet_search">Search people and lists</string>
+    <string name="audience_sheet_no_lists">You have no people lists or follow packs yet. Search above to add someone directly.</string>
+    <string name="audience_count_with_private">%1$d \u00b7 %2$d private</string>
+    <string name="audience_over_limit">Over limit</string>
+    <string name="audience_badge_already_added">Already added</string>
+    <string name="audience_badge_muted">Muted</string>
+    <string name="audience_badge_private_member">Private member</string>
+    <string name="audience_badge_no_inbox_relay">No inbox relay</string>
+    <string name="audience_recipients_are_visible">Everyone on this note can see the full recipient list.</string>
+    <plurals name="audience_summary_others">
+        <item quantity="one">%1$s, %2$s and %3$d other</item>
+        <item quantity="other">%1$s, %2$s and %3$d others</item>
+    </plurals>
+    <plurals name="audience_soft_cap_private">
+        <item quantity="one">This note will be encrypted and delivered %1$d separate time, once per person. With an external signer that is one approval each.</item>
+        <item quantity="other">This note will be encrypted and delivered %1$d separate times, once per person. With an external signer that is one approval each.</item>
+    </plurals>
+    <plurals name="audience_soft_cap_public">
+        <item quantity="one">%1$d person will get a notification for this post.</item>
+        <item quantity="other">%1$d people will get a notification for this post.</item>
+    </plurals>
+    <plurals name="audience_hard_cap">
+        <item quantity="one">That would be %1$d person. Amethyst adds at most %2$d at a time \u2014 deselect a few.</item>
+        <item quantity="other">That would be %1$d people. Amethyst adds at most %2$d at a time \u2014 deselect a few.</item>
+    </plurals>
+    <plurals name="audience_add_people">
+        <item quantity="one">Add %1$d person</item>
+        <item quantity="other">Add %1$d people</item>
+    </plurals>
+    <plurals name="audience_add_anyway">
+        <item quantity="one">Add %1$d person anyway</item>
+        <item quantity="other">Add %1$d people anyway</item>
+    </plurals>
     <string name="notify_add_user">Add</string>
     <string name="notify_remove_user">Remove user from notifications</string>
     <string name="notify_mute_user">Notifying. Tap to mute the notification for this user</string>
