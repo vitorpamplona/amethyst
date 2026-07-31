@@ -69,8 +69,27 @@ enum class SubPurpose(
     /** Reports (kind 1984), mute lists, spam and ban state. */
     MODERATION(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
-    /** Cashu wallet, nutzaps, mints and NWC. */
+    /**
+     * Your own NIP-60 wallet state, read back from your outbox relays. Narrow by construction.
+     *
+     * Split from the wider wallet jobs because they answer different questions: this is "restore my
+     * wallet", [NUTZAP_INBOX] is "listen everywhere someone might pay me", and [MINT_DIRECTORY] is
+     * "what mints exist". Lumping them made a handful of relays look like a dozen.
+     */
     WALLET(SubPurposeGroup.ACCOUNT, runsInBackground = true),
+
+    /**
+     * Inbound nutzaps (kind 9321). Deliberately the **union** of the NIP-61 `10019` relays, the
+     * NIP-65 inbox and the DM relays — per the assembler, "so a nutzap can't slip past us". That
+     * union is why this is wide, and it is a choice rather than an accident.
+     */
+    NUTZAP_INBOX(SubPurposeGroup.ACCOUNT, runsInBackground = true),
+
+    /** Mint announcements and recommendations — a discovery query, so it fans out. */
+    MINT_DIRECTORY(SubPurposeGroup.ACCOUNT),
+
+    /** Nostr Wallet Connect notifications, on the wallet-connect relay. */
+    NWC(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
     // ---- things addressed to me: always on ---------------------------------
 
@@ -80,8 +99,27 @@ enum class SubPurpose(
     /** NIP-17 gift wraps and NIP-04 legacy DMs. DM relays. */
     DIRECT_MESSAGES(SubPurposeGroup.MESSAGES, runsInBackground = true),
 
-    /** NIP-28/29 public channels and relay groups. */
+    /**
+     * NIP-28 public channels only.
+     *
+     * This was a catch-all that also carried NIP-29 relay groups, ephemeral chats, geohash chats and
+     * live-stream chat — five protocols in one row labelled with the NIP-29 name, so the subscription
+     * screen could not say where any of them came from. They are separate below, each named and
+     * counted on its own.
+     */
     PUBLIC_CHATS(SubPurposeGroup.MESSAGES, runsInBackground = true),
+
+    /** NIP-29 relay groups. Each group is keyed by (id, host relay). */
+    RELAY_GROUPS(SubPurposeGroup.MESSAGES, runsInBackground = true),
+
+    /** NIP-C7 ephemeral chats — no history is stored, so only live delivery exists. */
+    EPHEMERAL_CHATS(SubPurposeGroup.MESSAGES, runsInBackground = true),
+
+    /** Location-scoped chat rooms. */
+    GEOHASH_CHATS(SubPurposeGroup.MESSAGES, runsInBackground = true),
+
+    /** Chat and zap goals attached to live streams. */
+    LIVE_CHAT(SubPurposeGroup.MESSAGES, runsInBackground = true),
 
     /** Concord and Buzz community planes. */
     COMMUNITY_CHATS(SubPurposeGroup.MESSAGES, runsInBackground = true),

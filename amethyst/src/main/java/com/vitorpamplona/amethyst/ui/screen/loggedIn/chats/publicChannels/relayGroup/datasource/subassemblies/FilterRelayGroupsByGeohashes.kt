@@ -41,7 +41,7 @@ fun filterRelayGroupsByGeohashes(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PUBLIC_CHATS,
+                    purpose = SubPurpose.RELAY_GROUPS,
                     kinds = listOf(GroupMetadataEvent.KIND),
                     tags = mapOf(GeoHashTag.TAG_NAME to geotags.map { it.lowercase() }.sorted()),
                     limit = 100,

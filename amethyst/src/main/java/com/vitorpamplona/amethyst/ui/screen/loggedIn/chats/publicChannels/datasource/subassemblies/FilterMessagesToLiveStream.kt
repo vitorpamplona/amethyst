@@ -41,7 +41,7 @@ fun filterMessagesToLiveActivities(
             relay = it,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PUBLIC_CHATS,
+                    purpose = SubPurpose.LIVE_CHAT,
                     kinds =
                         listOf(
                             LiveActivitiesChatMessageEvent.KIND,

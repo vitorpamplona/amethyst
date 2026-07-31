@@ -39,31 +39,38 @@ object SubPurposeLabels {
     fun labelOf(purpose: SubPurpose): Int =
         when (purpose) {
             // account — always on
-            SubPurpose.ACCOUNT_DATA -> R.string.kind_drafts
-            SubPurpose.PROFILE_METADATA -> R.string.kind_profile
-            SubPurpose.RELAY_LISTS -> R.string.kind_outbox_relays
+            SubPurpose.ACCOUNT_DATA -> R.string.relay_purpose_your_account
+            SubPurpose.PROFILE_METADATA -> R.string.relay_purpose_observing_profiles
+            SubPurpose.RELAY_LISTS -> R.string.relay_purpose_relay_list_finder
             SubPurpose.FOLLOW_LISTS -> R.string.kind_follow_list
-            SubPurpose.MODERATION -> R.string.kind_reports
-            SubPurpose.WALLET -> R.string.wallet
+            SubPurpose.MODERATION -> R.string.relay_purpose_reports_from_follows
+            SubPurpose.WALLET -> R.string.relay_purpose_your_wallet
+            SubPurpose.NUTZAP_INBOX -> R.string.relay_purpose_nutzap_inbox
+            SubPurpose.MINT_DIRECTORY -> R.string.relay_purpose_mint_directory
+            SubPurpose.NWC -> R.string.relay_purpose_nwc
             // messages — always on
             SubPurpose.NOTIFICATIONS -> R.string.route_notifications
-            SubPurpose.DIRECT_MESSAGES -> R.string.route_messages
-            SubPurpose.PUBLIC_CHATS -> R.string.relay_chat_title
-            SubPurpose.COMMUNITY_CHATS -> R.string.communities
+            SubPurpose.DIRECT_MESSAGES -> R.string.relay_purpose_dm_inbox
+            SubPurpose.PUBLIC_CHATS -> R.string.public_chat
+            SubPurpose.RELAY_GROUPS -> R.string.relay_purpose_relay_groups
+            SubPurpose.EPHEMERAL_CHATS -> R.string.relay_purpose_ephemeral_chats
+            SubPurpose.GEOHASH_CHATS -> R.string.relay_purpose_geohash_chats
+            SubPurpose.LIVE_CHAT -> R.string.relay_purpose_live_chat
+            SubPurpose.COMMUNITY_CHATS -> R.string.relay_purpose_community_chats
             SubPurpose.ENCRYPTED_GROUPS -> R.string.marmot_group
             SubPurpose.LIVE_ROOMS -> R.string.nests
             // feeds
-            SubPurpose.HOME_FEED -> R.string.route_home
+            SubPurpose.HOME_FEED -> R.string.relay_purpose_home_feed
             SubPurpose.DISCOVER_FEED -> R.string.route_discover
             SubPurpose.MEDIA_FEED -> R.string.relay_purpose_media
             SubPurpose.TAG_FEED -> R.string.relay_purpose_tags
-            SubPurpose.COMMUNITY_FEED -> R.string.communities
+            SubPurpose.COMMUNITY_FEED -> R.string.relay_purpose_community_feeds
             SubPurpose.TOPIC_FEED -> R.string.relay_purpose_topics
             // current screen
             SubPurpose.THREAD -> R.string.relay_purpose_thread
             SubPurpose.USER_PROFILE -> R.string.kind_profile
             SubPurpose.SEARCH -> R.string.relay_purpose_search
-            SubPurpose.ENGAGEMENT -> R.string.kind_reactions
+            SubPurpose.ENGAGEMENT -> R.string.relay_purpose_engagement
             SubPurpose.REFERENCED_EVENTS -> R.string.relay_purpose_referenced
             SubPurpose.ADD_ONS -> R.string.relay_purpose_add_ons
             SubPurpose.GAMES -> R.string.route_chess
@@ -95,6 +102,10 @@ object SubPurposeLabels {
             SubPurpose.NOTIFICATIONS -> R.string.relay_explain_notifications
             SubPurpose.DIRECT_MESSAGES -> R.string.relay_explain_direct_messages
             SubPurpose.PUBLIC_CHATS -> R.string.relay_explain_public_chats
+            SubPurpose.RELAY_GROUPS -> R.string.relay_explain_relay_groups
+            SubPurpose.EPHEMERAL_CHATS -> R.string.relay_explain_ephemeral_chats
+            SubPurpose.GEOHASH_CHATS -> R.string.relay_explain_geohash_chats
+            SubPurpose.LIVE_CHAT -> R.string.relay_explain_live_chat
             SubPurpose.COMMUNITY_CHATS -> R.string.relay_explain_community_chats
             SubPurpose.ENCRYPTED_GROUPS -> R.string.relay_explain_encrypted_groups
             SubPurpose.LIVE_ROOMS -> R.string.relay_explain_live_rooms
@@ -104,7 +115,12 @@ object SubPurposeLabels {
             SubPurpose.FOLLOW_LISTS -> R.string.relay_explain_follows
             SubPurpose.MODERATION -> R.string.relay_explain_moderation
             SubPurpose.WALLET -> R.string.relay_explain_wallet
+            SubPurpose.NUTZAP_INBOX -> R.string.relay_explain_nutzap_inbox
+            SubPurpose.MINT_DIRECTORY -> R.string.relay_explain_mint_directory
+            SubPurpose.NWC -> R.string.relay_explain_nwc
             SubPurpose.HOME_FEED -> R.string.relay_explain_home
+            SubPurpose.ENGAGEMENT -> R.string.relay_explain_engagement
+            SubPurpose.REFERENCED_EVENTS -> R.string.relay_explain_referenced
             else -> null
         }
 }

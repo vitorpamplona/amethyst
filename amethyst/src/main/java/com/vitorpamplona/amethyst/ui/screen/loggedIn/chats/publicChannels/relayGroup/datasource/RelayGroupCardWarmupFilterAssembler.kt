@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies.filterRelayGroupState
@@ -35,13 +36,13 @@ import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 
 /** One on-screen group card's request to warm a single group. */
 class RelayGroupCardWarmupQueryState(
-    val account: Account,
+    override val account: Account,
     val channel: RelayGroupChannel,
     /** When true, prefetch only recent content — the caller's screen already streams metadata. */
     val contentOnly: Boolean = false,
     /** How many recent content events to prefetch ahead of a tap. */
     val contentLimit: Int = RELAY_GROUP_WARMUP_LIMIT,
-)
+) : AccountScopedQuery
 
 /**
  * Default number of recent events to pull ahead of a tap — enough to fill the first screen AND drive
@@ -96,7 +97,7 @@ class RelayGroupCardWarmupSubAssembler(
                 relay = groupId.relayUrl,
                 filter =
                     ExplainedFilter(
-                        purpose = SubPurpose.PUBLIC_CHATS,
+                        purpose = SubPurpose.RELAY_GROUPS,
                         kinds = RELAY_GROUP_CARD_WARMUP_KINDS,
                         tags = mapOf(GroupIdTag.TAG_NAME to listOf(groupId.id)),
                         limit = key.contentLimit,

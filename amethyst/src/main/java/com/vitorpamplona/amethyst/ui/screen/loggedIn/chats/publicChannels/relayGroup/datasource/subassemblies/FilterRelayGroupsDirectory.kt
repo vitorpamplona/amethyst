@@ -53,7 +53,7 @@ fun filterRelayGroupsDirectory(
             relay = relay,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PUBLIC_CHATS,
+                    purpose = SubPurpose.RELAY_GROUPS,
                     kinds = RELAY_GROUP_DISCOVERY_KINDS,
                     limit = 500,
                     since = since,

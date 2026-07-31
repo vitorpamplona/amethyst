@@ -43,7 +43,10 @@ fun filterMessagesToGeohashChat(
             relay = it,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PUBLIC_CHATS,
+                    purpose = SubPurpose.GEOHASH_CHATS,
+                    // The cell IS the chat's identity, so the screen can list one row per location
+                    // instead of collapsing every joined cell into one unnamed entry.
+                    entityIds = listOf(channel.geohash),
                     kinds = listOf(GeohashChatEvent.KIND),
                     tags = mapOf("g" to listOf(channel.geohash)),
                     limit = 200,

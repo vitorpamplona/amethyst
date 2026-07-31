@@ -38,7 +38,7 @@ fun filterMyMessagesToEphemeralChat(
             relay = it,
             filter =
                 ExplainedFilter(
-                    purpose = SubPurpose.PUBLIC_CHATS,
+                    purpose = SubPurpose.EPHEMERAL_CHATS,
                     kinds = listOf(EphemeralChatEvent.KIND),
                     tags =
                         if (channel.roomId.id.isBlank()) {

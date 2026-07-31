@@ -49,8 +49,8 @@ fun filterRelayGroupState(
         relays.flatMap {
             val floor = since?.get(it)?.time
             listOf(
-                RelayBasedFilter(relay = it, filter = ExplainedFilter(purpose = SubPurpose.PUBLIC_CHATS, kinds = RELAY_GROUP_METADATA_KINDS, tags = scope, since = floor)),
-                RelayBasedFilter(relay = it, filter = ExplainedFilter(purpose = SubPurpose.PUBLIC_CHATS, kinds = RELAY_GROUP_PIN_KINDS, tags = scope, since = floor)),
+                RelayBasedFilter(relay = it, filter = ExplainedFilter(purpose = SubPurpose.RELAY_GROUPS, kinds = RELAY_GROUP_METADATA_KINDS, tags = scope, since = floor)),
+                RelayBasedFilter(relay = it, filter = ExplainedFilter(purpose = SubPurpose.RELAY_GROUPS, kinds = RELAY_GROUP_PIN_KINDS, tags = scope, since = floor)),
             )
         }
 
@@ -63,7 +63,7 @@ fun filterRelayGroupState(
         if (pinnedIds.isEmpty()) {
             emptyList()
         } else {
-            relays.map { RelayBasedFilter(relay = it, filter = ExplainedFilter(purpose = SubPurpose.PUBLIC_CHATS, ids = pinnedIds)) }
+            relays.map { RelayBasedFilter(relay = it, filter = ExplainedFilter(purpose = SubPurpose.RELAY_GROUPS, ids = pinnedIds)) }
         }
 
     return directory + pins
