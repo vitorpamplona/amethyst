@@ -40,6 +40,7 @@ fun filterChannelMetadataUpdatesById(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.PUBLIC_CHATS,
+                    entityIds = channels.map { it.idHex }.sorted(),
                     kinds = channelMetadataKinds,
                     tags = mapOf("e" to channels.map { it.idHex }),
                     since = since,

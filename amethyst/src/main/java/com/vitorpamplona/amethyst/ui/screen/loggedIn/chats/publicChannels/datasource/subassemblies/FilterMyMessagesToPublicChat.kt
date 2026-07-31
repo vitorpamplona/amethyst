@@ -39,6 +39,7 @@ fun filterMyMessagesToPublicChat(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.PUBLIC_CHATS,
+                    entityIds = listOfNotNull(channel.idHex),
                     kinds = listOf(ChannelMessageEvent.KIND),
                     tags = mapOf("e" to listOfNotNull(channel.idHex)),
                     authors = listOf(pubKey),

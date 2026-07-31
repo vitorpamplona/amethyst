@@ -59,6 +59,7 @@ fun filterFollowingPublicChatsCreationEvent(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.PUBLIC_CHATS,
+                    entityIds = it.value.sorted(),
                     kinds = listOf(ChannelCreateEvent.KIND),
                     ids = it.value.sorted(),
                     since = since?.get(it.key)?.time,

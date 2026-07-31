@@ -60,6 +60,7 @@ fun filterLastMessageFollowingPublicChats(
                     filter =
                         ExplainedFilter(
                             purpose = SubPurpose.PUBLIC_CHATS,
+                            entityIds = it.value.sorted(),
                             kinds = listOf(ChannelMetadataEvent.KIND),
                             tags = mapOf("e" to it.value.sorted()),
                             since = since?.get(it.key)?.time,
@@ -71,6 +72,7 @@ fun filterLastMessageFollowingPublicChats(
                     filter =
                         ExplainedFilter(
                             purpose = SubPurpose.PUBLIC_CHATS,
+                            entityIds = it.value.sorted(),
                             kinds = listOf(ChannelMessageEvent.KIND),
                             tags = mapOf("e" to it.value.sorted()),
                             since = since?.get(it.key)?.time,
