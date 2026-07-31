@@ -33,15 +33,16 @@ data class ServiceType(
         ) = "$kind:$type"
 
         fun parse(serviceType: String): ServiceType? {
-            val (kindStr, type) = serviceType.split(":", limit = 2)
-            val kind = kindStr.toIntOrNull() ?: return null
-            return ServiceType(kind, type)
+            val divider = serviceType.indexOf(':')
+            if (divider < 0 || divider == serviceType.length - 1) return null
+            val kind = serviceType.substring(0, divider).toIntOrNull() ?: return null
+            return ServiceType(kind, serviceType.substring(divider + 1))
         }
 
         fun isOfKind(
             serviceType: String,
             kind: String,
-        ) = serviceType.startsWith(kind) && serviceType[kind.length] == ':'
+        ) = serviceType.length > kind.length && serviceType.startsWith(kind) && serviceType[kind.length] == ':'
     }
 }
 
