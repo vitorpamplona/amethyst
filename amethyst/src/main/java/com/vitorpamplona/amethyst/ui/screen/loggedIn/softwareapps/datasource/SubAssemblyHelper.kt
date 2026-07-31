@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavP
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies.filterSoftwareAppsByAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies.filterSoftwareAppsByFollows
@@ -48,4 +49,4 @@ fun makeSoftwareAppsFilter(
         is HashtagTopNavPerRelayFilterSet -> filterSoftwareAppsByHashtag(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterSoftwareAppsByMutedAuthors(feedSettings, since, defaultSince)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

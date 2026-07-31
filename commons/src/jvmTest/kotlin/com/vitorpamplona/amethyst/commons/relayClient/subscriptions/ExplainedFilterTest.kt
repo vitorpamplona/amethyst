@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.FiltersChanged
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -56,8 +57,9 @@ class ExplainedFilterTest {
             limit = 20,
             purpose = SubPurpose.NOTIFICATIONS,
             purposeDetail = "inbox relays for the active account",
-            entityId = "cafe0000000000000000000000000000000000000000000000000000000000ff",
+            entityIds = listOf("cafe0000000000000000000000000000000000000000000000000000000000ff"),
             accountPubKey = pubkey,
+            scope = HashtagTopNavPerRelayFilter(setOf("askednostr")),
         )
 
     // ---- the wire must not learn why we asked -------------------------------
@@ -81,6 +83,11 @@ class ExplainedFilterTest {
         assertFalse("detail leaked to the wire: $json", json.contains("inbox relays", ignoreCase = true))
         assertFalse("entityId leaked to the wire: $json", json.contains("cafe0000", ignoreCase = true))
         assertFalse("accountPubKey leaked as a field: $json", json.contains("accountPubKey", ignoreCase = true))
+        // The scope is the feed selection behind the filter — a hashtag here, but for a follows feed
+        // it is a slice of the user's follow list. Handing a relay the *selection* rather than the
+        // authors it already sees would tell it which of its neighbours' filters belong together.
+        assertFalse("scope leaked to the wire: $json", json.contains("askednostr", ignoreCase = true))
+        assertFalse("scope leaked as a field: $json", json.contains("scope", ignoreCase = true))
     }
 
     /** The filter is serialized as part of a REQ, so check the real command too, not just the filter. */
@@ -106,9 +113,10 @@ class ExplainedFilterTest {
         assertTrue("copy() must stay an ExplainedFilter", advanced is ExplainedFilter)
         assertEquals(SubPurpose.NOTIFICATIONS, advanced.purposeOrNull())
         assertEquals("inbox relays for the active account", (advanced as ExplainedFilter).purposeDetail)
-        // entityId/accountPubKey ride the same path and would vanish just as silently
-        assertEquals("cafe0000000000000000000000000000000000000000000000000000000000ff", advanced.entityId)
+        // entityIds/accountPubKey/scope ride the same path and would vanish just as silently
+        assertEquals(listOf("cafe0000000000000000000000000000000000000000000000000000000000ff"), advanced.entityIds)
         assertEquals(pubkey, advanced.accountPubKey)
+        assertEquals(setOf("askednostr"), (advanced.scope as? HashtagTopNavPerRelayFilter)?.hashtags)
         assertEquals(1_785_379_272L, advanced.since)
         // and the protocol fields came along untouched
         assertEquals(listOf(pubkey), advanced.authors)

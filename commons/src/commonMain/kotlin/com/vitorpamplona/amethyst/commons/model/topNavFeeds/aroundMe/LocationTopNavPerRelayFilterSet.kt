@@ -25,4 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class LocationTopNavPerRelayFilterSet(
     val set: Map<NormalizedRelayUrl, LocationTopNavPerRelayFilter>,
-) : IFeedTopNavPerRelayFilterSet
+) : IFeedTopNavPerRelayFilterSet {
+    override fun scopeFor(relay: NormalizedRelayUrl) = set[relay]
+}

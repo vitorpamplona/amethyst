@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.model.HomeFeedType
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
@@ -78,7 +79,7 @@ class HomeOutboxEventsEoseManager(
                 is SingleCommunityTopNavPerRelayFilterSet -> filterHomePostsByCommunity(feedSettings, since, newThreadSince)
                 is FavoriteAlgoFeedTopNavPerRelayFilterSet -> filterHomePostsByAlgoFeedIds(feedSettings, since, newThreadSince)
                 else -> emptyList()
-            }
+            }.scopedTo(feedSettings)
 
         // Drop the kinds the user turned off in Settings › Home from every home relay filter, so a
         // disabled group is never downloaded regardless of which top-nav strategy built the filters.

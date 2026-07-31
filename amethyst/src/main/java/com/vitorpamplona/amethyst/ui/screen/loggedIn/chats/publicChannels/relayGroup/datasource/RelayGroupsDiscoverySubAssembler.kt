@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
@@ -88,7 +89,9 @@ class RelayGroupsDiscoverySubAssembler(
                 )
             }
 
-        return base + extra
+        // `base` is scoped by its own builder; these host-relay rosters are built here, so they get
+        // the same selection stamped on them rather than showing up as an unexplained extra.
+        return base + extra.scopedTo(feedSettings)
     }
 
     /** Relays that host NIP-29 groups the user is connected to: joined (kind-10009) + favorited (kind-10012). */

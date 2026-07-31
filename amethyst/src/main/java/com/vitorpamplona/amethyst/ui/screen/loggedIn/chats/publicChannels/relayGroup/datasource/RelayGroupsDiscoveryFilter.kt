@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.Aut
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.subassemblies.filterRelayGroupsByAuthors
@@ -58,4 +59,4 @@ fun filterRelayGroupsDiscovery(
         is RelayTopNavPerRelayFilterSet -> filterRelayGroupsByRelay(feedSettings, since, defaultSince)
         is SingleCommunityTopNavPerRelayFilterSet -> filterRelayGroupsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

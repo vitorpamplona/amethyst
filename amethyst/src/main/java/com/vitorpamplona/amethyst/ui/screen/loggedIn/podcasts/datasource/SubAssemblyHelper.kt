@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.PODCASTING20_METADATA_KINDS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.subassemblies.PODCAST_EPISODE_KINDS
@@ -78,4 +79,4 @@ private fun makePodcastFilter(
         is MutedAuthorsTopNavPerRelayFilterSet -> filterPodcastEventsByMutedAuthors(feedSettings, kinds, since, defaultSince, additionalTags)
         is SingleCommunityTopNavPerRelayFilterSet -> filterPodcastEventsByCommunity(feedSettings, kinds, since, defaultSince, additionalTags)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

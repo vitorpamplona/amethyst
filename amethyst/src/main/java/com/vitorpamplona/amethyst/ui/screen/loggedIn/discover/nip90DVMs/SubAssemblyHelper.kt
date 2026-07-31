@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip90DVMs.subassemblies.filterContentDVMsByAuthors
@@ -54,4 +55,4 @@ fun makeContentDVMsFilter(
         is MutedAuthorsTopNavPerRelayFilterSet -> filterContentDVMsByAuthors(feedSettings, since, defaultSince)
         is SingleCommunityTopNavPerRelayFilterSet -> filterContentDVMsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

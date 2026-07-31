@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.MUSIC_PLAYLIST_KINDS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.MUSIC_TRACK_KINDS
@@ -82,4 +83,4 @@ private fun makeMusicFilter(
         is MutedAuthorsTopNavPerRelayFilterSet -> filterMusicEventsByMutedAuthors(feedSettings, kinds, since, defaultSince)
         is SingleCommunityTopNavPerRelayFilterSet -> filterMusicEventsByCommunity(feedSettings, kinds, since, defaultSince)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

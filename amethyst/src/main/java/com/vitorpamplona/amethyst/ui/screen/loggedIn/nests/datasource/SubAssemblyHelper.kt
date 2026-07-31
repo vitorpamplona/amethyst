@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies.filterNestsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.subassemblies.filterNestsByAuthors
@@ -56,7 +57,7 @@ fun makeNestsFilter(
             is MutedAuthorsTopNavPerRelayFilterSet -> filterNestsByAuthors(feedSettings, since, defaultSince)
             is SingleCommunityTopNavPerRelayFilterSet -> filterNestsByCommunity(feedSettings, since, defaultSince)
             else -> return emptyList()
-        }
+        }.scopedTo(feedSettings)
     if (rooms.isEmpty()) return rooms
 
     // Add a single presence probe per relay we're already querying for

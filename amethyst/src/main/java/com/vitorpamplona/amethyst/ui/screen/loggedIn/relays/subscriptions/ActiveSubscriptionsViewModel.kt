@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -56,9 +57,27 @@ import kotlinx.coroutines.withContext
 data class SubscriptionEntityRow(
     /** Null when the filter named no entity — "the rest of this purpose", not a real entity. */
     val entityId: HexKey?,
+    /**
+     * The top-nav selection behind a filter that names no entity — what a discovery filter is
+     * searching *within*. Null for filters that name a real entity, which speaks for itself.
+     */
+    val scope: IFeedTopNavPerRelayFilter?,
     val detail: String?,
     val relays: List<NormalizedRelayUrl>,
     val filterCount: Int,
+)
+
+/**
+ * What makes two filters the same row.
+ *
+ * [scopeKey] is the scope's **type**, not its contents: an author-based selection carries a
+ * different slice of the follow list to every relay, so keying on contents would shatter "People you
+ * follow" into one row per relay — the opposite of what this screen is for. Selections whose
+ * contents are the same everywhere (a hashtag, a geohash) render theirs from the retained instance.
+ */
+private data class EntityKey(
+    val entityId: HexKey?,
+    val scopeKey: String?,
 )
 
 @Immutable
@@ -109,8 +128,9 @@ class ActiveSubscriptionsViewModel : ViewModel() {
             val client = Amethyst.instance.client
 
             // account -> purpose -> entity -> relays / count
-            val byAccount = mutableMapOf<HexKey?, MutableMap<SubPurpose, MutableMap<HexKey?, MutableList<NormalizedRelayUrl>>>>()
-            val detailOf = mutableMapOf<Pair<SubPurpose, HexKey?>, String?>()
+            val byAccount = mutableMapOf<HexKey?, MutableMap<SubPurpose, MutableMap<EntityKey, MutableList<NormalizedRelayUrl>>>>()
+            val detailOf = mutableMapOf<Pair<SubPurpose, EntityKey>, String?>()
+            val scopeOf = mutableMapOf<Pair<SubPurpose, EntityKey>, IFeedTopNavPerRelayFilter>()
             var total = 0
             var untagged = 0
             val allRelays = mutableSetOf<NormalizedRelayUrl>()
@@ -124,17 +144,23 @@ class ActiveSubscriptionsViewModel : ViewModel() {
                         return@forEach
                     }
                     allRelays.add(relay)
+                    // Discovery filters name no entity — they go looking for things rather than
+                    // serving known ones — but they do carry the selection they search within, which
+                    // is what keeps them from collapsing into one nameless row per purpose.
+                    val scopeKey = explained.scope?.let { it::class.simpleName }
                     // A batched filter serves several entities at once — relay-group state is one #d
                     // filter per host relay carrying every joined group on it — so it contributes a
                     // row to each of them rather than collapsing to "All".
                     val entities: List<HexKey?> = explained.entityIds?.takeIf { it.isNotEmpty() } ?: listOf(null)
                     entities.forEach { entityId ->
+                        val key = EntityKey(entityId, scopeKey)
                         byAccount
                             .getOrPut(explained.accountPubKey) { mutableMapOf() }
                             .getOrPut(explained.purpose) { mutableMapOf() }
-                            .getOrPut(entityId) { mutableListOf() }
+                            .getOrPut(key) { mutableListOf() }
                             .add(relay)
-                        detailOf[explained.purpose to entityId] = explained.purposeDetail
+                        detailOf[explained.purpose to key] = explained.purposeDetail
+                        explained.scope?.let { scopeOf.getOrPut(explained.purpose to key) { it } }
                     }
                 }
             }
@@ -147,10 +173,11 @@ class ActiveSubscriptionsViewModel : ViewModel() {
                                 .map { (purpose, entities) ->
                                     val entityRows =
                                         entities
-                                            .map { (entityId, relays) ->
+                                            .map { (key, relays) ->
                                                 SubscriptionEntityRow(
-                                                    entityId = entityId,
-                                                    detail = detailOf[purpose to entityId],
+                                                    entityId = key.entityId,
+                                                    scope = scopeOf[purpose to key],
+                                                    detail = detailOf[purpose to key],
                                                     relays = relays.distinct().sortedBy { it.url },
                                                     filterCount = relays.size,
                                                 )

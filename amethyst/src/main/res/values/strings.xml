@@ -2151,6 +2151,12 @@
     <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
     <string name="active_subs_unattributed">Not attributed to an account</string>
     <string name="active_subs_no_entity">All</string>
+    <string name="active_subs_scope_global">Everyone</string>
+    <string name="active_subs_scope_follows">People you follow</string>
+    <string name="active_subs_scope_authors">A chosen list of people</string>
+    <string name="active_subs_scope_muted">Muted people</string>
+    <string name="active_subs_scope_all_communities">Your communities</string>
+    <string name="active_subs_scope_algo">A favorite algo feed</string>
     <string name="active_subs_share">%1$d%% of all</string>
     <string name="active_subs_search_keywords">subscriptions filters relays requests reqs connections why diagnostics</string>
     <string name="relay_explain_home">Posts by people you follow, read from the relays each of them publishes to.</string>

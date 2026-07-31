@@ -20,9 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class RelayTopNavPerRelayFilterSet(
     val relayUrl: NormalizedRelayUrl,
-) : IFeedTopNavPerRelayFilterSet
+) : IFeedTopNavPerRelayFilterSet {
+    // The relay *is* the whole selection here, so there is nothing per-relay left to say — the
+    // filter's own relay already carries it.
+    override fun scopeFor(relay: NormalizedRelayUrl): IFeedTopNavPerRelayFilter? = null
+}

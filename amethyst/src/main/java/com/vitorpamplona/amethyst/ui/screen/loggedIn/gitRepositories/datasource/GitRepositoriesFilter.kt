@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource.subassemblies.filterGitRepositoriesByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories.datasource.subassemblies.filterGitRepositoriesByAuthors
@@ -55,4 +56,4 @@ fun makeGitRepositoriesFilter(
         is MutedAuthorsTopNavPerRelayFilterSet -> filterGitRepositoriesByMutedAuthors(feedSettings, since, defaultSince)
         is SingleCommunityTopNavPerRelayFilterSet -> filterGitRepositoriesByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

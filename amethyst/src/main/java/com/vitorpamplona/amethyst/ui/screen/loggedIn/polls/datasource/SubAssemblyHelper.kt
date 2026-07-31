@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByAllCommunities
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.subassemblies.filterPollsByAuthors
@@ -55,4 +56,4 @@ fun makePollsFilter(
         is LocationTopNavPerRelayFilterSet -> filterPollsByGeohashes(feedSettings, since, defaultSince)
         is SingleCommunityTopNavPerRelayFilterSet -> filterPollsByCommunity(feedSettings, since, defaultSince)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

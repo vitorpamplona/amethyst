@@ -20,4 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.model.topNavFeeds
 
-interface IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+
+interface IFeedTopNavPerRelayFilterSet {
+    /**
+     * What this feed selection asks of one relay — the follows, hashtags, geohashes or communities
+     * scoped to it — or null when the set says nothing per relay.
+     *
+     * Declared here so an `ExplainedFilter` can carry the scope that produced it. A discovery filter
+     * names no entity (it searches for things rather than serving known ones), which used to leave
+     * the Active Subscriptions screen with a nameless row it could only label "no entity". The
+     * selection behind it was always known at build time; it just had nowhere to travel. Returning
+     * the per-relay value rather than the whole set keeps it exact: the filter is already per relay,
+     * so it carries only the slice that applies to it.
+     */
+    fun scopeFor(relay: NormalizedRelayUrl): IFeedTopNavPerRelayFilter?
+}

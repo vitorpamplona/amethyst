@@ -39,4 +39,8 @@ class FavoriteAlgoFeedTopNavPerRelayFilterSet(
     val contentFetches: Map<NormalizedRelayUrl, FavoriteAlgoFeedTopNavPerRelayFilter>,
     val listenRelays: Set<NormalizedRelayUrl>,
     val requestIds: Set<HexKey>,
-) : IFeedTopNavPerRelayFilterSet
+) : IFeedTopNavPerRelayFilterSet {
+    // Only the content half is per-relay. [listenRelays] is where the DVMs answer, which is a
+    // delivery address rather than a scope, so a filter aimed there carries none.
+    override fun scopeFor(relay: NormalizedRelayUrl) = contentFetches[relay]
+}

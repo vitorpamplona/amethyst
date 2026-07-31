@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.subassemblies.filterNsitesByAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nsites.datasource.subassemblies.filterNsitesByFollows
@@ -51,4 +52,4 @@ fun makeNsitesFilter(
         is GlobalTopNavPerRelayFilterSet -> filterNsitesGlobal(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterNsitesByMutedAuthors(feedSettings, since, defaultSince)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

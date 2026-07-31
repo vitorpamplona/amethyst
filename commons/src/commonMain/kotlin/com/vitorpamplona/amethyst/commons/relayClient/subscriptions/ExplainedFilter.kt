@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -89,6 +91,24 @@ class ExplainedFilter(
      * account alive.
      */
     val accountPubKey: HexKey? = null,
+    /**
+     * The top-nav selection that produced this filter — Global, the user's follows, a hashtag, a
+     * geohash, a community.
+     *
+     * [entityIds] answers "which known thing does this serve"; discovery filters have no such thing,
+     * because they go looking for chats/articles/streams rather than serving ones already named. That
+     * is not the same as having no explanation: the feed selection behind them was always known where
+     * the filter was built, it simply had nowhere to travel, so the screen could only render those
+     * rows as "no entity".
+     *
+     * The per-relay value, not the whole set: this filter is already scoped to one relay, so it
+     * carries only the slice that applies to it and holds no reference to the other relays' authors.
+     *
+     * A typed value rather than a formatted string, because [purposeDetail] taught the lesson —
+     * text built in `commons` can never be translated. The UI matches on the type and picks its own
+     * localized wording.
+     */
+    val scope: IFeedTopNavPerRelayFilter? = null,
 ) : Filter(ids, authors, kinds, tags, tagsAll, since, until, limit, search) {
     override fun copy(
         ids: List<String>?,
@@ -100,7 +120,7 @@ class ExplainedFilter(
         until: Long?,
         limit: Int?,
         search: String?,
-    ) = ExplainedFilter(ids, authors, kinds, tags, tagsAll, since, until, limit, search, purpose, purposeDetail, entityIds, accountPubKey)
+    ) = ExplainedFilter(ids, authors, kinds, tags, tagsAll, since, until, limit, search, purpose, purposeDetail, entityIds, accountPubKey, scope)
 
     companion object {
         /** Tags [filter] with a [purpose], preserving every protocol field. */
@@ -110,6 +130,7 @@ class ExplainedFilter(
             detail: String? = null,
             entityIds: List<HexKey>? = null,
             accountPubKey: HexKey? = null,
+            scope: IFeedTopNavPerRelayFilter? = null,
         ) = ExplainedFilter(
             filter.ids,
             filter.authors,
@@ -124,6 +145,7 @@ class ExplainedFilter(
             detail,
             entityIds,
             accountPubKey,
+            scope,
         )
     }
 }
@@ -173,7 +195,31 @@ fun List<RelayBasedFilter>.attributedTo(accountPubKey: HexKey): List<RelayBasedF
         if (filter is ExplainedFilter && filter.accountPubKey == null) {
             RelayBasedFilter(
                 relay = relayFilter.relay,
-                filter = ExplainedFilter.of(filter, filter.purpose, filter.purposeDetail, filter.entityIds, accountPubKey),
+                filter = ExplainedFilter.of(filter, filter.purpose, filter.purposeDetail, filter.entityIds, accountPubKey, filter.scope),
+            )
+        } else {
+            relayFilter
+        }
+    }
+
+/**
+ * Stamps the top-nav selection onto every tagged filter that does not already name one.
+ *
+ * Applied once at each feed's `make…Filter` dispatch — the single place that still knows which
+ * selection is being served, and the same place that already chooses a builder from it. Below that
+ * point the builders have flattened it into `authors`/`#t`/`#g` and the selection is unrecoverable.
+ *
+ * Each filter gets the slice for its own relay, so a filter aimed at a relay the selection says
+ * nothing about is simply left alone rather than labelled with someone else's scope.
+ */
+fun List<RelayBasedFilter>.scopedTo(feedSettings: IFeedTopNavPerRelayFilterSet): List<RelayBasedFilter> =
+    map { relayFilter ->
+        val filter = relayFilter.filter
+        val scope = if (filter is ExplainedFilter && filter.scope == null) feedSettings.scopeFor(relayFilter.relay) else null
+        if (filter is ExplainedFilter && scope != null) {
+            RelayBasedFilter(
+                relay = relayFilter.relay,
+                filter = ExplainedFilter.of(filter, filter.purpose, filter.purposeDetail, filter.entityIds, filter.accountPubKey, scope),
             )
         } else {
             relayFilter

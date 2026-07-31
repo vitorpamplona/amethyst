@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.subassemblies.filterNappletsByAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.datasource.subassemblies.filterNappletsByFollows
@@ -51,4 +52,4 @@ fun makeNappletsFilter(
         is GlobalTopNavPerRelayFilterSet -> filterNappletsGlobal(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterNappletsByMutedAuthors(feedSettings, since, defaultSince)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

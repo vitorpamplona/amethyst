@@ -60,6 +60,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurposeGroup
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -284,6 +293,29 @@ private fun PurposeCard(
     }
 }
 
+/**
+ * The feed selection a discovery filter is searching within, in the app's own words.
+ *
+ * Hashtags and geohashes read out their own values — they are short, and the whole point is *which*
+ * hashtag. The author-based selections do not: a follow list is thousands of keys, and per relay it
+ * is a different slice of them, so naming the kind is the honest summary.
+ */
+@Composable
+private fun scopeLabel(scope: IFeedTopNavPerRelayFilter): String? =
+    when (scope) {
+        is GlobalTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_global)
+        is AllFollowsTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_follows)
+        is AuthorsTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_authors)
+        is MutedAuthorsTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_muted)
+        is AllCommunitiesTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_all_communities)
+        is FavoriteAlgoFeedTopNavPerRelayFilter -> stringRes(R.string.active_subs_scope_algo)
+        is HashtagTopNavPerRelayFilter -> scope.hashtags.sorted().joinToString(", ") { "#$it" }
+        is LocationTopNavPerRelayFilter -> scope.geotags.sorted().joinToString(", ")
+        // The community and the relay already name themselves — the community through its own
+        // entity row, the relay through the row's relay list — so repeating it here would be noise.
+        else -> null
+    }
+
 /** The entity's name, coloured as a link only when tapping it actually goes somewhere. */
 @Composable
 private fun EntityLabelText(
@@ -400,7 +432,12 @@ private fun EntityBlock(
     // Deliberately not falling back to `entity.detail`: that field is a developer breadcrumb set in
     // `commons`, where Android string resources do not exist, so it is hardcoded English and could
     // never be translated. A localized "no entity" line is better than an untranslatable one.
-    val label = resolved?.name ?: stringRes(R.string.active_subs_no_entity)
+    //
+    // A discovery filter has no entity by nature — it searches for chats and articles rather than
+    // serving ones already named — but it does carry the selection it searches within, which is a
+    // far better answer than "no entity". The scope arrives as a typed value for exactly this
+    // reason: the wording is chosen here, where translations exist.
+    val label = resolved?.name ?: entity.scope?.let { scopeLabel(it) } ?: stringRes(R.string.active_subs_no_entity)
 
     Column {
         Row(

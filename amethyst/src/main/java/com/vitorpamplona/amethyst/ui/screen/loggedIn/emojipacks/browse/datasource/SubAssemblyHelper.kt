@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavP
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasource.subassemblies.filterBrowseEmojiSetsByAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.browse.datasource.subassemblies.filterBrowseEmojiSetsByFollows
@@ -46,4 +47,4 @@ fun makeBrowseEmojiSetsFilter(
         is GlobalTopNavPerRelayFilterSet -> filterBrowseEmojiSetsGlobal(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterBrowseEmojiSetsByHashtag(feedSettings, since, defaultSince)
         else -> emptyList()
-    }
+    }.scopedTo(feedSettings)

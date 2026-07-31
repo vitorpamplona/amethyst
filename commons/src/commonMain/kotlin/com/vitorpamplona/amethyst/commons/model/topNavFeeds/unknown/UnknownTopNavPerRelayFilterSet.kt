@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.model.topNavFeeds.unknown
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-object UnknownTopNavPerRelayFilterSet : IFeedTopNavPerRelayFilterSet
+object UnknownTopNavPerRelayFilterSet : IFeedTopNavPerRelayFilterSet {
+    override fun scopeFor(relay: NormalizedRelayUrl): IFeedTopNavPerRelayFilter? = null
+}
