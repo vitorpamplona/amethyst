@@ -136,10 +136,7 @@ data class ActiveSubscriptionsState(
      * overstate every card, which is the mistake the per-entity rows already taught once.
      */
     val attributedFilters: Int = 0,
-) {
-    /** The largest purpose, so every card can draw its share against a common scale. */
-    val busiestPurposeFilters: Int = accounts.flatMap { it.purposes }.maxOfOrNull { it.filterCount } ?: 0
-}
+)
 
 class ActiveSubscriptionsViewModel : ViewModel() {
     private val _state = MutableStateFlow(ActiveSubscriptionsState())

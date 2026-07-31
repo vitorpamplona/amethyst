@@ -149,12 +149,17 @@ class AlwaysOnNotificationServiceManager(
                                 // The service layers are a background concern, so they stay tied to
                                 // the master switch and to somebody having opted in. A foreground-only
                                 // account must not start a foreground service that outlives the screen.
-                                if (masterEnabled && participating.isNotEmpty()) {
-                                    wasEnabled = true
-                                    enableServiceLayers()
-                                } else if (wasEnabled) {
-                                    disableServiceLayers()
-                                    wasEnabled = false
+                                //
+                                // Edge-triggered, deliberately. This flow re-emits whenever the account
+                                // map changes identity or the app crosses foreground — far more often
+                                // than the old boolean did — and ServiceWatchdogManager.schedule()
+                                // replaces its alarm with one starting `now + 5min`. Calling it on every
+                                // emission pushed the watchdog's first fire past every screen-on, so the
+                                // layer that exists to restart a dead service would never have run.
+                                val shouldRun = masterEnabled && participating.isNotEmpty()
+                                if (shouldRun != wasEnabled) {
+                                    if (shouldRun) enableServiceLayers() else disableServiceLayers()
+                                    wasEnabled = shouldRun
                                 }
                             }
                     }
