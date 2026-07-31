@@ -1938,6 +1938,16 @@
         <item quantity="one">Ansluten till %1$d relä</item>
         <item quantity="other">Ansluten till %1$d reläer</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">Ansluter till inbox-relän\u2026</string>
     <string name="always_on_notif_setting_title">Alltid på-notifieringstjänst</string>
     <string name="always_on_notif_setting_description">Upprätthåller en konstant anslutning till dina inbox-relän för omedelbar leverans av notifieringar. Visar en pågående notifiering. Använder mer batteri men säkerställer att du aldrig missar ett meddelande.</string>
@@ -2219,8 +2229,10 @@
     <string name="geohash_exclusive">Plats-exklusivt inlägg</string>
     <string name="geohash_exclusive_explainer">Endast anhängare av platsen kommer att se den. Dina allmänna anhängare kommer inte att se den.</string>
     <string name="hashtag_exclusive">Hashtag-exklusivt inlägg</string>
+    <string name="external_content_title">Externt innehåll</string>
     <string name="external_url_scope">Kommentera en webbplats</string>
     <string name="external_id_scope">Kommentera en extern resurs</string>
+    <string name="url_preview_open_in_browser">Öppna i webbläsare</string>
     <string name="long_form_reading_minutes">%1$d min läsning</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d spår</item>
@@ -2352,6 +2364,7 @@
     <string name="relay_group_create_title">Skapa en grupp</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="buzz_channel_create_title">Ny kanal</string>
+    <string name="buzz_forum_create_title">Nytt forum</string>
     <string name="buzz_channel_flag_private">Privat kanal</string>
     <string name="buzz_channel_flag_private_desc">Dold från kanallistan och endast via inbjudan. Av innebär att vem som helst på det här relät kan hitta och gå med i den.</string>
     <string name="buzz_channel_flag_forum">Forumkanal</string>
@@ -2394,6 +2407,8 @@
     <string name="relay_group_delete_confirm">Radera ”%1$s”? Det tar bort gruppen och dess historik för alla, och kan inte ångras.</string>
     <string name="buzz_channel_delete">Radera kanal</string>
     <string name="buzz_channel_delete_confirm">Radera ”%1$s”? Det tar bort kanalen och dess meddelanden för alla, och kan inte ångras.</string>
+    <string name="buzz_channel_archive">Arkivera kanal</string>
+    <string name="buzz_channel_unarchive">Avarkivera kanal</string>
     <string name="relay_group_threads_title">Trådar</string>
     <string name="relay_group_pin_message">Fäst meddelande</string>
     <string name="relay_group_unpin_message">Lossa meddelande</string>
@@ -2536,6 +2551,9 @@
     <string name="share_to_dm_title">Skicka till…</string>
     <string name="share_to_dm_start_new">Nytt meddelande</string>
     <string name="share_target_as_highlight">Ny höjdpunkt</string>
+    <string name="share_target_as_picture">Ny bild</string>
+    <string name="share_target_as_short_video">Ny kortfilm</string>
+    <string name="share_target_as_video">Ny video</string>
     <string name="new_highlight_title">Ny höjdpunkt</string>
     <string name="new_highlight_passage_label">Markerad text</string>
     <string name="new_highlight_passage_placeholder">Vad fastnade du för?</string>
@@ -3298,6 +3316,7 @@
     <string name="buzz_import_empty_body">Du verkar inte vara medlem i några kanaler på det här relät än. Acceptera arbetsyteinbjudan i webbläsaren först och försök sedan igen.</string>
     <string name="relay_group_section_channels">Kanaler</string>
     <string name="relay_group_section_forums">Forum</string>
+    <string name="relay_group_section_archived">Arkiverade</string>
     <string name="buzz_agent_working">Arbetar…</string>
     <string name="relay_group_add_member">Lägg till medlem</string>
     <string name="buzz_community_add_people">Lägg till personer i den här arbetsytan</string>
@@ -4624,13 +4643,4 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
-    <string name="buzz_channel_archive">Arkivera kanal</string>
-    <string name="buzz_channel_unarchive">Avarkivera kanal</string>
-    <string name="buzz_forum_create_title">Nytt forum</string>
-    <string name="external_content_title">Externt innehåll</string>
-    <string name="relay_group_section_archived">Arkiverade</string>
-    <string name="share_target_as_picture">Ny bild</string>
-    <string name="share_target_as_short_video">Ny kortfilm</string>
-    <string name="share_target_as_video">Ny video</string>
-    <string name="url_preview_open_in_browser">Öppna i webbläsare</string>
 </resources>

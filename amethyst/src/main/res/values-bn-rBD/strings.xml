@@ -1282,6 +1282,16 @@
         <item quantity="one">%1$d টি relay-তে সংযুক্ত</item>
         <item quantity="other">%1$d টি relay-তে সংযুক্ত</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">ইনবক্স relays-এ সংযুক্ত হচ্ছে…</string>
     <string name="always_on_notif_setting_title">সর্বদা-চালু বিজ্ঞপ্তি সেবা</string>
     <string name="always_on_notif_setting_description">তাৎক্ষণিক বিজ্ঞপ্তি প্রদানের জন্য আপনার ইনবক্স relays-এর সাথে স্থায়ী সংযোগ বজায় রাখে। একটি চলমান বিজ্ঞপ্তি দেখায়। বেশি ব্যাটারি ব্যবহার করে কিন্তু নিশ্চিত করে যে কোনো বার্তা মিস হবে না।</string>

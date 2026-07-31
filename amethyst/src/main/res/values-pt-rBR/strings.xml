@@ -1938,6 +1938,16 @@
         <item quantity="one">Conectado a %1$d relay</item>
         <item quantity="other">Conectado a %1$d relays</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">Conectando aos relays de caixa de entrada\u2026</string>
     <string name="always_on_notif_setting_title">Serviço de notificações sempre ativo</string>
     <string name="always_on_notif_setting_description">Mantém uma conexão persistente com seus relays de caixa de entrada para entrega instantânea de notificações. Mostra uma notificação contínua. Usa mais bateria, mas garante que você nunca perca uma mensagem.</string>
@@ -2217,8 +2227,10 @@
     <string name="geohash_exclusive">Postagem exclusiva de localização</string>
     <string name="geohash_exclusive_explainer">Somente seguidores da localização verão isso. Seus seguidores gerais não verão isso.</string>
     <string name="hashtag_exclusive">Postagem exclusiva de Hashtag</string>
+    <string name="external_content_title">Conteúdo externo</string>
     <string name="external_url_scope">Comentar em um site</string>
     <string name="external_id_scope">Comentar em um recurso externo</string>
+    <string name="url_preview_open_in_browser">Abrir no navegador</string>
     <string name="long_form_reading_minutes">%1$d min de leitura</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d faixa</item>
@@ -2350,6 +2362,7 @@
     <string name="relay_group_create_title">Criar um grupo</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="buzz_channel_create_title">Novo canal</string>
+    <string name="buzz_forum_create_title">Novo fórum</string>
     <string name="buzz_channel_flag_private">Canal privado</string>
     <string name="buzz_channel_flag_private_desc">Oculto da lista de canais e apenas por convite. Desligado significa que qualquer pessoa neste relay pode encontrá-lo e entrar.</string>
     <string name="buzz_channel_flag_forum">Canal de fórum</string>
@@ -2392,6 +2405,8 @@
     <string name="relay_group_delete_confirm">Excluir “%1$s”? Isso remove o grupo e seu histórico para todos e não pode ser desfeito.</string>
     <string name="buzz_channel_delete">Excluir canal</string>
     <string name="buzz_channel_delete_confirm">Excluir “%1$s”? Isso remove o canal e suas mensagens para todos e não pode ser desfeito.</string>
+    <string name="buzz_channel_archive">Arquivar canal</string>
+    <string name="buzz_channel_unarchive">Desarquivar canal</string>
     <string name="relay_group_threads_title">Tópicos</string>
     <string name="relay_group_pin_message">Fixar mensagem</string>
     <string name="relay_group_unpin_message">Desafixar mensagem</string>
@@ -2534,6 +2549,9 @@
     <string name="share_to_dm_title">Enviar para…</string>
     <string name="share_to_dm_start_new">Nova mensagem</string>
     <string name="share_target_as_highlight">Novo destaque</string>
+    <string name="share_target_as_picture">Nova Foto</string>
+    <string name="share_target_as_short_video">Novo Vídeo Curto</string>
+    <string name="share_target_as_video">Novo Vídeo</string>
     <string name="new_highlight_title">Novo destaque</string>
     <string name="new_highlight_passage_label">Texto destacado</string>
     <string name="new_highlight_passage_placeholder">O que chamou sua atenção?</string>
@@ -3296,6 +3314,7 @@
     <string name="buzz_import_empty_body">Você ainda não parece ser membro de nenhum canal neste relay. Aceite primeiro o convite do espaço de trabalho no navegador e tente novamente.</string>
     <string name="relay_group_section_channels">Canais</string>
     <string name="relay_group_section_forums">Fóruns</string>
+    <string name="relay_group_section_archived">Arquivados</string>
     <string name="buzz_agent_working">Trabalhando…</string>
     <string name="relay_group_add_member">Adicionar membro</string>
     <string name="buzz_community_add_people">Adicionar pessoas a este espaço de trabalho</string>
@@ -4621,13 +4640,4 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
-    <string name="buzz_channel_archive">Arquivar canal</string>
-    <string name="buzz_channel_unarchive">Desarquivar canal</string>
-    <string name="buzz_forum_create_title">Novo fórum</string>
-    <string name="external_content_title">Conteúdo externo</string>
-    <string name="relay_group_section_archived">Arquivados</string>
-    <string name="share_target_as_picture">Nova Foto</string>
-    <string name="share_target_as_short_video">Novo Vídeo Curto</string>
-    <string name="share_target_as_video">Novo Vídeo</string>
-    <string name="url_preview_open_in_browser">Abrir no navegador</string>
 </resources>

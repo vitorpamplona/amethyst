@@ -2022,6 +2022,16 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="many">Podłączono do %1$d transmiterów</item>
         <item quantity="other">Podłączono do %1$d transmiterów</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">Łączenie z transmiterami odbiorczymi\u2026</string>
     <string name="always_on_notif_setting_title">Usługa powiadomień zawsze włączona</string>
     <string name="always_on_notif_setting_description">Utrzymuje stałe połączenie z transmiterami odbiorczymi, aby zapewnić natychmiastowe dostarczanie powiadomień. Wyświetla bieżące powiadomienia. Zużywa więcej baterii, ale gwarantuje, że nigdy nie przegapisz żadnej wiadomości.</string>
@@ -2236,7 +2246,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="home_content_type_ephemeral_chat">Czaty efemeryczne</string>
     <string name="home_content_type_interactive_stories">Interaktywne opowieści</string>
     <string name="home_content_type_chess">Szachy</string>
-    <string name="home_content_type_attestations">Świadectwa</string>
+    <string name="home_content_type_birds">Obserwacje ptaków</string>
+    <string name="home_content_type_attestations">Certyfikaty</string>
     <string name="home_content_type_nips">Szkice NIP</string>
     <string name="home_content_type_music">Muzyka &amp; audio</string>
     <string name="home_content_type_podcasts">Podcasty</string>
@@ -2302,8 +2313,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="geohash_exclusive">Post ekskluzywny dla lokalizacji</string>
     <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji to zobaczą. Twoi ogólni obserwatorzy nie zobaczą tego.</string>
     <string name="hashtag_exclusive">Wpis hasztagowy</string>
+    <string name="external_content_title">Treści zewnętrzne</string>
     <string name="external_url_scope">Skomentuj na stronie internetowej</string>
     <string name="external_id_scope">Skomentuj na zewnętrznym serwisie</string>
+    <string name="url_preview_open_in_browser">Otwórz w przeglądarce</string>
     <string name="long_form_reading_minutes">Czas czytania: %1$d min.</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d utwór</item>
@@ -2637,6 +2650,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="share_to_dm_title">Wyślij do…</string>
     <string name="share_to_dm_start_new">Nowa wiadomość</string>
     <string name="share_target_as_highlight">Nowe wyróżnienie</string>
+    <string name="share_target_as_picture">Nowe zdjęcie</string>
+    <string name="share_target_as_short_video">Nowy filmik</string>
+    <string name="share_target_as_video">Nowe wideo</string>
     <string name="new_highlight_title">Nowe wyróżnienie</string>
     <string name="new_highlight_passage_label">Wyróżniony tekst</string>
     <string name="new_highlight_passage_placeholder">Co szczególnie zwróciło twoją uwagę?</string>
@@ -3339,8 +3355,20 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <string name="buzz_system_unknown">%1$s: %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_huddle_started">🔊 %1$s rozpoczął/a naradę</string>
+    <string name="buzz_huddle_joined">🔊 %1$s dołączył do zgromadzenia</string>
+    <string name="buzz_huddle_left">🔊 %1$s opuścił zgromadzenie</string>
+    <string name="buzz_huddle_ended">🔊 Zebranie zakończone</string>
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_job_requested">⚙️ %1$s zapytał o pracę</string>
+    <string name="buzz_job_accepted">⚙️ %1$s zaakceptował ofertę</string>
+    <string name="buzz_job_progress">⚙️ Postęp pracy</string>
+    <string name="buzz_job_result">⚙️ Wynik pracy</string>
+    <string name="buzz_job_cancelled">⚙️ Praca anulowana</string>
+    <string name="buzz_job_error">⚠️ Błąd Zadania</string>
     <!-- Buzz forum votes (kind 45002). -->
+    <string name="buzz_forum_upvoted">◆ %1$s głosował na post</string>
+    <string name="buzz_forum_downvoted">◆ %1$s ocenił post negatywnie</string>
     <string name="buzz_canvas_title">Płótno</string>
     <string name="buzz_canvas_empty">Żadne płótno nie zostało jeszcze udostępnione w tym projekcie.</string>
     <string name="buzz_canvas_edit">Edytuj płótno</string>
@@ -3382,6 +3410,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_dm_workspace">Przestrzeń robocza</string>
     <string name="buzz_dm_recipients">Do</string>
     <string name="buzz_dm_add_hint">Dodaj kogoś (npub lub hex)</string>
+    <string name="buzz_add_people_hint">Szukaj wg nazwy, NIP-05 lub npub</string>
+    <string name="buzz_add_people_empty">Nie znaleziono żadnych wyników. Spróbuj wpisać inne imię i nazwisko, adres NIP-05 lub wklej numer npub.</string>
     <string name="buzz_dm_start">Rozpocznij konwersację</string>
     <string name="buzz_dm_opening">Otwieranie…</string>
     <string name="buzz_dm_remove">Usuń</string>
@@ -3405,6 +3435,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_import_empty_body">Wygląda na to, że nie jesteś jeszcze członkiem żadnego kanału w tym transmiterze. Najpierw zaakceptuj zaproszenie do przestrzeni roboczej w przeglądarce, a następnie spróbuj ponownie.</string>
     <string name="relay_group_section_channels">Kanały</string>
     <string name="relay_group_section_forums">Fora</string>
+    <string name="relay_group_section_archived">Zarchiwizowane</string>
     <string name="buzz_agent_working">Pracuję…</string>
     <string name="relay_group_add_member">Dodaj członka</string>
     <string name="buzz_community_add_people">Dodaj osoby do tej przestrzeni roboczej</string>
@@ -3417,6 +3448,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_pin">Przypnij kanał</string>
     <string name="buzz_unpin">Odepnij kanał</string>
     <string name="buzz_dm_section_empty">Brak konwersacji</string>
+    <plurals name="buzz_dm_hidden_count">
+        <item quantity="one">%1$d ukryta rozmowa</item>
+        <item quantity="few">%1$d ukrytych rozmów</item>
+        <item quantity="many">%1$d ukrytych rozmów</item>
+        <item quantity="other">%1$d ukryte rozmowy</item>
+    </plurals>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">Zobacz %1$d rozmowę więcej</item>
         <item quantity="few">Zobacz %1$d rozmów więcej</item>
@@ -4679,14 +4716,31 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="new_conversation_location_pro_2">Kompatybilny z Bitchatem; dociera do pobliskich użytkowników na tych samych transmiterach.</string>
     <string name="new_conversation_location_con_1">Publiczny i efemeryczny – brak historii, każdy uczestnik może go odczytać.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_job_board_title">Zaległości</string>
+    <string name="buzz_workflow_runs_title">Uruchomienia Workflow</string>
+    <string name="buzz_agent_work_title">Praca agenta</string>
+    <string name="buzz_workflow_new_run">Nowe uruchomienie</string>
+    <string name="buzz_workflow_section_awaiting">Wymaga Twojej zgody</string>
     <string name="buzz_workflow_section_active">Pracuje teraz</string>
     <string name="buzz_workflow_section_shipped">Wysłano</string>
     <string name="buzz_workflow_section_closed">Zamknięte</string>
     <string name="buzz_workflow_gate_needs_you">Wymaga zatwierdzenia</string>
     <string name="buzz_workflow_gate_awaiting">Oczekiwanie na zatwierdzenie</string>
     <string name="buzz_workflow_no_description">(brak opisu)</string>
+    <string name="buzz_workflow_id_prefix">Workflow: %1$s</string>
     <string name="buzz_workflow_by">przez</string>
+    <string name="buzz_workflow_waiting_on">oczekiwanie na</string>
+    <string name="buzz_workflow_readonly_approver">To Ty jesteś osobą zatwierdzającą, ale to konto nie ma uprawnień do podejmowania decyzji.</string>
+    <string name="buzz_workflow_deny">Odrzuć</string>
+    <string name="buzz_workflow_approve_open_pr">Zatwierdź &amp; otwórz PR</string>
+    <string name="buzz_workflow_approve_title">Zatwierdzić to działanie?</string>
+    <string name="buzz_workflow_deny_title">Zabronić to działanie?</string>
+    <string name="buzz_workflow_approve_body">Runner wypchnie swoją gałąź i otworzy pull request dla „%1$s”. Zatwierdzanie nigdy nie łączy się ani nie wdraża-to nadal dzieje się na GitHubie.</string>
+    <string name="buzz_workflow_deny_body">Praca agenta dla \"%1$s\" zostanie odrzucona. Tej operacji nie można cofnąć.</string>
+    <string name="buzz_workflow_this_run">ten bieg</string>
     <string name="buzz_workflow_cancel">Anuluj</string>
+    <string name="buzz_workflow_waiting_for_approval">Oczekiwanie na zatwierdzenie</string>
+    <string name="buzz_workflow_triggered_toast">Uruchom zatwierdzone</string>
     <string name="buzz_workflow_trigger_failed_toast">Nie udało się uruchomić zadania — sprawdź, czy możesz publikować posty w tej przestrzeni roboczej</string>
     <string name="buzz_workflow_approved_toast">Zatwierdzono — autor tworzy pull request</string>
     <string name="buzz_workflow_denied_toast">Odmowa – prace zostały odrzucone</string>
@@ -4725,5 +4779,39 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_workflow_empty_desc">Naciśnij „Nowe uruchomienie” w celu uruchomienia procesu. Moduł wykonawczy realizuje zadanie i zatrzymuje się na etapie zatwierdzenia — przed wysłaniem jakichkolwiek danych zatwierdzenie musi udzielić osoba.</string>
     <!-- Buzz agent attestation -->
     <string name="buzz_attest_topbar">Świadectwa</string>
+    <string name="buzz_attest_hold_title">Zachowaj certyfikat</string>
+    <string name="buzz_attest_holding">Posiadam certyfikat dotyczący tego konta. Jest on dołączany automatycznie podczas uwierzytelniania się na transmiterze Buzz.</string>
+    <string name="buzz_attest_grants_prefix">Dotacje: %1$s</string>
+    <string name="buzz_attest_grants_unrestricted">wszelkiego rodzaju – w dowolnym czasie (nieograniczony)</string>
+    <string name="buzz_attest_remove">Usuń</string>
+    <string name="buzz_attest_hold_desc">Wklej podpisany przez właściciela tag autoryzacyjny wydany dla tego konta, aby uwierzytelnić się w przestrzeni roboczej Buzz jako członek wirtualny.</string>
+    <string name="buzz_attest_authtag_label">tag autoryzacji JSON</string>
+    <string name="buzz_attest_hold_button">Przeprowadzić certyfikację</string>
+    <string name="buzz_attest_readonly_title">Wymagany klucz lokalny</string>
+    <string name="buzz_attest_readonly_desc">Certyfikat NIP-OA stanowi podpis pod zaszyfrowanym zobowiązaniem, a nie zdarzeniem Nostr, dlatego może je wygenerować wyłącznie podpisujący, który posiada nieprzetworzony klucz prywatny użytkownika. To konto korzysta ze zdalnego (bunkier NIP-46) lub zewnętrznego (NIP-55) sygnatariusza, który nie może potwierdzić certyfikatu.</string>
+    <string name="buzz_attest_form_desc">Upoważnij klucz publiczny agenta do publikowania w Twojej przestrzeni roboczej bez konieczności rejestrowania tego klucza. Agent dołącza do swoich zdarzeń poniższy sygnowany tag.</string>
+    <string name="buzz_attest_agent_label">Agent (wyszukaj nazwę lub wklej npub / hex)</string>
+    <string name="buzz_attest_agent_paste_error">Wprowadź npub lub 64-char hex klucz.</string>
+    <string name="buzz_attest_change_agent">Zmień agenta</string>
+    <string name="buzz_attest_conditions_hint">Warunki (opcjonalnie) — pozostaw puste, aby uzyskać certyfikację bez ograniczeń.</string>
+    <string name="buzz_attest_kind_label">Ogranicz do typu (0–65535)</string>
+    <string name="buzz_attest_after_label">Tylko zdarzenia po (unix sekund)</string>
+    <string name="buzz_attest_before_label">Tylko zdarzenia przed (unix sekund)</string>
+    <string name="buzz_attest_generate">Generuj certyfikat</string>
+    <string name="buzz_attest_signed_title">Podpisany certyfikat</string>
+    <string name="buzz_attest_copy_tag">Kopiuj tag</string>
+    <string name="buzz_attest_warning">⚠ Dokument ten należy przekazać wyłącznie operatorowi agenta. Dopóki dokument ten jest ważny, a użytkownik pozostaje członkiem przestrzeni roboczej, upoważnienie to pozwala agentowi na publikowanie postów jako członek zgodnie z powyższymi warunkami.</string>
     <!-- Buzz agent persona editor -->
+    <string name="buzz_persona_new_title">Nowa persona</string>
+    <string name="buzz_persona_edit_title">Edytuj persona</string>
+    <string name="buzz_persona_slug">Slug (persona id)</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' lub \'_\'. Nie można zmienić po utworzeniu.</string>
+    <string name="buzz_persona_display_name">Nazwa wyświetlana</string>
+    <string name="buzz_persona_system_prompt">Komunikat systemowy</string>
+    <string name="buzz_persona_model">Model (opcjonalnie)</string>
+    <string name="buzz_persona_provider">Dostawca (opcjonalnie)</string>
+    <string name="buzz_persona_runtime">Czas pracy (opcjonalnie)</string>
+    <string name="buzz_persona_avatar">Adres URL awatara (opcjonalnie)</string>
+    <string name="buzz_persona_publishing">Publikowanie…</string>
+    <string name="buzz_persona_publish">Publikuj persona</string>
 </resources>

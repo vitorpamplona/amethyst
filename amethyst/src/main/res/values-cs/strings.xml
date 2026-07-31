@@ -2022,6 +2022,16 @@
         <item quantity="many">Připojeno k %1$d relay</item>
         <item quantity="other">Připojeno k %1$d relays</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">Připojování k inbox relayím\u2026</string>
     <string name="always_on_notif_setting_title">Služba trvalých oznámení</string>
     <string name="always_on_notif_setting_description">Udržuje trvalé připojení k vašim inbox relayím pro okamžité doručování oznámení. Zobrazuje průběžné oznámení. Spotřebovává více baterie, ale zajišťuje, že nezmeškáte žádnou zprávu.</string>
@@ -2303,8 +2313,10 @@
     <string name="geohash_exclusive">Lokace-Exkluzívní příspěvek</string>
     <string name="geohash_exclusive_explainer">Uvidí to pouze následovníci umístění. Tvoji obecní následovníci to neuvidí.</string>
     <string name="hashtag_exclusive">Hashtag-exkluzivní příspěvek</string>
+    <string name="external_content_title">Externí obsah</string>
     <string name="external_url_scope">Komentář k webové stránce</string>
     <string name="external_id_scope">Komentář k externímu zdroji</string>
+    <string name="url_preview_open_in_browser">Otevřít v prohlížeči</string>
     <string name="long_form_reading_minutes">%1$d min čtení</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d stopa</item>
@@ -2440,6 +2452,7 @@
     <string name="relay_group_create_title">Vytvořit skupinu</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="buzz_channel_create_title">Nový kanál</string>
+    <string name="buzz_forum_create_title">Nové fórum</string>
     <string name="buzz_channel_flag_private">Soukromý kanál</string>
     <string name="buzz_channel_flag_private_desc">Skrytý ze seznamu kanálů a jen na pozvání. Vypnuto znamená, že ho může najít a připojit se k němu kdokoli na tomto relayi.</string>
     <string name="buzz_channel_flag_forum">Fórový kanál</string>
@@ -2482,6 +2495,8 @@
     <string name="relay_group_delete_confirm">Smazat „%1$s“? Odstraní to skupinu a její historii pro všechny a nelze to vrátit zpět.</string>
     <string name="buzz_channel_delete">Smazat kanál</string>
     <string name="buzz_channel_delete_confirm">Smazat „%1$s“? Odstraní to kanál a jeho zprávy pro všechny a nelze to vrátit zpět.</string>
+    <string name="buzz_channel_archive">Archivovat kanál</string>
+    <string name="buzz_channel_unarchive">Zrušit archivaci kanálu</string>
     <string name="relay_group_threads_title">Vlákna</string>
     <string name="relay_group_pin_message">Připnout zprávu</string>
     <string name="relay_group_unpin_message">Odepnout zprávu</string>
@@ -2634,6 +2649,9 @@
     <string name="share_to_dm_title">Odeslat…</string>
     <string name="share_to_dm_start_new">Nová zpráva</string>
     <string name="share_target_as_highlight">Nové zvýraznění</string>
+    <string name="share_target_as_picture">Nový obrázek</string>
+    <string name="share_target_as_short_video">Nové krátké video</string>
+    <string name="share_target_as_video">Nové video</string>
     <string name="new_highlight_title">Nové zvýraznění</string>
     <string name="new_highlight_passage_label">Zvýrazněný text</string>
     <string name="new_highlight_passage_placeholder">Co vás zaujalo?</string>
@@ -3416,6 +3434,7 @@
     <string name="buzz_import_empty_body">Zdá se, že zatím nejste členem žádného kanálu na tomto relayi. Nejprve přijměte pozvánku do pracovního prostoru v prohlížeči a pak to zkuste znovu.</string>
     <string name="relay_group_section_channels">Kanály</string>
     <string name="relay_group_section_forums">Fóra</string>
+    <string name="relay_group_section_archived">Archivované</string>
     <string name="buzz_agent_working">Pracuji…</string>
     <string name="relay_group_add_member">Přidat člena</string>
     <string name="buzz_community_add_people">Přidat lidi do tohoto pracovního prostoru</string>
@@ -4792,13 +4811,4 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
-    <string name="buzz_channel_archive">Archivovat kanál</string>
-    <string name="buzz_channel_unarchive">Zrušit archivaci kanálu</string>
-    <string name="buzz_forum_create_title">Nové fórum</string>
-    <string name="external_content_title">Externí obsah</string>
-    <string name="relay_group_section_archived">Archivované</string>
-    <string name="share_target_as_picture">Nový obrázek</string>
-    <string name="share_target_as_short_video">Nové krátké video</string>
-    <string name="share_target_as_video">Nové video</string>
-    <string name="url_preview_open_in_browser">Otevřít v prohlížeči</string>
 </resources>
