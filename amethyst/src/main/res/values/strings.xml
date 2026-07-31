@@ -2093,7 +2093,7 @@
          their profile screen. Naming the job avoids an active misreading. -->
     <string name="relay_purpose_relay_list_finder">Relay List Finder</string>
     <string name="relay_purpose_observing_profiles">Observing Profiles</string>
-    <string name="relay_purpose_your_account">Your Account\'s data</string>
+    <string name="relay_purpose_your_account">Account\'s data</string>
     <string name="relay_purpose_home_feed">Home Feed</string>
     <string name="relay_purpose_relay_groups">Relay Groups</string>
     <plurals name="active_subs_groups">
