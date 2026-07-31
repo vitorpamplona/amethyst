@@ -592,7 +592,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
         composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
 
-        composableFromEndArgs<Route.ActiveSubscriptions> { ActiveSubscriptionsScreen() }
+        composableFromEndArgs<Route.ActiveSubscriptions> { ActiveSubscriptionsScreen(accountViewModel, nav) }
         composableFromEnd<Route.EventSync> { EventSyncScreen(accountViewModel, nav) }
         composableFromEnd<Route.RequestToVanish> { RequestToVanishScreen(accountViewModel, nav) }
         composableFromEnd<Route.VanishEvents> { VanishEventsScreen(accountViewModel, nav) }
