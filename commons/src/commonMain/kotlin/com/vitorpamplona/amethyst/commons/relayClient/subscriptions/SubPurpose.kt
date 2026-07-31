@@ -63,8 +63,20 @@ enum class SubPurpose(
     /** NIP-65 relay lists, DM relay lists, blocked/trusted relay sets — outbox discovery. */
     RELAY_LISTS(SubPurposeGroup.ACCOUNT, runsInBackground = true),
 
-    /** Kind-3 follows and the web-of-trust sets derived from them. */
-    FOLLOW_LISTS(SubPurposeGroup.ACCOUNT, runsInBackground = true),
+    /**
+     * Browsing other people's NIP-51 follow sets — the Follow Sets feed.
+     *
+     * Named for kind-3 follows and the web-of-trust, and grouped under the account for it, but every
+     * producer is a browse filter on a screen (`discover/nip51FollowSets`). The account's own follows
+     * ride [ACCOUNT_DATA] with the rest of its lists, so nothing here outlives the screen and the
+     * `runsInBackground = true` it used to carry was simply untrue.
+     *
+     * That flag is read by people, not by code, which is exactly why a wrong one is worth fixing:
+     * anyone checking a backgrounded breakdown against it would have cleared this as allowed.
+     *
+     * ([MINT_DIRECTORY] is the other account-grouped purpose that is screen-lived.)
+     */
+    FOLLOW_LISTS(SubPurposeGroup.ACCOUNT),
 
     /** Reports (kind 1984), mute lists, spam and ban state. */
     MODERATION(SubPurposeGroup.ACCOUNT, runsInBackground = true),
