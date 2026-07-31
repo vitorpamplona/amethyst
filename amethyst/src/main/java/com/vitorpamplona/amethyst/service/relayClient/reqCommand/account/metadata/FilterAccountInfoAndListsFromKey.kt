@@ -120,6 +120,7 @@ fun filterAccountInfoAndListsFromKey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
                     kinds = AccountInfoAndListsFromKeyKinds,
                     authors = pubkeys,
                     limit = 20 * pubkeys.size,
@@ -131,6 +132,7 @@ fun filterAccountInfoAndListsFromKey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
                     kinds = AccountInfoAndListsFromKeyKinds2,
                     authors = pubkeys,
                     limit = 80 * pubkeys.size,
@@ -149,6 +151,7 @@ fun filterAccountInfoAndListsFromKey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
                     kinds = AmethystMetadataKinds,
                     authors = pubkeys,
                     tags = AmethystMetadataTagMapFilter,

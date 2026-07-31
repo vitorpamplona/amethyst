@@ -55,6 +55,7 @@ fun filterBookmarksAndReportsFromKey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
                     kinds = ReportsAndBookmarksFromKeyKinds,
                     authors = pubkeys,
                     since = since,

@@ -59,6 +59,7 @@ fun filterFollowsAndMutesFromKey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
                     kinds = FollowAndMutesFromKeyKinds,
                     authors = pubkeys,
                     limit = 100 * pubkeys.size,

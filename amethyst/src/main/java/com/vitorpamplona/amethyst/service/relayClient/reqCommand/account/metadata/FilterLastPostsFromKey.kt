@@ -39,6 +39,7 @@ fun filterLastPostsFromKey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
                     authors = pubkeys,
                     limit = 100 * pubkeys.size,
                     since = since,

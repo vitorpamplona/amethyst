@@ -79,6 +79,12 @@ fun filterBasicAccountInfoFromKeys(
     relay: NormalizedRelayUrl,
     otherAccounts: List<HexKey>?,
     since: Long?,
+    /**
+     * Who wants these profiles. The `authors` here are OTHER people — the account-switcher's
+     * avatars — so unlike every other builder in this package the authors are NOT the accounts
+     * asking, and attribution has to be passed in or the row reads as unattributed.
+     */
+    requestedBy: List<HexKey>,
 ): List<RelayBasedFilter> {
     if (otherAccounts.isNullOrEmpty()) return emptyList()
 
@@ -88,6 +94,7 @@ fun filterBasicAccountInfoFromKeys(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = requestedBy,
                     kinds = BasicAccountInfoKinds,
                     authors = otherAccounts.toList(),
                     limit = otherAccounts.size * BasicAccountInfoKinds.size,
@@ -99,6 +106,7 @@ fun filterBasicAccountInfoFromKeys(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = requestedBy,
                     kinds = BasicAccountInfoKinds2,
                     authors = otherAccounts.toList(),
                     limit = otherAccounts.size * BasicAccountInfoKinds2.size,

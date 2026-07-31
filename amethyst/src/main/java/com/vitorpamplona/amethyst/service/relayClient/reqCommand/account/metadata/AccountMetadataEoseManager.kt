@@ -78,7 +78,7 @@ class AccountMetadataEoseManager(
                 filterFollowsAndMutesFromKey(relay, pubkeys, relaySince),
                 filterBookmarksAndReportsFromKey(relay, pubkeys, relaySince),
                 filterLastPostsFromKey(relay, pubkeys, relaySince ?: TimeUtils.oneMonthAgo()),
-                filterBasicAccountInfoFromKeys(relay, otherAccounts.toList(), relaySince),
+                filterBasicAccountInfoFromKeys(relay, otherAccounts.toList(), relaySince, pubkeys),
             ).flatten()
         }
     }
