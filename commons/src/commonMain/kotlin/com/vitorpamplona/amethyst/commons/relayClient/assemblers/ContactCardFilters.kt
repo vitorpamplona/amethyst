@@ -65,7 +65,7 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
  */
 fun filterContactCardsByAuthorInTheRelay(
     relay: NormalizedRelayUrl,
-    author: HexKey,
+    authors: List<HexKey>,
     since: Long?,
     limit: Int = 500,
 ): RelayBasedFilter =
@@ -75,9 +75,9 @@ fun filterContactCardsByAuthorInTheRelay(
             ExplainedFilter(
                 purpose = SubPurpose.PROFILE_METADATA,
                 // This variant fetches an account's OWN contact card, so the author is the owner.
-                accountPubKeys = listOfNotNull(author),
+                accountPubKeys = authors,
                 kinds = ContactCardKindList,
-                authors = listOf(author),
+                authors = authors,
                 limit = limit,
                 since = since,
             ),

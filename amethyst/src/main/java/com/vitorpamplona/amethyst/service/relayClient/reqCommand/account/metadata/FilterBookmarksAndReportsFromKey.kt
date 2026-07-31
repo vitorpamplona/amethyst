@@ -44,10 +44,10 @@ val ReportsAndBookmarksFromKeyKinds =
 
 fun filterBookmarksAndReportsFromKey(
     relay: NormalizedRelayUrl,
-    pubkey: HexKey?,
+    pubkeys: List<HexKey>,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey.isNullOrEmpty()) return emptyList()
+    if (pubkeys.isEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
@@ -56,7 +56,7 @@ fun filterBookmarksAndReportsFromKey(
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = ReportsAndBookmarksFromKeyKinds,
-                    authors = listOf(pubkey),
+                    authors = pubkeys,
                     since = since,
                 ),
         ),

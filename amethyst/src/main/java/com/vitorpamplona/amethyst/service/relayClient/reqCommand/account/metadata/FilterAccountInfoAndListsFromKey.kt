@@ -109,10 +109,10 @@ val AmethystMetadataTagMapFilter = mapOf("d" to listOf(APP_SPECIFIC_DATA_D_TAG))
 
 fun filterAccountInfoAndListsFromKey(
     relay: NormalizedRelayUrl,
-    pubkey: HexKey,
+    pubkeys: List<HexKey>,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey.isEmpty()) return emptyList()
+    if (pubkeys.isEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
@@ -121,8 +121,8 @@ fun filterAccountInfoAndListsFromKey(
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = AccountInfoAndListsFromKeyKinds,
-                    authors = listOf(pubkey),
-                    limit = 20,
+                    authors = pubkeys,
+                    limit = 20 * pubkeys.size,
                     since = since,
                 ),
         ),
@@ -132,8 +132,8 @@ fun filterAccountInfoAndListsFromKey(
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = AccountInfoAndListsFromKeyKinds2,
-                    authors = listOf(pubkey),
-                    limit = 80,
+                    authors = pubkeys,
+                    limit = 80 * pubkeys.size,
                     since = since,
                 ),
         ),
@@ -141,7 +141,7 @@ fun filterAccountInfoAndListsFromKey(
         // Addressable — one card per target user — hence its own larger-limit filter.
         filterContactCardsByAuthorInTheRelay(
             relay = relay,
-            author = pubkey,
+            authors = pubkeys,
             since = since,
         ),
         RelayBasedFilter(
@@ -150,9 +150,9 @@ fun filterAccountInfoAndListsFromKey(
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = AmethystMetadataKinds,
-                    authors = listOf(pubkey),
+                    authors = pubkeys,
                     tags = AmethystMetadataTagMapFilter,
-                    limit = 1,
+                    limit = 1 * pubkeys.size,
                     since = since,
                 ),
         ),

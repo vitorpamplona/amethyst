@@ -48,10 +48,10 @@ val FollowAndMutesFromKeyKinds =
 
 fun filterFollowsAndMutesFromKey(
     relay: NormalizedRelayUrl,
-    pubkey: HexKey,
+    pubkeys: List<HexKey>,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey.isEmpty()) return emptyList()
+    if (pubkeys.isEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
@@ -60,8 +60,8 @@ fun filterFollowsAndMutesFromKey(
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
                     kinds = FollowAndMutesFromKeyKinds,
-                    authors = listOf(pubkey),
-                    limit = 100,
+                    authors = pubkeys,
+                    limit = 100 * pubkeys.size,
                     since = since,
                 ),
         ),

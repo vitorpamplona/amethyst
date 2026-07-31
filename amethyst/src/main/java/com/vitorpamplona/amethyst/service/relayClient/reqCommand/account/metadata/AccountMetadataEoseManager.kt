@@ -20,66 +20,96 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
+/**
+ * Each account's own profile, lists and recent posts — for **every** logged-in account, in one
+ * subscription.
+ *
+ * Every filter here is `authors`-keyed, so a relay that several accounts read from can be asked
+ * about all of them at once by widening `authors` rather than opening a REQ per account. This was
+ * the largest single contributor to blowing a relay's `max_subscriptions`: seven filters in a
+ * subscription, repeated once per account.
+ *
+ * The per-account `limit`s are summed rather than shared. These are mostly replaceable events, so
+ * the limit is a safety bound rather than a page size, and scaling it by the number of accounts
+ * keeps each one exactly the headroom it had alone.
+ */
 class AccountMetadataEoseManager(
     client: INostrClient,
     allKeys: () -> Set<AccountQueryState>,
-) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
-    override fun user(key: AccountQueryState) = key.account.userProfile()
+) : SingleSubEoseManager<AccountQueryState>(client, allKeys) {
+    override fun distinct(key: AccountQueryState) = key.account.userProfile()
 
     fun relayFlow(query: AccountQueryState) = query.account.homeRelays.flow
 
     override fun updateFilter(
-        key: AccountQueryState,
+        keys: List<AccountQueryState>,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> =
-        relayFlow(key).value.flatMap {
-            val since = since?.get(it)?.time
-            listOf(
-                filterAccountInfoAndListsFromKey(it, user(key).pubkeyHex, since),
-                filterFollowsAndMutesFromKey(it, user(key).pubkeyHex, since),
-                filterBookmarksAndReportsFromKey(it, user(key).pubkeyHex, since),
-                filterLastPostsFromKey(it, user(key).pubkeyHex, since ?: TimeUtils.oneMonthAgo()),
-                filterBasicAccountInfoFromKeys(it, key.otherAccounts.minus(key.account.userProfile().pubkeyHex).toList(), since),
-            ).flatten()
+    ): List<RelayBasedFilter> {
+        val accountsPerRelay = mutableMapOf<NormalizedRelayUrl, MutableList<AccountQueryState>>()
+        keys.forEach { key ->
+            relayFlow(key).value.forEach { relay ->
+                accountsPerRelay.getOrPut(relay) { mutableListOf() }.add(key)
+            }
         }
 
-    val userJobMap = mutableMapOf<User, List<Job>>()
+        return accountsPerRelay.flatMap { (relay, accounts) ->
+            val pubkeys = accounts.map { it.account.userProfile().pubkeyHex }
+            val relaySince = since?.get(relay)?.time
 
-    @OptIn(FlowPreview::class)
-    override fun newSub(key: AccountQueryState): Subscription {
-        val user = user(key)
-        userJobMap[user]?.forEach { it.cancel() }
-        userJobMap[user] =
+            // The account-switcher avatars: other logged-in accounts this screen wants to name.
+            // Screens supply them; the background registry does not, so this is usually empty.
+            val otherAccounts = accounts.flatMapTo(mutableSetOf()) { it.otherAccounts }.minus(pubkeys.toSet())
+
             listOf(
-                key.account.scope.launch(Dispatchers.IO) {
-                    relayFlow(key).collectLatest {
-                        invalidateFilters()
-                    }
-                },
-            )
-
-        return super.newSub(key)
+                filterAccountInfoAndListsFromKey(relay, pubkeys, relaySince),
+                filterFollowsAndMutesFromKey(relay, pubkeys, relaySince),
+                filterBookmarksAndReportsFromKey(relay, pubkeys, relaySince),
+                filterLastPostsFromKey(relay, pubkeys, relaySince ?: TimeUtils.oneMonthAgo()),
+                filterBasicAccountInfoFromKeys(relay, otherAccounts.toList(), relaySince),
+            ).flatten()
+        }
     }
 
-    override fun endSub(
-        key: User,
-        subId: String,
-    ) {
-        super.endSub(key, subId)
-        userJobMap[key]?.forEach { it.cancel() }
+    /** Per-account relay watchers, reconciled as accounts come and go. See the notifications manager. */
+    private val userJobMap = mutableMapOf<User, List<Job>>()
+
+    override fun updateSubscriptions(keys: Set<AccountQueryState>) {
+        val wanted = keys.associateBy { it.account.userProfile() }
+
+        (userJobMap.keys - wanted.keys).toList().forEach { user ->
+            userJobMap.remove(user)?.forEach { it.cancel() }
+        }
+
+        wanted.forEach { (user, key) ->
+            if (user !in userJobMap) {
+                userJobMap[user] =
+                    listOf(
+                        key.account.scope.launch(Dispatchers.IO) {
+                            relayFlow(key).collectLatest { invalidateFilters() }
+                        },
+                    )
+            }
+        }
+
+        super.updateSubscriptions(keys)
+    }
+
+    override fun destroy() {
+        userJobMap.values.forEach { jobs -> jobs.forEach { it.cancel() } }
+        userJobMap.clear()
+        super.destroy()
     }
 }

@@ -28,10 +28,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun filterLastPostsFromKey(
     relay: NormalizedRelayUrl,
-    pubkey: HexKey,
+    pubkeys: List<HexKey>,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey.isEmpty()) return emptyList()
+    if (pubkeys.isEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
@@ -39,8 +39,8 @@ fun filterLastPostsFromKey(
             filter =
                 ExplainedFilter(
                     purpose = SubPurpose.ACCOUNT_DATA,
-                    authors = listOf(pubkey),
-                    limit = 100,
+                    authors = pubkeys,
+                    limit = 100 * pubkeys.size,
                     since = since,
                 ),
         ),
