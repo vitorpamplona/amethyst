@@ -269,7 +269,15 @@ class RelayObserver : RelayConnectionListener {
         return mapOf(
             "auth_challenges" to authChallenges.snapshot().values.sum(),
             "auth_required_relays" to authChallenges.size(),
-            "closed_by_reason" to closedByReason.snapshot().toSortedMap(),
+            // Sorted into a LinkedHashMap rather than toSortedMap(): that one is
+            // java.util and this file is commonMain, so it built on JVM and broke
+            // the native targets.
+            "closed_by_reason" to
+                closedByReason
+                    .snapshot()
+                    .entries
+                    .sortedBy { it.key }
+                    .associate { it.key to it.value },
             "notices" to notices.values.sum(),
             "notice_top" to
                 notices.entries
