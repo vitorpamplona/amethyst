@@ -240,6 +240,44 @@ class RelayObserver : RelayConnectionListener {
     }
 
     /**
+     * Record a measurement taken OUTSIDE the websocket client — a TCP probe, a
+     * DNS failure, a host struck out after repeated silence.
+     *
+     * This class is a [RelayConnectionListener], so on its own it can only report
+     * on relays something opened a websocket to. On a large fan-out that is a
+     * small minority, and it is the wrong minority: the cheap checks that decide
+     * NOT to dial are precisely the ones that learn a relay is gone, and their
+     * findings had nowhere to go. Measured on a 16,507-relay list — 104 records
+     * published, because everything else was ruled out before the client saw it.
+     *
+     * A monitor that only reports what it happened to connect to is not a census.
+     *
+     * [rttOpenMs] is whatever was actually measured; null means reachable with no
+     * timing, and no timing is ever invented.
+     */
+    fun record(
+        relay: NormalizedRelayUrl,
+        reachable: Boolean,
+        rttOpenMs: Long? = null,
+        error: String? = null,
+    ) {
+        val o = seen.getOrPut(relay) { Observation(relay) }
+        if (reachable) {
+            o.reachable = true
+            o.error = null
+            // Kept on the Observation, which is never removed — only marked
+            // reported — so a measurement survives every later flush.
+            rttOpenMs?.let { o.rttOpenMs = it }
+        } else {
+            // Same rule as onCannotConnect: a relay that answered earlier is not
+            // demoted by one failed probe. The writer decides what record that
+            // becomes, and "answered, then a probe failed" is not "dead".
+            o.error = (error ?: "unreachable").take(MAX_TEXT)
+        }
+        o.touch()
+    }
+
+    /**
      * Everything observed since the last call, marked reported as it is read.
      *
      * A relay whose state has not changed is left out: writing its record again

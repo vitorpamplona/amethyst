@@ -200,6 +200,56 @@ class RelayObserverTest {
         assertEquals(first.rttOpenMs, second.rttOpenMs, "the last real measurement still stands")
     }
 
+    // ---- findings from outside the websocket client ------------------------
+
+    @Test
+    fun `a probe failure is published even though nothing was dialled`() {
+        // The cheap checks that decide NOT to open a websocket are exactly the
+        // ones that learn a relay is gone. Without a way in, a listener-only
+        // observer reports on the small minority it happened to connect to —
+        // 104 records out of a 16,507-relay list — which is not a census.
+        val o = RelayObserver()
+        o.record(url, reachable = false, error = "nodename nor servname provided")
+
+        val obs = o.only()
+        assertFalse(obs.reachable)
+        assertEquals("nodename nor servname provided", obs.error)
+        assertNull(obs.rttOpenMs, "a failed probe times nothing")
+    }
+
+    @Test
+    fun `a probe that connected reports its measured time or none at all`() {
+        val timed = RelayObserver()
+        timed.record(url, reachable = true, rttOpenMs = 42)
+        assertEquals(42L, timed.only().rttOpenMs)
+
+        val untimed = RelayObserver()
+        untimed.record(url, reachable = true)
+        val obs = untimed.only()
+        assertTrue(obs.reachable)
+        assertNull(obs.rttOpenMs, "reachable without a timing must not invent one")
+    }
+
+    @Test
+    fun `a failed probe does not demote a relay that already answered`() {
+        // Same rule the connection path follows: one bad probe is not death, and
+        // only the writer decides what record a mixed history becomes.
+        val o = RelayObserver()
+        o.onConnecting(client(url))
+        o.onConnected(client(url), 1, true)
+        o.record(url, reachable = false, error = "connect timeout")
+
+        assertTrue(o.only().reachable, "it answered; a later probe failure does not erase that")
+    }
+
+    @Test
+    fun `an out-of-band finding is reported once like any other`() {
+        val o = RelayObserver()
+        o.record(url, reachable = false, error = "refused")
+        assertEquals(1, o.collectUnreported().size)
+        assertEquals(0, o.collectUnreported().size, "nothing new to say")
+    }
+
     @Test
     fun `each relay is observed on its own`() {
         val o = RelayObserver()
