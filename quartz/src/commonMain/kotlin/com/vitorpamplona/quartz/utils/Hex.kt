@@ -216,28 +216,36 @@ object Hex {
     /**
      * Decodes [hex] into [byteLen] bytes, or null if any char is not a hex
      * digit. The caller has already checked `hex.length == 2 * byteLen`.
-     * Validation is free: the lookup table yields -1 for invalid chars, which
-     * keeps the OR-accumulator negative, so one sign check at the end covers
-     * every char with no branches inside the loop.
+     *
+     * Tuned at the bytecode level (see `HexBenchmark`): the table is hoisted
+     * into a local (the JVM/ART can't always prove the field load loop
+     * invariant), `inline` turns [byteLen] into a compile-time trip count at
+     * each call site, and validation is branchless — the table yields -1 for
+     * invalid chars and `255 - code` goes negative for chars above 0xFF (e.g.
+     * emoji, kept in bounds by the `and 0xFF` mask), so OR-ing everything into
+     * one accumulator and sign-checking it at the end rejects all bad input
+     * with no branches and no exception table. ~25% faster than the same loop
+     * with a per-iteration field load and a try/catch guard, and ~2x faster
+     * than `isHex64` + [decode].
      */
-    private fun decodeExactOrNull(
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun decodeExactOrNull(
         hex: String,
         byteLen: Int,
-    ): ByteArray? =
-        try {
-            val out = ByteArray(byteLen)
-            var acc = 0
-            var c = 0
-            for (i in 0 until byteLen) {
-                val b = (hexToByte[hex[c++].code] shl 4) or hexToByte[hex[c++].code]
-                acc = acc or b
-                out[i] = b.toByte()
-            }
-            if (acc < 0) null else out
-        } catch (_: IndexOutOfBoundsException) {
-            // chars above 0xFF (e.g. emoji) fall outside the lookup table
-            null
+    ): ByteArray? {
+        val table = hexToByte
+        val out = ByteArray(byteLen)
+        var acc = 0
+        var c = 0
+        for (i in 0 until byteLen) {
+            val c0 = hex[c++].code
+            val c1 = hex[c++].code
+            val b = (table[c0 and 0xFF] shl 4) or table[c1 and 0xFF]
+            acc = acc or b or (255 - c0) or (255 - c1)
+            out[i] = b.toByte()
         }
+        return if (acc < 0) null else out
+    }
 
     /**
      * Encodes a 32-byte pubkey/event id as a 64-char lower-case hex string.
