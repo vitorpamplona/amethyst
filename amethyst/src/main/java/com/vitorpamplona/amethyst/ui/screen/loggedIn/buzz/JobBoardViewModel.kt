@@ -112,19 +112,19 @@ class JobBoardViewModel : ViewModel() {
 
     fun file(request: String) =
         act { account, relay, channelId ->
-            account.fileBuzzJob(relay, channelId, request)
+            account.relayGroups.fileBuzzJob(relay, channelId, request)
         }
 
     fun upvote(
         jobId: String,
         jobAuthor: String?,
     ) = act { account, relay, channelId ->
-        account.upvoteBuzzJob(relay, channelId, jobId, jobAuthor)
+        account.relayGroups.upvoteBuzzJob(relay, channelId, jobId, jobAuthor)
     }
 
     fun cancel(jobId: String) =
         act { account, relay, channelId ->
-            account.cancelBuzzJob(relay, channelId, jobId)
+            account.relayGroups.cancelBuzzJob(relay, channelId, jobId)
         }
 
     private inline fun act(crossinline block: suspend (Account, NormalizedRelayUrl, String) -> Unit) {

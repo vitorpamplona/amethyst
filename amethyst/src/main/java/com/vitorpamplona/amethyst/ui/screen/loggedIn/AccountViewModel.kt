@@ -696,7 +696,7 @@ class AccountViewModel(
 
     fun sendBuzzTyping(channel: RelayGroupChannel) =
         viewModelScope.launch(Dispatchers.IO) {
-            account.sendBuzzTyping(channel)
+            account.relayGroups.sendBuzzTyping(channel)
         }
 
     @Immutable
@@ -1668,12 +1668,12 @@ class AccountViewModel(
     fun joinRelayGroup(
         channel: RelayGroupChannel,
         code: String? = null,
-    ) = launchSigner { account.joinRelayGroup(channel, code) }
+    ) = launchSigner { account.relayGroups.joinRelayGroup(channel, code) }
 
-    fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.leaveRelayGroup(channel) }
+    fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.relayGroups.leaveRelayGroup(channel) }
 
     /** Delete the channel/group for everyone (kind-9008). Owner/admin only; the relay enforces it. */
-    fun deleteRelayGroup(channel: RelayGroupChannel) = launchSigner { account.deleteRelayGroup(channel) }
+    fun deleteRelayGroup(channel: RelayGroupChannel) = launchSigner { account.relayGroups.deleteRelayGroup(channel) }
 
     /**
      * Archive/unarchive a Buzz channel (kind-9002 `archived` tag) — hides it from the sidebar without
@@ -1682,7 +1682,7 @@ class AccountViewModel(
     fun archiveRelayGroup(
         channel: RelayGroupChannel,
         archived: Boolean,
-    ) = launchSigner { account.archiveRelayGroup(channel, archived) }
+    ) = launchSigner { account.relayGroups.archiveRelayGroup(channel, archived) }
 
     /**
      * Take a relay group off Messages WITHOUT leaving it: drop it from my kind-10009 list so it stops
@@ -1721,7 +1721,7 @@ class AccountViewModel(
      * Hide a Buzz DM from Messages (kind-41012). DM-specific — a DM has no kind-10009 entry; the relay
      * republishes my per-viewer 30622 hidden snapshot, dropping it from the inbox until I re-open it.
      */
-    fun hideBuzzDm(channel: RelayGroupChannel) = launchSigner { account.hideBuzzDm(channel) }
+    fun hideBuzzDm(channel: RelayGroupChannel) = launchSigner { account.relayGroups.hideBuzzDm(channel) }
 
     /**
      * Bring a hidden Buzz DM back to Messages: Buzz has no "unhide", so re-open the conversation with
@@ -1731,7 +1731,7 @@ class AccountViewModel(
     fun unhideBuzzDm(
         relay: NormalizedRelayUrl,
         participants: List<HexKey>,
-    ) = launchSigner { account.openBuzzDm(relay, participants) }
+    ) = launchSigner { account.relayGroups.openBuzzDm(relay, participants) }
 
     /**
      * Keep the channel off Messages without touching membership. Local and reversible — I stay in the
@@ -1745,7 +1745,7 @@ class AccountViewModel(
     /** Actually leave: kind-9022 to the host relay, and drop it from my list and the pending set. */
     fun leaveChannelInvite(channel: RelayGroupChannel) =
         launchSigner {
-            account.leaveRelayGroup(channel)
+            account.relayGroups.leaveRelayGroup(channel)
             BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
         }
 
@@ -1771,7 +1771,7 @@ class AccountViewModel(
         hashtags: List<String>,
         geohashes: List<String>,
     ) = launchSigner {
-        account.createRelayGroup(
+        account.relayGroups.createRelayGroup(
             relay,
             groupId,
             name,
@@ -1789,47 +1789,47 @@ class AccountViewModel(
     fun createRelayGroupInvite(
         channel: RelayGroupChannel,
         code: String,
-    ) = launchSigner { account.createRelayGroupInvite(channel, code) }
+    ) = launchSigner { account.relayGroups.createRelayGroupInvite(channel, code) }
 
     fun postRelayGroupThread(
         channel: RelayGroupChannel,
         title: String,
         body: String,
-    ) = launchSigner { account.postRelayGroupThread(channel, title, body) }
+    ) = launchSigner { account.relayGroups.postRelayGroupThread(channel, title, body) }
 
     fun pinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.pinRelayGroupMessage(channel, note.idHex) }
+    ) = launchSigner { account.relayGroups.pinRelayGroupMessage(channel, note.idHex) }
 
     fun unpinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.unpinRelayGroupMessage(channel, note.idHex) }
+    ) = launchSigner { account.relayGroups.unpinRelayGroupMessage(channel, note.idHex) }
 
     fun removeRelayGroupUser(
         channel: RelayGroupChannel,
         pubkey: HexKey,
-    ) = launchSigner { account.removeRelayGroupUser(channel, pubkey) }
+    ) = launchSigner { account.relayGroups.removeRelayGroupUser(channel, pubkey) }
 
     fun putRelayGroupUser(
         channel: RelayGroupChannel,
         pubkey: HexKey,
         roles: List<String>,
-    ) = launchSigner { account.putRelayGroupUser(channel, pubkey, roles) }
+    ) = launchSigner { account.relayGroups.putRelayGroupUser(channel, pubkey, roles) }
 
     /** Add [pubkey] to a Buzz community (relay-wide, kind 9030). Owner/admin only; relay enforces. */
     fun addCommunityMember(
         relay: NormalizedRelayUrl,
         pubkey: HexKey,
         role: String? = null,
-    ) = launchSigner { account.addCommunityMember(relay, pubkey, role) }
+    ) = launchSigner { account.relayGroups.addCommunityMember(relay, pubkey, role) }
 
     /** Remove [pubkey] from a Buzz community (relay-wide, kind 9031). Owner/admin only. */
     fun removeCommunityMember(
         relay: NormalizedRelayUrl,
         pubkey: HexKey,
-    ) = launchSigner { account.removeCommunityMember(relay, pubkey) }
+    ) = launchSigner { account.relayGroups.removeCommunityMember(relay, pubkey) }
 
     fun editRelayGroupMetadata(
         channel: RelayGroupChannel,
@@ -1843,7 +1843,7 @@ class AccountViewModel(
         hashtags: List<String>,
         geohashes: List<String>,
     ) = launchSigner {
-        account.editRelayGroupMetadata(
+        account.relayGroups.editRelayGroupMetadata(
             channel,
             name,
             about,

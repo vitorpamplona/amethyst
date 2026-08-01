@@ -211,7 +211,7 @@ private fun DmRowCard(
                 addMemberOpen = false
                 scope.launch {
                     val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
-                    accountViewModel.account.addBuzzDmMember(channel, hex)
+                    accountViewModel.account.relayGroups.addBuzzDmMember(channel, hex)
                 }
             },
         )
