@@ -73,7 +73,7 @@ class RelayObserverTest {
     // ---- what we measured ---------------------------------------------------
 
     @Test
-    fun `an opened connection is timed, not assumed`() {
+    fun `an opened connection is timed rather than assumed`() {
         val o = RelayObserver()
         o.onConnecting(client(url))
         o.onConnected(client(url), 1, true)
@@ -156,7 +156,7 @@ class RelayObserverTest {
     // ---- AUTH, which is why an anonymous crawl finds a relay empty ------------
 
     @Test
-    fun `a demand for AUTH is recorded, from either shape`() {
+    fun `a demand for AUTH is recorded from either shape`() {
         val challenged = RelayObserver()
         challenged.onIncomingMessage(client(url), "", AuthMessage("challenge"))
         assertTrue(challenged.only().authRequired)
@@ -169,7 +169,7 @@ class RelayObserverTest {
     }
 
     @Test
-    fun `a CLOSED that is not about auth is categorised, not misread`() {
+    fun `a CLOSED that is not about auth is categorised rather than misread`() {
         val o = RelayObserver()
         o.onIncomingMessage(client(url), "", ClosedMessage("sub", "rate-limited: slow down"))
 
@@ -181,7 +181,7 @@ class RelayObserverTest {
     // ---- publishing bookkeeping ---------------------------------------------
 
     @Test
-    fun `an unchanged relay is not re-reported, and its measurement survives`() {
+    fun `an unchanged relay is not re-reported but its measurement survives`() {
         // Re-writing a record refreshes its freshness window, so a relay nobody
         // re-measured must be left out. But the measurement itself has to stay:
         // a long-lived socket fires onConnected once, and if publishing erased
@@ -247,7 +247,7 @@ class RelayObserverTest {
     }
 
     @Test
-    fun `a machine-readable prefix is extracted, or 'other'`() {
+    fun `a machine-readable prefix is extracted or falls back to other`() {
         assertEquals("auth-required", RelayObserver.prefixOf("auth-required: come back signed"))
         assertEquals("other", RelayObserver.prefixOf("just some prose"))
         assertEquals("other", RelayObserver.prefixOf(""))

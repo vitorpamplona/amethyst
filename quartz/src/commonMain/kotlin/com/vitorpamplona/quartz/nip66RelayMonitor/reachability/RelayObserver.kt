@@ -134,8 +134,8 @@ class RelayObserver : RelayConnectionListener {
 
     override fun onConnected(
         relay: IRelayClient,
-        attempt: Int,
-        success: Boolean,
+        pingMillis: Int,
+        compressed: Boolean,
     ) {
         val o = of(relay)
         o.reachable = true
@@ -146,13 +146,13 @@ class RelayObserver : RelayConnectionListener {
 
     override fun onCannotConnect(
         relay: IRelayClient,
-        error: String,
+        errorMessage: String,
     ) {
         val o = of(relay)
         // NOT `reachable = false`. A relay that answered an hour ago and is down
         // now is a different thing from one that never answered at all, and only
         // the writer decides which record that becomes.
-        o.error = error.take(MAX_TEXT)
+        o.error = errorMessage.take(MAX_TEXT)
         o.touch()
     }
 
@@ -162,13 +162,13 @@ class RelayObserver : RelayConnectionListener {
      */
     override fun onSent(
         relay: IRelayClient,
-        msgStr: String,
-        command: Command,
+        cmdStr: String,
+        cmd: Command,
         success: Boolean,
     ) {
         if (!success) return
         val o = of(relay)
-        when (command) {
+        when (cmd) {
             is ReqCmd -> if (o.firstReqAt == null) o.firstReqAt = TimeSource.Monotonic.markNow()
             is EventCmd -> if (o.firstEventAt == null) o.firstEventAt = TimeSource.Monotonic.markNow()
             else -> Unit
@@ -178,10 +178,10 @@ class RelayObserver : RelayConnectionListener {
     override fun onIncomingMessage(
         relay: IRelayClient,
         msgStr: String,
-        message: Message,
+        msg: Message,
     ) {
         val o = of(relay)
-        when (message) {
+        when (msg) {
             is EoseMessage -> {
                 if (o.rttReadMs == null) {
                     o.firstReqAt?.let {
@@ -219,14 +219,14 @@ class RelayObserver : RelayConnectionListener {
             }
 
             is NoticeMessage -> {
-                val text = message.message.trim().take(NOTICE_KEY)
+                val text = msg.message.trim().take(NOTICE_KEY)
                 o.notice = text
                 o.touch()
                 if (noticeSamples.size() < MAX_DISTINCT_NOTICES) noticeSamples.merge(text, 1L) { a, b -> a + b }
             }
 
             is ClosedMessage -> {
-                val reason = prefixOf(message.message)
+                val reason = prefixOf(msg.message)
                 o.closedReason = reason
                 // NIP-42 refusal, in the shape relays use when the subscription
                 // is what got rejected rather than the connection.
