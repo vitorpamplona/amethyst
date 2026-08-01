@@ -2057,11 +2057,72 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="many">%1$d grup</item>
         <item quantity="other">%1$d grupy</item>
     </plurals>
+    <string name="relay_purpose_ephemeral_chats">Czaty efemeryczne</string>
+    <string name="relay_purpose_geohash_chats">Czaty z funkcją lokalizacji</string>
+    <string name="relay_purpose_live_chat">Czat podczas transmisji na żywo</string>
+    <string name="relay_explain_relay_groups">Grupy NIP-29, do których dołączyłeś. Każda grupa działa na jednym transmiterze, więc aplikacja łączy się z każdym transmiterem, na którym znajduje się jakaś Twoja grupa.</string>
+    <string name="relay_explain_ephemeral_chats">Czaty, w których nie jest zapisywana historia — wiadomości są dostępne tylko wtedy, gdy użytkownik jest podłączony, więc aby otrzymywać jakiekolwiek wiadomości, należy pozostać subskrybentem.</string>
+    <string name="relay_explain_geohash_chats">Pokoje powiązane z lokalizacją dla obszarów, które obserwujesz, wymagane od transmiterów, które je obsługują.</string>
+    <string name="relay_explain_live_chat">Czatuj i zap cele powiązane z transmisjami na żywo, które masz otwarte lub które obserwujesz.</string>
+    <string name="relay_purpose_dm_inbox">Skrzynka odbiorcza DM</string>
+    <string name="relay_purpose_your_wallet">Portfel</string>
+    <string name="relay_purpose_nutzap_inbox">Skrzynka odbiorcza Nutzap</string>
+    <string name="relay_purpose_mint_directory">Katalog Mint</string>
+    <string name="relay_purpose_nwc">Podłącz portfel</string>
+    <string name="relay_purpose_community_chats">Czaty społecznościowe</string>
+    <string name="relay_purpose_community_feeds">Kanały społecznościowe</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
+    <string name="relay_explain_notifications">Twoje transmitery skrzynek odbiorczych oraz niewielka, zmieniająca się próbka transmiterów, na których publikują osoby, które obserwujesz – na wypadek, gdyby wzmianka została dostarczona gdzie indziej.</string>
+    <string name="relay_explain_direct_messages">Transmitery skrzynek odbiorczych DM, gdzie dostarczane są zawijane wiadomości DM.</string>
+    <string name="relay_explain_public_chats">Transmiter domowy każdego czatu, który masz otwarty lub do którego dołączyłeś.</string>
+    <string name="relay_explain_community_chats">Transmitery, na których każda społeczność publikuje swoje plany.</string>
+    <string name="relay_explain_encrypted_groups">Wiadomości grupowe i pakiety kluczy na transmiterach poszczególnych grup.</string>
+    <string name="relay_explain_live_rooms">Transmitery pokoju, dopóki jest otwarty.</string>
+    <string name="relay_explain_account_data">Twój profil, ustawienia i wersje robocze na Twoich domowych transmiterach.</string>
+    <string name="relay_explain_profiles">Profile osób znajdujących się obecnie na ekranie.</string>
+    <string name="relay_explain_relay_lists">Ustala, na jakich transmiterach poszczególne osoby publikują swoje treści, dzięki czemu ich posty mogą być pobierane z właściwego miejsca.</string>
+    <string name="relay_explain_follows">Listy obserwacji, używane do budowania Twojego kanału i Twojej sieci WoT.</string>
+    <string name="relay_explain_moderation">Raporty sporządzone przez obserwowanych przez Ciebie użytkowników na temat profili wyświetlanych obecnie na ekranie, uzyskane z poszczególnych transmiterów, na których publikują ci użytkownicy.</string>
+    <string name="relay_purpose_reports_from_follows">Zgłoszenia od obserwujących</string>
+    <string name="relay_explain_wallet">Własne zdarzenia z portfela, odczytane z transmiterów, na których zostały opublikowane.</string>
+    <string name="relay_explain_nutzap_inbox">Monitoruje transmitery Nutzap, a także transmitery skrzynek odbiorczych i wiadomości prywatnych, dzięki czemu żadna płatność nie umknie.</string>
+    <string name="relay_explain_mint_directory">Sprawdza na różnych transmiterach, na których istnieją serwisy typu „mint”, oraz które z nich są polecane przez użytkowników.</string>
+    <string name="relay_explain_nwc">Powiadomienia z podłączonego portfela.</string>
+    <string name="active_subs_title">Aktywne subskrypcje transmitera</string>
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d filtr</item>
+        <item quantity="few">%1$d filtrów</item>
+        <item quantity="many">%1$d filtrów</item>
+        <item quantity="other">%1$d filtry</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d transmiter</item>
+        <item quantity="few">%1$d transmiterów</item>
+        <item quantity="many">%1$d/ transmiterów</item>
+        <item quantity="other">%1$d transmitery</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d filtr nie został jeszcze przypisany</item>
+        <item quantity="few">%1$d filtrów nie zostało jeszcze przypisanych</item>
+        <item quantity="many">%1$d filtrów nie zostało jeszcze przypisanych</item>
+        <item quantity="other">%1$d filtry nie zostały jeszcze przypisane</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Nie przypisano do konta</string>
+    <string name="active_subs_no_entity">Wszystkie</string>
+    <string name="active_subs_scope_global">Wszyscy</string>
+    <string name="active_subs_scope_follows">Osoby, które obserwujesz</string>
+    <string name="active_subs_scope_authors">Wybrana lista osób</string>
+    <string name="active_subs_scope_muted">Uciszone osoby</string>
+    <string name="active_subs_scope_all_communities">Twoje społeczności</string>
+    <string name="active_subs_scope_algo">Ulubiony kanał algorytmów</string>
+    <string name="active_subs_share">%1$d%% z wszystkich</string>
+    <string name="active_subs_search_keywords">subskrypcje filtry przekaźniki, żądania (reqs) połączenia dlaczego diagnostyka</string>
+    <string name="relay_explain_home">Posty osób, które obserwujesz, są pobierane z transmiterów, na których każda z nich publikuje swoje treści.</string>
     <string name="always_on_notif_connecting">Łączenie z transmiterami odbiorczymi\u2026</string>
     <string name="always_on_notif_setting_title">Usługa powiadomień zawsze włączona</string>
     <string name="always_on_notif_setting_description">Utrzymuje stałe połączenie z transmiterami odbiorczymi, aby zapewnić natychmiastowe dostarczanie powiadomień. Wyświetla bieżące powiadomienia. Zużywa więcej baterii, ale gwarantuje, że nigdy nie przegapisz żadnej wiadomości.</string>
