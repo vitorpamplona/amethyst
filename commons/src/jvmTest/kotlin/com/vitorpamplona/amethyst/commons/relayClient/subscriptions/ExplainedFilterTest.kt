@@ -108,7 +108,9 @@ class ExplainedFilterTest {
      */
     @Test
     fun `copy preserves the purpose`() {
-        val advanced = explained().copy(since = 1_785_379_272)
+        // Typed as the base Filter so the is-check below stays a runtime assertion — with the
+        // override's covariant return type inferred, the compiler would prove it true statically.
+        val advanced: Filter = explained().copy(since = 1_785_379_272)
 
         assertTrue("copy() must stay an ExplainedFilter", advanced is ExplainedFilter)
         assertEquals(SubPurpose.NOTIFICATIONS, advanced.purposeOrNull())
