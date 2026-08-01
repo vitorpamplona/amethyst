@@ -1055,11 +1055,4 @@ class AccountConcordActions(
         account.client.fetchAllPagesFromPool(filters = byRelay) { _, _ -> drained++ }
         Log.d("Concord", "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), drained $drained control wrap(s)")
     }
-
-    // ── NIP-29 relay-group actions ───────────────────────────────────────────
-    // All group commands are published ONLY to the group's host relay, where
-    // relay29 authorizes them. The relay is the source of truth; the kind-10009
-    // list is our own cross-device bookkeeping of what we joined.
-
-    /** Send a kind 9021 join request to the group's host relay and remember it. */
 }

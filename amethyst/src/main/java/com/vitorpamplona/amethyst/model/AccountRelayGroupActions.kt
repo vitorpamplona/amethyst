@@ -82,6 +82,11 @@ import kotlinx.serialization.json.Json
 class AccountRelayGroupActions(
     private val account: Account,
 ) {
+    // All group commands are published ONLY to the group's host relay, where
+    // relay29 authorizes them. The relay is the source of truth; the kind-10009
+    // list is our own cross-device bookkeeping of what we joined.
+
+    /** Send a kind 9021 join request to the group's host relay and remember it. */
     suspend fun joinRelayGroup(
         channel: RelayGroupChannel,
         code: String? = null,
