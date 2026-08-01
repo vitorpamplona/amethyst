@@ -28,6 +28,35 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
+/**
+ * Storage contract for Nostr events: insert, filter-query, count, delete,
+ * NIP-50 full-text search, and NIP-77 negentropy snapshots.
+ *
+ * ## NIP-50 `search` contract
+ *
+ * Query/count/delete filters arrive with [Filter.search] **verbatim as the
+ * client sent it**, `key:value` extension tokens included (`include:spam`,
+ * `domain:example.com`, `language:en`, …). No layer above the store rewrites
+ * the string, so each implementation decides which extensions it supports:
+ *
+ * - A store that interprets an extension (rank profiles, trust floors,
+ *   observer-relative scoring, …) reads it from the raw string — parse it
+ *   with [com.vitorpamplona.quartz.nip50Search.SearchQuery.parse].
+ * - Extensions the store does NOT support must be **ignored, not matched as
+ *   literal text and not treated as match-nothing** (NIP-50: relays "SHOULD
+ *   ignore extensions they don't support"). Stores whose text engine would
+ *   choke on the raw tokens strip them first with
+ *   [com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions] — this
+ *   is what the built-in SQLite and filesystem stores do. An extensions-only
+ *   search therefore collapses to an unconstrained query.
+ *
+ * ## Caller identity
+ *
+ * Ranked/observer-relative stores can read the caller's NIP-42-authenticated
+ * identity from the coroutine context via [StoreQueryContext]; the relay
+ * layer installs it around every REQ/COUNT-driven store call. It is ranking
+ * context only and absent for unauthenticated callers.
+ */
 interface IEventStore : AutoCloseable {
     companion object {
         /**
@@ -37,6 +66,12 @@ interface IEventStore : AutoCloseable {
          * small enough that a pause request is honoured promptly.
          */
         const val DEFAULT_FTS_REINDEX_BATCH = 1000
+
+        /**
+         * Suggested [snapshotIdsForNegentropy] `onProgress` cadence: report
+         * the running count roughly every this many collected entries.
+         */
+        const val NEGENTROPY_PROGRESS_EVERY = 1000
     }
 
     /**
@@ -173,6 +208,13 @@ interface IEventStore : AutoCloseable {
      * guard). The +1 sentinel lets the caller distinguish "exactly
      * capped" from "too many to fit".
      *
+     * [onProgress] is a liveness hook for corpora large enough that the
+     * walk takes minutes: implementations SHOULD invoke it every
+     * [NEGENTROPY_PROGRESS_EVERY]-ish collected entries with the running
+     * count. Callers must not rely on any particular cadence — a store
+     * that answers from an index may legitimately never call it. Pass
+     * `null` (the default) to opt out at zero cost.
+     *
      * Default implementation falls back to the full-decode path so
      * non-SQLite stores stay correct; SQLite overrides with a direct
      * `SELECT id, created_at` against the `query_by_created_at_id`
@@ -182,8 +224,13 @@ interface IEventStore : AutoCloseable {
     suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
         maxEntries: Int? = null,
+        onProgress: ((collected: Int) -> Unit)? = null,
     ): List<IdAndTime> {
-        val all = query<Event>(filters).map { IdAndTime(it.createdAt, it.id) }
+        val all = ArrayList<IdAndTime>()
+        query<Event>(filters) { event ->
+            all.add(IdAndTime(event.createdAt, event.id))
+            if (onProgress != null && all.size % NEGENTROPY_PROGRESS_EVERY == 0) onProgress(all.size)
+        }
         return if (maxEntries != null && all.size > maxEntries + 1) {
             all.subList(0, maxEntries + 1)
         } else {
@@ -258,6 +305,11 @@ interface IEventStore : AutoCloseable {
      *
      * Process roughly [batchSize] events starting from [resumeFrom]
      * (`null` = from the beginning) and return a [FtsReindexProgress].
+     * [resumeFrom] / [FtsReindexProgress.cursor] is an **opaque,
+     * store-defined string**: callers persist it and pass it back
+     * unchanged, and must never parse, order, or compare it (SQLite
+     * encodes a kind + row id; another store may carry an engine
+     * continuation token).
      * Drive it in a loop, feeding [FtsReindexProgress.cursor] back in,
      * until [FtsReindexProgress.done] is `true`:
      *

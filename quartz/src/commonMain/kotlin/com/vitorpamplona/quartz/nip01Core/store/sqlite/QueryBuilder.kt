@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.sql.where
@@ -258,6 +259,7 @@ class QueryBuilder(
         filters: List<Filter>,
         db: SQLiteConnection,
         maxEntries: Int? = null,
+        onProgress: ((collected: Int) -> Unit)? = null,
     ): List<IdAndTime> {
         val inner =
             if (filters.size == 1) {
@@ -278,7 +280,7 @@ class QueryBuilder(
             } else {
                 inner
             }
-        return db.runIdAndTimeQuery(query)
+        return db.runIdAndTimeQuery(query, onProgress)
     }
 
     private fun toSnapshotIdsSql(
@@ -454,7 +456,10 @@ class QueryBuilder(
         return QuerySpec(sql, clause.args)
     }
 
-    private fun SQLiteConnection.runIdAndTimeQuery(query: QuerySpec): List<IdAndTime> =
+    private fun SQLiteConnection.runIdAndTimeQuery(
+        query: QuerySpec,
+        onProgress: ((collected: Int) -> Unit)? = null,
+    ): List<IdAndTime> =
         prepare(query.sql).use { stmt ->
             query.args.forEachIndexed { index, arg ->
                 stmt.bindText(index + 1, arg)
@@ -462,6 +467,7 @@ class QueryBuilder(
             val results = ArrayList<IdAndTime>()
             while (stmt.step()) {
                 results.add(IdAndTime(stmt.getLong(1), stmt.getText(0)))
+                if (onProgress != null && results.size % IEventStore.NEGENTROPY_PROGRESS_EVERY == 0) onProgress(results.size)
             }
             results
         }

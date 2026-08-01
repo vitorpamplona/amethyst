@@ -27,10 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
-import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
+import com.vitorpamplona.quartz.nip01Core.store.StoreQueryContext
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.withContext
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.AtomicReference
@@ -50,14 +51,14 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * match. This avoids the quadratic O(N_subscribers × N_filters_per_sub) per-event walk
  * that a SharedFlow-based broadcast would do.
  *
- * NIP-50 `search` strings are handed to the store with their `key:value`
- * extension tokens stripped ([strippingSearchExtensions]): the SQLite FTS
- * backend treats `:` as column-filter syntax, so a raw `include:spam`
- * would raise "no such column" instead of matching. Per NIP-50, an
- * unsupported extension is ignored — an extensions-only search therefore
- * becomes unconstrained, not match-nothing. Relays that *do* implement
- * extensions serve search through an [EventSource] backend, which
- * receives the raw string.
+ * NIP-50 `search` strings are handed to the store **verbatim**, extension
+ * tokens included: whether `include:spam` is a directive, ignorable noise,
+ * or poison for a text engine is a property of the store, so each
+ * [IEventStore] implementation makes that call itself (see the NIP-50
+ * contract on [IEventStore] — the built-in SQLite and filesystem stores
+ * strip the tokens at their own boundary). This layer also installs a
+ * [StoreQueryContext] around each store call so observer-relative stores
+ * can read the connection's NIP-42 identity.
  *
  * @property store The underlying persistent storage for events.
  * @property ingest The group-commit writer pipeline. Accepted events fan out via the
@@ -209,6 +210,25 @@ class LiveEventStore(
     }
 
     /**
+     * Runs [block] with a [StoreQueryContext] carrying the connection's
+     * NIP-42-authenticated pubkeys, so observer-relative stores can read
+     * the caller's identity from the coroutine context. Skipped entirely
+     * for unauthenticated connections — the element's contract is
+     * "present means non-empty".
+     */
+    private suspend inline fun <R> withCallerIdentity(
+        ctx: RequestContext,
+        crossinline block: suspend () -> R,
+    ): R {
+        val users = ctx.authenticatedUsers
+        return if (users.isEmpty()) {
+            block()
+        } else {
+            withContext(StoreQueryContext(users)) { block() }
+        }
+    }
+
+    /**
      * With deferred FTS, a search query must first drain the catch-up
      * backlog — that keeps NIP-50 results exactly as fresh as the
      * synchronous path (the deferral is invisible to correctness; only
@@ -248,9 +268,11 @@ class LiveEventStore(
 
         index.register(filters, sub)
         try {
-            store.query<Event>(filters.strippingSearchExtensions()) { event ->
-                seen.record(event.id)
-                onEach(event)
+            withCallerIdentity(ctx) {
+                store.query<Event>(filters) { event ->
+                    seen.record(event.id)
+                    onEach(event)
+                }
             }
             onEose()
             // Drop the dedupe set so the live path stops paying for
@@ -295,9 +317,11 @@ class LiveEventStore(
 
         index.register(filters, sub)
         try {
-            store.rawQuery(filters.strippingSearchExtensions()) { raw ->
-                seen.record(raw.id)
-                onEachStored(raw)
+            withCallerIdentity(ctx) {
+                store.rawQuery(filters) { raw ->
+                    seen.record(raw.id)
+                    onEachStored(raw)
+                }
             }
             onEose()
             seen.release()
@@ -312,7 +336,7 @@ class LiveEventStore(
         filters: List<Filter>,
     ): Int {
         drainFtsIfSearching(filters)
-        return store.count(filters.strippingSearchExtensions())
+        return withCallerIdentity(ctx) { store.count(filters) }
     }
 
     /**
@@ -320,7 +344,7 @@ class LiveEventStore(
      * needs the full set of event ids matching the filter at the
      * moment the NEG-OPEN arrives, not a streamed/live result.
      */
-    suspend fun snapshotQuery(filter: Filter): List<Event> = store.query(filter.strippingSearchExtensions())
+    suspend fun snapshotQuery(filter: Filter): List<Event> = store.query(filter)
 
     /**
      * Multi-filter snapshot. Unions the per-filter results and
@@ -333,7 +357,7 @@ class LiveEventStore(
         val seen = HashSet<String>()
         val merged = ArrayList<Event>()
         for (f in filters) {
-            for (e in store.query<Event>(f.strippingSearchExtensions())) {
+            for (e in store.query<Event>(f)) {
                 if (seen.add(e.id)) merged += e
             }
         }
@@ -353,7 +377,7 @@ class LiveEventStore(
     override suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
         maxEntries: Int?,
-    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters.strippingSearchExtensions(), maxEntries)
+    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
 
     // ------------------------------------------------------------------
     // NIP-77 snapshot cache

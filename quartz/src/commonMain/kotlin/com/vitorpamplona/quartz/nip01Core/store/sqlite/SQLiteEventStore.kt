@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip77Negentropy.LiveNegentropyIndex
@@ -537,48 +538,58 @@ class SQLiteEventStore(
         }
     }
 
-    suspend fun <T : Event> query(filter: Filter): List<T> = pool.useReader { queryBuilder.query(filter, it) }
+    // Every filter-accepting read/delete strips NIP-50 extension tokens at
+    // this boundary: FTS5 treats `:` as column-filter syntax, so a raw
+    // `include:spam` reaching MATCH raises "no such column" instead of
+    // matching. This store implements no extensions, and NIP-50 says
+    // unsupported extensions are ignored — an extensions-only search
+    // therefore collapses to an unconstrained query, not match-nothing.
+    // Stores that DO interpret extensions receive the raw string from the
+    // relay layer and make their own call (see the IEventStore contract).
 
-    suspend fun <T : Event> query(filters: List<Filter>): List<T> = pool.useReader { queryBuilder.query(filters, it) }
+    suspend fun <T : Event> query(filter: Filter): List<T> = pool.useReader { queryBuilder.query(filter.strippingSearchExtensions(), it) }
+
+    suspend fun <T : Event> query(filters: List<Filter>): List<T> = pool.useReader { queryBuilder.query(filters.strippingSearchExtensions(), it) }
 
     suspend fun <T : Event> query(
         filter: Filter,
         onEach: (T) -> Unit,
-    ) = pool.useReader { queryBuilder.query(filter, it, onEach) }
+    ) = pool.useReader { queryBuilder.query(filter.strippingSearchExtensions(), it, onEach) }
 
     suspend fun <T : Event> query(
         filters: List<Filter>,
         onEach: (T) -> Unit,
-    ) = pool.useReader { queryBuilder.query(filters, it, onEach) }
+    ) = pool.useReader { queryBuilder.query(filters.strippingSearchExtensions(), it, onEach) }
 
-    suspend fun rawQuery(filter: Filter): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filter, it) }
+    suspend fun rawQuery(filter: Filter): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filter.strippingSearchExtensions(), it) }
 
-    suspend fun rawQuery(filters: List<Filter>): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filters, it) }
+    suspend fun rawQuery(filters: List<Filter>): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filters.strippingSearchExtensions(), it) }
 
     suspend fun rawQuery(
         filter: Filter,
         onEach: (RawEvent) -> Unit,
-    ) = pool.useReader { queryBuilder.rawQuery(filter, it, onEach) }
+    ) = pool.useReader { queryBuilder.rawQuery(filter.strippingSearchExtensions(), it, onEach) }
 
     suspend fun rawQuery(
         filters: List<Filter>,
         onEach: (RawEvent) -> Unit,
-    ) = pool.useReader { queryBuilder.rawQuery(filters, it, onEach) }
+    ) = pool.useReader { queryBuilder.rawQuery(filters.strippingSearchExtensions(), it, onEach) }
 
-    suspend fun planQuery(filter: Filter) = pool.useReader { queryBuilder.planQuery(filter, seedModule.hasher(it), it) }
+    suspend fun planQuery(filter: Filter) = pool.useReader { queryBuilder.planQuery(filter.strippingSearchExtensions(), seedModule.hasher(it), it) }
 
-    suspend fun planQuery(filters: List<Filter>) = pool.useReader { queryBuilder.planQuery(filters, seedModule.hasher(it), it) }
+    suspend fun planQuery(filters: List<Filter>) = pool.useReader { queryBuilder.planQuery(filters.strippingSearchExtensions(), seedModule.hasher(it), it) }
 
-    suspend fun count(filter: Filter): Int = pool.useReader { queryBuilder.count(filter, it) }
+    suspend fun count(filter: Filter): Int = pool.useReader { queryBuilder.count(filter.strippingSearchExtensions(), it) }
 
-    suspend fun count(filters: List<Filter>): Int = pool.useReader { queryBuilder.count(filters, it) }
+    suspend fun count(filters: List<Filter>): Int = pool.useReader { queryBuilder.count(filters.strippingSearchExtensions(), it) }
 
     suspend fun authorsMissingOutbox(): List<HexKey> = pool.useReader { queryBuilder.authorsMissingKind(AdvertisedRelayListEvent.KIND, it) }
 
     suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
         maxEntries: Int? = null,
-    ): List<IdAndTime> = pool.useReader { queryBuilder.snapshotIdsForNegentropy(filters, it, maxEntries) }
+        onProgress: ((collected: Int) -> Unit)? = null,
+    ): List<IdAndTime> = pool.useReader { queryBuilder.snapshotIdsForNegentropy(filters.strippingSearchExtensions(), it, maxEntries, onProgress) }
 
     // The invalidate() calls below run INSIDE useWriter: dropping the
     // index while still holding the mutex means no NEG-OPEN can seal a
@@ -588,7 +599,7 @@ class SQLiteEventStore(
 
     suspend fun delete(filter: Filter) {
         pool.useWriter {
-            queryBuilder.delete(filter, it)
+            queryBuilder.delete(filter.strippingSearchExtensions(), it)
             // Delete-by-filter can't itemize what it removed; drop the
             // live index and let the next NEG-OPEN rebuild from one scan.
             liveNegentropyIndex?.invalidate()
@@ -597,7 +608,7 @@ class SQLiteEventStore(
 
     suspend fun delete(filters: List<Filter>) {
         pool.useWriter {
-            queryBuilder.delete(filters, it)
+            queryBuilder.delete(filters.strippingSearchExtensions(), it)
             liveNegentropyIndex?.invalidate()
         }
     }

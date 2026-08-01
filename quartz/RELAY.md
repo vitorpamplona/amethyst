@@ -259,15 +259,25 @@ q.domain       // "example.com"
 q.nsfwIncluded // false  (NIP-50 default is true when the token is absent)
 ```
 
-The SQLite store expects `Filter.search` to be plain FTS text: `:` is FTS5
-column-filter syntax, so a raw `include:spam` reaching MATCH raises "no such
-column: include" instead of matching. Strip the tokens before querying with
-`SearchQuery.stripExtensions(raw)` or `filter.strippingSearchExtensions()` —
-an extensions-only query collapses to an empty search, which imposes no
-constraint (NIP-50: unsupported extensions are ignored, not match-nothing).
-The storage-backed server path (`NostrServer` / `LiveEventStore`) already does
-this, so relays like geode comply out of the box; `EventSource` backends get
-the raw string because a real search backend wants the extensions.
+`Filter.search` reaches every backend **verbatim**, extension tokens included
+— the relay layer never rewrites it. Which extensions are directives and which
+are noise is a property of the store, so the `IEventStore` contract puts the
+decision there: a store that implements an extension (rank profiles, trust
+floors, observer-relative scoring) parses the raw string with
+`SearchQuery.parse`; a store that doesn't must ignore the tokens per NIP-50
+(not match them as literal text, not return nothing). The built-in SQLite and
+filesystem stores do the latter by stripping at their own boundary with
+`filter.strippingSearchExtensions()` — FTS5 treats `:` as column-filter syntax,
+so a raw `include:spam` reaching MATCH would raise "no such column: include" —
+and an extensions-only query collapses to an empty search, which imposes no
+constraint. Relays like geode therefore comply out of the box, and
+`EventSource` backends likewise get the raw string.
+
+Observer-relative stores (web-of-trust ranking, "for-you" relevance) read the
+caller's NIP-42-authenticated pubkeys from the coroutine context via
+`StoreQueryContext` — `LiveEventStore` installs it around every REQ/COUNT store
+call for authenticated connections. It is ranking context only: it may reorder
+results, never change which events match.
 
 A search/redirector relay is just a custom policy (or, for computed results, a
 custom `IEventStore` whose `query` answers the REQ) that reads the parsed query:

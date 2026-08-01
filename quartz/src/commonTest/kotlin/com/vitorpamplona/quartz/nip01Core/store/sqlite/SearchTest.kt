@@ -99,6 +99,29 @@ class SearchTest : BaseDBTest() {
         }
 
     @Test
+    fun testSearchExtensionTokensAreIgnoredByTheStore() =
+        forEachDB { db ->
+            db.store.insertEvent(comment)
+
+            // The store — not the relay layer — owns the NIP-50 extension
+            // decision now: a raw `include:spam` reaching FTS5 MATCH would
+            // raise "no such column: include", so the store strips the
+            // token at its own boundary and matches on the terms alone.
+            db.assertQuery(comment, Filter(search = "testing include:spam"))
+
+            // Extensions-only search: unsupported extensions are ignored
+            // (NIP-50), so the constraint drops and the query is
+            // unconstrained — not match-nothing, not an FTS error.
+            db.assertQuery(comment, Filter(search = "include:spam language:en"))
+
+            // Delete-by-filter must strip the same way, and an
+            // extensions-only search collapses to an empty filter, which
+            // deletes nothing (safe-by-default contract).
+            db.store.delete(Filter(search = "language:en"))
+            db.assertQuery(comment, Filter(search = "testing"))
+        }
+
+    @Test
     fun testFtsCleanedUpAfterReplaceableRotation() =
         forEachDB { db ->
             // The fts_foreign_key trigger fires on event_headers DELETE, so
