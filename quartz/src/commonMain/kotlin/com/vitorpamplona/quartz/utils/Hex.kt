@@ -185,9 +185,15 @@ object Hex {
         require(hex.length and 1 == 0) {
             "Invalid hex $hex"
         }
-        return ByteArray(hex.length / 2) {
-            (hexToByte[hex[2 * it].code] shl 4 or hexToByte[hex[2 * it + 1].code]).toByte()
+        // table hoisted into a local: the JVM/ART doesn't reliably prove the
+        // field load loop-invariant, and re-loading it per char costs ~25%
+        val table = hexToByte
+        val out = ByteArray(hex.length shr 1)
+        var c = 0
+        for (i in out.indices) {
+            out[i] = ((table[hex[c++].code] shl 4) or table[hex[c++].code]).toByte()
         }
+        return out
     }
 
     /**
@@ -268,10 +274,11 @@ object Hex {
 
     /** Encodes [input] as a lower-case hex string (two chars per byte). */
     fun encode(input: ByteArray): String {
+        val table = byteToHex
         val out = CharArray(input.size * 2)
         var outIdx = 0
         for (i in 0 until input.size) {
-            val chars = byteToHex[input[i].toInt() and 0xFF]
+            val chars = table[input[i].toInt() and 0xFF]
             out[outIdx++] = (chars shr 8).toChar()
             out[outIdx++] = (chars and 0xFF).toChar()
         }
@@ -290,23 +297,26 @@ object Hex {
     fun readLong(
         hex: String,
         offset: Int,
-    ): Long =
-        (hexToByte[hex[offset].code].toLong() shl 60) or
-            (hexToByte[hex[offset + 1].code].toLong() shl 56) or
-            (hexToByte[hex[offset + 2].code].toLong() shl 52) or
-            (hexToByte[hex[offset + 3].code].toLong() shl 48) or
-            (hexToByte[hex[offset + 4].code].toLong() shl 44) or
-            (hexToByte[hex[offset + 5].code].toLong() shl 40) or
-            (hexToByte[hex[offset + 6].code].toLong() shl 36) or
-            (hexToByte[hex[offset + 7].code].toLong() shl 32) or
-            (hexToByte[hex[offset + 8].code].toLong() shl 28) or
-            (hexToByte[hex[offset + 9].code].toLong() shl 24) or
-            (hexToByte[hex[offset + 10].code].toLong() shl 20) or
-            (hexToByte[hex[offset + 11].code].toLong() shl 16) or
-            (hexToByte[hex[offset + 12].code].toLong() shl 12) or
-            (hexToByte[hex[offset + 13].code].toLong() shl 8) or
-            (hexToByte[hex[offset + 14].code].toLong() shl 4) or
-            hexToByte[hex[offset + 15].code].toLong()
+    ): Long {
+        // table hoisted into a local — one field load instead of sixteen
+        val t = hexToByte
+        return (t[hex[offset].code].toLong() shl 60) or
+            (t[hex[offset + 1].code].toLong() shl 56) or
+            (t[hex[offset + 2].code].toLong() shl 52) or
+            (t[hex[offset + 3].code].toLong() shl 48) or
+            (t[hex[offset + 4].code].toLong() shl 44) or
+            (t[hex[offset + 5].code].toLong() shl 40) or
+            (t[hex[offset + 6].code].toLong() shl 36) or
+            (t[hex[offset + 7].code].toLong() shl 32) or
+            (t[hex[offset + 8].code].toLong() shl 28) or
+            (t[hex[offset + 9].code].toLong() shl 24) or
+            (t[hex[offset + 10].code].toLong() shl 20) or
+            (t[hex[offset + 11].code].toLong() shl 16) or
+            (t[hex[offset + 12].code].toLong() shl 12) or
+            (t[hex[offset + 13].code].toLong() shl 8) or
+            (t[hex[offset + 14].code].toLong() shl 4) or
+            t[hex[offset + 15].code].toLong()
+    }
 
     /**
      * Reads the first 64 bits (16 hex chars) of [hex] as a single [Long].
@@ -350,9 +360,10 @@ object Hex {
         id: String,
         ourId: ByteArray,
     ): Boolean {
+        val table = byteToHex
         var charIndex = 0
         for (i in 0 until ourId.size) {
-            val chars = byteToHex[ourId[i].toInt() and 0xFF]
+            val chars = table[ourId[i].toInt() and 0xFF]
             if (
                 id[charIndex++] != (chars shr 8).toChar() ||
                 id[charIndex++] != (chars and 0xFF).toChar()
