@@ -4072,413 +4072,35 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     ): Boolean =
         try {
             when (event) {
-                is AcceptedBadgeSetEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is AdvertisedRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is AppDefinitionEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is AppRecommendationEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is AppSpecificDataEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is AttestationEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is AttestationRequestEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is AttestorRecommendationEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is AttestorProficiencyEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is AudioHeaderEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is AudioTrackEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is BadgeAwardEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is BadgeDefinitionEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is BlockedRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is BlossomServersEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is NestsServersEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is BroadcastRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is BookmarkListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is OldBookmarkListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is CalendarEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is CalendarDateSlotEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is CalendarTimeSlotEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is CalendarRSVPEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is CallAnswerEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CallHangupEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CallIceCandidateEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CallOfferEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CallRejectEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CallRenegotiateEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
                 // ============================================================
-                // NIP-60 Cashu wallet + NIP-61 nutzaps
+                // Kinds with dedicated consume() logic: typed overloads that
+                // update channels, zaps, drafts, the deletion index, etc.
+                // Everything without per-kind logic falls through to the
+                // generic replaceable / regular groups at the bottom.
                 // ============================================================
-                is CashuWalletEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
 
-                is CashuTokenEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CashuSpendingHistoryEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CashuMintQuoteEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is NutzapInfoEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is NutzapEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                // ============================================================
-                // NIP-87 Cashu mint discovery + recommendations
-                // ============================================================
-                // All three are kind 3xxxx (parameterized-replaceable per the
-                // spec) but neither CashuMintEvent / FedimintEvent /
-                // MintRecommendationEvent extends AddressableEvent in Quartz
-                // today, so consumeBaseReplaceable's `check(event is
-                // AddressableEvent)` would crash. Route through
-                // consumeRegularEvent — downstream consumers
-                // (CashuMintDirectoryState, CashuWalletState) already dedupe
-                // by (pubKey, dTag) and keep the newest. Without these
-                // entries the dispatch falls into the "Event Not Supported"
-                // else branch and silently drops the event, so our own
-                // kind:38000 thumbs-up never lands in the cache.
-                is CashuMintEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is FedimintEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is MintRecommendationEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is ChannelCreateEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is ChannelListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is ChannelHideMessageEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is ChannelMessageEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is ChannelMetadataEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is ChannelMuteUserEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is ChatMessageEncryptedFileHeaderEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is ChatMessageEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is ChatMessageRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is Bolt12OfferListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is ClassifiedsEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is FundraiserEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is BirdexEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is BirdDetectionEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is Ps1SaveEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is CommentEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CommunityDefinitionEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is CommunityListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is CommunityPostApprovalEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is ContactListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is DeletionEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is DraftWrapEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is EmojiPackEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is EmojiPackSelectionEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is EphemeralChatEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is GeohashChatEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is EphemeralChatListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups +
-                // servers. Replaceable like its sibling lists; RelayGroupListState reads it from the
-                // addressable cache, so it must be stored (it was silently dropped before).
-                is SimpleGroupListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                // Concord private joined-communities list (kind 13302). Replaceable, self-encrypted;
-                // ConcordChannelListState observes it via the addressable cache (Address(13302, me, "")),
-                // so — exactly like the 10009 list above — it must be stored replaceably or the Concord
-                // hub stays empty even after the event arrives.
-                is ConcordCommunityListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is GroupMetadataEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is GroupMembersEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is GroupAdminsEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is GroupPinnedEvent -> {
-                    consume(event, relay, wasVerified)
-                }
+                is NutzapEvent -> consume(event, relay, wasVerified)
+                is ChannelCreateEvent -> consume(event, relay, wasVerified)
+                is ChannelHideMessageEvent -> consume(event, relay, wasVerified)
+                is ChannelMessageEvent -> consume(event, relay, wasVerified)
+                is ChannelMetadataEvent -> consume(event, relay, wasVerified)
+                is ChannelMuteUserEvent -> consume(event, relay, wasVerified)
+                is CommunityPostApprovalEvent -> consume(event, relay, wasVerified)
+                is DeletionEvent -> consume(event, relay, wasVerified)
+                is DraftWrapEvent -> consume(event, relay, wasVerified)
+                is EphemeralChatEvent -> consume(event, relay, wasVerified)
+                is GeohashChatEvent -> consume(event, relay, wasVerified)
+                is GroupMetadataEvent -> consume(event, relay, wasVerified)
+                is GroupMembersEvent -> consume(event, relay, wasVerified)
+                is GroupAdminsEvent -> consume(event, relay, wasVerified)
+                is GroupPinnedEvent -> consume(event, relay, wasVerified)
 
                 // 39003 (relay-declared roles) is durable group state like 39000/39001/39002:
                 // route it onto the channel so a moderation UI can offer the relay's role set.
-                is SupportedRolesEvent -> {
-                    consume(event, relay, wasVerified)
-                }
+                is SupportedRolesEvent -> consume(event, relay, wasVerified)
 
-                // Remaining NIP-29 relay-group kinds. The relay-signed 39004 AV-participants
-                // addressable is durable group state, so it's stored replaceably. The 9xxx
-                // moderation actions and join/leave requests are regular one-shot events the
-                // relay is authoritative for (it applies them and republishes the
-                // 39000/39001/39002); we store them so they're queryable and don't fall through
-                // to the "Not Supported" warning, but we don't act on them client-side.
-                is GroupParticipantsEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is PutUserEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is RemoveUserEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is EditMetadataEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is DeleteEventEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is UpdatePinListEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is DeleteGroupEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CreateGroupEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CreateInviteEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is JoinRequestEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is LeaveRequestEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is ExternalIdentitiesEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is GenericRepostEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is FhirResourceEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is FileHeaderEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is ProfileGalleryEntryEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is FileServersEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is FileStorageEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is FileStorageHeaderEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is FollowListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is GeohashListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is GoalEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
+                is GenericRepostEvent -> consume(event, relay, wasVerified)
+                is FileStorageEvent -> consume(event, relay, wasVerified)
 
                 is GiftWrapEvent -> {
                     // A wrap with an empty content carries no NIP-44 ciphertext and can
@@ -4492,177 +4114,11 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                     }
                 }
 
-                is GroupEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is GitIssueEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is GitReplyEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is GitPatchEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is GitPullRequestEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is GitPullRequestUpdateEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is GitStatusEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is GitRepositoryEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is GitRepositoryStateEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is UserGraspListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is RootSiteEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is NamedSiteEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is RootNappletEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is NamedNappletEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is ChessGameEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is RelayFeedsListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is JesterEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is KeyPackageEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is KeyPackageRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is LiveChessGameChallengeEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is LiveChessGameAcceptEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is LiveChessMoveEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is LiveChessGameEndEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is LiveChessDrawOfferEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is HashtagListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is FavoriteAlgoFeedsListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is HighlightEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is IndexerRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is InteractiveStoryPrologueEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is InteractiveStorySceneEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is InteractiveStoryReadingStateEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is InterestSetEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is LabeledBookmarkListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is LiveActivitiesEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is LiveActivitiesChatMessageEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is LiveActivitiesRaidEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is LiveActivitiesClipEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is MeetingSpaceEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is MeetingRoomEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is MeetingRoomPresenceEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is MusicTrackEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is MusicPlaylistEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is PodcastEpisodeEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
+                is LiveActivitiesEvent -> consume(event, relay, wasVerified)
+                is LiveActivitiesChatMessageEvent -> consume(event, relay, wasVerified)
+                is LiveActivitiesRaidEvent -> consume(event, relay, wasVerified)
+                is LiveActivitiesClipEvent -> consume(event, relay, wasVerified)
+                is MeetingRoomPresenceEvent -> consume(event, relay, wasVerified)
 
                 is PodcastMetadataEvent -> {
                     // Drop the known "Mock Podcast" spam flood instead of caching thousands of them.
@@ -4673,133 +4129,27 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                     }
                 }
 
-                is AuthoredPodcastsEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is FavoritePodcastsListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is Podcasting20EpisodeEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is Podcasting20TrailerEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is LnZapEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is LnZapRequestEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is OnchainZapEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is Bolt12ZapEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is NIP90StatusEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is NIP90ContentDiscoveryResponseEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is NIP90ContentDiscoveryRequestEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is NIP90UserDiscoveryResponseEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is NIP90UserDiscoveryRequestEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is LnZapPaymentRequestEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is LnZapPaymentResponseEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is LongTextNoteEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is MetadataEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is MuteListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is NNSEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is NipTextEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is OtsEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is PictureEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is PrivateDmEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is PrivateOutboxRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is ProfileBadgesEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is ProxyRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is PinListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is PublicMessageEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is PeopleListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is RequestToVanishEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is CodeSnippetEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is ZapPollEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
+                is LnZapEvent -> consume(event, relay, wasVerified)
+                is LnZapRequestEvent -> consume(event, relay, wasVerified)
+                is OnchainZapEvent -> consume(event, relay, wasVerified)
+                is Bolt12ZapEvent -> consume(event, relay, wasVerified)
+                is LnZapPaymentRequestEvent -> consume(event, relay, wasVerified)
+                is LnZapPaymentResponseEvent -> consume(event, relay, wasVerified)
+                is LongTextNoteEvent -> consume(event, relay, wasVerified)
+                is MetadataEvent -> consume(event, relay, wasVerified)
+                is NipTextEvent -> consume(event, relay, wasVerified)
+                is OtsEvent -> consume(event, relay, wasVerified)
+                is PollResponseEvent -> consume(event, relay, wasVerified)
+                is ReactionEvent -> consume(event, relay, wasVerified)
+                is LabelEvent -> consume(event, relay, wasVerified)
+                is ContactCardEvent -> consume(event, relay, wasVerified)
+                is ReportEvent -> consume(event, relay, wasVerified)
+                is RepostEvent -> consume(event, relay, wasVerified)
+                is StatusEvent -> consume(event, relay, wasVerified)
+                is TextNoteModificationEvent -> consume(event, relay, wasVerified)
+                is ConcordChatEditEvent -> consume(event, relay, wasVerified)
+                is WikiNoteEvent -> consume(event, relay, wasVerified)
+                is PaymentTargetsEvent -> consume(event, relay, wasVerified)
 
                 is ChatEvent -> {
                     consumeRegularEvent(event, relay, wasVerified).also {
@@ -4808,6 +4158,18 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                         // host relay's later echo (new == false) is what carries the
                         // provenance needed to key the channel. attach is idempotent.
                         attachToRelayGroupIfScoped(event, relay)
+                    }
+                }
+
+                is PollEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified).also {
+                        attachToRelayGroupIfScoped(event, relay)
+                    }
+                }
+
+                is ThreadEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified).also {
+                        attachThreadToRelayGroupIfScoped(event, relay)
                     }
                 }
 
@@ -4821,87 +4183,78 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 // BitChat `g` tag is absent, and it is handled below with the ephemerals.
                 // ------------------------------------------------------------------
 
-                is StreamMessageV2Event -> consumeBuzzTimelineEvent(event, relay, wasVerified)
                 is StreamMessageEditEvent -> consume(event, relay, wasVerified)
-                is StreamMessageDiffEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
                 is SystemMessageEvent -> consume(event, relay, wasVerified)
                 is CanvasEvent -> consume(event, relay, wasVerified)
-                // Forum root (45001) is a thread, not a chat row → Threads collection. Comments (45003)
-                // and votes (45002) are store-only: the forum-thread detail loads them on demand by root.
-                is ForumPostEvent -> consumeBuzzForumPost(event, relay, wasVerified)
-                is ForumCommentEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ForumVoteEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is JobRequestEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is JobAcceptedEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is JobProgressEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is JobResultEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is JobCancelEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is JobErrorEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is HuddleStartedEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is HuddleParticipantJoinedEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is HuddleParticipantLeftEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-                is HuddleEndedEvent -> consumeBuzzTimelineEvent(event, relay, wasVerified)
-
-                // Buzz addressable/replaceable state.
-                is PersonaEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is TeamEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ManagedAgentEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is AgentProfileEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is EngramEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is WorkflowDefEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is EventReminderEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is PushLeaseEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is DmVisibilityEvent -> consume(event, relay, wasVerified)
-                is WindowBoundsEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-                is ArchivedIdentitiesListEvent -> consumeBaseReplaceable(event, relay, wasVerified)
-
-                // Buzz store-only regular kinds (queryable state; no timeline row yet).
-                is StreamMessagePinnedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is StreamMessageBookmarkedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is StreamMessageScheduledEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is StreamReminderEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is DmCreatedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is DmOpenEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is DmAddMemberEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is DmHideEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is MemberAddedNotificationEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
                 is MemberRemovedNotificationEvent -> consume(event, relay, wasVerified)
                 is RelayMembershipListEvent -> consume(event, relay, wasVerified)
                 is RelayAddMemberEvent -> consume(event, relay, wasVerified)
                 is RelayRemoveMemberEvent -> consume(event, relay, wasVerified)
-                is AgentTurnMetricEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ModerationBanEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ModerationTimeoutEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ModerationUntimeoutEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ModerationResolveReportEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ProductFeedbackEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is RelayAdminAddMemberEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is RelayAdminRemoveMemberEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is RelayAdminChangeRoleEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is SetWorkspaceProfileEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ArchiveRequestEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is UnarchiveRequestEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ArchivedIdentityEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is UnarchivedIdentityEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is HuddleGuidelinesEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowTriggeredEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowStepStartedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowStepCompletedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowStepFailedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowCompletedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowFailedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowCancelledEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowApprovalRequestedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowApprovalGrantedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowApprovalDeniedEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is WorkflowTriggerEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ApprovalGrantEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ApprovalDenyEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                is DmVisibilityEvent -> consume(event, relay, wasVerified)
 
-                // Buzz relay-signed sidecars and audit projections: store-only, queryable.
-                is AuditEntryEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is ChannelSummaryEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
-                is PresenceSnapshotEvent -> consumeBuzzRegularEvent(event, relay, wasVerified)
+                // Forum root (45001) is a thread, not a chat row → Threads collection. Comments (45003)
+                // and votes (45002) are store-only: the forum-thread detail loads them on demand by root.
+                is ForumPostEvent -> consumeBuzzForumPost(event, relay, wasVerified)
+
+                is StreamMessageV2Event,
+                is StreamMessageDiffEvent,
+                is JobRequestEvent,
+                is JobAcceptedEvent,
+                is JobProgressEvent,
+                is JobResultEvent,
+                is JobCancelEvent,
+                is JobErrorEvent,
+                is HuddleStartedEvent,
+                is HuddleParticipantJoinedEvent,
+                is HuddleParticipantLeftEvent,
+                is HuddleEndedEvent,
+                -> consumeBuzzTimelineEvent(event, relay, wasVerified)
+
+                // Buzz store-only regular kinds (queryable state; no timeline row yet),
+                // plus relay-signed sidecars and audit projections.
+                is ForumCommentEvent,
+                is ForumVoteEvent,
+                is StreamMessagePinnedEvent,
+                is StreamMessageBookmarkedEvent,
+                is StreamMessageScheduledEvent,
+                is StreamReminderEvent,
+                is DmCreatedEvent,
+                is DmOpenEvent,
+                is DmAddMemberEvent,
+                is DmHideEvent,
+                is MemberAddedNotificationEvent,
+                is AgentTurnMetricEvent,
+                is ModerationBanEvent,
+                is ModerationTimeoutEvent,
+                is ModerationUntimeoutEvent,
+                is ModerationResolveReportEvent,
+                is ProductFeedbackEvent,
+                is RelayAdminAddMemberEvent,
+                is RelayAdminRemoveMemberEvent,
+                is RelayAdminChangeRoleEvent,
+                is SetWorkspaceProfileEvent,
+                is ArchiveRequestEvent,
+                is UnarchiveRequestEvent,
+                is ArchivedIdentityEvent,
+                is UnarchivedIdentityEvent,
+                is HuddleGuidelinesEvent,
+                is WorkflowTriggeredEvent,
+                is WorkflowStepStartedEvent,
+                is WorkflowStepCompletedEvent,
+                is WorkflowStepFailedEvent,
+                is WorkflowCompletedEvent,
+                is WorkflowFailedEvent,
+                is WorkflowCancelledEvent,
+                is WorkflowApprovalRequestedEvent,
+                is WorkflowApprovalGrantedEvent,
+                is WorkflowApprovalDeniedEvent,
+                is WorkflowTriggerEvent,
+                is ApprovalGrantEvent,
+                is ApprovalDenyEvent,
+                is AuditEntryEvent,
+                is ChannelSummaryEvent,
+                is PresenceSnapshotEvent,
+                -> consumeBuzzRegularEvent(event, relay, wasVerified)
 
                 // Buzz ephemeral signals: transient by definition (20000-29999) — do not
                 // pollute the note store, and do NOT mark the dialect from them (they are
@@ -4926,165 +4279,211 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 // pairing before any workspace relationship is established.
                 is PairingEvent -> false
 
-                is PollEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified).also {
-                        attachToRelayGroupIfScoped(event, relay)
-                    }
-                }
+                // ============================================================
+                // Replaceable / addressable kinds with no per-kind logic:
+                // the newest version per address is kept, older ones dropped.
+                // New kinds without custom consume logic go in one of the two
+                // groups below — an unlisted kind falls into the else branch
+                // and is rejected as unsupported.
+                // ============================================================
+                is AcceptedBadgeSetEvent,
+                is AdvertisedRelayListEvent,
+                is AppDefinitionEvent,
+                is AppRecommendationEvent,
+                is AppSpecificDataEvent,
+                is AttestationEvent,
+                is AttestationRequestEvent,
+                is AttestorRecommendationEvent,
+                is AttestorProficiencyEvent,
+                is AudioTrackEvent,
+                is BadgeDefinitionEvent,
+                is BlockedRelayListEvent,
+                is BlossomServersEvent,
+                is NestsServersEvent,
+                is BroadcastRelayListEvent,
+                is BookmarkListEvent,
+                is OldBookmarkListEvent,
+                is CalendarEvent,
+                is CalendarDateSlotEvent,
+                is CalendarTimeSlotEvent,
+                is CalendarRSVPEvent,
+                is CashuWalletEvent,
+                is NutzapInfoEvent,
+                is ChannelListEvent,
+                is ChatMessageRelayListEvent,
+                is Bolt12OfferListEvent,
+                is ClassifiedsEvent,
+                is FundraiserEvent,
+                is BirdexEvent,
+                is Ps1SaveEvent,
+                is CommunityDefinitionEvent,
+                is CommunityListEvent,
+                is ContactListEvent,
+                is EmojiPackEvent,
+                is EmojiPackSelectionEvent,
+                is EphemeralChatListEvent,
+                // NIP-51 "simple groups" list (kind 10009): the user's joined NIP-29 groups +
+                // servers. Replaceable like its sibling lists; RelayGroupListState reads it from the
+                // addressable cache, so it must be stored (it was silently dropped before).
+                is SimpleGroupListEvent,
+                // Concord private joined-communities list (kind 13302). Replaceable, self-encrypted;
+                // ConcordChannelListState observes it via the addressable cache (Address(13302, me, "")),
+                // so — exactly like the 10009 list above — it must be stored replaceably or the Concord
+                // hub stays empty even after the event arrives.
+                is ConcordCommunityListEvent,
+                // The relay-signed NIP-29 39004 AV-participants addressable is durable group state.
+                is GroupParticipantsEvent,
+                is ExternalIdentitiesEvent,
+                is FileServersEvent,
+                is FollowListEvent,
+                is GeohashListEvent,
+                is GitRepositoryEvent,
+                is GitRepositoryStateEvent,
+                is UserGraspListEvent,
+                is RootSiteEvent,
+                is NamedSiteEvent,
+                is RootNappletEvent,
+                is NamedNappletEvent,
+                is RelayFeedsListEvent,
+                is KeyPackageEvent,
+                is KeyPackageRelayListEvent,
+                is LiveChessGameChallengeEvent,
+                is LiveChessGameAcceptEvent,
+                is LiveChessMoveEvent,
+                is LiveChessGameEndEvent,
+                is LiveChessDrawOfferEvent,
+                is HashtagListEvent,
+                is FavoriteAlgoFeedsListEvent,
+                is IndexerRelayListEvent,
+                is InteractiveStoryPrologueEvent,
+                is InteractiveStorySceneEvent,
+                is InteractiveStoryReadingStateEvent,
+                is InterestSetEvent,
+                is LabeledBookmarkListEvent,
+                is MeetingSpaceEvent,
+                is MeetingRoomEvent,
+                is MusicTrackEvent,
+                is MusicPlaylistEvent,
+                is AuthoredPodcastsEvent,
+                is FavoritePodcastsListEvent,
+                is Podcasting20EpisodeEvent,
+                is Podcasting20TrailerEvent,
+                is MuteListEvent,
+                is NNSEvent,
+                is PrivateOutboxRelayListEvent,
+                is ProfileBadgesEvent,
+                is ProxyRelayListEvent,
+                is PinListEvent,
+                is PeopleListEvent,
+                // Buzz addressable/replaceable state.
+                is PersonaEvent,
+                is TeamEvent,
+                is ManagedAgentEvent,
+                is AgentProfileEvent,
+                is EngramEvent,
+                is WorkflowDefEvent,
+                is EventReminderEvent,
+                is PushLeaseEvent,
+                is WindowBoundsEvent,
+                is ArchivedIdentitiesListEvent,
+                is RelayDiscoveryEvent,
+                is RelayMonitorEvent,
+                is RelaySetEvent,
+                is ReleaseArtifactSetEvent,
+                is SearchRelayListEvent,
+                is SoftwareApplicationEvent,
+                is TrustedRelayListEvent,
+                is TrustProviderListEvent,
+                is VideoHorizontalEvent,
+                is VideoVerticalEvent,
+                is WebBookmarkEvent,
+                is ExerciseTemplateEvent,
+                -> consumeBaseReplaceable(event, relay, wasVerified)
 
-                is ThreadEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified).also {
-                        attachThreadToRelayGroupIfScoped(event, relay)
-                    }
-                }
-
-                is PollResponseEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is RoadEventReportEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is RoadEventConfirmationEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is RelayDiscoveryEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is RelayMonitorEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is ReactionEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is LabelEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is ContactCardEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is RelaySetEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is ReportEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is RepostEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is ReleaseArtifactSetEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is SealedRumorEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is SearchRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is SoftwareApplicationEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is SoftwareAssetEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is StatusEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is TextNoteEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is TextNoteModificationEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is ConcordChatEditEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is TorrentEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is TorrentCommentEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is TrustedRelayListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is TrustProviderListEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is VideoHorizontalEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is VideoNormalEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is VideoVerticalEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is VideoShortEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is VoiceEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is VoiceReplyEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is WakeUpEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is WebBookmarkEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is WelcomeEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is WikiNoteEvent -> {
-                    consume(event, relay, wasVerified)
-                }
-
-                is WorkoutRecordEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
-                }
-
-                is ExerciseTemplateEvent -> {
-                    consumeBaseReplaceable(event, relay, wasVerified)
-                }
-
-                is PaymentTargetsEvent -> {
-                    consume(event, relay, wasVerified)
-                }
+                // ============================================================
+                // Regular kinds with no per-kind logic: stored as plain notes.
+                // ============================================================
+                is AudioHeaderEvent,
+                is BadgeAwardEvent,
+                is CallAnswerEvent,
+                is CallHangupEvent,
+                is CallIceCandidateEvent,
+                is CallOfferEvent,
+                is CallRejectEvent,
+                is CallRenegotiateEvent,
+                is CashuTokenEvent,
+                is CashuSpendingHistoryEvent,
+                is CashuMintQuoteEvent,
+                // NIP-87 Cashu mint discovery + recommendations: all three are kind 3xxxx
+                // (parameterized-replaceable per the spec) but neither CashuMintEvent /
+                // FedimintEvent / MintRecommendationEvent extends AddressableEvent in Quartz
+                // today, so consumeBaseReplaceable's `check(event is AddressableEvent)` would
+                // crash. Route them as regular events — downstream consumers
+                // (CashuMintDirectoryState, CashuWalletState) already dedupe by (pubKey, dTag)
+                // and keep the newest.
+                is CashuMintEvent,
+                is FedimintEvent,
+                is MintRecommendationEvent,
+                is ChatMessageEncryptedFileHeaderEvent,
+                is ChatMessageEvent,
+                is BirdDetectionEvent,
+                is CommentEvent,
+                // The NIP-29 9xxx moderation actions and join/leave requests are regular
+                // one-shot events the relay is authoritative for (it applies them and
+                // republishes the 39000/39001/39002); we store them so they're queryable,
+                // but we don't act on them client-side.
+                is PutUserEvent,
+                is RemoveUserEvent,
+                is EditMetadataEvent,
+                is DeleteEventEvent,
+                is UpdatePinListEvent,
+                is DeleteGroupEvent,
+                is CreateGroupEvent,
+                is CreateInviteEvent,
+                is JoinRequestEvent,
+                is LeaveRequestEvent,
+                is FhirResourceEvent,
+                is FileHeaderEvent,
+                is ProfileGalleryEntryEvent,
+                is FileStorageHeaderEvent,
+                is GoalEvent,
+                is GroupEvent,
+                is GitIssueEvent,
+                is GitReplyEvent,
+                is GitPatchEvent,
+                is GitPullRequestEvent,
+                is GitPullRequestUpdateEvent,
+                is GitStatusEvent,
+                is ChessGameEvent,
+                is JesterEvent,
+                is HighlightEvent,
+                is PodcastEpisodeEvent,
+                is NIP90StatusEvent,
+                is NIP90ContentDiscoveryResponseEvent,
+                is NIP90ContentDiscoveryRequestEvent,
+                is NIP90UserDiscoveryResponseEvent,
+                is NIP90UserDiscoveryRequestEvent,
+                is PictureEvent,
+                is PrivateDmEvent,
+                is PublicMessageEvent,
+                is RequestToVanishEvent,
+                is CodeSnippetEvent,
+                is ZapPollEvent,
+                is RoadEventReportEvent,
+                is RoadEventConfirmationEvent,
+                is SealedRumorEvent,
+                is SoftwareAssetEvent,
+                is TextNoteEvent,
+                is TorrentEvent,
+                is TorrentCommentEvent,
+                is VideoNormalEvent,
+                is VideoShortEvent,
+                is VoiceEvent,
+                is VoiceReplyEvent,
+                is WakeUpEvent,
+                is WelcomeEvent,
+                is WorkoutRecordEvent,
+                -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {
                     Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
