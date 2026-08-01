@@ -254,7 +254,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
         val geohashes = parseGeohashes()
         val existing = channel
         if (existing == null) {
-            account.createRelayGroup(
+            account.relayGroups.createRelayGroup(
                 relay = relay!!,
                 groupId = groupId,
                 name = name,
@@ -270,7 +270,7 @@ class RelayGroupMetadataViewModel : ViewModel() {
                 channelType = if (isBuzzRelay) (if (isForum) BUZZ_CHANNEL_TYPE_FORUM else BUZZ_CHANNEL_TYPE_STREAM) else null,
             )
         } else {
-            account.editRelayGroupMetadata(
+            account.relayGroups.editRelayGroupMetadata(
                 channel = existing,
                 name = name,
                 about = about,

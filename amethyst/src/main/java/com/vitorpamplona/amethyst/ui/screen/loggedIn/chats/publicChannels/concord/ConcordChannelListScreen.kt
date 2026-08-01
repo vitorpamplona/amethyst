@@ -190,9 +190,9 @@ fun ConcordChannelListScreen(
                 channelEditor = null
                 scope.launch {
                     if (editor.channelIdHex == null) {
-                        account.createConcordChannel(communityId, newName)
+                        account.concord.createConcordChannel(communityId, newName)
                     } else {
-                        account.renameConcordChannel(communityId, editor.channelIdHex, newName)
+                        account.concord.renameConcordChannel(communityId, editor.channelIdHex, newName)
                     }
                 }
             },
@@ -208,7 +208,7 @@ fun ConcordChannelListScreen(
             confirmButton = {
                 TextButton(onClick = {
                     channelToDelete = null
-                    scope.launch { account.deleteConcordChannel(communityId, id, target.initialName) }
+                    scope.launch { account.concord.deleteConcordChannel(communityId, id, target.initialName) }
                 }) {
                     Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_channel_delete_confirm))
                 }
@@ -254,7 +254,7 @@ fun ConcordChannelListScreen(
                             minting = true
                             scope.launch {
                                 try {
-                                    inviteLink = account.mintConcordInvite(communityId)
+                                    inviteLink = account.concord.mintConcordInvite(communityId)
                                 } finally {
                                     // Always clear the flag — a thrown mint would otherwise leave the
                                     // button disabled until the screen is recreated.

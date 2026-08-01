@@ -1467,7 +1467,7 @@ class AmethystAppFunctions {
         }
 
         val result =
-            account.sendOnchainZap(
+            account.zaps.sendOnchainZap(
                 recipientPubKey = recipientPub,
                 amountSats = sats,
                 feeRateSatPerVByte = feeRateSatPerVByte,
@@ -1751,7 +1751,7 @@ class AmethystAppFunctions {
         val deferred = CompletableDeferred<Response?>()
         // sendZapPaymentRequestFor fires onResponse exactly once when the wallet replies
         // (success, error, or NwcError). On timeout we discard the late response.
-        account.sendZapPaymentRequestFor(bolt11, zappedNote) { response ->
+        account.zaps.sendZapPaymentRequestFor(bolt11, zappedNote) { response ->
             if (!deferred.isCompleted) deferred.complete(response)
         }
         val response =

@@ -275,8 +275,8 @@ fun CardBody(
     val isFollowingUser = !isOwnNote && accountViewModel.isFollowing(note.author)
 
     // Concord moderation: only present when this account may actually act.
-    val canConcordBan = remember(note) { accountViewModel.account.concordBanTarget(note) != null }
-    val concordAdmin = remember(note) { accountViewModel.account.concordAdminTarget(note) }
+    val canConcordBan = remember(note) { accountViewModel.account.concord.concordBanTarget(note) != null }
+    val concordAdmin = remember(note) { accountViewModel.account.concord.concordAdminTarget(note) }
     val showConcordBanDialog = remember { mutableStateOf(false) }
 
     if (showConcordBanDialog.value) {

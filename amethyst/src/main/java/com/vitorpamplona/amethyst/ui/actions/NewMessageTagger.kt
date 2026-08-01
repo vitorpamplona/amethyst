@@ -21,10 +21,9 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Dao
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -257,12 +256,4 @@ class NewMessageTagger(
 
         return null
     }
-}
-
-interface Dao {
-    fun getOrCreateUser(hex: HexKey): User
-
-    fun getOrCreateNote(hex: HexKey): Note
-
-    fun getOrCreateAddressableNote(address: Address): AddressableNote?
 }

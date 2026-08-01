@@ -169,33 +169,33 @@ class AgentWorkBoardViewModel : ViewModel() {
         onResult: (Boolean) -> Unit,
     ) = act(onResult) { account, relay, channelId ->
         if (requireApproval) {
-            account.triggerBuzzWorkflow(relay, channelId, ADHOC_WORKFLOW_ID, text) != null
+            account.relayGroups.triggerBuzzWorkflow(relay, channelId, ADHOC_WORKFLOW_ID, text) != null
         } else {
-            account.fileBuzzJob(relay, channelId, text) != null
+            account.relayGroups.fileBuzzJob(relay, channelId, text) != null
         }
     }
 
     fun approve(
         runId: HexKey,
         onResult: (Boolean) -> Unit,
-    ) = act(onResult) { account, relay, _ -> account.approveBuzzWorkflowRun(relay, runId) != null }
+    ) = act(onResult) { account, relay, _ -> account.relayGroups.approveBuzzWorkflowRun(relay, runId) != null }
 
     fun deny(
         runId: HexKey,
         onResult: (Boolean) -> Unit,
-    ) = act(onResult) { account, relay, _ -> account.denyBuzzWorkflowRun(relay, runId) != null }
+    ) = act(onResult) { account, relay, _ -> account.relayGroups.denyBuzzWorkflowRun(relay, runId) != null }
 
     fun upvote(
         jobId: HexKey,
         jobAuthor: HexKey?,
     ) = act({}) { account, relay, channelId ->
-        account.upvoteBuzzJob(relay, channelId, jobId, jobAuthor)
+        account.relayGroups.upvoteBuzzJob(relay, channelId, jobId, jobAuthor)
         true
     }
 
     fun cancel(jobId: HexKey) =
         act({}) { account, relay, channelId ->
-            account.cancelBuzzJob(relay, channelId, jobId)
+            account.relayGroups.cancelBuzzJob(relay, channelId, jobId)
             true
         }
 

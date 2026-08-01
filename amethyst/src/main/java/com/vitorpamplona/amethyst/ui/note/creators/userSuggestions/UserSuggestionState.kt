@@ -190,7 +190,7 @@ class UserSuggestionState(
             if (prefix != null) {
                 logTime("UserSuggestionState Search $prefix version $version") {
                     rankPriorityFirst(
-                        account.cache.findUsersStartingWith(prefix, account),
+                        account.cache.search.findUsersStartingWith(prefix, account),
                         priorityPubkeys(),
                     )
                 }

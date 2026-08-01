@@ -254,7 +254,7 @@ class BuzzDmListViewModel : ViewModel() {
     fun removeFromMessages(row: DmRow) {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            account.hideBuzzDm(LocalCache.getOrCreateRelayGroupChannel(GroupId(row.channelId, row.relayUrl)))
+            account.relayGroups.hideBuzzDm(LocalCache.getOrCreateRelayGroupChannel(GroupId(row.channelId, row.relayUrl)))
         }
     }
 
@@ -268,7 +268,7 @@ class BuzzDmListViewModel : ViewModel() {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
             val me = account.userProfile().pubkeyHex
-            account.openBuzzDm(row.relayUrl, row.others.ifEmpty { listOf(me) })
+            account.relayGroups.openBuzzDm(row.relayUrl, row.others.ifEmpty { listOf(me) })
             // The relay's new 30622 normally arrives on the live subscription; refresh anyway so the
             // row returns even if this screen's socket missed the snapshot.
             refresh()

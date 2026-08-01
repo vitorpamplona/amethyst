@@ -596,7 +596,7 @@ private fun ConcordFileUploadDialog(
                     onceUploaded = { uploads ->
                         val imetas = uploads.mapNotNull { it.toConcordImeta() }
                         if (imetas.isNotEmpty()) {
-                            accountViewModel.account.sendConcordChannelImageMessage(community, channel, "", imetas)
+                            accountViewModel.account.concord.sendConcordChannelImageMessage(community, channel, "", imetas)
                         }
                         onUpload()
                     },

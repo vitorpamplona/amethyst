@@ -120,7 +120,7 @@ fun ConcordCreateScreen(
                     scope.launch {
                         val communityId =
                             try {
-                                accountViewModel.account.createConcordCommunity(
+                                accountViewModel.account.concord.createConcordCommunity(
                                     name = name.value.trim(),
                                     description = about.value.trim().ifBlank { null },
                                     relays = relays.map { it.url },

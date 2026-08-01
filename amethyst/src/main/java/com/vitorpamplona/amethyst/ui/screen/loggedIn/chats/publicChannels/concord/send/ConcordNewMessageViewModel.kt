@@ -204,11 +204,11 @@ open class ConcordNewMessageViewModel : ViewModel() {
 
         val editing = editingMessage.value
         if (editing != null) {
-            account.editConcordChannelMessage(editing, text)
+            account.concord.editConcordChannelMessage(editing, text)
             editingMessage.value = null
         } else {
             val parent = replyTo.value
-            account.sendConcordChannelMessage(community, channel, text, parent, replyMode.value)
+            account.concord.sendConcordChannelMessage(community, channel, text, parent, replyMode.value)
         }
 
         message.clearText()

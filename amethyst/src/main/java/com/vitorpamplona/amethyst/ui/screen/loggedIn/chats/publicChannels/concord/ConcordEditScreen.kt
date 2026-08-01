@@ -163,7 +163,7 @@ fun ConcordEditScreen(
                     scope.launch {
                         val ok =
                             try {
-                                account.editConcordMetadata(
+                                account.concord.editConcordMetadata(
                                     communityId = communityId,
                                     name = name.value.trim(),
                                     description = about.value.trim().ifBlank { null },

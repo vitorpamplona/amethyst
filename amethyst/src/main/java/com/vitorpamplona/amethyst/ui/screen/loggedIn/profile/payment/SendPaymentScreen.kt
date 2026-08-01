@@ -509,13 +509,13 @@ private fun SendPaymentLoaded(
                     if (onchainAddressTarget != null) {
                         // Pays the profile's announced bitcoin address directly —
                         // a plain wallet send, no NIP-BC receipt exists for it.
-                        accountViewModel.account.sendOnchainToAddress(
+                        accountViewModel.account.zaps.sendOnchainToAddress(
                             recipientAddress = onchainAddressTarget,
                             amountSats = amount,
                             feeRateSatPerVByte = feeRate,
                         )
                     } else {
-                        accountViewModel.account.sendOnchainZap(
+                        accountViewModel.account.zaps.sendOnchainZap(
                             recipientPubKey = user.pubkeyHex,
                             amountSats = amount,
                             feeRateSatPerVByte = feeRate,

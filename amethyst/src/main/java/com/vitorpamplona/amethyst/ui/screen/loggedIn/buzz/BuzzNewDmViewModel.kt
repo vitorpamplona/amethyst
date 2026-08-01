@@ -118,7 +118,7 @@ class BuzzNewDmViewModel : ViewModel() {
                 val me = account.userProfile().pubkeyHex
                 val already = _participants.value.toSet()
                 val ranked =
-                    LocalCache
+                    LocalCache.search
                         .findUsersStartingWith(text.trim(), account)
                         .asSequence()
                         .map { it.pubkeyHex }
@@ -194,7 +194,7 @@ class BuzzNewDmViewModel : ViewModel() {
         _status.value = Status.Sending
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val channelId = account.openBuzzDm(relay, others)
+                val channelId = account.relayGroups.openBuzzDm(relay, others)
                 val groupId = channelId?.let { GroupId(it, relay) }
                 withContext(Dispatchers.Main) { onOpened(groupId) }
             } catch (e: CancellationException) {
