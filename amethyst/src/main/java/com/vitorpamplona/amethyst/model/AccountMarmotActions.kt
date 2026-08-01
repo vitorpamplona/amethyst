@@ -278,7 +278,7 @@ class AccountMarmotActions(
     suspend fun publishMarmotKeyPackages() {
         val manager =
             account.marmotManager ?: run {
-                Log.w("MarmotDbg") { "publishMarmotKeyPackages: account.marmotManager is NULL — no-op" }
+                Log.w("MarmotDbg") { "publishMarmotKeyPackages: marmotManager is NULL — no-op" }
                 return
             }
         if (!account.isWriteable()) {
@@ -475,7 +475,7 @@ class AccountMarmotActions(
         }
         val manager =
             account.marmotManager ?: run {
-                Log.w("MarmotDbg") { "removeMarmotGroupMember: account.marmotManager is NULL — no-op" }
+                Log.w("MarmotDbg") { "removeMarmotGroupMember: marmotManager is NULL — no-op" }
                 return
             }
         if (!account.isWriteable()) {
