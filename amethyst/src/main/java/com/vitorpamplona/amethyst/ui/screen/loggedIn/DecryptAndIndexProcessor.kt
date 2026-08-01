@@ -415,7 +415,7 @@ private suspend fun processMarmotWelcomeFlow(
 
             // Rotate KeyPackages if needed
             if (result.needsKeyPackageRotation) {
-                account.publishMarmotKeyPackages()
+                account.marmot.publishMarmotKeyPackages()
             }
 
             // Fire the "You've been added to <group>" notification. Welcomes

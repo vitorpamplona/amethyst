@@ -2330,8 +2330,8 @@ class AccountViewModel(
                     mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
                 )
                 ?: return
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
     }
 
     suspend fun sendMarmotGroupMediaMessage(
@@ -2356,21 +2356,21 @@ class AccountViewModel(
                     account.signer.pubKey,
                     template,
                 )
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
     }
 
     fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
 
     suspend fun createMarmotGroup(nostrGroupId: String) {
-        account.createMarmotGroup(nostrGroupId)
+        account.marmot.createMarmotGroup(nostrGroupId)
     }
 
     suspend fun publishMarmotKeyPackage() {
-        account.publishMarmotKeyPackage()
+        account.marmot.publishMarmotKeyPackage()
     }
 
-    suspend fun hasPublishedKeyPackage(): Boolean = account.hasPublishedKeyPackage()
+    suspend fun hasPublishedKeyPackage(): Boolean = account.marmot.hasPublishedKeyPackage()
 
     /**
      * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)
@@ -2394,12 +2394,12 @@ class AccountViewModel(
     }
 
     suspend fun leaveMarmotGroup(nostrGroupId: String) {
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.leaveMarmotGroup(nostrGroupId, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.leaveMarmotGroup(nostrGroupId, relays)
     }
 
     suspend fun resetMarmotState() {
-        account.resetMarmotState()
+        account.marmot.resetMarmotState()
     }
 
     fun marmotGroupMembers(nostrGroupId: String): List<com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
@@ -2407,30 +2407,30 @@ class AccountViewModel(
     suspend fun addMarmotGroupMember(
         nostrGroupId: String,
         memberPubKey: String,
-    ): String = account.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
+    ): String = account.marmot.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
 
     suspend fun removeMarmotGroupMember(
         nostrGroupId: String,
         targetLeafIndex: Int,
     ) {
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
     }
 
     suspend fun grantMarmotGroupAdmin(
         nostrGroupId: String,
         targetPubKey: String,
     ) {
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.grantMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.grantMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
     }
 
     suspend fun revokeMarmotGroupAdmin(
         nostrGroupId: String,
         targetPubKey: String,
     ) {
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.revokeMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.revokeMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
     }
 
     /**
@@ -2486,8 +2486,8 @@ class AccountViewModel(
                         imageUploadKey = icon.upload.imageUploadKey,
                     )
             }
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }
 
     override fun onCleared() {

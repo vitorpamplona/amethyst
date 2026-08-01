@@ -189,7 +189,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 persistOwn = false,
             )
 
-        account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, account.marmotGroupRelays(nostrGroupId))
+        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, account.marmot.marmotGroupRelays(nostrGroupId))
     }
 
     private suspend fun sendPublicReply(
