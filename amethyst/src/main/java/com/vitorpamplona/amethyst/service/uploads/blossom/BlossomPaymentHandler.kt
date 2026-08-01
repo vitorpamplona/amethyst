@@ -166,7 +166,7 @@ object BlossomPaymentHandler {
 
         val preimageResult = CompletableDeferred<String?>()
         try {
-            account.sendZapPaymentRequestFor(invoice, null) { response ->
+            account.zaps.sendZapPaymentRequestFor(invoice, null) { response ->
                 // CompletableDeferred.complete is idempotent, so extra callbacks are harmless.
                 preimageResult.complete((response as? PayInvoiceSuccessResponse)?.result?.preimage)
             }

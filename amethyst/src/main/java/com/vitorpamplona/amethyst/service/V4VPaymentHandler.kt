@@ -159,7 +159,7 @@ class V4VPaymentHandler(
                     tlvRecords = tlvRecords,
                 )
 
-            account.sendNwcRequest(request) { response: Response? ->
+            account.zaps.sendNwcRequest(request) { response: Response? ->
                 if (response is IErrorResponseLike) {
                     onError(
                         stringRes(context, R.string.error_dialog_pay_invoice_error),
@@ -195,7 +195,7 @@ class V4VPaymentHandler(
             try {
                 val nostrRequest =
                     if (asZap && noteEvent != null) {
-                        account.createZapRequestFor(
+                        account.zaps.createZapRequestFor(
                             event = noteEvent,
                             pollOption = null,
                             message = message,
@@ -250,7 +250,7 @@ class V4VPaymentHandler(
             is PaymentSource.Nwc -> {
                 var done = 0
                 payables.forEach { payable ->
-                    account.sendZapPaymentRequestFor(payable.invoice, zappedNote) { response ->
+                    account.zaps.sendZapPaymentRequestFor(payable.invoice, zappedNote) { response ->
                         if (response is IErrorResponseLike) {
                             onError(
                                 stringRes(context, R.string.error_dialog_pay_invoice_error),

@@ -843,7 +843,7 @@ class AccountViewModel(
         afterTimeInSeconds: Long,
     ): Boolean =
         withContext(Dispatchers.IO) {
-            account.calculateIfNoteWasZappedByAccount(zappedNote, afterTimeInSeconds)
+            account.zaps.calculateIfNoteWasZappedByAccount(zappedNote, afterTimeInSeconds)
         }
 
     suspend fun calculateZapAmount(zappedNote: Note): String {
@@ -854,7 +854,7 @@ class AccountViewModel(
         val ownPendingOnchain = zappedNote.extraOwnPendingOnchainSats(account.userProfile().pubkeyHex)
         return if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                val nwc = account.calculateZappedAmount(zappedNote)
+                val nwc = account.zaps.calculateZappedAmount(zappedNote)
                 showAmount(nwc + java.math.BigDecimal(ownPendingOnchain))
             }
         } else {
@@ -866,7 +866,7 @@ class AccountViewModel(
         val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
         return if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                val newZapAmount = account.calculateZappedAmount(zappedNote)
+                val newZapAmount = account.zaps.calculateZappedAmount(zappedNote)
                 var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
 
                 if (percentage > 1) {
@@ -1202,7 +1202,7 @@ class AccountViewModel(
             .isNotEmpty()
 
     /** True when a BOLT12 offer can be paid in-app: an NWC wallet is set and advertises `pay` (nwc#2). */
-    fun canPayBolt12ViaNwc(): Boolean = hasNwcWallet() && account.defaultWalletSupportsBolt12Pay()
+    fun canPayBolt12ViaNwc(): Boolean = hasNwcWallet() && account.zaps.defaultWalletSupportsBolt12Pay()
 
     /**
      * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2
@@ -1214,7 +1214,7 @@ class AccountViewModel(
         offer: String,
         amountMillisats: Long,
     ) = launchSigner {
-        account.sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
+        account.zaps.sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
             when (response) {
                 is PaySuccessResponse -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_sent)
                 is IErrorResponseLike ->
@@ -2745,7 +2745,7 @@ class AccountViewModel(
         onSent: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ) = launchSigner {
-        account.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
+        account.zaps.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
         onSent()
     }
 
@@ -2801,7 +2801,7 @@ class AccountViewModel(
                     if (effectiveZapType != LnZapEvent.ZapType.NONZAP) {
                         // NIP-57 Appendix F: include amount + lnurl so the receipt can be validated.
                         val splitLnurl = LnurlForm.toUrl(lnAddress)?.let(LnurlForm::urlToBech32)
-                        account.createZapRequestFor(
+                        account.zaps.createZapRequestFor(
                             user = user,
                             message = message,
                             zapType = effectiveZapType,

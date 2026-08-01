@@ -163,7 +163,7 @@ class ZapPaymentHandler(
         val canBolt12 =
             account.settings.nwcWallets.value
                 .isNotEmpty() &&
-                account.defaultWalletSupportsBolt12Pay()
+                account.zaps.defaultWalletSupportsBolt12Pay()
 
         val bolt12Recipients =
             unverifiedZapsToSend.mapNotNull {
@@ -330,7 +330,7 @@ class ZapPaymentHandler(
 
             val zapRequest =
                 if (zapType != LnZapEvent.ZapType.NONZAP && noteEvent != null) {
-                    account.createZapRequestFor(
+                    account.zaps.createZapRequestFor(
                         event = noteEvent,
                         pollOption = pollOption,
                         message = message,
@@ -414,7 +414,7 @@ class ZapPaymentHandler(
         return mapNotNullAsync(
             items = payables,
             runRequestFor = { payable: Payable ->
-                account.sendZapPaymentRequestFor(
+                account.zaps.sendZapPaymentRequestFor(
                     bolt11 = payable.invoice,
                     zappedNote = note,
                     onResponse = { response ->
@@ -462,7 +462,7 @@ class ZapPaymentHandler(
         val progress = PaymentProgress(recipients.size, onProgress)
 
         mapNotNullAsync(recipients) { recipient: Bolt12Recipient ->
-            account.sendBolt12Zap(
+            account.zaps.sendBolt12Zap(
                 zappedEvent = note.event,
                 recipientPubKey = recipient.user.pubkeyHex,
                 offer = recipient.offer,

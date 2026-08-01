@@ -279,7 +279,7 @@ class AccountNappletGateways(
         }
 
         val result = CompletableDeferred<String?>()
-        account.sendZapPaymentRequestFor(invoice, null) { response ->
+        account.zaps.sendZapPaymentRequestFor(invoice, null) { response ->
             when (response) {
                 is PayInvoiceSuccessResponse -> result.complete(response.result?.preimage)
                 is PayInvoiceErrorResponse -> result.completeExceptionally(RuntimeException(response.error?.message ?: "Payment failed."))

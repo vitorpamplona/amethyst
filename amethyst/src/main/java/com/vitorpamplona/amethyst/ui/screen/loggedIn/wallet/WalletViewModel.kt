@@ -222,7 +222,7 @@ class WalletViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             delay(NWC_TIMEOUT_MS)
             val requestId = requestIdProvider()
-            val spoofs = requestId?.let { account?.nwcSpoofAttempts(it) ?: 0 } ?: 0
+            val spoofs = requestId?.let { account?.zaps?.nwcSpoofAttempts(it) ?: 0 } ?: 0
             _error.value =
                 if (spoofs > 0) {
                     "Wallet request timed out — $spoofs ${if (spoofs == 1) "reply was" else "replies were"} rejected because " +
@@ -230,7 +230,7 @@ class WalletViewModel : ViewModel() {
                 } else {
                     "Wallet request timed out"
                 }
-            requestId?.let { account?.cleanupNwcRequest(it) }
+            requestId?.let { account?.zaps?.cleanupNwcRequest(it) }
             onTimeout()
         }
 
@@ -406,7 +406,7 @@ class WalletViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             updateWalletInfo(walletId) { it.copy(isLoading = true, error = null) }
             try {
-                acc.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
+                acc.zaps.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
                     when (response) {
                         is GetBalanceSuccessResponse -> {
                             val sats = (response.result?.balance ?: 0L) / 1000L
@@ -437,7 +437,7 @@ class WalletViewModel : ViewModel() {
         val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                acc.sendNwcRequestToWallet(walletUri, GetInfoMethod.create()) { response ->
+                acc.zaps.sendNwcRequestToWallet(walletUri, GetInfoMethod.create()) { response ->
                     when (response) {
                         is GetInfoSuccessResponse -> {
                             updateWalletInfo(walletId) { it.copy(alias = response.result?.alias) }
@@ -479,7 +479,7 @@ class WalletViewModel : ViewModel() {
             val timeoutJob = launchTimeout({ requestId }) { _isLoading.value = false }
             try {
                 requestId =
-                    acc.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
+                    acc.zaps.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
                         timeoutJob.cancel()
                         when (response) {
                             is GetBalanceSuccessResponse -> {
@@ -512,7 +512,7 @@ class WalletViewModel : ViewModel() {
         val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                acc.sendNwcRequestToWallet(walletUri, GetInfoMethod.create()) { response ->
+                acc.zaps.sendNwcRequestToWallet(walletUri, GetInfoMethod.create()) { response ->
                     when (response) {
                         is GetInfoSuccessResponse -> {
                             _walletAlias.value = response.result?.alias
@@ -538,7 +538,7 @@ class WalletViewModel : ViewModel() {
             val timeoutJob = launchTimeout({ requestId }) { _isLoading.value = false }
             try {
                 requestId =
-                    acc.sendNwcRequestToWallet(
+                    acc.zaps.sendNwcRequestToWallet(
                         walletUri,
                         ListTransactionsMethod.create(
                             limit = pageSize,
@@ -591,7 +591,7 @@ class WalletViewModel : ViewModel() {
             val timeoutJob = launchTimeout({ requestId }) { _isLoadingMore.value = false }
             try {
                 requestId =
-                    acc.sendNwcRequestToWallet(
+                    acc.zaps.sendNwcRequestToWallet(
                         walletUri,
                         ListTransactionsMethod.create(
                             limit = pageSize,
@@ -638,7 +638,7 @@ class WalletViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _sendState.value = SendState.Sending
             try {
-                acc.sendNwcRequestToWallet(walletUri, PayInvoiceMethod.create(bolt11)) { response ->
+                acc.zaps.sendNwcRequestToWallet(walletUri, PayInvoiceMethod.create(bolt11)) { response ->
                     when (response) {
                         is PayInvoiceSuccessResponse -> {
                             _sendState.value = SendState.Success(response.result?.preimage)
@@ -676,7 +676,7 @@ class WalletViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _receiveState.value = ReceiveState.Creating
             try {
-                acc.sendNwcRequestToWallet(
+                acc.zaps.sendNwcRequestToWallet(
                     walletUri,
                     MakeInvoiceMethod.create(
                         amount = amountSats * 1000L,
