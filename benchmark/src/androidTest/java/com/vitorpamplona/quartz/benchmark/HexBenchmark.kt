@@ -133,6 +133,24 @@ class HexBenchmark {
         r.measureRepeated { Hex.encode128(bytes64) }
     }
 
+    /** The general-purpose decoder on the same 128 chars, for comparison with [hexDecode128]. */
+    @Test
+    fun hexDecodeOurs128() {
+        r.measureRepeated {
+            Hex
+                .decode(hex128)
+        }
+    }
+
+    /** The general-purpose encoder on the same 64 bytes, for comparison with [hexEncode128]. */
+    @Test
+    fun hexEncodeOurs128() {
+        r.measureRepeated {
+            Hex
+                .encode(bytes64)
+        }
+    }
+
     /** The pre-existing two-pass way to safely decode an id, for comparison with [hexDecode64OrNull]. */
     @Test
     fun hexIsHex64ThenDecode() {
