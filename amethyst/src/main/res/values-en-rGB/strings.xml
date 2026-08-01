@@ -52,6 +52,16 @@
     <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
     <!-- Poll mentions (rendered on the Mentions channel) -->
     <!-- Call notifications and UI -->
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,

@@ -1247,6 +1247,16 @@
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="other">เชื่อมต่อกับ %1$d relay แล้ว</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">กำลังเชื่อมต่อกับ inbox relay…</string>
     <string name="always_on_notif_setting_title">บริการแจ้งเตือนแบบถาวร</string>
     <string name="always_on_notif_setting_description">รักษาการเชื่อมต่อถาวรกับ inbox relay ของคุณเพื่อการส่งการแจ้งเตือนแบบทันที แสดงการแจ้งเตือนที่กำลังดำเนินอยู่ ใช้แบตเตอรี่มากขึ้น แต่รับประกันว่าคุณจะไม่พลาดข้อความ</string>
