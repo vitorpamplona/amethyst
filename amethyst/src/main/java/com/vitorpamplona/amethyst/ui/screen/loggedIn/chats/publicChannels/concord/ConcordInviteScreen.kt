@@ -116,7 +116,7 @@ fun ConcordInviteScreen(
     LaunchedEffect(link, state) {
         if (state is RedeemState.Working) {
             state =
-                when (val result = accountViewModel.account.joinConcordViaInvite(link)) {
+                when (val result = accountViewModel.account.concord.joinConcordViaInvite(link)) {
                     is ConcordInviteResult.Joined -> RedeemState.Done(result.communityId)
                     is ConcordInviteResult.InvalidLink ->
                         RedeemState.Failed(R.string.concord_invite_failed_invalid, canRetry = false)

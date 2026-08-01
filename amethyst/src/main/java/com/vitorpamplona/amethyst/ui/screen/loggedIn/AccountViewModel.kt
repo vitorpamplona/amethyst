@@ -548,7 +548,7 @@ class AccountViewModel(
         // public relays. Route the reaction through a channel-plane wrap instead. (Retraction of an
         // existing Concord reaction is a follow-up; for now this only adds one.)
         if (note.inGatherers?.any { it is ConcordChannel } == true) {
-            launchSigner { account.reactToConcordMessage(note, reaction) }
+            launchSigner { account.concord.reactToConcordMessage(note, reaction) }
             return
         }
 
@@ -606,15 +606,15 @@ class AccountViewModel(
 
     /** Ban the author of a Concord channel message (no-op unless this account may ban them). */
     fun banConcordMember(note: Note) {
-        val (communityId, member) = account.concordBanTarget(note) ?: return
-        launchSigner { account.banConcordMember(communityId, member) }
+        val (communityId, member) = account.concord.concordBanTarget(note) ?: return
+        launchSigner { account.concord.banConcordMember(communityId, member) }
     }
 
     /** Toggle the Admin role on the author of a Concord channel message (owner only). */
     fun toggleConcordAdmin(note: Note) {
-        val (communityId, member, isAdmin) = account.concordAdminTarget(note) ?: return
+        val (communityId, member, isAdmin) = account.concord.concordAdminTarget(note) ?: return
         launchSigner {
-            if (isAdmin) account.removeConcordAdmin(communityId, member) else account.makeConcordAdmin(communityId, member)
+            if (isAdmin) account.concord.removeConcordAdmin(communityId, member) else account.concord.makeConcordAdmin(communityId, member)
         }
     }
 
@@ -624,7 +624,7 @@ class AccountViewModel(
         member: HexKey,
         makeAdmin: Boolean,
     ) = launchSigner {
-        if (makeAdmin) account.makeConcordAdmin(communityId, member) else account.removeConcordAdmin(communityId, member)
+        if (makeAdmin) account.concord.makeConcordAdmin(communityId, member) else account.concord.removeConcordAdmin(communityId, member)
     }
 
     /**
@@ -640,7 +640,7 @@ class AccountViewModel(
         member: HexKey,
         roleIds: List<String>,
     ) = launchSigner {
-        if (!account.grantConcordRole(communityId, member, roleIds)) {
+        if (!account.concord.grantConcordRole(communityId, member, roleIds)) {
             toastManager.toast(R.string.concord_members_roles_title, R.string.concord_members_roles_failed)
         }
     }
@@ -651,7 +651,7 @@ class AccountViewModel(
         member: HexKey,
         ban: Boolean,
     ) = launchSigner {
-        if (ban) account.banConcordMember(communityId, member) else account.unbanConcordMember(communityId, member)
+        if (ban) account.concord.banConcordMember(communityId, member) else account.concord.unbanConcordMember(communityId, member)
     }
 
     /**
@@ -663,7 +663,7 @@ class AccountViewModel(
         communityId: String,
         member: HexKey,
     ) = launchSigner {
-        account.refoundConcordCommunity(communityId, setOf(member))
+        account.concord.refoundConcordCommunity(communityId, setOf(member))
     }
 
     /**
@@ -683,7 +683,7 @@ class AccountViewModel(
                             else -> emptyList()
                         }
                     }.mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
-            account.importConcordCommunities(pinnedRelays)
+            account.concord.importConcordCommunities(pinnedRelays)
         }
 
     /** Publish an ephemeral typing heartbeat to a Concord channel (throttled by the caller). */
@@ -691,7 +691,7 @@ class AccountViewModel(
         communityId: String,
         channelIdHex: String,
     ) = viewModelScope.launch(Dispatchers.IO) {
-        account.sendConcordTyping(communityId, channelIdHex)
+        account.concord.sendConcordTyping(communityId, channelIdHex)
     }
 
     fun sendBuzzTyping(channel: RelayGroupChannel) =
@@ -1756,7 +1756,7 @@ class AccountViewModel(
      * what makes leaving a community whose own relays are dead work at all — the list lives in *our*
      * outbox, not in the community's relays.
      */
-    fun leaveConcordCommunity(communityId: String) = launchSigner { account.leaveConcordCommunity(communityId) }
+    fun leaveConcordCommunity(communityId: String) = launchSigner { account.concord.leaveConcordCommunity(communityId) }
 
     fun createRelayGroup(
         relay: NormalizedRelayUrl,

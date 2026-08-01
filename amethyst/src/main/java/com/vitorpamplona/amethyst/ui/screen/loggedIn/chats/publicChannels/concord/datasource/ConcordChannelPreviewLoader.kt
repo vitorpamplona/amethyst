@@ -50,7 +50,7 @@ fun ConcordChannelPreviewLoader(
         val entry =
             account.concordChannelList.liveCommunities.value
                 .firstOrNull { it.id == communityId } ?: return@LaunchedEffect
-        account.warmConcordChannelPreviews(listOf(entry))
+        account.concord.warmConcordChannelPreviews(listOf(entry))
     }
 }
 
@@ -72,6 +72,6 @@ fun ConcordChannelPreviewAccountPreload(accountViewModel: AccountViewModel) {
     LaunchedEffect(communities, revision) {
         // Debounce the cold-boot burst of fold revisions (and any join/leave churn) into one drain.
         delay(1500)
-        account.warmConcordChannelPreviews(communities)
+        account.concord.warmConcordChannelPreviews(communities)
     }
 }

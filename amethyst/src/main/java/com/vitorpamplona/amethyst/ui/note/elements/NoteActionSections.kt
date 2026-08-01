@@ -371,7 +371,7 @@ fun noteActionSections(
             // message's author (both return null unless it's a Concord message this
             // account may act on). Promote/demote is instant; a ban re-keys the
             // community, so it defers to the surface's confirmation dialog.
-            val concordAdmin = accountViewModel.account.concordAdminTarget(note)
+            val concordAdmin = accountViewModel.account.concord.concordAdminTarget(note)
             if (concordAdmin != null) {
                 val isAdmin = concordAdmin.third
                 add(
@@ -384,7 +384,7 @@ fun noteActionSections(
                     },
                 )
             }
-            if (handlers.onConcordBan != null && accountViewModel.account.concordBanTarget(note) != null) {
+            if (handlers.onConcordBan != null && accountViewModel.account.concord.concordBanTarget(note) != null) {
                 add(NoteAction(MaterialSymbols.Gavel, stringRes(R.string.concord_ban_user), isDestructive = true, onClick = handlers.onConcordBan))
             }
         }
