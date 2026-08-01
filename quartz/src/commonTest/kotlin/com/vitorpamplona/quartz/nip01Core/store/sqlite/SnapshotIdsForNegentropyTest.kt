@@ -20,9 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
+import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -101,4 +105,119 @@ class SnapshotIdsForNegentropyTest : BaseDBTest() {
             val whole = db.snapshotIdsForNegentropy(listOf(filter), maxEntries = 100)
             assertEquals(30, whole.size)
         }
+
+    @Test
+    fun reportsProgressWhileCollecting() =
+        runBlocking {
+            // Single store (not forEachDB): this exercises the row-loop
+            // cadence, which is indexing-strategy independent, and needs
+            // enough rows to cross the reporting interval twice.
+            val db = EventStore(dbName = null)
+            try {
+                val total = IEventStore.NEGENTROPY_PROGRESS_EVERY * 2 + 500
+                db.batchInsert(
+                    List(total) { i ->
+                        Event(
+                            id = i.toString(16).padStart(64, '0'),
+                            pubKey = PUBKEY,
+                            createdAt = 1_700_000_000L + i,
+                            kind = 1,
+                            tags = emptyArray(),
+                            content = "e$i",
+                            sig = SIG,
+                        )
+                    },
+                )
+
+                val ticks = mutableListOf<Int>()
+                val all =
+                    db.snapshotIdsForNegentropy(
+                        listOf(Filter(kinds = listOf(1))),
+                        onProgress = { ticks.add(it) },
+                    )
+                assertEquals(total, all.size)
+                assertEquals(
+                    listOf(IEventStore.NEGENTROPY_PROGRESS_EVERY, IEventStore.NEGENTROPY_PROGRESS_EVERY * 2),
+                    ticks,
+                    "onProgress must tick the running count once per interval",
+                )
+
+                // Omitting the callback stays the zero-cost path.
+                assertEquals(total, db.snapshotIdsForNegentropy(listOf(Filter(kinds = listOf(1)))).size)
+            } finally {
+                db.close()
+            }
+        }
+
+    @Test
+    fun interfaceDefaultReportsProgressForStoresWithoutAnOverride() =
+        runBlocking {
+            // A store that only streams events, so snapshotIdsForNegentropy
+            // resolves to the IEventStore default implementation.
+            val total = IEventStore.NEGENTROPY_PROGRESS_EVERY + 500
+            val store = StreamOnlyStore(total)
+
+            val ticks = mutableListOf<Int>()
+            val all = store.snapshotIdsForNegentropy(listOf(Filter()), onProgress = { ticks.add(it) })
+            assertEquals(total, all.size)
+            assertEquals(listOf(IEventStore.NEGENTROPY_PROGRESS_EVERY), ticks)
+
+            // maxEntries truncation still applies on the default path.
+            val capped = store.snapshotIdsForNegentropy(listOf(Filter()), maxEntries = 10)
+            assertEquals(11, capped.size)
+        }
+
+    private companion object {
+        const val PUBKEY = "46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d"
+        const val SIG = "4aa5264965018fa12a326686ad3d3bd8beae3218dcc83689b19ca1e6baeb791531943c15363aa6707c7c0c8b2d601deca1f20c32078b2872d356cdca03b04cce"
+    }
+
+    /** Minimal [IEventStore]: streams [total] synthetic events, nothing else. */
+    private class StreamOnlyStore(
+        private val total: Int,
+    ) : IEventStore {
+        override val relay = null
+
+        @Suppress("UNCHECKED_CAST")
+        override suspend fun <T : Event> query(
+            filters: List<Filter>,
+            onEach: (T) -> Unit,
+        ) {
+            repeat(total) { i ->
+                onEach(Event(i.toString(16).padStart(64, '0'), PUBKEY, 1_700_000_000L + i, 1, emptyArray(), "", SIG) as T)
+            }
+        }
+
+        override suspend fun insert(event: Event) = error("unused")
+
+        override suspend fun transaction(body: IEventStore.ITransaction.() -> Unit) = error("unused")
+
+        override suspend fun <T : Event> query(filter: Filter): List<T> = error("unused")
+
+        override suspend fun <T : Event> query(filters: List<Filter>): List<T> = error("unused")
+
+        override suspend fun <T : Event> query(
+            filter: Filter,
+            onEach: (T) -> Unit,
+        ) = error("unused")
+
+        override suspend fun count(filter: Filter): Int = error("unused")
+
+        override suspend fun count(filters: List<Filter>): Int = error("unused")
+
+        override suspend fun delete(filter: Filter) = error("unused")
+
+        override suspend fun delete(filters: List<Filter>) = error("unused")
+
+        override suspend fun deleteExpiredEvents() = error("unused")
+
+        override suspend fun reindexFullTextSearch() = error("unused")
+
+        override suspend fun reindexFullTextSearch(
+            resumeFrom: String?,
+            batchSize: Int,
+        ): FtsReindexProgress = error("unused")
+
+        override fun close() {}
+    }
 }

@@ -82,7 +82,8 @@ class EventStore(
     override suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
         maxEntries: Int?,
-    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
+        onProgress: ((collected: Int) -> Unit)?,
+    ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries, onProgress)
 
     override suspend fun liveNegentropySnapshot(maxEntries: Int) = store.liveNegentropySnapshot(maxEntries)
 

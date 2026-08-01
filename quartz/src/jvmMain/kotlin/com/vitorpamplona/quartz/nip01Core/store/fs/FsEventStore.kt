@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -299,15 +300,22 @@ open class FsEventStore(
         filter: Filter,
         onEach: (T) -> Unit,
     ) {
-        val limit = filter.limit ?: Int.MAX_VALUE
+        // Every read path (list/streaming query, count, delete-by-filter,
+        // negentropy snapshot) funnels through here, so this is the one
+        // place this store strips NIP-50 extension tokens: the FTS token
+        // index would otherwise require `include` / `spam` as literal AND
+        // terms. NIP-50 says unsupported extensions are ignored, so an
+        // extensions-only search collapses to an unconstrained query.
+        val stripped = filter.strippingSearchExtensions()
+        val limit = stripped.limit ?: Int.MAX_VALUE
         if (limit <= 0) return
         var emitted = 0
         val seenIds = HashSet<HexKey>()
-        for (candidate in planner.plan(filter)) {
+        for (candidate in planner.plan(stripped)) {
             if (emitted >= limit) break
             if (!seenIds.add(candidate.id)) continue
             val event = readEvent(candidate.id) ?: continue
-            if (!filter.match(event)) continue
+            if (!stripped.match(event)) continue
             @Suppress("UNCHECKED_CAST")
             onEach(event as T)
             emitted++
@@ -348,7 +356,10 @@ open class FsEventStore(
      */
     override suspend fun delete(filter: Filter) =
         lockManager.withWriteLock {
-            if (filter.isEmpty()) return@withWriteLock
+            // The emptiness check runs on the STRIPPED filter: an
+            // extensions-only search (`search = "language:en"`) strips to
+            // an empty filter, which must delete nothing — not everything.
+            if (filter.strippingSearchExtensions().isEmpty()) return@withWriteLock
             val ids = ArrayList<HexKey>()
             query<Event>(filter) { ids.add(it.id) }
             ids.forEach { deleteLocked(it) }
@@ -357,7 +368,7 @@ open class FsEventStore(
     /** See [delete] for the empty-filter contract. */
     override suspend fun delete(filters: List<Filter>) =
         lockManager.withWriteLock {
-            val nonEmpty = filters.filterNot { it.isEmpty() }
+            val nonEmpty = filters.filterNot { it.strippingSearchExtensions().isEmpty() }
             if (nonEmpty.isEmpty()) return@withWriteLock
             val ids = HashSet<HexKey>()
             query<Event>(nonEmpty) { ids.add(it.id) }
