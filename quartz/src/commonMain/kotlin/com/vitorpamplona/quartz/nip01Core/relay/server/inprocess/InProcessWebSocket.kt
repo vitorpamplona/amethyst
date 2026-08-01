@@ -41,7 +41,19 @@ import kotlinx.coroutines.launch
  *  - Outbound (`send`) → server `RelaySession.receive()` via an inbound
  *    channel drained by a single coroutine, preserving message order
  *    per the [WebSocketListener] contract.
- *  - Server-side `send` callbacks → [WebSocketListener.onMessage].
+ *  - Server-side `send` callbacks → [WebSocketListener.onMessage], via an
+ *    outbound channel drained by a single coroutine started only after
+ *    [WebSocketListener.onOpen] has fired.
+ *
+ * The outbound channel is not an optimization: a session's connect-time
+ * policies send synchronously from inside `server.connect` (e.g.
+ * [com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy]'s
+ * AUTH challenge), which is before this socket has stored its own state and
+ * before `onOpen`. Delivering those frames directly would break the
+ * [WebSocketListener] contract (no `onMessage` before `onOpen`) and — worse —
+ * a listener that answers the challenge from another thread (RelayAuthenticator
+ * signs and replies concurrently) could hit [send] while `incoming` is still
+ * null, silently losing the reply and deadlocking the NIP-42 handshake.
  *
  * Use this to wire a `NostrClient` to an embedded server in unit tests
  * or single-JVM scenarios without paying for a real TCP socket. Because
@@ -49,8 +61,8 @@ import kotlinx.coroutines.launch
  * expects.
  *
  * Reconnect-after-disconnect is supported: each [connect] creates a
- * fresh scope + drain channel so a previous [disconnect] (which
- * cancels both) doesn't leave a dead drainer behind.
+ * fresh scope + drain channels so a previous [disconnect] (which
+ * cancels them) doesn't leave a dead drainer behind.
  */
 class InProcessWebSocket(
     private val server: NostrServer,
@@ -58,7 +70,9 @@ class InProcessWebSocket(
 ) : WebSocket {
     private var scope: CoroutineScope? = null
     private var incoming: Channel<String>? = null
+    private var outgoing: Channel<String>? = null
     private var drainJob: Job? = null
+    private var deliverJob: Job? = null
     private var session: RelaySession? = null
 
     override fun needsReconnect(): Boolean = session == null
@@ -67,10 +81,12 @@ class InProcessWebSocket(
         if (session != null) return
         val newScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val newIncoming = Channel<String>(UNLIMITED)
-        val s = server.connect { json -> out.onMessage(json) }
+        val newOutgoing = Channel<String>(UNLIMITED)
+        val s = server.connect { json -> newOutgoing.trySend(json) }
 
         scope = newScope
         incoming = newIncoming
+        outgoing = newOutgoing
         session = s
         drainJob =
             newScope.launch {
@@ -80,6 +96,15 @@ class InProcessWebSocket(
             }
 
         out.onOpen(0, false)
+
+        // Started only after onOpen so every buffered connect-time frame (AUTH
+        // challenge & co.) reaches the listener with the socket fully wired.
+        deliverJob =
+            newScope.launch {
+                for (msg in newOutgoing) {
+                    out.onMessage(msg)
+                }
+            }
     }
 
     override fun disconnect() {
@@ -87,7 +112,10 @@ class InProcessWebSocket(
         session = null
         incoming?.close()
         incoming = null
+        outgoing?.close()
+        outgoing = null
         drainJob = null
+        deliverJob = null
         scope?.cancel()
         scope = null
         s.close()
