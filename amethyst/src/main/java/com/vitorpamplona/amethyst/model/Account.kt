@@ -226,17 +226,12 @@ import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
-import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
@@ -274,7 +269,6 @@ import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.signer.PoWNostrSigner
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
-import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
@@ -323,12 +317,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -345,12 +334,10 @@ import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapTemplateConversion
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureMeta
@@ -366,7 +353,6 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
-import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
@@ -801,6 +787,13 @@ class Account(
     // Per-message publish acceptance (relay OKs), feeding the delivery ticks on
     // own chat bubbles.
     val chatDeliveryTracker = ChatDeliveryTracker(client)
+
+    /**
+     * Relay routing + sign-and-publish choke point: computes which relays an event
+     * should go to (outbox model, hints, channels, broadcast lists) and owns every
+     * publish path. All Account send helpers delegate here.
+     */
+    val broadcaster = EventBroadcaster(this)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
@@ -1929,239 +1922,57 @@ class Account(
             relaysItCameFrom
     }
 
-    private fun computeRelayListForLinkedUser(user: User): Set<NormalizedRelayUrl> =
-        if (user == userProfile()) {
-            notificationRelays.flow.value
-        } else {
-            user.inboxRelays()?.ifEmpty { null }?.toSet()
-                ?: (cache.relayHints.hintsForKey(user.pubkeyHex).toSet() + user.allUsedRelays())
-        }
+    // ------------------------------------------------------------------
+    // Broadcast / relay-routing delegates (logic lives in EventBroadcaster).
+    // ------------------------------------------------------------------
 
-    private fun computeRelayListForLinkedUser(pubkey: HexKey): Set<NormalizedRelayUrl> =
-        if (pubkey == userProfile().pubkeyHex) {
-            notificationRelays.flow.value
-        } else {
-            cache
-                .getUserIfExists(pubkey)
-                ?.inboxRelays()
-                ?.ifEmpty { null }
-                ?.toSet()
-                ?: cache.relayHints.hintsForKey(pubkey).toSet()
-        }
+    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = broadcaster.computeRelayListToBroadcast(event)
 
-    private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> = cache.getAnyChannel(event)?.relays() ?: emptySet()
+    fun computeRelayListToBroadcast(note: Note): Set<NormalizedRelayUrl> = broadcaster.computeRelayListToBroadcast(note)
 
-    // Personal events the user stores just for themselves — drafts, app settings, bookmark
-    // lists — and channel/community events that already declare their own home relays
-    // should not be replicated to the user's broadcasting relays. Channel/community events
-    // that don't define any home relays fall through to broadcast, since there's nowhere
-    // else for them to land.
-    private fun wantsBroadcastRelays(event: Event): Boolean {
-        if (event is DraftWrapEvent ||
-            event is AppSpecificDataEvent ||
-            event is BookmarkListEvent ||
-            event is OldBookmarkListEvent ||
-            event is LabeledBookmarkListEvent
-        ) {
-            return false
-        }
-        if (event is PollEvent && event.relays().isNotEmpty()) return false
-        if (event is MeetingSpaceEvent && event.allRelayUrls().isNotEmpty()) return false
-        if (event is MeetingRoomEvent && event.allRelayUrls().isNotEmpty()) return false
-        if (event is LiveActivitiesEvent && event.allRelayUrls().isNotEmpty()) return false
+    suspend fun broadcast(note: Note) = broadcaster.broadcast(note)
 
-        val channelRelays = cache.getAnyChannel(event)?.relays()
-        if (channelRelays != null && channelRelays.isNotEmpty()) return false
+    fun sendAutomatic(events: List<Event>) = broadcaster.sendAutomatic(events)
 
-        return true
-    }
+    fun sendAutomatic(event: Event?) = broadcaster.sendAutomatic(event)
 
-    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = computeRelayListToBroadcast(event, mutableSetOf())
+    fun sendMyPublicAndPrivateOutbox(event: Event?) = broadcaster.sendMyPublicAndPrivateOutbox(event)
 
-    private fun computeRelayListToBroadcast(
-        event: Event,
-        visited: MutableSet<HexKey>,
-    ): Set<NormalizedRelayUrl> {
-        // a-tagged events can form cycles; without this the two recursive descents stack-overflow.
-        if (!visited.add(event.id)) return emptySet()
+    fun sendMyPublicAndPrivateOutbox(events: List<Event>) = broadcaster.sendMyPublicAndPrivateOutbox(events)
 
-        if (event is GiftWrapEvent) {
-            val receiver = event.recipientPubKey()
-            return if (receiver != null) {
-                val relayList =
-                    cache
-                        .getOrCreateUser(receiver)
-                        .dmInboxRelayList()
-                        ?.relays()
-                        ?.ifEmpty { null }
-                relayList?.toSet() ?: computeRelayListForLinkedUser(receiver)
-            } else {
-                emptySet()
-            }
-        }
-        // Seals, inner DM messages, and unsigned rumors never get broadcast
-        // relays: they only travel inside gift wraps.
-        if (event is SealedRumorEvent || event is BaseDMGroupEvent || event.sig.isEmpty()) {
-            return emptySet()
-        }
+    fun sendLiterallyEverywhere(event: Event) = broadcaster.sendLiterallyEverywhere(event)
 
-        val includeBroadcast = wantsBroadcastRelays(event)
-        val broadcastRelays = if (includeBroadcast) broadcastRelayList.flow.value else emptySet()
+    suspend fun <T : Event> signAndSendPrivately(
+        template: EventTemplate<T>,
+        relayList: Set<NormalizedRelayUrl>,
+    ) = broadcaster.signAndSendPrivately(template, relayList)
 
-        if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
-            // everywhere
-            return followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value + broadcastRelays
-        }
+    suspend fun <T : Event> signWithAndSendPrivately(
+        template: EventTemplate<T>,
+        signer: NostrSigner,
+        relayList: Set<NormalizedRelayUrl>,
+    ): T = broadcaster.signWithAndSendPrivately(template, signer, relayList)
 
-        val relayList = mutableSetOf<NormalizedRelayUrl>()
-        relayList.addAll(broadcastRelays)
+    suspend fun <T : Event> signAndSendPrivatelyOrBroadcast(
+        template: EventTemplate<T>,
+        relayList: (T) -> List<NormalizedRelayUrl>?,
+    ): T = broadcaster.signAndSendPrivatelyOrBroadcast(template, relayList)
 
-        val author = cache.getUserIfExists(event.pubKey)
+    suspend fun <T : Event> signAndComputeBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+    ): T = broadcaster.signAndComputeBroadcast(template, broadcast)
 
-        if (author != null) {
-            if (author == userProfile()) {
-                if (includeBroadcast) {
-                    relayList.addAll(outboxRelays.flow.value)
-                } else {
-                    // outboxRelays mixes in the broadcast list; for personal/channel events
-                    // we want the user's NIP-65 / private / local outbox without it.
-                    relayList.addAll(nip65RelayList.outboxFlow.value)
-                    relayList.addAll(privateStorageRelayList.flow.value)
-                    relayList.addAll(localRelayList.flow.value)
-                }
-            } else {
-                val relays =
-                    author.outboxRelays()?.ifEmpty { null }
-                        ?: author.allUsedRelaysOrNull()
-                        ?: cache.relayHints.hintsForKey(author.pubkeyHex)
+    suspend fun <T : Event> signAnonymouslyAndBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+        anonymousSigner: NostrSigner = NostrSignerInternal(KeyPair()),
+    ): T = broadcaster.signAnonymouslyAndBroadcast(template, broadcast, anonymousSigner)
 
-                relayList.addAll(relays)
-            }
-        } else {
-            relayList.addAll(cache.relayHints.hintsForKey(event.pubKey))
-        }
-
-        if (event is PubKeyHintProvider) {
-            event.pubKeyHints().forEach {
-                relayList.add(it.relay)
-            }
-            event.linkedPubKeys().forEach { pubkey ->
-                relayList.addAll(computeRelayListForLinkedUser(pubkey))
-            }
-        }
-
-        if (event is EventHintProvider) {
-            event.eventHints().forEach {
-                relayList.add(it.relay)
-            }
-            event.linkedEventIds().forEach { eventId ->
-                cache.getNoteIfExists(eventId)?.let { linkedNote ->
-                    val linkedNoteAuthor = linkedNote.author
-
-                    if (linkedNoteAuthor != null) {
-                        relayList.addAll(computeRelayListForLinkedUser(linkedNoteAuthor))
-                    } else {
-                        relayList.addAll(linkedNote.relays.toSet())
-                    }
-
-                    linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelayListToBroadcast(linkedEvent, visited))
-                    }
-                }
-            }
-        }
-
-        if (event is AddressHintProvider) {
-            event.addressHints().forEach {
-                relayList.add(it.relay)
-            }
-            event.linkedAddressIds().forEach { addressId ->
-                cache.getAddressableNoteIfExists(addressId)?.let { linkedNote ->
-                    val linkedNoteAuthor = linkedNote.author
-
-                    if (linkedNoteAuthor != null) {
-                        relayList.addAll(computeRelayListForLinkedUser(linkedNoteAuthor))
-                    } else {
-                        relayList.addAll(linkedNote.relays.toSet())
-                    }
-
-                    linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelayListToBroadcast(linkedEvent, visited))
-                    }
-                }
-            }
-        }
-
-        if (event is PollEvent) {
-            relayList.addAll(event.relays())
-        }
-
-        if (event is MeetingSpaceEvent) {
-            relayList.addAll(event.allRelayUrls())
-        }
-
-        if (event is MeetingRoomEvent) {
-            relayList.addAll(event.allRelayUrls())
-        }
-
-        if (event is LiveActivitiesEvent) {
-            relayList.addAll(event.allRelayUrls())
-        }
-
-        relayList.addAll(computeRelaysForChannels(event))
-
-        return relayList
-    }
-
-    fun computeRelayListToBroadcast(note: Note): Set<NormalizedRelayUrl> {
-        val noteEvent = note.event
-        return if (noteEvent != null) {
-            computeRelayListToBroadcast(noteEvent)
-        } else {
-            note.relays.toSet()
-        }
-    }
-
-    suspend fun broadcast(note: Note) {
-        note.event?.let { noteEvent ->
-            val host = note.rumorHost
-            if (host != null) {
-                // Rumors are rebroadcast as their delivering envelope: the
-                // cached copy is content-stripped, so download it and send it.
-                // A just-sent note has no relays until its self-wrap echoes
-                // back — fall back to our own DM inbox relays. Bare seals
-                // (kind 13) carry no p tag, so that filter is wrap-only.
-                val relays = note.relays.ifEmpty { dmRelays.flow.value.toList() }
-                val filter =
-                    if (host.kind == SealedRumorEvent.KIND) {
-                        Filter(
-                            kinds = listOf(host.kind),
-                            ids = listOf(host.id),
-                        )
-                    } else {
-                        Filter(
-                            kinds = listOf(host.kind),
-                            tags = mapOf("p" to listOf(pubKey)),
-                            ids = listOf(host.id),
-                        )
-                    }
-                client
-                    .fetchFirst(
-                        filters = relays.associateWith { _ -> listOf(filter) },
-                    )?.let { downloadedEvent ->
-                        val toRelays = computeRelayListToBroadcast(downloadedEvent)
-                        client.publish(downloadedEvent, toRelays)
-                    }
-            } else if (noteEvent.sig.isEmpty()) {
-                // Rumor with no known wrap: publishing it would disclose the
-                // private content to relays even though they reject the
-                // missing signature.
-                return
-            } else {
-                client.publish(noteEvent, computeRelayListToBroadcast(note))
-            }
-        }
-    }
+    fun republishEventsTo(
+        events: List<Event>,
+        relays: Set<NormalizedRelayUrl>,
+    ) = broadcaster.republishEventsTo(events, relays)
 
     fun upgradeAttestations() = otsState.upgradeAttestationsIfNeeded(::sendAutomatic)
 
@@ -3748,14 +3559,6 @@ class Account(
         client.publish(signedEvent, relays)
     }
 
-    fun sendAutomatic(events: List<Event>) = events.forEach { sendAutomatic(it) }
-
-    fun sendAutomatic(event: Event?) {
-        if (event == null) return
-        cache.justConsumeMyOwnEvent(event)
-        client.publish(event, computeRelayListToBroadcast(event))
-    }
-
     suspend fun sendWebBookmark(
         url: String,
         title: String?,
@@ -3972,24 +3775,6 @@ class Account(
             }
 
         client.publish(signedEvent, outboxRelays.flow.value)
-    }
-
-    fun sendMyPublicAndPrivateOutbox(event: Event?) {
-        if (event == null) return
-        cache.justConsumeMyOwnEvent(event)
-        client.publish(event, outboxRelays.flow.value)
-    }
-
-    fun sendMyPublicAndPrivateOutbox(events: List<Event>) {
-        events.forEach {
-            client.publish(it, outboxRelays.flow.value)
-            cache.justConsumeMyOwnEvent(it)
-        }
-    }
-
-    fun sendLiterallyEverywhere(event: Event) {
-        client.publish(event, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
-        cache.justConsumeMyOwnEvent(event)
     }
 
     suspend fun pollRespond(
@@ -4222,96 +4007,6 @@ class Account(
             }
 
         signAndComputeBroadcast(template)
-    }
-
-    suspend fun <T : Event> signAndSendPrivately(
-        template: EventTemplate<T>,
-        relayList: Set<NormalizedRelayUrl>,
-    ) {
-        val event = signer.sign(template)
-        cache.justConsumeMyOwnEvent(event)
-        client.publish(event, relayList)
-    }
-
-    /**
-     * Sign [template] with an arbitrary [signer] (e.g. a per-geohash ephemeral
-     * identity that is deliberately NOT this account's key) and publish to exactly
-     * [relayList]. Used by geohash location chat, where authorship inside a cell
-     * must not be linkable to the user's npub.
-     */
-    suspend fun <T : Event> signWithAndSendPrivately(
-        template: EventTemplate<T>,
-        signer: NostrSigner,
-        relayList: Set<NormalizedRelayUrl>,
-    ): T {
-        val event = signer.sign(template)
-        cache.justConsumeMyOwnEvent(event)
-        if (relayList.isNotEmpty()) client.publish(event, relayList)
-        return event
-    }
-
-    suspend fun <T : Event> signAndSendPrivatelyOrBroadcast(
-        template: EventTemplate<T>,
-        relayList: (T) -> List<NormalizedRelayUrl>?,
-    ): T {
-        val event = signer.sign(template)
-        cache.justConsumeMyOwnEvent(event)
-        val relays = relayList(event)
-        val targets =
-            if (!relays.isNullOrEmpty()) {
-                relays.toSet()
-            } else {
-                computeRelayListToBroadcast(event)
-            }
-        chatDeliveryTracker.trackPublic(event.id, targets)
-        client.publish(event, targets)
-        return event
-    }
-
-    suspend fun <T : Event> signAndComputeBroadcast(
-        template: EventTemplate<T>,
-        broadcast: List<Event> = emptyList(),
-    ): T {
-        val event = signer.sign(template)
-        cache.justConsumeMyOwnEvent(event)
-        val note =
-            if (event is AddressableEvent) {
-                cache.getOrCreateAddressableNote(event.address())
-            } else {
-                cache.getOrCreateNote(event.id)
-            }
-
-        val relayList = computeRelayListToBroadcast(note)
-
-        client.publish(event, relayList)
-
-        broadcast.forEach { client.publish(it, relayList) }
-
-        return event
-    }
-
-    suspend fun <T : Event> signAnonymouslyAndBroadcast(
-        template: EventTemplate<T>,
-        broadcast: List<Event> = emptyList(),
-        anonymousSigner: NostrSigner = NostrSignerInternal(KeyPair()),
-    ): T {
-        val event = anonymousSigner.sign(template)
-
-        cache.justConsumeMyOwnEvent(event)
-        val note =
-            if (event is AddressableEvent) {
-                cache.getOrCreateAddressableNote(event.address())
-            } else {
-                cache.getOrCreateNote(event.id)
-            }
-
-        val relayList = computeRelayListToBroadcast(note)
-
-        client.publish(event, relayList)
-
-        broadcast.forEach { client.publish(it, relayList) }
-
-        return event
     }
 
     /**
@@ -5988,14 +5683,6 @@ class Account(
             .mapNotNull { it.event }
 
     /** Publishes the given events to each of the given relays. No-op if either list is empty. */
-    fun republishEventsTo(
-        events: List<Event>,
-        relays: Set<NormalizedRelayUrl>,
-    ) {
-        if (relays.isEmpty() || events.isEmpty()) return
-        events.forEach { client.publish(it, relays) }
-    }
-
     suspend fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
         reason: String,
