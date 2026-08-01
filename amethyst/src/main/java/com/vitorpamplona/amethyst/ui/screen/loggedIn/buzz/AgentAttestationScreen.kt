@@ -436,7 +436,10 @@ private fun AgentKeyPicker(
         delay(150)
         suggestions =
             withContext(Dispatchers.IO) {
-                LocalCache.findUsersStartingWith(query.trim(), accountViewModel.account).map { it.pubkeyHex }.take(8)
+                LocalCache.search
+                    .findUsersStartingWith(query.trim(), accountViewModel.account)
+                    .map { it.pubkeyHex }
+                    .take(8)
             }
     }
 

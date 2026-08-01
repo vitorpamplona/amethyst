@@ -54,21 +54,21 @@ class MemoryTrimmingService(
     ) {
         // Tier 1: always run — cheap housekeeping; cleanObservers only removes flows that are
         // not currently held by the UI, so it is safe and inexpensive at any pressure level.
-        cache.cleanMemory()
-        cache.cleanObservers()
-        cache.pruneExpiredEvents()
-        cache.prunePastVersionsOfReplaceables()
+        cache.pruner.cleanMemory()
+        cache.pruner.cleanObservers()
+        cache.pruner.pruneExpiredEvents()
+        cache.pruner.prunePastVersionsOfReplaceables()
 
         if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
             // Tier 2: real reclaim pressure — drop events from muted/blocked users, old
             // messages, and unobserved reactions.
             account.forEach {
-                cache.pruneHiddenEvents(it)
-                cache.pruneHiddenMessages(it)
+                cache.pruner.pruneHiddenEvents(it)
+                cache.pruner.pruneHiddenMessages(it)
             }
             val accounts = otherAccounts.mapNotNull { decodePublicKeyAsHexOrNull(it.npub) }.toSet()
-            cache.pruneOldMessages()
-            cache.pruneRepliesAndReactions(accounts)
+            cache.pruner.pruneOldMessages()
+            cache.pruner.pruneRepliesAndReactions(accounts)
         }
     }
 

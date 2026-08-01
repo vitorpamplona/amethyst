@@ -52,11 +52,9 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
-import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
 import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
-import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
@@ -184,7 +182,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isRegular
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
-import com.vitorpamplona.quartz.nip01Core.core.tagValueContains
 import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -202,8 +199,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -211,7 +206,6 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -219,9 +213,6 @@ import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
@@ -261,7 +252,6 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
-import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -278,7 +268,6 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
-import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
@@ -374,7 +363,6 @@ import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -410,7 +398,6 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
-import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -544,6 +531,15 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
      * see every event.
      */
     val observables = FilterIndex<Observable>()
+
+    /**
+     * Memory-reclaim policy (soft-cache trims + hidden/old/expired/superseded event
+     * pruning) and the shared [CachePruner.unlinkAndRemove] removal primitive.
+     */
+    val pruner = CachePruner(this)
+
+    /** Prefix/content search over users, notes, and channels. */
+    val search = CacheSearch(this)
 
     fun Filter.match(note: Note): Boolean {
         val event = note.event
@@ -1031,7 +1027,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             // quoted note. Count it as a boost so it shows in the quoted note's repost
             // counter alongside kind:6/kind:16 reposts. The quoted note is deliberately
             // kept out of `replyTo` so the quote still renders as a root post in the home
-            // feed (see Note.isNewThread); deletion cleanup lives in unlinkAndRemove.
+            // feed (see Note.isNewThread); deletion cleanup lives in CachePruner.unlinkAndRemove.
             addQuoteBoosts(event, note, replyTo)
 
             refreshNewNoteObservers(note)
@@ -1635,14 +1631,14 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
      *
      * Removal has two halves: unlinking the note from everything that points AT it
      * (its parents, channels, and the per-user report/card/status/poll indexes —
-     * all handled by [unlinkAndRemove]); and dealing with the note's OWN children
+     * all handled by [CachePruner.unlinkAndRemove]); and dealing with the note's OWN children
      * (the notes that point at IT). The delete path and the prune path share the
      * first half and differ only on the second:
      *  - delete (here): the children are independent events and stay in the cache;
      *    [Note.detachFromChildren] only severs their back-reference so the removed
      *    shell can neither leak (held alive by a child's `replyTo`) nor be later
      *    resurrected by `computeReplyTo` as a second Note for the same id.
-     *  - prune (see [unlinkAndRemove] callers): the whole child subtree is removed.
+     *  - prune (see [CachePruner.unlinkAndRemove] callers): the whole child subtree is removed.
      *
      * Rumors additionally drop the envelope notes that delivered them.
      */
@@ -1651,7 +1647,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
 
         deleteNote.detachFromChildren()
 
-        unlinkAndRemove(deleteNote)
+        pruner.unlinkAndRemove(deleteNote)
     }
 
     /**
@@ -3116,636 +3112,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         return false
     }
 
-    fun findUsersStartingWith(
-        username: String,
-        forAccount: Account?,
-    ): List<User> {
-        if (username.isBlank()) return emptyList()
-
-        checkNotInMainThread()
-
-        val key = decodePublicKeyAsHexOrNull(username)
-
-        if (key != null) {
-            val user = getUserIfExists(key)
-            if (user != null) {
-                return listOfNotNull(user)
-            }
-        }
-
-        val dualCase =
-            listOf(
-                DualCase(username.lowercase(), username.uppercase()),
-            )
-
-        val finds =
-            users.filter { _, user: User ->
-                val metadata = user.metadataOrNull()
-                if (metadata == null) {
-                    user.pubkeyHex.startsWith(username, true) ||
-                        user.pubkeyNpub().startsWith(username, true)
-                } else {
-                    (
-                        metadata.anyNameOrAddressContains(dualCase) ||
-                            user.pubkeyHex.startsWith(username, true) ||
-                            user.pubkeyNpub().startsWith(username, true)
-                    ) &&
-                        (forAccount == null || (!forAccount.isHidden(user) && !metadata.anyPropertyContains(forAccount.hiddenUsers.flow.value.hiddenWordsCase)))
-                }
-            }
-
-        val findsFollowing = finds.associateWith { forAccount?.isFollowing(it) == true }
-        val anyNameStartsWith = finds.associateWith { it.metadataOrNull()?.anyNameStartsWith(dualCase) == true }
-        val anyAddressStartsWith = finds.associateWith { it.metadataOrNull()?.anyAddressStartsWith(dualCase) == true }
-        val displayNames = finds.associateWith { it.toBestDisplayName().lowercase() }
-
-        return finds.sortedWith(
-            compareBy(
-                { findsFollowing[it] == false },
-                { anyNameStartsWith[it] == false },
-                { anyAddressStartsWith[it] == false },
-                { displayNames[it] },
-                { it.pubkeyHex },
-            ),
-        )
-    }
-
-    /**
-     * Will return true if supplied note is one of events to be excluded from
-     * search results.
-     */
-    private fun excludeNoteEventFromSearchResults(note: Note): Boolean =
-        (
-            note.event is GenericRepostEvent ||
-                note.event is RepostEvent ||
-                note.event is CommunityPostApprovalEvent ||
-                note.event is ReactionEvent ||
-                note.event is LnZapEvent ||
-                note.event is LnZapRequestEvent ||
-                note.event is FileHeaderEvent ||
-                note.event is MetadataEvent ||
-                note.event is ContactListEvent ||
-                note.event is AppSpecificDataEvent
-        )
-
-    /**
-     * Tag names whose values should not match text searches: the `client` tag
-     * names the app that published the event (searching for "Amethyst" would
-     * otherwise return every event posted through Amethyst), and `p`/`e`/`a`/`alt`
-     * values are ids or descriptions of other events, not content of this one.
-     */
-    private val excludedTagNamesFromSearch =
-        setOf(
-            ClientTag.TAG_NAME,
-            PTag.TAG_NAME,
-            ETag.TAG_NAME,
-            ATag.TAG_NAME,
-            AltTag.TAG_NAME,
-        )
-
-    fun findNotesStartingWith(
-        text: String,
-        hiddenUsers: HiddenUsersState,
-    ): List<Note> {
-        checkNotInMainThread()
-
-        if (text.isBlank()) return emptyList()
-
-        val key = decodeEventIdAsHexOrNull(text)
-
-        if (key != null) {
-            val note = getNoteIfExists(key)
-            val noteEvent = note?.event
-            val newNote =
-                if (noteEvent is AddressableEvent) {
-                    val addressableNote = getAddressableNoteIfExists(noteEvent.address())
-                    if (addressableNote?.event?.id == note.idHex) {
-                        addressableNote
-                    } else {
-                        note
-                    }
-                } else {
-                    note
-                }
-
-            if ((newNote != null) && !excludeNoteEventFromSearchResults(newNote)) {
-                return listOfNotNull(newNote)
-            }
-        }
-
-        return notes.filter { _, note ->
-            if (note.event is AddressableEvent) {
-                return@filter false
-            }
-
-            if (excludeNoteEventFromSearchResults(note)) {
-                return@filter false
-            }
-
-            if (note.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
-                note.idHex.startsWith(text, true)
-            ) {
-                return@filter !note.isHiddenFor(hiddenUsers.flow.value)
-            }
-
-            if (note.event?.isContentEncoded() == false) {
-                return@filter if (!note.isHiddenFor(hiddenUsers.flow.value)) {
-                    note.event?.content?.contains(text, true) ?: false
-                } else {
-                    false
-                }
-            }
-
-            return@filter false
-        } +
-            addressables.filter { _, addressable ->
-                if (excludeNoteEventFromSearchResults(addressable)) {
-                    return@filter false
-                }
-
-                if (addressable.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
-                    addressable.idHex.startsWith(text, true)
-                ) {
-                    return@filter !addressable.isHiddenFor(hiddenUsers.flow.value)
-                }
-
-                if (addressable.event?.isContentEncoded() == false) {
-                    return@filter if (!addressable.isHiddenFor(hiddenUsers.flow.value)) {
-                        addressable.event?.content?.contains(text, true) ?: false
-                    } else {
-                        false
-                    }
-                }
-
-                return@filter false
-            }
-    }
-
-    fun findPublicChatChannelsStartingWith(text: String): List<PublicChatChannel> {
-        if (text.isBlank()) return emptyList()
-
-        val key = decodeEventIdAsHexOrNull(text)
-        if (key != null) {
-            getPublicChatChannelIfExists(key)?.let {
-                return listOf(it)
-            }
-        }
-
-        return publicChatChannels.filter { _, channel ->
-            channel.anyNameStartsWith(text)
-        }
-    }
-
-    fun findEphemeralChatChannelsStartingWith(text: String): List<EphemeralChatChannel> {
-        if (text.isBlank()) return emptyList()
-
-        return ephemeralChannels.filter { _, channel ->
-            channel.anyNameStartsWith(text)
-        }
-    }
-
-    fun findLiveActivityChannelsStartingWith(text: String): List<LiveActivitiesChannel> {
-        if (text.isBlank()) return emptyList()
-
-        try {
-            val parsed = Nip19Parser.uriToRoute(text)?.entity
-            if (parsed is NAddress && parsed.kind == LiveActivitiesEvent.KIND) {
-                return listOf(getOrCreateLiveChannel(parsed.address()))
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-        }
-
-        return liveChatChannels.filter { _, channel ->
-            channel.anyNameStartsWith(text)
-        }
-    }
-
     fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(PeopleListEvent.KIND, user.pubkeyHex)
-
-    fun cleanMemory() {
-        Log.d("LargeCache") { "Notes cleanup started. Current size: ${notes.size()}" }
-        notes.cleanUp()
-        Log.d("LargeCache") { "Notes cleanup completed. Remaining size: ${notes.size()}" }
-
-        Log.d("LargeCache") { "Addressables cleanup started. Current size: ${addressables.size()}" }
-        addressables.cleanUp()
-        Log.d("LargeCache") { "Addressables cleanup completed. Remaining size: ${addressables.size()}" }
-
-        Log.d("LargeCache") { "Users cleanup started. Current size: ${users.size()}" }
-        users.cleanUp()
-        Log.d("LargeCache") { "Users cleanup completed. Remaining size: ${users.size()}" }
-    }
-
-    fun cleanObservers() {
-        notes.forEach { _, it -> it.clearFlow() }
-        addressables.forEach { _, it -> it.clearFlow() }
-    }
-
-    fun pruneHiddenMessagesChannel(
-        channel: Channel,
-        account: Account,
-    ) {
-        val toBeRemoved = channel.pruneHiddenMessages(account)
-
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        toBeRemoved.forEach {
-            unlinkAndRemove(it)
-
-            childrenToBeRemoved.addAll(it.clearChildLinks())
-        }
-
-        unlinkAndRemove(childrenToBeRemoved)
-
-        if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
-            println(
-                "PRUNE: ${toBeRemoved.size} hidden messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
-            )
-        }
-    }
-
-    fun pruneHiddenMessages(account: Account) {
-        ephemeralChannels.forEach { _, channel ->
-            pruneHiddenMessagesChannel(channel, account)
-        }
-
-        geohashChannels.forEach { _, channel ->
-            pruneHiddenMessagesChannel(channel, account)
-        }
-
-        liveChatChannels.forEach { _, channel ->
-            pruneHiddenMessagesChannel(channel, account)
-        }
-
-        publicChatChannels.forEach { _, channel ->
-            pruneHiddenMessagesChannel(channel, account)
-        }
-
-        relayGroupChannels.forEach { _, channel ->
-            pruneHiddenMessagesChannel(channel, account)
-        }
-    }
-
-    // 2× the 10-min `PRESENCE_FRESHNESS_WINDOW_SECONDS` used by
-    // `NestsFeedFilter` so a presence still inside any feed's window
-    // can never be pruned.
-    private val PRESENCE_PRUNE_AGE_SECONDS = 20L * 60L
-
-    fun pruneOldMessagesChannel(channel: Channel) {
-        val toBeRemoved = channel.pruneOldMessages()
-
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        toBeRemoved.forEach {
-            unlinkAndRemove(it)
-
-            childrenToBeRemoved.addAll(it.clearChildLinks())
-        }
-
-        unlinkAndRemove(childrenToBeRemoved)
-
-        // Audio-room presence is keyed separately from `notes` and
-        // never gets reaped by the top-N rule. Drop entries older
-        // than 2× the 10-min freshness window so the index doesn't
-        // grow unbounded with every author who ever heartbeat here.
-        if (channel is LiveActivitiesChannel) {
-            channel.pruneStalePresence(TimeUtils.now() - PRESENCE_PRUNE_AGE_SECONDS)
-        }
-
-        if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
-            println(
-                "PRUNE: ${toBeRemoved.size} old messages removed from ${channel.toBestDisplayName()}. ${channel.notes.size()} kept",
-            )
-        }
-    }
-
-    fun pruneOldMessages() {
-        checkNotInMainThread()
-
-        ephemeralChannels.forEach { _, channel ->
-            pruneOldMessagesChannel(channel)
-        }
-
-        geohashChannels.forEach { _, channel ->
-            pruneOldMessagesChannel(channel)
-        }
-
-        liveChatChannels.forEach { _, channel ->
-            pruneOldMessagesChannel(channel)
-        }
-
-        publicChatChannels.forEach { _, channel ->
-            pruneOldMessagesChannel(channel)
-        }
-
-        relayGroupChannels.forEach { _, channel ->
-            pruneOldMessagesChannel(channel)
-        }
-
-        chatroomList.forEach { userHex, room ->
-            // History floors are pinned per scope on first advance; null means that window never paged
-            // history, so its cursors hold no position to misalign and nothing needs rewinding. Only the
-            // bands strictly BELOW a floor are this window's responsibility — a pruned message newer than
-            // the floor is the always-on live tail's concern, and rewinding history for it would needlessly
-            // re-page (and, for a busy room straddling the floor, mis-set the boundary). Hence the per-floor
-            // filter when accumulating below.
-            val giftWrapFloor = room.giftWrapHistory.floor
-            val accountNip04Floor = room.nip04History.floor
-
-            room.rooms.map { key, chatroom ->
-                val toBeRemoved = chatroom.pruneMessagesToTheLatestOnly()
-
-                val childrenToBeRemoved = mutableListOf<Note>()
-
-                // Newest pruned `created_at` per relay, in each window's cursor space, capped at < floor.
-                // Gift wraps page by the OUTER wrap time (from the rumor-host index); NIP-04 by the event's
-                // own time, and a kind:4 belongs to BOTH the account (rooms-list) and per-conversation cursor.
-                val giftWrapPruned = HashMap<NormalizedRelayUrl, Long>()
-                val accountNip04Pruned = HashMap<NormalizedRelayUrl, Long>()
-                val roomNip04Pruned = HashMap<NormalizedRelayUrl, Long>()
-                // chatroom.nip04History is lazy — only touch (allocate) it when this room actually drops a
-                // kind:4 message, so rooms that never paged conversation history pay nothing.
-                val roomNip04Floor = if (toBeRemoved.any { it.event is PrivateDmEvent }) chatroom.nip04History.floor else null
-
-                toBeRemoved.forEach { note ->
-                    when (val ev = note.event) {
-                        is BaseDMGroupEvent ->
-                            if (giftWrapFloor != null) {
-                                val outerUntil = note.rumorHost?.createdAt ?: ev.createdAt
-                                if (outerUntil < giftWrapFloor) note.relays.forEach { giftWrapPruned.merge(it, outerUntil, ::maxOf) }
-                            }
-                        is PrivateDmEvent -> {
-                            val until = ev.createdAt
-                            if (accountNip04Floor != null && until < accountNip04Floor) note.relays.forEach { accountNip04Pruned.merge(it, until, ::maxOf) }
-                            if (roomNip04Floor != null && until < roomNip04Floor) note.relays.forEach { roomNip04Pruned.merge(it, until, ::maxOf) }
-                        }
-                    }
-
-                    childrenToBeRemoved.addAll(removeIfWrap(note))
-                    unlinkAndRemove(note)
-
-                    childrenToBeRemoved.addAll(note.clearChildLinks())
-                }
-
-                unlinkAndRemove(childrenToBeRemoved)
-
-                // Realign the windows so a relay that already paged past (or `done` below) the dropped band
-                // re-requests it on the next demand-advance instead of skipping the hole.
-                if (giftWrapPruned.isNotEmpty()) {
-                    room.giftWrapHistory.rewindTo(giftWrapPruned)
-                    Log.d("DMPagination") { "[giftwrap] window rewound after prune: ${giftWrapPruned.size} relay(s), newest pruned wrap @${giftWrapPruned.values.max()}" }
-                }
-                if (accountNip04Pruned.isNotEmpty()) {
-                    room.nip04History.rewindTo(accountNip04Pruned)
-                    Log.d("DMPagination") { "[rooms.nip04] window rewound after prune: ${accountNip04Pruned.size} relay(s), newest pruned @${accountNip04Pruned.values.max()}" }
-                }
-                if (roomNip04Pruned.isNotEmpty()) {
-                    chatroom.nip04History.rewindTo(roomNip04Pruned)
-                    Log.d("DMPagination") { "[convo.nip04] window rewound after prune of ${key.users.joinToString()}: ${roomNip04Pruned.size} relay(s), newest pruned @${roomNip04Pruned.values.max()}" }
-                }
-
-                if (toBeRemoved.size > 1) {
-                    println(
-                        "PRUNE: ${toBeRemoved.size} private messages from $userHex to ${key.users.joinToString()} removed. ${chatroom.messages.size} kept",
-                    )
-                }
-            }
-        }
-    }
-
-    fun removeIfWrap(note: Note): List<Note> {
-        val host = note.rumorHost ?: return emptyList()
-
-        val children = mutableListOf<Note>()
-        getNoteIfExists(host.id)?.let { hostNote ->
-            (hostNote.event as? GiftWrapEvent)?.innerEventId?.let { sealId ->
-                getNoteIfExists(sealId)?.let { sealNote ->
-                    unlinkAndRemove(sealNote)
-                    children.addAll(sealNote.clearChildLinks())
-                }
-            }
-            unlinkAndRemove(hostNote)
-            children.addAll(hostNote.clearChildLinks())
-        }
-        note.rumorHost = null
-        return children
-    }
-
-    fun prunePastVersionsOfReplaceables() {
-        val toBeRemoved =
-            notes.filter { _, note ->
-                val noteEvent = note.event
-                if (noteEvent is AddressableEvent) {
-                    noteEvent.createdAt <
-                        (addressables.get(noteEvent.address())?.event?.createdAt ?: 0)
-                } else {
-                    false
-                }
-            }
-
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        toBeRemoved.forEach {
-            val newerVersion = (it.event as? AddressableEvent)?.address()?.let { tag -> addressables.get(tag) }
-            if (newerVersion != null) {
-                it.moveAllReferencesTo(newerVersion)
-            }
-
-            unlinkAndRemove(it)
-            childrenToBeRemoved.addAll(it.clearChildLinks())
-        }
-
-        unlinkAndRemove(childrenToBeRemoved)
-
-        if (toBeRemoved.size > 1) {
-            println("PRUNE: ${toBeRemoved.size} old version of addressables removed.")
-        }
-    }
-
-    fun pruneRepliesAndReactions(accounts: Set<HexKey>) {
-        checkNotInMainThread()
-
-        val toBeRemoved =
-            notes.filter { _, note ->
-                (
-                    (note.event is TextNoteEvent && !note.isNewThread()) ||
-                        note.event is ReactionEvent ||
-                        note.event is LnZapEvent ||
-                        note.event is LnZapRequestEvent ||
-                        note.event is ReportEvent ||
-                        note.event is GenericRepostEvent
-                ) &&
-                    note.replyTo?.any { it.flowSet?.isInUse() == true } != true &&
-                    note.flowSet?.isInUse() != true &&
-                    // don't delete if observing.
-                    note.author?.pubkeyHex !in
-                    accounts &&
-                    // don't delete if it is the logged in account
-                    note.event?.isTaggedUsers(accounts) !=
-                    true // don't delete if it's a notification to the logged in user
-            }
-
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        toBeRemoved.forEach {
-            unlinkAndRemove(it)
-            childrenToBeRemoved.addAll(it.clearChildLinks())
-        }
-
-        unlinkAndRemove(childrenToBeRemoved)
-
-        if (toBeRemoved.size > 1) {
-            println("PRUNE: ${toBeRemoved.size} thread replies removed.")
-        }
-    }
-
-    /**
-     * Unlinks [note] from everything in the cache that references it, then drops it
-     * from the [notes] map and notifies observers. This is the shared "unlink from
-     * above" half of removal, used by both the prune callers and [deleteNote].
-     *
-     * It detaches the note from:
-     *  - its parent notes (their replies/reactions/zaps/boosts/reports/labels maps);
-     *    because event-level reports and torrent comments both carry the target in
-     *    `replyTo`, [Note.removeNote] cleans those up here too;
-     *  - its channels/gatherers (`inGatherers` is authoritative — `Channel.addNote`
-     *    always registers the gatherer — and `getAnyChannel` is a belt-and-suspenders
-     *    resolve so a note can never linger in a channel after leaving the cache);
-     *  - the per-target indexes `replyTo` does NOT reach: user-level reports and
-     *    reported addresses, contact cards, statuses, and poll responses.
-     *
-     * It deliberately does NOT touch the note's own children: prune callers collect
-     * them via [Note.clearChildLinks] and remove the subtree, while [deleteNote]
-     * keeps them and severs only their back-reference. Every per-target removal is
-     * idempotent, so the overlap between `replyTo` and the explicit indexes (e.g. an
-     * event-level report reachable both ways) is harmless. Addressable notes are
-     * dropped from the [addressables] map by the caller; this only removes from [notes].
-     */
-    private fun unlinkAndRemove(note: Note) {
-        note.replyTo?.forEach { masterNote ->
-            masterNote.removeNote(note)
-        }
-
-        note.inGatherers?.forEach { it.removeNote(note) }
-
-        getAnyChannel(note)?.removeNote(note)
-
-        val noteEvent = note.event
-
-        // Quote-repost boosts are tracked outside `replyTo` (see addQuoteBoosts), so
-        // detach this note from every quoted note's boosts here.
-        noteEvent?.taggedQuoteIds()?.forEach { quotedId ->
-            getNoteIfExists(quotedId)?.removeBoost(note)
-        }
-
-        // Edits (1010/3302/40003) are anchored on their target's Note.edits and carry no `replyTo`
-        // back-link, so the unlink above can't reach them — resolve the target by the edit's `e` tag
-        // and drop it there, or a deleted edit would keep overlaying its message.
-        editedTargetIdOf(noteEvent)?.let { getNoteIfExists(it)?.removeEdit(note) }
-
-        // OTS attestations (kind 1040) are likewise anchored on their target's Note.timestamps with
-        // no `replyTo` back-link — resolve the target by the `e` tag and drop the proof there.
-        if (noteEvent is OtsEvent) {
-            noteEvent.digestEventId()?.let { getNoteIfExists(it)?.removeTimestamp(note) }
-        }
-
-        if (noteEvent is ReportEvent) {
-            noteEvent.reportedAuthor().forEach {
-                getUserIfExists(it.pubkey)?.reportsOrNull()?.let { reports ->
-                    reports.removeReport(note)
-                    reports.removeReportNamingUser(note)
-                }
-            }
-
-            noteEvent.reportedPost().forEach {
-                getNoteIfExists(it.eventId)?.removeReport(note)
-            }
-
-            noteEvent.reportedAddresses().forEach {
-                getAddressableNoteIfExists(it.address)?.removeReport(note)
-            }
-        }
-
-        if (note is AddressableNote && noteEvent is ContactCardEvent) {
-            getUserIfExists(noteEvent.aboutUser())?.cardsOrNull()?.removeCard(note)
-        }
-
-        if (note is AddressableNote && noteEvent is StatusEvent) {
-            note.author?.statusStateOrNull()?.removeStatus(note)
-        }
-
-        if (noteEvent is PollResponseEvent) {
-            noteEvent.poll()?.eventId?.let {
-                getNoteIfExists(it)?.pollStateOrNull()?.removeResponse(note)
-            }
-        }
-
-        note.clearFlow()
-
-        notes.remove(note.idHex)
-
-        refreshDeletedNoteObservers(note)
-    }
-
-    /** The id of the message/post an edit event targets (its `e` tag), across all three edit kinds. */
-    private fun editedTargetIdOf(event: Event?): HexKey? =
-        when (event) {
-            is TextNoteModificationEvent -> event.editedNote()?.eventId
-            is ConcordChatEditEvent -> event.editedMessageId()
-            is StreamMessageEditEvent -> event.editedMessage()
-            else -> null
-        }
-
-    fun unlinkAndRemove(nextToBeRemoved: List<Note>) {
-        nextToBeRemoved.forEach { note -> unlinkAndRemove(note) }
-    }
-
-    fun pruneExpiredEvents() {
-        checkNotInMainThread()
-
-        val now = TimeUtils.now()
-        val versionsToBeRemoved = notes.filter { _, it -> it.event?.isExpirationBefore(now) == true }
-        val addressesToBeRemoved = addressables.filter { _, it -> it.event?.isExpirationBefore(now) == true }
-
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        versionsToBeRemoved.forEach {
-            unlinkAndRemove(it)
-            childrenToBeRemoved.addAll(it.clearChildLinks())
-        }
-
-        addressesToBeRemoved.forEach {
-            unlinkAndRemove(it)
-            childrenToBeRemoved.addAll(it.clearChildLinks())
-        }
-
-        unlinkAndRemove(childrenToBeRemoved)
-
-        if (versionsToBeRemoved.size > 1 || addressesToBeRemoved.size > 1) {
-            println("PRUNE: ${versionsToBeRemoved.size} events and ${addressesToBeRemoved.size} expired.")
-        }
-    }
-
-    fun pruneHiddenEvents(account: Account) {
-        checkNotInMainThread()
-
-        val childrenToBeRemoved = mutableListOf<Note>()
-
-        val toBeRemoved =
-            account.hiddenUsers.flow.value.hiddenUsers.flatMap { userHex ->
-                (notes.filter { _, it -> it.event?.pubKey == userHex } + addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
-            }
-
-        toBeRemoved.forEach {
-            unlinkAndRemove(it)
-            childrenToBeRemoved.addAll(it.clearChildLinks())
-        }
-
-        unlinkAndRemove(childrenToBeRemoved)
-
-        println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
-    }
 
     override fun markAsSeen(
         eventId: String,
@@ -3799,7 +3166,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         live.newNote(newNote)
     }
 
-    private fun refreshDeletedNoteObservers(newNote: Note) {
+    internal fun refreshDeletedNoteObservers(newNote: Note) {
         // Deletes don't have a filterable shape — every observer
         // might hold this note in its result set, so iterate them
         // all. The index doesn't help here.

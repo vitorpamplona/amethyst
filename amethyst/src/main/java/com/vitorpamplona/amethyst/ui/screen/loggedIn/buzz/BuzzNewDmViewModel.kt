@@ -118,7 +118,7 @@ class BuzzNewDmViewModel : ViewModel() {
                 val me = account.userProfile().pubkeyHex
                 val already = _participants.value.toSet()
                 val ranked =
-                    LocalCache
+                    LocalCache.search
                         .findUsersStartingWith(text.trim(), account)
                         .asSequence()
                         .map { it.pubkeyHex }

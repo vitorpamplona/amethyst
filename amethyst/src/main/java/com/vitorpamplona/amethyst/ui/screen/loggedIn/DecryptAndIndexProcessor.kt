@@ -308,7 +308,7 @@ class GiftWrapEventHandler(
             // already folded the state they carried, so drop the durable wrap note now
             // to keep LocalCache from growing without bound.
             if (event is EphemeralGiftWrapEvent) {
-                cache.unlinkAndRemove(listOf(eventNote))
+                cache.pruner.unlinkAndRemove(listOf(eventNote))
             }
             return
         }
