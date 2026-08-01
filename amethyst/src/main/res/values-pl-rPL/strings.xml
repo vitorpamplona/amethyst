@@ -2024,9 +2024,39 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     </plurals>
     <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d transmiter</item>
+        <item quantity="few">%1$s \u00b7 %2$d transmiterów</item>
+        <item quantity="many">%1$s \u00b7 %2$d transmiterów</item>
+        <item quantity="other">%1$s \u00b7 %2$d transmitery</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Przeglądanie</string>
+    <string name="relay_purpose_media">Multimedia</string>
+    <string name="relay_purpose_tags">Hashtagi</string>
+    <string name="relay_purpose_topics">Tematy</string>
+    <string name="relay_purpose_thread">Rozmowa</string>
+    <string name="relay_purpose_search">Szukaj</string>
+    <string name="relay_purpose_referenced">Wyszukiwanie brakujących wydarzeń</string>
+    <string name="relay_purpose_engagement">Obserwowanie wydarzeń</string>
+    <string name="relay_explain_referenced">Pobiera wydarzenia na podstawie identyfikatora, do których odnosi się jakiś element na ekranie, ale których jeszcze nie masz — cytat, wiadomość nadrzędna odpowiedzi, początek wątku.</string>
+    <string name="relay_explain_engagement">Monitoruje aktualnie wyświetlane wydarzenia pod kątem nowych odpowiedzi, reakcji, udostępnień, zapsów i zgłoszeń, dzięki czemu liczby są aktualizowane na bieżąco podczas czytania.</string>
+    <string name="relay_purpose_add_ons">Dodatki</string>
+    <string name="relay_purpose_relay_info">Informacje o transmiterze</string>
+    <string name="relay_purpose_other">Inne</string>
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
          their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Wyszukiwarka listy transmiterów</string>
+    <string name="relay_purpose_observing_profiles">Obserwowanie profili</string>
+    <string name="relay_purpose_your_account">Dane konta</string>
+    <string name="relay_purpose_home_feed">Główny kanał</string>
+    <string name="relay_purpose_relay_groups">Grupy Transmiterów</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d grupa</item>
+        <item quantity="few">%1$d grup</item>
+        <item quantity="many">%1$d grup</item>
+        <item quantity="other">%1$d grupy</item>
+    </plurals>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
