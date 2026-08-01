@@ -66,28 +66,37 @@ class PlaybackErrorOverlayFitTest {
 
     private val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
 
+    /**
+     * Built outside composition on purpose: the mock and its error state are fixtures for the whole
+     * test, not per-composition state. Creating them inside `setContent` would rebuild both on every
+     * recomposition (and trips Compose's UnrememberedMutableState lint).
+     */
+    private fun failedControllerState() =
+        MediaControllerState(
+            controller = mockk<Player>(relaxed = true),
+            playbackError =
+                mutableStateOf(
+                    PlaybackException(
+                        "Malformed HLS manifest",
+                        null,
+                        PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+                    ),
+                ),
+        )
+
     private fun renderInBox(
         width: Dp,
         height: Dp,
         fontScale: Float = 1f,
     ) {
+        val controllerState = failedControllerState()
+
         rule.setContent {
             val density = LocalDensity.current.density
             CompositionLocalProvider(LocalDensity provides Density(density, fontScale)) {
                 Box(Modifier.width(width).height(height)) {
                     RenderPlaybackError(
-                        controllerState =
-                            MediaControllerState(
-                                controller = mockk<Player>(relaxed = true),
-                                playbackError =
-                                    mutableStateOf(
-                                        PlaybackException(
-                                            "Malformed HLS manifest",
-                                            null,
-                                            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
-                                        ),
-                                    ),
-                            ),
+                        controllerState = controllerState,
                         videoUri = "https://streamstr.net/x/hls/live.m3u8",
                     )
                 }
@@ -151,24 +160,14 @@ class PlaybackErrorOverlayFitTest {
         // button is measured before the weighted text block that absorbs the shortfall. Measure
         // the same button roomy and then at its tightest, and require the two to agree.
         val boxHeight = mutableStateOf(400.dp)
+        val controllerState = failedControllerState()
 
         rule.setContent {
             val density = LocalDensity.current.density
             CompositionLocalProvider(LocalDensity provides Density(density, 2f)) {
                 Box(Modifier.width(322.dp).height(boxHeight.value)) {
                     RenderPlaybackError(
-                        controllerState =
-                            MediaControllerState(
-                                controller = mockk<Player>(relaxed = true),
-                                playbackError =
-                                    mutableStateOf(
-                                        PlaybackException(
-                                            "Malformed HLS manifest",
-                                            null,
-                                            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
-                                        ),
-                                    ),
-                            ),
+                        controllerState = controllerState,
                         videoUri = "https://streamstr.net/x/hls/live.m3u8",
                     )
                 }
@@ -196,24 +195,14 @@ class PlaybackErrorOverlayFitTest {
         // was just tall enough to keep the icon and not tall enough to pay for it, so the title
         // rendered sliced. Decoration must yield before words do.
         val boxHeight = mutableStateOf(400.dp)
+        val controllerState = failedControllerState()
 
         rule.setContent {
             val density = LocalDensity.current.density
             CompositionLocalProvider(LocalDensity provides Density(density, 2f)) {
                 Box(Modifier.width(322.dp).height(boxHeight.value)) {
                     RenderPlaybackError(
-                        controllerState =
-                            MediaControllerState(
-                                controller = mockk<Player>(relaxed = true),
-                                playbackError =
-                                    mutableStateOf(
-                                        PlaybackException(
-                                            "Malformed HLS manifest",
-                                            null,
-                                            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
-                                        ),
-                                    ),
-                            ),
+                        controllerState = controllerState,
                         videoUri = "https://streamstr.net/x/hls/live.m3u8",
                     )
                 }
