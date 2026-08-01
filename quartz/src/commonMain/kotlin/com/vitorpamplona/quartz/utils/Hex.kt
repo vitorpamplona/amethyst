@@ -36,6 +36,8 @@ package com.vitorpamplona.quartz.utils
  * val hex = Hex.encode(bytes) // ByteArray -> lower-case hex
  * val bytes = Hex.decode(hex) // hex (any case) -> ByteArray
  * if (Hex.isHex64(id)) { ... } // is this a valid 32-byte hex id?
+ * val id = Hex.decode64(idHex) // exactly 64 chars or it throws
+ * val sig = Hex.decode128OrNull(sigHex) // exactly 128 chars or null
  * ```
  */
 object Hex {
@@ -186,6 +188,74 @@ object Hex {
         return ByteArray(hex.length / 2) {
             (hexToByte[hex[2 * it].code] shl 4 or hexToByte[hex[2 * it + 1].code]).toByte()
         }
+    }
+
+    /**
+     * Decodes a 32-byte pubkey/event id, accepting only exactly 64 hex chars
+     * (upper or lower case). Throws [IllegalArgumentException] on any other
+     * length or on non-hex characters — use [decode64OrNull] for untrusted
+     * input. Single pass: validation is folded into the decode, so this is
+     * faster than `isHex64` + [decode].
+     */
+    fun decode64(hex: String): ByteArray = decode64OrNull(hex) ?: throw IllegalArgumentException("Invalid 64-char hex $hex")
+
+    /** Like [decode64] but returns null instead of throwing. */
+    fun decode64OrNull(hex: String): ByteArray? = if (hex.length == 64) decodeExactOrNull(hex, 32) else null
+
+    /**
+     * Decodes a 64-byte value (a Schnorr signature), accepting only exactly
+     * 128 hex chars (upper or lower case). Throws [IllegalArgumentException]
+     * on any other length or on non-hex characters — use [decode128OrNull]
+     * for untrusted input.
+     */
+    fun decode128(hex: String): ByteArray = decode128OrNull(hex) ?: throw IllegalArgumentException("Invalid 128-char hex $hex")
+
+    /** Like [decode128] but returns null instead of throwing. */
+    fun decode128OrNull(hex: String): ByteArray? = if (hex.length == 128) decodeExactOrNull(hex, 64) else null
+
+    /**
+     * Decodes [hex] into [byteLen] bytes, or null if any char is not a hex
+     * digit. The caller has already checked `hex.length == 2 * byteLen`.
+     * Validation is free: the lookup table yields -1 for invalid chars, which
+     * keeps the OR-accumulator negative, so one sign check at the end covers
+     * every char with no branches inside the loop.
+     */
+    private fun decodeExactOrNull(
+        hex: String,
+        byteLen: Int,
+    ): ByteArray? =
+        try {
+            val out = ByteArray(byteLen)
+            var acc = 0
+            var c = 0
+            for (i in 0 until byteLen) {
+                val b = (hexToByte[hex[c++].code] shl 4) or hexToByte[hex[c++].code]
+                acc = acc or b
+                out[i] = b.toByte()
+            }
+            if (acc < 0) null else out
+        } catch (_: IndexOutOfBoundsException) {
+            // chars above 0xFF (e.g. emoji) fall outside the lookup table
+            null
+        }
+
+    /**
+     * Encodes a 32-byte pubkey/event id as a 64-char lower-case hex string.
+     * Throws [IllegalArgumentException] when [input] is not exactly 32 bytes.
+     */
+    fun encode64(input: ByteArray): String {
+        require(input.size == 32) { "Expected 32 bytes, got ${input.size}" }
+        return encode(input)
+    }
+
+    /**
+     * Encodes a 64-byte value (a Schnorr signature) as a 128-char lower-case
+     * hex string. Throws [IllegalArgumentException] when [input] is not
+     * exactly 64 bytes.
+     */
+    fun encode128(input: ByteArray): String {
+        require(input.size == 64) { "Expected 64 bytes, got ${input.size}" }
+        return encode(input)
     }
 
     /** Encodes [input] as a lower-case hex string (two chars per byte). */
