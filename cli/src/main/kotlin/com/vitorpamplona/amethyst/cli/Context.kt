@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayObserver
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -210,8 +211,12 @@ class Context(
      * (auth-required / rate-limited / restricted / …), and NIP-42 AUTH
      * challenges — so a failed REQ can be explained instead of guessed at.
      * Registered on [client] for the life of this run.
+     *
+     * Quartz's [RelayObserver], which also measures the connect/read/write
+     * round trips behind that feedback and is what a [RelayMonitor] publishes
+     * as NIP-66. One listener now answers both questions.
      */
-    val relayDiagnostics: RelayDiagnostics = RelayDiagnostics().also { client.addConnectionListener(it) }
+    val relayDiagnostics: RelayObserver = RelayObserver().also { client.addConnectionListener(it) }
 
     /**
      * Adaptive per-relay concurrent-subscription cap. Starts every relay
