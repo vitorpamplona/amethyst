@@ -73,6 +73,29 @@ class RelayObserverTest {
     // ---- what we measured ---------------------------------------------------
 
     @Test
+    fun `rtt-open is the transport handshake rather than our own queueing`() {
+        // pingMillis is receivedResponseAtMillis - sentRequestAtMillis: it starts
+        // when the upgrade request goes out, so it excludes time the call spent
+        // queued in the client's dispatcher. Timing the enqueue instead published
+        // our own backlog as the relay's latency — a median of 33.5 SECONDS on a
+        // 16,507-relay fan-out, against a true minimum of 140ms — into the field
+        // aggregators rank relays by.
+        val o = RelayObserver()
+        o.onConnected(client(url), 140, false)
+        assertEquals(140L, o.only().rttOpenMs)
+    }
+
+    @Test
+    fun `a handshake the transport could not time publishes no time`() {
+        val o = RelayObserver()
+        o.onConnected(client(url), 0, false)
+
+        val obs = o.only()
+        assertTrue(obs.reachable, "it opened, and that much is known")
+        assertNull(obs.rttOpenMs, "unmeasurable is not zero")
+    }
+
+    @Test
     fun `an opened connection is timed rather than assumed`() {
         val o = RelayObserver()
         o.onConnecting(client(url))

@@ -73,10 +73,6 @@ class RelayObserver : RelayConnectionListener {
     class Observation(
         val url: NormalizedRelayUrl,
     ) {
-        // Monotonic marks, not wall clock: these measure durations, and a clock
-        // step mid-connection must not produce a negative or wild latency.
-        @Volatile var connectingAt: TimeSource.Monotonic.ValueTimeMark? = null
-
         @Volatile var rttOpenMs: Long? = null
 
         @Volatile var firstReqAt: TimeSource.Monotonic.ValueTimeMark? = null
@@ -124,7 +120,6 @@ class RelayObserver : RelayConnectionListener {
 
     override fun onConnecting(relay: IRelayClient) {
         val o = of(relay)
-        o.connectingAt = TimeSource.Monotonic.markNow()
         // Cleared, not kept: a reconnect is a fresh attempt, and carrying an old
         // error forward would report a working relay as broken for as long as the
         // process lives after one bad minute.
@@ -140,7 +135,20 @@ class RelayObserver : RelayConnectionListener {
         val o = of(relay)
         o.reachable = true
         o.error = null
-        o.connectingAt?.let { o.rttOpenMs = it.elapsedNow().inWholeMilliseconds.coerceAtLeast(0) }
+        // The TRANSPORT's number, not ours. pingMillis is
+        // receivedResponseAtMillis - sentRequestAtMillis, so it starts when the
+        // upgrade request actually goes out and excludes everything before it.
+        //
+        // Timing onConnecting -> onConnected instead measures our own dispatcher
+        // queue as if it were the relay's latency. Under a 16,507-relay fan-out
+        // that queue dominates: published records showed a median rtt-open of
+        // 33.5 SECONDS and a max of 90, against a true minimum of 140ms. That is
+        // the field aggregators rank relays by, so it was worse than publishing
+        // nothing — a slow-looking relay that is not slow.
+        //
+        // Zero or negative means the transport could not time it; no timing is
+        // published rather than a fabricated one.
+        o.rttOpenMs = pingMillis.toLong().takeIf { it > 0 }
         o.touch()
     }
 
