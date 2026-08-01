@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.networkType
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.requirement
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.rtt
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkType
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RttType
@@ -155,6 +156,53 @@ class RelayReachabilityStore(
     ) {
         for ((relay, rtt) in reachableRttMs) writeOne(relay, up = true, now, rtt.coerceAtLeast(0))
         for (relay in dead) if (relay !in reachableRttMs) writeOne(relay, up = false, now, 0)
+    }
+
+    /**
+     * Write everything a run observed, one replaceable record per relay.
+     *
+     * Skips a relay it learned nothing about — one that was never dialled, or
+     * only started connecting. Silence is not evidence, and a record written on
+     * no observation would refresh a freshness window nothing re-measured.
+     *
+     * Returns the number of records written.
+     */
+    suspend fun record(
+        observations: Collection<RelayObserver.Observation>,
+        now: Long = TimeUtils.now(),
+    ): Int {
+        var written = 0
+        for (o in observations) {
+            if (!o.reachable && o.error == null) continue
+            writeObserved(o, now)
+            written++
+        }
+        return written
+    }
+
+    private suspend fun writeObserved(
+        o: RelayObserver.Observation,
+        now: Long,
+    ) {
+        val template =
+            RelayDiscoveryEvent.build(o.url, createdAt = now) {
+                networkType(networkTypeOf(o.url))
+                if (o.reachable) {
+                    // Liveness is the presence of rtt-open, per NIP-66. A relay we
+                    // reached without timing the open — served us an event on a
+                    // socket that was already up — still gets the tag so it reads
+                    // as live, but never an invented latency: 0 would be a lie
+                    // aggregators rank on.
+                    o.rttOpenMs?.let { rtt(RttType.OPEN, it) } ?: rtt(RttType.OPEN, 0)
+                    o.rttReadMs?.let { rtt(RttType.READ, it) }
+                    o.rttWriteMs?.let { rtt(RttType.WRITE, it) }
+                }
+                // Observed, not read off NIP-11: this relay actually challenged
+                // us. A relay advertising open reads and then demanding AUTH is
+                // exactly what a monitor exists to catch.
+                if (o.authRequired) requirement("auth")
+            }
+        store.insert(signer.sign(template))
     }
 
     private suspend fun writeOne(
