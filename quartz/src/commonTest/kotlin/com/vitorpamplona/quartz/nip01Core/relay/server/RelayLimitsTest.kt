@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RelayLimitsTest {
@@ -151,6 +152,39 @@ class RelayLimitsTest {
         val result = policy.accept(ReqCmd("s", listOf(Filter(kinds = listOf(1))))) as PolicyResult.Accepted
         assertEquals(
             50,
+            result.cmd.filters
+                .single()
+                .limit,
+        )
+    }
+
+    @Test
+    fun countNeverGetsTheDefaultLimit() {
+        // A COUNT returns no events, so "how many should a REQ return by
+        // default" is not a question it asked. Applying the answer anyway turns
+        // every unbounded COUNT into min(matches, defaultLimit) — a relay
+        // holding 12,289,614 profiles replied {"count":500}, which is plausible
+        // enough that no client can tell it from the truth.
+        val policy = LimitsPolicy(RelayLimits(defaultLimit = 50, maxLimit = 100))
+
+        val result = policy.accept(CountCmd("q", listOf(Filter(kinds = listOf(1))))) as PolicyResult.Accepted
+
+        assertNull(
+            result.cmd.filters
+                .single()
+                .limit,
+        )
+    }
+
+    @Test
+    fun countStillHonoursAnExplicitMaxLimit() {
+        // Asking to count at most N is a question the relay may bound.
+        val policy = LimitsPolicy(RelayLimits(defaultLimit = 50, maxLimit = 100))
+
+        val result = policy.accept(CountCmd("q", listOf(Filter(kinds = listOf(1), limit = 900)))) as PolicyResult.Accepted
+
+        assertEquals(
+            100,
             result.cmd.filters
                 .single()
                 .limit,
