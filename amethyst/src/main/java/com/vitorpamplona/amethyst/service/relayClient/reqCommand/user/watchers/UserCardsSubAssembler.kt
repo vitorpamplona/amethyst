@@ -84,9 +84,14 @@ class UserCardsSubAssembler(
                         add(it, account.userProfile().pubkeyHex)
                     }
                 }
-                accounts.map { it.trustProviderList.liveUserRankProvider.value }.forEach { account ->
-                    if (account != null) {
-                        add(account.relayUrl, account.pubkey)
+                accounts.map { it.trustProviderList.liveUserRankProvider.value }.forEach { provider ->
+                    if (provider != null) {
+                        add(provider.relayUrl, provider.pubkey)
+                    }
+                }
+                accounts.map { it.trustProviderList.liveUserFollowerCount.value }.forEach { provider ->
+                    if (provider != null) {
+                        add(provider.relayUrl, provider.pubkey)
                     }
                 }
             }
