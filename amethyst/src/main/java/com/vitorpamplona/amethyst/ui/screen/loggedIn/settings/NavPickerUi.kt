@@ -42,6 +42,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,12 +93,31 @@ val SectionCollapse = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(
  * category (a favorite, or a relay/community "server" row), 2 = a room nested under its server (a
  * NIP-29 group under its relay, or a Concord channel under its community).
  */
-fun indentPadding(level: Int) =
+private fun indentPadding(level: Int) =
     when (level) {
         0 -> Size13dp
         1 -> Size24dp
         else -> Size40dp
     }
+
+/**
+ * Which collapsible rows of a picker are currently open, keyed by whatever identifies a row (a
+ * section id, a string-resource id, a catalog item). Absent means collapsed, so the initial state
+ * costs nothing and no list has to be seeded.
+ */
+@Stable
+class ExpandedKeys<K> {
+    private val open = mutableStateMapOf<K, Boolean>()
+
+    fun isExpanded(key: K): Boolean = open[key] == true
+
+    fun toggle(key: K) {
+        open[key] = !isExpanded(key)
+    }
+}
+
+@Composable
+fun <K> rememberExpandedKeys(): ExpandedKeys<K> = remember { ExpandedKeys() }
 
 @Composable
 fun PickerSectionHeader(title: String) {

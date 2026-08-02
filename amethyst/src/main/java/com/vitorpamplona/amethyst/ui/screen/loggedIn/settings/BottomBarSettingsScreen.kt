@@ -54,7 +54,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,6 +90,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
@@ -158,8 +158,8 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
     val pinned = state.pinned
     val pinnedKeys = remember(pinned) { state.pinnedKeys() }
 
-    val expandedCategories = remember { mutableStateMapOf<Int, Boolean>() }
-    val expandedItems = remember { mutableStateMapOf<NavBarItem, Boolean>() }
+    val expandedCategories = rememberExpandedKeys<Int>()
+    val expandedItems = rememberExpandedKeys<NavBarItem>()
 
     Column(
         modifier =
@@ -183,8 +183,8 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
             CategoryCard(
                 category = category,
                 pinnedKeys = pinnedKeys,
-                expanded = expandedCategories[category.titleRes] ?: false,
-                onToggleExpand = { expandedCategories[category.titleRes] = !(expandedCategories[category.titleRes] ?: false) },
+                expanded = expandedCategories.isExpanded(category.titleRes),
+                onToggleExpand = { expandedCategories.toggle(category.titleRes) },
                 expandedItems = expandedItems,
                 accountViewModel = accountViewModel,
                 onTogglePin = state::togglePin,
@@ -437,12 +437,12 @@ private fun CategoryCard(
     pinnedKeys: Set<String>,
     expanded: Boolean,
     onToggleExpand: () -> Unit,
-    expandedItems: SnapshotStateMap<NavBarItem, Boolean>,
+    expandedItems: ExpandedKeys<NavBarItem>,
     accountViewModel: AccountViewModel,
     onTogglePin: (BottomBarEntry) -> Unit,
 ) {
     CatalogCard(
-        icon = categoryIcon(category.titleRes),
+        icon = category.icon,
         title = stringRes(category.titleRes),
         expanded = expanded,
         onToggleExpand = onToggleExpand,
@@ -455,9 +455,9 @@ private fun CategoryCard(
                     icon = def.icon,
                     label = stringRes(def.labelRes),
                     pinned = entry.stableKey in pinnedKeys,
-                    expanded = expandedItems[item] ?: false,
+                    expanded = expandedItems.isExpanded(item),
                     onTogglePin = { onTogglePin(entry) },
-                    onToggleExpand = { expandedItems[item] = !(expandedItems[item] ?: false) },
+                    onToggleExpand = { expandedItems.toggle(item) },
                 ) {
                     PickerChildren(item, pinnedKeys, accountViewModel, onTogglePin)
                 }
@@ -717,27 +717,15 @@ private fun ExpandableAvailableRow(
     onToggleExpand: () -> Unit,
     children: @Composable () -> Unit,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggleExpand)
-                .padding(start = 13.dp, end = 13.dp, top = 7.dp, bottom = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    CatalogRow(
+        leading = { LeadingGlyph(icon) },
+        label = label,
+        onToggle = onToggleExpand,
     ) {
-        LeadingGlyph(icon)
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
         Icon(
             symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
             contentDescription = stringRes(R.string.bottom_bar_settings_expand),
-            modifier = Modifier.size(22.dp),
+            modifier = Size22Modifier,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         AddPill(added = pinned, onClick = onTogglePin)
@@ -776,16 +764,6 @@ private fun FavoriteLeading(app: FavoriteApp) {
         )
     }
 }
-
-private fun categoryIcon(titleRes: Int): MaterialSymbol =
-    when (titleRes) {
-        R.string.bottom_bar_category_main -> MaterialSymbols.Home
-        R.string.bottom_bar_category_chats -> MaterialSymbols.Group
-        R.string.bottom_bar_category_you -> MaterialSymbols.AccountCircle
-        R.string.bottom_bar_category_feeds -> MaterialSymbols.Subscriptions
-        R.string.bottom_bar_category_apps -> MaterialSymbols.Apps
-        else -> MaterialSymbols.Settings
-    }
 
 // ------------------------------------------------------------------------------------------------
 // Leading/label resolution for a pinned entry (built-in glyph, favorite icon, or group avatar).

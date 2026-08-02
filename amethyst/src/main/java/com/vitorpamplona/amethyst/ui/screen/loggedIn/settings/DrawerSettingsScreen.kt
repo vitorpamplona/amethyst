@@ -38,7 +38,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -113,11 +112,9 @@ fun DrawerSettingsContent(accountViewModel: AccountViewModel) {
 
     // Sections start collapsed: expanded, they are ~50 rows of scrolling. The header's hidden
     // counter is what tells the user which one to open.
-    val expandedSections = remember { mutableStateMapOf<DrawerSectionId, Boolean>() }
+    val expandedSections = rememberExpandedKeys<DrawerSectionId>()
 
-    // derivedStateOf so a toggle that leaves this total unchanged doesn't re-run the whole screen
-    // body — every SectionCard below reads the same coarse `hidden` state.
-    val totalHidden by remember { derivedStateOf { state.totalHidden() } }
+    val totalHidden = state.totalHidden()
 
     Column(
         modifier =
@@ -142,8 +139,8 @@ fun DrawerSettingsContent(accountViewModel: AccountViewModel) {
             SectionCard(
                 section = section,
                 state = state,
-                expanded = expandedSections[section.id] ?: false,
-                onToggleExpand = { expandedSections[section.id] = !(expandedSections[section.id] ?: false) },
+                expanded = expandedSections.isExpanded(section.id),
+                onToggleExpand = { expandedSections.toggle(section.id) },
             )
         }
 
@@ -241,22 +238,18 @@ private fun VisibilityPill(
     mandatory: Boolean,
     onClick: () -> Unit,
 ) {
+    // One branch decides both halves of the pill, so a label can't drift away from its glyph.
+    val (labelRes, icon) =
+        when {
+            mandatory -> R.string.drawer_settings_always_on to MaterialSymbols.Lock
+            visible -> R.string.drawer_settings_visible to MaterialSymbols.Visibility
+            else -> R.string.drawer_settings_hidden to MaterialSymbols.VisibilityOff
+        }
+
     TogglePill(
         on = visible,
-        label =
-            stringRes(
-                when {
-                    mandatory -> R.string.drawer_settings_always_on
-                    visible -> R.string.drawer_settings_visible
-                    else -> R.string.drawer_settings_hidden
-                },
-            ),
-        icon =
-            when {
-                mandatory -> MaterialSymbols.Lock
-                visible -> MaterialSymbols.Visibility
-                else -> MaterialSymbols.VisibilityOff
-            },
+        label = stringRes(labelRes),
+        icon = icon,
         enabled = !mandatory,
         onClick = onClick,
     )

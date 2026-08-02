@@ -91,6 +91,22 @@ class DrawerSectionsTest {
     }
 
     @Test
+    fun aSectionWithNoCatalogItemsRendersFixedRowsOrNothingAtAll() {
+        // hasFixedRows is declared on the section but consumed by CatalogSection's `when (section.id)`,
+        // in another file — so the flag and the branch that honours it can drift apart with no compile
+        // error. A section that carries neither is unreachable in both directions at once: the settings
+        // screen skips it on items.isEmpty(), and CatalogSection returns before rendering a heading.
+        val unreachable = DrawerSections.filter { it.items.isEmpty() && !it.hasFixedRows }
+
+        assertEquals(
+            "a drawer section has no catalog items and no fixed rows, so it renders nowhere — " +
+                "give it items, set hasFixedRows and a branch in CatalogSection, or delete it",
+            emptyList<Any>(),
+            unreachable.map { it.id },
+        )
+    }
+
+    @Test
     fun mandatoryItemsAreActuallyRenderedByASection() {
         // A mandatory item that no section renders would be unhideable *and* invisible — the worst
         // of both. Settings is mandatory precisely because it is the way back to this configuration.

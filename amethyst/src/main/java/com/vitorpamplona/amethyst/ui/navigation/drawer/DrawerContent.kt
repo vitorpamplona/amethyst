@@ -648,8 +648,7 @@ fun CatalogSection(
     val onBackground = MaterialTheme.colorScheme.onBackground
 
     val visible = remember(section, hidden) { DrawerItemVisibility.visibleItems(section, hidden) }
-    val hasFixedRows = section.id == DrawerSectionId.CREATE || section.id == DrawerSectionId.SYSTEM
-    if (visible.isEmpty() && !hasFixedRows) return
+    if (visible.isEmpty() && !section.hasFixedRows) return
 
     CollapsibleSection(title = section.titleRes) {
         when (section.id) {

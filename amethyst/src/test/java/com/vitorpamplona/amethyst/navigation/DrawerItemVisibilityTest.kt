@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.navigation
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
-import com.vitorpamplona.amethyst.ui.navigation.drawer.drawerSection
+import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.DrawerSettingsState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,8 +38,8 @@ import org.junit.Test
  * rows, which no code path may switch off.
  */
 class DrawerItemVisibilityTest {
-    private val you = drawerSection(DrawerSectionId.YOU)
-    private val system = drawerSection(DrawerSectionId.SYSTEM)
+    private val you = DrawerSections.first { it.id == DrawerSectionId.YOU }
+    private val system = DrawerSections.first { it.id == DrawerSectionId.SYSTEM }
 
     @Test
     fun nothingHiddenMeansEverythingVisible() {

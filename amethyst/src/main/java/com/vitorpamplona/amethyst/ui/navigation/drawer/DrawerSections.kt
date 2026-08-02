@@ -47,6 +47,12 @@ data class DrawerSection(
     val titleRes: Int,
     val icon: MaterialSymbol,
     val items: List<NavBarItem>,
+    /**
+     * True for a section that renders rows of its own on top of its catalog items (see [CatalogSection]).
+     * Such a section stays in the drawer even with every catalog row switched off, and — since a fixed
+     * row is not a catalog destination — it never appears in the Side Menu settings screen's counts.
+     */
+    val hasFixedRows: Boolean = false,
 )
 
 /**
@@ -133,11 +139,9 @@ val DrawerSections: List<DrawerSection> =
         DrawerSection(DrawerSectionId.YOU, R.string.drawer_section_you, MaterialSymbols.AccountCircle, DrawerYouItems),
         DrawerSection(DrawerSectionId.NAVIGATE, R.string.drawer_section_navigate, MaterialSymbols.Home, DrawerNavigateItems),
         DrawerSection(DrawerSectionId.FEEDS, R.string.drawer_section_feeds, MaterialSymbols.Subscriptions, DrawerFeedsItems),
-        DrawerSection(DrawerSectionId.CREATE, R.string.drawer_section_create, MaterialSymbols.Edit, emptyList()),
-        DrawerSection(DrawerSectionId.SYSTEM, R.string.drawer_section_system, MaterialSymbols.Settings, listOf(NavBarItem.SETTINGS)),
+        DrawerSection(DrawerSectionId.CREATE, R.string.drawer_section_create, MaterialSymbols.Edit, emptyList(), hasFixedRows = true),
+        DrawerSection(DrawerSectionId.SYSTEM, R.string.drawer_section_system, MaterialSymbols.Settings, listOf(NavBarItem.SETTINGS), hasFixedRows = true),
     )
-
-fun drawerSection(id: DrawerSectionId): DrawerSection = DrawerSections.first { it.id == id }
 
 /**
  * Catalog ids deliberately absent from every [DrawerSections] list, with the reason. Only Favorite

@@ -463,6 +463,7 @@ val DefaultBottomBarEntries: List<BottomBarEntry> = DefaultBottomBarItems.map { 
  */
 data class NavBarCategory(
     val titleRes: Int,
+    val icon: MaterialSymbol,
     val items: List<NavBarItem>,
 )
 
@@ -475,6 +476,7 @@ val BottomBarCategories: List<NavBarCategory> =
     listOf(
         NavBarCategory(
             R.string.bottom_bar_category_main,
+            MaterialSymbols.Home,
             listOf(
                 NavBarItem.HOME,
                 NavBarItem.MESSAGES,
@@ -485,6 +487,7 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_chats,
+            MaterialSymbols.Group,
             listOf(
                 NavBarItem.PUBLIC_CHATS,
                 NavBarItem.RELAY_GROUPS,
@@ -494,6 +497,7 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_you,
+            MaterialSymbols.AccountCircle,
             listOf(
                 NavBarItem.PROFILE,
                 NavBarItem.MY_LISTS,
@@ -511,6 +515,7 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_feeds,
+            MaterialSymbols.Subscriptions,
             listOf(
                 NavBarItem.ARTICLES,
                 NavBarItem.LONGS,
@@ -537,6 +542,7 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_apps,
+            MaterialSymbols.Apps,
             listOf(
                 NavBarItem.BROWSER,
                 NavBarItem.FAVORITE_APPS,
@@ -547,6 +553,7 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_other,
+            MaterialSymbols.Settings,
             listOf(
                 NavBarItem.SETTINGS,
             ),
