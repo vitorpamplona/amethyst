@@ -124,7 +124,7 @@ class PollResultsViewModelTest {
         note.pollState().addResponse(responseNote)
     }
 
-    private fun viewModel(
+    private fun TestScope.viewModel(
         note: Note,
         hidden: Set<HexKey> = emptySet(),
         follows: Set<HexKey> = setOf(followed),
@@ -136,6 +136,10 @@ class PollResultsViewModelTest {
         follows = MutableStateFlow(follows),
         hiddenChanges = MutableStateFlow(Unit),
         loader = loader,
+        // Keep the state build and the backfill on the test scheduler; in production these are
+        // Default and IO so a big poll's re-sorts never land on the UI thread.
+        computeContext = UnconfinedTestDispatcher(testScheduler),
+        loadContext = UnconfinedTestDispatcher(testScheduler),
     )
 
     @Test

@@ -42,9 +42,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
 
 /** One option's share of the poll, ready to draw. */
@@ -96,9 +98,11 @@ class PollResultsUiState(
 /**
  * Screen state for the poll results page.
  *
- * Reads the live tally off the poll [Note] — no new subscription, no second cache — and turns it
- * into rows the UI can render without doing set arithmetic in composition. The only interactive
- * state is [selectedOption], which scopes the voter list without touching the summary above it.
+ * Reads the live tally off the poll [Note] — no second cache — and turns it into rows the UI can
+ * render without doing set arithmetic in composition. Every rebuild after the first runs on
+ * [computeContext] (Default): a backfill emits one tally per consumed vote, and re-sorting thousands of
+ * voters that many times on the UI thread would drop frames for the whole drain. The only
+ * interactive state is [selectedOption], which scopes the voter list without touching the summary.
  *
  * Muting is applied here rather than in the tally: a muted voter still counts toward the totals
  * (they did vote, and hiding them from the maths would misreport the poll), they are just not
@@ -112,6 +116,9 @@ class PollResultsViewModel(
     follows: Flow<Set<HexKey>>,
     hiddenChanges: Flow<Any?>,
     private val loader: PollResponseLoader? = null,
+    // Injected so tests can drive both on the test scheduler; production never passes them.
+    private val computeContext: CoroutineContext = Dispatchers.Default,
+    private val loadContext: CoroutineContext = Dispatchers.IO,
 ) : ViewModel() {
     companion object {
         /** Faces shown per option before collapsing into a "+N" chip, matching UserGallery. */
@@ -132,7 +139,7 @@ class PollResultsViewModel(
         // Page past the subscription cap once, on open. Without this a poll with more responses
         // than the live filter's limit shows a confidently wrong tally.
         if (loader != null) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch(loadContext) {
                 val poll = awaitPollEvent()
                 backfill.value = BackfillState(running = true)
                 val report = runCatching { loader.load(poll) }.getOrNull()
@@ -160,11 +167,16 @@ class PollResultsViewModel(
             backfill,
         ) { tally, followSet, selected, _, load ->
             build(tally, followSet, selected, load)
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = build(pollNote.pollState().responses.value, emptySet(), null, BackfillState()),
-        )
+        }.flowOn(computeContext)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                // Built eagerly so the first frame already has the tally instead of flashing an
+                // empty poll. Only this one pass is on the caller's thread; every recomputation
+                // after it — including the flood of them during a backfill, one per consumed vote —
+                // runs on Default via the flowOn above.
+                initialValue = build(pollNote.pollState().responses.value, emptySet(), null, BackfillState()),
+            )
 
     fun selectOption(code: String?) {
         _selectedOption.value = if (_selectedOption.value == code) null else code

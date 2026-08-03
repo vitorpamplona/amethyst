@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollOptionResult
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollVoterRow
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -139,6 +140,12 @@ private fun PollResults(
     nav: INav,
 ) {
     val account = accountViewModel.account
+
+    // Keeps a REQ open for this poll while the screen is on top. Without it the only votes ever
+    // shown are the ones the one-shot backfill happened to catch: a vote cast while you are reading
+    // would never arrive, because the feed card that used to hold this subscription is disposed
+    // behind us. It also loads the kind-1068 event itself when we arrived by deep link.
+    EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
     // Opening this screen is the opt-in, exactly like the card's "View results" link — so the feed
     // card stops hiding the tally behind a tap once you have been here.

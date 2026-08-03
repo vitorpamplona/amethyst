@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip45Count.HyperLogLog
+import com.vitorpamplona.quartz.nip45Count.mergeCountResults
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 
@@ -44,7 +44,8 @@ import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
  *     partially and nothing says so. [fetchAllPagesFromPool] walks `until` backwards per relay
  *     until each is exhausted.
  *
- *  2. **Knowing what "complete" is.** See [mergeCounts] — a COUNT fan-out cannot simply be summed.
+ *  2. **Knowing what "complete" is.** See [mergeCountResults] — a COUNT fan-out cannot be summed,
+ *     because relays mirror each other and the same vote would be counted once per relay.
  */
 class RelayPollResponseLoader(
     private val client: INostrClient,
@@ -54,33 +55,6 @@ class RelayPollResponseLoader(
     companion object {
         /** Per-relay idle window for both the drain and the COUNT. */
         const val TIMEOUT_MS = 20_000L
-
-        /**
-         * Combines per-relay COUNT results into one figure that is never inflated.
-         *
-         * Summing is wrong: relays mirror each other, so the same vote is counted once per relay
-         * that holds it. NIP-45's optional `hll` field exists precisely for this — HyperLogLog
-         * registers merge by taking the per-register maximum, and the union's cardinality is
-         * re-estimated from the merged registers, so shared events collapse instead of stacking.
-         *
-         * When no relay ships HLL (most don't), the best available answer is the **largest single
-         * relay's count**: every relay's count is a lower bound on the union, so the max is the
-         * tightest lower bound we can justify. Relays that don't implement COUNT never answer and
-         * are simply absent — they make the figure smaller, never larger, which is the safe
-         * direction for a number the UI presents as "at least this many".
-         */
-        fun mergeCounts(counts: List<Pair<Int, ByteArray?>>): Pair<Int, Boolean>? {
-            if (counts.isEmpty()) return null
-
-            val hlls = counts.mapNotNull { it.second }
-            if (hlls.isNotEmpty()) {
-                val merged = HyperLogLog.merge(hlls)
-                return HyperLogLog.estimate(merged).toInt() to true
-            }
-
-            // No registers to union — fall back to the tightest lower bound, never the sum.
-            return (counts.maxOf { it.first }) to false
-        }
     }
 
     override suspend fun load(poll: PollEvent): PollLoadReport {
@@ -103,12 +77,13 @@ class RelayPollResponseLoader(
         }
 
         val results = client.count(relays.associateWith { listOf(filter) }, idleTimeoutMs = TIMEOUT_MS)
-        val merged = mergeCounts(results.values.map { it.count to it.hll })
+        // Combination rules (never a sum) live in quartz — see mergeCountResults.
+        val merged = mergeCountResults(results.values)
 
         return PollLoadReport(
-            reported = merged?.first,
+            reported = merged?.count,
             // An estimate is approximate; so is a figure from only some of the relays we asked.
-            approximate = (merged?.second ?: false) || results.size < relays.size,
+            approximate = (merged?.approximate ?: false) || results.size < relays.size,
             relaysAsked = relays.size,
             relaysAnswered = results.size,
         )
