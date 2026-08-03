@@ -190,16 +190,20 @@ more than 100 responses truncates silently.
 │ You voted: nos.lol            [Change vote] │   only when signed in + voted
 ├─────────────────────────────────────────────┤
 │ [All] [nos.lol] [damus] [purplepag.es]      │   option filter chips
-│ [Everyone ▾] [Recent ▾]      🔍 search      │   audience + sort + search
 ├─────────────────────────────────────────────┤
-│ [avatar] you            nos.lol      2d ago │   voter rows
-│ [avatar] Bob (follows)  damus        2d ago │
-│ [avatar] Carol          nos.lol      1d ago │
+│ ⬤  Ana Reis              nos.lol     2d ago │   voter rows — SlimListItem,
+│    Building things on nostr.                │   same anatomy as UserCompose
+│ ⬤  Bruno Sá              damus       2d ago │   (§6.1): picture / name /
+│    Relay operator, Lisbon.                  │   about, vote in the trailing
+│ ⬤  npub1q8f…j3xw         damus       22h ago│   slot
 │ …                                            │
 ├─────────────────────────────────────────────┤
 │ 380 of ~412 loaded from 6 relays · 3 ignored│   completeness footer (§4)
 └─────────────────────────────────────────────┘
 ```
+
+Audience filter, sort and voter search are **deliberately not in the first
+version** — see §5.3.
 
 ### 5.2 Behaviour decisions
 
@@ -207,32 +211,79 @@ more than 100 responses truncates silently.
 |---|---|---|
 | Percent basis | single-choice: % of voters; multi-choice: % of voters, bars may exceed 100% in sum, each row captioned "N of M voters" | §3.1 — matches how people read a poll |
 | Voter list default | flat list of **all** voters, each row showing which option(s) they chose | answers "who voted for what" in one screen without drilling |
+| Voter row | `SlimListItem` with the same slots `UserCompose` fills — `UserPicture` / `UsernameDisplay` / `AboutDisplay` — and the vote in `trailingContent` (§6.1) | a voter is a user; it should look like every other user row in the app |
 | Option chips | filter the voter list to one option; the summary block never filters | keeps totals stable while browsing |
-| Audience filter | `Everyone` (default) / `Following` / `Following + WoT` | reuses `account.allFollows.flow`, already the tally's priority set |
-| Muted users | excluded by default via `account.isHidden`, with a footer line "2 hidden by your mute list" and a toggle | consistent with every other user list in the app |
-| Sort | `Relevance` (you → follows → pubkey — today's `filterTo` comparator), `Newest`, `Oldest` | relevance is already implemented; the other two are one comparator each |
-| Ordering of you | your own row always pinned first in Relevance, and your vote echoed in the "You voted" strip | already the `filterTo` behaviour |
+| Muted users | excluded by default via `account.isHidden`, with a footer line "2 hidden by your mute list" | consistent with every other user list in the app |
+| Ordering | you first, then follows, then pubkey — today's `filterTo` comparator, no sort control | the ordering already exists and already does the useful thing |
 | Live updates | the page is a live view of `pollState().responses`; new votes animate in | it's a StateFlow already; no refresh button needed except for the relay backfill |
 | Closed polls | status chip flips to "Ended · 2d ago", "Change vote" disappears, late votes excluded (§3.3) with an "N late votes excluded" footnote | spec compliance, and it explains a number that would otherwise look wrong |
 | Empty state | "No votes yet" + the option rows at 0 | |
 
-### 5.3 Privacy call-out
+### 5.3 Deferred to a later pass
 
-NIP-88 responses are **public, unencrypted events** — this page doesn't disclose
-anything new, but it makes a fact legible that many users have not internalised.
-Two small additions belong with this work:
+Three controls are specified here so the layout leaves room for them, but are
+**not** part of the first version:
 
-- an ⓘ affordance on the results header: *"Poll votes are public. Anyone can see
-  who voted for what."*
-- the same one-liner next to the vote controls in `RenderPollCard` **before** the
-  first vote — the honest place to say it is where the choice is made, not after.
+- **audience filter** (`Everyone` / `Following` / `Following + WoT`),
+- **sort control** (`Newest` / `Oldest` on top of the default relevance order),
+- **voter search**.
 
-There is no "anonymous vote" option to offer; saying so plainly is the whole fix.
+Each is cheap on its own — the follow set and the comparator both already exist —
+but none of them is needed to answer "how many votes did each answer get, and who
+voted for what". They land once the page is real and it's clear which of them
+people actually reach for. Until then the list is ordered you → follows → rest,
+and the option chips are the only filter.
 
 ## 6. Code structure
 
 Following `commons/ARCHITECTURE.md` (state + ViewModels + shared Compose in
 `commons`, screens/nav platform-native):
+
+### 6.1 The voter row is an existing user row
+
+A voter is a user, and the app already has one way to draw a user in a list.
+`UserCompose` (`amethyst/…/ui/note/UserCompose.kt:52`) is `SlimListItem`
+(`ui/layouts/listItem/SlimListItemLayout.kt:168`) with four slots filled:
+
+| Slot | Filled with | Renders |
+|---|---|---|
+| `leadingContent` | `UserPicture(user, Size55dp, …)` | avatar, with its own loading/blank handling |
+| `headlineContent` | `UsernameDisplay(user, accountViewModel)` | the account's petname → `bestName()` → `pubkeyDisplayHex()`, with custom-emoji support via `CreateTextWithEmoji` |
+| `supportingContent` | `AboutDisplay(user, accountViewModel)` | the profile's about text, one line, ellipsized, in `placeholderText` |
+| `trailingContent` | `UserActionOptions(…)` | follow/unfollow + list buttons |
+
+The results row wants the first three **verbatim** and only differs in the
+fourth, where the vote goes instead of the follow buttons. So don't write a new
+row — add a slot to the existing one:
+
+```kotlin
+@Composable
+fun UserCompose(
+    baseUser: User,
+    modifier: Modifier = Modifier,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    trailingContent: @Composable () -> Unit = { UserActionOptions(baseUser, accountViewModel, nav) },
+) { … }
+```
+
+Every existing call site is unchanged by the default; the poll screen passes the
+option label + relative timestamp. This also means voter rows inherit, for free,
+the things a hand-rolled row would silently lose: petname overrides, emoji in
+display names, the npub fallback when metadata hasn't arrived, and the
+tap-to-profile navigation from `routeFor(user)`.
+
+Two consequences worth stating:
+
+- **The second line is the user's about text, not their npub.** That is what the
+  rest of the app shows, and the npub already appears in the headline when there
+  is no metadata to show instead.
+- **No bespoke "follows" or "you" chip.** `UserCompose` has never had one, and the
+  ordering (you → follows → rest) already carries that information. If a follow
+  marker is wanted later it should come from the existing follow-state renderer
+  used elsewhere, not a new badge invented for this screen.
+
+### 6.2 New and edited files
 
 **New in `commons` (shared):**
 
@@ -240,9 +291,9 @@ Following `commons/ARCHITECTURE.md` (state + ViewModels + shared Compose in
 |---|---|
 | `model/nip88Polls/PollTallyPolicy.kt` | §3.5 |
 | `model/nip88Polls/PollResponsesCache.kt` *(edit)* | poll-aware `ResponseTally`, `totalVoters()`, `totalSelections()`, `rejected`, `lateVotes` |
-| `viewmodels/nip88Polls/PollResultsViewModel.kt` | holds the poll `Note`; exposes `StateFlow<PollResultsState>` (header + option rows + filtered/sorted voter rows + completeness meta); owns filter/sort/search `MutableStateFlow`s; drives the backfill. Sibling in style to `viewmodels/LiveStreamTopZappersViewModel.kt`, with the usual nested `Factory` |
+| `viewmodels/nip88Polls/PollResultsViewModel.kt` | holds the poll `Note`; exposes `StateFlow<PollResultsState>` (header + option rows + voter rows + completeness meta); owns the option-chip selection; drives the backfill. Sibling in style to `viewmodels/LiveStreamTopZappersViewModel.kt`, with the usual nested `Factory` |
 | `relayClient/…/polls/PollResponsesFilterAssembler.kt` | §4 |
-| `ui/note/polls/PollResultsHeader.kt`, `PollOptionBreakdown.kt`, `PollVoterRow.kt` | slot-based shared composables — the user avatar/name cell is a `@Composable` slot supplied by each platform (`UserCompose` on Android, desktop's own row), per `compose-slot-api-pattern` |
+| `ui/note/polls/PollResultsHeader.kt`, `PollOptionBreakdown.kt` | slot-based shared composables for the header and the option bars, per `compose-slot-api-pattern`. **No shared voter-row composable** — each platform's own user row fills that job (§6.1) |
 
 **New in `amethyst` (Android):**
 
@@ -259,10 +310,14 @@ Following `commons/ARCHITECTURE.md` (state + ViewModels + shared Compose in
 - `DeckColumnType.PollResults(noteId)` in `ui/deck/DeckColumnType.kt` (plus the
   `title()` and `typeKey()` branches — those `when`s are exhaustive) and a render
   branch in `DeckColumnContainer.kt`. Keep `VoterListPopup` as the quick peek and
-  add a **"See all voters"** footer that opens the column.
+  add a **"See all voters"** footer that opens the column. Its voter rows follow
+  the same rule as §6.1 against desktop's own user-row composable rather than the
+  bespoke avatar+name pair in `VoterListPopup`.
 
 **Edited (entry points):**
 
+- `UserCompose.kt` — add the `trailingContent` slot (§6.1). Default keeps every
+  existing call site identical.
 - `Poll.kt` — make the totals line and the `UserGallery` `+N` chip clickable →
   `nav.nav(Route.PollResults(noteId))`; add a "N votes" count next to the
   percentage (currently absent).
@@ -295,8 +350,8 @@ very different tally models.
   the denominator (§3.4); multi-choice `totalVoters` vs `totalSelections` (§3.1);
   policy arriving *after* responses recomputes the tally (§3.5); duplicate
   pubkey latest-wins (existing behaviour, lock it in).
-- New `PollResultsViewModelTest` with Turbine: filter/sort/search transitions,
-  mute exclusion, live insertion of a new vote.
+- New `PollResultsViewModelTest` with Turbine: option-chip transitions, mute
+  exclusion, live insertion of a new vote.
 - Manual: a >100-response poll (paging), a poll whose `relay` tags the viewer
   isn't connected to (completeness), a multi-choice poll (denominators).
 
@@ -306,9 +361,10 @@ very different tally models.
 |---|---|---|
 | 0 | Poll-aware tally (§3) — commons + tests | yes — fixes the inline card's numbers on both platforms |
 | 1 | Shared subscription + backfill (§4) | yes — Android tallies stop being short |
-| 2 | `PollResultsViewModel` + shared composables + Android screen + route + entry points | yes — the feature |
-| 3 | Filters, sort, search, completeness footer, privacy call-out (§5.2–5.3) | polish |
-| 4 | Desktop column; then zap polls (§7) | parity, then breadth |
+| 2 | `PollResultsViewModel` + shared composables + `UserCompose` trailing slot + Android screen + route + entry points | yes — the feature |
+| 3 | Desktop column | parity |
+| 4 | Audience filter, sort, voter search (§5.3) | once it's clear which are actually reached for |
+| 5 | Zap polls (§7) | breadth |
 
 Phases 0 and 1 are worth landing even if the page itself is deferred: they are
 bug fixes wearing a feature's clothes.
@@ -323,7 +379,9 @@ bug fixes wearing a feature's clothes.
    (`Poll.kt:298-336`, `hasViewedPollResults`). Proposal: the page respects the
    same gate — reaching it counts as opting in and calls `markPollResultsViewed`,
    exactly like today's "View results" link.
-3. **WoT tier in the audience filter** — worth it, or do `Everyone` / `Following`
-   cover the need?
+3. **Trailing slot vs. a second entry point.** §6.1 adds a `trailingContent`
+   parameter to `UserCompose` with a default that preserves every call site. The
+   alternative is a separate `UserComposeWithTrailing` — more files, no behaviour
+   difference. Flagging it because it edits a composable used across the app.
 4. **Export/share results** (copy as text, or a rendered image) — desirable, but
    listed as out of scope until the page exists.

@@ -40,7 +40,7 @@
     --app-accent: #6200ee;
     --app-good: #339900;
     --app-warn: #c09b14;
-    --app-following: #00897b;
+    --app-placeholder: color-mix(in srgb, #1c1c1c 42%, transparent);
     --app-shadow: 0 18px 40px rgba(0, 0, 0, .16), 0 2px 6px rgba(0, 0, 0, .08);
 
     --font-ui: ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -78,7 +78,7 @@
       --app-accent: #bb86fc;
       --app-good: #99cc33;
       --app-warn: #e1c419;
-      --app-following: #03dac5;
+    --app-placeholder: color-mix(in srgb, #e6e6e6 42%, transparent);
       --app-shadow: 0 18px 40px rgba(0, 0, 0, .6), 0 0 0 1px #2b2b2b;
     }
   }
@@ -109,7 +109,7 @@
     --app-accent: #bb86fc;
     --app-good: #99cc33;
     --app-warn: #e1c419;
-    --app-following: #03dac5;
+    --app-placeholder: color-mix(in srgb, #e6e6e6 42%, transparent);
     --app-shadow: 0 18px 40px rgba(0, 0, 0, .6), 0 0 0 1px #2b2b2b;
   }
 
@@ -139,7 +139,7 @@
     --app-accent: #6200ee;
     --app-good: #339900;
     --app-warn: #c09b14;
-    --app-following: #00897b;
+    --app-placeholder: color-mix(in srgb, #1c1c1c 42%, transparent);
     --app-shadow: 0 18px 40px rgba(0, 0, 0, .16), 0 2px 6px rgba(0, 0, 0, .08);
   }
 
@@ -323,7 +323,8 @@
     letter-spacing: .02em;
     flex: none;
   }
-  .avatar-sm { width: 22px; height: 22px; font-size: 9px; }
+  /* UserPicture at Size55dp, the size every user list in the app uses. */
+  .avatar-user { width: 48px; height: 48px; font-size: 15px; }
   .avatar-xs {
     width: 21px; height: 21px; font-size: 8.5px;
     box-shadow: 0 0 0 2px var(--app-bg);
@@ -514,74 +515,35 @@
   .fchip:focus-visible,
   .app-btn:focus-visible { outline: 2px solid var(--app-accent); outline-offset: 2px; }
 
-  .filter-row { display: flex; gap: 7px; align-items: center; }
-  .select {
-    font-size: 11.5px;
-    padding: 4px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--app-outline-2);
-    color: var(--app-on-2);
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    white-space: nowrap;
-  }
-  .search {
-    flex: 1;
-    font-size: 11.5px;
-    padding: 4px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--app-outline-2);
-    color: var(--app-on-2);
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    min-width: 0;
-  }
 
-  /* voter list */
+  /* Voter list. Row anatomy is UserCompose's, not a new one: SlimListItem with
+     UserPicture / UsernameDisplay / AboutDisplay, and the vote in the trailing
+     slot where the follow buttons normally sit. */
   .voters { display: flex; flex-direction: column; }
   .voter {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
+    gap: 12px;
+    padding: 11px 16px;
     border-bottom: 1px solid var(--app-outline-2);
   }
   .voter:last-child { border-bottom: 0; }
   .voter-id { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
   .voter-name {
-    font-size: 13.5px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    font-size: 14.5px;
+    font-weight: 700;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .voter-handle { font-size: 11.5px; color: var(--app-on-2); }
-  .tag-follows {
-    font-size: 9.5px;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--app-following);
-    border: 1px solid color-mix(in srgb, var(--app-following) 45%, transparent);
-    border-radius: 4px;
-    padding: 0 4px;
-    font-weight: 700;
-    flex: none;
-  }
-  .tag-you {
-    font-size: 9.5px;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--app-accent);
-    border: 1px solid color-mix(in srgb, var(--app-accent) 45%, transparent);
-    border-radius: 4px;
-    padding: 0 4px;
-    font-weight: 700;
-    flex: none;
+  /* AboutDisplay: profile about text, one line, ellipsized, placeholderText
+     (= onSurface at 42%). */
+  .voter-about {
+    font-size: 12.5px;
+    color: var(--app-placeholder);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
   .voter-vote {
     text-align: right;
@@ -590,8 +552,8 @@
     gap: 1px;
     flex: none;
   }
-  .voter-choice { font-size: 12px; font-weight: 600; }
-  .voter-when { font-size: 11px; color: var(--app-on-2); font-variant-numeric: tabular-nums; }
+  .voter-choice { font-size: 12.5px; font-weight: 600; }
+  .voter-when { font-size: 11px; color: var(--app-placeholder); font-variant-numeric: tabular-nums; }
 
   .app-foot {
     padding: 11px 16px 14px;
@@ -716,21 +678,7 @@
     gap: 9px;
   }
 
-  .privacy-line {
-    font-size: 11.5px;
-    color: var(--app-on-2);
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
-  }
-  .privacy-line b { color: var(--app-warn); font-weight: 700; }
 
-  .vote-opt {
-    border: 1px solid var(--app-outline-2);
-    border-radius: 10px;
-    padding: 10px 13px;
-    font-size: 14px;
-  }
 
   /* ── Decision A/B ───────────────────────────────────────── */
   .ab {
@@ -1062,7 +1010,8 @@
                   <div class="avatar avatar-xs a2">BS</div>
                   <div class="avatar avatar-xs a5">LN</div>
                   <div class="avatar avatar-xs a8">RW</div>
-                  <div class="opt-more">+130</div>
+                  <div class="avatar avatar-xs a6">CF</div>
+                  <div class="opt-more">+129</div>
                 </div>
                 <div class="opt-pct">35%</div>
               </div>
@@ -1074,7 +1023,9 @@
                 <div class="opt-gallery">
                   <div class="avatar avatar-xs a6">HM</div>
                   <div class="avatar avatar-xs a4">NF</div>
-                  <div class="opt-more">+70</div>
+                  <div class="avatar avatar-xs a2">PS</div>
+                  <div class="avatar avatar-xs a3">EK</div>
+                  <div class="opt-more">+68</div>
                 </div>
                 <div class="opt-pct">19%</div>
               </div>
@@ -1089,22 +1040,64 @@
       </div>
 
       <div class="card">
-        <div class="card-tag card-tag-new">Proposed — the same card, two additions</div>
+        <div class="card-tag card-tag-new">Proposed — the same card, one addition</div>
         <div class="miniframe">
           <div class="app-q" style="font-size:15px">Which relay should Amethyst suggest first to brand-new users?</div>
-          <div class="vote-opt">nos.lol</div>
-          <div class="vote-opt">relay.damus.io</div>
-          <div class="vote-opt">purplepag.es</div>
-          <div class="privacy-line"><b>&#9432;</b><span>Poll votes are public. Anyone can see who voted for what.</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-            <div style="font-size:12.5px;color:var(--app-accent);font-weight:600">View results</div>
-            <div style="font-size:12px;color:var(--app-on-2)">380 votes</div>
+          <div class="opts">
+            <div class="opt opt-win" style="--pct:46%">
+              <div class="opt-fill"></div>
+              <div class="opt-row">
+                <div class="opt-label"><div class="opt-name">nos.lol</div></div>
+                <div class="opt-gallery">
+                  <div class="avatar avatar-xs a1">MK</div>
+                  <div class="avatar avatar-xs a3">AR</div>
+                  <div class="avatar avatar-xs a7">TS</div>
+                  <div class="avatar avatar-xs a4">JD</div>
+                  <div class="opt-more">+171</div>
+                </div>
+                <div class="opt-sub" style="min-width:26px;text-align:right">175</div>
+                <div class="opt-pct">46%</div>
+              </div>
+            </div>
+            <div class="opt" style="--pct:35%">
+              <div class="opt-fill"></div>
+              <div class="opt-row">
+                <div class="opt-label"><div class="opt-name">relay.damus.io</div></div>
+                <div class="opt-gallery">
+                  <div class="avatar avatar-xs a2">BS</div>
+                  <div class="avatar avatar-xs a5">LN</div>
+                  <div class="avatar avatar-xs a8">RW</div>
+                  <div class="avatar avatar-xs a6">CF</div>
+                  <div class="opt-more">+129</div>
+                </div>
+                <div class="opt-sub" style="min-width:26px;text-align:right">133</div>
+                <div class="opt-pct">35%</div>
+              </div>
+            </div>
+            <div class="opt" style="--pct:19%">
+              <div class="opt-fill"></div>
+              <div class="opt-row">
+                <div class="opt-label"><div class="opt-name">purplepag.es</div></div>
+                <div class="opt-gallery">
+                  <div class="avatar avatar-xs a6">HM</div>
+                  <div class="avatar avatar-xs a4">NF</div>
+                  <div class="avatar avatar-xs a2">PS</div>
+                  <div class="avatar avatar-xs a3">EK</div>
+                  <div class="opt-more">+68</div>
+                </div>
+                <div class="opt-sub" style="min-width:26px;text-align:right">72</div>
+                <div class="opt-pct">19%</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end">
+            <div style="font-size:12.5px;color:var(--app-accent);font-weight:600">380 votes &#8250;</div>
           </div>
         </div>
         <p class="card-note">
-          Two changes to the card itself: a <b>vote count</b> beside the percentage, and the privacy
-          line placed <b>where the choice is made</b> rather than after it. The avatar stack and the
-          count both become the entry point to the full results screen.
+          One change to the card itself: the <b>vote count</b> beside each percentage. The count
+          under the options and the avatar stack both become the entry point to the full results
+          screen — so the <b>+171</b> stops being a dead end.
         </p>
       </div>
     </div>
@@ -1165,11 +1158,12 @@
                     <div class="opt-sub">175 of 380 voters</div>
                   </div>
                   <div class="opt-gallery">
-                    <div class="avatar avatar-xs a1">MK</div>
-                    <div class="avatar avatar-xs a3">AR</div>
-                    <div class="avatar avatar-xs a7">TS</div>
-                    <div class="opt-more">+172</div>
-                  </div>
+                  <div class="avatar avatar-xs a1">MK</div>
+                  <div class="avatar avatar-xs a3">AR</div>
+                  <div class="avatar avatar-xs a7">TS</div>
+                  <div class="avatar avatar-xs a4">JD</div>
+                  <div class="opt-more">+171</div>
+                </div>
                   <div class="opt-pct">46%</div>
                   <div class="opt-check">&#10003;</div>
                 </div>
@@ -1182,10 +1176,12 @@
                     <div class="opt-sub">133 of 380 voters</div>
                   </div>
                   <div class="opt-gallery">
-                    <div class="avatar avatar-xs a2">BS</div>
-                    <div class="avatar avatar-xs a5">LN</div>
-                    <div class="opt-more">+131</div>
-                  </div>
+                  <div class="avatar avatar-xs a2">BS</div>
+                  <div class="avatar avatar-xs a5">LN</div>
+                  <div class="avatar avatar-xs a8">RW</div>
+                  <div class="avatar avatar-xs a6">CF</div>
+                  <div class="opt-more">+129</div>
+                </div>
                   <div class="opt-pct">35%</div>
                 </div>
               </div>
@@ -1197,10 +1193,12 @@
                     <div class="opt-sub">72 of 380 voters</div>
                   </div>
                   <div class="opt-gallery">
-                    <div class="avatar avatar-xs a6">HM</div>
-                    <div class="avatar avatar-xs a8">RW</div>
-                    <div class="opt-more">+70</div>
-                  </div>
+                  <div class="avatar avatar-xs a6">HM</div>
+                  <div class="avatar avatar-xs a4">NF</div>
+                  <div class="avatar avatar-xs a2">PS</div>
+                  <div class="avatar avatar-xs a3">EK</div>
+                  <div class="opt-more">+68</div>
+                </div>
                   <div class="opt-pct">19%</div>
                 </div>
               </div>
@@ -1219,75 +1217,69 @@
               <button class="fchip" type="button" aria-pressed="false" data-opt="damus">relay.damus.io · 133</button>
               <button class="fchip" type="button" aria-pressed="false" data-opt="purple">purplepag.es · 72</button>
             </div>
-            <div class="filter-row">
-              <span class="select">Everyone &#9662;</span>
-              <span class="select">Relevance &#9662;</span>
-              <span class="search">&#9906; Search voters</span>
-            </div>
           </div>
 
           <div class="voters" id="voterList" data-pin="pin6">
             <div class="voter" data-opt="nos">
-              <div class="avatar avatar-sm a8">VP</div>
+              <div class="avatar avatar-user a8">VP</div>
               <div class="voter-id">
-                <div class="voter-name">you <span class="tag-you">you</span></div>
-                <div class="voter-handle">npub1gcx&#8230;wq7d</div>
+                <div class="voter-name">you</div>
+                <div class="voter-about">Android + KMP. Nostr all day.</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">nos.lol</div><div class="voter-when">2d ago</div></div>
             </div>
             <div class="voter" data-opt="damus">
-              <div class="avatar avatar-sm a2">BS</div>
+              <div class="avatar avatar-user a2">BS</div>
               <div class="voter-id">
-                <div class="voter-name">Bruno Sá <span class="tag-follows">follows</span></div>
-                <div class="voter-handle">bruno@nostrplebs.com</div>
+                <div class="voter-name">Bruno Sá</div>
+                <div class="voter-about">Relay operator in Lisbon. Runs a small paid relay.</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">relay.damus.io</div><div class="voter-when">2d ago</div></div>
             </div>
             <div class="voter" data-opt="nos">
-              <div class="avatar avatar-sm a1">MK</div>
+              <div class="avatar avatar-user a1">MK</div>
               <div class="voter-id">
-                <div class="voter-name">mira.k <span class="tag-follows">follows</span></div>
-                <div class="voter-handle">npub18ht&#8230;2m4v</div>
+                <div class="voter-name">mira.k</div>
+                <div class="voter-about">Designer. Making nostr less frightening.</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">nos.lol</div><div class="voter-when">2d ago</div></div>
             </div>
             <div class="voter" data-opt="nos">
-              <div class="avatar avatar-sm a3">AR</div>
+              <div class="avatar avatar-user a3">AR</div>
               <div class="voter-id">
-                <div class="voter-name">Ana Reis <span class="tag-follows">follows</span></div>
-                <div class="voter-handle">npub1t4qz&#8230;p09h</div>
+                <div class="voter-name">Ana Reis</div>
+                <div class="voter-about">Photographer, mostly film.</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">nos.lol</div><div class="voter-when">1d ago</div></div>
             </div>
             <div class="voter" data-opt="purple">
-              <div class="avatar avatar-sm a8">RW</div>
+              <div class="avatar avatar-user a8">RW</div>
               <div class="voter-id">
                 <div class="voter-name">relaywrangler</div>
-                <div class="voter-handle">npub1kk9m&#8230;4zzt</div>
+                <div class="voter-about">Self-hosting everything since 2011.</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">purplepag.es</div><div class="voter-when">1d ago</div></div>
             </div>
             <div class="voter" data-opt="damus">
-              <div class="avatar avatar-sm a5">LN</div>
+              <div class="avatar avatar-user a5"></div>
               <div class="voter-id">
                 <div class="voter-name">npub1q8f&#8230;j3xw</div>
-                <div class="voter-handle">no profile found</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">relay.damus.io</div><div class="voter-when">22h ago</div></div>
             </div>
             <div class="voter" data-opt="nos">
-              <div class="avatar avatar-sm a7">TS</div>
+              <div class="avatar avatar-user a7">TS</div>
               <div class="voter-id">
                 <div class="voter-name">tomás</div>
-                <div class="voter-handle">npub1w2ns&#8230;6vhc</div>
+                <div class="voter-about">café, código, bicicleta</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">nos.lol</div><div class="voter-when">14h ago</div></div>
             </div>
             <div class="voter" data-opt="purple">
-              <div class="avatar avatar-sm a6">HM</div>
+              <div class="avatar avatar-user a6">HM</div>
               <div class="voter-id">
                 <div class="voter-name">hodlmatrix</div>
-                <div class="voter-handle">npub1xr7d&#8230;5ktp</div>
+                <div class="voter-about">21M or bust.</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">purplepag.es</div><div class="voter-when">9h ago</div></div>
             </div>
@@ -1351,20 +1343,23 @@
             <div class="note-t">Filter the list, never the summary</div>
             <p class="note-d">
               Option chips scope the voter list only — the bars above stay put, so the totals can't
-              appear to change while you browse. Audience is <b>Everyone / Following / Following + WoT</b>,
-              reusing the follow set the tally already sorts by.
+              appear to change while you browse. An audience filter, a sort control and voter search
+              are <b>deliberately held back</b>; the list is ordered you → follows → rest, and it's
+              not yet clear which of the three people would actually reach for.
             </p>
           </div>
         </div>
         <div class="note">
           <div class="note-n">6</div>
           <div class="note-body">
-            <div class="note-t">One row per person, with their choice on it</div>
+            <div class="note-t">A voter row is just a user row</div>
             <p class="note-d">
-              The default is a flat list of everyone, so "who voted for what" is answered without
-              drilling into an option. You are pinned first, follows next — that ordering already
-              exists in <code class="ref">filterTo</code>. Multiple-choice rows list every option
-              that person picked.
+              Not a new row type — <code class="ref">SlimListItem</code> with exactly the slots
+              <code class="ref">UserCompose</code> fills: <code>UserPicture</code>,
+              <code>UsernameDisplay</code>, <code>AboutDisplay</code>. Only the trailing slot differs,
+              carrying the vote where the follow buttons normally sit. So the second line is the
+              person's <b>about text</b>, petnames and display-name emoji work, and the npub fallback
+              (row six) appears on its own when no profile has arrived — all for free.
             </p>
           </div>
         </div>
@@ -1680,23 +1675,26 @@
           </div>
           <div class="voters" style="border:1px solid var(--app-outline-2);border-radius:10px;overflow:hidden">
             <div class="voter">
-              <div class="avatar avatar-sm a8">VP</div>
+              <div class="avatar avatar-user a8">VP</div>
               <div class="voter-id">
-                <div class="voter-name">you <span class="tag-you">you</span></div>
+                <div class="voter-name">you</div>
+                <div class="voter-about">Android + KMP. Nostr all day.</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">nos.lol</div><div class="voter-when">2d ago</div></div>
             </div>
             <div class="voter">
-              <div class="avatar avatar-sm a2">BS</div>
+              <div class="avatar avatar-user a2">BS</div>
               <div class="voter-id">
-                <div class="voter-name">Bruno Sá <span class="tag-follows">follows</span></div>
+                <div class="voter-name">Bruno Sá</div>
+                <div class="voter-about">Relay operator in Lisbon.</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">relay.damus.io</div><div class="voter-when">2d ago</div></div>
             </div>
             <div class="voter">
-              <div class="avatar avatar-sm a1">MK</div>
+              <div class="avatar avatar-user a1">MK</div>
               <div class="voter-id">
-                <div class="voter-name">mira.k <span class="tag-follows">follows</span></div>
+                <div class="voter-name">mira.k</div>
+                <div class="voter-about">Designer. Making nostr less frightening.</div>
               </div>
               <div class="voter-vote"><div class="voter-choice">nos.lol</div><div class="voter-when">2d ago</div></div>
             </div>
@@ -1789,18 +1787,23 @@
       </div>
       <div class="phase">
         <div class="phase-n">P2</div>
-        <div class="phase-t">The screen<span>ViewModel + shared composables + Android route + entry points from the card.</span></div>
+        <div class="phase-t">The screen<span>ViewModel + shared composables + the <code class="ref">UserCompose</code> trailing slot + Android route + entry points from the card.</span></div>
         <div class="phase-v ships">The feature</div>
       </div>
       <div class="phase">
         <div class="phase-n">P3</div>
-        <div class="phase-t">Filters, sort, search, completeness footer, privacy line<span>Everything in §02 notes 5 and 7.</span></div>
-        <div class="phase-v">Polish</div>
+        <div class="phase-t">Desktop deck column<span>Same ViewModel, same option bars, desktop's own user row.</span></div>
+        <div class="phase-v">Parity</div>
       </div>
       <div class="phase">
         <div class="phase-n">P4</div>
-        <div class="phase-t">Desktop column, then zap polls<span>Kind 6969 shares the shell but not the tally — it is weighted by sats, not by people.</span></div>
-        <div class="phase-v">Parity, then breadth</div>
+        <div class="phase-t">Audience filter, sort, voter search<span>Held back on purpose — added once it's clear which of the three people reach for.</span></div>
+        <div class="phase-v">Only if wanted</div>
+      </div>
+      <div class="phase">
+        <div class="phase-n">P5</div>
+        <div class="phase-t">Zap polls<span>Kind 6969 shares the shell but not the tally — it is weighted by sats, not by people.</span></div>
+        <div class="phase-v">Breadth</div>
       </div>
     </div>
   </section>
