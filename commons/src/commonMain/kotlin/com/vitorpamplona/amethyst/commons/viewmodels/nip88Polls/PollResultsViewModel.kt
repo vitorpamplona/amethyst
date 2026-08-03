@@ -32,13 +32,19 @@ import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache.Re
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
 /** One option's share of the poll, ready to draw. */
@@ -75,7 +81,17 @@ class PollResultsUiState(
     val myVote: List<String> = emptyList(),
     val type: PollType = PollType.SINGLE_CHOICE,
     val endsAt: Long? = null,
-)
+    /** Raw kind-1018 events the tally has, however they were counted. */
+    val loadedResponses: Int = 0,
+    /** What the relays say exists, floored by [loadedResponses]. Null when nobody could say. */
+    val reportedResponses: Int? = null,
+    val reportIsApproximate: Boolean = false,
+    val relaysAnswered: Int = 0,
+    val isBackfilling: Boolean = false,
+) {
+    /** True only when we can actually show that responses are missing. */
+    val isIncomplete get() = reportedResponses != null && reportedResponses > loadedResponses
+}
 
 /**
  * Screen state for the poll results page.
@@ -95,6 +111,7 @@ class PollResultsViewModel(
     private val isHidden: (HexKey) -> Boolean,
     follows: Flow<Set<HexKey>>,
     hiddenChanges: Flow<Any?>,
+    private val loader: PollResponseLoader? = null,
 ) : ViewModel() {
     companion object {
         /** Faces shown per option before collapsing into a "+N" chip, matching UserGallery. */
@@ -104,18 +121,49 @@ class PollResultsViewModel(
     private val _selectedOption = MutableStateFlow<String?>(null)
     val selectedOption = _selectedOption.asStateFlow()
 
+    private val backfill = MutableStateFlow(BackfillState())
+
+    private class BackfillState(
+        val running: Boolean = false,
+        val report: PollLoadReport? = null,
+    )
+
+    init {
+        // Page past the subscription cap once, on open. Without this a poll with more responses
+        // than the live filter's limit shows a confidently wrong tally.
+        if (loader != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val poll = awaitPollEvent()
+                backfill.value = BackfillState(running = true)
+                val report = runCatching { loader.load(poll) }.getOrNull()
+                backfill.value = BackfillState(running = false, report = report)
+            }
+        }
+    }
+
+    /** Responses regularly beat their poll to the client; there is nothing to query until it lands. */
+    private suspend fun awaitPollEvent(): PollEvent =
+        pollNote.event as? PollEvent
+            ?: pollNote
+                .flow()
+                .metadata.stateFlow
+                .map { it.note.event as? PollEvent }
+                .filterNotNull()
+                .first()
+
     val uiState: StateFlow<PollResultsUiState> =
         combine(
             pollNote.pollState().responses,
             follows,
             _selectedOption,
             hiddenChanges,
-        ) { tally, followSet, selected, _ ->
-            build(tally, followSet, selected)
+            backfill,
+        ) { tally, followSet, selected, _, load ->
+            build(tally, followSet, selected, load)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = build(pollNote.pollState().responses.value, emptySet(), null),
+            initialValue = build(pollNote.pollState().responses.value, emptySet(), null, BackfillState()),
         )
 
     fun selectOption(code: String?) {
@@ -126,6 +174,7 @@ class PollResultsViewModel(
         tally: ResponseTally,
         follows: Set<HexKey>,
         selected: String?,
+        load: BackfillState,
     ): PollResultsUiState {
         val event = pollNote.event as? PollEvent
 
@@ -196,6 +245,13 @@ class PollResultsViewModel(
                     .orEmpty(),
             type = event?.pollType() ?: PollType.SINGLE_CHOICE,
             endsAt = event?.endsAt(),
+            loadedResponses = tally.allResponses.size,
+            // Floor the relays' figure with what we hold: an HLL estimate can land under the true
+            // value, and a relay that never answered can only make the number too small.
+            reportedResponses = load.report?.reported?.coerceAtLeast(tally.allResponses.size),
+            reportIsApproximate = load.report?.approximate ?: false,
+            relaysAnswered = load.report?.relaysAnswered ?: 0,
+            isBackfilling = load.running,
         )
     }
 
@@ -205,12 +261,13 @@ class PollResultsViewModel(
         private val isHidden: (HexKey) -> Boolean,
         private val follows: Flow<Set<HexKey>>,
         private val hiddenChanges: Flow<Any?>,
+        private val loader: PollResponseLoader? = null,
     ) : ViewModelProvider.Factory {
         // The multiplatform signature — commonMain has no java.lang.Class.
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(
             modelClass: KClass<T>,
             extras: CreationExtras,
-        ): T = PollResultsViewModel(pollNote, forKey, isHidden, follows, hiddenChanges) as T
+        ): T = PollResultsViewModel(pollNote, forKey, isHidden, follows, hiddenChanges, loader) as T
     }
 }

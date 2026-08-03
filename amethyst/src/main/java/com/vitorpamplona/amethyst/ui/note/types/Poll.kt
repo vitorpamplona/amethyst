@@ -176,6 +176,7 @@ fun InnerRenderPoll(
             event = event,
             pollState = note.pollState(),
             accountViewModel = accountViewModel,
+            footerContent = { if (!makeItShort) PollResultsLink(note, nav) },
             galleryUser = { user ->
                 ClickableUserPicture(
                     user,
@@ -201,10 +202,6 @@ fun InnerRenderPoll(
             )
         }
 
-        if (!makeItShort) {
-            PollResultsLink(note, nav)
-        }
-
         if (event.hasHashtags()) {
             DisplayUncitedHashtags(event, event.content, callbackUri, accountViewModel, nav)
         }
@@ -214,6 +211,10 @@ fun InnerRenderPoll(
 /**
  * The way out of the card. The avatar stack tops out at four faces and the "+N" chip counts people
  * the card has no room to show — this is the door to the rest of them.
+ *
+ * Rendered only from [RenderResults], i.e. only once the card is already showing the tally. Putting
+ * it beside the voting controls would hand every reader a one-tap bypass of the vote-first gate,
+ * and — since opening the screen counts as opting in — permanently so.
  */
 @Composable
 private fun PollResultsLink(
@@ -261,6 +262,7 @@ fun RenderPollCard(
     pollState: PollResponsesCache,
     accountViewModel: AccountViewModel,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
+    footerContent: @Composable () -> Unit = {},
     labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
     val card =
@@ -308,6 +310,7 @@ fun RenderPollCard(
         onViewResults = { accountViewModel.markPollResultsViewed(event.id, event.endsAt()) },
         hasViewedResults = { accountViewModel.hasViewedPollResults(event.id) },
         resultContent = galleryUser,
+        footerContent = footerContent,
         labelContent = labelContent,
     )
 }
@@ -320,28 +323,29 @@ fun RenderPollCard(
     onViewResults: () -> Unit = {},
     hasViewedResults: () -> Boolean = { false },
     resultContent: @Composable RowScope.(user: User) -> Unit,
+    footerContent: @Composable () -> Unit = {},
     labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
     Column(
         verticalArrangement = SpacedBy5dp,
     ) {
         if (card.isMyPoll) {
-            RenderResults(card, resultContent, labelContent)
+            RenderResults(card, resultContent, footerContent, labelContent)
         } else {
             val haveIVoted = card.haveIVoted()
             if (haveIVoted) {
-                RenderResults(card, resultContent, labelContent)
+                RenderResults(card, resultContent, footerContent, labelContent)
             } else {
                 // waits for vote
                 val haveIVoted by card.haveIVotedFlow.collectAsStateWithLifecycle(haveIVoted)
                 if (haveIVoted) {
-                    RenderResults(card, resultContent, labelContent)
+                    RenderResults(card, resultContent, footerContent, labelContent)
                 } else if (card.hasEnded() || hasViewedResults()) {
-                    RenderResults(card, resultContent, labelContent)
+                    RenderResults(card, resultContent, footerContent, labelContent)
                 } else {
                     var viewingResults by remember { mutableStateOf(false) }
                     if (viewingResults) {
-                        RenderResults(card, resultContent, labelContent)
+                        RenderResults(card, resultContent, footerContent, labelContent)
                     } else {
                         when (card.type) {
                             PollType.SINGLE_CHOICE -> RenderSingleChoiceOptions(card, labelContent, onRespond)
@@ -467,6 +471,7 @@ private fun ColumnScope.RenderMultiChoiceOptions(
 private fun RenderResults(
     card: PollCard,
     resultContent: @Composable RowScope.(user: User) -> Unit,
+    footerContent: @Composable () -> Unit,
     labelContent: @Composable (ColumnScope.(code: String, label: String) -> Unit),
 ) {
     val showGallery =
@@ -481,6 +486,8 @@ private fun RenderResults(
             labelContent(pollItem.code, pollItem.label)
         }
     }
+
+    footerContent()
 }
 
 @Composable

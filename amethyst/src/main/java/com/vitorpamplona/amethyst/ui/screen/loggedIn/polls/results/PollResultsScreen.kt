@@ -45,6 +45,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -95,6 +96,7 @@ import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.amethyst.ui.theme.warningColor
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -154,6 +156,7 @@ private fun PollResults(
                     isHidden = { account.isHidden(it) },
                     follows = account.allFollows.flow.map { it.authors },
                     hiddenChanges = account.hiddenUsers.flow,
+                    loader = RelayPollResponseLoader(account.client, account.cache, note),
                 ),
         )
 
@@ -633,18 +636,62 @@ private fun ResultsFooter(state: PollResultsUiState) {
         }
     }
 
-    if (notes.isNotEmpty()) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            notes.forEach { (res, count) ->
-                Text(
-                    text = pluralStringResource(res, count, count),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.placeholderText,
-                )
-            }
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Completeness(state)
+
+        notes.forEach { (res, count) ->
+            Text(
+                text = pluralStringResource(res, count, count),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
         }
     }
+}
+
+/**
+ * Says how complete the tally is, and only when there is something to say. Silence means the relays
+ * either agreed with what we hold or could not answer — claiming completeness we cannot prove would
+ * be the same mistake as presenting a truncated tally as final.
+ */
+@Composable
+private fun Completeness(state: PollResultsUiState) {
+    if (state.isBackfilling) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(12.dp),
+                strokeWidth = 1.5.dp,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringRes(R.string.poll_results_loading_votes),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
+        return
+    }
+
+    val reported = state.reportedResponses ?: return
+    if (!state.isIncomplete) return
+
+    Text(
+        text =
+            stringRes(
+                if (state.reportIsApproximate) {
+                    R.string.poll_results_partial_approx
+                } else {
+                    R.string.poll_results_partial
+                },
+                state.loadedResponses,
+                reported,
+                state.relaysAnswered,
+            ),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.warningColor,
+    )
 }
