@@ -85,9 +85,21 @@
         ]
       },
       {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
+      {
         "user": "maxblake2015",
         "languages": [
           "Polish"
+        ]
+      },
+      {
+        "user": "rajs19420616",
+        "languages": [
+          "Hindi"
         ]
       },
       {
@@ -95,14 +107,9 @@
         "languages": [
           "Czech",
           "German",
+          "Polish",
           "Portuguese, Brazilian",
           "Swedish"
-        ]
-      },
-      {
-        "user": "rajs19420616",
-        "languages": [
-          "Hindi"
         ]
       },
       {
@@ -263,10 +270,6 @@
       },
       {
         "user": "D4rkFIow",
-        "languages": []
-      },
-      {
-        "user": "summoner001",
         "languages": []
       },
       {

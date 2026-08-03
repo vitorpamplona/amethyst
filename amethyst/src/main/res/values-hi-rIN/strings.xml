@@ -1942,14 +1942,95 @@
     </plurals>
     <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d पुनःप्रसारक</item>
+        <item quantity="other">%1$s \u00b7 %2$d पुनःप्रसारक</item>
+    </plurals>
+    <string name="relay_purpose_browsing">जालभ्रमण</string>
+    <string name="relay_purpose_media">ध्वनिचित्राभिलेख</string>
+    <string name="relay_purpose_tags">विषयसूचक</string>
+    <string name="relay_purpose_topics">विषय सूची</string>
+    <string name="relay_purpose_thread">वार्तालाप</string>
+    <string name="relay_purpose_search">खोज</string>
+    <string name="relay_purpose_referenced">लुप्त घटनाओं को ढूँढें</string>
+    <string name="relay_purpose_engagement">घटना अवलोकन</string>
+    <string name="relay_explain_referenced">घटनाओं को विभेदक अनुसार ले आता है जिसका उल्लेख आपके पटल पर अमुक करता है पर जिसकी प्राप्ती अभी नहीं हुई। एक उद्धरण अथवा एक प्रत्युत्तर का पूर्वपत्र अथवा एक सूत्र का मूल।</string>
+    <string name="relay_explain_engagement">घटनाओं का अवलोकन करता है जो वर्तमान में प्रदर्शित हो रहे हैं नए प्रत्युत्तर प्रतिक्रियाएँ उद्धरण ज्साप तथा वृत्तान्तों के लिए जिससे गिनतियों का नवीकरण होता है जब आप पढ रहे हैं।</string>
+    <string name="relay_purpose_add_ons">संलग्न</string>
+    <string name="relay_purpose_relay_info">पुनःप्रसारक जानकारी</string>
+    <string name="relay_purpose_other">अन्य</string>
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
          their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">पुनःप्रसारक सूची खोजकर्ता</string>
+    <string name="relay_purpose_observing_profiles">परिचय अवलोकन</string>
+    <string name="relay_purpose_your_account">लेखा जानकारी</string>
+    <string name="relay_purpose_home_feed">मुख्य सूचनावली</string>
+    <string name="relay_purpose_relay_groups">पुनःप्रसारक समूह</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d समूह</item>
+        <item quantity="other">%1$d समूह</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">अस्थायी चर्चाएँ</string>
+    <string name="relay_purpose_geohash_chats">स्थानीय चर्चाएँ</string>
+    <string name="relay_purpose_live_chat">वर्तमानप्रवाह चर्चा</string>
+    <string name="relay_explain_relay_groups">निप॰२९ समूह जिनसे आप जुडे हैं। प्रत्येक समूह एक जालावास पुनःप्रसारक में रहता है। इसलिए क्रमक प्रत्येक पुनःप्रसारक से संयोजन करता है जो आपके किसी समूह का जालावास है।</string>
+    <string name="relay_explain_ephemeral_chats">चर्चाशालाएँ जो कोई इतिहास नहीं रखते। सन्देश केवल तब तक रहते हैं जब तक आप संयोजित हैं। इसलिए ये ग्राहकता बनाए रखते हैं कुछ भी प्राप्त होने के लिए।</string>
+    <string name="relay_explain_geohash_chats">स्थान आधारित शालाएँ उन क्षेत्रों के लिए जिनका आप अनुगमन करते हैं। पृष्ट उन पुनःप्रसारको से जो इनके जालावास हैं।</string>
+    <string name="relay_explain_live_chat">चर्चा तथा ज्साप उद्देश्य जो वर्तमानप्रवाहों से संलग्न हैं जिन्हें आप खोले हुए हैं अथवा अनुगमन करते हैं।</string>
+    <string name="relay_purpose_dm_inbox">सीधासन्देश आगतपेटिका</string>
+    <string name="relay_purpose_your_wallet">धनकोष</string>
+    <string name="relay_purpose_nutzap_inbox">नटज्साप आगतपेटिका</string>
+    <string name="relay_purpose_mint_directory">टकसाल निर्देशिका</string>
+    <string name="relay_purpose_nwc">धनकोष संयोजन</string>
+    <string name="relay_purpose_community_chats">समुदाय चर्चाएँ</string>
+    <string name="relay_purpose_community_feeds">समुदाय सूचनावलियाँ</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
+    <string name="relay_explain_notifications">आपके आगतपेटिका पुनःप्रसारक तथा कुछ अल्पमात्रा परिभ्रमणवर्ती दृष्टान्त पुनःप्रसारक जिनपर आपके अनुचरित पत्र प्रकाशित करते हैं। यदि कोई उल्लेख अन्यत्र भेजा गया।</string>
+    <string name="relay_explain_direct_messages">आपके सीधासन्देश पुनःप्रसारक। जहाँ उपहारकोषयुक्त सन्देश भेजे जाते हैं।</string>
+    <string name="relay_explain_public_chats">मुख्य पुनःप्रसारक प्रत्येक चर्चा का जिन्हें आप खोल रखे हैं अथवा जिनसे आप जुड चुके हैं।</string>
+    <string name="relay_explain_community_chats">पुनःप्रसारक जिनपर प्रत्येक समुदाय अपने पत्र प्रकाशित करते हैं।</string>
+    <string name="relay_explain_encrypted_groups">समूह सन्देश तथा कुंचिकापेटलियाँ। प्रत्येक समूह के पुनःप्रसारकों पर।</string>
+    <string name="relay_explain_live_rooms">शाला के पुनःप्रसारक। जब वह खुला हो।</string>
+    <string name="relay_explain_account_data">आपके अपने परिचय तथा स्थापना विकल्प तथा पाण्डुलिपियाँ। आपके मुख्य पुनःप्रसारकों पर।</string>
+    <string name="relay_explain_profiles">वर्तमानतः पटल पर लोगों के परिचय।</string>
+    <string name="relay_explain_relay_lists">खोजता है किन पुनःप्रसारकों पर प्रत्येक व्यक्ति प्रकाशन करता है। जिससे कि उनके पत्र सम्यक स्थल से प्राप्प हो।</string>
+    <string name="relay_explain_follows">अनुचरण सूचियाँ। आपकी सूचनावली तथा आपका विश्वासजाल का निर्माण के लिए उपयुक्त।</string>
+    <string name="relay_explain_moderation">वृत्तान्त जो आपके अनुचरितों ने लिखा वर्तमानतः आपके पटल पर दिखनेवाले परिचयों के विषय में। पृष्ट प्रत्येक पुनःप्रसारक से जिनपर वे पत्र प्रकाशन करते हैं।</string>
+    <string name="relay_purpose_reports_from_follows">अनुचरित से वृत्तान्त</string>
+    <string name="relay_explain_wallet">आपके अपने धनकोष घटनाएँ। पुनःपठित उन पुनःप्रसारकों से जिनपर आपने उनके प्रकाशन किए।</string>
+    <string name="relay_explain_nutzap_inbox">सुनता है आपके नटज्साप पुनःप्रसारकों पर तथा आपके आगतपेटिका तथा सीधासन्देश पुनःप्रसारकों पर। जिससे कि कोई भी भुगतान छूट ना जाए।</string>
+    <string name="relay_explain_mint_directory">पुनःप्रसारकों का वीक्षण करता है यह देखने के लिए कि कौनसे टकसाल हैं तथा लोग किनकी अनुशम्सा करते हैं।</string>
+    <string name="relay_explain_nwc">आपके संयोजित धनकोष से सूचनाएँ।</string>
+    <string name="active_subs_title">सक्रिय पुनःप्रसारक ग्राहकताएँ</string>
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d छलनी</item>
+        <item quantity="other">%1$d छलनियाँ</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d पुनःप्रसारक</item>
+        <item quantity="other">%1$d पुनःप्रसारक</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d छलनी आरोपित नहीं अब तक</item>
+        <item quantity="other">%1$d छलनियाँ आरोपित नहीं अब तक</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">किसी लेखा प्रति आरोपित नहीं</string>
+    <string name="active_subs_no_entity">सभी</string>
+    <string name="active_subs_scope_global">सभी</string>
+    <string name="active_subs_scope_follows">आपके द्वारा अनुचरित लोग</string>
+    <string name="active_subs_scope_authors">चयनित लोगों की सूची</string>
+    <string name="active_subs_scope_muted">मौनकृत लोग</string>
+    <string name="active_subs_scope_all_communities">आपके समुदाय</string>
+    <string name="active_subs_scope_algo">एक प्रिय कलनविधि सूचनावली</string>
+    <string name="active_subs_share">%1$dप्रतिशतप्रतिशत सब में से</string>
+    <string name="active_subs_search_keywords">ग्राहकताएँ छलनियाँ पुनःप्रसारक अनुरोध अनु॰ संयोजन क्यों निदानतन्त्र</string>
+    <string name="relay_explain_home">आपके अनुचरितों के पत्र। पठित उन पुनःप्रसारकों से जिनपर उनमें से प्रत्येक प्रकाशन करते हैं।</string>
     <string name="always_on_notif_connecting">आगतपेटिका पुनःप्रसारकों के साथ संयोजन किया जा रहा है \u2026</string>
     <string name="always_on_notif_setting_title">सदैव सक्रिय सूचना सेवा</string>
     <string name="always_on_notif_setting_description">अनवरत संयोजन बनाए रखता है आपके आगतपेटिका पुनःप्रसारकों के साथ तत्काल सूचना वितरण के लिए। एक स्थायी सूचना दिखाता है। विद्युत्कोष का अधिक उपयोग करता है पर निश्चित करता है कि आप कभी भी सन्देश नहीं खोएँगे।</string>
