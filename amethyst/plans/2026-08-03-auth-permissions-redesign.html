@@ -280,6 +280,10 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
 .dlg-title { font-size: 1.32rem; line-height: 1.25; font-weight: 500; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
 .dlg-title.center { text-align: center; }
 .dlg-body { font-size: .875rem; line-height: 1.45; color: var(--on-s-var); margin: 0; }
+.npub {
+  font-family: var(--f-code); font-size: .72rem; letter-spacing: .01em;
+  color: var(--on-s-var); margin-top: -10px;
+}
 .dlg-err { font-size: .875rem; line-height: 1.45; color: var(--err); margin: 0; }
 .relaychip {
   align-self: flex-start; background: var(--s-var); color: var(--on-s);
@@ -828,7 +832,8 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
       <h5>The shape</h5>
       <p>
         <strong>Relay identity</strong> (icon + host, the thing being trusted) ·
-        <strong>"Log in as @you?"</strong> (the disclosure, with the account named for the first time) ·
+        <strong>"Log in as @you?"</strong> + the npub beneath it (the disclosure, named for the first
+        time — no sentence explaining what logging in means, because the verb already says it) ·
         <strong>one reason sentence</strong> (varies by state) ·
         <strong>Remember for this relay</strong> (a switch, not a third button) ·
         <strong>Not now / Log in</strong> ·
@@ -844,11 +849,11 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
       <div>
         <div class="frame">
           <div class="screen">
-            <span class="pin good" style="top:24px; left:-9px">1</span>
-            <span class="pin good" style="top:82px; left:-9px">2</span>
-            <span class="pin good" style="top:150px; left:-9px">3</span>
-            <span class="pin good" style="top:250px; left:-9px">4</span>
-            <span class="pin good" style="top:320px; left:-9px">5</span>
+            <span class="pin good" style="top:44px; left:-9px">1</span>
+            <span class="pin good" style="top:96px; left:-9px">2</span>
+            <span class="pin good" style="top:160px; left:-9px">3</span>
+            <span class="pin good" style="top:238px; left:-9px">4</span>
+            <span class="pin good" style="top:300px; left:-9px">5</span>
             <div class="dlg">
               <div style="display:flex;align-items:center;gap:11px">
                 <span class="relayicon r1">nw</span>
@@ -858,12 +863,12 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
                 </div>
               </div>
               <h3 class="dlg-title" style="margin-top:2px">Log in as <span style="color:var(--pri)">@vitor</span>?</h3>
+              <div class="npub">npub1vp3k9qz…q8x4k</div>
               <p class="dlg-body" style="font-size:.92rem;color:var(--on-s)">
                 It won't accept your message for
                 <span class="av xs a1 av-inline">AN</span><strong>Alice Nakamoto</strong>
                 from someone it can't identify.
               </p>
-              <p class="dlg-body">The operator will see your npub and can link it to this relay.</p>
               <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--s-var);border-radius:14px">
                 <div style="flex:1;font-size:.86rem">Remember for this relay</div>
                 <span class="sw"></span>
@@ -892,7 +897,7 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
         </div>
         <ul class="legend ok">
           <li><span class="pin-n">1</span><span>The relay leads, because the relay is the thing being trusted. Its NIP-11 icon is already loaded elsewhere in the app and reused here.</span></li>
-          <li><span class="pin-n">2</span><span>The account is named — new. This is the actual disclosure, and on a multi-account device it is the one thing the user cannot infer.</span></li>
+          <li><span class="pin-n">2</span><span>The account is named — new. This is the actual disclosure, and on a multi-account device it is the one thing the user cannot infer. The npub sits under it as the concrete thing being handed over; there is no sentence explaining that logging in identifies you, because "log in" is that sentence.</span></li>
           <li><span class="pin-n">3</span><span>The only variable line. Avatar inline, at text size, so it reads as part of the sentence rather than a separate block to parse.</span></li>
           <li><span class="pin-n">4</span><span>Remember becomes a switch, so "allow" and "allow forever" stop competing as two buttons. Default off — a one-time allow stays the cheap answer.</span></li>
           <li><span class="pin-n">5</span><span>Destructive and navigational actions demoted to text, out of the tap path. Nothing here rewrites a global setting.</span></li>
@@ -940,7 +945,6 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
             <p class="dlg-body" style="font-size:.92rem;color:var(--on-s)">
               It won't serve <strong>your replies, zaps and mentions</strong> to readers it can't identify.
             </p>
-            <p class="dlg-body">The operator will see your npub and can link it to this relay.</p>
             <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--s-var);border-radius:14px">
               <div style="flex:1;font-size:.86rem">Remember for this relay</div><span class="sw on"></span>
             </div>
@@ -976,7 +980,6 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
               </span>
               <span style="margin-left:14px;font-size:.78rem;color:var(--pri)">Also reading 2 people you follow ⌄</span>
             </button>
-            <p class="dlg-body">The operator will see your npub and can link it to this relay.</p>
             <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--s-var);border-radius:14px">
               <div style="flex:1;font-size:.86rem">Remember for this relay</div><span class="sw"></span>
             </div>
@@ -1012,7 +1015,6 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
             <p class="dlg-body" style="font-size:.92rem;color:var(--on-s)">
               It won't accept your post in <strong>Bitcoin Devs</strong> from someone it can't identify.
             </p>
-            <p class="dlg-body">The operator will see your npub and can link it to this relay.</p>
             <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--s-var);border-radius:14px">
               <div style="flex:1;font-size:.86rem">Remember for this relay</div><span class="sw"></span>
             </div>
@@ -1040,7 +1042,6 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
             <p class="dlg-body" style="font-size:.92rem;color:var(--on-s)">
               It asks everyone to log in. Amethyst can't tell what it's holding back.
             </p>
-            <p class="dlg-body">The operator will see your npub and can link it to this relay.</p>
             <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--s-var);border-radius:14px">
               <div style="flex:1;font-size:.86rem">Remember for this relay</div><span class="sw"></span>
             </div>
@@ -1384,14 +1385,14 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
         <div class="deck-key">relay_auth_prompt_title</div>
         <div>
           <div class="deck-old">Confirm it's you to this relay?</div>
-          <div class="deck-new">Log in as %1$s? <span style="color:var(--muted);font-size:13px">— now constant across all states; %1$s is the account</span></div>
+          <div class="deck-new">Log in as %1$s? <span style="color:var(--muted);font-size:13px">— now constant across all states; %1$s is the account, with its npub rendered beneath</span></div>
         </div>
       </div>
       <div class="deck-row">
         <div class="deck-key">relay_auth_prompt_message</div>
         <div>
           <div class="deck-old">This relay wants to confirm it's really you first. Its operator will see which account you are.</div>
-          <div class="deck-new">The operator will see your npub and can link it to this relay.</div>
+          <div class="deck-cut">"log in" already means "identify yourself" — the npub under the title shows what is handed over, which is more concrete than a sentence about it and doesn't have to be re-read on every prompt</div>
         </div>
       </div>
       <div class="deck-row">

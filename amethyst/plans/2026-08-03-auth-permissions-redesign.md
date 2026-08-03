@@ -125,11 +125,10 @@ Further problems:
   asks who you are
 
 Log in as @vitor?             (constant title; names the account — new)
+npub1vp3k9qz…q8x4k            (the concrete thing handed over)
 
 It won't accept your message for ⬤Alice Nakamoto from someone
 it can't identify.            (the ONE variable line; avatar inline)
-
-The operator will see your npub and can link it to this relay.
 
 [ Remember for this relay              (•  ) ]   (switch, default off)
 
@@ -140,6 +139,12 @@ Never allow            How Amethyst decides
 The one reason sentence replaces the old title + purpose label + avatar row +
 consequence line. Four buttons become two plus a switch. Nothing in the dialog
 writes a global setting; the link navigates to the settings screen instead.
+
+`relay_auth_prompt_message` is **cut, not shortened**. "Log in" already means
+"identify yourself", so a sentence explaining that is boilerplate on every state —
+the same duplication this proposal is removing everywhere else. The npub under the
+title does the job better: it is the concrete value handed over rather than a
+description of it, and it doesn't have to be re-read on the fifth prompt.
 
 Reason sentence per state (P1′–P12′, incl. the two new kinds and the
 never-reachable `MY_OWN_RELAY`) — see the copy deck in the HTML.
