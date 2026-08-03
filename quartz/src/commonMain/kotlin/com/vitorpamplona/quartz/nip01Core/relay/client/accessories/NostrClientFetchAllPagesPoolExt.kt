@@ -52,8 +52,8 @@ import kotlinx.coroutines.sync.Semaphore
  *   A `search` filter is fetched as a single relevance page — see [fetchAllPages].
  * @param timeoutMs per-page idle window handed to each relay's [fetchAllPages] —
  *   measured from that relay's most recent message (every event resets it), not
- *   from the page's start.
- * @param maxPageMs per-page wall-clock ceiling handed to each relay's [fetchAllPages].
+ *   from the page's start. As in [fetchAllPages] there is no wall-clock ceiling;
+ *   bound a relay's walk with a [Filter.limit], or cancel the caller.
  * @param maxConcurrentRelays upper bound on relays paginating at once (≥ 1).
  * @param onNewPage    optional `(until, relay)` tick before each non-first page.
  * @param onRelayStart optional hook fired as each relay's download begins.
@@ -64,7 +64,6 @@ import kotlinx.coroutines.sync.Semaphore
 suspend fun INostrClient.fetchAllPagesFromPool(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 30_000L,
-    maxPageMs: Long = timeoutMs * 10,
     maxConcurrentRelays: Int = 8,
     onNewPage: ((until: Long, relay: NormalizedRelayUrl) -> Unit)? = null,
     onRelayStart: ((relay: NormalizedRelayUrl) -> Unit)? = null,
@@ -85,7 +84,6 @@ suspend fun INostrClient.fetchAllPagesFromPool(
                             relay = relay,
                             filters = filtersForRelay,
                             timeoutMs = timeoutMs,
-                            maxPageMs = maxPageMs,
                             onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
                         ) { event -> onEvent(event, relay) }
                     onRelayComplete?.invoke(relay, total)

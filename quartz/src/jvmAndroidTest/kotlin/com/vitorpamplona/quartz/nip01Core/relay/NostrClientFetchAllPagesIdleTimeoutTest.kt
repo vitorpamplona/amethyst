@@ -31,8 +31,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.TimeSource
 
@@ -49,7 +51,10 @@ import kotlin.time.TimeSource
 class NostrClientFetchAllPagesIdleTimeoutTest {
     /** Captures the subscription listener so the test can play a relay. */
     private class ScriptedClient : INostrClient by EmptyNostrClient() {
+        @Volatile
         var listener: SubscriptionListener? = null
+
+        @Volatile
         var subscribeCount = 0
 
         override fun subscribe(
@@ -64,16 +69,18 @@ class NostrClientFetchAllPagesIdleTimeoutTest {
 
     private val relay = RelayUrlNormalizer.normalize("wss://slow.example.com")
 
-    private fun event(i: Int) =
-        Event(
-            id = i.toString(16).padStart(64, '0'),
-            pubKey = "f".repeat(64),
-            createdAt = i.toLong(),
-            kind = 1,
-            tags = emptyArray(),
-            content = "e$i",
-            sig = "0".repeat(128),
-        )
+    private fun event(
+        i: Int,
+        createdAt: Long = i.toLong(),
+    ) = Event(
+        id = i.toString(16).padStart(64, '0'),
+        pubKey = "f".repeat(64),
+        createdAt = createdAt,
+        kind = 1,
+        tags = emptyArray(),
+        content = "e$i",
+        sig = "0".repeat(128),
+    )
 
     @Test
     fun streamingPageOutlivesTheIdleWindow() =
@@ -141,5 +148,44 @@ class NostrClientFetchAllPagesIdleTimeoutTest {
             assertEquals(2, total, "events delivered before the stall are kept")
             assertTrue(elapsedMs >= 300, "must wait out at least one idle window, took ${elapsedMs}ms")
             assertTrue(elapsedMs < 5_000, "a stalled page must end promptly after the idle window, took ${elapsedMs}ms")
+        }
+
+    /**
+     * Documents why [fetchAllPages] has no wall-clock ceiling, unlike the
+     * single-wait accessories (`fetchAll`/`fetchFirst`/`count`, whose `maxTotalMs`
+     * really does end the call).
+     *
+     * A per-page ceiling cannot bound this walk: when a page ends, the loop advances
+     * the cursor and fires the NEXT `REQ`, so an endless trickle against an unbounded
+     * filter is merely re-paged. This pins that reality — the walk runs until the
+     * caller cancels — so nobody re-adds a `maxPageMs` believing it caps anything.
+     * What actually bounds a download is the filter's `limit`.
+     */
+    @Test
+    fun anEndlessTrickleIsBoundedByCancellationNotByAWallClock() =
+        runBlocking {
+            val client = ScriptedClient()
+            var ts = 10_000_000L
+            var i = 1
+            val feeder =
+                launch {
+                    // Trickles forever, strictly decreasing created_at, never EOSE.
+                    while (true) {
+                        delay(40)
+                        client.listener?.onEvent(event(i++, ts--), false, relay, null)
+                    }
+                }
+
+            val returned =
+                withTimeoutOrNull(1_500) {
+                    client.fetchAllPages(
+                        relay = relay,
+                        filters = listOf(Filter(kinds = listOf(1))), // unbounded: no limit
+                        timeoutMs = 200,
+                    ) { }
+                }
+            feeder.cancel()
+
+            assertNull(returned, "an unbounded filter against an endless trickle ends only by cancellation")
         }
 }

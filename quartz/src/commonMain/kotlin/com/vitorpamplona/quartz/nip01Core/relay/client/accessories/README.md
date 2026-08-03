@@ -19,11 +19,24 @@ from the relay's most recent message**, never a wall-clock deadline: each arrivi
 event / result / terminal signal resets it, so an actively streaming relay is never
 cut off mid-delivery — the operation only gives up after a full window of silence.
 The shared primitives are in `IdleWatchdog.kt` (`IdleClock` + `receiveWithinIdle`);
-use them when writing a new accessory. Because an idle window alone is unbounded
-against a relay that trickles messages forever, the loops that could run away also
-take a hard wall-clock ceiling (`maxTotalMs` / `maxPageMs`, default 10x the idle
-window) as a backstop; a non-positive ceiling means uncapped. The one deliberate
-exception is the write side: `publishAndConfirm`'s `timeoutInSeconds` is a fixed
+use them when writing a new accessory.
+
+An idle window alone never expires against a relay that trickles messages forever,
+so the accessories that wait in **one** loop and then return — `fetchAll` /
+`fetchAllWithHooks`, `fetchFirst`, multi-relay `count` — also take a wall-clock
+ceiling (`maxTotalMs`, default 10x the idle window; non-positive means uncapped).
+There the ceiling genuinely ends the call.
+
+`fetchAllPages` deliberately has **no** ceiling. A per-page ceiling would bound a
+page, not the call: the paging loop reacts to a page ending by advancing the cursor
+and issuing the next `REQ`, so an endless trickle just gets re-paged forever (a
+ceiling of 400 ms against one measured 8 `REQ`s and no return). It also makes
+truncation unsafe — cutting a page mid-stream advances `until` to the oldest event
+received *so far*, which only preserves the set if the relay streams strictly
+newest-first, which NIP-01 recommends but does not require. Bound a paged download
+with the filter's `limit`, or by cancelling the caller.
+
+The write side is its own case: `publishAndConfirm`'s `timeoutInSeconds` is a fixed
 window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
 
 ## One-shot reads (subscribe → collect → return)

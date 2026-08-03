@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -76,9 +75,17 @@ import kotlin.coroutines.coroutineContext
  *   from the relay's **most recent message**, not from the page's start: every arriving
  *   event resets it, so a slow relay actively streaming a large page is never cropped
  *   mid-delivery. A page only gives up after this much silence without an EOSE.
- * @param maxPageMs   Hard wall-clock ceiling per page (default 10x the idle window) — the
- *   idle window alone is unbounded against a misbehaving relay that trickles events
- *   forever without ever sending EOSE. Pass [Long.MAX_VALUE] for an uncapped page.
+ *
+ *   Deliberately no wall-clock ceiling here, unlike [fetchAll]'s `maxTotalMs`. A ceiling
+ *   would bound one *page*, not this call: the loop below reacts to a page ending by
+ *   advancing the cursor and issuing the next REQ, so a relay trickling events forever
+ *   against an unbounded filter would just be re-paged forever — measurably so (see
+ *   NostrClientFetchAllPagesIdleTimeoutTest). Worse, cutting a page mid-stream advances
+ *   `until` to the oldest event received *so far*, which only preserves the set if the
+ *   relay streams strictly newest-first (NIP-01 recommends but does not require it) —
+ *   otherwise the not-yet-sent events above that cursor are skipped. What actually
+ *   bounds this walk is a [Filter.limit] (the documented way to cap a download) or
+ *   cancelling the caller, which the [ensureActive] at the top of each page honors.
  * @param onEvent     Called once for every distinct event delivered, in page order.
  * @return Total number of distinct events delivered across all pages.
  */
@@ -86,7 +93,6 @@ suspend fun INostrClient.fetchAllPages(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
-    maxPageMs: Long = timeoutMs * 10,
     onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int {
@@ -237,14 +243,8 @@ suspend fun INostrClient.fetchAllPages(
 
             // Wait for the page's terminal signal (EOSE / CLOSED / cannot-connect),
             // giving up only after [timeoutMs] of silence — the wait resets on every
-            // event — or at the [maxPageMs] wall-clock ceiling. A non-positive
-            // ceiling means uncapped, mirroring the idle window's `<= 0` = disabled
-            // convention (it also absorbs a `timeoutMs * 10` overflow from a caller
-            // passing an effectively-infinite idle window).
-            val ceiling = if (maxPageMs <= 0) Long.MAX_VALUE else maxPageMs
-            withTimeoutOrNull(ceiling) {
-                doneChannel.receiveWithinIdle(clock, timeoutMs)
-            }
+            // arriving event, so an actively streaming page is never cut mid-delivery.
+            doneChannel.receiveWithinIdle(clock, timeoutMs)
 
             unsubscribe(subId)
             doneChannel.close()
@@ -297,7 +297,6 @@ suspend fun INostrClient.fetchAllPages(
     relay: String,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
-    maxPageMs: Long = timeoutMs * 10,
     onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int =
@@ -305,7 +304,6 @@ suspend fun INostrClient.fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,
         timeoutMs = timeoutMs,
-        maxPageMs = maxPageMs,
         onNewPage = onNewPage,
         onEvent = onEvent,
     )
