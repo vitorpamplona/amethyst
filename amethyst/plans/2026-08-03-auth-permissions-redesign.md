@@ -125,7 +125,6 @@ Further problems:
   asks who you are
 
 Log in as @vitor?             (constant title; names the account — new)
-npub1vp3k9qz…q8x4k            (the concrete thing handed over)
 
 It won't accept your message for ⬤Alice Nakamoto from someone
 it can't identify.            (the ONE variable line; avatar inline)
@@ -140,11 +139,12 @@ The one reason sentence replaces the old title + purpose label + avatar row +
 consequence line. Four buttons become two plus a switch. Nothing in the dialog
 writes a global setting; the link navigates to the settings screen instead.
 
-`relay_auth_prompt_message` is **cut, not shortened**. "Log in" already means
-"identify yourself", so a sentence explaining that is boilerplate on every state —
-the same duplication this proposal is removing everywhere else. The npub under the
-title does the job better: it is the concrete value handed over rather than a
-description of it, and it doesn't have to be re-read on the fifth prompt.
+`relay_auth_prompt_message` is **cut, not shortened**, and nothing replaces it.
+"Log in" already means "identify yourself" and the title names the account, so a
+sentence explaining the disclosure is boilerplate on every state — the same
+duplication this proposal removes everywhere else. An npub under the title was
+tried and dropped for the same reason: truncated, it can't be verified by eye, so
+it is decoration that costs a line on every single prompt.
 
 Reason sentence per state (P1′–P12′, incl. the two new kinds and the
 never-reachable `MY_OWN_RELAY`) — see the copy deck in the HTML.
@@ -162,8 +162,12 @@ fixed height and the buttons never leave the fold.
 - Toggle group header carries the grammar — "Log in without asking when…" — so each
   row is a three-to-four-word completion with no description.
 - The single mislabelled list splits into what it actually contains:
-  **Exceptions** (explicit overrides only, two-way segmented `Always`/`Never`;
-  clearing both removes the row, so "Forget" disappears as a separate action),
+  **Exceptions** (explicit overrides only, two-way segmented `Always`/`Never`,
+  plus **✕ Remove exception** — today's `Forget`, kept and retitled: it clears the
+  override so the relay drops back to your rules and asks again next time,
+  confirmed by an undo snackbar. It is unambiguous now in a way it wasn't: it no
+  longer sits beside a red chip that also reads as "block", and it no longer wipes
+  the usage history, which has its own list),
   **Blocked by your block list** (locked, kind 10006 — previously invisible),
   **Recent logins** (the log, with `SubPurpose` chips — "your inbox",
   "a conversation", "reading 4 follows" — instead of an unlabelled facepile).

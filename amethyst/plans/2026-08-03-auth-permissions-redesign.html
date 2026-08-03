@@ -280,10 +280,6 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
 .dlg-title { font-size: 1.32rem; line-height: 1.25; font-weight: 500; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
 .dlg-title.center { text-align: center; }
 .dlg-body { font-size: .875rem; line-height: 1.45; color: var(--on-s-var); margin: 0; }
-.npub {
-  font-family: var(--f-code); font-size: .72rem; letter-spacing: .01em;
-  color: var(--on-s-var); margin-top: -10px;
-}
 .dlg-err { font-size: .875rem; line-height: 1.45; color: var(--err); margin: 0; }
 .relaychip {
   align-self: flex-start; background: var(--s-var); color: var(--on-s);
@@ -388,6 +384,14 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
 .relayrow .url { font-size: .95rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .relayrow .sub { font-size: .76rem; color: var(--on-s-var); margin-top: 2px; }
 .emptycard { background: var(--s-c-low); border-radius: 20px; padding: 16px; font-size: .84rem; color: var(--on-s-var); line-height: 1.45; }
+.snackbar {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--on-s); color: var(--s);
+  border-radius: 12px; padding: 12px 14px; margin-top: 10px;
+  font-size: .82rem; line-height: 1.35;
+}
+.snackbar .undo { color: var(--pri); font-weight: 700; flex: none; }
+.screen.light .snackbar .undo { color: #D0BCFF; }
 .purposechips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
 .pchip { font-size: .68rem; padding: 2px 8px; border-radius: 100px; background: var(--s-var); color: var(--on-s-var); }
 .icon { color: var(--on-s-var); flex: none; }
@@ -832,8 +836,8 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
       <h5>The shape</h5>
       <p>
         <strong>Relay identity</strong> (icon + host, the thing being trusted) ·
-        <strong>"Log in as @you?"</strong> + the npub beneath it (the disclosure, named for the first
-        time — no sentence explaining what logging in means, because the verb already says it) ·
+        <strong>"Log in as @you?"</strong> (the disclosure, named for the first time — and nothing
+        else, because the verb already says what logging in does) ·
         <strong>one reason sentence</strong> (varies by state) ·
         <strong>Remember for this relay</strong> (a switch, not a third button) ·
         <strong>Not now / Log in</strong> ·
@@ -851,9 +855,9 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
           <div class="screen">
             <span class="pin good" style="top:44px; left:-9px">1</span>
             <span class="pin good" style="top:96px; left:-9px">2</span>
-            <span class="pin good" style="top:160px; left:-9px">3</span>
-            <span class="pin good" style="top:238px; left:-9px">4</span>
-            <span class="pin good" style="top:300px; left:-9px">5</span>
+            <span class="pin good" style="top:141px; left:-9px">3</span>
+            <span class="pin good" style="top:219px; left:-9px">4</span>
+            <span class="pin good" style="top:281px; left:-9px">5</span>
             <div class="dlg">
               <div style="display:flex;align-items:center;gap:11px">
                 <span class="relayicon r1">nw</span>
@@ -863,7 +867,6 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
                 </div>
               </div>
               <h3 class="dlg-title" style="margin-top:2px">Log in as <span style="color:var(--pri)">@vitor</span>?</h3>
-              <div class="npub">npub1vp3k9qz…q8x4k</div>
               <p class="dlg-body" style="font-size:.92rem;color:var(--on-s)">
                 It won't accept your message for
                 <span class="av xs a1 av-inline">AN</span><strong>Alice Nakamoto</strong>
@@ -897,7 +900,7 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
         </div>
         <ul class="legend ok">
           <li><span class="pin-n">1</span><span>The relay leads, because the relay is the thing being trusted. Its NIP-11 icon is already loaded elsewhere in the app and reused here.</span></li>
-          <li><span class="pin-n">2</span><span>The account is named — new. This is the actual disclosure, and on a multi-account device it is the one thing the user cannot infer. The npub sits under it as the concrete thing being handed over; there is no sentence explaining that logging in identifies you, because "log in" is that sentence.</span></li>
+          <li><span class="pin-n">2</span><span>The account is named — new. This is the actual disclosure, and on a multi-account device it is the one thing the user cannot infer. Nothing sits under it: no sentence explaining that logging in identifies you, because "log in" is that sentence, and no npub, because a truncated key can't be verified by eye and the handle already names the account.</span></li>
           <li><span class="pin-n">3</span><span>The only variable line. Avatar inline, at text size, so it reads as part of the sentence rather than a separate block to parse.</span></li>
           <li><span class="pin-n">4</span><span>Remember becomes a switch, so "allow" and "allow forever" stop competing as two buttons. Default off — a one-time allow stays the cheap answer.</span></li>
           <li><span class="pin-n">5</span><span>Destructive and navigational actions demoted to text, out of the tap path. Nothing here rewrites a global setting.</span></li>
@@ -1267,13 +1270,19 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
                 <span class="relayicon r1">nw</span>
                 <div class="meta"><div class="url">inbox.nostr.wine</div><div class="sub">Always, since 12 Jul</div></div>
                 <span class="seg"><span class="on">Always</span><span>Never</span></span>
+                <svg class="icon" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Remove exception"><path d="m19 6.4-1.4-1.4-5.6 5.6L6.4 5 5 6.4l5.6 5.6L5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6z"/></svg>
               </div>
               <div class="divider"></div>
               <div class="relayrow">
                 <span class="relayicon r2">pv</span>
                 <div class="meta"><div class="url">private.relay.example</div><div class="sub">Never, since 28 Jul</div></div>
                 <span class="seg"><span>Always</span><span class="on no">Never</span></span>
+                <svg class="icon" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Remove exception"><path d="m19 6.4-1.4-1.4-5.6 5.6L6.4 5 5 6.4l5.6 5.6L5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6z"/></svg>
               </div>
+            </div>
+            <div class="snackbar">
+              <span>Exception removed. inbox.nostr.wine follows your rules again.</span>
+              <span class="undo">Undo</span>
             </div>
             <div class="grouphead">Blocked by your block list</div>
             <div class="card">
@@ -1299,7 +1308,7 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
           <li><span class="pin-n">1</span><span>The account is on the bar. Decisions are stored per account, so the screen should say whose it is — and switching accounts should switch the lists.</span></li>
           <li><span class="pin-n">2</span><span>Policy cards become a plain radio group. Each description is one clause and adds a fact the title doesn't have; the mode formerly called <em>Custom</em> is named for what it does.</span></li>
           <li><span class="pin-n">3</span><span>The group header carries the grammar — "Log in without asking when…" — so each row is a completion, three or four words, no descriptions. The one row with a non-obvious default keeps a single short line.</span></li>
-          <li><span class="pin-n">4</span><span><em>Exceptions</em> contains only explicit overrides, so the header is true. A two-way segmented control replaces the ambiguous chip: a relay is here because you put it here, and clearing both segments removes the row.</span></li>
+          <li><span class="pin-n">4</span><span><em>Exceptions</em> contains only explicit overrides, so the header is true. A two-way segmented control replaces the ambiguous chip — a relay is here because you put it here, and the control shows which way. <strong>✕ removes the exception</strong>, dropping the relay back to your rules so it can ask again; an undo snackbar names what just happened. This is the old <em>Forget</em>, kept but disambiguated: it no longer sits beside a red chip that also looks like a block, and it no longer wipes the usage history, which now lives in its own list.</span></li>
           <li><span class="pin-n">5</span><span>Block-list relays get their own locked group. They outrank every control above them and were previously invisible.</span></li>
         </ul>
       </div>
@@ -1385,14 +1394,14 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
         <div class="deck-key">relay_auth_prompt_title</div>
         <div>
           <div class="deck-old">Confirm it's you to this relay?</div>
-          <div class="deck-new">Log in as %1$s? <span style="color:var(--muted);font-size:13px">— now constant across all states; %1$s is the account, with its npub rendered beneath</span></div>
+          <div class="deck-new">Log in as %1$s? <span style="color:var(--muted);font-size:13px">— now constant across all states; %1$s is the account handle</span></div>
         </div>
       </div>
       <div class="deck-row">
         <div class="deck-key">relay_auth_prompt_message</div>
         <div>
           <div class="deck-old">This relay wants to confirm it's really you first. Its operator will see which account you are.</div>
-          <div class="deck-cut">"log in" already means "identify yourself" — the npub under the title shows what is handed over, which is more concrete than a sentence about it and doesn't have to be re-read on every prompt</div>
+          <div class="deck-cut">"log in" already means "identify yourself", and the title names the account. Nothing replaces it — an npub under the title was tried and dropped: truncated, it can't be verified by eye, so it is decoration on every single prompt</div>
         </div>
       </div>
       <div class="deck-row">
@@ -1538,8 +1547,16 @@ td.k { font-family: var(--f-code); font-size: 11.5px; color: var(--ink-2); }
         <div><div class="deck-old">Nothing here yet — your global policy applies to every relay.</div><div class="deck-new">No exceptions yet. Every relay follows the rules above.</div></div>
       </div>
       <div class="deck-row">
-        <div class="deck-key">relay_auth_decision_allow<br>relay_auth_decision_deny<br>relay_auth_forget</div>
-        <div><div class="deck-old">Allow · Deny · Forget</div><div class="deck-new">Always · Never <span style="color:var(--muted);font-size:13px">— a segmented control; clearing both removes the row, so "forget" disappears as a separate action</span></div></div>
+        <div class="deck-key">relay_auth_decision_allow<br>relay_auth_decision_deny</div>
+        <div><div class="deck-old">Allow · Deny</div><div class="deck-new">Always · Never <span style="color:var(--muted);font-size:13px">— a two-way segmented control, so "allowed by policy" is no longer drawn as an explicit allow</span></div></div>
+      </div>
+      <div class="deck-row">
+        <div class="deck-key">relay_auth_forget</div>
+        <div><div class="deck-old">Forget</div><div class="deck-new">Remove exception <span style="color:var(--muted);font-size:13px">— kept, retitled for what it does; clears the override only, and the relay asks again next time</span></div></div>
+      </div>
+      <div class="deck-row">
+        <div class="deck-key">relay_auth_exception_removed<br><span class="tag ok">new</span></div>
+        <div><div class="deck-new">Exception removed. %1$s follows your rules again. <span style="color:var(--muted);font-size:13px">— undo snackbar</span></div></div>
       </div>
       <div class="deck-row">
         <div class="deck-key">relay_auth_last_used</div>
