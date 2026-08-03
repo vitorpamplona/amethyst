@@ -298,7 +298,11 @@ class NegentropyStoreSync(
                     }
                 }
             try {
-                client.fetchAllPages(relay, listOf(filter), config.idleTimeoutMs) { event -> events.trySend(event) }
+                // Like fetchByIds, a download keeps a finite idle bound even when the
+                // whole-sync watchdog is disabled (idleTimeoutMs = 0) — a page that
+                // never EOSEs must not hang the sync forever.
+                val pageIdleMs = if (config.idleTimeoutMs > 0) config.idleTimeoutMs else DEFAULT_DOWNLOAD_IDLE_MS
+                client.fetchAllPages(relay, listOf(filter), pageIdleMs) { event -> events.trySend(event) }
             } finally {
                 events.close()
             }

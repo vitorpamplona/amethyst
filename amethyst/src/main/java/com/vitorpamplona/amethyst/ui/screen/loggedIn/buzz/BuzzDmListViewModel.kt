@@ -200,7 +200,7 @@ class BuzzDmListViewModel : ViewModel() {
             )
         account.client.fetchAllWithHooks(
             filters = relays.associateWith { filters },
-            timeoutMs = 8_000,
+            idleTimeoutMs = 8_000,
             pendingOnAuthRequired = true,
         ) { relay, event ->
             (event as? MemberAddedNotificationEvent)?.channel()?.let { memberChannels[it] = relay }
@@ -215,7 +215,7 @@ class BuzzDmListViewModel : ViewModel() {
                 .groupBy({ it.value }, { it.key })
                 .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }
         if (byRelay.isEmpty()) return
-        account.client.fetchAllWithHooks(filters = byRelay, timeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
+        account.client.fetchAllWithHooks(filters = byRelay, idleTimeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
     }
 
     /**

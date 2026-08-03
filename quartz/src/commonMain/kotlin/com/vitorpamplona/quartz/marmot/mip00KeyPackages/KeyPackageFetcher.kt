@@ -75,11 +75,11 @@ object KeyPackageFetcher {
         client: INostrClient,
         targetPubKey: HexKey,
         relays: Set<NormalizedRelayUrl>,
-        timeoutMs: Long = 30_000,
+        idleTimeoutMs: Long = 30_000,
     ): KeyPackageEvent? {
         if (relays.isEmpty()) return null
         val filter = MarmotFilters.keyPackagesByAuthor(targetPubKey)
-        val events = client.fetchAll(filters = relays.associateWith { listOf(filter) }, timeoutMs = timeoutMs)
+        val events = client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs)
         // fetchAll returns events sorted by created_at DESC, so the first
         // KeyPackageEvent is the most recent one any relay had.
         return events.firstNotNullOfOrNull { it as? KeyPackageEvent }

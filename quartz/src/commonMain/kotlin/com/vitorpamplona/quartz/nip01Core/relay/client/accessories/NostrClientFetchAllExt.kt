@@ -31,47 +31,47 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 suspend fun INostrClient.fetchAll(
     relay: String,
     filter: Filter,
-    timeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)), timeoutMs)
+    idleTimeoutMs: Long = 30_000L,
+) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)), idleTimeoutMs)
 
 suspend fun INostrClient.fetchAll(
     relay: String,
     filters: List<Filter>,
-    timeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to filters), timeoutMs)
+    idleTimeoutMs: Long = 30_000L,
+) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to filters), idleTimeoutMs)
 
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: String,
     filters: List<Filter>,
-    timeoutMs: Long = 30_000L,
-) = fetchAll(subscriptionId, mapOf(RelayUrlNormalizer.normalize(relay) to filters), timeoutMs)
+    idleTimeoutMs: Long = 30_000L,
+) = fetchAll(subscriptionId, mapOf(RelayUrlNormalizer.normalize(relay) to filters), idleTimeoutMs)
 
 suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filter: Filter,
-    timeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(relay to listOf(filter)), timeoutMs)
+    idleTimeoutMs: Long = 30_000L,
+) = fetchAll(newSubId(), mapOf(relay to listOf(filter)), idleTimeoutMs)
 
 suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
-    timeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(relay to filters), timeoutMs)
+    idleTimeoutMs: Long = 30_000L,
+) = fetchAll(newSubId(), mapOf(relay to filters), idleTimeoutMs)
 
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
-    timeoutMs: Long = 30_000L,
-) = fetchAll(subscriptionId, mapOf(relay to filters), timeoutMs)
+    idleTimeoutMs: Long = 30_000L,
+) = fetchAll(subscriptionId, mapOf(relay to filters), idleTimeoutMs)
 
 /**
  * Subscribe [filters], collect every (deduped) event, and return once every
  * relay reached a terminal state (EOSE, CLOSED, or cannot-connect) or the
- * line went quiet for [timeoutMs].
+ * line went quiet for [idleTimeoutMs].
  *
- * [timeoutMs] is an **idle window, not a hard cap**: every arriving event or
+ * [idleTimeoutMs] is an **idle window, not a hard cap**: every arriving event or
  * terminal signal resets it, so a slow relay actively streaming a large
  * backlog is never cropped mid-delivery. The fetch only gives up after a full
  * window of silence — or at the [maxTotalMs] wall-clock ceiling (default 10x
@@ -85,13 +85,13 @@ suspend fun INostrClient.fetchAll(
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
-    timeoutMs: Long = 30_000L,
-    maxTotalMs: Long = timeoutMs * 10,
+    idleTimeoutMs: Long = 30_000L,
+    maxTotalMs: Long = idleTimeoutMs * 10,
 ): List<Event> {
     val seenIds = mutableSetOf<HexKey>()
     return fetchAllWithHooks(
         filters = filters,
-        timeoutMs = timeoutMs,
+        idleTimeoutMs = idleTimeoutMs,
         subscriptionId = subscriptionId,
         maxTotalMs = maxTotalMs,
     ) { _, event -> seenIds.add(event.id) }

@@ -141,7 +141,7 @@ class BulkDownloadBenchmark {
                             client.fetchAllPages(
                                 relay = relayUrl,
                                 filters = listOf(Filter(kinds = listOf(1), since = lo, until = hi)),
-                                timeoutMs = LOCAL_PAGE_TIMEOUT_MS,
+                                idleTimeoutMs = LOCAL_PAGE_TIMEOUT_MS,
                             ) { event ->
                                 count.incrementAndGet()
                                 bytes.addAndGet(event.content.length.toLong())
@@ -376,7 +376,7 @@ class BulkDownloadBenchmark {
                 client.fetchAllPages(
                     relay = relay,
                     filters = listOf(Filter(kinds = listOf(PROD_KIND), limit = PROD_MAX_EVENTS)),
-                    timeoutMs = 30_000L,
+                    idleTimeoutMs = 30_000L,
                     onNewPage = { pages++ },
                 ) { event ->
                     count.incrementAndGet()
@@ -672,7 +672,7 @@ class BulkDownloadBenchmark {
                 client.fetchAllPages(
                     relay = relay,
                     filters = listOf(Filter(kinds = listOf(PROD_KIND), limit = PROD_MAX_EVENTS)),
-                    timeoutMs = 30_000L,
+                    idleTimeoutMs = 30_000L,
                     onNewPage = { pages++ },
                 ) { event ->
                     count.incrementAndGet()

@@ -133,7 +133,7 @@ class AccountRelayGroupActions(
         if (channelId == null && results.values.any { !it.accepted && it.message.contains("auth-required", ignoreCase = true) }) {
             account.client.fetchAllWithHooks(
                 filters = mapOf(relay to listOf(Filter(kinds = listOf(DmOpenEvent.KIND), limit = 1))),
-                timeoutMs = 8_000,
+                idleTimeoutMs = 8_000,
                 pendingOnAuthRequired = true,
             ) { _, _ -> false }
             results = account.client.publishAndCollectResults(signed, setOf(relay))

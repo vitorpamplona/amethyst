@@ -112,7 +112,7 @@ object AwaitCommands {
                 val event =
                     ctx.client.fetchFirst(
                         filters = relays.associateWith { listOf(filter) },
-                        timeoutMs = 3_000,
+                        idleTimeoutMs = 3_000,
                     )
                 if (event is KeyPackageEvent) {
                     Output.emit(

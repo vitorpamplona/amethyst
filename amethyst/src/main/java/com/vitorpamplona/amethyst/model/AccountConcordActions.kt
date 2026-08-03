@@ -971,7 +971,7 @@ class AccountConcordActions(
         val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(account.signer.pubKey))
         // Stock relays like relay.ditto.pub can be slow (~10–20s to first response), so give
         // the fetch a generous window to drain every relay before we pick the newest copy.
-        val events = account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, timeoutMs = 30_000L)
+        val events = account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 30_000L)
         val newest = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
         val entryCount = newest?.let { runCatching { it.decrypt(account.signer).size }.getOrElse { -1 } } ?: 0
         Log.d(
@@ -1015,7 +1015,7 @@ class AccountConcordActions(
             }
         if (filters.isEmpty()) return
         val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }
-        account.client.fetchAll(filters = byRelay, timeoutMs = 20_000L)
+        account.client.fetchAll(filters = byRelay, idleTimeoutMs = 20_000L)
     }
 
     /**

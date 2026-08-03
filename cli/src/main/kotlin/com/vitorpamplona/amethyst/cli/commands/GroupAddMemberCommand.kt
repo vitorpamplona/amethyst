@@ -97,7 +97,7 @@ object GroupAddMemberCommand {
                         client = ctx.client,
                         targetPubKey = pub,
                         relays = kpRelays,
-                        timeoutMs = 10_000,
+                        idleTimeoutMs = 10_000,
                     )
                 if (kpEvent == null) {
                     report.add(mapOf("pubkey" to pub, "status" to "no_key_package"))

@@ -29,8 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.coroutineContext
 
 suspend fun INostrClient.fetchFirst(
     relay: String,
@@ -64,10 +66,29 @@ suspend fun INostrClient.fetchFirst(
     filters: List<Filter>,
 ) = fetchFirst(subscriptionId, mapOf(relay to filters))
 
+/**
+ * Subscribe [filters], return the first event any relay delivers (or `null` when
+ * every relay reached a terminal state — EOSE, CLOSED, or cannot-connect — with
+ * nothing matching, or the line went quiet).
+ *
+ * [idleTimeoutMs] is an **idle window measured from the most recent progress**, not a
+ * wall-clock deadline — the package-wide accessory convention. Progress means a
+ * signal that actually advances the fetch: an event, or the first terminal state
+ * from a relay still being waited on. Repeat chatter from a relay already
+ * accounted for (a CLOSED/reconnect loop) is *not* progress and does not restart
+ * the window — the same rule the negentropy watchdog applies to NOTICE/CLOSED
+ * error chatter, and what keeps a flapping relay from holding this open forever.
+ *
+ * That makes the call self-bounding: at most one progress signal per relay, each
+ * granting a fresh window. There is deliberately no ceiling parameter — a caller
+ * who wants a hard wall-clock bound already has one in
+ * `withTimeoutOrNull(ms) { fetchFirst(...) }`, which costs nothing here since a
+ * timed-out fetch returns `null` either way.
+ */
 suspend fun INostrClient.fetchFirst(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 30_000L,
 ): Event? {
     val eventChannel = Channel<Event>(UNLIMITED)
     val doneChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
@@ -112,29 +133,55 @@ suspend fun INostrClient.fetchFirst(
     try {
         subscribe(subscriptionId, filters, listener)
 
-        withTimeoutOrNull(timeoutMs) {
-            while (remaining.isNotEmpty()) {
-                select {
-                    eventChannel.onReceive { event ->
-                        result = event
-                        remaining.clear()
+        // One idle window per unit of progress. The inner loop keeps consuming
+        // non-progress signals INSIDE the same window, so repeat chatter from an
+        // already-accounted-for relay cannot push the deadline out; only a real
+        // advance escapes to the outer loop and earns a fresh window.
+        while (remaining.isNotEmpty()) {
+            val progressed =
+                withTimeoutOrNull(idleTimeoutMs) {
+                    while (true) {
+                        // Cancellation (this window expiring, or the caller giving up)
+                        // only lands at a suspension point, and select() completes
+                        // without suspending while either channel has something
+                        // buffered — so check explicitly rather than draining a
+                        // backlog of chatter uninterruptibly.
+                        coroutineContext.ensureActive()
+                        val advanced =
+                            select<Boolean> {
+                                eventChannel.onReceive { event ->
+                                    result = event
+                                    remaining.clear()
+                                    true
+                                }
+                                doneChannel.onReceive { relay ->
+                                    // A relay sends its matching events before its EOSE, so an event may
+                                    // already be buffered when this completion fires. select() picks a ready
+                                    // clause at random, so without this drain we could treat the relay as done
+                                    // and exit while its event still sits unread in the channel.
+                                    val buffered = eventChannel.tryReceive().getOrNull()
+                                    if (buffered != null) {
+                                        result = buffered
+                                        remaining.clear()
+                                        true
+                                    } else {
+                                        // Only the FIRST terminal signal from a relay we are still
+                                        // waiting on advances the fetch; a repeat is chatter.
+                                        remaining.remove(relay)
+                                    }
+                                }
+                            }
+                        if (advanced) break
                     }
-                    doneChannel.onReceive { relay ->
-                        // A relay sends its matching events before its EOSE, so an event may
-                        // already be buffered when this completion fires. select() picks a ready
-                        // clause at random, so without this drain we could treat the relay as done
-                        // and exit while its event still sits unread in the channel.
-                        val buffered = eventChannel.tryReceive().getOrNull()
-                        if (buffered != null) {
-                            result = buffered
-                            remaining.clear()
-                        } else {
-                            remaining.remove(relay)
-                        }
-                    }
+                    true
                 }
-            }
+            if (progressed == null) break
         }
+
+        // An event can land after the last terminal signal but before we
+        // unsubscribe; without this drain it would be dropped and the fetch
+        // would report "nothing found" while holding a match.
+        if (result == null) result = eventChannel.tryReceive().getOrNull()
     } finally {
         unsubscribe(subscriptionId)
         eventChannel.close()

@@ -32,21 +32,27 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip45Count.HyperLogLog
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.coroutineContext
 
 /**
  * Sends a NIP-45 COUNT query to a single relay and suspends until
  * the result arrives or the timeout expires.
  *
+ * A COUNT exchange is a single response message, so [idleTimeoutMs] here is
+ * trivially the package-wide idle-window convention (time since the most
+ * recent message): no message can arrive before the one that completes it.
+ *
  * @param relay Target relay to query.
  * @param filter The filter to count against.
- * @param timeoutMs How long to wait for a response (default 15 s).
+ * @param idleTimeoutMs How long to wait for the response (default 15 s).
  * @return The [CountResult], or `null` on timeout.
  */
 suspend fun INostrClient.count(
     relay: NormalizedRelayUrl,
     filter: Filter,
-    timeoutMs: Long = 15_000,
+    idleTimeoutMs: Long = 15_000,
 ): CountResult? {
     val subId = newSubId()
     val resultChannel = Channel<CountResult>(UNLIMITED)
@@ -64,23 +70,22 @@ suspend fun INostrClient.count(
             }
         }
 
-    addConnectionListener(listener)
+    return try {
+        addConnectionListener(listener)
 
-    val result =
-        try {
-            count(subId = subId, filters = mapOf(relay to listOf(filter)))
+        count(subId = subId, filters = mapOf(relay to listOf(filter)))
 
-            withTimeoutOrNull(timeoutMs) {
-                resultChannel.receive()
-            }
-        } finally {
-            unsubscribe(subId)
-            removeConnectionListener(listener)
+        withTimeoutOrNull(idleTimeoutMs) {
+            resultChannel.receive()
         }
-
-    resultChannel.close()
-
-    return result
+    } finally {
+        // Every cleanup step belongs in the finally: closing the channel used to
+        // sit after it, so a throw (or cancellation) mid-wait skipped it while the
+        // sibling accessories all cleaned up fully.
+        unsubscribe(subId)
+        removeConnectionListener(listener)
+        resultChannel.close()
+    }
 }
 
 /**
@@ -88,13 +93,22 @@ suspend fun INostrClient.count(
  * (one filter per relay) and suspends until all results arrive
  * or the timeout expires.
  *
+ * [idleTimeoutMs] is an **idle window measured from the most recent progress**, not a
+ * wall-clock deadline for the whole batch — the package-wide accessory
+ * convention: each *new* relay's COUNT result restarts it, so a large fan-out
+ * where results keep trickling in is never cut short. A relay re-sending a result
+ * it already gave is not progress and does not restart the window, which makes
+ * the call self-bounding (at most one window per relay). A caller wanting a hard
+ * wall-clock bound has `withTimeoutOrNull(ms) { count(...) }` — at the cost of
+ * discarding the partial map, which is why this returns whatever arrived instead.
+ *
  * @param filters Map of relay -> filter to count.
- * @param timeoutMs How long to wait for all responses (default 15 s).
+ * @param idleTimeoutMs Idle window between new responses (default 15 s).
  * @return Map of relay -> [CountResult] for every relay that responded in time.
  */
 suspend fun INostrClient.count(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
-    timeoutMs: Long = 15_000,
+    idleTimeoutMs: Long = 15_000,
 ): Map<NormalizedRelayUrl, CountResult> {
     if (filters.isEmpty()) return emptyMap()
 
@@ -115,26 +129,51 @@ suspend fun INostrClient.count(
             }
         }
 
-    addConnectionListener(listener)
-
-    filters.forEach { (relay, filterList) ->
-        val subId = newSubId()
-        subIdToRelay[subId] = relay
-        count(subId = subId, filters = mapOf(relay to filterList))
-    }
-
     val results = mutableMapOf<NormalizedRelayUrl, CountResult>()
 
-    withTimeoutOrNull(timeoutMs) {
+    try {
+        addConnectionListener(listener)
+
+        filters.forEach { (relay, filterList) ->
+            val subId = newSubId()
+            subIdToRelay[subId] = relay
+            count(subId = subId, filters = mapOf(relay to filterList))
+        }
+
+        // One idle window per new relay result. The inner loop absorbs repeats
+        // (a relay answering twice) inside the SAME window, so only genuinely
+        // new information pushes the deadline out — bounding the call at one
+        // window per relay without needing a wall-clock ceiling.
         while (results.size < filters.size) {
-            val (relay, result) = resultChannel.receive()
+            val progressed =
+                withTimeoutOrNull(idleTimeoutMs) {
+                    while (true) {
+                        // Cancellation (this window expiring, or the caller giving up)
+                        // only lands at a suspension point, and receive() does not
+                        // suspend while the channel has buffered results — so check
+                        // explicitly rather than draining a backlog uninterruptibly.
+                        coroutineContext.ensureActive()
+                        val (relay, result) = resultChannel.receive()
+                        // put() returns the previous value: null means this relay
+                        // had not answered yet, i.e. real progress.
+                        if (results.put(relay, result) == null) break
+                    }
+                    true
+                }
+            if (progressed == null) break
+        }
+
+        // A result can land after the last window closed but before we unsubscribe;
+        // it costs nothing to keep, and dropping it would understate the count.
+        while (true) {
+            val (relay, result) = resultChannel.tryReceive().getOrNull() ?: break
             results[relay] = result
         }
+    } finally {
+        subIdToRelay.keys.forEach { unsubscribe(it) }
+        removeConnectionListener(listener)
+        resultChannel.close()
     }
-
-    subIdToRelay.keys.forEach { unsubscribe(it) }
-    removeConnectionListener(listener)
-    resultChannel.close()
 
     return results
 }
@@ -152,20 +191,20 @@ suspend fun INostrClient.count(
  *
  * @param relays List of relays to query.
  * @param filter The filter to count against.
- * @param timeoutMs How long to wait for all responses (default 15 s).
+ * @param idleTimeoutMs Idle window between responses (default 15 s) — see [count].
  * @return A merged [CountResult], or `null` if no relay responded.
  */
 suspend fun INostrClient.countMerged(
     relays: List<NormalizedRelayUrl>,
     filter: Filter,
-    timeoutMs: Long = 15_000,
+    idleTimeoutMs: Long = 15_000,
 ): CountResult? {
     if (relays.isEmpty()) return null
 
     val results =
         count(
             filters = relays.associateWith { listOf(filter) },
-            timeoutMs = timeoutMs,
+            idleTimeoutMs = idleTimeoutMs,
         )
 
     if (results.isEmpty()) return null

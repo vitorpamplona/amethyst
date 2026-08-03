@@ -357,7 +357,7 @@ object DmCommands {
                     .groupBy { it.relay }
                     .mapValues { (_, v) -> v.map { it.filter } }
 
-            val raw = ctx.drain(filters, timeoutMs = timeoutSecs * 1000)
+            val raw = ctx.drain(filters, idleTimeoutMs = timeoutSecs * 1000)
 
             val messages = decryptDms(ctx, raw, peerHex)
             val out =
@@ -415,7 +415,7 @@ object DmCommands {
                         .groupBy { it.relay }
                         .mapValues { (_, v) -> v.map { it.filter } }
 
-                val raw = ctx.drain(filters, timeoutMs = 3_000)
+                val raw = ctx.drain(filters, idleTimeoutMs = 3_000)
                 val messages = decryptDms(ctx, raw, peerHex)
                 // Match against the text body for kind:14 and against the URL
                 // for kind:15 — both are exposed as `searchText` so callers

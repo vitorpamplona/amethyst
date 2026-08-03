@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -72,14 +71,28 @@ import kotlin.coroutines.coroutineContext
  *
  * @param relay       The relay to query.
  * @param filters Filters to apply on every page (the `until` field is overwritten per page).
- * @param timeoutMs   Maximum time to wait for a single page's EOSE before giving up.
+ * @param idleTimeoutMs   Idle window per page — like every accessory timeout, it is measured
+ *   from the relay's **most recent message**, not from the page's start: every arriving
+ *   event resets it, so a slow relay actively streaming a large page is never cropped
+ *   mid-delivery. A page only gives up after this much silence without an EOSE.
+ *
+ *   Deliberately no wall-clock ceiling here, unlike [fetchAll]'s `maxTotalMs`. A ceiling
+ *   would bound one *page*, not this call: the loop below reacts to a page ending by
+ *   advancing the cursor and issuing the next REQ, so a relay trickling events forever
+ *   against an unbounded filter would just be re-paged forever — measurably so (see
+ *   NostrClientFetchAllPagesIdleTimeoutTest). Worse, cutting a page mid-stream advances
+ *   `until` to the oldest event received *so far*, which only preserves the set if the
+ *   relay streams strictly newest-first (NIP-01 recommends but does not require it) —
+ *   otherwise the not-yet-sent events above that cursor are skipped. What actually
+ *   bounds this walk is a [Filter.limit] (the documented way to cap a download) or
+ *   cancelling the caller, which the [ensureActive] at the top of each page honors.
  * @param onEvent     Called once for every distinct event delivered, in page order.
  * @return Total number of distinct events delivered across all pages.
  */
 suspend fun INostrClient.fetchAllPages(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int {
@@ -144,6 +157,11 @@ suspend fun INostrClient.fetchAllPages(
 
         val doneChannel = Channel<Unit>(Channel.CONFLATED)
 
+        // Idle watchdog for this page: every arriving event bumps it, so the page's
+        // timeout measures silence since the relay's most recent message (the same
+        // convention as fetchAll and the negentropy sync), never total page time.
+        val clock = IdleClock()
+
         // Captured for the listener: the boundary second we re-fetch this page.
         val boundary = until
         var received = 0
@@ -160,39 +178,62 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        received++
-                        // Drop a boundary-second event we already delivered on an
-                        // earlier page (the inclusive re-fetch returns it again).
-                        if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
+                        // The bump is in a finally so it runs for EVERY event —
+                        // including the duplicate that returns early below, which is
+                        // still a sign of life — and, being a volatile write, runs
+                        // AFTER the counters below. That ordering matters: these
+                        // counters are written on the relay's reader thread and read
+                        // by the driver coroutine once the wait ends. The EOSE path
+                        // gets its happens-before from the channel, but the idle
+                        // path has no such edge, so without the release write the
+                        // driver could read a stale `pageMinTs` (ending the walk
+                        // early) or an unsafely published `idsAtPageMin`.
+                        try {
+                            received++
+                            // Drop a boundary-second event we already delivered on an
+                            // earlier page (the inclusive re-fetch returns it again).
+                            if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
 
-                        // Count this event against every active filter it satisfies
-                        // (one event can match more than one). Only a non-search filter
-                        // may advance the `until` cursor: a search hit — possibly old,
-                        // relevance-ranked — must not drag the cursor back and make the
-                        // next page skip events a co-resident normal filter still needs.
-                        var atLeastOne = false
-                        var advancesCursor = false
-                        for ((index, filter) in activeFilters) {
-                            if (matchCountPerFilter[index] < (filter.limit ?: Int.MAX_VALUE) && filter.match(event)) {
-                                matchCountPerFilter[index]++
-                                atLeastOne = true
-                                if (filter.search == null) advancesCursor = true
-                            }
-                        }
-                        if (atLeastOne) {
-                            onEvent(event)
-                            delivered++
-                            // Track the oldest advancing second and the ids delivered
-                            // in it — that becomes the next boundary and its dedup set.
-                            if (advancesCursor) {
-                                if (event.createdAt < pageMinTs) {
-                                    pageMinTs = event.createdAt
-                                    idsAtPageMin.clear()
-                                    idsAtPageMin.add(event.id)
-                                } else if (event.createdAt == pageMinTs) {
-                                    idsAtPageMin.add(event.id)
+                            // Count this event against every active filter it satisfies
+                            // (one event can match more than one). Only a non-search filter
+                            // may advance the `until` cursor: a search hit — possibly old,
+                            // relevance-ranked — must not drag the cursor back and make the
+                            // next page skip events a co-resident normal filter still needs.
+                            var atLeastOne = false
+                            var advancesCursor = false
+                            // Indexed loop, not `for ((i, f) in activeFilters)`: this runs for
+                            // EVERY event on the relay's reader thread (millions in a bulk
+                            // download) and the destructuring form allocates an Iterator per
+                            // event. Same reason quartz uses the `fast*` operators elsewhere
+                            // in hot event paths — those only cover Array, so a List needs
+                            // the index form.
+                            for (i in activeFilters.indices) {
+                                val active = activeFilters[i]
+                                val index = active.index
+                                val filter = active.value
+                                if (matchCountPerFilter[index] < (filter.limit ?: Int.MAX_VALUE) && filter.match(event)) {
+                                    matchCountPerFilter[index]++
+                                    atLeastOne = true
+                                    if (filter.search == null) advancesCursor = true
                                 }
                             }
+                            if (atLeastOne) {
+                                onEvent(event)
+                                delivered++
+                                // Track the oldest advancing second and the ids delivered
+                                // in it — that becomes the next boundary and its dedup set.
+                                if (advancesCursor) {
+                                    if (event.createdAt < pageMinTs) {
+                                        pageMinTs = event.createdAt
+                                        idsAtPageMin.clear()
+                                        idsAtPageMin.add(event.id)
+                                    } else if (event.createdAt == pageMinTs) {
+                                        idsAtPageMin.add(event.id)
+                                    }
+                                }
+                            }
+                        } finally {
+                            clock.bump()
                         }
                     }
 
@@ -222,9 +263,10 @@ suspend fun INostrClient.fetchAllPages(
 
             subscribe(subId, mapOf(relay to activeFilters.map { it.value }), listener)
 
-            withTimeoutOrNull(timeoutMs) {
-                doneChannel.receive()
-            }
+            // Wait for the page's terminal signal (EOSE / CLOSED / cannot-connect),
+            // giving up only after [idleTimeoutMs] of silence — the wait resets on every
+            // arriving event, so an actively streaming page is never cut mid-delivery.
+            doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
 
             unsubscribe(subId)
             doneChannel.close()
@@ -276,14 +318,14 @@ suspend fun INostrClient.fetchAllPages(
 suspend fun INostrClient.fetchAllPages(
     relay: String,
     filters: List<Filter>,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int =
     fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,
-        timeoutMs = timeoutMs,
+        idleTimeoutMs = idleTimeoutMs,
         onNewPage = onNewPage,
         onEvent = onEvent,
     )

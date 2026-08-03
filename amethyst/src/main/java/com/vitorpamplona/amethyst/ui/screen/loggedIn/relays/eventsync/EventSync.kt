@@ -502,7 +502,7 @@ class EventSync(
             try {
                 client.fetchAllPagesFromPool(
                     filters = perRelayFilters,
-                    timeoutMs = RELAY_TIMEOUT_MS,
+                    idleTimeoutMs = RELAY_TIMEOUT_MS,
                     maxConcurrentRelays = MAX_CONCURRENT_RELAYS,
                     onNewPage = { until, sourceRelay ->
                         _liveActivity.value.runningRelays[sourceRelay]

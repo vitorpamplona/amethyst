@@ -147,7 +147,7 @@ class DmInboxRelayResolver(
             if (writeRelays.isNotEmpty()) {
                 relays =
                     RecipientRelayFetcher
-                        .fetchRelayLists(unauthenticatedClient, pubkey, writeRelays, timeoutMs = 5_000L)
+                        .fetchRelayLists(unauthenticatedClient, pubkey, writeRelays, idleTimeoutMs = 5_000L)
                         .dmInbox
             }
         }

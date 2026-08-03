@@ -255,7 +255,7 @@ class AccountNappletGateways(
                 emptyList()
             } else {
                 runCatching {
-                    account.client.fetchAll(filters = relays.associateWith { filters }, timeoutMs = QUERY_TIMEOUT.inWholeMilliseconds)
+                    account.client.fetchAll(filters = relays.associateWith { filters }, idleTimeoutMs = QUERY_TIMEOUT.inWholeMilliseconds)
                 }.getOrDefault(emptyList())
             }
         val fromCache = filters.flatMap { filter -> account.cache.filter(filter).mapNotNull { it.event } }

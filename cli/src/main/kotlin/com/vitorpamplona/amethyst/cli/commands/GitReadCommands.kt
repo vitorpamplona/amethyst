@@ -103,7 +103,7 @@ object GitReadCommands {
                 ctx
                     .drainAllPages(
                         relays.associateWith { listOf(Filter(kinds = listOf(itemKind), tags = mapOf("a" to listOf(repoAddress)), limit = limit)) },
-                        timeoutMs = READ_TIMEOUT_MS,
+                        idleTimeoutMs = READ_TIMEOUT_MS,
                     ).asSequence()
                     .map { it.second }
                     .filter { it.kind == itemKind }
@@ -160,7 +160,7 @@ object GitReadCommands {
                         relays.associateWith {
                             listOf(Filter(kinds = STATUS_KINDS + listOf(CommentEvent.KIND, GitReplyEvent.KIND), tags = mapOf("e" to listOf(id))))
                         },
-                        timeoutMs = READ_TIMEOUT_MS,
+                        idleTimeoutMs = READ_TIMEOUT_MS,
                     ).map { it.second }
                     .distinctBy { it.id }
 
@@ -208,7 +208,7 @@ object GitReadCommands {
                 ctx
                     .drainAllPages(
                         relays.associateWith { listOf(Filter(kinds = STATUS_KINDS, tags = mapOf("e" to chunk))) },
-                        timeoutMs = READ_TIMEOUT_MS,
+                        idleTimeoutMs = READ_TIMEOUT_MS,
                     ).map { it.second }
             }.filterIsInstance<GitStatusEvent>()
             .distinctBy { it.id }
