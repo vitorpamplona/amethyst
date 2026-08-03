@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollLoadReport
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResponseLoader
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
@@ -32,6 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip45Count.mergeCountResults
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Drains a poll's responses past the live subscription's cap, then asks the relays how many there
@@ -55,9 +58,28 @@ class RelayPollResponseLoader(
     companion object {
         /** Per-relay idle window for both the drain and the COUNT. */
         const val TIMEOUT_MS = 20_000L
+
+        /**
+         * How long a completed drain stands in for the next one.
+         *
+         * The ViewModel — and therefore this loader — is rebuilt on every visit, so bouncing in and
+         * out of a poll would otherwise re-walk every relay's whole history each time. The live
+         * subscription keeps the tally current in between, which is what makes skipping safe.
+         */
+        const val REDRAIN_AFTER_SECONDS = 5 * 60L
+
+        // Process-wide, because the point is to outlive the screen. Small and self-limiting: one
+        // entry per poll actually opened.
+        private val recentDrains = ConcurrentHashMap<HexKey, Pair<Long, PollLoadReport>>()
+
+        fun forgetDrains() = recentDrains.clear()
     }
 
     override suspend fun load(poll: PollEvent): PollLoadReport {
+        recentDrains[poll.id]?.let { (drainedAt, report) ->
+            if (TimeUtils.now() - drainedAt < REDRAIN_AFTER_SECONDS) return report
+        }
+
         val relays = responseRelays(poll)
         if (relays.isEmpty()) return PollLoadReport(null, approximate = false, relaysAsked = 0, relaysAnswered = 0)
 
@@ -80,13 +102,17 @@ class RelayPollResponseLoader(
         // Combination rules (never a sum) live in quartz — see mergeCountResults.
         val merged = mergeCountResults(results.values)
 
-        return PollLoadReport(
-            reported = merged?.count,
-            // An estimate is approximate; so is a figure from only some of the relays we asked.
-            approximate = (merged?.approximate ?: false) || results.size < relays.size,
-            relaysAsked = relays.size,
-            relaysAnswered = results.size,
-        )
+        val report =
+            PollLoadReport(
+                reported = merged?.count,
+                // An estimate is approximate; so is a figure from only some of the relays we asked.
+                approximate = (merged?.approximate ?: false) || results.size < relays.size,
+                relaysAsked = relays.size,
+                relaysAnswered = results.size,
+            )
+
+        recentDrains[poll.id] = TimeUtils.now() to report
+        return report
     }
 
     /**

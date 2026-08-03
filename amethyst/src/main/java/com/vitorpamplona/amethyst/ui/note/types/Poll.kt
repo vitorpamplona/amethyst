@@ -575,7 +575,7 @@ private fun RenderClosedItem(
 
                 // The percentage alone never said how many people that was.
                 Text(
-                    text = tally.users.size.toString(),
+                    text = tally.size.toString(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
                     modifier = Modifier.padding(end = 6.dp),
@@ -612,23 +612,27 @@ fun measure100PercentWidthModifier(textStyle: TextStyle): Modifier {
     }
 }
 
+/** Faces drawn before the rest collapse into a "+N" chip. */
+private const val GALLERY_FACES = 4
+
 @Composable
 fun UserGallery(
     tally: TallyResults,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
 ) {
-    if (tally.users.isNotEmpty()) {
+    if (tally.size > 0) {
+        val shown = tally.topUsers(GALLERY_FACES)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy((-10).dp),
         ) {
-            tally.users.take(4).forEach {
+            shown.forEach {
                 key(it.pubkeyHex) {
                     galleryUser(it)
                 }
             }
 
-            if (tally.users.size > 4) {
+            if (tally.size > shown.size) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
@@ -638,7 +642,7 @@ fun UserGallery(
                             .background(MaterialTheme.colorScheme.secondaryContainer),
                 ) {
                     Text(
-                        text = "+" + showCount(tally.users.size - 4),
+                        text = "+" + showCount(tally.size - shown.size),
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                     )

@@ -255,6 +255,49 @@ class PollResultsViewModelTest {
         }
 
     @Test
+    fun twoUserInstancesForOnePersonYieldOneRow() =
+        runTest {
+            val note = pollNote()
+            val pubkey = "9".repeat(64)
+
+            // The cache normally hands out one User per pubkey, but an eviction and re-create can
+            // leave two live instances. Two rows sharing a LazyColumn key is a crash, not a
+            // cosmetic duplicate — so the row list has to collapse them.
+            listOf("1", "2").forEachIndexed { i, id ->
+                val event =
+                    PollResponseEvent(
+                        id = id.repeat(64),
+                        pubKey = pubkey,
+                        createdAt = 150L + i,
+                        tags = arrayOf(arrayOf("e", pollId), arrayOf("response", "red")),
+                        content = "",
+                        sig = "0".repeat(128),
+                    )
+                val responseNote = Note(event.id)
+                // A fresh User object each time, deliberately bypassing the test's user cache.
+                responseNote.loadEvent(event, User(pubkey) { addr -> Note(addr.toValue()) }, emptyList())
+                note.pollState().addResponse(responseNote)
+            }
+
+            val state = stateOf(viewModel(note))
+
+            assertEquals(1, state.voters.count { it.user.pubkeyHex == pubkey })
+            assertEquals(state.voters.size, state.voters.distinctBy { it.user.pubkeyHex }.size)
+        }
+
+    @Test
+    fun aDrawLeavesEveryOptionUncrowned() =
+        runTest {
+            val note = pollNote()
+            vote(note, "1".repeat(64), me, listOf("red"))
+            vote(note, "2".repeat(64), followed, listOf("blue"))
+
+            val state = stateOf(viewModel(note))
+
+            assertTrue(state.options.none { it.isWinning }, "a 1-1 poll has no winner to highlight")
+        }
+
+    @Test
     fun myVoteIsReportedForHighlightingTheOption() =
         runTest {
             val note = pollNote()

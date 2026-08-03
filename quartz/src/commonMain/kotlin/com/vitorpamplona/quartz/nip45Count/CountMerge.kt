@@ -50,7 +50,14 @@ fun mergeCountResults(results: Collection<CountResult>): CountResult? {
 
     val hlls = results.mapNotNull { it.hll }
     if (hlls.isEmpty()) {
-        return results.maxByOrNull { it.count }
+        val best = results.maxByOrNull { it.count } ?: return null
+        // Approximation is a property of the batch, not of the winner: one relay admitting its
+        // count is an estimate makes the combined figure an estimate too, whoever reported highest.
+        return if (best.approximate || results.none { it.approximate }) {
+            best
+        } else {
+            CountResult(count = best.count, approximate = true, hll = null)
+        }
     }
 
     val merged = HyperLogLog.merge(hlls)

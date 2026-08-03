@@ -202,6 +202,8 @@ class PollResultsViewModel(
                 .thenBy { it.pubkeyHex }
 
         val totalVoters = tally.totalVoters()
+        // Once, not once per option: winning() walks every bucket.
+        val winner = tally.winning()
 
         val optionResults =
             codesInOrder.map { code ->
@@ -211,24 +213,32 @@ class PollResultsViewModel(
                     label = labels[code] ?: code,
                     voters = voters.size,
                     percent = if (totalVoters > 0) voters.size.toFloat() / totalVoters else 0f,
-                    isWinning = voters.isNotEmpty() && code == tally.winning(),
-                    topVoters = voters.sortedWith(byRelevance).take(AVATAR_STACK),
+                    isWinning = code == winner,
+                    topVoters = topByRelevance(voters, byRelevance, AVATAR_STACK),
                 )
             }
 
         // Invert the tally once: voter -> the codes they picked, in poll order.
-        val picks = mutableMapOf<User, MutableList<String>>()
+        //
+        // Keyed by pubkey rather than by User instance. The cache normally hands out one User per
+        // pubkey, but an eviction and re-create would leave two live instances for one person —
+        // and two rows sharing a key is a hard crash in LazyColumn, not a cosmetic duplicate.
+        val picks = LinkedHashMap<HexKey, Pair<User, MutableList<String>>>()
         codesInOrder.forEach { code ->
             tally.tally[code]?.forEach { user ->
-                picks.getOrPut(user) { mutableListOf() }.add(code)
+                picks.getOrPut(user.pubkeyHex) { user to mutableListOf() }.second.add(code)
             }
         }
 
         var hidden = 0
+        var myPicks: List<String> = emptyList()
         val rows =
             picks
-                .mapNotNull { (user, codes) ->
-                    if (isHidden(user.pubkeyHex)) {
+                .mapNotNull { (pubkey, entry) ->
+                    val (user, codes) = entry
+                    if (pubkey == forKey) myPicks = codes
+
+                    if (isHidden(pubkey)) {
                         hidden++
                         return@mapNotNull null
                     }
@@ -250,11 +260,7 @@ class PollResultsViewModel(
             ignoredVotes = tally.ignoredVotes,
             lateVotes = tally.lateVotes,
             hiddenVoters = hidden,
-            myVote =
-                picks.entries
-                    .firstOrNull { it.key.pubkeyHex == forKey }
-                    ?.value
-                    .orEmpty(),
+            myVote = myPicks,
             type = event?.pollType() ?: PollType.SINGLE_CHOICE,
             endsAt = event?.endsAt(),
             loadedResponses = tally.allResponses.size,
@@ -265,6 +271,29 @@ class PollResultsViewModel(
             relaysAnswered = load.report?.relaysAnswered ?: 0,
             isBackfilling = load.running,
         )
+    }
+
+    /**
+     * The [n] highest-ranked voters without sorting the rest — the stack shows a handful and a
+     * "+N" chip, so ordering the tail is pure waste on a poll with thousands of them.
+     */
+    private fun topByRelevance(
+        voters: Collection<User>,
+        order: Comparator<User>,
+        n: Int,
+    ): List<User> {
+        if (voters.size <= n) return voters.sortedWith(order)
+
+        val top = ArrayList<User>(n + 1)
+        voters.forEach { user ->
+            val found = top.binarySearch(user, order)
+            val at = if (found < 0) -found - 1 else found
+            if (at < n) {
+                top.add(at, user)
+                if (top.size > n) top.removeAt(n)
+            }
+        }
+        return top
     }
 
     class Factory(

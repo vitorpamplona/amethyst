@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -409,6 +410,89 @@ class PollResponsesCacheTest {
 
         // Same instance, so every collector stays put instead of recomposing for nothing.
         assertSame(before, cache.responses.value)
+    }
+
+    @Test
+    fun aDrawHasNoWinner() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+
+        cache.addResponse(responseNote("1".repeat(64), "b".repeat(64), option = "yes", createdAt = 10))
+        cache.addResponse(responseNote("2".repeat(64), "c".repeat(64), option = "no", createdAt = 10))
+
+        // Crowning whichever option came first would be an outright lie about a 1-1 result.
+        assertNull(cache.responses.value.winning())
+        assertFalse(cache.currentTally("yes", "0".repeat(64), emptySet()).isWinning)
+        assertFalse(cache.currentTally("no", "0".repeat(64), emptySet()).isWinning)
+    }
+
+    @Test
+    fun aClearLeadStillWins() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+
+        cache.addResponse(responseNote("1".repeat(64), "b".repeat(64), option = "yes", createdAt = 10))
+        cache.addResponse(responseNote("2".repeat(64), "c".repeat(64), option = "yes", createdAt = 10))
+        cache.addResponse(responseNote("3".repeat(64), "d".repeat(64), option = "no", createdAt = 10))
+
+        assertEquals("yes", cache.responses.value.winning())
+    }
+
+    @Test
+    fun anEmptyPollHasNoWinner() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+
+        assertNull(cache.responses.value.winning())
+    }
+
+    @Test
+    fun topUsersPicksTheHighestRankedWithoutOrderingTheRest() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+        val me = "f".repeat(64)
+        val followed = "e".repeat(64)
+
+        // Ten voters, two of whom should outrank the rest.
+        cache.addResponse(responseNote("1".repeat(64), me, option = "yes", createdAt = 10))
+        cache.addResponse(responseNote("2".repeat(64), followed, option = "yes", createdAt = 10))
+        (0 until 8).forEach { i ->
+            cache.addResponse(responseNote("$i".repeat(64).take(64).padEnd(64, 'a'), "${i}b".repeat(32), option = "yes", createdAt = 10))
+        }
+
+        val tally = cache.currentTally("yes", me, priorityAccounts = setOf(followed))
+
+        assertEquals(10, tally.size)
+        val top = tally.topUsers(4)
+        assertEquals(4, top.size)
+        assertEquals(me, top[0].pubkeyHex)
+        assertEquals(followed, top[1].pubkeyHex)
+        // Same answer the full ordering gives, just without paying for the tail.
+        assertEquals(tally.users.take(4).map { it.pubkeyHex }, top.map { it.pubkeyHex })
+    }
+
+    @Test
+    fun topUsersHandlesFewerVotersThanAsked() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+        cache.addResponse(responseNote("1".repeat(64), "b".repeat(64), option = "yes", createdAt = 10))
+
+        val tally = cache.currentTally("yes", "0".repeat(64), emptySet())
+        assertEquals(1, tally.topUsers(4).size)
+        assertEquals(0, tally.topUsers(0).size)
+        assertEquals(0, cache.currentTally("no", "0".repeat(64), emptySet()).topUsers(4).size)
+    }
+
+    @Test
+    fun containsFindsAVoterWithoutOrdering() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+        val voter = "b".repeat(64)
+        cache.addResponse(responseNote("1".repeat(64), voter, option = "yes", createdAt = 10))
+
+        val tally = cache.currentTally("yes", "0".repeat(64), emptySet())
+        assertTrue(tally.contains(voter))
+        assertFalse(tally.contains("c".repeat(64)))
     }
 
     @Test

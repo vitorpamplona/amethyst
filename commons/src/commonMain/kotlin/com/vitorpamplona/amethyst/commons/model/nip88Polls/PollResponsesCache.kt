@@ -83,7 +83,32 @@ class PollResponsesCache : UserDependencies {
             /** Voters whose response cast no valid option code at all, excluded from [tally]. */
             val ignoredVotes: Int get() = votes.size - countedVoters.size
 
-            fun winning() = tally.maxByOrNull { it.value.size }?.key
+            /**
+             * The single option with the most voters, or null when nothing leads.
+             *
+             * A draw has no winner. `maxByOrNull` would hand the crown — the green highlight and
+             * the check — to whichever tied option happened to come first, which on a 1-1 poll is
+             * an outright lie about the result.
+             */
+            fun winning(): String? {
+                var best: String? = null
+                var bestCount = 0
+                var drawn = false
+
+                tally.forEach { (code, voters) ->
+                    when {
+                        voters.size > bestCount -> {
+                            best = code
+                            bestCount = voters.size
+                            drawn = false
+                        }
+
+                        voters.size == bestCount -> drawn = true
+                    }
+                }
+
+                return if (drawn || bestCount == 0) null else best
+            }
 
             /**
              * Distinct people whose vote counts. This is the denominator for every percentage: on a
@@ -210,7 +235,7 @@ class PollResponsesCache : UserDependencies {
     ): TallyResults {
         val comparator = compareByDescending<User> { it.pubkeyHex == forKey }.thenByDescending { it.pubkeyHex in priority }.thenBy { it.pubkeyHex }
 
-        val usersThatVotedForThisOption = tally[code] ?: emptyList()
+        val usersThatVotedForThisOption = tally[code] ?: emptySet()
 
         val voters = totalVoters()
 
@@ -224,9 +249,9 @@ class PollResponsesCache : UserDependencies {
                 0f
             }
 
-        val sortedUsers = usersThatVotedForThisOption.sortedWith(comparator)
-
-        return TallyResults(sortedUsers, percent, code == winning())
+        // Deliberately not sorted here: this runs on the UI thread for every visible poll card, and
+        // the feed only ever draws four avatars. TallyResults sorts on demand.
+        return TallyResults(usersThatVotedForThisOption, comparator, percent, code == winning())
     }
 
     fun currentTally(
@@ -251,9 +276,46 @@ class PollResponsesCache : UserDependencies {
     fun hasPubKeyVotedFlow(user: User): Flow<Boolean> = responses.map { it.countedVoters.contains(user) }.distinctUntilChanged()
 }
 
+/**
+ * One option's share of a poll, with its voters kept unsorted until somebody needs them ordered.
+ *
+ * The feed card builds one of these per option, on the UI thread, every time the tally changes —
+ * and then draws four avatars. Sorting every voter of a busy poll to pick four is the kind of work
+ * that only shows up as dropped frames while scrolling, so [users] is lazy and [topUsers] never
+ * sorts the tail at all.
+ */
 @Stable
 class TallyResults(
-    val users: List<User> = emptyList(),
+    private val voters: Collection<User> = emptyList(),
+    private val order: Comparator<User> = compareBy { it.pubkeyHex },
     val percent: Float = 0.0f,
     val isWinning: Boolean = false,
-)
+) {
+    val size get() = voters.size
+
+    /** Whether this option holds a vote from [pubkeyHex], without materialising the ordered list. */
+    fun contains(pubkeyHex: HexKey) = voters.any { it.pubkeyHex == pubkeyHex }
+
+    /** Every voter, in order. Materialised once, and only for screens that list them all. */
+    val users: List<User> by lazy(LazyThreadSafetyMode.PUBLICATION) { voters.sortedWith(order) }
+
+    /**
+     * The first [n] voters in order, chosen by a bounded insertion rather than a full sort — O(m·n)
+     * with n fixed at a handful, against O(m log m) to then throw all but [n] away.
+     */
+    fun topUsers(n: Int): List<User> {
+        if (n <= 0 || voters.isEmpty()) return emptyList()
+        if (voters.size <= n) return users
+
+        val top = ArrayList<User>(n + 1)
+        voters.forEach { user ->
+            val found = top.binarySearch(user, order)
+            val at = if (found < 0) -found - 1 else found
+            if (at < n) {
+                top.add(at, user)
+                if (top.size > n) top.removeAt(n)
+            }
+        }
+        return top
+    }
+}

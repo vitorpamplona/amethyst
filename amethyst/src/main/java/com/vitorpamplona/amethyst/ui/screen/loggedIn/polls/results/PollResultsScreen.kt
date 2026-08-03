@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -54,7 +55,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -76,7 +79,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollOptionResult
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollVoterRow
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -103,7 +106,7 @@ import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.map
 
-private val VoteColumnWidth = 116.dp
+private val VoteColumnMaxWidth = 140.dp
 
 /**
  * The full results of a NIP-88 poll: how many votes each option got, and who voted for what.
@@ -141,31 +144,34 @@ private fun PollResults(
 ) {
     val account = accountViewModel.account
 
-    // Keeps a REQ open for this poll while the screen is on top. Without it the only votes ever
-    // shown are the ones the one-shot backfill happened to catch: a vote cast while you are reading
-    // would never arrive, because the feed card that used to hold this subscription is disposed
-    // behind us. It also loads the kind-1068 event itself when we arrived by deep link.
-    EventFinderFilterAssemblerSubscription(note, accountViewModel)
+    // Subscribes for this poll while the screen is on top *and* observes what arrives. Without the
+    // subscription the only votes ever shown are the ones the one-shot backfill happened to catch —
+    // a vote cast while you are reading would never appear, because the feed card that used to
+    // carry it is disposed behind us. It also loads the kind-1068 event on a deep link.
+    val noteState by observeNote(note, accountViewModel)
 
-    // Opening this screen is the opt-in, exactly like the card's "View results" link — so the feed
-    // card stops hiding the tally behind a tap once you have been here.
-    LaunchedEffect(note.idHex) {
+    // Opening this screen is the opt-in, exactly like the card's "View results" link. Keyed on the
+    // note state rather than the id: arriving by deep link, the poll event lands *after* the first
+    // composition, and an id-keyed effect would never run again to record it.
+    LaunchedEffect(noteState) {
         (note.event as? PollEvent)?.let { accountViewModel.markPollResultsViewed(it.id, it.endsAt()) }
     }
 
-    val viewModel: PollResultsViewModel =
-        viewModel(
-            key = "PollResults-${note.idHex}",
-            factory =
-                PollResultsViewModel.Factory(
-                    pollNote = note,
-                    forKey = account.pubKey,
-                    isHidden = { account.isHidden(it) },
-                    follows = account.allFollows.flow.map { it.authors },
-                    hiddenChanges = account.hiddenUsers.flow,
-                    loader = RelayPollResponseLoader(account.client, account.cache, note),
-                ),
-        )
+    // Remembered: viewModel() only consults the factory once, but building it inline allocated a
+    // loader, two lambdas and a mapped Flow on every recomposition.
+    val factory =
+        remember(note, account) {
+            PollResultsViewModel.Factory(
+                pollNote = note,
+                forKey = account.pubKey,
+                isHidden = { account.isHidden(it) },
+                follows = account.allFollows.flow.map { it.authors },
+                hiddenChanges = account.hiddenUsers.flow,
+                loader = RelayPollResponseLoader(account.client, account.cache, note),
+            )
+        }
+
+    val viewModel: PollResultsViewModel = viewModel(key = "PollResults-${note.idHex}", factory = factory)
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val selected by viewModel.selectedOption.collectAsStateWithLifecycle()
@@ -414,8 +420,12 @@ private fun OptionBar(
     )
 
     // Same 800ms tween the feed card uses, so a vote cast there and read here moves identically.
+    // animateFloatAsState starts *at* its target, so without stepping off zero the first frame the
+    // bars would simply appear at full length and only ever animate on later changes.
+    var target by remember(option.code) { mutableFloatStateOf(0f) }
+    LaunchedEffect(option.code, option.percent) { target = option.percent }
     val progress by animateFloatAsState(
-        targetValue = option.percent,
+        targetValue = target,
         animationSpec = tween(durationMillis = 800),
         label = "pollOptionBar",
     )
@@ -604,7 +614,7 @@ private fun VoterRow(
 private fun VoteChoice(voter: PollVoterRow) {
     Column(
         horizontalAlignment = Alignment.End,
-        modifier = Modifier.width(VoteColumnWidth),
+        modifier = Modifier.widthIn(max = VoteColumnMaxWidth),
     ) {
         Text(
             text = voter.labels.joinToString(", "),
@@ -633,7 +643,7 @@ private fun ResultsFooter(state: PollResultsUiState) {
             }
         }
 
-    if (state.totalVoters == 0) {
+    if (state.totalVoters == 0 && !state.isBackfilling) {
         Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = stringRes(R.string.poll_results_no_votes),
