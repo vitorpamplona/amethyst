@@ -20,38 +20,25 @@
  */
 package com.vitorpamplona.quartz.utils.concurrent
 
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
-actual class ConcurrentMap<K : Any, V : Any> {
-    private val map = ConcurrentHashMap<K, V>()
+// Linux/JVM-less target: Kotlin/Native's stdlib ships no parking lock and there is
+// no Foundation here, so this keeps a test-and-test-and-set spin. Correct but not
+// scalable. Acceptable ONLY because linuxX64 is a build/CI target for quartz, not a
+// host for the many-relay client workload whose contention motivated the parking
+// actuals on jvmAndroid and Apple. If that ever changes, swap in a pthread mutex.
+@OptIn(ExperimentalAtomicApi::class)
+actual class PlatformLock {
+    private val held = AtomicBoolean(false)
 
-    actual operator fun get(key: K): V? = map[key]
-
-    actual operator fun set(
-        key: K,
-        value: V,
-    ) {
-        map[key] = value
+    actual fun lock() {
+        while (held.exchange(true)) {
+            while (held.load()) { }
+        }
     }
 
-    actual fun getOrPut(
-        key: K,
-        defaultValue: () -> V,
-    ): V =
-        // Fast-path the present-key hit (the common case in the crawl's hot
-        // relay-hint accumulation) so it never allocates the mapping-function
-        // closure; only an absent key pays for the atomic computeIfAbsent.
-        map[key] ?: map.computeIfAbsent(key) { defaultValue() }
-
-    actual fun merge(
-        key: K,
-        value: V,
-        remap: (old: V, new: V) -> V,
-    ): V = map.merge(key, value) { old, new -> remap(old, new) }!!
-
-    actual fun remove(key: K): V? = map.remove(key)
-
-    actual fun size(): Int = map.size
-
-    actual fun snapshot(): Map<K, V> = HashMap(map)
+    actual fun unlock() {
+        held.store(false)
+    }
 }

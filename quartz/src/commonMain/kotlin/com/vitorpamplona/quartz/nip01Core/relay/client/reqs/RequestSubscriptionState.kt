@@ -21,84 +21,116 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import kotlin.concurrent.atomics.AtomicBoolean
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
 
 /**
  * Manages the State of Subscriptions by logging states as the
  * subscription progresses.
  *
- * Thread-safety: the plain maps below are only touched inside [withLock].
- * The lock lives HERE — one per subscription — instead of a single global
- * lock in PoolRequests, because every mutation is scoped to one subId:
- * relays delivering EVENTs for *different* subscriptions have no shared
- * state and must not serialize on each other. (A single global spin lock
- * measured *negative* scaling: 4 relay consumer threads pushed less
- * aggregate throughput through it than 1 — see
- * quartz/plans/2026-07-02-nostrclient-receiver-perf.md.)
+ * **Thread-safety: the lock is striped per reference (per relay), not per
+ * subscription.** Every operation below is scoped to a single [reference] — all state
+ * lives in [RelayState] objects held in a [ConcurrentMap] keyed by it — so two relays
+ * delivering EVENTs for the SAME subscription touch disjoint state and no longer
+ * serialize on each other.
+ *
+ * That mattered in production: one subId spans every relay it is subscribed on, so a
+ * single per-subscription lock was contended ~191 threads deep on the Pixel 8 that
+ * produced `anr_2026-08-03-12-55-26-256` (it was a *spin* lock then, which burned 6 of
+ * 9 cores — see [PlatformLock]). Striping removes the contention instead of making
+ * waiting cheaper: measured 1.5-2.8x the throughput of one lock per sub in
+ * `quartz/src/jvmTest/.../prodbench/LockDesignComparisonBenchmark.kt`. Full analysis,
+ * including why a suspending `Mutex` was rejected, is in
+ * `quartz/plans/2026-08-03-poolrequests-lock-contention.md`.
+ *
+ * The stripe array is allocated once and NEVER mutated, so a stripe's identity is
+ * stable for this object's whole life. That is load-bearing: if locks lived inside the
+ * per-relay values, a thread holding one while another thread dropped and re-created
+ * that entry would leave both "inside" the critical section excluding nothing.
+ *
+ * Callers MUST NOT hold two references' stripes at once ([PoolRequests] locks one relay
+ * at a time, including inside its all-subs iterations), and MUST keep socket sends and
+ * listener callbacks outside the critical section — they re-enter this class through
+ * `onSent`, and the point of a lock is to be held briefly.
  */
-@OptIn(ExperimentalAtomicApi::class)
-class RequestSubscriptionState<T> {
+class RequestSubscriptionState<T : Any> {
     /**
-     * Tiny non-reentrant spin lock (same primitive as BasicRelayClient's
-     * connecting mutex). Critical sections are a handful of map operations,
-     * never I/O — callers MUST NOT re-enter and MUST NOT hold two
-     * subscriptions' locks at once (PoolRequests locks one sub at a time,
-     * including inside its all-subs iterations).
+     * One reference's (relay's) slice of this subscription's state. Plain `var`s: every
+     * field is written and read under that reference's stripe by [PoolRequests].
      *
-     * `@PublishedApi internal` only because [withLock] is inline (this sits
-     * on the per-EVENT hot path; inlining avoids a closure allocation per
-     * message) — treat it as private.
+     * Note `RelayActiveRequestStates` uses this class WITHOUT locking. There the fields
+     * may be read stale — but the backing [ConcurrentMap] can no longer be structurally
+     * corrupted the way the plain `HashMap`s this replaced could.
+     */
+    private class RelayState {
+        /** Null == no REQ state on this relay (fresh, or wiped by connecting/disconnected). */
+        var status: ReqSubStatus? = null
+
+        /** Filters of the REQ currently believed to be in flight. */
+        var filters: List<Filter>? = null
+
+        /**
+         * Survives connect/disconnect so that if new events still arrive we can link
+         * them with the filters the relay was processing.
+         */
+        var lastKnownFilters: List<Filter>? = null
+
+        /**
+         * Refused-filter memory. Unlike [status]/[filters] — per-connection wire state
+         * wiped by [connecting]/[disconnected] — this SURVIVES reconnects on purpose: a
+         * relay that structurally refuses a filter (a search-only relay CLOSING a plain
+         * kinds REQ, a relay that "does not accept REQs", "too many filters", …) refuses
+         * it again on every new socket, so [PoolRequests.syncState] replaying it each
+         * reconnect is pure waste. [refusalCount] accumulates repeated refusals of the
+         * same shape so a one-off (transient) close isn't mistaken for a structural one.
+         * Cleared on a successful REQ ([onEose]/[onNewEvent]) or when the caller observes
+         * the desired filter meaningfully changed.
+         */
+        var refusedFilters: List<Filter>? = null
+
+        var refusalCount: Int = 0
+    }
+
+    private val states = ConcurrentMap<T, RelayState>()
+
+    /**
+     * Fixed stripe array — allocated once, never mutated, so lock identity is stable.
+     * [STRIPE_COUNT] stripes over ~191 relays is roughly 6-way sharing: a ~32x
+     * contention reduction versus one lock per subscription. References colliding on a
+     * stripe merely serialize; correctness never depends on N.
      */
     @PublishedApi
-    internal val lock = AtomicBoolean(false)
+    internal val stripes = Array(STRIPE_COUNT) { PlatformLock() }
 
-    inline fun <R> withLock(block: () -> R): R {
-        while (lock.exchange(true)) {
-            // Test-and-test-and-set: spin-read until it looks free (cheaper
-            // on the cache line than hammering exchange), then retry above.
-            while (lock.load()) { }
-        }
+    @PublishedApi
+    internal fun stripeFor(reference: T): PlatformLock = stripes[(reference.hashCode() and 0x7FFFFFFF) % STRIPE_COUNT]
+
+    /**
+     * Runs [block] holding [reference]'s stripe. Inline so the per-EVENT hot path
+     * allocates no closure.
+     */
+    inline fun <R> withLock(
+        reference: T,
+        block: () -> R,
+    ): R {
+        val lock = stripeFor(reference)
+        lock.lock()
         try {
             return block()
         } finally {
-            lock.store(false)
+            lock.unlock()
         }
     }
 
-    // Logs the state of each channel to:
-    // 1. inform when an event is received as live
-    // 2. to block REQs being sent before finished (receiving an EOSE or Closed)
-    //
-    // If 2 happens, the relay might send multiple EOSEs in sequence
-    // for the same sub and we won't know which REQ was it for.
-    private val subStates = mutableMapOf<T, ReqSubStatus>()
-    private val filterStates = mutableMapOf<T, List<Filter>>()
+    /** Read-only lookup — never creates an entry. */
+    private fun peek(reference: T): RelayState? = states[reference]
 
-    /**
-     * This cache is used to make sure we know what the relay was processing
-     * before a close or disconnect so that if new events still arrive
-     * we can link them with the appropriate filters.
-     */
-    private val lastKnownFilterStates = mutableMapOf<T, List<Filter>>()
+    /** Write lookup — creates the entry on first use. */
+    private fun mutable(reference: T): RelayState = states.getOrPut(reference) { RelayState() }
 
-    /**
-     * Refused-filter memory. Unlike [subStates]/[filterStates] above — per-connection
-     * wire state wiped by [connecting]/[disconnected] — this SURVIVES reconnects on
-     * purpose: a relay that structurally refuses a filter (a search-only relay CLOSING
-     * a plain kinds REQ, a relay that "does not accept REQs", "too many filters", …)
-     * refuses it again on every new socket, so [PoolRequests.syncState] replaying it
-     * each reconnect is pure waste. [refusalCounts] accumulates repeated refusals of
-     * the same shape so a one-off (transient) close isn't mistaken for a structural
-     * one. Cleared on a successful REQ ([onEose]/[onNewEvent]) or when the caller
-     * observes the desired filter meaningfully changed.
-     */
-    private val refusedFilters = mutableMapOf<T, List<Filter>>()
-    private val refusalCounts = mutableMapOf<T, Int>()
+    fun refusedFilters(reference: T) = peek(reference)?.refusedFilters
 
-    fun refusedFilters(reference: T) = refusedFilters[reference]
-
-    fun refusalCount(reference: T) = refusalCounts[reference] ?: 0
+    fun refusalCount(reference: T) = peek(reference)?.refusalCount ?: 0
 
     /**
      * Records that [reference] refused [filters]. [sameAsLastRefusal] must be true when
@@ -111,73 +143,91 @@ class RequestSubscriptionState<T> {
         filters: List<Filter>,
         sameAsLastRefusal: Boolean,
     ) {
+        val state = mutable(reference)
         if (sameAsLastRefusal) {
-            refusalCounts[reference] = refusalCount(reference) + 1
+            state.refusalCount += 1
         } else {
-            refusedFilters[reference] = filters
-            refusalCounts[reference] = 1
+            state.refusedFilters = filters
+            state.refusalCount = 1
         }
     }
 
     fun clearRefusal(reference: T) {
-        refusedFilters.remove(reference)
-        refusalCounts.remove(reference)
+        peek(reference)?.let {
+            it.refusedFilters = null
+            it.refusalCount = 0
+        }
     }
 
-    fun currentFilters() = filterStates
+    fun currentFilters(reference: T) = peek(reference)?.filters
 
-    fun currentFilters(reference: T) = filterStates[reference]
+    fun lastKnownFilterStates(reference: T) = peek(reference)?.lastKnownFilters
 
-    fun lastKnownFilterStates(reference: T) = lastKnownFilterStates[reference]
-
-    fun currentState(reference: T) = subStates[reference]
+    fun currentState(reference: T) = peek(reference)?.status
 
     fun onNewEvent(reference: T) {
+        val state = mutable(reference)
         // The relay is serving this REQ (it matched an event), so any past refusal
         // no longer applies — let it be tried freely again.
-        clearRefusal(reference)
-        if (subStates[reference] == ReqSubStatus.SENT) {
-            subStates[reference] = ReqSubStatus.QUERYING_PAST
+        state.refusedFilters = null
+        state.refusalCount = 0
+        if (state.status == ReqSubStatus.SENT) {
+            state.status = ReqSubStatus.QUERYING_PAST
         }
     }
 
     fun onEose(reference: T) {
+        val state = mutable(reference)
         // Reaching EOSE means the relay accepted and finished the REQ; clear any refusal.
-        clearRefusal(reference)
-        subStates[reference] = ReqSubStatus.LIVE
+        state.refusedFilters = null
+        state.refusalCount = 0
+        state.status = ReqSubStatus.LIVE
     }
 
     fun onClosed(reference: T) {
-        subStates[reference] = ReqSubStatus.CLOSED
-        // Closed messages are usually relays refusing to process a REQ
-        // This message keeps the state of filterStates intact to
-        // avoid sending the same filter, and getting immediately closed,
-        // over and over again.
-
-        // filterStates.remove(reference)
+        // Closed messages are usually relays refusing to process a REQ. This keeps
+        // [RelayState.filters] intact to avoid sending the same filter, and getting
+        // immediately closed, over and over again.
+        mutable(reference).status = ReqSubStatus.CLOSED
     }
 
     fun onOpenReq(
         reference: T,
         filters: List<Filter>,
     ) {
-        subStates[reference] = ReqSubStatus.SENT
-        filterStates[reference] = filters
-        lastKnownFilterStates[reference] = filters
+        val state = mutable(reference)
+        state.status = ReqSubStatus.SENT
+        state.filters = filters
+        state.lastKnownFilters = filters
     }
 
     fun onSubscriptionClosed(reference: T) {
-        subStates[reference] = ReqSubStatus.CLOSED
-        filterStates.remove(reference)
+        val state = mutable(reference)
+        state.status = ReqSubStatus.CLOSED
+        state.filters = null
     }
 
     fun connecting(reference: T) {
-        subStates.remove(reference)
-        filterStates.remove(reference)
+        // Wipes per-connection wire state only; lastKnownFilters and the refusal memory
+        // deliberately survive (see [RelayState]).
+        peek(reference)?.let {
+            it.status = null
+            it.filters = null
+        }
     }
 
     fun disconnected(reference: T) {
-        subStates.remove(reference)
-        filterStates.remove(reference)
+        peek(reference)?.let {
+            it.status = null
+            it.filters = null
+        }
+    }
+
+    companion object {
+        /**
+         * Comfortably above the IO dispatcher's thread count (64 / 2) so collisions stay
+         * rare even when many workers are inside this class at once.
+         */
+        const val STRIPE_COUNT = 32
     }
 }
