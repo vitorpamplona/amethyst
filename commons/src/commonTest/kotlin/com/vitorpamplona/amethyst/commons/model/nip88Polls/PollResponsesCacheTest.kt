@@ -23,10 +23,12 @@ package com.vitorpamplona.amethyst.commons.model.nip88Polls
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PollResponsesCacheTest {
@@ -76,7 +78,7 @@ class PollResponsesCacheTest {
         val tally = cache.responses.value
 
         // Exactly one vote counted for this user.
-        assertEquals(1, tally.totalVotes())
+        assertEquals(1, tally.totalVoters())
         // The winning option is the newer one.
         assertEquals("no", tally.winning())
         // Old option carries no voters.
@@ -140,6 +142,175 @@ class PollResponsesCacheTest {
         cache.addResponse(note)
         cache.addResponse(note) // relay echo of the same note must not double-count
 
-        assertEquals(1, cache.responses.value.totalVotes())
+        assertEquals(1, cache.responses.value.totalVoters())
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Poll-aware tally: everything below needs the kind-1068 rules, which ResponseTally only has
+    // once updatePolicy has run.
+    // ---------------------------------------------------------------------------------------
+
+    /** Builds a response casting several codes at once, to exercise the per-type accept rules. */
+    private fun multiResponseNote(
+        id: HexKey,
+        pubKey: HexKey,
+        options: List<String>,
+        createdAt: Long,
+    ): Note {
+        val event =
+            PollResponseEvent(
+                id = id,
+                pubKey = pubKey,
+                createdAt = createdAt,
+                tags = arrayOf(arrayOf("e", pollId)) + options.map { arrayOf("response", it) },
+                content = "",
+                sig = "0".repeat(128),
+            )
+        val note = Note(id)
+        note.loadEvent(event, user(pubKey), emptyList())
+        return note
+    }
+
+    private fun policy(
+        type: PollType,
+        codes: Set<String> = setOf("yes", "no"),
+        createdAt: Long = 0,
+        endsAt: Long? = null,
+    ) = PollTallyPolicy(validCodes = codes, type = type, createdAt = createdAt, endsAt = endsAt)
+
+    @Test
+    fun singleChoiceCountsOnlyTheFirstResponseTag() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+
+        // A client that emits one response tag per option must not land in every bucket.
+        cache.addResponse(multiResponseNote("1".repeat(64), "b".repeat(64), listOf("yes", "no"), createdAt = 10))
+
+        val tally = cache.responses.value
+        assertEquals(1, tally.totalVoters())
+        assertEquals(1, tally.totalSelections())
+        assertEquals(1, tally.tally["yes"]?.size)
+        assertTrue(tally.tally["no"].isNullOrEmpty())
+    }
+
+    @Test
+    fun singleChoiceRejectsWhenTheFirstTagIsNotAnOption() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+
+        // NIP-88 says the first tag *is* the response — so an invalid first tag is an invalid vote,
+        // not an invitation to look for a valid one further down.
+        cache.addResponse(multiResponseNote("1".repeat(64), "b".repeat(64), listOf("bogus", "yes"), createdAt = 10))
+
+        val tally = cache.responses.value
+        assertEquals(0, tally.totalVoters())
+        assertEquals(1, tally.ignoredVotes)
+    }
+
+    @Test
+    fun multiChoiceCountsEveryValidCodeOncePerVoter() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.MULTI_CHOICE))
+
+        cache.addResponse(multiResponseNote("1".repeat(64), "b".repeat(64), listOf("yes", "no", "yes"), createdAt = 10))
+
+        val tally = cache.responses.value
+        // One person, two selections: the duplicate "yes" collapses.
+        assertEquals(1, tally.totalVoters())
+        assertEquals(2, tally.totalSelections())
+    }
+
+    @Test
+    fun multiChoicePercentagesAreShareOfVotersNotSelections() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.MULTI_CHOICE))
+
+        // Two voters; one picks both options, the other picks only "yes".
+        cache.addResponse(multiResponseNote("1".repeat(64), "b".repeat(64), listOf("yes", "no"), createdAt = 10))
+        cache.addResponse(multiResponseNote("2".repeat(64), "c".repeat(64), listOf("yes"), createdAt = 10))
+
+        val tally = cache.responses.value
+        assertEquals(2, tally.totalVoters())
+        assertEquals(3, tally.totalSelections())
+
+        val forKey = "0".repeat(64)
+        // 2 of 2 people want "yes", 1 of 2 want "no" — bars sum past 100% on purpose.
+        assertEquals(1.0f, cache.currentTally("yes", forKey, emptySet()).percent)
+        assertEquals(0.5f, cache.currentTally("no", forKey, emptySet()).percent)
+    }
+
+    @Test
+    fun votesOutsideThePollWindowAreExcluded() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE, createdAt = 100, endsAt = 200))
+
+        val voter = "b".repeat(64)
+        cache.addResponse(responseNote("1".repeat(64), voter, option = "yes", createdAt = 150))
+        // Same voter again after the deadline: a later timestamp must not overwrite a valid vote.
+        cache.addResponse(responseNote("2".repeat(64), voter, option = "no", createdAt = 500))
+        // And a vote from before the poll existed is not a vote either.
+        cache.addResponse(responseNote("3".repeat(64), "c".repeat(64), option = "no", createdAt = 50))
+
+        val tally = cache.responses.value
+        assertEquals(1, tally.totalVoters())
+        assertEquals("yes", tally.winning())
+        assertEquals(2, tally.lateVotes)
+    }
+
+    @Test
+    fun unknownOptionCodesDoNotDragDownPercentages() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+
+        cache.addResponse(responseNote("1".repeat(64), "b".repeat(64), option = "yes", createdAt = 10))
+        cache.addResponse(responseNote("2".repeat(64), "c".repeat(64), option = "spam", createdAt = 10))
+
+        val tally = cache.responses.value
+        assertEquals(1, tally.totalVoters())
+        assertEquals(1, tally.ignoredVotes)
+        assertTrue(tally.tally["spam"].isNullOrEmpty())
+        // The one real vote is 100% of the poll, not 50%.
+        assertEquals(1.0f, cache.currentTally("yes", "0".repeat(64), emptySet()).percent)
+    }
+
+    @Test
+    fun policyArrivingAfterResponsesRecomputesTheTally() {
+        val cache = PollResponsesCache()
+
+        // Responses regularly beat their poll to the client. Until the poll lands the tally is
+        // permissive, so the bogus code counts.
+        cache.addResponse(responseNote("1".repeat(64), "b".repeat(64), option = "yes", createdAt = 10))
+        cache.addResponse(responseNote("2".repeat(64), "c".repeat(64), option = "spam", createdAt = 10))
+        assertEquals(2, cache.responses.value.totalVoters())
+
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+
+        assertEquals(1, cache.responses.value.totalVoters())
+    }
+
+    @Test
+    fun updatePolicyIsIdempotent() {
+        val cache = PollResponsesCache()
+        cache.addResponse(responseNote("1".repeat(64), "b".repeat(64), option = "yes", createdAt = 10))
+
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+        val first = cache.responses.value
+        // Same poll re-delivered by another relay must not churn the tally identity.
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+
+        assertSame(first, cache.responses.value)
+    }
+
+    @Test
+    fun voterWhoseVoteWasIgnoredCanStillVote() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+
+        val voter = "b".repeat(64)
+        cache.addResponse(responseNote("1".repeat(64), voter, option = "spam", createdAt = 10))
+
+        // They responded, but cast nothing countable — the card should still offer them the
+        // controls rather than showing results for a vote that does not exist.
+        assertFalse(cache.hasPubKeyVoted(user(voter)))
     }
 }

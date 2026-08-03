@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.UserContext
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -487,6 +488,9 @@ class DesktopLocalCache : ICacheProvider {
         relay: NormalizedRelayUrl?,
     ): Boolean {
         val note = getOrCreateNote(event.id)
+        // Not gated on the early return below: the tally may already hold responses that arrived
+        // before this poll did, and updatePolicy is idempotent for re-delivery from another relay.
+        note.pollState().updatePolicy(PollTallyPolicy.from(event))
         if (note.event != null) return false
         val author = getOrCreateUser(event.pubKey)
         note.loadEvent(event, author, emptyList())
@@ -510,6 +514,7 @@ class DesktopLocalCache : ICacheProvider {
     ): Boolean {
         val pollId = event.poll()?.eventId ?: return false
         val pollNote = getOrCreateNote(pollId)
+        (pollNote.event as? PollEvent)?.let { pollNote.pollState().updatePolicy(PollTallyPolicy.from(it)) }
         val responseNote = getOrCreateNote(event.id)
         if (responseNote.event != null) return false
         val author = getOrCreateUser(event.pubKey)

@@ -43,13 +43,72 @@ class PollResponsesCache : UserDependencies {
 
     class ResponseTally(
         val allResponses: List<Note> = emptyList(),
+        /**
+         * The poll's own rules. Null until the kind-1068 event arrives — responses often show up
+         * first — in which case the tally stays permissive rather than dropping votes it cannot
+         * yet validate.
+         */
+        val policy: PollTallyPolicy? = null,
     ) {
-        val votes: Map<User, PollResponseEvent> = allResponses.latestByAuthor()
-        val tally: Map<String, Set<User>> = votes.votesByOption()
+        /** Responses stamped outside the poll's window, excluded from [votes]. */
+        val lateVotes: Int
+
+        /** Voters whose response cast no valid option code at all, excluded from [tally]. */
+        val ignoredVotes: Int
+
+        /** One response per author — the latest one that is actually eligible. */
+        val votes: Map<User, PollResponseEvent>
+
+        /** Option code -> the voters who picked it. */
+        val tally: Map<String, Set<User>>
+
+        /** Voters whose response cast at least one valid option code. */
+        val countedVoters: Set<User>
+
+        init {
+            var late = 0
+            val eligible =
+                if (policy == null) {
+                    allResponses
+                } else {
+                    allResponses.filter { note ->
+                        val event = note.event
+                        val inWindow = event !is PollResponseEvent || policy.isInWindow(event.createdAt)
+                        if (!inWindow) late++
+                        inWindow
+                    }
+                }
+
+            lateVotes = late
+            votes = eligible.latestByAuthor()
+
+            val counted = mutableMapOf<String, MutableSet<User>>()
+            val voters = mutableSetOf<User>()
+            votes.forEach { (user, responseEvent) ->
+                val codes = responseEvent.responses()
+                val accepted = policy?.accept(codes) ?: codes.toSet()
+                if (accepted.isNotEmpty()) {
+                    voters.add(user)
+                    accepted.forEach { code -> counted.getOrPut(code) { mutableSetOf() }.add(user) }
+                }
+            }
+
+            ignoredVotes = votes.size - voters.size
+            countedVoters = voters
+            tally = counted
+        }
 
         fun winning() = tally.maxByOrNull { it.value.size }?.key
 
-        fun totalVotes() = tally.entries.sumOf { it.value.size }
+        /**
+         * Distinct people whose vote counts. This is the denominator for every percentage: on a
+         * multiple-choice poll someone who ticks three boxes is still one voter, so the bars read
+         * as "share of people" and may sum past 100%.
+         */
+        fun totalVoters() = countedVoters.size
+
+        /** Boxes ticked across all voters. Equal to [totalVoters] on a single-choice poll. */
+        fun totalSelections() = tally.entries.sumOf { it.value.size }
     }
 
     val responses = MutableStateFlow(ResponseTally())
@@ -61,6 +120,7 @@ class PollResponsesCache : UserDependencies {
         responses.update {
             ResponseTally(
                 it.allResponses + note,
+                it.policy,
             )
         }
     }
@@ -72,7 +132,20 @@ class PollResponsesCache : UserDependencies {
         responses.update {
             ResponseTally(
                 it.allResponses - deleteNote,
+                it.policy,
             )
+        }
+    }
+
+    /**
+     * Hands the tally the poll's rules, recomputing it in place. Idempotent — the common case is
+     * the same poll event arriving again from another relay.
+     */
+    fun updatePolicy(newPolicy: PollTallyPolicy) {
+        if (responses.value.policy == newPolicy) return
+
+        responses.update {
+            ResponseTally(it.allResponses, newPolicy)
         }
     }
 
@@ -85,11 +158,14 @@ class PollResponsesCache : UserDependencies {
 
         val usersThatVotedForThisOption = tally[code] ?: emptyList()
 
-        val votes = totalVotes()
+        val voters = totalVoters()
 
+        // Share of voters, not share of selections: a multiple-choice voter who ticks three boxes
+        // is one person, and a bar that reads "70%" should mean "7 in 10 people". Identical to the
+        // selections basis on a single-choice poll.
         val percent =
-            if (votes > 0) {
-                usersThatVotedForThisOption.size.toFloat() / votes.toFloat()
+            if (voters > 0) {
+                usersThatVotedForThisOption.size.toFloat() / voters.toFloat()
             } else {
                 0f
             }
@@ -114,9 +190,11 @@ class PollResponsesCache : UserDependencies {
             responses.filterTo(code, forKey, priority)
         }
 
-    fun hasPubKeyVoted(user: User): Boolean = responses.value.votes.containsKey(user)
+    // Counted, not merely present: a response whose option codes the poll doesn't recognise casts
+    // no vote, so its author should still be offered the voting controls.
+    fun hasPubKeyVoted(user: User): Boolean = responses.value.countedVoters.contains(user)
 
-    fun hasPubKeyVotedFlow(user: User): Flow<Boolean> = responses.map { hasPubKeyVoted(user) }.distinctUntilChanged()
+    fun hasPubKeyVotedFlow(user: User): Flow<Boolean> = responses.map { it.countedVoters.contains(user) }.distinctUntilChanged()
 }
 
 @Stable
@@ -125,19 +203,3 @@ class TallyResults(
     val percent: Float = 0.0f,
     val isWinning: Boolean = false,
 )
-
-fun Map<User, PollResponseEvent>.votesByOption(): Map<String, Set<User>> {
-    val tally = mutableMapOf<String, MutableSet<User>>()
-
-    this.forEach { (user, responseEvent) ->
-        responseEvent.responses().forEach { code ->
-            val currentTally = tally[code]
-            if (currentTally == null) {
-                tally[code] = mutableSetOf(user)
-            } else {
-                currentTally.add(user)
-            }
-        }
-    }
-    return tally
-}

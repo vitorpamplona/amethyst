@@ -4256,6 +4256,39 @@
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Submit</string>
     <string name="poll_view_results">View results</string>
+    <string name="poll_results_title">Poll results</string>
+    <string name="poll_results_loading">Loading poll…</string>
+    <string name="poll_results_open">Open</string>
+    <string name="poll_results_closes_in">Closes in %1$s</string>
+    <string name="poll_results_ended">Ended %1$s ago</string>
+    <string name="poll_results_all_options">All options</string>
+    <string name="poll_results_your_pick">Your vote</string>
+    <string name="poll_results_selections">· %1$d selections</string>
+    <string name="poll_results_no_votes">No votes yet</string>
+    <plurals name="poll_results_voters">
+        <item quantity="one">voter</item>
+        <item quantity="other">voters</item>
+    </plurals>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d vote ›</item>
+        <item quantity="other">%1$d votes ›</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d voter</item>
+        <item quantity="other">%1$d voters</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d vote arrived after the poll closed and is excluded.</item>
+        <item quantity="other">%1$d votes arrived after the poll closed and are excluded.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d response did not pick a valid option and is excluded.</item>
+        <item quantity="other">%1$d responses did not pick a valid option and are excluded.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d voter is hidden by your mute list.</item>
+        <item quantity="other">%1$d voters are hidden by your mute list.</item>
+    </plurals>
     <string name="restart">Restart</string>
     <string name="chess_accept">Accept</string>
     <string name="chess_decline">Decline</string>

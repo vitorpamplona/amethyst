@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -199,10 +201,38 @@ fun InnerRenderPoll(
             )
         }
 
+        if (!makeItShort) {
+            PollResultsLink(note, nav)
+        }
+
         if (event.hasHashtags()) {
             DisplayUncitedHashtags(event, event.content, callbackUri, accountViewModel, nav)
         }
     }
+}
+
+/**
+ * The way out of the card. The avatar stack tops out at four faces and the "+N" chip counts people
+ * the card has no room to show — this is the door to the rest of them.
+ */
+@Composable
+private fun PollResultsLink(
+    note: Note,
+    nav: INav,
+) {
+    val tally by note.pollState().responses.collectAsStateWithLifecycle()
+    val voters = tally.totalVoters()
+    if (voters <= 0) return
+
+    Text(
+        text = pluralStringResource(R.plurals.poll_results_vote_count_link, voters, voters),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier =
+            Modifier
+                .clickable { nav.nav(Route.PollResults(note.idHex)) }
+                .padding(vertical = 4.dp),
+    )
 }
 
 @Stable
@@ -535,6 +565,14 @@ private fun RenderClosedItem(
                 if (showGallery) {
                     UserGallery(tally, resultContent)
                 }
+
+                // The percentage alone never said how many people that was.
+                Text(
+                    text = tally.users.size.toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    modifier = Modifier.padding(end = 6.dp),
+                )
 
                 Text(
                     text = "${(tally.percent * 100).toInt()}%",

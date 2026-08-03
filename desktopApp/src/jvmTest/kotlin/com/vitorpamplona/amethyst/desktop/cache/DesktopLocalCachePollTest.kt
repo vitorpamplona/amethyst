@@ -85,7 +85,7 @@ class DesktopLocalCachePollTest {
         val pollNote = cache.getNoteIfExists(poll.id)
         assertTrue(pollNote != null, "poll note must exist")
         val tally = pollNote.pollState().responses.value
-        assertEquals(1, tally.totalVotes())
+        assertEquals(1, tally.totalVoters())
         assertEquals("0", tally.winning())
     }
 
@@ -108,6 +108,6 @@ class DesktopLocalCachePollTest {
                 .getNoteIfExists(poll.id)!!
                 .pollState()
                 .responses.value
-        assertEquals(1, tally.totalVotes())
+        assertEquals(1, tally.totalVoters())
     }
 }
