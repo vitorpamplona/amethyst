@@ -191,11 +191,11 @@ more than 100 responses truncates silently.
 ├─────────────────────────────────────────────┤
 │ [All] [nos.lol] [damus] [purplepag.es]      │   option filter chips
 ├─────────────────────────────────────────────┤
-│ ⬤  Ana Reis              nos.lol     2d ago │   voter rows — SlimListItem,
-│    Building things on nostr.                │   same anatomy as UserCompose
-│ ⬤  Bruno Sá              damus       2d ago │   (§6.1): picture / name /
-│    Relay operator, Lisbon.                  │   about, vote in the trailing
-│ ⬤  npub1q8f…j3xw         damus       22h ago│   slot
+│ ⬤  Ana Reis              nos.lol     2d ago │   voter rows — UserLine as-is
+│    ana ✓ nostrcheck.me                      │   (§6.1): picture / name /
+│ ⬤  Bruno Sá              damus       2d ago │   NIP-05, vote passed in as
+│    bruno ✓ nostrplebs.com                   │   trailingContent
+│ ⬤  npub1q8f…j3xw         damus       22h ago│   (npub = no-NIP-05 fallback)
 │ …                                            │
 ├─────────────────────────────────────────────┤
 │ 380 of ~412 loaded from 6 relays · 3 ignored│   completeness footer (§4)
@@ -211,7 +211,7 @@ version** — see §5.3.
 |---|---|---|
 | Percent basis | single-choice: % of voters; multi-choice: % of voters, bars may exceed 100% in sum, each row captioned "N of M voters" | §3.1 — matches how people read a poll |
 | Voter list default | flat list of **all** voters, each row showing which option(s) they chose | answers "who voted for what" in one screen without drilling |
-| Voter row | `SlimListItem` with the same slots `UserCompose` fills — `UserPicture` / `UsernameDisplay` / `AboutDisplay` — and the vote in `trailingContent` (§6.1) | a voter is a user; it should look like every other user row in the app |
+| Voter row | `UserLine` unmodified, with the vote passed as its existing `trailingContent` (§6.1) | a voter is a user; the app already has this row, and it already has the slot |
 | Option chips | filter the voter list to one option; the summary block never filters | keeps totals stable while browsing |
 | Muted users | excluded by default via `account.isHidden`, with a footer line "2 hidden by your mute list" | consistent with every other user list in the app |
 | Ordering | you first, then follows, then pubkey — today's `filterTo` comparator, no sort control | the ordering already exists and already does the useful thing |
@@ -239,49 +239,53 @@ and the option chips are the only filter.
 Following `commons/ARCHITECTURE.md` (state + ViewModels + shared Compose in
 `commons`, screens/nav platform-native):
 
-### 6.1 The voter row is an existing user row
+### 6.1 The voter row is `UserLine`, unmodified
 
-A voter is a user, and the app already has one way to draw a user in a list.
-`UserCompose` (`amethyst/…/ui/note/UserCompose.kt:52`) is `SlimListItem`
-(`ui/layouts/listItem/SlimListItemLayout.kt:168`) with four slots filled:
+A voter is a user, and the app already has a user row with a trailing slot:
+**`UserLine`** (`amethyst/…/ui/note/creators/userSuggestions/ShowUserSuggestionList.kt:185`),
+the row the mention autocomplete and the follow-import screens use. It is
+`SlimListItem` (`ui/layouts/listItem/SlimListItemLayout.kt:168`) with:
 
 | Slot | Filled with | Renders |
 |---|---|---|
-| `leadingContent` | `UserPicture(user, Size55dp, …)` | avatar, with its own loading/blank handling |
-| `headlineContent` | `UsernameDisplay(user, accountViewModel)` | the account's petname → `bestName()` → `pubkeyDisplayHex()`, with custom-emoji support via `CreateTextWithEmoji` |
-| `supportingContent` | `AboutDisplay(user, accountViewModel)` | the profile's about text, one line, ellipsized, in `placeholderText` |
-| `trailingContent` | `UserActionOptions(…)` | follow/unfollow + list buttons |
-
-The results row wants the first three **verbatim** and only differs in the
-fourth, where the vote goes instead of the follow buttons. So don't write a new
-row — add a slot to the existing one:
+| `leadingContent` | `ClickableUserPicture(user, Size55dp, …)` | avatar |
+| `headlineContent` | `UsernameDisplay(user, accountViewModel)` | petname → `bestName()` → `pubkeyDisplayHex()`, with custom-emoji support via `CreateTextWithEmoji` |
+| `supportingContent` | `WatchAndDisplayNip05Row(user, accountViewModel)` | the NIP-05 identifier — local part, verified symbol, domain — in `colorScheme.nip05` |
+| `trailingContent` | **caller-supplied, already `null`-able** | — |
 
 ```kotlin
-@Composable
-fun UserCompose(
+fun UserLine(
     baseUser: User,
-    modifier: Modifier = Modifier,
     accountViewModel: AccountViewModel,
-    nav: INav,
-    trailingContent: @Composable () -> Unit = { UserActionOptions(baseUser, accountViewModel, nav) },
-) { … }
+    trailingContent: (@Composable (User) -> Unit)? = null,
+    colors: ListItemColors = ListItemDefaults.colors(),
+    onClick: () -> Unit,
+)
 ```
 
-Every existing call site is unchanged by the default; the poll screen passes the
-option label + relative timestamp. This also means voter rows inherit, for free,
-the things a hand-rolled row would silently lose: petname overrides, emoji in
-display names, the npub fallback when metadata hasn't arrived, and the
-tap-to-profile navigation from `routeFor(user)`.
+So the results screen writes **no row at all** and modifies **no existing
+composable** — it calls `UserLine` and passes the option label plus the relative
+timestamp as `trailingContent`. Voter rows then inherit for free the things a
+hand-rolled row silently loses: petname overrides, emoji in display names, live
+NIP-05 verification state, and the npub fallback when nothing else has arrived.
 
 Two consequences worth stating:
 
-- **The second line is the user's about text, not their npub.** That is what the
-  rest of the app shows, and the npub already appears in the headline when there
-  is no metadata to show instead.
-- **No bespoke "follows" or "you" chip.** `UserCompose` has never had one, and the
+- **The second line is the NIP-05 identifier, not the npub.** `WatchAndDisplayNip05Row`
+  (`:214`) renders `pubkeyDisplayHex()` only in the `else` branch, when the user
+  has no NIP-05 — it is a fallback, not the intended content. Note the app draws
+  it as *name · verified symbol · domain* with no `@` (`:236-258`), and the
+  `hasLocalPart()` check means a root identifier (`_@domain`) shows the domain
+  alone.
+- **No bespoke "follows" or "you" chip.** No user row in the app has one, and the
   ordering (you → follows → rest) already carries that information. If a follow
-  marker is wanted later it should come from the existing follow-state renderer
-  used elsewhere, not a new badge invented for this screen.
+  marker is wanted later it should come from the existing follow-state renderer,
+  not a badge invented for this screen.
+
+The one loose end: `UserLine` lives under `note/creators/userSuggestions/`, a
+mention-autocomplete package, despite being a general-purpose row with three
+callers already. Moving it to `ui/note/` is a tidy-up this change makes
+worthwhile but does not require.
 
 ### 6.2 New and edited files
 
@@ -316,8 +320,6 @@ Two consequences worth stating:
 
 **Edited (entry points):**
 
-- `UserCompose.kt` — add the `trailingContent` slot (§6.1). Default keeps every
-  existing call site identical.
 - `Poll.kt` — make the totals line and the `UserGallery` `+N` chip clickable →
   `nav.nav(Route.PollResults(noteId))`; add a "N votes" count next to the
   percentage (currently absent).
@@ -361,7 +363,7 @@ very different tally models.
 |---|---|---|
 | 0 | Poll-aware tally (§3) — commons + tests | yes — fixes the inline card's numbers on both platforms |
 | 1 | Shared subscription + backfill (§4) | yes — Android tallies stop being short |
-| 2 | `PollResultsViewModel` + shared composables + `UserCompose` trailing slot + Android screen + route + entry points | yes — the feature |
+| 2 | `PollResultsViewModel` + shared composables + Android screen + route + entry points | yes — the feature |
 | 3 | Desktop column | parity |
 | 4 | Audience filter, sort, voter search (§5.3) | once it's clear which are actually reached for |
 | 5 | Zap polls (§7) | breadth |
@@ -379,9 +381,9 @@ bug fixes wearing a feature's clothes.
    (`Poll.kt:298-336`, `hasViewedPollResults`). Proposal: the page respects the
    same gate — reaching it counts as opting in and calls `markPollResultsViewed`,
    exactly like today's "View results" link.
-3. **Trailing slot vs. a second entry point.** §6.1 adds a `trailingContent`
-   parameter to `UserCompose` with a default that preserves every call site. The
-   alternative is a separate `UserComposeWithTrailing` — more files, no behaviour
-   difference. Flagging it because it edits a composable used across the app.
+3. **Move `UserLine` out of `userSuggestions/`?** It is a general-purpose row
+   sitting in a mention-autocomplete package (§6.1). The poll screen is its
+   fourth caller. Move it to `ui/note/` with this change, or leave it and
+   import across packages?
 4. **Export/share results** (copy as text, or a rendered image) — desirable, but
    listed as out of scope until the page exists.
