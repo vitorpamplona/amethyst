@@ -12,6 +12,12 @@ consumers: amethyst, desktopApp
 > **Status:** proposal. Nothing implemented. This document surveys what exists,
 > names four correctness bugs the current tally has, and specifies a shared
 > results surface for Android and Desktop. _Authored 2026-08-03._
+>
+> **Visual mockup:** [`assets/2026-08-03-poll-results-page.html`](assets/2026-08-03-poll-results-page.html)
+> — annotated screens for the Android page, the Desktop deck column, the loading /
+> closed / empty states, and a side-by-side of the two multi-choice percentage
+> readings from §10.1. Open it in a browser; it renders in Amethyst's own theme
+> tokens and follows the viewer's light/dark preference.
 
 ## 1. Motivation
 
