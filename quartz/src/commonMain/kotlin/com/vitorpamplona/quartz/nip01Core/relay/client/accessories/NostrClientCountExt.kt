@@ -32,7 +32,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip45Count.HyperLogLog
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.coroutineContext
 
 /**
  * Sends a NIP-45 COUNT query to a single relay and suspends until
@@ -146,6 +148,11 @@ suspend fun INostrClient.count(
             val progressed =
                 withTimeoutOrNull(idleTimeoutMs) {
                     while (true) {
+                        // Cancellation (this window expiring, or the caller giving up)
+                        // only lands at a suspension point, and receive() does not
+                        // suspend while the channel has buffered results — so check
+                        // explicitly rather than draining a backlog uninterruptibly.
+                        coroutineContext.ensureActive()
                         val (relay, result) = resultChannel.receive()
                         // put() returns the previous value: null means this relay
                         // had not answered yet, i.e. real progress.
@@ -154,6 +161,13 @@ suspend fun INostrClient.count(
                     true
                 }
             if (progressed == null) break
+        }
+
+        // A result can land after the last window closed but before we unsubscribe;
+        // it costs nothing to keep, and dropping it would understate the count.
+        while (true) {
+            val (relay, result) = resultChannel.tryReceive().getOrNull() ?: break
+            results[relay] = result
         }
     } finally {
         subIdToRelay.keys.forEach { unsubscribe(it) }

@@ -29,8 +29,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.coroutineContext
 
 suspend fun INostrClient.fetchFirst(
     relay: String,
@@ -139,6 +141,12 @@ suspend fun INostrClient.fetchFirst(
             val progressed =
                 withTimeoutOrNull(idleTimeoutMs) {
                     while (true) {
+                        // Cancellation (this window expiring, or the caller giving up)
+                        // only lands at a suspension point, and select() completes
+                        // without suspending while either channel has something
+                        // buffered — so check explicitly rather than draining a
+                        // backlog of chatter uninterruptibly.
+                        coroutineContext.ensureActive()
                         val advanced =
                             select<Boolean> {
                                 eventChannel.onReceive { event ->

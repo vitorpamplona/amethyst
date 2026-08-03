@@ -201,7 +201,16 @@ suspend fun INostrClient.fetchAllPages(
                             // next page skip events a co-resident normal filter still needs.
                             var atLeastOne = false
                             var advancesCursor = false
-                            for ((index, filter) in activeFilters) {
+                            // Indexed loop, not `for ((i, f) in activeFilters)`: this runs for
+                            // EVERY event on the relay's reader thread (millions in a bulk
+                            // download) and the destructuring form allocates an Iterator per
+                            // event. Same reason quartz uses the `fast*` operators elsewhere
+                            // in hot event paths — those only cover Array, so a List needs
+                            // the index form.
+                            for (i in activeFilters.indices) {
+                                val active = activeFilters[i]
+                                val index = active.index
+                                val filter = active.value
                                 if (matchCountPerFilter[index] < (filter.limit ?: Int.MAX_VALUE) && filter.match(event)) {
                                     matchCountPerFilter[index]++
                                     atLeastOne = true
