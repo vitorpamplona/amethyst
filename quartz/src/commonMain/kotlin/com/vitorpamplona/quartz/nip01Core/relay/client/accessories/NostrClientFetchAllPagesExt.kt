@@ -178,40 +178,53 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        clock.bump()
-                        received++
-                        // Drop a boundary-second event we already delivered on an
-                        // earlier page (the inclusive re-fetch returns it again).
-                        if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
+                        // The bump is in a finally so it runs for EVERY event —
+                        // including the duplicate that returns early below, which is
+                        // still a sign of life — and, being a volatile write, runs
+                        // AFTER the counters below. That ordering matters: these
+                        // counters are written on the relay's reader thread and read
+                        // by the driver coroutine once the wait ends. The EOSE path
+                        // gets its happens-before from the channel, but the idle
+                        // path has no such edge, so without the release write the
+                        // driver could read a stale `pageMinTs` (ending the walk
+                        // early) or an unsafely published `idsAtPageMin`.
+                        try {
+                            received++
+                            // Drop a boundary-second event we already delivered on an
+                            // earlier page (the inclusive re-fetch returns it again).
+                            if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
 
-                        // Count this event against every active filter it satisfies
-                        // (one event can match more than one). Only a non-search filter
-                        // may advance the `until` cursor: a search hit — possibly old,
-                        // relevance-ranked — must not drag the cursor back and make the
-                        // next page skip events a co-resident normal filter still needs.
-                        var atLeastOne = false
-                        var advancesCursor = false
-                        for ((index, filter) in activeFilters) {
-                            if (matchCountPerFilter[index] < (filter.limit ?: Int.MAX_VALUE) && filter.match(event)) {
-                                matchCountPerFilter[index]++
-                                atLeastOne = true
-                                if (filter.search == null) advancesCursor = true
-                            }
-                        }
-                        if (atLeastOne) {
-                            onEvent(event)
-                            delivered++
-                            // Track the oldest advancing second and the ids delivered
-                            // in it — that becomes the next boundary and its dedup set.
-                            if (advancesCursor) {
-                                if (event.createdAt < pageMinTs) {
-                                    pageMinTs = event.createdAt
-                                    idsAtPageMin.clear()
-                                    idsAtPageMin.add(event.id)
-                                } else if (event.createdAt == pageMinTs) {
-                                    idsAtPageMin.add(event.id)
+                            // Count this event against every active filter it satisfies
+                            // (one event can match more than one). Only a non-search filter
+                            // may advance the `until` cursor: a search hit — possibly old,
+                            // relevance-ranked — must not drag the cursor back and make the
+                            // next page skip events a co-resident normal filter still needs.
+                            var atLeastOne = false
+                            var advancesCursor = false
+                            for ((index, filter) in activeFilters) {
+                                if (matchCountPerFilter[index] < (filter.limit ?: Int.MAX_VALUE) && filter.match(event)) {
+                                    matchCountPerFilter[index]++
+                                    atLeastOne = true
+                                    if (filter.search == null) advancesCursor = true
                                 }
                             }
+                            if (atLeastOne) {
+                                onEvent(event)
+                                delivered++
+                                // Track the oldest advancing second and the ids delivered
+                                // in it — that becomes the next boundary and its dedup set.
+                                if (advancesCursor) {
+                                    if (event.createdAt < pageMinTs) {
+                                        pageMinTs = event.createdAt
+                                        idsAtPageMin.clear()
+                                        idsAtPageMin.add(event.id)
+                                    } else if (event.createdAt == pageMinTs) {
+                                        idsAtPageMin.add(event.id)
+                                    }
+                                }
+                            }
+                        } finally {
+                            clock.bump()
                         }
                     }
 

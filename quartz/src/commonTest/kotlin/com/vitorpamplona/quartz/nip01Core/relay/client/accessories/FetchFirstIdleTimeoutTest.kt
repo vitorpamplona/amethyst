@@ -32,6 +32,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -59,6 +60,8 @@ class FetchFirstIdleTimeoutTest {
 
     private val relayA = RelayUrlNormalizer.normalize("wss://a.example.com")
     private val relayB = RelayUrlNormalizer.normalize("wss://b.example.com")
+    private val relayC = RelayUrlNormalizer.normalize("wss://c.example.com")
+    private val relayD = RelayUrlNormalizer.normalize("wss://d.example.com")
 
     private fun event(i: Int) =
         Event(
@@ -74,28 +77,29 @@ class FetchFirstIdleTimeoutTest {
     private fun filters(vararg relays: NormalizedRelayUrl) = relays.associateWith { listOf(Filter(kinds = listOf(1))) }
 
     @Test
-    fun arrivingSignalsRestartTheIdleWindow() =
+    fun genuineProgressRestartsTheIdleWindow() =
         runTest {
             val client = ScriptedClient()
             launch {
-                // Terminal chatter every 250ms keeps the 300ms window alive long
-                // enough for the slow relay's event at 900ms — an absolute
+                // Each relay's FIRST terminal signal is real progress and buys a
+                // fresh window, carrying the fetch well past a single 300ms window
+                // so the slow relay's event at 900ms still lands. An absolute
                 // deadline would have returned null at 300ms.
                 delay(250)
                 client.listener!!.onClosed("rate limited", relayA, null)
                 delay(250)
-                client.listener!!.onClosed("rate limited", relayA, null)
+                client.listener!!.onClosed("rate limited", relayB, null)
                 delay(250)
-                client.listener!!.onClosed("rate limited", relayA, null)
+                client.listener!!.onClosed("rate limited", relayC, null)
                 delay(150)
-                client.listener!!.onEvent(event(1), false, relayB, null)
+                client.listener!!.onEvent(event(1), false, relayD, null)
             }
             val result =
                 client.fetchFirst(
-                    filters = filters(relayA, relayB),
+                    filters = filters(relayA, relayB, relayC, relayD),
                     timeoutMs = 300,
                 )
-            assertEquals(event(1).id, result?.id, "signals must restart the window; the slow relay's event still lands")
+            assertEquals(event(1).id, result?.id, "progress must restart the window; the slow relay's event still lands")
         }
 
     @Test
@@ -113,14 +117,16 @@ class FetchFirstIdleTimeoutTest {
         }
 
     @Test
-    fun wallClockCeilingStopsEndlessTerminalChatter() =
+    fun repeatTerminalChatterDoesNotRestartTheIdleWindow() =
         runTest {
             val client = ScriptedClient()
             val chatter =
                 launch {
                     // relayA re-CLOSEs forever (a reconnect loop); relayB never
-                    // answers. Every signal restarts the window, so only the
-                    // ceiling can end the wait.
+                    // answers. Only relayA's FIRST CLOSED is progress — it removes
+                    // relayA from `remaining`. The repeats say nothing new, so they
+                    // must not push the deadline out (the rule the negentropy
+                    // watchdog already uses for NOTICE/CLOSED chatter).
                     while (true) {
                         delay(200)
                         client.listener!!.onClosed("auth-required: again", relayA, null)
@@ -131,28 +137,52 @@ class FetchFirstIdleTimeoutTest {
                 client.fetchFirst(
                     filters = filters(relayA, relayB),
                     timeoutMs = 300,
-                    maxTotalMs = 1_000,
                 )
             chatter.cancel()
             assertNull(result)
-            assertEquals(1_000L, currentTime - start, "the ceiling must end an endlessly-restarted wait")
+            // First CLOSED at 200ms is the only progress; the window then expires
+            // 300ms later despite chatter at 400/600/800…
+            assertEquals(500L, currentTime - start, "repeat chatter must not keep the wait alive")
         }
 
     @Test
-    fun effectivelyInfiniteIdleWindowDoesNotOverflowTheCeiling() =
+    fun anEventArrivingAfterTheLastTerminalSignalIsStillReturned() =
         runTest {
             val client = ScriptedClient()
             launch {
                 delay(100)
-                client.listener!!.onEvent(event(1), false, relayA, null)
+                // The only relay EOSEs, emptying `remaining` and ending the loop —
+                // then its matching event lands before we unsubscribe. Without the
+                // post-loop drain this returns null while holding a match.
+                client.listener!!.onEose(relayA, null)
+                client.listener!!.onEvent(event(7), false, relayA, null)
             }
-            // Long.MAX_VALUE * 10 wraps to -10; the default ceiling must
-            // degrade to "uncapped", not to an instantly-expired wait.
             val result =
                 client.fetchFirst(
                     filters = filters(relayA),
-                    timeoutMs = Long.MAX_VALUE,
+                    timeoutMs = 300,
                 )
-            assertEquals(event(1).id, result?.id, "an overflowed default ceiling must mean uncapped, not instant timeout")
+            assertEquals(event(7).id, result?.id, "an event racing the final EOSE must not be dropped")
+        }
+
+    @Test
+    fun aHardWallClockBoundIsTheCallersToApply() =
+        runTest {
+            val client = ScriptedClient()
+            val chatter =
+                launch {
+                    while (true) {
+                        delay(50)
+                        client.listener!!.onClosed("flapping", relayA, null)
+                    }
+                }
+            // No ceiling parameter: composing withTimeoutOrNull at the call site
+            // is the wall-clock bound, and costs nothing because a timed-out
+            // fetchFirst yields null either way.
+            val start = currentTime
+            val result = withTimeoutOrNull(120) { client.fetchFirst(filters = filters(relayA, relayB), timeoutMs = 10_000) }
+            chatter.cancel()
+            assertNull(result)
+            assertEquals(120L, currentTime - start, "the caller's timeout bounds the call")
         }
 }

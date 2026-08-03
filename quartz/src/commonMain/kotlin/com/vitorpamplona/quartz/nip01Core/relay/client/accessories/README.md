@@ -15,26 +15,36 @@ Import as `com.vitorpamplona.quartz.nip01Core.relay.client.accessories.<name>` (
 ## Timeout convention
 
 Every `timeoutMs` / `idleTimeoutMs` in this package is an **idle window measured
-from the relay's most recent message**, never a wall-clock deadline: each arriving
-event / result / terminal signal resets it, so an actively streaming relay is never
-cut off mid-delivery — the operation only gives up after a full window of silence.
-The shared primitives are in `IdleWatchdog.kt` (`IdleClock` + `receiveWithinIdle`);
-use them when writing a new accessory.
+from the relay's most recent progress**, never a wall-clock deadline: real progress
+resets it, so an actively streaming relay is never cut off mid-delivery — the
+operation only gives up after a full window of silence. The shared primitives are in
+`IdleWatchdog.kt` (`IdleClock` + `receiveWithinIdle`); use them in a new accessory.
 
-An idle window alone never expires against a relay that trickles messages forever,
-so the accessories that wait in **one** loop and then return — `fetchAll` /
-`fetchAllWithHooks`, `fetchFirst`, multi-relay `count` — also take a wall-clock
-ceiling (`maxTotalMs`, default 10x the idle window; non-positive means uncapped).
-There the ceiling genuinely ends the call.
+**Progress, not merely traffic.** A message that tells us nothing new — a relay
+re-CLOSEing after we already recorded it as done, a duplicate COUNT — must not
+restart the window, or a flapping relay keeps the call alive indefinitely. This is
+the rule the negentropy watchdog already applies to `NOTICE`/`CLOSED` chatter, and
+it is what makes `fetchFirst` and multi-relay `count` self-bounding: at most one
+window per relay.
 
-`fetchAllPages` deliberately has **no** ceiling. A per-page ceiling would bound a
-page, not the call: the paging loop reacts to a page ending by advancing the cursor
-and issuing the next `REQ`, so an endless trickle just gets re-paged forever (a
-ceiling of 400 ms against one measured 8 `REQ`s and no return). It also makes
-truncation unsafe — cutting a page mid-stream advances `until` to the oldest event
-received *so far*, which only preserves the set if the relay streams strictly
-newest-first, which NIP-01 recommends but does not require. Bound a paged download
-with the filter's `limit`, or by cancelling the caller.
+**No accessory takes a wall-clock ceiling parameter.** A hard bound composes at the
+call site — `withTimeoutOrNull(ms) { fetchFirst(...) }` — so duplicating it in every
+signature buys nothing. Prefer the idle window inside (the caller cannot implement
+it; it needs the message stream) and the wall clock outside. Two consequences worth
+knowing:
+
+- `fetchAllPages` has no ceiling and could not usefully have one. A per-page cap
+  bounds a *page*, not the call: the loop reacts to a page ending by advancing the
+  cursor and issuing the next `REQ`, so an endless trickle is just re-paged (a
+  400 ms cap measured 8 `REQ`s and no return). It also makes truncation unsafe —
+  cutting a page mid-stream advances `until` to the oldest event received *so far*,
+  which only preserves the set if the relay streams strictly newest-first, which
+  NIP-01 recommends but does not require. Bound a paged download with the filter's
+  `limit`, or by cancelling.
+- `fetchAll` / `fetchAllWithHooks` keep a pre-existing `maxTotalMs`, and it earns
+  its place: an endless *event* trickle there is genuine progress, so the call never
+  self-terminates, and the internal cap returns the events collected so far where an
+  external `withTimeoutOrNull` would discard them.
 
 The write side is its own case: `publishAndConfirm`'s `timeoutInSeconds` is a fixed
 window to collect the `OK`s — a bounded confirmation round-trip, not a stream.

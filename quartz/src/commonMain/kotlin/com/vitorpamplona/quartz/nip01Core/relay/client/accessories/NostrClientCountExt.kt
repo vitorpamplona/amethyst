@@ -68,23 +68,22 @@ suspend fun INostrClient.count(
             }
         }
 
-    addConnectionListener(listener)
+    return try {
+        addConnectionListener(listener)
 
-    val result =
-        try {
-            count(subId = subId, filters = mapOf(relay to listOf(filter)))
+        count(subId = subId, filters = mapOf(relay to listOf(filter)))
 
-            withTimeoutOrNull(timeoutMs) {
-                resultChannel.receive()
-            }
-        } finally {
-            unsubscribe(subId)
-            removeConnectionListener(listener)
+        withTimeoutOrNull(timeoutMs) {
+            resultChannel.receive()
         }
-
-    resultChannel.close()
-
-    return result
+    } finally {
+        // Every cleanup step belongs in the finally: closing the channel used to
+        // sit after it, so a throw (or cancellation) mid-wait skipped it while the
+        // sibling accessories all cleaned up fully.
+        unsubscribe(subId)
+        removeConnectionListener(listener)
+        resultChannel.close()
+    }
 }
 
 /**
@@ -92,23 +91,22 @@ suspend fun INostrClient.count(
  * (one filter per relay) and suspends until all results arrive
  * or the timeout expires.
  *
- * [timeoutMs] is an **idle window measured from the most recent message**, not a
+ * [timeoutMs] is an **idle window measured from the most recent progress**, not a
  * wall-clock deadline for the whole batch — the package-wide accessory
- * convention: each arriving COUNT result restarts it, so a large fan-out where
- * results keep trickling in is never cut short; the wait only gives up after a
- * full window with no relay answering. [maxTotalMs] (default 10x the idle
- * window) is the wall-clock ceiling against a misbehaving relay re-sending
- * results forever; a non-positive value means uncapped (which also absorbs a
- * `timeoutMs * 10` overflow from an effectively-infinite idle window).
+ * convention: each *new* relay's COUNT result restarts it, so a large fan-out
+ * where results keep trickling in is never cut short. A relay re-sending a result
+ * it already gave is not progress and does not restart the window, which makes
+ * the call self-bounding (at most one window per relay). A caller wanting a hard
+ * wall-clock bound has `withTimeoutOrNull(ms) { count(...) }` — at the cost of
+ * discarding the partial map, which is why this returns whatever arrived instead.
  *
  * @param filters Map of relay -> filter to count.
- * @param timeoutMs Idle window between responses (default 15 s).
+ * @param timeoutMs Idle window between new responses (default 15 s).
  * @return Map of relay -> [CountResult] for every relay that responded in time.
  */
 suspend fun INostrClient.count(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 15_000,
-    maxTotalMs: Long = timeoutMs * 10,
 ): Map<NormalizedRelayUrl, CountResult> {
     if (filters.isEmpty()) return emptyMap()
 
@@ -140,15 +138,22 @@ suspend fun INostrClient.count(
             count(subId = subId, filters = mapOf(relay to filterList))
         }
 
-        // Each receive is bounded by the idle window alone; every arriving result
-        // restarts it on the next loop iteration. The outer ceiling bounds the whole
-        // wait against a relay that keeps re-sending results.
-        val ceiling = if (maxTotalMs <= 0) Long.MAX_VALUE else maxTotalMs
-        withTimeoutOrNull(ceiling) {
-            while (results.size < filters.size) {
-                val next = withTimeoutOrNull(timeoutMs) { resultChannel.receive() } ?: break
-                results[next.first] = next.second
-            }
+        // One idle window per new relay result. The inner loop absorbs repeats
+        // (a relay answering twice) inside the SAME window, so only genuinely
+        // new information pushes the deadline out — bounding the call at one
+        // window per relay without needing a wall-clock ceiling.
+        while (results.size < filters.size) {
+            val progressed =
+                withTimeoutOrNull(timeoutMs) {
+                    while (true) {
+                        val (relay, result) = resultChannel.receive()
+                        // put() returns the previous value: null means this relay
+                        // had not answered yet, i.e. real progress.
+                        if (results.put(relay, result) == null) break
+                    }
+                    true
+                }
+            if (progressed == null) break
         }
     } finally {
         subIdToRelay.keys.forEach { unsubscribe(it) }
