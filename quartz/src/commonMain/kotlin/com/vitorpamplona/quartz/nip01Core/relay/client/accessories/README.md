@@ -14,11 +14,16 @@ Import as `com.vitorpamplona.quartz.nip01Core.relay.client.accessories.<name>` (
 
 ## Timeout convention
 
-Every `timeoutMs` / `idleTimeoutMs` in this package is an **idle window measured
-from the relay's most recent progress**, never a wall-clock deadline: real progress
-resets it, so an actively streaming relay is never cut off mid-delivery — the
-operation only gives up after a full window of silence. The shared primitives are in
-`IdleWatchdog.kt` (`IdleClock` + `receiveWithinIdle`); use them in a new accessory.
+Every wait in this package is an **idle window measured from the relay's most recent
+progress**, never a wall-clock deadline: real progress resets it, so an actively
+streaming relay is never cut off mid-delivery — the operation only gives up after a
+full window of silence. The shared primitives are in `IdleWatchdog.kt` (`IdleClock` +
+`receiveWithinIdle`); use them in a new accessory.
+
+**The parameter is named `idleTimeoutMs`, never `timeoutMs`** — the name is the
+contract, so a caller can't mistake it for a deadline. The sole exception is
+`publishAndConfirm`'s `timeoutInSeconds`, which genuinely *is* a fixed window (see
+below); the differing name is the tell.
 
 **Progress, not merely traffic.** A message that tells us nothing new — a relay
 re-CLOSEing after we already recorded it as done, a duplicate COUNT — must not
@@ -53,9 +58,9 @@ window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
 
 | Function | File | Use when |
 | --- | --- | --- |
-| `fetchAll(relay, filter, timeoutMs)` | `NostrClientFetchAllExt` | Get every event matching a filter in one REQ, deduped by id, until EOSE or a full idle window of silence. **No verify, no store** — just the events. |
-| `fetchFirst(relay, filter, timeoutMs)` | `NostrClientFetchFirstExt` | Get the first matching event and stop (returns `null` on none/timeout). |
-| `fetchAllPages(relay, filters, timeoutMs)` | `NostrClientFetchAllPagesExt` | Fully retrieve a result set larger than the relay's per-REQ cap (strfry `limit`, ~500) by walking a `created_at` cursor. Bound it with the filter's `limit`. |
+| `fetchAll(relay, filter, idleTimeoutMs)` | `NostrClientFetchAllExt` | Get every event matching a filter in one REQ, deduped by id, until EOSE or a full idle window of silence. **No verify, no store** — just the events. |
+| `fetchFirst(relay, filter, idleTimeoutMs)` | `NostrClientFetchFirstExt` | Get the first matching event and stop (returns `null` on none/timeout). |
+| `fetchAllPages(relay, filters, idleTimeoutMs)` | `NostrClientFetchAllPagesExt` | Fully retrieve a result set larger than the relay's per-REQ cap (strfry `limit`, ~500) by walking a `created_at` cursor. Bound it with the filter's `limit`. |
 | `fetchAllPagesFromPool(filters, ...)` | `NostrClientFetchAllPagesPoolExt` | Same paging, across several relays at once. No cross-relay dedup — the `WithHooks` variant below dedups. |
 | `fetchAllWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAll` with a suspending per-`(relay, event)` accept hook (verify+store as events arrive), per-relay terminal-reason tracking, optional dead-relay collection (`deadOut` + `classifyDrainFailure`), keep-pending-on-`auth-required` CLOSED (NIP-42 re-fire), and a timeout diagnostic hook. |
 | `fetchAllPagesFromPoolWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAllPagesFromPool` with the same suspending accept hook, run single-threaded in one consumer; deduped across relays by `SeenIds` before the hook. |
@@ -79,7 +84,7 @@ window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
 
 | Function | File | Use when |
 | --- | --- | --- |
-| `count(relay, filter, timeoutMs)` | `NostrClientCountExt` | NIP-45 `COUNT` against one relay (`null` on timeout / no support). |
+| `count(relay, filter, idleTimeoutMs)` | `NostrClientCountExt` | NIP-45 `COUNT` against one relay (`null` on timeout / no support). |
 | `countMerged(relays, filter, ...)` | `NostrClientCountExt` | Merged count across relays. |
 
 ## Negentropy (NIP-77)

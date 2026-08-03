@@ -547,7 +547,7 @@ class Context(
             if (needAuth.isEmpty()) break
             // A cheap REQ whose only purpose is to force the AUTH handshake to completion.
             val warmFilter = listOf(Filter(kinds = listOf(event.kind), limit = 1))
-            drain(needAuth.associateWith { warmFilter }, timeoutMs = 8_000, pendingOnAuthRequired = true)
+            drain(needAuth.associateWith { warmFilter }, idleTimeoutMs = 8_000, pendingOnAuthRequired = true)
             results = results + client.publishAndCollectResults(event, needAuth, timeoutSecs)
             attempt++
         }
@@ -565,7 +565,7 @@ class Context(
      * When [deadOut] is provided, every relay that reported it could not be
      * connected to (`onCannotConnect`) is added to it, so callers can prune
      * proven-dead relays from future routing instead of paying the full
-     * [timeoutMs] on them again. Slow-but-connected relays are NOT reported —
+     * [idleTimeoutMs] on them again. Slow-but-connected relays are NOT reported —
      * only hard connect failures, so a temporarily-busy relay isn't discarded.
      *
      * With [pendingOnAuthRequired], a relay that refuses the REQ with an
@@ -573,24 +573,24 @@ class Context(
      * NIP-42 responder answers the challenge and the client re-fires this same
      * subscription (`syncFilters`), so the post-auth events are collected instead of
      * returning empty. If auth never satisfies it, the relay simply falls through to
-     * the [timeoutMs]. Needed for Concord planes, whose kind-1059 wraps are served
+     * the [idleTimeoutMs]. Needed for Concord planes, whose kind-1059 wraps are served
      * only to a connection authenticated as the derived stream key.
      */
     suspend fun drain(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
-        timeoutMs: Long = 8_000,
+        idleTimeoutMs: Long = 8_000,
         diagnoseSlow: Boolean = false,
         deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
         pendingOnAuthRequired: Boolean = false,
     ): List<Pair<NormalizedRelayUrl, Event>> =
         client.fetchAllWithHooks(
             filters = filters,
-            timeoutMs = timeoutMs,
+            idleTimeoutMs = idleTimeoutMs,
             pendingOnAuthRequired = pendingOnAuthRequired,
             deadOut = deadOut,
             onTimeout =
                 if (diagnoseSlow) {
-                    { stalled, doneReasons, collected -> logSlowDrain(timeoutMs, stalled, doneReasons, collected) }
+                    { stalled, doneReasons, collected -> logSlowDrain(idleTimeoutMs, stalled, doneReasons, collected) }
                 } else {
                     null
                 },
@@ -604,7 +604,7 @@ class Context(
      * "relay is slow" and "we never connected" are easy to tell apart.
      */
     private fun logSlowDrain(
-        timeoutMs: Long,
+        idleTimeoutMs: Long,
         stalled: Set<NormalizedRelayUrl>,
         doneReasons: Map<NormalizedRelayUrl, String>,
         collected: List<Pair<NormalizedRelayUrl, Event>>,
@@ -615,7 +615,7 @@ class Context(
         val slowDetail = stalled.take(12).joinToString(", ") { "${it.url}(${eventsPer[it] ?: 0}ev)" }
         val cannotDetail = cannot.entries.take(8).joinToString(", ") { "${it.key.url}=${it.value.removePrefix("cannot:").take(40)}" }
         System.err.println(
-            "[drain] timeout ${timeoutMs}ms: ${stalled.size} slow(no EOSE), ${cannot.size} cannot-connect, ${closed.size} closed" +
+            "[drain] timeout ${idleTimeoutMs}ms: ${stalled.size} slow(no EOSE), ${cannot.size} cannot-connect, ${closed.size} closed" +
                 (if (slowDetail.isNotEmpty()) " | slow: $slowDetail" else "") +
                 (if (cannotDetail.isNotEmpty()) " | cannot: $cannotDetail" else ""),
         )
@@ -641,12 +641,12 @@ class Context(
      */
     suspend fun drainAllPages(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
-        timeoutMs: Long = 30_000,
+        idleTimeoutMs: Long = 30_000,
         maxConcurrentRelays: Int = 8,
     ): List<Pair<NormalizedRelayUrl, Event>> =
         client.fetchAllPagesFromPoolWithHooks(
             filters = filters,
-            timeoutMs = timeoutMs,
+            idleTimeoutMs = idleTimeoutMs,
             maxConcurrentRelays = maxConcurrentRelays,
         ) { _, event -> verifyAndStore(event) }
 

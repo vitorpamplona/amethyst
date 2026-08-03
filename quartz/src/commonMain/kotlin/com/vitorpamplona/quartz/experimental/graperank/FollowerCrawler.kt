@@ -75,14 +75,14 @@ class FollowerCrawler(
      *   stops paging once it's reached, so a non-null value cuts the crawl short at
      *   that many per relay. Leave it null for completeness; set it only to bound a
      *   spot check. The per-page size is the relay's own default either way.
-     * @param timeoutMs per-page EOSE timeout for a relay before its next page fires.
+     * @param idleTimeoutMs per-page EOSE timeout for a relay before its next page fires.
      * @param maxConcurrentRelays how many relays page at once (a global fan-out cap).
      * @param insertBatchSize verified events group-committed per [IEventStore.batchInsert].
      */
     class Config(
         val relays: Set<NormalizedRelayUrl>,
         val maxPerRelay: Int? = null,
-        val timeoutMs: Long = 15_000,
+        val idleTimeoutMs: Long = 15_000,
         val maxConcurrentRelays: Int = 16,
         val insertBatchSize: Int = 500,
     )
@@ -162,7 +162,7 @@ class FollowerCrawler(
 
                 client.fetchAllPagesFromPool(
                     filters = perRelay,
-                    timeoutMs = config.timeoutMs,
+                    idleTimeoutMs = config.idleTimeoutMs,
                     maxConcurrentRelays = config.maxConcurrentRelays,
                     onRelayComplete = { relay, total ->
                         if (total > 0) log("[followers] ${relay.url}: $total kind:3 pages drained")

@@ -71,7 +71,7 @@ import kotlin.coroutines.coroutineContext
  *
  * @param relay       The relay to query.
  * @param filters Filters to apply on every page (the `until` field is overwritten per page).
- * @param timeoutMs   Idle window per page — like every accessory timeout, it is measured
+ * @param idleTimeoutMs   Idle window per page — like every accessory timeout, it is measured
  *   from the relay's **most recent message**, not from the page's start: every arriving
  *   event resets it, so a slow relay actively streaming a large page is never cropped
  *   mid-delivery. A page only gives up after this much silence without an EOSE.
@@ -92,7 +92,7 @@ import kotlin.coroutines.coroutineContext
 suspend fun INostrClient.fetchAllPages(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int {
@@ -255,9 +255,9 @@ suspend fun INostrClient.fetchAllPages(
             subscribe(subId, mapOf(relay to activeFilters.map { it.value }), listener)
 
             // Wait for the page's terminal signal (EOSE / CLOSED / cannot-connect),
-            // giving up only after [timeoutMs] of silence — the wait resets on every
+            // giving up only after [idleTimeoutMs] of silence — the wait resets on every
             // arriving event, so an actively streaming page is never cut mid-delivery.
-            doneChannel.receiveWithinIdle(clock, timeoutMs)
+            doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
 
             unsubscribe(subId)
             doneChannel.close()
@@ -309,14 +309,14 @@ suspend fun INostrClient.fetchAllPages(
 suspend fun INostrClient.fetchAllPages(
     relay: String,
     filters: List<Filter>,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int =
     fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,
-        timeoutMs = timeoutMs,
+        idleTimeoutMs = idleTimeoutMs,
         onNewPage = onNewPage,
         onEvent = onEvent,
     )

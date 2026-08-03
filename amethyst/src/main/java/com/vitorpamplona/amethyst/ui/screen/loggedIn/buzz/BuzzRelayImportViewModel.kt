@@ -149,7 +149,7 @@ class BuzzRelayImportViewModel : ViewModel() {
                                     ),
                                 ),
                         ),
-                    timeoutMs = 8_000,
+                    idleTimeoutMs = 8_000,
                     pendingOnAuthRequired = true,
                 ) { _, event ->
                     (event as? MemberAddedNotificationEvent)?.channel()?.let { channelIds.add(it) }
@@ -172,7 +172,7 @@ class BuzzRelayImportViewModel : ViewModel() {
                                         Filter(kinds = listOf(SystemMessageEvent.KIND), tags = mapOf("h" to channelIds.toList())),
                                     ),
                             ),
-                        timeoutMs = 8_000,
+                        idleTimeoutMs = 8_000,
                         pendingOnAuthRequired = true,
                     ) { _, _ -> false }
                 }

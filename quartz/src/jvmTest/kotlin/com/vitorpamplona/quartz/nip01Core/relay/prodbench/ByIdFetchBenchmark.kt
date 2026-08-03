@@ -280,7 +280,7 @@ class ByIdFetchBenchmark {
             client.fetchAllPages(
                 relay = relay,
                 filters = listOf(Filter(kinds = listOf(KIND))),
-                timeoutMs = ENUM_PAGE_TIMEOUT_MS,
+                idleTimeoutMs = ENUM_PAGE_TIMEOUT_MS,
             ) { event -> ids.add(event.id) }
             println("  enumerated ${ids.size} ids in %.1fs (paged, untimed baseline for the matrix)".format((System.nanoTime() - t) / 1e9))
             ids.toList()

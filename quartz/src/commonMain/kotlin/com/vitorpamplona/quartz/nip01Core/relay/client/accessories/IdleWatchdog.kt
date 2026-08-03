@@ -30,10 +30,11 @@ import kotlin.time.TimeSource
  * fetch/sync loops. [bump] on every sign of life from the relay; [elapsedMs] reports
  * the silence since the last bump (or since construction, before the first bump).
  *
- * This is the timeout convention for every accessory in this package: a `timeoutMs`
- * (or `idleTimeoutMs`) is an **idle window measured from the relay's most recent
- * message**, not a wall-clock deadline — an actively streaming relay is never cut
- * off mid-delivery, only one that goes silent.
+ * This is the timeout convention for every accessory in this package: an
+ * `idleTimeoutMs` is an **idle window measured from the relay's most recent
+ * progress**, not a wall-clock deadline — an actively streaming relay is never cut
+ * off mid-delivery, only one that goes silent. The name is the contract: a
+ * parameter here is called `idleTimeoutMs` precisely because it is not a deadline.
  *
  * [bump] is on the per-event hot path (a connection listener may bump for every
  * message the relay sends — millions during a large download), so it must not

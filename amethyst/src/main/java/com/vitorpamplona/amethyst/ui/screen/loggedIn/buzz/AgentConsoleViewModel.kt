@@ -153,7 +153,7 @@ class AgentConsoleViewModel : ViewModel() {
         // (pendingOnAuthRequired) so it authenticates on the `auth-required` CLOSED and retries.
         account.client.fetchAllWithHooks(
             filters = relays.associateWith { filters },
-            timeoutMs = 8_000,
+            idleTimeoutMs = 8_000,
             pendingOnAuthRequired = true,
         ) { _, _ -> false }
     }

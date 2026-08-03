@@ -287,7 +287,7 @@ object GrapeRankCrawl {
                             // Default null → pull EVERY follower each relay holds; --max
                             // N caps the total per relay for a quick spot check.
                             maxPerRelay = args.flag("max")?.toIntOrNull(),
-                            timeoutMs = args.timeoutMs(15),
+                            idleTimeoutMs = args.timeoutMs(15),
                             maxConcurrentRelays = relayConcurrency,
                             insertBatchSize = args.intFlag(FLAG_INSERT_BATCH, INSERT_BATCH_DEFAULT),
                         ),

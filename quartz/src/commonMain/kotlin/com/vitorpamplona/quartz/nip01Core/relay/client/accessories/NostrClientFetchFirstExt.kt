@@ -69,7 +69,7 @@ suspend fun INostrClient.fetchFirst(
  * every relay reached a terminal state — EOSE, CLOSED, or cannot-connect — with
  * nothing matching, or the line went quiet).
  *
- * [timeoutMs] is an **idle window measured from the most recent progress**, not a
+ * [idleTimeoutMs] is an **idle window measured from the most recent progress**, not a
  * wall-clock deadline — the package-wide accessory convention. Progress means a
  * signal that actually advances the fetch: an event, or the first terminal state
  * from a relay still being waited on. Repeat chatter from a relay already
@@ -86,7 +86,7 @@ suspend fun INostrClient.fetchFirst(
 suspend fun INostrClient.fetchFirst(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 30_000L,
 ): Event? {
     val eventChannel = Channel<Event>(UNLIMITED)
     val doneChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
@@ -137,7 +137,7 @@ suspend fun INostrClient.fetchFirst(
         // advance escapes to the outer loop and earns a fresh window.
         while (remaining.isNotEmpty()) {
             val progressed =
-                withTimeoutOrNull(timeoutMs) {
+                withTimeoutOrNull(idleTimeoutMs) {
                     while (true) {
                         val advanced =
                             select<Boolean> {

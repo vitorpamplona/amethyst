@@ -38,10 +38,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * Pins [fetchFirst]'s timeout to the package-wide idle-window convention:
- * [timeoutMs] is silence measured from the most recent relay signal, not an
- * absolute deadline across the whole multi-relay wait — with [maxTotalMs] as
- * the wall-clock ceiling.
+ * Pins [fetchFirst]'s timeout to the package-wide convention: `idleTimeoutMs` is
+ * silence measured from the most recent *progress*, not an absolute deadline
+ * across the whole multi-relay wait. Repeat chatter from a relay already
+ * accounted for is not progress, which is what makes the call self-bounding
+ * without a ceiling parameter — a hard bound is the caller's `withTimeoutOrNull`.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FetchFirstIdleTimeoutTest {
@@ -97,7 +98,7 @@ class FetchFirstIdleTimeoutTest {
             val result =
                 client.fetchFirst(
                     filters = filters(relayA, relayB, relayC, relayD),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                 )
             assertEquals(event(1).id, result?.id, "progress must restart the window; the slow relay's event still lands")
         }
@@ -110,7 +111,7 @@ class FetchFirstIdleTimeoutTest {
             val result =
                 client.fetchFirst(
                     filters = filters(relayA),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                 )
             assertNull(result)
             assertEquals(300L, currentTime - start, "a silent relay costs exactly one idle window")
@@ -136,7 +137,7 @@ class FetchFirstIdleTimeoutTest {
             val result =
                 client.fetchFirst(
                     filters = filters(relayA, relayB),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                 )
             chatter.cancel()
             assertNull(result)
@@ -160,7 +161,7 @@ class FetchFirstIdleTimeoutTest {
             val result =
                 client.fetchFirst(
                     filters = filters(relayA),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                 )
             assertEquals(event(7).id, result?.id, "an event racing the final EOSE must not be dropped")
         }
@@ -180,7 +181,7 @@ class FetchFirstIdleTimeoutTest {
             // is the wall-clock bound, and costs nothing because a timed-out
             // fetchFirst yields null either way.
             val start = currentTime
-            val result = withTimeoutOrNull(120) { client.fetchFirst(filters = filters(relayA, relayB), timeoutMs = 10_000) }
+            val result = withTimeoutOrNull(120) { client.fetchFirst(filters = filters(relayA, relayB), idleTimeoutMs = 10_000) }
             chatter.cancel()
             assertNull(result)
             assertEquals(120L, currentTime - start, "the caller's timeout bounds the call")

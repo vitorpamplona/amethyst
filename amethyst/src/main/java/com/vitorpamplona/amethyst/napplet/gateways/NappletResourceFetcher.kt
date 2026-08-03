@@ -144,7 +144,7 @@ class NappletResourceFetcher(
         val relays = account.homeRelays.flow.value
         if (relays.isEmpty()) return null
         return runCatching {
-            account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, timeoutMs = NOSTR_FETCH_TIMEOUT_MS)
+            account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = NOSTR_FETCH_TIMEOUT_MS)
         }.getOrDefault(emptyList())
             .maxByOrNull { it.createdAt }
     }

@@ -221,7 +221,7 @@ class DesktopRelaySubscriptionsCoordinator(
                     val events =
                         client.fetchAll(
                             filters = indexRelays.associateWith { listOf(filter) },
-                            timeoutMs = 8.seconds.inWholeMilliseconds,
+                            idleTimeoutMs = 8.seconds.inWholeMilliseconds,
                         )
                     events.forEach { consumeEvent(it, null) }
                 }

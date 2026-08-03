@@ -50,7 +50,7 @@ import kotlinx.coroutines.sync.Semaphore
  * @param filters  per-relay filter lists; the key set is the relays queried, in
  *   iteration order (pass a [LinkedHashMap]/`associateWith` result to control it).
  *   A `search` filter is fetched as a single relevance page — see [fetchAllPages].
- * @param timeoutMs per-page idle window handed to each relay's [fetchAllPages] —
+ * @param idleTimeoutMs per-page idle window handed to each relay's [fetchAllPages] —
  *   measured from that relay's most recent message (every event resets it), not
  *   from the page's start. As in [fetchAllPages] there is no wall-clock ceiling;
  *   bound a relay's walk with a [Filter.limit], or cancel the caller.
@@ -63,7 +63,7 @@ import kotlinx.coroutines.sync.Semaphore
  */
 suspend fun INostrClient.fetchAllPagesFromPool(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 30_000L,
     maxConcurrentRelays: Int = 8,
     onNewPage: ((until: Long, relay: NormalizedRelayUrl) -> Unit)? = null,
     onRelayStart: ((relay: NormalizedRelayUrl) -> Unit)? = null,
@@ -83,7 +83,7 @@ suspend fun INostrClient.fetchAllPagesFromPool(
                         fetchAllPages(
                             relay = relay,
                             filters = filtersForRelay,
-                            timeoutMs = timeoutMs,
+                            idleTimeoutMs = idleTimeoutMs,
                             onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
                         ) { event -> onEvent(event, relay) }
                     onRelayComplete?.invoke(relay, total)

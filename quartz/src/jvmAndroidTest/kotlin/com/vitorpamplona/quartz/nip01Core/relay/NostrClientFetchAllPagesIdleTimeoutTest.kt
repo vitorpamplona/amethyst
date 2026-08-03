@@ -40,7 +40,7 @@ import kotlin.time.TimeSource
 
 /**
  * Pins [fetchAllPages]'s timeout to the package-wide idle-window convention:
- * `timeoutMs` is silence measured from the relay's MOST RECENT message, not a
+ * `idleTimeoutMs` is silence measured from the relay's MOST RECENT message, not a
  * wall-clock deadline for the page. A relay that keeps streaming — however
  * slowly — must never have a page cropped mid-delivery.
  *
@@ -106,7 +106,7 @@ class NostrClientFetchAllPagesIdleTimeoutTest {
                 client.fetchAllPages(
                     relay = relay,
                     filters = listOf(Filter(kinds = listOf(1), limit = 6)),
-                    timeoutMs = 500,
+                    idleTimeoutMs = 500,
                     onNewPage = { pages++ },
                 ) { got.add(it) }
             feeder.join()
@@ -140,7 +140,7 @@ class NostrClientFetchAllPagesIdleTimeoutTest {
                 client.fetchAllPages(
                     relay = relay,
                     filters = listOf(Filter(kinds = listOf(1), limit = 3)),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                 ) { got.add(it) }
             feeder.join()
             val elapsedMs = start.elapsedNow().inWholeMilliseconds
@@ -151,9 +151,8 @@ class NostrClientFetchAllPagesIdleTimeoutTest {
         }
 
     /**
-     * Documents why [fetchAllPages] has no wall-clock ceiling, unlike the
-     * single-wait accessories (`fetchAll`/`fetchFirst`/`count`, whose `maxTotalMs`
-     * really does end the call).
+     * Documents why [fetchAllPages] has no wall-clock ceiling — nor should any
+     * accessory: a hard bound composes at the call site as `withTimeoutOrNull`.
      *
      * A per-page ceiling cannot bound this walk: when a page ends, the loop advances
      * the cursor and fires the NEXT `REQ`, so an endless trickle against an unbounded
@@ -181,7 +180,7 @@ class NostrClientFetchAllPagesIdleTimeoutTest {
                     client.fetchAllPages(
                         relay = relay,
                         filters = listOf(Filter(kinds = listOf(1))), // unbounded: no limit
-                        timeoutMs = 200,
+                        idleTimeoutMs = 200,
                     ) { }
                 }
             feeder.cancel()

@@ -199,7 +199,7 @@ class CashuWalletDiscovery(
                             fetchAllPages(
                                 relay = relay,
                                 filters = filters,
-                                timeoutMs = RELAY_TIMEOUT_MS,
+                                idleTimeoutMs = RELAY_TIMEOUT_MS,
                                 onEvent = onEvent,
                             )
                         }.onFailure {

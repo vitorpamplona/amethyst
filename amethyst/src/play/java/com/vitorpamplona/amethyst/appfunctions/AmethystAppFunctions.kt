@@ -153,12 +153,12 @@ class AmethystAppFunctions {
 
         // Quartz's INostrClient.fetchAll handles subscribe → drain on
         // EOSE/closed/cannot-connect → unsubscribe → dedup by id → sort
-        // newest-first. Wraps everything in a withTimeoutOrNull(timeoutMs)
+        // newest-first. Wraps everything in a withTimeoutOrNull(idleTimeoutMs)
         // so a slow relay can't stall the dispatch.
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val candidates =
@@ -397,7 +397,7 @@ class AmethystAppFunctions {
         return Amethyst.instance.client
             .fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             ).mapNotNull { it as? TextNoteEvent }
             .take(limit)
     }
@@ -449,7 +449,7 @@ class AmethystAppFunctions {
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val hits =
@@ -521,7 +521,7 @@ class AmethystAppFunctions {
             client
                 .fetchAll(
                     filters = relays.associateWith { listOf(filter) },
-                    timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                    idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
                 ).mapNotNull { it as? MetadataEvent }
                 .filter { it.pubKey == pubkey }
                 .maxByOrNull { it.createdAt }
@@ -569,7 +569,7 @@ class AmethystAppFunctions {
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val hits =
@@ -643,7 +643,7 @@ class AmethystAppFunctions {
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val hits =
@@ -686,7 +686,7 @@ class AmethystAppFunctions {
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val hits =
@@ -733,7 +733,7 @@ class AmethystAppFunctions {
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val hits =
@@ -785,7 +785,7 @@ class AmethystAppFunctions {
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val receipts = events.mapNotNull { it as? LnZapEvent }
@@ -880,7 +880,7 @@ class AmethystAppFunctions {
             client
                 .fetchAll(
                     filters = relays.associateWith { listOf(filter) },
-                    timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                    idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
                 ).mapNotNull { it as? GiftWrapEvent }
 
         val seen = HashSet<HexKey>()
@@ -947,7 +947,7 @@ class AmethystAppFunctions {
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val hits =
@@ -991,7 +991,7 @@ class AmethystAppFunctions {
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val streams =
@@ -1691,7 +1691,7 @@ class AmethystAppFunctions {
         return client
             .fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             ).mapNotNull { it as? MetadataEvent }
             .maxByOrNull { it.createdAt }
             ?.contactMetaData()
@@ -2027,7 +2027,7 @@ class AmethystAppFunctions {
         val events =
             client.fetchAll(
                 filters = relays.associateWith { listOf(filter) },
-                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                idleTimeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
         val hits =
