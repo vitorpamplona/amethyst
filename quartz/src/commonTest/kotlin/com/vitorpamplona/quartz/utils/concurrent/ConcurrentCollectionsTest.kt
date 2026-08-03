@@ -72,6 +72,40 @@ class ConcurrentCollectionsTest {
     }
 
     @Test
+    fun mapRemoveReturnsOldValueAndDeletes() {
+        val map = ConcurrentMap<String, Int>()
+        map["a"] = 1
+        map["b"] = 2
+
+        assertEquals(1, map.remove("a"))
+        assertNull(map["a"])
+        assertEquals(1, map.size())
+        assertEquals(2, map["b"])
+    }
+
+    @Test
+    fun mapRemoveAbsentKeyIsNullAndNoOp() {
+        val map = ConcurrentMap<String, Int>()
+        map["b"] = 2
+
+        assertNull(map.remove("missing"))
+        assertEquals(1, map.size())
+        assertEquals(2, map["b"])
+    }
+
+    @Test
+    fun mapRemoveThenGetOrPutRecreates() {
+        // The lifecycle PoolRequests needs: connecting()/disconnected() drop a relay's
+        // wire state, and the next REQ re-creates it. A stale value must never survive.
+        val map = ConcurrentMap<String, Int>()
+        map.getOrPut("relay") { 1 }
+        map.remove("relay")
+
+        assertEquals(9, map.getOrPut("relay") { 9 })
+        assertEquals(9, map["relay"])
+    }
+
+    @Test
     fun mapSnapshotIsDetached() {
         val m = ConcurrentMap<String, Int>()
         m["a"] = 1

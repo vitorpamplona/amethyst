@@ -20,38 +20,17 @@
  */
 package com.vitorpamplona.quartz.utils.concurrent
 
-import java.util.concurrent.ConcurrentHashMap
+import platform.Foundation.NSRecursiveLock
 
-actual class ConcurrentMap<K : Any, V : Any> {
-    private val map = ConcurrentHashMap<K, V>()
+// NSRecursiveLock parks contended waiters in the kernel, matching the
+// ReentrantLock semantics of the jvmAndroid actual (and the same choice
+// commons' KmpLock made for iOS). This must NOT be a spin lock: quartz's
+// relay client runs here too, and spinning is what produced the Android
+// ANR documented on the expect declaration.
+actual class PlatformLock {
+    private val delegate = NSRecursiveLock()
 
-    actual operator fun get(key: K): V? = map[key]
+    actual fun lock() = delegate.lock()
 
-    actual operator fun set(
-        key: K,
-        value: V,
-    ) {
-        map[key] = value
-    }
-
-    actual fun getOrPut(
-        key: K,
-        defaultValue: () -> V,
-    ): V =
-        // Fast-path the present-key hit (the common case in the crawl's hot
-        // relay-hint accumulation) so it never allocates the mapping-function
-        // closure; only an absent key pays for the atomic computeIfAbsent.
-        map[key] ?: map.computeIfAbsent(key) { defaultValue() }
-
-    actual fun merge(
-        key: K,
-        value: V,
-        remap: (old: V, new: V) -> V,
-    ): V = map.merge(key, value) { old, new -> remap(old, new) }!!
-
-    actual fun remove(key: K): V? = map.remove(key)
-
-    actual fun size(): Int = map.size
-
-    actual fun snapshot(): Map<K, V> = HashMap(map)
+    actual fun unlock() = delegate.unlock()
 }

@@ -84,25 +84,26 @@ class PoolRequests(
     /*
      * Locking model: every compound access to a subscription's state machine
      * ([RequestSubscriptionState]) — including the check-then-send decision in
-     * [decideCommandLocked] — runs inside THAT subscription's own lock
-     * ([RequestSubscriptionState.withLock]).
+     * [decideCommandLocked] — runs inside the stripe for THAT (subscription, relay)
+     * pair ([RequestSubscriptionState.withLock], which takes the relay).
      *
-     * A single subscription can span many relays, and each relay's
-     * socket-reader thread delivers messages into this class concurrently
-     * while the app thread adds/removes subscriptions — so the plain maps
-     * inside [RequestSubscriptionState] are written from several threads at
-     * once. That is both a memory hazard (concurrent map mutation) and a
-     * logic hazard: two threads must never both observe "no REQ in flight"
-     * and both send a REQ for the same sub id.
+     * A single subscription can span many relays, and each relay's socket-reader
+     * thread delivers messages into this class concurrently while the app thread
+     * adds/removes subscriptions. Two threads must never both observe "no REQ in
+     * flight" and both send a REQ for the same (sub, relay).
      *
-     * The lock is per subscription, not global, because different subIds
-     * share no wire state: EVENT frames for different subs coming from
-     * different relay consumer threads must not serialize on each other (a
-     * global lock here measured negative scaling under 4 concurrent relay
-     * feeders). Listener callbacks and the actual socket sends are ALWAYS
-     * performed outside the lock — they re-enter this class through
-     * [onSent], so holding the lock across them would self-deadlock, and the
-     * lock is non-reentrant. Never hold two subscriptions' locks at once.
+     * The lock is striped PER RELAY rather than per subscription: every critical
+     * section below touches only one relay's slice of the state, so EVENT frames
+     * arriving for the same subId from different relays no longer serialize on each
+     * other. With ~191 relays that previously made a single per-sub lock contended
+     * ~191 threads deep — the production ANR in
+     * `quartz/plans/2026-08-03-poolrequests-lock-contention.md`.
+     *
+     * Two rules this file must keep:
+     *  - Never hold two relays' stripes (or two subscriptions') at once. Every loop
+     *    below locks exactly one relay at a time.
+     *  - Listener callbacks and socket sends are ALWAYS performed outside the lock —
+     *    they re-enter this class through [onSent].
      */
 
     /**
@@ -201,7 +202,7 @@ class PoolRequests(
     fun onConnecting(url: NormalizedRelayUrl) {
         // Change states to connecting. One sub's lock at a time.
         relayState.forEach { subId, state ->
-            state.withLock { state.connecting(url) }
+            state.withLock(url) { state.connecting(url) }
         }
     }
 
@@ -215,7 +216,7 @@ class PoolRequests(
         when (cmd) {
             is ReqCmd -> {
                 subState(cmd.subId).let { state ->
-                    state.withLock { state.onOpenReq(relay, cmd.filters) }
+                    state.withLock(relay) { state.onOpenReq(relay, cmd.filters) }
                 }
                 desiredSubListeners.get(cmd.subId)?.onSubscriptionStarted(
                     relay = relay.url,
@@ -225,7 +226,7 @@ class PoolRequests(
 
             is CloseCmd -> {
                 subState(cmd.subId).let { state ->
-                    state.withLock { state.onSubscriptionClosed(relay) }
+                    state.withLock(relay) { state.onSubscriptionClosed(relay) }
                 }
                 desiredSubListeners.get(cmd.subId)?.onSubscriptionClosed(
                     relay = relay.url,
@@ -246,7 +247,7 @@ class PoolRequests(
                 var isLive = false
                 var forFilters: List<Filter>? = null
                 relayState.get(msg.subId)?.let { state ->
-                    state.withLock {
+                    state.withLock(relay.url) {
                         state.onNewEvent(relay.url)
                         isLive = state.currentState(relay.url) == ReqSubStatus.LIVE
                         forFilters = state.lastKnownFilterStates(relay.url)
@@ -264,7 +265,7 @@ class PoolRequests(
                 var forFilters: List<Filter>? = null
                 val cmd =
                     relayState.get(msg.subId)?.let { state ->
-                        state.withLock {
+                        state.withLock(relay.url) {
                             state.onEose(relay.url)
                             forFilters = state.lastKnownFilterStates(relay.url)
                             // Decide (and pre-mark) the resend while still holding the
@@ -293,7 +294,7 @@ class PoolRequests(
                 var forFilters: List<Filter>? = null
                 val cmd =
                     relayState.get(msg.subId)?.let { state ->
-                        state.withLock {
+                        state.withLock(relay.url) {
                             state.onClosed(relay.url)
                             forFilters = state.lastKnownFilterStates(relay.url)
                             recordRefusalIfStructural(state, relay.url, msg.message, forFilters)
@@ -322,7 +323,7 @@ class PoolRequests(
      */
     fun onDisconnected(url: NormalizedRelayUrl) {
         relayState.forEach { subId, state ->
-            state.withLock { state.disconnected(url) }
+            state.withLock(url) { state.disconnected(url) }
         }
     }
 
@@ -351,7 +352,7 @@ class PoolRequests(
             if (!filters.isNullOrEmpty()) {
                 val send =
                     subState(subId).let { state ->
-                        state.withLock {
+                        state.withLock(relay) {
                             if (isStructurallyRefused(state, relay, filters)) {
                                 false
                             } else {
@@ -379,7 +380,7 @@ class PoolRequests(
             // These are all my subs.. need to figure out which relays have them
             val subs = desiredSubs.get(subId)
             if (subs != null && url in subs.keys) {
-                toNotify.add(subId to state.withLock { state.lastKnownFilterStates(url) })
+                toNotify.add(subId to state.withLock(url) { state.lastKnownFilterStates(url) })
             }
         }
 
@@ -400,7 +401,7 @@ class PoolRequests(
         val state = subState(subId)
         relaysToUpdate.forEach { relay ->
             // Decide + pre-mark atomically under the sub's lock, then send outside it.
-            val cmd = state.withLock { decideCommandLocked(state, subId, relay) }
+            val cmd = state.withLock(relay) { decideCommandLocked(state, subId, relay) }
             if (cmd != null) {
                 sync(relay, cmd)
             }

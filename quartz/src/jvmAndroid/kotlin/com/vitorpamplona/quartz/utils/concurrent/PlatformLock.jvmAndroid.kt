@@ -20,38 +20,16 @@
  */
 package com.vitorpamplona.quartz.utils.concurrent
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
 
-actual class ConcurrentMap<K : Any, V : Any> {
-    private val map = ConcurrentHashMap<K, V>()
+// ReentrantLock parks contended waiters through AbstractQueuedSynchronizer, so a
+// thread waiting on a holder that lost its core (GC, preemption) costs one context
+// switch rather than a spinning core. Non-fair on purpose: fairness would add a
+// handoff per acquisition and the critical sections here are microseconds long.
+actual class PlatformLock {
+    private val lock = ReentrantLock()
 
-    actual operator fun get(key: K): V? = map[key]
+    actual fun lock() = lock.lock()
 
-    actual operator fun set(
-        key: K,
-        value: V,
-    ) {
-        map[key] = value
-    }
-
-    actual fun getOrPut(
-        key: K,
-        defaultValue: () -> V,
-    ): V =
-        // Fast-path the present-key hit (the common case in the crawl's hot
-        // relay-hint accumulation) so it never allocates the mapping-function
-        // closure; only an absent key pays for the atomic computeIfAbsent.
-        map[key] ?: map.computeIfAbsent(key) { defaultValue() }
-
-    actual fun merge(
-        key: K,
-        value: V,
-        remap: (old: V, new: V) -> V,
-    ): V = map.merge(key, value) { old, new -> remap(old, new) }!!
-
-    actual fun remove(key: K): V? = map.remove(key)
-
-    actual fun size(): Int = map.size
-
-    actual fun snapshot(): Map<K, V> = HashMap(map)
+    actual fun unlock() = lock.unlock()
 }
