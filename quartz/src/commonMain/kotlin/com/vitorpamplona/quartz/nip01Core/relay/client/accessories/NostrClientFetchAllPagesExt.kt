@@ -72,7 +72,13 @@ import kotlin.coroutines.coroutineContext
  *
  * @param relay       The relay to query.
  * @param filters Filters to apply on every page (the `until` field is overwritten per page).
- * @param timeoutMs   Maximum time to wait for a single page's EOSE before giving up.
+ * @param timeoutMs   Idle window per page — like every accessory timeout, it is measured
+ *   from the relay's **most recent message**, not from the page's start: every arriving
+ *   event resets it, so a slow relay actively streaming a large page is never cropped
+ *   mid-delivery. A page only gives up after this much silence without an EOSE.
+ * @param maxPageMs   Hard wall-clock ceiling per page (default 10x the idle window) — the
+ *   idle window alone is unbounded against a misbehaving relay that trickles events
+ *   forever without ever sending EOSE. Pass [Long.MAX_VALUE] for an uncapped page.
  * @param onEvent     Called once for every distinct event delivered, in page order.
  * @return Total number of distinct events delivered across all pages.
  */
@@ -80,6 +86,7 @@ suspend fun INostrClient.fetchAllPages(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
+    maxPageMs: Long = timeoutMs * 10,
     onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int {
@@ -144,6 +151,11 @@ suspend fun INostrClient.fetchAllPages(
 
         val doneChannel = Channel<Unit>(Channel.CONFLATED)
 
+        // Idle watchdog for this page: every arriving event bumps it, so the page's
+        // timeout measures silence since the relay's most recent message (the same
+        // convention as fetchAll and the negentropy sync), never total page time.
+        val clock = IdleClock()
+
         // Captured for the listener: the boundary second we re-fetch this page.
         val boundary = until
         var received = 0
@@ -160,6 +172,7 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
+                        clock.bump()
                         received++
                         // Drop a boundary-second event we already delivered on an
                         // earlier page (the inclusive re-fetch returns it again).
@@ -222,8 +235,18 @@ suspend fun INostrClient.fetchAllPages(
 
             subscribe(subId, mapOf(relay to activeFilters.map { it.value }), listener)
 
-            withTimeoutOrNull(timeoutMs) {
-                doneChannel.receive()
+            // Wait for the page's terminal signal (EOSE / CLOSED / cannot-connect),
+            // giving up only after [timeoutMs] of silence — the wait resets on every
+            // event — or at the [maxPageMs] wall-clock ceiling. A non-positive
+            // ceiling means uncapped, mirroring the idle window's `<= 0` = disabled
+            // convention (it also absorbs a `timeoutMs * 10` overflow from a caller
+            // passing an effectively-infinite idle window).
+            if (maxPageMs <= 0 || maxPageMs == Long.MAX_VALUE) {
+                doneChannel.receiveWithinIdle(clock, timeoutMs)
+            } else {
+                withTimeoutOrNull(maxPageMs) {
+                    doneChannel.receiveWithinIdle(clock, timeoutMs)
+                }
             }
 
             unsubscribe(subId)
@@ -277,6 +300,7 @@ suspend fun INostrClient.fetchAllPages(
     relay: String,
     filters: List<Filter>,
     timeoutMs: Long = 30_000L,
+    maxPageMs: Long = timeoutMs * 10,
     onNewPage: ((Long) -> Unit)? = null,
     onEvent: (Event) -> Unit,
 ): Int =
@@ -284,6 +308,7 @@ suspend fun INostrClient.fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,
         timeoutMs = timeoutMs,
+        maxPageMs = maxPageMs,
         onNewPage = onNewPage,
         onEvent = onEvent,
     )

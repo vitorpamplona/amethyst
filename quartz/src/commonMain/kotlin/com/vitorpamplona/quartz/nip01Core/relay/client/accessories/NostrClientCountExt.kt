@@ -38,9 +38,13 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Sends a NIP-45 COUNT query to a single relay and suspends until
  * the result arrives or the timeout expires.
  *
+ * A COUNT exchange is a single response message, so [timeoutMs] here is
+ * trivially the package-wide idle-window convention (time since the most
+ * recent message): no message can arrive before the one that completes it.
+ *
  * @param relay Target relay to query.
  * @param filter The filter to count against.
- * @param timeoutMs How long to wait for a response (default 15 s).
+ * @param timeoutMs How long to wait for the response (default 15 s).
  * @return The [CountResult], or `null` on timeout.
  */
 suspend fun INostrClient.count(
@@ -88,13 +92,22 @@ suspend fun INostrClient.count(
  * (one filter per relay) and suspends until all results arrive
  * or the timeout expires.
  *
+ * [timeoutMs] is an **idle window measured from the most recent message**, not a
+ * wall-clock deadline for the whole batch — the package-wide accessory
+ * convention: each arriving COUNT result restarts it, so a large fan-out where
+ * results keep trickling in is never cut short; the wait only gives up after a
+ * full window with no relay answering. [maxTotalMs] (default 10x the idle
+ * window) is the wall-clock ceiling against a misbehaving relay re-sending
+ * results forever.
+ *
  * @param filters Map of relay -> filter to count.
- * @param timeoutMs How long to wait for all responses (default 15 s).
+ * @param timeoutMs Idle window between responses (default 15 s).
  * @return Map of relay -> [CountResult] for every relay that responded in time.
  */
 suspend fun INostrClient.count(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 15_000,
+    maxTotalMs: Long = timeoutMs * 10,
 ): Map<NormalizedRelayUrl, CountResult> {
     if (filters.isEmpty()) return emptyMap()
 
@@ -125,10 +138,13 @@ suspend fun INostrClient.count(
 
     val results = mutableMapOf<NormalizedRelayUrl, CountResult>()
 
-    withTimeoutOrNull(timeoutMs) {
+    // Each receive is bounded by the idle window alone; every arriving result
+    // restarts it on the next loop iteration. The outer ceiling bounds the whole
+    // wait against a relay that keeps re-sending results.
+    withTimeoutOrNull(maxTotalMs) {
         while (results.size < filters.size) {
-            val (relay, result) = resultChannel.receive()
-            results[relay] = result
+            val next = withTimeoutOrNull(timeoutMs) { resultChannel.receive() } ?: break
+            results[next.first] = next.second
         }
     }
 
@@ -152,7 +168,7 @@ suspend fun INostrClient.count(
  *
  * @param relays List of relays to query.
  * @param filter The filter to count against.
- * @param timeoutMs How long to wait for all responses (default 15 s).
+ * @param timeoutMs Idle window between responses (default 15 s) — see [count].
  * @return A merged [CountResult], or `null` if no relay responded.
  */
 suspend fun INostrClient.countMerged(

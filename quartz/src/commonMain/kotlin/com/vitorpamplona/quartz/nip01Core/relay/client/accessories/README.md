@@ -12,11 +12,23 @@ count, negentropy sync/reconcile) already exists.
 Import as `com.vitorpamplona.quartz.nip01Core.relay.client.accessories.<name>` (or
 `...client.reqs.<name>` for the flow/subscribe helpers).
 
+## Timeout convention
+
+Every `timeoutMs` / `idleTimeoutMs` in this package is an **idle window measured
+from the relay's most recent message**, never a wall-clock deadline: each arriving
+event / result / terminal signal resets it, so an actively streaming relay is never
+cut off mid-delivery — the operation only gives up after a full window of silence.
+The shared primitives are in `IdleWatchdog.kt` (`IdleClock` + `receiveWithinIdle`);
+use them when writing a new accessory. Because an idle window alone is unbounded
+against a relay that trickles messages forever, the loops that could run away also
+take a hard wall-clock ceiling (`maxTotalMs` / `maxPageMs`, default 10x the idle
+window) as a backstop.
+
 ## One-shot reads (subscribe → collect → return)
 
 | Function | File | Use when |
 | --- | --- | --- |
-| `fetchAll(relay, filter, timeoutMs)` | `NostrClientFetchAllExt` | Get every event matching a filter in one REQ, deduped by id, until EOSE or timeout. **No verify, no store** — just the events. |
+| `fetchAll(relay, filter, timeoutMs)` | `NostrClientFetchAllExt` | Get every event matching a filter in one REQ, deduped by id, until EOSE or a full idle window of silence. **No verify, no store** — just the events. |
 | `fetchFirst(relay, filter, timeoutMs)` | `NostrClientFetchFirstExt` | Get the first matching event and stop (returns `null` on none/timeout). |
 | `fetchAllPages(relay, filters, timeoutMs)` | `NostrClientFetchAllPagesExt` | Fully retrieve a result set larger than the relay's per-REQ cap (strfry `limit`, ~500) by walking a `created_at` cursor. Bound it with the filter's `limit`. |
 | `fetchAllPagesFromPool(filters, ...)` | `NostrClientFetchAllPagesPoolExt` | Same paging, across several relays at once, deduped across them. |

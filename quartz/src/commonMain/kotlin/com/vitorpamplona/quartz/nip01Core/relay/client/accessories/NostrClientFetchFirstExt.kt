@@ -64,10 +64,23 @@ suspend fun INostrClient.fetchFirst(
     filters: List<Filter>,
 ) = fetchFirst(subscriptionId, mapOf(relay to filters))
 
+/**
+ * Subscribe [filters], return the first event any relay delivers (or `null` when
+ * every relay reached a terminal state — EOSE, CLOSED, or cannot-connect — with
+ * nothing matching, or the line went quiet).
+ *
+ * [timeoutMs] is an **idle window measured from the most recent message**, not a
+ * wall-clock deadline — the package-wide accessory convention: every arriving
+ * signal (a terminal state from one relay of many) restarts it, so the fetch only
+ * gives up after a full window of total silence. [maxTotalMs] (default 10x the
+ * idle window) is the wall-clock ceiling that bounds a relay emitting endless
+ * terminal chatter (e.g. a CLOSED/reconnect loop) without ever delivering an event.
+ */
 suspend fun INostrClient.fetchFirst(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     timeoutMs: Long = 30_000L,
+    maxTotalMs: Long = timeoutMs * 10,
 ): Event? {
     val eventChannel = Channel<Event>(UNLIMITED)
     val doneChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
@@ -112,27 +125,34 @@ suspend fun INostrClient.fetchFirst(
     try {
         subscribe(subscriptionId, filters, listener)
 
-        withTimeoutOrNull(timeoutMs) {
+        // Each wait is bounded by the idle window alone; any arriving signal
+        // restarts it on the next loop iteration. The outer ceiling stays far
+        // above the window so legitimate multi-relay stragglers still land.
+        withTimeoutOrNull(maxTotalMs) {
             while (remaining.isNotEmpty()) {
-                select {
-                    eventChannel.onReceive { event ->
-                        result = event
-                        remaining.clear()
-                    }
-                    doneChannel.onReceive { relay ->
-                        // A relay sends its matching events before its EOSE, so an event may
-                        // already be buffered when this completion fires. select() picks a ready
-                        // clause at random, so without this drain we could treat the relay as done
-                        // and exit while its event still sits unread in the channel.
-                        val buffered = eventChannel.tryReceive().getOrNull()
-                        if (buffered != null) {
-                            result = buffered
-                            remaining.clear()
-                        } else {
-                            remaining.remove(relay)
+                val progressed =
+                    withTimeoutOrNull(timeoutMs) {
+                        select<Unit> {
+                            eventChannel.onReceive { event ->
+                                result = event
+                                remaining.clear()
+                            }
+                            doneChannel.onReceive { relay ->
+                                // A relay sends its matching events before its EOSE, so an event may
+                                // already be buffered when this completion fires. select() picks a ready
+                                // clause at random, so without this drain we could treat the relay as done
+                                // and exit while its event still sits unread in the channel.
+                                val buffered = eventChannel.tryReceive().getOrNull()
+                                if (buffered != null) {
+                                    result = buffered
+                                    remaining.clear()
+                                } else {
+                                    remaining.remove(relay)
+                                }
+                            }
                         }
                     }
-                }
+                if (progressed == null) break
             }
         }
     } finally {

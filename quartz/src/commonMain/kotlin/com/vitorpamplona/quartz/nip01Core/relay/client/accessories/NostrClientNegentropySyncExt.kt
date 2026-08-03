@@ -47,14 +47,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.decrementAndFetch
 import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.coroutines.coroutineContext
 import kotlin.math.min
-import kotlin.time.TimeSource
 
 /**
  * Outcome of a successful [negentropySync] run.
@@ -1180,52 +1178,8 @@ internal val KEEP_ALIVE_ID = "f".repeat(64)
  * still honor "run until the socket drops".
  */
 private const val DEFAULT_CONNECT_TIMEOUT_MS = 30_000L
-private const val DEFAULT_DOWNLOAD_IDLE_MS = 60_000L
+internal const val DEFAULT_DOWNLOAD_IDLE_MS = 60_000L
 
-/**
- * Monotonic "last activity" marker for the idle watchdog. [bump] on every sign of
- * life from the relay; [elapsedMs] reports the silence since the last bump.
- *
- * [bump] is on the per-event hot path (the connection listener bumps for every
- * message the relay sends — millions during a large download), so it must not
- * allocate: a single [start] mark is taken once (unboxed field) and each bump only
- * writes a `Long` of nanos-since-start into a `@Volatile` field. Reader threads
- * write, the driver coroutine reads — visibility is all we need, so a plain volatile
- * Long beats boxing a `ValueTimeMark` into an `AtomicReference` on every event.
- */
-private class IdleClock {
-    private val start = TimeSource.Monotonic.markNow()
-
-    @Volatile
-    private var lastNanos = 0L
-
-    fun bump() {
-        lastNanos = start.elapsedNow().inWholeNanoseconds
-    }
-
-    fun elapsedMs(): Long = (start.elapsedNow().inWholeNanoseconds - lastNanos) / 1_000_000
-}
-
-/**
- * Receives the next item, giving up (returning `null`) only after [idleMs] elapse with
- * no activity on [clock]. Because [clock] is bumped by *any* relay message — not just
- * items on this channel — unrelated progress (e.g. download events arriving during a
- * reconcile wait) keeps pushing the deadline out. [idleMs] `<= 0` disables the
- * watchdog: it waits until an item arrives (a disconnect is delivered as an item, so
- * a dead socket still unblocks it).
- */
-private suspend fun <T> Channel<T>.receiveWithinIdle(
-    clock: IdleClock,
-    idleMs: Long,
-): T? {
-    if (idleMs <= 0) return receive()
-    while (true) {
-        val remaining = idleMs - clock.elapsedMs()
-        if (remaining <= 0) return null
-        val item = withTimeoutOrNull(remaining) { receive() }
-        if (item != null) return item
-        // Timed out with nothing on this channel. If other activity bumped the clock
-        // meanwhile, the next `remaining` is positive and we wait again; otherwise it
-        // is <= 0 on the next iteration and we give up.
-    }
-}
+// IdleClock and receiveWithinIdle — the idle-watchdog primitives this file
+// introduced — now live in IdleWatchdog.kt, shared by every accessory whose
+// timeout is measured from the relay's most recent message.
