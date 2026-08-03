@@ -22,7 +22,9 @@ The shared primitives are in `IdleWatchdog.kt` (`IdleClock` + `receiveWithinIdle
 use them when writing a new accessory. Because an idle window alone is unbounded
 against a relay that trickles messages forever, the loops that could run away also
 take a hard wall-clock ceiling (`maxTotalMs` / `maxPageMs`, default 10x the idle
-window) as a backstop.
+window) as a backstop; a non-positive ceiling means uncapped. The one deliberate
+exception is the write side: `publishAndConfirm`'s `timeoutInSeconds` is a fixed
+window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
 
 ## One-shot reads (subscribe → collect → return)
 
@@ -31,7 +33,7 @@ window) as a backstop.
 | `fetchAll(relay, filter, timeoutMs)` | `NostrClientFetchAllExt` | Get every event matching a filter in one REQ, deduped by id, until EOSE or a full idle window of silence. **No verify, no store** — just the events. |
 | `fetchFirst(relay, filter, timeoutMs)` | `NostrClientFetchFirstExt` | Get the first matching event and stop (returns `null` on none/timeout). |
 | `fetchAllPages(relay, filters, timeoutMs)` | `NostrClientFetchAllPagesExt` | Fully retrieve a result set larger than the relay's per-REQ cap (strfry `limit`, ~500) by walking a `created_at` cursor. Bound it with the filter's `limit`. |
-| `fetchAllPagesFromPool(filters, ...)` | `NostrClientFetchAllPagesPoolExt` | Same paging, across several relays at once, deduped across them. |
+| `fetchAllPagesFromPool(filters, ...)` | `NostrClientFetchAllPagesPoolExt` | Same paging, across several relays at once. No cross-relay dedup — the `WithHooks` variant below dedups. |
 | `fetchAllWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAll` with a suspending per-`(relay, event)` accept hook (verify+store as events arrive), per-relay terminal-reason tracking, optional dead-relay collection (`deadOut` + `classifyDrainFailure`), keep-pending-on-`auth-required` CLOSED (NIP-42 re-fire), and a timeout diagnostic hook. |
 | `fetchAllPagesFromPoolWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAllPagesFromPool` with the same suspending accept hook, run single-threaded in one consumer; deduped across relays by `SeenIds` before the hook. |
 

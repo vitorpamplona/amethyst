@@ -86,7 +86,9 @@ suspend fun INostrClient.fetchAllWithHooks(
      * adversarial or misbehaving relay could pin the caller forever. The cap
      * restores an upper bound while staying far above the idle window, so a
      * legitimately streaming relay still finishes its backlog. Pass
-     * [Long.MAX_VALUE] for a deliberately uncapped drain.
+     * [Long.MAX_VALUE] for a deliberately uncapped drain; a non-positive value
+     * also uncaps (absorbing a `timeoutMs * 10` overflow from an
+     * effectively-infinite idle window).
      */
     maxTotalMs: Long = timeoutMs * 10,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
@@ -144,7 +146,7 @@ suspend fun INostrClient.fetchAllWithHooks(
         coroutineScope {
             subscribe(subscriptionId, filters, listener)
             val watchdog =
-                if (maxTotalMs == Long.MAX_VALUE) {
+                if (maxTotalMs <= 0 || maxTotalMs == Long.MAX_VALUE) {
                     null
                 } else {
                     launch {

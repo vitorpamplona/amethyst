@@ -98,7 +98,8 @@ suspend fun INostrClient.count(
  * results keep trickling in is never cut short; the wait only gives up after a
  * full window with no relay answering. [maxTotalMs] (default 10x the idle
  * window) is the wall-clock ceiling against a misbehaving relay re-sending
- * results forever.
+ * results forever; a non-positive value means uncapped (which also absorbs a
+ * `timeoutMs * 10` overflow from an effectively-infinite idle window).
  *
  * @param filters Map of relay -> filter to count.
  * @param timeoutMs Idle window between responses (default 15 s).
@@ -128,29 +129,32 @@ suspend fun INostrClient.count(
             }
         }
 
-    addConnectionListener(listener)
-
-    filters.forEach { (relay, filterList) ->
-        val subId = newSubId()
-        subIdToRelay[subId] = relay
-        count(subId = subId, filters = mapOf(relay to filterList))
-    }
-
     val results = mutableMapOf<NormalizedRelayUrl, CountResult>()
 
-    // Each receive is bounded by the idle window alone; every arriving result
-    // restarts it on the next loop iteration. The outer ceiling bounds the whole
-    // wait against a relay that keeps re-sending results.
-    withTimeoutOrNull(maxTotalMs) {
-        while (results.size < filters.size) {
-            val next = withTimeoutOrNull(timeoutMs) { resultChannel.receive() } ?: break
-            results[next.first] = next.second
-        }
-    }
+    try {
+        addConnectionListener(listener)
 
-    subIdToRelay.keys.forEach { unsubscribe(it) }
-    removeConnectionListener(listener)
-    resultChannel.close()
+        filters.forEach { (relay, filterList) ->
+            val subId = newSubId()
+            subIdToRelay[subId] = relay
+            count(subId = subId, filters = mapOf(relay to filterList))
+        }
+
+        // Each receive is bounded by the idle window alone; every arriving result
+        // restarts it on the next loop iteration. The outer ceiling bounds the whole
+        // wait against a relay that keeps re-sending results.
+        val ceiling = if (maxTotalMs <= 0) Long.MAX_VALUE else maxTotalMs
+        withTimeoutOrNull(ceiling) {
+            while (results.size < filters.size) {
+                val next = withTimeoutOrNull(timeoutMs) { resultChannel.receive() } ?: break
+                results[next.first] = next.second
+            }
+        }
+    } finally {
+        subIdToRelay.keys.forEach { unsubscribe(it) }
+        removeConnectionListener(listener)
+        resultChannel.close()
+    }
 
     return results
 }

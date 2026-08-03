@@ -241,12 +241,9 @@ suspend fun INostrClient.fetchAllPages(
             // ceiling means uncapped, mirroring the idle window's `<= 0` = disabled
             // convention (it also absorbs a `timeoutMs * 10` overflow from a caller
             // passing an effectively-infinite idle window).
-            if (maxPageMs <= 0 || maxPageMs == Long.MAX_VALUE) {
+            val ceiling = if (maxPageMs <= 0) Long.MAX_VALUE else maxPageMs
+            withTimeoutOrNull(ceiling) {
                 doneChannel.receiveWithinIdle(clock, timeoutMs)
-            } else {
-                withTimeoutOrNull(maxPageMs) {
-                    doneChannel.receiveWithinIdle(clock, timeoutMs)
-                }
             }
 
             unsubscribe(subId)

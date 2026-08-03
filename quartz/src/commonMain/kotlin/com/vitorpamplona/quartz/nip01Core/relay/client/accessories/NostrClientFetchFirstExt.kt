@@ -74,7 +74,9 @@ suspend fun INostrClient.fetchFirst(
  * signal (a terminal state from one relay of many) restarts it, so the fetch only
  * gives up after a full window of total silence. [maxTotalMs] (default 10x the
  * idle window) is the wall-clock ceiling that bounds a relay emitting endless
- * terminal chatter (e.g. a CLOSED/reconnect loop) without ever delivering an event.
+ * terminal chatter (e.g. a CLOSED/reconnect loop) without ever delivering an
+ * event; a non-positive value means uncapped (which also absorbs a
+ * `timeoutMs * 10` overflow from an effectively-infinite idle window).
  */
 suspend fun INostrClient.fetchFirst(
     subscriptionId: String = newSubId(),
@@ -128,7 +130,8 @@ suspend fun INostrClient.fetchFirst(
         // Each wait is bounded by the idle window alone; any arriving signal
         // restarts it on the next loop iteration. The outer ceiling stays far
         // above the window so legitimate multi-relay stragglers still land.
-        withTimeoutOrNull(maxTotalMs) {
+        val ceiling = if (maxTotalMs <= 0) Long.MAX_VALUE else maxTotalMs
+        withTimeoutOrNull(ceiling) {
             while (remaining.isNotEmpty()) {
                 val progressed =
                     withTimeoutOrNull(timeoutMs) {

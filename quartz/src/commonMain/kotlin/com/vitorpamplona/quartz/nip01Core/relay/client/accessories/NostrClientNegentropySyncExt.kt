@@ -1179,7 +1179,3 @@ internal val KEEP_ALIVE_ID = "f".repeat(64)
  */
 private const val DEFAULT_CONNECT_TIMEOUT_MS = 30_000L
 internal const val DEFAULT_DOWNLOAD_IDLE_MS = 60_000L
-
-// IdleClock and receiveWithinIdle — the idle-watchdog primitives this file
-// introduced — now live in IdleWatchdog.kt, shared by every accessory whose
-// timeout is measured from the relay's most recent message.
