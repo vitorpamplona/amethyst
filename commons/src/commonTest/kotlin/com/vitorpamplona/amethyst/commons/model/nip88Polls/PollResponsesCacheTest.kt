@@ -301,6 +301,116 @@ class PollResponsesCacheTest {
         assertSame(first, cache.responses.value)
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Incremental folding: the tally accumulates one response at a time instead of rebuilding, so
+    // anything it forgets to retract stays wrong forever. A rebuild could not get these wrong.
+    // ---------------------------------------------------------------------------------------
+
+    @Test
+    fun reVotingRetractsTheOldOptionEntirely() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.MULTI_CHOICE, codes = setOf("a", "b", "c")))
+        val voter = "b".repeat(64)
+
+        cache.addResponse(multiResponseNote("1".repeat(64), voter, listOf("a", "b"), createdAt = 10))
+        cache.addResponse(multiResponseNote("2".repeat(64), voter, listOf("b", "c"), createdAt = 20))
+
+        val tally = cache.responses.value
+        // "a" was only ever held by this voter, so the key must be gone rather than left empty —
+        // winning() reads every entry and would happily return an option with nobody in it.
+        assertFalse(tally.tally.containsKey("a"))
+        assertEquals(setOf(voter), tally.tally["b"]?.map { it.pubkeyHex }?.toSet())
+        assertEquals(setOf(voter), tally.tally["c"]?.map { it.pubkeyHex }?.toSet())
+        assertEquals(1, tally.totalVoters())
+        assertEquals(2, tally.totalSelections())
+    }
+
+    @Test
+    fun aLaterButInvalidVoteDoesNotSilentlyDropTheVoter() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+        val voter = "b".repeat(64)
+
+        cache.addResponse(responseNote("1".repeat(64), voter, option = "yes", createdAt = 10))
+        // NIP-88 keeps the latest response per author — even when that response casts nothing
+        // countable, it still supersedes the earlier one.
+        cache.addResponse(responseNote("2".repeat(64), voter, option = "bogus", createdAt = 20))
+
+        val tally = cache.responses.value
+        assertEquals(0, tally.totalVoters())
+        assertEquals(1, tally.ignoredVotes)
+        assertFalse(tally.tally.containsKey("yes"))
+    }
+
+    @Test
+    fun deletingTheLatestVoteRestoresThePreviousOne() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+        val voter = "b".repeat(64)
+
+        val first = responseNote("1".repeat(64), voter, option = "yes", createdAt = 10)
+        val second = responseNote("2".repeat(64), voter, option = "no", createdAt = 20)
+        cache.addResponse(first)
+        cache.addResponse(second)
+        assertEquals("no", cache.responses.value.winning())
+
+        cache.removeResponse(second)
+
+        // Removal cannot be folded in — the earlier vote has to be found again — so it rebuilds.
+        assertEquals("yes", cache.responses.value.winning())
+        assertEquals(1, cache.responses.value.totalVoters())
+    }
+
+    @Test
+    fun foldingOneAtATimeMatchesARebuildFromScratch() {
+        val incremental = PollResponsesCache()
+        val pollPolicy = policy(PollType.MULTI_CHOICE, codes = setOf("a", "b", "c"), createdAt = 100, endsAt = 500)
+        incremental.updatePolicy(pollPolicy)
+
+        // A messy but realistic stream: re-votes, a late vote, an invalid code, and duplicates.
+        val notes =
+            listOf(
+                multiResponseNote("1".repeat(64), "b".repeat(64), listOf("a"), createdAt = 150),
+                multiResponseNote("2".repeat(64), "c".repeat(64), listOf("a", "b"), createdAt = 160),
+                multiResponseNote("3".repeat(64), "b".repeat(64), listOf("b", "c"), createdAt = 200),
+                multiResponseNote("4".repeat(64), "d".repeat(64), listOf("zzz"), createdAt = 210),
+                multiResponseNote("5".repeat(64), "e".repeat(64), listOf("c"), createdAt = 900),
+                multiResponseNote("6".repeat(64), "c".repeat(64), listOf("a"), createdAt = 120),
+            )
+        notes.forEach { incremental.addResponse(it) }
+
+        val folded = incremental.responses.value
+        val rebuilt = folded.rebuild()
+
+        assertEquals(rebuilt.totalVoters(), folded.totalVoters())
+        assertEquals(rebuilt.totalSelections(), folded.totalSelections())
+        assertEquals(rebuilt.lateVotes, folded.lateVotes)
+        assertEquals(rebuilt.ignoredVotes, folded.ignoredVotes)
+        assertEquals(rebuilt.winning(), folded.winning())
+        assertEquals(
+            rebuilt.tally.mapValues { entry -> entry.value.map { it.pubkeyHex }.toSet() },
+            folded.tally.mapValues { entry -> entry.value.map { it.pubkeyHex }.toSet() },
+        )
+        assertEquals(
+            rebuilt.votes.mapKeys { it.key.pubkeyHex }.mapValues { it.value.id },
+            folded.votes.mapKeys { it.key.pubkeyHex }.mapValues { it.value.id },
+        )
+    }
+
+    @Test
+    fun aResponseThatChangesNothingDoesNotChurnTheFlow() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE))
+        val note = responseNote("1".repeat(64), "b".repeat(64), option = "yes", createdAt = 10)
+        cache.addResponse(note)
+
+        val before = cache.responses.value
+        cache.addResponse(note) // the same relay echo again
+
+        // Same instance, so every collector stays put instead of recomposing for nothing.
+        assertSame(before, cache.responses.value)
+    }
+
     @Test
     fun voterWhoseVoteWasIgnoredCanStillVote() {
         val cache = PollResponsesCache()

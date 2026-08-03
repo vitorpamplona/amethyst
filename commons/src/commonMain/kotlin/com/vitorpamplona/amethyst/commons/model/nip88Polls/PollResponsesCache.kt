@@ -24,9 +24,12 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.UserDependencies
-import com.vitorpamplona.amethyst.commons.model.latestByAuthor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.PersistentSet
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -41,100 +44,153 @@ class PollResponsesCache : UserDependencies {
             compareByDescending<PollResponseEvent> { it.createdAt }.thenBy { it.id }
     }
 
-    class ResponseTally(
-        val allResponses: List<Note> = emptyList(),
-        /**
-         * The poll's own rules. Null until the kind-1068 event arrives — responses often show up
-         * first — in which case the tally stays permissive rather than dropping votes it cannot
-         * yet validate.
-         */
-        val policy: PollTallyPolicy? = null,
-    ) {
-        /** Responses stamped outside the poll's window, excluded from [votes]. */
-        val lateVotes: Int
+    /**
+     * An immutable snapshot of the tally.
+     *
+     * Built on persistent collections so [add] can fold one response in while sharing structure
+     * with the snapshot the UI is still reading. Rebuilding from scratch per arrival — the obvious
+     * implementation — is O(n) each time and therefore O(n²) across a poll's lifetime; a backfill
+     * draining a few thousand votes turns that into millions of map operations and one full copy
+     * per event.
+     */
+    class ResponseTally
+        private constructor(
+            val allResponses: PersistentSet<Note>,
+            /**
+             * The poll's own rules. Null until the kind-1068 event arrives — responses often show
+             * up first — in which case the tally stays permissive rather than dropping votes it
+             * cannot yet validate.
+             */
+            val policy: PollTallyPolicy?,
+            /** One response per author — the latest one that is actually eligible. */
+            val votes: PersistentMap<User, PollResponseEvent>,
+            /** Option code -> the voters who picked it. */
+            val tally: PersistentMap<String, PersistentSet<User>>,
+            /** Voters whose response cast at least one valid option code. */
+            val countedVoters: PersistentSet<User>,
+            /** Responses stamped outside the poll's window, excluded from [votes]. */
+            val lateVotes: Int,
+        ) {
+            constructor() : this(
+                persistentSetOf(),
+                null,
+                persistentMapOf(),
+                persistentMapOf(),
+                persistentSetOf(),
+                0,
+            )
 
-        /** Voters whose response cast no valid option code at all, excluded from [tally]. */
-        val ignoredVotes: Int
+            /** Voters whose response cast no valid option code at all, excluded from [tally]. */
+            val ignoredVotes: Int get() = votes.size - countedVoters.size
 
-        /** One response per author — the latest one that is actually eligible. */
-        val votes: Map<User, PollResponseEvent>
+            fun winning() = tally.maxByOrNull { it.value.size }?.key
 
-        /** Option code -> the voters who picked it. */
-        val tally: Map<String, Set<User>>
+            /**
+             * Distinct people whose vote counts. This is the denominator for every percentage: on a
+             * multiple-choice poll someone who ticks three boxes is still one voter, so the bars
+             * read as "share of people" and may sum past 100%.
+             */
+            fun totalVoters() = countedVoters.size
 
-        /** Voters whose response cast at least one valid option code. */
-        val countedVoters: Set<User>
+            /** Boxes ticked across all voters. Equal to [totalVoters] on a single-choice poll. */
+            fun totalSelections() = tally.entries.sumOf { it.value.size }
 
-        init {
-            var late = 0
-            val eligible =
-                if (policy == null) {
-                    allResponses
-                } else {
-                    allResponses.filter { note ->
-                        val event = note.event
-                        val inWindow = event !is PollResponseEvent || policy.isInWindow(event.createdAt)
-                        if (!inWindow) late++
-                        inWindow
+            /** The option codes this response actually casts under the current rules. */
+            private fun accepted(event: PollResponseEvent): Set<String> {
+                val codes = event.responses()
+                return policy?.accept(codes) ?: codes.toSet()
+            }
+
+            private fun withVoteRemoved(
+                user: User,
+                event: PollResponseEvent,
+            ): Pair<PersistentMap<String, PersistentSet<User>>, PersistentSet<User>> {
+                var newTally = tally
+                accepted(event).forEach { code ->
+                    val remaining = newTally[code]?.remove(user)
+                    newTally =
+                        when {
+                            remaining == null -> newTally
+                            // Drop the key rather than leave an empty set: winning() and
+                            // totalSelections() both read every entry.
+                            remaining.isEmpty() -> newTally.remove(code)
+                            else -> newTally.put(code, remaining)
+                        }
+                }
+                return newTally to countedVoters.remove(user)
+            }
+
+            /**
+             * Folds one response in, returning `this` unchanged when it adds nothing — which lets
+             * the caller skip an emission rather than churn every collector.
+             */
+            fun add(note: Note): ResponseTally {
+                if (note in allResponses) return this
+
+                val withNote = allResponses.add(note)
+                val event =
+                    note.event as? PollResponseEvent
+                        ?: return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes)
+
+                if (policy != null && !policy.isInWindow(event.createdAt)) {
+                    return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes + 1)
+                }
+
+                val author = note.author ?: return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes)
+
+                // Latest-per-author, ties keeping the one already held — same rule as latestByAuthor.
+                val current = votes[author]
+                if (current != null && current.createdAt >= event.createdAt) {
+                    return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes)
+                }
+
+                // A re-vote has to retract the old one first, or the voter lingers in the options
+                // they used to hold.
+                var newTally = tally
+                var newVoters = countedVoters
+                if (current != null) {
+                    val (t, v) = withVoteRemoved(author, current)
+                    newTally = t
+                    newVoters = v
+                }
+
+                val codes = accepted(event)
+                if (codes.isNotEmpty()) {
+                    newVoters = newVoters.add(author)
+                    codes.forEach { code ->
+                        newTally = newTally.put(code, (newTally[code] ?: persistentSetOf()).add(author))
                     }
                 }
 
-            lateVotes = late
-            votes = eligible.latestByAuthor()
-
-            val counted = mutableMapOf<String, MutableSet<User>>()
-            val voters = mutableSetOf<User>()
-            votes.forEach { (user, responseEvent) ->
-                val codes = responseEvent.responses()
-                val accepted = policy?.accept(codes) ?: codes.toSet()
-                if (accepted.isNotEmpty()) {
-                    voters.add(user)
-                    accepted.forEach { code -> counted.getOrPut(code) { mutableSetOf() }.add(user) }
-                }
+                return ResponseTally(withNote, policy, votes.put(author, event), newTally, newVoters, lateVotes)
             }
 
-            ignoredVotes = votes.size - voters.size
-            countedVoters = voters
-            tally = counted
+            /**
+             * Rebuilds from a response set — the O(n) path, used when a response disappears or the
+             * rules change under us. Both are rare; incremental removal would need a per-author
+             * index to find the next-latest vote, which is not worth carrying for a delete.
+             */
+            fun rebuild(
+                responses: PersistentSet<Note> = allResponses,
+                newPolicy: PollTallyPolicy? = policy,
+            ): ResponseTally {
+                var rebuilt = ResponseTally(persistentSetOf(), newPolicy, persistentMapOf(), persistentMapOf(), persistentSetOf(), 0)
+                responses.forEach { rebuilt = rebuilt.add(it) }
+                return rebuilt
+            }
         }
-
-        fun winning() = tally.maxByOrNull { it.value.size }?.key
-
-        /**
-         * Distinct people whose vote counts. This is the denominator for every percentage: on a
-         * multiple-choice poll someone who ticks three boxes is still one voter, so the bars read
-         * as "share of people" and may sum past 100%.
-         */
-        fun totalVoters() = countedVoters.size
-
-        /** Boxes ticked across all voters. Equal to [totalVoters] on a single-choice poll. */
-        fun totalSelections() = tally.entries.sumOf { it.value.size }
-    }
 
     val responses = MutableStateFlow(ResponseTally())
 
     fun addResponse(note: Note) {
-        // if it's already there, quick exit
-        if (responses.value.allResponses.contains(note)) return
-
-        responses.update {
-            ResponseTally(
-                it.allResponses + note,
-                it.policy,
-            )
-        }
+        responses.update { it.add(note) }
     }
 
     fun removeResponse(deleteNote: Note) {
         // if it's not already there, quick exit
-        if (!responses.value.allResponses.contains(deleteNote)) return
+        if (deleteNote !in responses.value.allResponses) return
 
-        responses.update {
-            ResponseTally(
-                it.allResponses - deleteNote,
-                it.policy,
-            )
-        }
+        responses.update { it.rebuild(responses = it.allResponses.remove(deleteNote)) }
     }
 
     /**
@@ -144,9 +200,7 @@ class PollResponsesCache : UserDependencies {
     fun updatePolicy(newPolicy: PollTallyPolicy) {
         if (responses.value.policy == newPolicy) return
 
-        responses.update {
-            ResponseTally(it.allResponses, newPolicy)
-        }
+        responses.update { it.rebuild(newPolicy = newPolicy) }
     }
 
     fun ResponseTally.filterTo(
