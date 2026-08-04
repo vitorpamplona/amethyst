@@ -194,7 +194,7 @@ class RelayProber(
         timeoutMs: Long = 15_000,
         waveSize: Int = 1000,
         readLimit: Int = 1,
-        readKinds: List<Int>? = null,
+        readKinds: List<Int>? = listOf(0),
     ): Map<NormalizedRelayUrl, ReadWriteVerdict> {
         val out = HashMap<NormalizedRelayUrl, ReadWriteVerdict>()
         val distinct = relays.toSet()
@@ -348,15 +348,15 @@ class RelayProber(
          * than a liveness ping — the time still counts from the wave start (dial
          * included), so compare it against [Verdict.rttOpenMs], not across waves.
          *
-         * [kinds] widens compatibility with purpose relays: some (purplepag.es)
-         * reject any REQ that names no kind with `blocked: filters must specify at
-         * least one kind`, which leaves their read side unobserved. Passing e.g.
-         * `listOf(0, 1)` satisfies them; the default stays kind-less because a
-         * kind list also narrows the query on every OTHER relay.
+         * [kinds] defaults to kind 0: purpose relays (purplepag.es) reject any REQ
+         * that names no kind with `blocked: filters must specify at least one kind`,
+         * and practically every relay stores SOME profile — so a kind-0, limit-1
+         * query works everywhere. Pass a different list to probe a specific shelf,
+         * or null for a kind-less query on relays known to allow one.
          */
         fun readTestFilter(
             limit: Int = 1,
-            kinds: List<Int>? = null,
+            kinds: List<Int>? = listOf(0),
         ) = listOf(Filter(kinds = kinds, limit = limit))
 
         /**

@@ -227,6 +227,7 @@ class RelayProberFlowTest {
                 delay(10)
                 val sent = client.sentFilters!![fast]!!.single()
                 assertEquals(1, sent.limit, "read test defaults to limit 1")
+                assertEquals(listOf(0), sent.kinds, "read test defaults to kind 0 — accepted by purpose relays too")
                 assertNull(sent.ids, "read test must query real events, not the impossible id")
                 client.listener!!.onEose(fast, null)
             }
