@@ -29,10 +29,14 @@ object FiltersChanged {
     ): Boolean {
         if (oldFilters.size != newFilters.size) return true
 
-        oldFilters.forEachIndexed { index, oldFilter ->
-            val newFilter = newFilters.getOrNull(index) ?: return true
-
-            return needsToResendRequest(oldFilter, newFilter)
+        // Every filter must be compared. This used to be a forEachIndexed whose body
+        // `return`ed on the first iteration — a non-local return from this function — so
+        // only filters[0] was ever checked and a subscription whose first filter happened
+        // to be unchanged reported "no resend needed" however much the rest had changed,
+        // leaving the relay serving a stale filter set.
+        // Indexing is safe: the sizes were just proven equal.
+        for (i in oldFilters.indices) {
+            if (needsToResendRequest(oldFilters[i], newFilters[i])) return true
         }
         return false
     }
