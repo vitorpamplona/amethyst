@@ -194,12 +194,13 @@ class RelayProber(
         timeoutMs: Long = 15_000,
         waveSize: Int = 1000,
         readLimit: Int = 1,
+        readKinds: List<Int>? = null,
     ): Map<NormalizedRelayUrl, ReadWriteVerdict> {
         val out = HashMap<NormalizedRelayUrl, ReadWriteVerdict>()
         val distinct = relays.toSet()
         for ((waveIndex, wave) in distinct.chunked(waveSize.coerceAtLeast(1)).withIndex()) {
             val reads = HashMap<NormalizedRelayUrl, Long>()
-            probeWave(wave, timeoutMs, readTestFilter(readLimit)) { reads[it.relay] = it.rttEoseMs }
+            probeWave(wave, timeoutMs, readTestFilter(readLimit, readKinds)) { reads[it.relay] = it.rttEoseMs }
 
             // A distinct event id per wave (createdAt has second granularity, so the
             // content must vary) keeps a straggler OK from an earlier wave's relays
@@ -346,8 +347,17 @@ class RelayProber(
          * [filters] to turn [Verdict.rttEoseMs] into a genuine read test rather
          * than a liveness ping — the time still counts from the wave start (dial
          * included), so compare it against [Verdict.rttOpenMs], not across waves.
+         *
+         * [kinds] widens compatibility with purpose relays: some (purplepag.es)
+         * reject any REQ that names no kind with `blocked: filters must specify at
+         * least one kind`, which leaves their read side unobserved. Passing e.g.
+         * `listOf(0, 1)` satisfies them; the default stays kind-less because a
+         * kind list also narrows the query on every OTHER relay.
          */
-        fun readTestFilter(limit: Int = 1) = listOf(Filter(limit = limit))
+        fun readTestFilter(
+            limit: Int = 1,
+            kinds: List<Int>? = null,
+        ) = listOf(Filter(kinds = kinds, limit = limit))
 
         /**
          * The relay universe the local store knows: every read/write relay advertised
