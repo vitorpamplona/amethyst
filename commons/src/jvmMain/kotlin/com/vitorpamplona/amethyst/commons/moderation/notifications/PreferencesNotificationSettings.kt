@@ -53,7 +53,19 @@ class PreferencesNotificationSettings(
     override fun setEnabled(v: Boolean) {
         _enabled.value = v
         prefs.putBoolean(KEY_ENABLED, v)
+        // Track explicit user intent so the Settings screen can auto-enable
+        // on next visit for users who never touched the switch, while
+        // respecting users who deliberately turned it off. Only false
+        // → "explicit disable"; going from off to on clears the flag so
+        // subsequent auto-enable heuristics work normally.
+        if (v) {
+            prefs.remove(KEY_EXPLICITLY_DISABLED)
+        } else {
+            prefs.putBoolean(KEY_EXPLICITLY_DISABLED, true)
+        }
     }
+
+    override fun wasExplicitlyDisabled(): Boolean = prefs.getBoolean(KEY_EXPLICITLY_DISABLED, false)
 
     override fun setKindToggle(
         kind: NotifKind,
@@ -92,6 +104,7 @@ class PreferencesNotificationSettings(
     companion object {
         const val NODE = "com/vitorpamplona/amethyst/notifications"
         private const val KEY_ENABLED = "enabled"
+        private const val KEY_EXPLICITLY_DISABLED = "explicitly_disabled"
         private const val KEY_DND_UNTIL = "dnd_until"
         private const val KEY_PREVIEW = "preview_in_toast"
 
