@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
@@ -50,6 +51,7 @@ import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayProber
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 
 /**
  * `amy relay …` — manage every relay list this account maintains, mirroring
@@ -112,10 +114,12 @@ object RelayCommands {
         |  relay info URL                fetch + print a relay's NIP-11 info document (stateless)
         |  relay probe [--timeout SECS]  relay census: mass-connect every relay the store
         |    [--concurrency N]            knows and record live/dead + measured rtt-open
-        |                                 into the reachability cache (NIP-66 kind:30166),
+        |    [--file PATH]                into the reachability cache (NIP-66 kind:30166),
         |                                 so reachability-aware commands (graperank crawl/
         |                                 refresh) skip dead relays and wait once
-        |                                 (--timeout: per wave, default 15s)
+        |                                 (--timeout: per wave, default 15s; --file: also
+        |                                 probe candidate urls, one per line, each run
+        |                                 through the relay url normalizer first)
         """.trimMargin()
 
     // ------------------------------------------------------------------
@@ -337,12 +341,36 @@ object RelayCommands {
         // Relays dialed at once; --relay-concurrency accepted as the alias the
         // graperank verbs spell it with.
         val waveSize = args.intFlag("concurrency", args.intFlag("relay-concurrency", Context.defaultPreconnectCap))
+        // Optional external candidate list: one raw url per line, run through the
+        // same RelayUrlNormalizer the app uses, so a probe doubles as a census of
+        // how a corpus of relay hints normalizes (rejects are counted, not dialed).
+        val fromFile = args.flag("file")
         args.rejectUnknown()
+
+        var fileRaw = 0
+        var fileRejected = 0
+        val fileRelays = HashSet<NormalizedRelayUrl>()
+        if (fromFile != null) {
+            File(fromFile).forEachLine { line ->
+                if (line.isBlank()) return@forEachLine
+                fileRaw++
+                val normalized = line.normalizeRelayUrlOrNull()
+                if (normalized == null) {
+                    fileRejected++
+                } else if (!RelayUrlNormalizer.isOnion(normalized.url)) {
+                    fileRelays.add(normalized)
+                }
+            }
+            System.err.println(
+                "[relay-probe] $fromFile: $fileRaw urls → ${fileRelays.size} unique clearnet relays " +
+                    "($fileRejected rejected by the normalizer)",
+            )
+        }
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
             val cached = ctx.reachability.snapshot()
-            val universe = RelayProber.knownRelayUniverse(ctx.store) + cached.live + cached.dead
+            val universe = RelayProber.knownRelayUniverse(ctx.store) + cached.live + cached.dead + fileRelays
             if (universe.isEmpty()) {
                 Output.emit(
                     linkedMapOf<String, Any?>(
@@ -381,6 +409,9 @@ object RelayCommands {
             Output.emit(
                 linkedMapOf<String, Any?>(
                     "probed" to result.verdicts.size,
+                    "file_urls" to (if (fromFile != null) fileRaw else null),
+                    "file_normalized" to (if (fromFile != null) fileRelays.size else null),
+                    "file_rejected" to (if (fromFile != null) fileRejected else null),
                     "reachable" to result.reachable.size,
                     "dead" to result.dead.size,
                     "closed_by_policy" to authWalled,
