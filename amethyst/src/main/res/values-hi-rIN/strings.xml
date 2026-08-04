@@ -332,7 +332,7 @@
     <string name="concord_leave_title">क्या समुदाय छोडें।</string>
     <string name="concord_leave_message">क्या %1$s छोडें। इसे हटाया जाएगा इस लेखा की सूची से तथा आपके यन्त्रों पर समचरणीकरण रुक जाएगा। समुदाय को सूचित नहीं किया जाएगा। तथा आपको उसके सदस्य कार्यसूची से हटाया नहीं जाएगा। सन्देश जिनका आप अरहस्यीकरण नहीं कर सकेंगे सम्भाव्यतः पुनःप्राप्तव्य नहीं होंगे। तथा आप केवल नए आमन्त्रण के साथ लौट सकेंगे।</string>
     <string name="concord_leave_owner_warning">आपने इस समुदाय को बनाया। छोड जाने से यह मिटेगा नहीं। किसी अन्य के हाथ सौंपा नहीं जाएगा। परन्तु स्वत्वधारी कुंचिका जो आपकी सूची में हैं वह हटाया जाएगा। आप आगे से इसका प्रबन्धन नहीं कर पाएँगे।</string>
-    <string name="concord_edit_relays_desc">जहाँ इस समुदाय के रहस्यीकृत पत्रों का प्रकाशन तथा पठन किया जाता है।</string>
+    <string name="concord_edit_relays_desc">जहाँ इस समुदाय के रहस्यीकृत समतलों का प्रकाशन तथा पठन किया जाता है।</string>
     <string name="concord_dissolved_read_only">इस समुदाय को विघटित किया गया है तथा अब पठनेवशक्य है। आप इसका इतिहास पढ सकते हैं परन्तु कोई नए सन्देश नहीं भेज सकते।</string>
     <string name="concord_typing_one">%1$s टंकण मध्य…</string>
     <string name="concord_typing_two">%1$s तथा %2$s टंकण मध्य…</string>
@@ -1233,7 +1233,7 @@
     <string name="nest_participant_unmute">मौन हटाएँ</string>
     <string name="nest_force_mute_note">सम्भाव्यतः उन ग्राहकों द्वारा उपेक्षित जो आज्ञा का सम्मान नहीं करते।</string>
     <string name="nest_confirm_kick_title">क्या शाला से निष्कासित करें।</string>
-    <string name="nest_confirm_kick_body">%1$s को ध्वनि तल से हटाए जाएँगे तथा सहभागी सूची से भी। वे पुनः जुड सकते हैं यदि वे शाला योजक प्राप्त कर लें।</string>
+    <string name="nest_confirm_kick_body">%1$s को ध्वनि समतल से हटाए जाएँगे तथा सहभागी सूची से भी। वे पुनः जुड सकते हैं यदि वे शाला योजक प्राप्त कर लें।</string>
     <string name="nest_confirm_kick_confirm">पदप्रहार</string>
     <string name="nest_confirm_force_mute_title">क्या वक्ता को मौन करें।</string>
     <string name="nest_confirm_force_mute_body">%1$s के ग्राहक को अपना ध्वनिग्राहक मौन करने का अनुरोध करता है। कुछ ग्राहक इस आदेश की उपेक्षा कर सकते हैं।</string>
@@ -1991,7 +1991,7 @@
     <string name="relay_explain_notifications">आपके आगतपेटिका पुनःप्रसारक तथा कुछ अल्पमात्रा परिभ्रमणवर्ती दृष्टान्त पुनःप्रसारक जिनपर आपके अनुचरित पत्र प्रकाशित करते हैं। यदि कोई उल्लेख अन्यत्र भेजा गया।</string>
     <string name="relay_explain_direct_messages">आपके सीधासन्देश पुनःप्रसारक। जहाँ उपहारकोषयुक्त सन्देश भेजे जाते हैं।</string>
     <string name="relay_explain_public_chats">मुख्य पुनःप्रसारक प्रत्येक चर्चा का जिन्हें आप खोल रखे हैं अथवा जिनसे आप जुड चुके हैं।</string>
-    <string name="relay_explain_community_chats">पुनःप्रसारक जिनपर प्रत्येक समुदाय अपने पत्र प्रकाशित करते हैं।</string>
+    <string name="relay_explain_community_chats">पुनःप्रसारक जिनपर प्रत्येक समुदाय अपने समतलों को प्रकाशित करते हैं।</string>
     <string name="relay_explain_encrypted_groups">समूह सन्देश तथा कुंचिकापेटलियाँ। प्रत्येक समूह के पुनःप्रसारकों पर।</string>
     <string name="relay_explain_live_rooms">शाला के पुनःप्रसारक। जब वह खुला हो।</string>
     <string name="relay_explain_account_data">आपके अपने परिचय तथा स्थापना विकल्प तथा पाण्डुलिपियाँ। आपके मुख्य पुनःप्रसारकों पर।</string>
