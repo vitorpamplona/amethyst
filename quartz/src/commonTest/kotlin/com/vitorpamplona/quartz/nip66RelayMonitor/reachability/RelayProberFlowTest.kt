@@ -49,6 +49,7 @@ class RelayProberFlowTest {
     /** Captures the probe subscription so the test can play the relays. */
     private class ScriptedClient : INostrClient by EmptyNostrClient() {
         var listener: SubscriptionListener? = null
+        var sentFilters: Map<NormalizedRelayUrl, List<Filter>>? = null
 
         override fun subscribe(
             subId: String,
@@ -56,6 +57,7 @@ class RelayProberFlowTest {
             listener: SubscriptionListener?,
         ) {
             this.listener = listener
+            this.sentFilters = filters
         }
     }
 
@@ -138,6 +140,55 @@ class RelayProberFlowTest {
             assertEquals("cannot:dns failure", verdict.error)
             assertTrue(at < 1_000, "a failed dial must not wait for the deadline, arrived at ${at}ms")
         }
+
+    // ------------------------------------------------------------------
+    // Check options — liveness default, read-test override, write-test event
+    // ------------------------------------------------------------------
+
+    @Test
+    fun livenessFilterIsTheDefaultCheck() =
+        runTest {
+            val client = ScriptedClient()
+            val collector =
+                launch {
+                    RelayProber(client).probeFlow(listOf(fast), timeoutMs = 1_000).collect {}
+                }
+            launch {
+                delay(10)
+                assertEquals(RelayProber.LIVENESS_FILTERS, client.sentFilters!![fast])
+                client.listener!!.onEose(fast, null)
+            }
+            collector.join()
+        }
+
+    @Test
+    fun readTestFilterIsSentWhenChosen() =
+        runTest {
+            val client = ScriptedClient()
+            val collector =
+                launch {
+                    RelayProber(client)
+                        .probeFlow(listOf(fast), timeoutMs = 1_000, filters = RelayProber.readTestFilter())
+                        .collect {}
+                }
+            launch {
+                delay(10)
+                val sent = client.sentFilters!![fast]!!.single()
+                assertEquals(1, sent.limit, "read test defaults to limit 1")
+                assertNull(sent.ids, "read test must query real events, not the impossible id")
+                client.listener!!.onEose(fast, null)
+            }
+            collector.join()
+        }
+
+    @Test
+    fun writeTestEventIsEphemeralAndSelfExpiring() {
+        val template = RelayProbeWriteTest.build(createdAt = 5000)
+
+        assertEquals(20166, template.kind)
+        assertTrue(template.kind in 20000..29999, "the write probe must be an ephemeral kind")
+        assertTrue(listOf("expiration", "5060") in template.tags.map { it.toList() })
+    }
 
     // ------------------------------------------------------------------
     // toDiscoveryEventTemplate — only observed facts become tags

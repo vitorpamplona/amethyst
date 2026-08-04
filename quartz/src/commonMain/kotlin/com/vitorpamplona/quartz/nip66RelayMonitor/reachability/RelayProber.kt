@@ -100,18 +100,24 @@ class RelayProber(
     /**
      * Probe every relay in [relays], [waveSize] at a time, giving each wave up to
      * [timeoutMs] to reach terminals. Returns one [Verdict] per input relay.
+     *
+     * [filters] is the REQ each relay is asked to answer. The default
+     * [LIVENESS_FILTERS] matches nothing, so an EOSE proves liveness without
+     * streaming a payload; pass [readTestFilter] to make [Verdict.rttEoseMs] a
+     * real read test instead (the relay must query and stream an actual event).
      */
     suspend fun probe(
         relays: Collection<NormalizedRelayUrl>,
         timeoutMs: Long = 15_000,
         waveSize: Int = 1000,
+        filters: List<Filter> = LIVENESS_FILTERS,
     ): Result {
         val mark = TimeSource.Monotonic.markNow()
         val all = ArrayList<Verdict>(relays.size)
         val distinct = relays.toSet()
         var done = 0
         for (wave in distinct.chunked(waveSize.coerceAtLeast(1))) {
-            probeWave(wave, timeoutMs) { all += it }
+            probeWave(wave, timeoutMs, filters) { all += it }
             done += wave.size
             if (distinct.size > wave.size) {
                 val liveSoFar = all.count { it.reachable }
@@ -127,6 +133,9 @@ class RelayProber(
      * as its EOSE/CLOSED/connect-failure lands, not when the whole census ends. Only
      * relays that stay silent wait for their wave's [timeoutMs] deadline.
      *
+     * [filters] picks the check, as in [probe]: [LIVENESS_FILTERS] (default) or
+     * [readTestFilter].
+     *
      * Probing starts when the flow is collected and pauses between waves while the
      * collector is busy (emission is sequential). Pair each verdict with
      * [toDiscoveryEventTemplate] to turn the stream into signable NIP-66 kind:30166
@@ -136,16 +145,18 @@ class RelayProber(
         relays: Collection<NormalizedRelayUrl>,
         timeoutMs: Long = 15_000,
         waveSize: Int = 1000,
+        filters: List<Filter> = LIVENESS_FILTERS,
     ): Flow<Verdict> =
         flow {
             for (wave in relays.toSet().chunked(waveSize.coerceAtLeast(1))) {
-                probeWave(wave, timeoutMs) { emit(it) }
+                probeWave(wave, timeoutMs, filters) { emit(it) }
             }
         }
 
     private suspend fun probeWave(
         wave: List<NormalizedRelayUrl>,
         timeoutMs: Long,
+        filters: List<Filter>,
         onVerdict: suspend (Verdict) -> Unit,
     ) {
         val mark = TimeSource.Monotonic.markNow()
@@ -230,7 +241,7 @@ class RelayProber(
 
         client.addConnectionListener(connListener)
         try {
-            client.subscribe(subId, wave.associateWith { PROBE_FILTERS }, subListener)
+            client.subscribe(subId, wave.associateWith { filters }, subListener)
             val remaining = wave.toMutableSet()
             while (remaining.isNotEmpty()) {
                 val left = timeoutMs - mark.elapsedNow().inWholeMilliseconds
@@ -251,10 +262,21 @@ class RelayProber(
     }
 
     companion object {
-        // A filter no event can match (ids are 64-hex of a hash): the relay answers
-        // with an immediate EOSE and never streams a payload. Same trick as the
-        // crawler's warm pool.
-        private val PROBE_FILTERS = listOf(Filter(ids = listOf("0".repeat(64))))
+        /**
+         * A filter no event can match (ids are 64-hex of a hash): the relay answers
+         * with an immediate EOSE and never streams a payload. Same trick as the
+         * crawler's warm pool. This is the default check — pure liveness.
+         */
+        val LIVENESS_FILTERS = listOf(Filter(ids = listOf("0".repeat(64))))
+
+        /**
+         * A REQ the relay must actually WORK for: query its store and stream up to
+         * [limit] real events before the EOSE. Pass to [probe]/[probeFlow] as
+         * [filters] to turn [Verdict.rttEoseMs] into a genuine read test rather
+         * than a liveness ping — the time still counts from the wave start (dial
+         * included), so compare it against [Verdict.rttOpenMs], not across waves.
+         */
+        fun readTestFilter(limit: Int = 1) = listOf(Filter(limit = limit))
 
         /**
          * The relay universe the local store knows: every read/write relay advertised
