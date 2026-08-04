@@ -23,6 +23,7 @@ package com.vitorpamplona.geode.mirror
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.SyncCoverage
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySyncOrFetch
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -159,6 +160,13 @@ class MirrorWorker(
      * transparent and needs no separate toggle.
      */
     private val negentropyBackfill: Boolean = false,
+    /**
+     * Resume memory for the down catch-up, shared across upstreams and — via
+     * [SyncCoverageFile] — across restarts. Null keeps the old behavior:
+     * every boot re-syncs the whole backfill window, which for an upstream
+     * without NIP-77 is a full re-download.
+     */
+    private val coverage: SyncCoverage? = null,
 ) : AutoCloseable {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -200,6 +208,14 @@ class MirrorWorker(
 
     /** Events the store rejected — mostly duplicate replays after a reconnect. */
     val rejected = AtomicLong(0)
+
+    /**
+     * Good events the store could not write ([IEventStore.InsertOutcome.Failed]).
+     * The store's fault, not the event's, and nothing re-offers them — counted
+     * apart from [rejected] so a schema drift reads as store damage rather
+     * than as upstreams sending junk.
+     */
+    val failed = AtomicLong(0)
 
     /**
      * Deliveries dropped before ever reaching the store: events outside
@@ -304,7 +320,7 @@ class MirrorWorker(
                                 // The store's error, not the event's: the event
                                 // was good and nothing will re-offer it. Louder
                                 // than a rejection on purpose.
-                                rejected.incrementAndGet()
+                                failed.incrementAndGet()
                                 Log.w("MirrorWorker") { "store failed ${msg.event.id}: ${outcome.reason}" }
                             }
                         }
@@ -419,11 +435,21 @@ class MirrorWorker(
         initialSince: Long,
         until: Long,
     ) {
-        val catchUpFilter = scopedBase.copy(since = initialSince, until = until)
-        // Reconcile against what we already hold in this window → download only
-        // the diff (like `strfry sync`). No store wired → empty local set → the
-        // whole window is downloaded and the store's unique-id constraint dedups.
-        val localEntries = store?.snapshotIdsForNegentropy(listOf(catchUpFilter)) ?: emptyList()
+        // Resume memory: coverage is keyed on the STABLE scoped filter, never
+        // on the boot window — whose since/until change every start and would
+        // never match a stored band. The window only slides forward
+        // (initialSince = boot − backfillSeconds), so a band recorded against
+        // an earlier boot's lower floor never licenses skipping a range this
+        // boot can ask about but the last one could not.
+        val legs =
+            coverage
+                ?.legs(up.url, scopedBase)
+                ?.mapNotNull { clampToWindow(it, initialSince, until) }
+                ?: listOf(scopedBase.copy(since = initialSince, until = until))
+        if (legs.isEmpty()) {
+            Log.i("MirrorWorker") { "catch-up from ${up.url.url}: window already covered - nothing outside the synced band" }
+            return
+        }
 
         // Bounded hand-off → one ingest consumer. `onEvent` can't suspend, so it
         // blocks here when the sink falls behind; because negentropySyncOrFetch's
@@ -439,7 +465,7 @@ class MirrorWorker(
                                 IEventStore.InsertOutcome.Accepted -> accepted.incrementAndGet()
                                 is IEventStore.InsertOutcome.Rejected -> rejected.incrementAndGet()
                                 is IEventStore.InsertOutcome.Failed -> {
-                                    rejected.incrementAndGet()
+                                    failed.incrementAndGet()
                                     Log.w("MirrorWorker") { "store failed ${event.id}: ${outcome.reason}" }
                                 }
                             }
@@ -454,24 +480,59 @@ class MirrorWorker(
             }
 
         try {
-            val result =
-                client.negentropySyncOrFetch(
-                    relay = up.url,
-                    filter = catchUpFilter,
-                    localEntries = localEntries,
-                    onEvent = { event ->
-                        // Same containment as the live path: even a trusted
-                        // upstream may only inject events inside the declared scope.
-                        if (up.filter == null || up.filter.match(event)) {
-                            handoff.trySendBlocking(event)
-                        } else {
-                            filtered.incrementAndGet()
-                        }
-                    },
+            var downloaded = 0
+            var paged = false
+            for (leg in legs) {
+                // Reconcile against what we already hold in this leg → download
+                // only the diff (like `strfry sync`). No store wired → empty
+                // local set → the whole leg is downloaded and the store's
+                // unique-id constraint dedups.
+                val localEntries = store?.snapshotIdsForNegentropy(listOf(leg)) ?: emptyList()
+                // Coverage is stamped from when the local ids were read — that
+                // is the state the relay is being compared against.
+                val syncStartedAt = TimeUtils.now()
+                var seenMin: Long? = null
+                var seenMax: Long? = null
+                val result =
+                    client.negentropySyncOrFetch(
+                        relay = up.url,
+                        filter = leg,
+                        localEntries = localEntries,
+                        onEvent = { event ->
+                            // Same containment as the live path: even a trusted
+                            // upstream may only inject events inside the declared scope.
+                            if (up.filter == null || up.filter.match(event)) {
+                                // Only plausible stamps widen a band — one
+                                // misdated event must not discard the rest.
+                                if (SyncCoverage.isPlausible(event.createdAt)) {
+                                    seenMin = minOf(seenMin ?: event.createdAt, event.createdAt)
+                                    seenMax = maxOf(seenMax ?: event.createdAt, event.createdAt)
+                                }
+                                handoff.trySendBlocking(event)
+                            } else {
+                                filtered.incrementAndGet()
+                            }
+                        },
+                    )
+                downloaded += result.downloaded
+                paged = paged || result.pagedFallback
+                // Recorded per leg, so a failure between legs keeps the ground
+                // the first one gained. A clean reconcile is complete through
+                // the instant its snapshot was read; a paged fallback earns
+                // only the span it actually saw.
+                coverage?.record(
+                    up.url,
+                    scopedBase,
+                    seenMin,
+                    seenMax,
+                    paged = result.pagedFallback,
+                    reconciledThrough = if (result.pagedFallback) null else syncStartedAt,
                 )
+            }
             Log.i("MirrorWorker") {
-                val how = if (result.pagedFallback) "paged REQ (upstream has no NIP-77)" else "negentropy"
-                "catch-up from ${up.url.url}: ${result.downloaded} events via $how"
+                val how = if (paged) "paged REQ (upstream has no NIP-77)" else "negentropy"
+                val resumed = if (coverage != null && legs.size > 1) " [resumed: ${legs.size} legs outside the synced band]" else ""
+                "catch-up from ${up.url.url}: $downloaded events via $how$resumed"
             }
         } catch (e: CancellationException) {
             throw e
@@ -730,4 +791,21 @@ class MirrorWorker(
         /** Settle time between an up-push and the next verifying reconcile. */
         const val UP_SYNC_SETTLE_MS = 1_500L
     }
+}
+
+/**
+ * [leg] intersected with the boot window `[since, until]`, or null when the
+ * band already covers everything this window could ask. Coverage legs come
+ * off the stable scoped filter and are unbounded on one side; the catch-up
+ * only ever asks inside its own window.
+ */
+internal fun clampToWindow(
+    leg: Filter,
+    since: Long,
+    until: Long,
+): Filter? {
+    val newSince = maxOf(leg.since ?: since, since)
+    val newUntil = minOf(leg.until ?: until, until)
+    if (newSince > newUntil) return null
+    return leg.copy(since = newSince, until = newUntil)
 }

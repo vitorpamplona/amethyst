@@ -28,6 +28,7 @@ import com.vitorpamplona.geode.config.StaticConfig
 import com.vitorpamplona.geode.mirror.MirrorDirection
 import com.vitorpamplona.geode.mirror.MirrorUpstream
 import com.vitorpamplona.geode.mirror.MirrorWorker
+import com.vitorpamplona.geode.mirror.SyncCoverageFile
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -411,6 +412,16 @@ private fun serve(args: Array<String>) {
     require(upstreams.none { it.url.displayUrl() == advertisedIdentity }) {
         "[[mirror]] must not list this relay's own URL ($advertisedUrl)"
     }
+    // Resume state for the mirror catch-up, following the admin state-file
+    // convention: next to the event database unless configured. An in-memory
+    // store keeps none — bands only pay off across restarts.
+    val syncCoverage =
+        if (upstreams.isEmpty()) {
+            null
+        } else {
+            (config.options.mirror_sync_state_file ?: config.database.file?.let { "$it.sync-coverage.json" })
+                ?.let { SyncCoverageFile(File(it)) }
+        }
     val mirror =
         if (upstreams.isEmpty()) {
             null
@@ -425,6 +436,9 @@ private fun serve(args: Array<String>) {
                 // for the historical window, then live REQ tail. Auto-falls back
                 // to paged REQ for upstreams without NIP-77.
                 negentropyBackfill = true,
+                // Without NIP-77 the catch-up is a paged re-download; the
+                // coverage bands remember what previous boots already walked.
+                coverage = syncCoverage?.coverage,
             ).also { it.start() }
         }
 
@@ -462,6 +476,8 @@ private fun serve(args: Array<String>) {
             // queue and store beneath them shut down.
             runCatching { maintenanceScope.cancel() }
             runCatching { mirror?.close() }
+            // After the mirror, so the final flush carries the last bands.
+            runCatching { syncCoverage?.close() }
             runCatching { server.stop() }
             runCatching { relay.close() }
         },

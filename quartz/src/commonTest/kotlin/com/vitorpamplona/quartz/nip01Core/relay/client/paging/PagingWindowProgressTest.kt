@@ -18,14 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
+package com.vitorpamplona.quartz.nip01Core.relay.client.paging
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class PagingProgressTest {
+class PagingWindowProgressTest {
     private fun assertClose(
         expected: Double,
         actual: Double?,
@@ -35,8 +35,8 @@ class PagingProgressTest {
     }
 
     @Test
-    fun `progress is the walked share of the time window`() {
-        val p = PagingProgress()
+    fun `progress is the paged share of the time window`() {
+        val p = PagingWindowProgress()
         p.begin("a", top = 1_000L, bottom = 0L)
 
         assertClose(0.0, p.fraction(), "nothing walked yet")
@@ -49,11 +49,11 @@ class PagingProgressTest {
     }
 
     @Test
-    fun `a page that jumps backwards cannot un-advance the walk`() {
+    fun `a page that jumps backwards cannot un-advance the pagination`() {
         // Pages arrive from one relay in order, but nothing in the protocol
         // guarantees it, and a percentage that goes DOWN is worse than one that
         // is slightly wrong — it reads as the sync having lost ground.
-        val p = PagingProgress()
+        val p = PagingWindowProgress()
         p.begin("a", top = 1_000L, bottom = 0L)
 
         p.mark("a", 200L)
@@ -63,10 +63,10 @@ class PagingProgressTest {
     }
 
     @Test
-    fun `walks average rather than sum`() {
+    fun `windows average rather than sum`() {
         // Two relays each walking their own window: one done and one untouched
         // is half way — not 100% as summing would give.
-        val p = PagingProgress()
+        val p = PagingWindowProgress()
         p.begin("a", top = 1_000L, bottom = 0L)
         p.begin("b", top = 500L, bottom = 0L)
 
@@ -76,8 +76,8 @@ class PagingProgressTest {
     }
 
     @Test
-    fun `a finished walk leaves the average`() {
-        val p = PagingProgress()
+    fun `a finished window leaves the average`() {
+        val p = PagingWindowProgress()
         p.begin("a", top = 1_000L, bottom = 0L)
         p.begin("b", top = 1_000L, bottom = 0L)
         p.mark("b", 500L)
@@ -86,14 +86,14 @@ class PagingProgressTest {
 
         assertClose(0.5, p.fraction(), "only b is still walking")
         p.finish("b")
-        assertNull(p.fraction(), "nothing walking means no number to report")
+        assertNull(p.fraction(), "nothing paging means no number to report")
     }
 
     @Test
     fun `a group prefix scopes the numbers to its own walks`() {
         // One instance serves many concurrent walks; without the scope two
         // streams would print each other's percentages.
-        val p = PagingProgress()
+        val p = PagingWindowProgress()
         p.begin("streamA|wss://r1", top = 1_000L, bottom = 0L)
         p.begin("streamB|wss://r2", top = 1_000L, bottom = 0L)
         p.mark("streamA|wss://r1", 0L)
@@ -104,10 +104,10 @@ class PagingProgressTest {
     }
 
     @Test
-    fun `an inverted or empty window is not a walk`() {
+    fun `an inverted or empty window is not a pagination`() {
         // A leg whose since is above its until asks for a range nothing can be
         // in. Dividing by that span would produce infinities on the status line.
-        val p = PagingProgress()
+        val p = PagingWindowProgress()
 
         p.begin("a", top = 100L, bottom = 900L)
 
@@ -116,7 +116,7 @@ class PagingProgressTest {
 
     @Test
     fun `no ETA before the estimate means anything`() {
-        val p = PagingProgress()
+        val p = PagingWindowProgress()
         p.begin("a", top = 1_000_000L, bottom = 0L)
 
         p.mark("a", 999_000L)
@@ -129,7 +129,7 @@ class PagingProgressTest {
     @Test
     fun `ETA extrapolates from the rate achieved so far`() {
         var clock = 1_000_000L
-        val p = PagingProgress(nowMillis = { clock })
+        val p = PagingWindowProgress(nowMillis = { clock })
         p.begin("a", top = 1_000L, bottom = 0L)
         p.mark("a", 500L)
 

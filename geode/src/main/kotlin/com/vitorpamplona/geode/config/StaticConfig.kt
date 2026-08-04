@@ -185,6 +185,16 @@ data class StaticConfig(
          * that don't offer NIP-50 at all (strfry, for example).
          */
         val full_text_search: Boolean = true,
+        /**
+         * Where the mirror catch-up's resume state lives: the per-upstream
+         * `created_at` coverage bands (quartz's `SyncCoverage`). Without it
+         * every restart re-syncs each upstream's whole backfill window —
+         * a full re-download for an upstream without NIP-77. Defaults to
+         * `<database file>.sync-coverage.json` when the store is
+         * file-backed; an in-memory store keeps no resume state (bands
+         * only pay off across restarts).
+         */
+        val mirror_sync_state_file: String? = null,
     )
 
     /**

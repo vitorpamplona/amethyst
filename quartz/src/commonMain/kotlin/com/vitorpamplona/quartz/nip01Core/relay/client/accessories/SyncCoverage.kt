@@ -50,8 +50,13 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
  * Persistence is the caller's: [export] the map on a schedule and [restore]
  * it at startup. [onChange] fires whenever a band changes, so a persistence
  * layer can mark itself dirty without polling.
+ *
+ * Not to be confused with the `relay.client.paging` package: its
+ * `RelayLoadingCursors` are in-memory POSITIONS for demand-driven UI paging
+ * within one session, while these are persistent INTERVALS — a claim about
+ * coverage that outlives the process and licenses skipping work.
  */
-class SyncBands(
+class SyncCoverage(
     // How long a band may narrow work before the whole filter is walked
     // again. Everything a band claims is a claim about the past; this is how
     // long to trust it without re-testing.
