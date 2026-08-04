@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -31,6 +33,10 @@ import org.junit.Test
 
 class RelayAuthPromptBusTest {
     private val relay = NormalizedRelayUrl("wss://auth.relay.test")
+    private val alice = "a".repeat(64)
+    private val bob = "b".repeat(64)
+
+    private suspend fun RelayAuthPromptBus.ask(account: String = alice) = requestDecision(relay, emptyList(), account, isMyOwnRelay = false)
 
     @Test
     fun deliversTheUsersChoiceToTheWaitingCaller() =
@@ -38,21 +44,21 @@ class RelayAuthPromptBusTest {
             val bus = RelayAuthPromptBus()
 
             val collector = async { bus.prompts.first() }
-            val caller = async { bus.requestDecision(relay, emptyList()) }
+            val caller = async { bus.ask() }
 
             collector.await().respond(UserAuthChoice.ALWAYS_ALLOW)
             assertEquals(UserAuthChoice.ALWAYS_ALLOW, caller.await())
         }
 
     @Test
-    fun concurrentChallengesForSameRelayShareOnePrompt() =
+    fun concurrentChallengesForSameRelayAndAccountShareOnePrompt() =
         runTest {
             val bus = RelayAuthPromptBus()
 
             // Capture the single surfaced prompt before the two challenges fire.
             val surfaced = async { bus.prompts.first() }
-            val first = async { bus.requestDecision(relay, emptyList()) }
-            val second = async { bus.requestDecision(relay, emptyList()) }
+            val first = async { bus.ask() }
+            val second = async { bus.ask() }
 
             surfaced.await().respond(UserAuthChoice.ALLOW_ONCE)
 
@@ -63,12 +69,33 @@ class RelayAuthPromptBusTest {
         }
 
     @Test
+    fun twoAccountsOnTheSameRelayAreAskedSeparately() =
+        runTest {
+            val bus = RelayAuthPromptBus()
+
+            // The dialog names the account whose npub would be revealed, so answering it for one
+            // account must never speak for another. Dedup is keyed by (relay, account), not relay.
+            val surfaced = async { bus.prompts.take(2).toList() }
+            val forAlice = async { bus.ask(alice) }
+            val forBob = async { bus.ask(bob) }
+
+            val prompts = surfaced.await()
+            assertEquals(setOf(alice, bob), prompts.map { it.askingAccount }.toSet())
+
+            prompts.first { it.askingAccount == alice }.respond(UserAuthChoice.ALWAYS_ALLOW)
+            prompts.first { it.askingAccount == bob }.respond(UserAuthChoice.BLOCK)
+
+            assertEquals(UserAuthChoice.ALWAYS_ALLOW, forAlice.await())
+            assertEquals(UserAuthChoice.BLOCK, forBob.await())
+        }
+
+    @Test
     fun unansweredPromptTimesOutToDismiss() =
         runTest {
             val bus = RelayAuthPromptBus(timeoutMs = 1_000L)
 
             // No one ever responds; the call must not hang, it resolves to DISMISS.
-            assertEquals(UserAuthChoice.DISMISS, bus.requestDecision(relay, emptyList()))
+            assertEquals(UserAuthChoice.DISMISS, bus.ask())
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -78,7 +105,7 @@ class RelayAuthPromptBusTest {
             val bus = RelayAuthPromptBus()
 
             // A challenge fires while NO host is collecting (cold start / account switch).
-            val caller = async { bus.requestDecision(relay, emptyList()) }
+            val caller = async { bus.ask() }
             runCurrent() // let the emit happen with no subscriber present
 
             // A host subscribes late; the replayed prompt must still reach it (not be lost, which

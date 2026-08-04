@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,10 +46,18 @@ enum class UserAuthChoice {
 /**
  * A pending "should I authenticate with this relay?" question, surfaced to the UI. The relay
  * connection coroutine is suspended on [reply] until the user (or a timeout) answers.
+ *
+ * @param askingAccount the account whose identity would be revealed. One socket is shared by every
+ *   logged-in account, so the prompt has to name *whose* npub is at stake — it is the disclosure
+ *   being authorized, and the only part of it the user cannot infer from context.
+ * @param isMyOwnRelay [relayUrl] is in that account's own relay list. Lets the dialog explain a
+ *   challenge from the user's own infrastructure instead of falling back to the blank wording.
  */
 class RelayAuthPrompt(
     val relayUrl: NormalizedRelayUrl,
     val purposes: List<AuthPurpose>,
+    val askingAccount: HexKey,
+    val isMyOwnRelay: Boolean,
     private val reply: CompletableDeferred<UserAuthChoice>,
 ) {
     fun respond(choice: UserAuthChoice) {
@@ -81,26 +90,33 @@ class RelayAuthPromptBus(
     private val mutablePrompts = MutableSharedFlow<RelayAuthPrompt>(replay = 32, extraBufferCapacity = 32)
     val prompts: SharedFlow<RelayAuthPrompt> = mutablePrompts
 
-    private val inFlight = mutableMapOf<NormalizedRelayUrl, CompletableDeferred<UserAuthChoice>>()
+    // Keyed by (relay, account), not relay alone: the dialog names the account whose npub would be
+    // revealed, so two accounts challenged by the same relay are two different questions and must not
+    // share one answer. Concurrent challenges for the SAME account still collapse into one prompt,
+    // which is what this dedupe was always for.
+    private val inFlight = mutableMapOf<Pair<NormalizedRelayUrl, HexKey>, CompletableDeferred<UserAuthChoice>>()
 
     suspend fun requestDecision(
         relayUrl: NormalizedRelayUrl,
         purposes: List<AuthPurpose>,
+        askingAccount: HexKey,
+        isMyOwnRelay: Boolean,
     ): UserAuthChoice {
         // Suspension can't happen inside synchronized, so we only decide ownership under the lock
         // and await outside it. The owner is the challenge that first created the prompt; any
         // concurrent challenge for the same relay awaits the same answer.
+        val key = relayUrl to askingAccount
         val (deferred, isOwner) =
             synchronized(inFlight) {
-                inFlight[relayUrl]?.let { it to false }
-                    ?: CompletableDeferred<UserAuthChoice>().also { inFlight[relayUrl] = it } to true
+                inFlight[key]?.let { it to false }
+                    ?: CompletableDeferred<UserAuthChoice>().also { inFlight[key] = it } to true
             }
 
-        if (isOwner) mutablePrompts.emit(RelayAuthPrompt(relayUrl, purposes, deferred))
+        if (isOwner) mutablePrompts.emit(RelayAuthPrompt(relayUrl, purposes, askingAccount, isMyOwnRelay, deferred))
         return try {
             awaitOrTimeout(deferred)
         } finally {
-            if (isOwner) synchronized(inFlight) { inFlight.remove(relayUrl) }
+            if (isOwner) synchronized(inFlight) { inFlight.remove(key) }
         }
     }
 

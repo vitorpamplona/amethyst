@@ -75,8 +75,13 @@ class RelayAuthPermissionLedger(
                     ctx.purposes.any { p -> isWrite(p.kind) && p.counterparties.any { !isFollowed(it) } },
                 hasAttributablePurpose =
                     ctx.purposes.any {
+                        // MY_INBOX and THREAD name no counterparty by design — the relay is holding
+                        // back the user's *own* inbox or the conversation on screen. They are still
+                        // fully explainable, so they must reach ASK rather than a silent DENY.
                         it.kind == AuthPurposeKind.MY_OWN_RELAY ||
                             it.kind == AuthPurposeKind.OTHER ||
+                            it.kind == AuthPurposeKind.MY_INBOX ||
+                            it.kind == AuthPurposeKind.THREAD ||
                             it.counterparties.isNotEmpty() ||
                             it.venues.isNotEmpty()
                     },

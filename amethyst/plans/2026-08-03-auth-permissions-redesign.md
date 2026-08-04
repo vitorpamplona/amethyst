@@ -2,9 +2,48 @@
 
 **Date:** 2026-08-03
 **Module:** `amethyst` (+ `commons`)
-**Status:** Proposal — mockups only, no code changed
+**Status:** Implemented — see "As-built" below
 **Mockups:** `2026-08-03-auth-permissions-redesign.html` (open in a browser)
 **Supersedes the UI half of:** `2026-07-01-auth-permission-architecture.md`
+
+## As-built
+
+Shipped as designed. Where it diverged or went further:
+
+- **Purpose now comes from `SubPurpose`.** `commons/relayauth/SubPurposeToAuthPurpose.kt`
+  maps the purpose every `ExplainedFilter` already declares onto `AuthPurposeKind`;
+  `RelayAuthPurposeDeriver` reads it and keeps tag-shape inference only as the
+  fallback for a plain `Filter`. A declared `READ_VENUE` prefers the assembler's
+  `entityIds` over sniffing `#e`, so note ids can no longer arrive as "venues".
+- **`MY_INBOX` + `THREAD` added**, and both added to the ledger's
+  `hasAttributablePurpose` — they name no counterparty by design, so without that
+  they would have fallen to a silent DENY instead of ASK.
+- **`MY_OWN_RELAY` is reachable from the UI, not the deriver.** One socket is
+  shared by every logged-in account, so a shared purpose list cannot know *whose*
+  relay it is. The prompt carries `isMyOwnRelay` per account instead.
+- **Prompts are now per account, not per challenge.** The dialog names the account
+  whose npub would be revealed, so the old "first account to ASK answers for
+  everyone" shortcut had to go, and `RelayAuthPromptBus.inFlight` is keyed by
+  `(relay, account)`. In practice this rarely means two dialogs — `isFirstParty`
+  already drops every account without its own reason to be on the relay.
+- **`rememberVenueLabel` only get-or-creates a channel for `POST_VENUE`** (whose id
+  really is a channel root); a read looks up an existing channel and otherwise
+  degrades. This is what stops the phantom-channel side effect.
+- **`TopBarWithBackButton` gained an `actions` slot** (defaulted, so no other caller
+  changed) to carry the account chip.
+- **Renamed rather than reused every string whose meaning or placeholders changed**
+  (`relay_auth_reason_*` → `relay_auth_why_*`, `relay_auth_prompt_title` →
+  `relay_auth_login_as`, the toggles → `relay_auth_auto_*`, …). A stale Crowdin
+  translation binding to a reused key would have shown the *old* copy — "Notify:"
+  where the new sentence belongs — or silently dropped a new `%1$s`. New keys fall
+  back to the new English until Crowdin catches up. The 401 now-orphaned
+  translations were deleted from the 11 locale files that carried them.
+- **Not done:** the 60-second silent `DISMISS` (item 6 below) is still a silent
+  deny with the event left pending in the outbox. It needs a decision about what
+  the user should see, not just a layout.
+
+Verified: `:amethyst:testFdroidDebugUnitTest` 1096 tests green (38 in the relay-auth
+suites, 5 of them new), `:commons:jvmTest` 1446 green, `spotlessApply` clean.
 
 Scope is the two **NIP-42 AUTH** permission surfaces only — not the napplet/nSite
 permission screens, not the Android runtime permission prompts.

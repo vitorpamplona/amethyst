@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthPromptHost
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
 import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
@@ -325,6 +326,11 @@ fun AppNavigation(
     accountSessionManager: AccountSessionManager,
 ) {
     val nav = rememberNav()
+
+    // Shows the "log in to this relay?" dialog when a NIP-42 challenge needs the user to decide.
+    // Hosted here rather than in LoggedInPage because the dialog links out to the relay-login
+    // settings screen, which needs the nav created just above.
+    RelayAuthPromptHost(accountViewModel, nav)
 
     // One layout decision per window size for the whole shell: bottom bar vs rail vs
     // permanent drawer, plus the docked notification panel. Every screen, bar and panel
