@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.QuickActionAlertDialogOneButton
+import com.vitorpamplona.amethyst.ui.note.copyNoteTextAction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.LightRedColor
@@ -129,14 +130,21 @@ fun noteActionSections(
             )
         }
 
+    // When the rendered note was translated, Copy Text opens a chooser (Copy
+    // Original / Copy Translated) on top of the menu; the menu dismisses only
+    // after the flow resolves so the chooser survives in composition.
+    val copyNoteText =
+        copyNoteTextAction(
+            accountViewModel = accountViewModel,
+            onCopied = handlers.onDismiss,
+            onDismiss = handlers.onDismiss,
+        )
+
     val copyAndShare =
         buildList {
             add(
                 NoteAction(MaterialSymbols.ContentCopy, stringRes(R.string.copy_text)) {
-                    accountViewModel.decrypt(noteVersionToCopy) {
-                        scope.launch { clipboardManager.setText(it) }
-                    }
-                    handlers.onDismiss()
+                    copyNoteText(noteVersionToCopy)
                 },
             )
             add(

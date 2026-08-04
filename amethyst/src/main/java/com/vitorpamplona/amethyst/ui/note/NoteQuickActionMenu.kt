@@ -299,20 +299,26 @@ fun CardBody(
         )
     }
 
+    // When the rendered note was translated, tapping Copy Text opens a chooser
+    // (Copy Original / Copy Translated) on top of this popup; the popup stays up
+    // until the flow resolves so the chooser survives in composition.
+    val copyNoteText =
+        copyNoteTextAction(
+            accountViewModel = accountViewModel,
+            onCopied = {
+                showToast(R.string.copied_note_text_to_clipboard)
+                onDismiss()
+            },
+            onDismiss = onDismiss,
+        )
+
     Column(modifier = Modifier.width(IntrinsicSize.Min)) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             NoteQuickActionItem(
                 icon = MaterialSymbols.ContentCopy,
                 label = stringRes(R.string.quick_action_copy_text),
             ) {
-                accountViewModel.decrypt(note) {
-                    scope.launch {
-                        clipboardManager.setText(it)
-                        showToast(R.string.copied_note_text_to_clipboard)
-                    }
-                }
-
-                onDismiss()
+                copyNoteText(note)
             }
             VerticalDivider(color = primaryLight)
             NoteQuickActionItem(

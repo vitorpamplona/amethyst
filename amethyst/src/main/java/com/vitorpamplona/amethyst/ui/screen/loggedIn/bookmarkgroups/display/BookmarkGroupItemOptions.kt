@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
+import com.vitorpamplona.amethyst.ui.note.copyNoteTextAction
 import com.vitorpamplona.amethyst.ui.note.elements.DropDownParams
 import com.vitorpamplona.amethyst.ui.note.elements.observeBookmarksFollowsAndAccount
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
@@ -186,16 +187,21 @@ fun BookmarkGroupItemOptionsMenu(
             }
         }
 
+        // When the rendered note was translated, Copy Text opens a chooser (Copy
+        // Original / Copy Translated) on top of the menu; the menu dismisses only
+        // after the flow resolves so the chooser survives in composition.
+        val copyNoteText =
+            copyNoteTextAction(
+                accountViewModel = accountViewModel,
+                onCopied = onDismiss,
+                onDismiss = onDismiss,
+            )
+
         // Copy & Share section
         M3ActionSection {
             M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_text)) {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
-                accountViewModel.decrypt(lastNoteVersion) {
-                    scope.launch {
-                        clipboardManager.setText(it)
-                    }
-                }
-                onDismiss()
+                copyNoteText(lastNoteVersion)
             }
             M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
                 note.author?.let {
