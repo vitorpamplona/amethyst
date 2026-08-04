@@ -7,7 +7,10 @@
 # (Equivalent packages on Fedora/Arch.)
 set -eu
 HERE="$(dirname "$(readlink -f "${0}")")"
-export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
+# Multiarch lib path is set by the host, not baked at build time — same
+# AppRun works in both x86_64 and aarch64 AppImages.
+GNU_TRIPLET="$(uname -m)-linux-gnu"
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/${GNU_TRIPLET}:${LD_LIBRARY_PATH:-}"
 export PATH="${HERE}/usr/bin:${PATH}"
 export APPDIR="${HERE}"
 exec "${HERE}/usr/bin/Amethyst" "$@"

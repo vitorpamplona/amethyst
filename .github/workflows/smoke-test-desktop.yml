@@ -49,9 +49,17 @@ jobs:
   #    package, installs it, and verifies the process stays alive for 10s.
   #    Catches ProGuard stripping (JNI, reflection), missing jlink modules
   #    (java.management, java.prefs), and native lib bundling issues.
+  #
+  #    Runs on both x64 and arm64 hosted runners so release-time arm64 breakage
+  #    (e.g. ProGuard rules missing an arch-specific reflection root) is caught
+  #    at PR time instead of on the tag build.
   # -------------------------------------------------------------------------
   release-deb-launch:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
       - name: Checkout code
@@ -139,5 +147,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: Release DEB (smoke-tested)
+          # Artifact names must be unique across a run — disambiguate per arch.
+          name: Release DEB (smoke-tested, ${{ matrix.os }})
           path: desktopApp/build/compose/binaries/main-release/deb/*.deb
