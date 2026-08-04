@@ -23,9 +23,11 @@ package com.vitorpamplona.geode.mirror
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.SyncCoverage
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropyReconcile
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySyncOrFetch
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -41,12 +43,15 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
@@ -155,9 +160,9 @@ class MirrorWorker(
      * historical window before the live REQ tail takes over. The geode binary
      * turns this on (see `Main`); it defaults **off** so the many existing
      * MirrorWorker tests keep exercising the pure live-REQ path unchanged.
-     * When on, `negentropySyncOrFetch` automatically falls back to paged REQ
-     * against an upstream that doesn't speak NIP-77 — so "either mode" is
-     * transparent and needs no separate toggle.
+     * When on, the catch-up automatically falls back to paged REQ against an
+     * upstream that doesn't speak NIP-77 — so "either mode" is transparent
+     * and needs no separate toggle.
      */
     private val negentropyBackfill: Boolean = false,
     /**
@@ -422,9 +427,9 @@ class MirrorWorker(
      * **client-paced** so a fast upstream can't overrun the sink: a plain REQ
      * backfill of a large set dies here (strfry kills a slow REQ client once its
      * unsent-outbound buffer crosses `maxPendingOutboundBytes`), which is exactly
-     * why this uses negentropy. [INostrClient.negentropySyncOrFetch] falls back
-     * to paged REQ automatically when the upstream doesn't speak NIP-77, so the
-     * mirror is compatible with either kind of upstream with no config.
+     * why this uses negentropy. When the upstream doesn't speak NIP-77 the
+     * catch-up falls back to paged REQ, so the mirror is compatible with
+     * either kind of upstream with no config.
      *
      * A failure here is non-fatal: the live subscription keeps the mirror current
      * and the reconnect watermark narrows any residual gap.
@@ -437,13 +442,12 @@ class MirrorWorker(
     ) {
         // Resume memory: coverage is keyed on the STABLE scoped filter, never
         // on the boot window — whose since/until change every start and would
-        // never match a stored band. The window only slides forward
-        // (initialSince = boot − backfillSeconds), so a band recorded against
-        // an earlier boot's lower floor never licenses skipping a range this
-        // boot can ask about but the last one could not.
+        // never match a stored band. The window itself rides along as the
+        // floor argument, so a band recorded against a shallower window
+        // re-opens the older span when the operator deepens the backfill.
         val legs =
             coverage
-                ?.legs(up.url, scopedBase)
+                ?.legs(up.url, scopedBase, initialSince)
                 ?.mapNotNull { clampToWindow(it, initialSince, until) }
                 ?: listOf(scopedBase.copy(since = initialSince, until = until))
         if (legs.isEmpty()) {
@@ -452,9 +456,10 @@ class MirrorWorker(
         }
 
         // Bounded hand-off → one ingest consumer. `onEvent` can't suspend, so it
-        // blocks here when the sink falls behind; because negentropySyncOrFetch's
-        // own delivery pipeline is bounded, that backpressure reaches all the way
-        // to the upstream — no unbounded buffering (unlike the live-tail path).
+        // blocks here when the sink falls behind; because negentropySync's own
+        // delivery pipeline is bounded (and a paged REQ is paced by its pages),
+        // that backpressure reaches all the way to the upstream — no unbounded
+        // buffering (unlike the live-tail path).
         val handoff = Channel<Event>(capacity = CATCHUP_HANDOFF)
         val consumer =
             scope.launch {
@@ -493,41 +498,81 @@ class MirrorWorker(
                 val syncStartedAt = TimeUtils.now()
                 var seenMin: Long? = null
                 var seenMax: Long? = null
-                val result =
-                    client.negentropySyncOrFetch(
-                        relay = up.url,
-                        filter = leg,
-                        localEntries = localEntries,
-                        onEvent = { event ->
-                            // Same containment as the live path: even a trusted
-                            // upstream may only inject events inside the declared scope.
-                            if (up.filter == null || up.filter.match(event)) {
-                                // Only plausible stamps widen a band — one
-                                // misdated event must not discard the rest.
-                                if (SyncCoverage.isPlausible(event.createdAt)) {
-                                    seenMin = minOf(seenMin ?: event.createdAt, event.createdAt)
-                                    seenMax = maxOf(seenMax ?: event.createdAt, event.createdAt)
-                                }
-                                handoff.trySendBlocking(event)
-                            } else {
-                                filtered.incrementAndGet()
-                            }
-                        },
-                    )
-                downloaded += result.downloaded
-                paged = paged || result.pagedFallback
+
+                fun observe(event: Event) {
+                    // Same containment as the live path: even a trusted
+                    // upstream may only inject events inside the declared scope.
+                    if (up.filter == null || up.filter.match(event)) {
+                        // Only plausible stamps widen a band — one
+                        // misdated event must not discard the rest.
+                        if (SyncCoverage.isPlausible(event.createdAt)) {
+                            seenMin = minOf(seenMin ?: event.createdAt, event.createdAt)
+                            seenMax = maxOf(seenMax ?: event.createdAt, event.createdAt)
+                        }
+                        handoff.trySendBlocking(event)
+                    } else {
+                        filtered.incrementAndGet()
+                    }
+                }
+
+                // The two phases run by hand rather than through
+                // negentropySyncOrFetch, for two reasons. The combinator keeps
+                // every delivered id for cross-phase dedup — a multi-million-
+                // event catch-up cannot afford that heap, and the store's
+                // unique-id constraint dedups anyway. And the fallback must
+                // reset the observed span: a half-finished reconcile delivers
+                // events scattered across the whole leg, and a band built from
+                // that scatter would claim interior ranges nobody walked.
+                val legPaged =
+                    try {
+                        downloaded +=
+                            client
+                                .negentropySync(
+                                    relay = up.url,
+                                    filter = leg,
+                                    localEntries = localEntries,
+                                    onEvent = ::observe,
+                                ).downloaded
+                        false
+                    } catch (e: NegentropySyncException) {
+                        seenMin = null
+                        seenMax = null
+                        // The watchdog matches negentropySync's default rather
+                        // than fetchAllPages' shorter one: a paged catch-up
+                        // sits behind the same slow upstreams.
+                        downloaded += client.fetchAllPages(up.url, listOf(leg), idleTimeoutMs = 120_000L) { observe(it) }
+                        true
+                    }
+                paged = paged || legPaged
                 // Recorded per leg, so a failure between legs keeps the ground
-                // the first one gained. A clean reconcile is complete through
-                // the instant its snapshot was read; a paged fallback earns
-                // only the span it actually saw.
-                coverage?.record(
-                    up.url,
-                    scopedBase,
-                    seenMin,
-                    seenMax,
-                    paged = result.pagedFallback,
-                    reconciledThrough = if (result.pagedFallback) null else syncStartedAt,
-                )
+                // the first one gained — and no more: a reconcile compared only
+                // its own leg, so completeness reaches the leg's ceiling, never
+                // "now" while a later leg is still pending. A paged fallback
+                // earns only the span it actually saw, capped at the snapshot
+                // instant so one future-dated event cannot lift the band's
+                // ceiling past what was asked.
+                if (legPaged) {
+                    coverage?.record(
+                        up.url,
+                        scopedBase,
+                        seenMin,
+                        seenMax?.coerceAtMost(syncStartedAt),
+                        paged = true,
+                    )
+                } else {
+                    val legFloor = leg.since ?: initialSince
+                    coverage?.record(
+                        up.url,
+                        scopedBase,
+                        // The compared range starts at the leg's floor whether
+                        // or not anything was observed there — that is what a
+                        // clean reconcile proves.
+                        observedMin = minOf(seenMin ?: legFloor, legFloor),
+                        observedMax = null,
+                        paged = false,
+                        reconciledThrough = minOf(leg.until ?: syncStartedAt, syncStartedAt),
+                    )
+                }
             }
             Log.i("MirrorWorker") {
                 val how = if (paged) "paged REQ (upstream has no NIP-77)" else "negentropy"
@@ -743,11 +788,21 @@ class MirrorWorker(
         runCatching { client.close() }
         inbound.close()
         scope.cancel()
+        // Wait (bounded) for the workers to land: a coverage.record racing
+        // past the state file's final flush would be recorded and lost.
+        // Bounded because a worker parked in a blocking hand-off does not
+        // feel the cancel, and shutdown must not hang on it.
+        runBlocking {
+            withTimeoutOrNull(CLOSE_JOIN_MS) { scope.coroutineContext[Job]?.join() }
+        }
         okhttp?.dispatcher?.executorService?.shutdown()
         okhttp?.connectionPool?.evictAll()
     }
 
     private companion object {
+        /** How long [close] waits for the worker coroutines to land. */
+        const val CLOSE_JOIN_MS = 5_000L
+
         /** Matches the Android app's relay-pool WebSocket ping interval. */
         const val PING_INTERVAL_SECS = 120L
 
@@ -773,7 +828,7 @@ class MirrorWorker(
 
         /**
          * Depth of the catch-up hand-off between the negentropy download and the
-         * ingest consumer. Small: negentropySyncOrFetch is already internally
+         * ingest consumer. Small: the negentropy download is already internally
          * backpressured, so this only smooths the seam — the bounded IngestQueue
          * behind `server.ingest` is the real limiter.
          */

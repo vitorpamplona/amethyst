@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.NdjsonImportExport
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -224,7 +225,8 @@ private fun runImport(args: Array<String>) {
             }
         System.err.println(
             "geode import: read=${stats.read} imported=${stats.imported} " +
-                "rejected=${stats.rejected} invalid-sig=${stats.invalid} malformed=${stats.malformed} " +
+                "rejected=${stats.rejected} failed=${stats.failed} " +
+                "invalid-sig=${stats.invalid} malformed=${stats.malformed} " +
                 "→ ${ctx.dbFile ?: "(in-memory — not persisted; pass --db)"}",
         )
     } finally {
@@ -413,14 +415,25 @@ private fun serve(args: Array<String>) {
         "[[mirror]] must not list this relay's own URL ($advertisedUrl)"
     }
     // Resume state for the mirror catch-up, following the admin state-file
-    // convention: next to the event database unless configured. An in-memory
-    // store keeps none — bands only pay off across restarts.
+    // convention: next to the event database unless configured. Keyed to the
+    // store's ACTUAL persistence, not to `database.file` being set: a
+    // volatile store with a persistent coverage file would claim, on the
+    // next boot, that an empty database already holds the backfill window —
+    // and the mirror would never fetch it.
+    val sqliteBackend =
+        config.database.backend
+            .trim()
+            .lowercase() in StoreFactory.SQLITE_BACKEND_KEYWORDS
+    val persistentLocation =
+        a.opt("--db") ?: config.database.file?.takeUnless { sqliteBackend && config.database.in_memory }
     val syncCoverage =
-        if (upstreams.isEmpty()) {
+        if (upstreams.isEmpty() || persistentLocation == null) {
+            if (upstreams.isNotEmpty() && config.options.mirror_sync_state_file != null) {
+                Log.w("Main") { "mirror_sync_state_file ignored: the event store is in-memory, so saved coverage would outlive the events it describes" }
+            }
             null
         } else {
-            (config.options.mirror_sync_state_file ?: config.database.file?.let { "$it.sync-coverage.json" })
-                ?.let { SyncCoverageFile(File(it)) }
+            SyncCoverageFile(File(config.options.mirror_sync_state_file ?: "$persistentLocation.sync-coverage.json"))
         }
     val mirror =
         if (upstreams.isEmpty()) {

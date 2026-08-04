@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Storage contract for Nostr events: insert, filter-query, count, delete,
@@ -136,16 +137,20 @@ interface IEventStore : AutoCloseable {
      *
      * Default impl runs each insert in its own transaction — correct
      * but loses the group-commit win — and cannot classify a throw from
-     * [insert], so it reports `Rejected`. Implementations that can tell
-     * a refusal from a write error should override and say which.
+     * [insert], so it reports `Failed`: re-offering a duplicate is
+     * idempotent, while dropping a good event on a transient store
+     * error is not. Implementations that can tell a refusal from a
+     * write error should override and say which.
      */
     suspend fun batchInsert(events: List<Event>): List<InsertOutcome> =
         events.map { event ->
             try {
                 insert(event)
                 InsertOutcome.Accepted
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Throwable) {
-                InsertOutcome.Rejected(e.message ?: e::class.simpleName ?: "insert failed")
+                InsertOutcome.Failed(e.message ?: e::class.simpleName ?: "insert failed")
             }
         }
 

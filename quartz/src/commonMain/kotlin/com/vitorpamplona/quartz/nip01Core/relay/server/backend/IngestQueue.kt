@@ -36,6 +36,7 @@ import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Group-commit writer for incoming EVENT publishes.
@@ -290,6 +291,11 @@ class IngestQueue(
             } else {
                 try {
                     store.batchInsert(toInsert)
+                } catch (e: CancellationException) {
+                    // Shutdown, not a store failure: rethrow so the loop
+                    // stops instead of stamping the batch Failed and
+                    // carrying on while cancelled.
+                    throw e
                 } catch (e: Throwable) {
                     Log.w("IngestQueue") { "batchInsert failed for ${toInsert.size} events: ${e.message}" }
                     val reason = e.message ?: e::class.simpleName ?: "insert failed"

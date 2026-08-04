@@ -87,8 +87,10 @@ class SyncCoverage(
     // filter -> its canonical json. Filter.toJson() runs to tens of thousands
     // of characters for author-scoped filters, and a fan-out keys once per
     // relay per cycle over the SAME handful of filter instances. Filter
-    // compares by identity, so this map is an identity cache; an
-    // equal-but-distinct filter still keys correctly, just without the cache.
+    // compares by identity, so this map is an identity cache — and an
+    // identity cache retains every distinct instance it is handed. A caller
+    // that rebuilds its filter each cycle would grow it forever, so past
+    // MAX_FINGERPRINTS new instances key correctly but are not cached.
     private val fingerprints = ConcurrentMap<Filter, String>()
 
     /**
@@ -106,6 +108,7 @@ class SyncCoverage(
     fun legs(
         url: NormalizedRelayUrl,
         filter: Filter,
+        floor: Long? = null,
     ): List<Filter> {
         val band = bands[key(url, filter)] ?: return listOf(filter)
         // Time for another full pass: relays gain old events, and without
@@ -114,9 +117,20 @@ class SyncCoverage(
         val legs = mutableListOf<Filter>()
 
         // Older: up to and including the band's floor, but not past the
-        // filter's. A complete band has no older leg at all — the reconcile
-        // already compared the whole range.
-        if (!band.complete && (filter.since == null || band.minCreatedAt >= filter.since)) {
+        // filter's (or, when the filter has no `since`, the caller's
+        // [floor] — a sync window the filter itself must not carry, or it
+        // would change the band's key every run). A complete band compared
+        // its whole range already, but only down to the floor it ran
+        // against: a caller now reaching deeper — a raised backfill window
+        // — re-opens the span below the band.
+        val since = filter.since ?: floor
+        val wantsOlder =
+            if (band.complete) {
+                since != null && since < band.minCreatedAt
+            } else {
+                since == null || band.minCreatedAt >= since
+            }
+        if (wantsOlder) {
             legs.add(filter.copy(until = minOf(band.minCreatedAt, filter.until ?: Long.MAX_VALUE)))
         }
 
@@ -211,12 +225,17 @@ class SyncCoverage(
         var since = Long.MAX_VALUE
         for (url in urls) {
             val legs = legs(url, filter)
+            // Nothing outside its band: this relay asks nothing of the
+            // snapshot at all — the best case must not widen the window.
+            if (legs.isEmpty()) continue
             // More than one leg means an older gap this relay still wants, so
             // the snapshot cannot start above the filter's own floor.
             val only = legs.singleOrNull() ?: return filter
             val legSince = only.since ?: return filter
             since = minOf(since, legSince)
         }
+        // Every relay fully covered: any window would do; the unnarrowed
+        // filter is merely safe, and callers usually skip the sync entirely.
         return if (since == Long.MAX_VALUE) filter else filter.copy(since = since)
     }
 
@@ -245,9 +264,23 @@ class SyncCoverage(
     private fun key(
         url: NormalizedRelayUrl,
         filter: Filter,
-    ): String = "${url.url} ${fingerprints.getOrPut(filter) { filter.toJson() }}"
+    ): String {
+        val fingerprint =
+            fingerprints[filter]
+                ?: filter.toJson().also {
+                    // Bounded: stable callers hit the cache at any size a real
+                    // config produces; a caller minting fresh instances just
+                    // pays the toJson each time instead of growing the heap.
+                    if (fingerprints.size() < MAX_FINGERPRINTS) fingerprints[filter] = it
+                }
+        return "${url.url} $fingerprint"
+    }
 
     companion object {
+        // More filter instances than any deliberate configuration holds; only
+        // a caller rebuilding filters per cycle ever reaches it.
+        private const val MAX_FINGERPRINTS = 1_000
+
         /**
          * A week. Long enough that the narrow path is the normal one, short
          * enough that anything a band is wrong about is wrong for days, not

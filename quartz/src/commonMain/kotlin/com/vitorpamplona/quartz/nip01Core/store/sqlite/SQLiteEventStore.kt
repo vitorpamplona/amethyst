@@ -510,7 +510,29 @@ class SQLiteEventStore(
             // ROLLBACK shouldn't mask the original cause.
             runCatching { db.execSQL("ROLLBACK TRANSACTION TO SAVEPOINT $sp") }
             runCatching { db.execSQL("RELEASE SAVEPOINT $sp") }
-            IEventStore.InsertOutcome.Rejected(e.message ?: e::class.simpleName ?: "insert failed")
+            classifyRowError(e)
+        }
+    }
+
+    /**
+     * Which side failed decides whether the caller may drop the event.
+     * Policy refusals are recognizable — every schema trigger RAISEs with
+     * a `blocked:` prefix, the immutability guards say "not allowed", and
+     * a duplicate id is a constraint violation. Anything else (disk full,
+     * I/O error, schema drift) is the store failing to write an acceptable
+     * event: `Failed`, so a rising count is loud instead of blending into
+     * the duplicate tally.
+     */
+    private fun classifyRowError(e: Throwable): IEventStore.InsertOutcome {
+        val message = e.message ?: e::class.simpleName ?: "insert failed"
+        val refusal =
+            message.contains("blocked:") ||
+                message.contains("not allowed") ||
+                message.contains("constraint", ignoreCase = true)
+        return if (refusal) {
+            IEventStore.InsertOutcome.Rejected(message)
+        } else {
+            IEventStore.InsertOutcome.Failed(message)
         }
     }
 

@@ -62,16 +62,25 @@ class PagingWindowProgress(
 
     private val windows = ConcurrentMap<String, Window>()
 
-    /** Begin a pagination over `[bottom, top]` seconds. An inverted window is not one. */
+    /**
+     * Begin a pagination over `[bottom, top]` seconds. An inverted window is
+     * not one; a single-second window (`top == bottom`) is — coverage legs
+     * that re-read a band's edge second are exactly that shape.
+     */
     fun begin(
         key: String,
         top: Long,
         bottom: Long,
     ) {
-        if (top > bottom) windows[key] = Window(top, bottom, nowMillis(), top)
+        if (top >= bottom) windows[key] = Window(top, bottom, nowMillis(), top)
     }
 
-    /** The pagination reached [until]; monotonic, so a page that jumps back cannot un-advance it. */
+    /**
+     * The pagination reached [until]; monotonic, so a page that jumps back
+     * cannot un-advance it. The check-then-set is unsynchronized on purpose:
+     * one pagination is one coroutine, and a display racing a mark can only
+     * ever read a value one page stale.
+     */
     fun mark(
         key: String,
         until: Long,

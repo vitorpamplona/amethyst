@@ -159,6 +159,22 @@ class SyncCoverageTest {
         assertEquals(2, walked.legs(relay, profiles).size, "a paged walk says nothing about what it never asked for")
     }
 
+    @Test
+    fun `a deeper floor re-opens history below a complete band`() {
+        // A reconcile only compared down to the window it ran against. When
+        // the operator raises the backfill window, the span below the band's
+        // recorded floor is ground nobody ever asked for.
+        val c = SyncCoverage()
+        c.record(relay, profiles, 1_700_000_000L, null, paged = false, reconciledThrough = 1_700_002_000L)
+
+        assertEquals(1, c.legs(relay, profiles, floor = 1_700_000_000L).size, "same floor: nothing older to ask")
+
+        val legs = c.legs(relay, profiles, floor = 1_600_000_000L)
+        assertEquals(2, legs.size, "a deeper floor re-opens the older span")
+        assertEquals(1_700_000_000L, legs[0].until, "up to the floor the reconcile actually compared")
+        assertEquals(1_700_002_000L, legs[1].since)
+    }
+
     // ---- the periodic full re-walk -----------------------------------------
 
     @Test
@@ -222,6 +238,20 @@ class SyncCoverageTest {
 
         // The hungriest of them sets the floor; the other two re-read a little.
         assertEquals(1_700_003_000L, c.coveringWindow(listOf(relay, other, third), profiles).since)
+    }
+
+    @Test
+    fun `a fully covered relay does not widen the shared window`() {
+        // A complete band past a bounded filter's ceiling needs no legs at
+        // all. The best case must not force the snapshot back to the whole
+        // filter — that would make full coverage cost the most.
+        val window = Filter(kinds = listOf(0), since = 1_700_000_000L, until = 1_700_005_000L)
+        val c = SyncCoverage()
+        c.record(relay, window, 1_700_000_000L, null, paged = false, reconciledThrough = 1_700_009_000L)
+        c.record(other, window, 1_700_000_000L, null, paged = false, reconciledThrough = 1_700_003_000L)
+
+        assertEquals(0, c.legs(relay, window).size, "covered past the ceiling: nothing to ask")
+        assertEquals(1_700_003_000L, c.coveringWindow(listOf(relay, other), window).since)
     }
 
     @Test

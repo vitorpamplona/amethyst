@@ -31,6 +31,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
@@ -58,7 +59,8 @@ class SyncCoverageFile(
 
     init {
         load()
-        // Loading marks every restored band dirty; the file already has them.
+        // restore() bypasses onChange, but stay defensive: reopening a file
+        // must never count as a change, or every boot rewrites it.
         dirty = false
         flusher =
             Thread {
@@ -130,7 +132,16 @@ class SyncCoverageFile(
             file.parentFile?.mkdirs()
             val tmp = File(file.parentFile ?: File("."), "${file.name}.tmp")
             tmp.writeText(json.encodeToString(JsonObject.serializer(), doc))
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            // ATOMIC_MOVE requested explicitly: without it the JVM may
+            // legally fall back to copy+delete, and a reader could see a
+            // half map. Same-directory rename, so support is the norm; a
+            // filesystem that truly can't gets the plain move (and the
+            // corrupt-file recovery absorbs the residual risk).
+            try {
+                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
         }.onFailure {
             Log.w("SyncCoverageFile") { "could not write ${file.path}: ${it.message}" }
         }

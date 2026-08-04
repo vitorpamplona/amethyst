@@ -39,7 +39,7 @@ class PagingWindowProgressTest {
         val p = PagingWindowProgress()
         p.begin("a", top = 1_000L, bottom = 0L)
 
-        assertClose(0.0, p.fraction(), "nothing walked yet")
+        assertClose(0.0, p.fraction(), "nothing paged yet")
 
         p.mark("a", 750L)
         assertClose(0.25, p.fraction())
@@ -64,7 +64,7 @@ class PagingWindowProgressTest {
 
     @Test
     fun `windows average rather than sum`() {
-        // Two relays each walking their own window: one done and one untouched
+        // Two relays each paging their own window: one done and one untouched
         // is half way — not 100% as summing would give.
         val p = PagingWindowProgress()
         p.begin("a", top = 1_000L, bottom = 0L)
@@ -84,14 +84,14 @@ class PagingWindowProgressTest {
 
         p.finish("a")
 
-        assertClose(0.5, p.fraction(), "only b is still walking")
+        assertClose(0.5, p.fraction(), "only b is still paging")
         p.finish("b")
         assertNull(p.fraction(), "nothing paging means no number to report")
     }
 
     @Test
-    fun `a group prefix scopes the numbers to its own walks`() {
-        // One instance serves many concurrent walks; without the scope two
+    fun `a group prefix scopes the numbers to its own paginations`() {
+        // One instance serves many concurrent paginations; without the scope two
         // streams would print each other's percentages.
         val p = PagingWindowProgress()
         p.begin("streamA|wss://r1", top = 1_000L, bottom = 0L)
@@ -104,13 +104,28 @@ class PagingWindowProgressTest {
     }
 
     @Test
-    fun `an inverted or empty window is not a pagination`() {
+    fun `an inverted window is not a pagination`() {
         // A leg whose since is above its until asks for a range nothing can be
         // in. Dividing by that span would produce infinities on the status line.
         val p = PagingWindowProgress()
 
         p.begin("a", top = 100L, bottom = 900L)
 
+        assertNull(p.fraction())
+    }
+
+    @Test
+    fun `a single-second window is a pagination`() {
+        // Coverage legs re-read a band's edge second: since == until is a
+        // real, one-second range, not an inverted one.
+        val p = PagingWindowProgress()
+
+        p.begin("a", top = 500L, bottom = 500L)
+
+        assertClose(0.0, p.fraction(), "tracked from its start")
+        p.mark("a", 500L)
+        assertClose(0.0, p.fraction(), "still at its only second")
+        p.finish("a")
         assertNull(p.fraction())
     }
 
