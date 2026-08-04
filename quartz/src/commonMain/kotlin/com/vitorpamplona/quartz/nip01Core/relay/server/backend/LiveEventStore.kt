@@ -180,6 +180,10 @@ class LiveEventStore(
                 is IEventStore.InsertOutcome.Rejected -> {
                     done.completeExceptionally(IllegalStateException(outcome.reason))
                 }
+
+                is IEventStore.InsertOutcome.Failed -> {
+                    done.completeExceptionally(IllegalStateException(outcome.reason))
+                }
             }
         }
         done.await()

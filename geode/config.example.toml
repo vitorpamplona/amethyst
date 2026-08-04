@@ -112,6 +112,15 @@ require_auth = false
 # the future. Enforced by RejectFutureEventsPolicy.
 # reject_future_seconds = 1800
 
+# Path for the JSON file that remembers what the [[mirror]] catch-up
+# has already synced (per upstream, per scope), so a restart resumes
+# instead of re-downloading each upstream's whole backfill window.
+# Defaults to "<database file>.sync-coverage.json" next to the event
+# store; only written when the store itself is file-backed (an
+# in-memory store keeps no resume state — saved coverage would
+# describe events that no longer exist).
+# mirror_sync_state_file = "/var/lib/geode/events.db.sync-coverage.json"
+
 [authorization]
 # Allow / deny lists. Allow is a permissive ceiling; deny still
 # removes specific entries inside it. Enforced by Pubkey/KindAllowDenyPolicy.

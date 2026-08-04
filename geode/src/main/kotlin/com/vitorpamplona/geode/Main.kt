@@ -28,6 +28,7 @@ import com.vitorpamplona.geode.config.StaticConfig
 import com.vitorpamplona.geode.mirror.MirrorDirection
 import com.vitorpamplona.geode.mirror.MirrorUpstream
 import com.vitorpamplona.geode.mirror.MirrorWorker
+import com.vitorpamplona.geode.mirror.SyncCoverageFile
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -44,6 +45,7 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.NdjsonImportExport
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -223,7 +225,8 @@ private fun runImport(args: Array<String>) {
             }
         System.err.println(
             "geode import: read=${stats.read} imported=${stats.imported} " +
-                "rejected=${stats.rejected} invalid-sig=${stats.invalid} malformed=${stats.malformed} " +
+                "rejected=${stats.rejected} failed=${stats.failed} " +
+                "invalid-sig=${stats.invalid} malformed=${stats.malformed} " +
                 "→ ${ctx.dbFile ?: "(in-memory — not persisted; pass --db)"}",
         )
     } finally {
@@ -411,6 +414,27 @@ private fun serve(args: Array<String>) {
     require(upstreams.none { it.url.displayUrl() == advertisedIdentity }) {
         "[[mirror]] must not list this relay's own URL ($advertisedUrl)"
     }
+    // Resume state for the mirror catch-up, following the admin state-file
+    // convention: next to the event database unless configured. Keyed to the
+    // store's ACTUAL persistence, not to `database.file` being set: a
+    // volatile store with a persistent coverage file would claim, on the
+    // next boot, that an empty database already holds the backfill window —
+    // and the mirror would never fetch it.
+    val sqliteBackend =
+        config.database.backend
+            .trim()
+            .lowercase() in StoreFactory.SQLITE_BACKEND_KEYWORDS
+    val persistentLocation =
+        a.opt("--db") ?: config.database.file?.takeUnless { sqliteBackend && config.database.in_memory }
+    val syncCoverage =
+        if (upstreams.isEmpty() || persistentLocation == null) {
+            if (upstreams.isNotEmpty() && config.options.mirror_sync_state_file != null) {
+                Log.w("Main") { "mirror_sync_state_file ignored: the event store is in-memory, so saved coverage would outlive the events it describes" }
+            }
+            null
+        } else {
+            SyncCoverageFile(File(config.options.mirror_sync_state_file ?: "$persistentLocation.sync-coverage.json"))
+        }
     val mirror =
         if (upstreams.isEmpty()) {
             null
@@ -425,6 +449,9 @@ private fun serve(args: Array<String>) {
                 // for the historical window, then live REQ tail. Auto-falls back
                 // to paged REQ for upstreams without NIP-77.
                 negentropyBackfill = true,
+                // Without NIP-77 the catch-up is a paged re-download; the
+                // coverage bands remember what previous boots already walked.
+                coverage = syncCoverage?.coverage,
             ).also { it.start() }
         }
 
@@ -462,6 +489,8 @@ private fun serve(args: Array<String>) {
             // queue and store beneath them shut down.
             runCatching { maintenanceScope.cancel() }
             runCatching { mirror?.close() }
+            // After the mirror, so the final flush carries the last bands.
+            runCatching { syncCoverage?.close() }
             runCatching { server.stop() }
             runCatching { relay.close() }
         },
