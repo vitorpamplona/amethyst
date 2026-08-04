@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip50Search
 
+import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -113,6 +115,27 @@ class SearchFieldExtractorTest {
         // Kind 7 reactions are not SearchableEvent.
         val reaction = Event("8".repeat(64), alice, 1L, 7, emptyArray(), "+", "")
         assertEquals(IndexableFields.None, SearchFieldExtractor.extract(reaction))
+    }
+
+    @Test
+    fun unmappedSearchableKindsFallBackToTheTextTier() {
+        val fields = SearchFieldExtractor.extract(ChatMessageEvent("a".repeat(64), alice, 1L, emptyArray(), "hello group", ""))
+        assertEquals(IndexableFields.Tiered(text = "hello group"), fields)
+    }
+
+    @Test
+    fun blankContentKindsNormalizeToNone() {
+        val fields = SearchFieldExtractor.extract(TextNoteEvent("b".repeat(64), alice, 1L, emptyArray(), "   ", ""))
+        assertEquals(IndexableFields.None, fields)
+    }
+
+    @Test
+    fun unparseableBuzzContentStillIndexesItsHashtags() {
+        // The branch finds no text, but the tiers() funnel still carries the
+        // event's raw tags — the one subtle reachability seam of the port.
+        val tags = arrayOf(arrayOf("t", "agents"))
+        val fields = SearchFieldExtractor.extract(AgentProfileEvent("c".repeat(64), alice, 1L, tags, "not json", ""))
+        assertEquals(IndexableFields.Tiered(hashtags = listOf("agents")), fields)
     }
 
     @Test

@@ -424,8 +424,8 @@ object SearchFieldExtractor {
                 }
             }
 
-            // kind 1 LAST among the explicit branches: several kinds extend the
-            // text-note base, and their own branches above must win.
+            // kind 1 LAST among the explicit branches, defensively: a future
+            // kind extending the text-note base must hit its own branch first.
             is TextNoteEvent -> {
                 tiers(event, event.subject(), null, event.content)
             }
@@ -482,5 +482,5 @@ object SearchFieldExtractor {
      * this funnel must also catch location tags on kinds whose class doesn't
      * model them.
      */
-    private fun locationValues(event: Event): List<String> = event.tags.mapNotNull { tag -> tag.getOrNull(1)?.trim()?.takeIf { tag.getOrNull(0) == "location" && it.isNotEmpty() } }
+    private fun locationValues(event: Event): List<String> = event.tags.mapNotNull { tag -> if (tag.getOrNull(0) != "location") null else clean(tag.getOrNull(1)) }
 }

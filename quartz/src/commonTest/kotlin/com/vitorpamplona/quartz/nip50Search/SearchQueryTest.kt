@@ -308,6 +308,33 @@ class SearchQueryTest {
     }
 
     @Test
+    fun allDashTokensAreDroppedNotEmptied() {
+        // "--" strips to nothing; surfacing an empty exclusion would
+        // round-trip into a required "-" term.
+        val q = SearchQuery.parse("a --")
+        assertEquals("a", q.terms)
+        assertTrue(q.notTerms.isEmpty())
+        assertEquals("a", SearchQuery.parse(q.toSearchString()).terms)
+        assertEquals("", SearchQuery.stripExtensions("-- include:spam"))
+    }
+
+    @Test
+    fun consecutiveSpansEachLift() {
+        val q = SearchQuery.parse("\"a\"\"b\" -\"c\"")
+        assertEquals(listOf("a", "b"), q.phrases)
+        assertEquals(listOf("c"), q.notPhrases)
+        assertEquals("", q.terms)
+    }
+
+    @Test
+    fun textAfterClosingQuoteIsItsOwnTerm() {
+        // The lifted span's place stays a token boundary for what follows.
+        val q = SearchQuery.parse("\"a b\"c")
+        assertEquals(listOf("a b"), q.phrases)
+        assertEquals("c", q.terms)
+    }
+
+    @Test
     fun stripExtensionsKeepsPhrasesAndExclusions() {
         assertEquals(
             "best \"nostr apps\" -spam",

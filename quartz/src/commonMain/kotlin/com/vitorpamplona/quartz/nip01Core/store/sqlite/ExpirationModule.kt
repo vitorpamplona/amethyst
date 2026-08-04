@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import androidx.sqlite.SQLiteConnection
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 
 class ExpirationModule : IModule {
@@ -44,7 +45,7 @@ class ExpirationModule : IModule {
             FOR EACH ROW
             BEGIN
                 -- Check for existing newer record
-                SELECT RAISE(ABORT, 'blocked: this event is expired')
+                SELECT RAISE(ABORT, '${RejectionReason.EXPIRED}')
                 WHERE NEW.expiration <= unixepoch();
             END;
             """.trimIndent(),

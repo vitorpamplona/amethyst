@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.server.backend
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -292,7 +293,7 @@ class IngestQueue(
                     store.batchInsert(toInsert)
                 } catch (e: Throwable) {
                     Log.w("IngestQueue") { "batchInsert failed for ${toInsert.size} events: ${e.message}" }
-                    val reason = e.message ?: e::class.simpleName ?: "insert failed"
+                    val reason = e.message ?: e::class.simpleName ?: RejectionReason.INSERT_FAILED
                     List(toInsert.size) { IEventStore.InsertOutcome.Rejected(reason) }
                 }
             }

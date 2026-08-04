@@ -210,7 +210,10 @@ class SearchQuery(
                     }
                 }
                 if (token.length > 1 && token[0] == '-') {
-                    notTerms += token.trimStart('-')
+                    // All-dash tokens ("--") strip to nothing: an
+                    // exclude-nothing token is dropped, not surfaced — an
+                    // empty exclusion would round-trip into a required "-".
+                    token.trimStart('-').takeIf { it.isNotEmpty() }?.let { notTerms += it }
                     continue
                 }
                 if (terms.isNotEmpty()) terms.append(' ')

@@ -28,24 +28,20 @@ package com.vitorpamplona.quartz.nip01Core.store
  * "duplicate" differently.
  *
  * NIP-01: an `OK false` message SHOULD begin with a single-word
- * machine-readable prefix followed by `:`. The `PREFIX_*` constants are that
- * vocabulary; the full-sentence constants are the standard reasons the
- * built-in stores emit. `replaced:` is not in NIP-01 but is the de-facto
- * prefix (strfry and others) for a replaceable event that lost to a stored
- * newer version — distinct from `duplicate:` (the exact event is already
- * held).
+ * machine-readable prefix followed by `:`. The full-sentence constants here
+ * are the standard reasons the built-in stores emit. `replaced:` is not in
+ * NIP-01 but is the de-facto prefix (strfry and others) for a replaceable
+ * event that lost to a stored newer version — distinct from `duplicate:`
+ * (the exact event is already held).
  */
 object RejectionReason {
-    // The NIP-01 machine-readable prefixes.
-    const val PREFIX_DUPLICATE = "duplicate:"
-    const val PREFIX_POW = "pow:"
-    const val PREFIX_BLOCKED = "blocked:"
-    const val PREFIX_RATE_LIMITED = "rate-limited:"
-    const val PREFIX_INVALID = "invalid:"
-    const val PREFIX_RESTRICTED = "restricted:"
-    const val PREFIX_ERROR = "error:"
-
-    /** De-facto prefix (not in NIP-01) for a stale version of a replaceable/addressable event. */
+    /**
+     * The NIP-01 prefix vocabulary itself lives in
+     * [com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix]
+     * — use its `format`/`parse` instead of hand-writing prefixes. The one
+     * prefix that enum lacks is the de-facto (not in NIP-01) word for a stale
+     * version of a replaceable/addressable event:
+     */
     const val PREFIX_REPLACED = "replaced:"
 
     // The standard store reasons.

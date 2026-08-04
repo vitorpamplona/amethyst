@@ -37,8 +37,9 @@ package com.vitorpamplona.quartz.nip50Search
  *
  * Multi-valued roles are carried UNJOINED, as lists: which separator to use —
  * or whether to index the values separately — is the backend's decision, and
- * once values are pre-joined a backend can't unmix them. All strings are
- * trimmed and non-empty.
+ * once values are pre-joined a backend can't unmix them. Values produced by
+ * [SearchFieldExtractor] are trimmed and non-empty; the types themselves do
+ * not enforce it.
  */
 sealed interface IndexableFields {
     fun isEmpty(): Boolean
@@ -48,7 +49,13 @@ sealed interface IndexableFields {
         override fun isEmpty(): Boolean = true
     }
 
-    /** Kind-0-shaped identity, each field in its own role. An all-null value means "profile-shaped kind, nothing indexable". */
+    /**
+     * Kind-0-shaped identity, each field in its own role. [SearchFieldExtractor]
+     * never RETURNS an empty Profile — extract() normalizes every empty shape
+     * to [None] — so an all-null value only exists mid-extraction or when
+     * hand-built. Note the equality trap for hand-built values: an empty
+     * shape isEmpty() but is not equal to [None].
+     */
     data class Profile(
         val name: String? = null,
         val displayName: String? = null,
