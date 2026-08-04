@@ -34,6 +34,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.TimeSource
 
 /**
  * One relay's verdict on a published event: [accepted] plus the reason the
@@ -45,6 +46,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 class PublishResult(
     val accepted: Boolean,
     val message: String,
+    /**
+     * Milliseconds from the publish to this relay's OK (true or false — a rejection
+     * is still a measured round trip), or -1 when the relay never answered with an
+     * OK. On an already-open socket this is an honest NIP-66 `rtt-write`.
+     */
+    val elapsedMs: Long = -1,
 ) {
     /**
      * True when this failure came from the transport (never connected,
@@ -102,6 +109,7 @@ suspend fun INostrClient.publishAndCollectResults(
     timeoutInSeconds: Long = 15,
 ): Map<NormalizedRelayUrl, PublishResult> {
     val resultChannel = Channel<DetailedResult>(UNLIMITED)
+    val mark = TimeSource.Monotonic.markNow()
 
     Log.d("publishAndConfirm") { "Waiting for ${relayList.size} responses" }
 
@@ -134,7 +142,7 @@ suspend fun INostrClient.publishAndCollectResults(
                 when (msg) {
                     is OkMessage -> {
                         if (msg.eventId == event.id) {
-                            resultChannel.trySend(DetailedResult(relay.url, msg.success, msg.message))
+                            resultChannel.trySend(DetailedResult(relay.url, msg.success, msg.message, mark.elapsedNow().inWholeMilliseconds))
                             Log.d("publishAndConfirm") { "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}" }
                         }
                     }
@@ -160,7 +168,7 @@ suspend fun INostrClient.publishAndCollectResults(
                                     val currentResult = receivedResults[result.relay]
                                     // do not override a successful result.
                                     if (currentResult == null || !currentResult.accepted) {
-                                        receivedResults[result.relay] = PublishResult(result.success, result.message)
+                                        receivedResults[result.relay] = PublishResult(result.success, result.message, result.elapsedMs)
                                     }
                                 }
                             }
@@ -191,4 +199,5 @@ private class DetailedResult(
     val relay: NormalizedRelayUrl,
     val success: Boolean,
     val message: String,
+    val elapsedMs: Long = -1,
 )

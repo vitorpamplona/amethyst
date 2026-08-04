@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip66RelayMonitor.reachability
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -30,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
@@ -81,6 +84,19 @@ class RelayProber(
         val rttOpenMs: Long,
         val rttEoseMs: Long,
         val error: String?,
+    )
+
+    /**
+     * One relay's read+write check outcome (see [readWriteCheck]). Latencies are
+     * -1 when unobserved; [writeAccepted] is null when the relay never answered
+     * the write with an OK (transport failure or silence).
+     */
+    class ReadWriteVerdict(
+        val relay: NormalizedRelayUrl,
+        val rttReadMs: Long,
+        val rttWriteMs: Long,
+        val writeAccepted: Boolean?,
+        val writeMessage: String?,
     )
 
     class Result(
@@ -152,6 +168,55 @@ class RelayProber(
                 probeWave(wave, timeoutMs, filters) { emit(it) }
             }
         }
+
+    /**
+     * The deeper, still-honest check pair: READ (a real limit-[readLimit] REQ the
+     * relay must query its store for) and WRITE (one ephemeral [RelayProbeWriteTest]
+     * event signed by [signer], the monitor key, timed to its OK). Everything is a
+     * direct observation — nothing is copied from the relay's NIP-11 self-claims.
+     *
+     * Run it against relays ALREADY PROVEN LIVE — typically [Result.reachable] of a
+     * [probe] that just ran, while the pool's sockets are still open. On a warm
+     * socket both numbers are honest NIP-66 rtts (`rtt-read`, `rtt-write`); against
+     * a cold relay they silently include the dial, so don't.
+     *
+     * A write REJECTION is still a measurement: `OK false` proves the write path
+     * works and documents policy ([ReadWriteVerdict.writeMessage] keeps the NIP-01
+     * machine-readable reason; [toDiscoveryEventTemplate] maps `auth-required:` and
+     * `pow:` to `R` tags). Only silence leaves [ReadWriteVerdict.writeAccepted] null.
+     */
+    suspend fun readWriteCheck(
+        relays: Collection<NormalizedRelayUrl>,
+        signer: NostrSigner,
+        timeoutMs: Long = 15_000,
+        waveSize: Int = 1000,
+        readLimit: Int = 1,
+    ): Map<NormalizedRelayUrl, ReadWriteVerdict> {
+        val out = HashMap<NormalizedRelayUrl, ReadWriteVerdict>()
+        val distinct = relays.toSet()
+        for (wave in distinct.chunked(waveSize.coerceAtLeast(1))) {
+            val reads = HashMap<NormalizedRelayUrl, Long>()
+            probeWave(wave, timeoutMs, readTestFilter(readLimit)) { reads[it.relay] = it.rttEoseMs }
+
+            val event = signer.sign(RelayProbeWriteTest.build())
+            val writes = client.publishAndCollectResults(event, wave.toSet(), (timeoutMs / 1000).coerceAtLeast(1))
+
+            for (relay in wave) {
+                // Only a real OK (true or false) counts as an answer; transport
+                // failures and silence leave the write side unobserved.
+                val answered = writes[relay]?.takeUnless { it.isTransportFailure || it.message == PublishResult.NO_RESPONSE }
+                out[relay] =
+                    ReadWriteVerdict(
+                        relay = relay,
+                        rttReadMs = reads[relay] ?: -1,
+                        rttWriteMs = answered?.elapsedMs ?: -1,
+                        writeAccepted = answered?.accepted,
+                        writeMessage = answered?.message,
+                    )
+            }
+        }
+        return out
+    }
 
     private suspend fun probeWave(
         wave: List<NormalizedRelayUrl>,
@@ -329,22 +394,37 @@ class RelayProber(
  * is the normalized relay url; sign it with the consumer's own monitor key (per
  * NIP-66 a monitor is its own identity, so the prober never signs on its own).
  *
- * Only facts this probe actually observed are tagged:
+ * Only facts a probe actually observed are tagged:
  *  - `n` network type inferred from the url (clearnet/tor/i2p);
  *  - `rtt-open` when the relay was reachable — the measured WS-upgrade round trip,
  *    or 0 for "reachable, latency not observed" (liveness is the tag's PRESENCE);
- *  - `R auth` when the relay answered the probe REQ with a NIP-42 `auth-required`
- *    CLOSED — an observed auth wall, not a NIP-11 claim.
+ *  - `rtt-read`/`rtt-write` when a [RelayProber.readWriteCheck] result is passed
+ *    as [readWrite] and actually measured that side;
+ *  - `R auth` when the relay answered a probe with a NIP-42 `auth-required`
+ *    (CLOSED on the REQ, or OK-false on the write) and `R pow` when the write
+ *    was refused with a `pow:` reason — observed walls, not NIP-11 claims.
  *
- * [Verdict.rttEoseMs] is deliberately NOT written as `rtt-read`: it is measured from
- * the wave start, so it bundles dial, TLS and any handshake queueing with the read —
- * publishing it as a read round trip would hand aggregators an inflated latency.
- * The [RelayObserver]/[RelayMonitor] path supplies honest `rtt-read`/`rtt-write`
- * from real traffic instead.
+ * NIP-11-derived tags (`N` supported NIPs, `k` kinds, `T` type) are deliberately
+ * absent: those are the relay's self-claims, and asserting them under a monitor
+ * signature without a per-NIP compliance test would launder claims into
+ * measurements. [Verdict.rttEoseMs] is likewise never written as `rtt-read` — it
+ * is wave-relative (dial + TLS + queueing), so the honest read number only comes
+ * from [readWrite] (or the [RelayObserver]/[RelayMonitor] real-traffic path).
  */
-fun RelayProber.Verdict.toDiscoveryEventTemplate(createdAt: Long = TimeUtils.now()): EventTemplate<RelayDiscoveryEvent> =
+fun RelayProber.Verdict.toDiscoveryEventTemplate(
+    createdAt: Long = TimeUtils.now(),
+    readWrite: RelayProber.ReadWriteVerdict? = null,
+): EventTemplate<RelayDiscoveryEvent> =
     RelayDiscoveryEvent.build(relay, createdAt = createdAt) {
         networkType(RelayReachabilityStore.networkTypeOf(relay))
         if (reachable) rtt(RttType.OPEN, rttOpenMs.coerceAtLeast(0))
-        if (error?.startsWith("closed:auth-required") == true) requirement("auth")
+        if (readWrite != null) {
+            if (readWrite.rttReadMs >= 0) rtt(RttType.READ, readWrite.rttReadMs)
+            if (readWrite.rttWriteMs >= 0) rtt(RttType.WRITE, readWrite.rttWriteMs)
+        }
+        val authWalled =
+            error?.startsWith("closed:auth-required") == true ||
+                readWrite?.writeMessage?.startsWith("auth-required") == true
+        if (authWalled) requirement("auth")
+        if (readWrite?.writeMessage?.startsWith("pow:") == true) requirement("pow")
     }

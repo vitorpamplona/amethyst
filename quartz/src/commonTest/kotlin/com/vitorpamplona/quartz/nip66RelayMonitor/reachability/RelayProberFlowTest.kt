@@ -20,13 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip66RelayMonitor.reachability
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -46,10 +53,12 @@ import kotlin.test.assertTrue
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RelayProberFlowTest {
-    /** Captures the probe subscription so the test can play the relays. */
+    /** Captures the probe subscription and publish so the test can play the relays. */
     private class ScriptedClient : INostrClient by EmptyNostrClient() {
         var listener: SubscriptionListener? = null
         var sentFilters: Map<NormalizedRelayUrl, List<Filter>>? = null
+        var published: Event? = null
+        val connListeners = mutableListOf<RelayConnectionListener>()
 
         override fun subscribe(
             subId: String,
@@ -59,6 +68,49 @@ class RelayProberFlowTest {
             this.listener = listener
             this.sentFilters = filters
         }
+
+        override fun publish(
+            event: Event,
+            relayList: Set<NormalizedRelayUrl>,
+        ) {
+            published = event
+        }
+
+        override fun addConnectionListener(listener: RelayConnectionListener) {
+            connListeners += listener
+        }
+
+        override fun removeConnectionListener(listener: RelayConnectionListener) {
+            connListeners -= listener
+        }
+
+        /** Plays a relay's OK answer for the published event to every armed listener. */
+        fun answerOk(
+            relay: NormalizedRelayUrl,
+            success: Boolean,
+            message: String,
+        ) {
+            val ok = OkMessage(published!!.id, success, message)
+            connListeners.toList().forEach { it.onIncomingMessage(FakeRelayClient(relay), "", ok) }
+        }
+    }
+
+    private class FakeRelayClient(
+        override val url: NormalizedRelayUrl,
+    ) : IRelayClient {
+        override fun connect() = Unit
+
+        override fun needsToReconnect() = false
+
+        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) = Unit
+
+        override fun isConnected() = true
+
+        override fun sendOrConnectAndSync(cmd: Command) = Unit
+
+        override fun sendIfConnected(cmd: Command) = Unit
+
+        override fun disconnect() = Unit
     }
 
     private val fast = RelayUrlNormalizer.normalize("wss://fast.example.com")
@@ -191,6 +243,82 @@ class RelayProberFlowTest {
     }
 
     // ------------------------------------------------------------------
+    // readWriteCheck — honest read + write measurements, nothing claimed
+    // ------------------------------------------------------------------
+
+    private suspend fun ScriptedClient.playReadThenWrite(
+        relay: NormalizedRelayUrl,
+        ok: Boolean?,
+        okMessage: String = "",
+    ) {
+        delay(50)
+        listener!!.onEose(relay, null) // read phase answers
+        while (published == null) delay(10) // write phase begins
+        if (ok != null) answerOk(relay, ok, okMessage)
+    }
+
+    @Test
+    fun readWriteCheckMeasuresBothSides() =
+        runTest {
+            val client = ScriptedClient()
+            val signer = NostrSignerInternal(KeyPair())
+            var result: Map<NormalizedRelayUrl, RelayProber.ReadWriteVerdict>? = null
+
+            val check =
+                launch {
+                    result = RelayProber(client).readWriteCheck(listOf(fast), signer, timeoutMs = 5_000)
+                }
+            launch { client.playReadThenWrite(fast, ok = true) }
+            check.join()
+
+            val verdict = result!![fast]!!
+            assertTrue(verdict.rttReadMs >= 0, "an answered read must be measured")
+            assertTrue(verdict.rttWriteMs >= 0, "an answered write must be measured")
+            assertEquals(true, verdict.writeAccepted)
+            assertEquals(20166, client.published!!.kind, "the write test must use the ephemeral probe event")
+        }
+
+    @Test
+    fun writeRejectionIsAnAnswerNotAFailure() =
+        runTest {
+            val client = ScriptedClient()
+            val signer = NostrSignerInternal(KeyPair())
+            var result: Map<NormalizedRelayUrl, RelayProber.ReadWriteVerdict>? = null
+
+            val check =
+                launch {
+                    result = RelayProber(client).readWriteCheck(listOf(walled), signer, timeoutMs = 5_000)
+                }
+            launch { client.playReadThenWrite(walled, ok = false, okMessage = "pow: 28 bits needed") }
+            check.join()
+
+            val verdict = result!![walled]!!
+            assertEquals(false, verdict.writeAccepted, "OK false is a measured policy answer")
+            assertEquals("pow: 28 bits needed", verdict.writeMessage)
+            assertTrue(verdict.rttWriteMs >= 0, "a rejection is still a round trip")
+        }
+
+    @Test
+    fun silentWriteLeavesTheWriteSideUnobserved() =
+        runTest {
+            val client = ScriptedClient()
+            val signer = NostrSignerInternal(KeyPair())
+            var result: Map<NormalizedRelayUrl, RelayProber.ReadWriteVerdict>? = null
+
+            val check =
+                launch {
+                    result = RelayProber(client).readWriteCheck(listOf(fast), signer, timeoutMs = 2_000)
+                }
+            launch { client.playReadThenWrite(fast, ok = null) }
+            check.join()
+
+            val verdict = result!![fast]!!
+            assertTrue(verdict.rttReadMs >= 0)
+            assertNull(verdict.writeAccepted, "silence is not evidence about the write path")
+            assertEquals(-1, verdict.rttWriteMs)
+        }
+
+    // ------------------------------------------------------------------
     // toDiscoveryEventTemplate — only observed facts become tags
     // ------------------------------------------------------------------
 
@@ -255,6 +383,40 @@ class RelayProberFlowTest {
                 .toDiscoveryEventTemplate()
 
         assertNull(tagsOf(template).firstOrNull { it[0] == "R" })
+    }
+
+    @Test
+    fun readWriteResultsBecomeRttTags() {
+        val verdict = RelayProber.Verdict(fast, reachable = true, rttOpenMs = 100, rttEoseMs = 300, error = null)
+        val readWrite = RelayProber.ReadWriteVerdict(fast, rttReadMs = 40, rttWriteMs = 55, writeAccepted = true, writeMessage = "")
+
+        val tags = tagsOf(verdict.toDiscoveryEventTemplate(readWrite = readWrite))
+        assertTrue(listOf("rtt-read", "40") in tags)
+        assertTrue(listOf("rtt-write", "55") in tags)
+    }
+
+    @Test
+    fun unobservedReadWriteSidesStayUntagged() {
+        val verdict = RelayProber.Verdict(fast, reachable = true, rttOpenMs = 100, rttEoseMs = -1, error = null)
+        val readWrite = RelayProber.ReadWriteVerdict(fast, rttReadMs = -1, rttWriteMs = -1, writeAccepted = null, writeMessage = null)
+
+        val tags = tagsOf(verdict.toDiscoveryEventTemplate(readWrite = readWrite))
+        assertNull(tags.firstOrNull { it[0] == "rtt-read" })
+        assertNull(tags.firstOrNull { it[0] == "rtt-write" })
+    }
+
+    @Test
+    fun writeRejectionReasonsBecomeRequirementTags() {
+        val verdict = RelayProber.Verdict(walled, reachable = true, rttOpenMs = 100, rttEoseMs = -1, error = null)
+
+        val pow = RelayProber.ReadWriteVerdict(walled, -1, 30, writeAccepted = false, writeMessage = "pow: 28 bits needed")
+        assertTrue(listOf("R", "pow") in tagsOf(verdict.toDiscoveryEventTemplate(readWrite = pow)))
+
+        val auth = RelayProber.ReadWriteVerdict(walled, -1, 30, writeAccepted = false, writeMessage = "auth-required: sign in")
+        assertTrue(listOf("R", "auth") in tagsOf(verdict.toDiscoveryEventTemplate(readWrite = auth)))
+
+        val blocked = RelayProber.ReadWriteVerdict(walled, -1, 30, writeAccepted = false, writeMessage = "blocked: not welcome")
+        assertNull(tagsOf(verdict.toDiscoveryEventTemplate(readWrite = blocked)).firstOrNull { it[0] == "R" })
     }
 
     @Test
