@@ -38,9 +38,23 @@ Shipped as designed. Where it diverged or went further:
   where the new sentence belongs — or silently dropped a new `%1$s`. New keys fall
   back to the new English until Crowdin catches up. The 401 now-orphaned
   translations were deleted from the 11 locale files that carried them.
-- **Not done:** the 60-second silent `DISMISS` (item 6 below) is still a silent
-  deny with the event left pending in the outbox. It needs a decision about what
-  the user should see, not just a layout.
+- **The 60s timeout now runs from display, not from arrival.** Found while
+  answering "what happens if several auths are requested inside one 60s window?".
+  The host shows one dialog at a time but every prompt's deadline started when its
+  challenge arrived, so a burst of relays meant prompt 2..N counted down while
+  invisible. They expired unseen — a silent deny — and if the user did reach one
+  after it expired, the click was swallowed whole: `complete()` is a no-op on a
+  resolved deferred, so no auth was sent and not even the "always allow" rule was
+  written. `RelayAuthPrompt.markShown()` now starts the window, gated on a host
+  actually collecting (no UI → the old arrival clock, which is what the timeout was
+  always for) and capped by `queueWaitMs` so a stuck queue can't suspend a
+  connection forever. A second challenge for the same (relay, account) rides along
+  on the owner's answer with no deadline of its own — running one would let it
+  resolve the shared deferred and tear down a dialog mid-read.
+- **Still not done:** what a timeout should *look like*. It is now an honest 60s of
+  visible time rather than a clock the user never saw, but it is still a dialog
+  that vanishes and an event left pending in the outbox with no feedback. That
+  needs a product decision, not a layout.
 
 Verified: `:amethyst:testFdroidDebugUnitTest` 1096 tests green (38 in the relay-auth
 suites, 5 of them new), `:commons:jvmTest` 1446 green, `spotlessApply` clean.

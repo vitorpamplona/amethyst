@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** What the user chose when asked whether to authenticate with a relay. */
@@ -64,6 +65,20 @@ class RelayAuthPrompt(
         reply.complete(choice)
     }
 
+    private val shown = CompletableDeferred<Unit>()
+
+    /**
+     * Called by the host the moment this prompt is actually put on screen. The answer window is
+     * measured from here, not from when the challenge arrived — the host shows one dialog at a time,
+     * so a prompt can sit queued behind another for a long while, and its clock must not be running
+     * during that.
+     */
+    fun markShown() {
+        shown.complete(Unit)
+    }
+
+    internal suspend fun awaitShown() = shown.await()
+
     /** True once answered by the user or resolved by the bus (e.g. timed out). */
     val isResolved: Boolean get() = reply.isCompleted
 
@@ -82,6 +97,7 @@ class RelayAuthPrompt(
  */
 class RelayAuthPromptBus(
     private val timeoutMs: Long = DEFAULT_TIMEOUT_MS,
+    private val queueWaitMs: Long = DEFAULT_QUEUE_WAIT_MS,
 ) {
     // replay so a challenge raised *before* the UI host subscribes — cold start, an account switch,
     // any moment no RelayAuthPromptHost is collecting — isn't dropped (which would stall the auth
@@ -112,16 +128,58 @@ class RelayAuthPromptBus(
                     ?: CompletableDeferred<UserAuthChoice>().also { inFlight[key] = it } to true
             }
 
-        if (isOwner) mutablePrompts.emit(RelayAuthPrompt(relayUrl, purposes, askingAccount, isMyOwnRelay, deferred))
+        // Only the owner surfaces a dialog and owns its deadline. A second challenge for the same
+        // (relay, account) just rides along on the owner's answer — it must NOT run a deadline of its
+        // own, because resolving the shared deferred would tear down a dialog the user is still
+        // looking at.
+        if (!isOwner) return rideAlong(deferred)
+
+        val prompt = RelayAuthPrompt(relayUrl, purposes, askingAccount, isMyOwnRelay, deferred)
+        mutablePrompts.emit(prompt)
         return try {
-            awaitOrTimeout(deferred)
+            awaitOrTimeout(prompt, deferred)
         } finally {
-            if (isOwner) synchronized(inFlight) { inFlight.remove(key) }
+            synchronized(inFlight) { inFlight.remove(key) }
         }
     }
 
-    private suspend fun awaitOrTimeout(deferred: CompletableDeferred<UserAuthChoice>): UserAuthChoice {
+    /**
+     * Waits for the owner's answer without imposing a deadline that could resolve the shared prompt.
+     * The cap exists only so a cancelled owner can't strand this caller forever; it deliberately
+     * returns [UserAuthChoice.DISMISS] *locally* rather than completing the deferred.
+     */
+    private suspend fun rideAlong(deferred: CompletableDeferred<UserAuthChoice>): UserAuthChoice = withTimeoutOrNull(queueWaitMs + 2 * timeoutMs) { deferred.await() } ?: UserAuthChoice.DISMISS
+
+    /**
+     * Waits for the user's answer, giving them [timeoutMs] **from the moment the dialog is on screen**
+     * rather than from the moment the challenge arrived.
+     *
+     * That distinction is the whole point. The host renders one dialog at a time, so when several
+     * relays challenge at once every prompt but the first is queued and invisible — and with a single
+     * deadline measured from arrival, those queued prompts expired without ever being shown. The user
+     * saw nothing, the relay was silently denied, and a click on a dialog that had already expired was
+     * swallowed whole: `complete()` is a no-op on a resolved deferred, so the auth was never sent and
+     * not even the "always allow" rule was written.
+     */
+    private suspend fun awaitOrTimeout(
+        prompt: RelayAuthPrompt,
+        deferred: CompletableDeferred<UserAuthChoice>,
+    ): UserAuthChoice {
+        // Is anything able to display this? With no host collecting — a headless background process,
+        // or a cold start before the UI subscribes — nobody can ever answer, and the relay coroutine
+        // must not hang. That case is what the timeout has always been for, so it keeps the old clock.
+        val hasHost = withTimeoutOrNull(timeoutMs) { mutablePrompts.subscriptionCount.first { it > 0 } } != null
+
+        if (hasHost) {
+            // Wait for this prompt's turn at the front of the host's queue. Capped, so a host that
+            // stops rendering (backgrounded mid-queue) still can't suspend the connection forever.
+            withTimeoutOrNull(queueWaitMs) { prompt.awaitShown() }
+        }
+
+        // The answer window proper. If the user already answered while we were waiting above, this
+        // returns immediately.
         withTimeoutOrNull(timeoutMs) { deferred.await() }?.let { return it }
+
         // Timed out: resolve the deferred so any UI still showing this prompt can drop it, and so a
         // concurrent waiter on the same deferred gets an answer too. complete() is a no-op if a late
         // user response already won the race.
@@ -131,5 +189,8 @@ class RelayAuthPromptBus(
 
     companion object {
         const val DEFAULT_TIMEOUT_MS = 60_000L
+
+        /** How long a prompt may wait its turn behind other dialogs before we give up on it. */
+        const val DEFAULT_QUEUE_WAIT_MS = 5 * 60_000L
     }
 }

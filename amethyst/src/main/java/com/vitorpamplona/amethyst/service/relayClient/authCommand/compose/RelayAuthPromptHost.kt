@@ -113,7 +113,10 @@ fun RelayAuthPromptHost(
         }
     }
 
+    // One dialog at a time. Everything else waits its turn, and tells the bus when its turn comes so
+    // its answer window starts from the moment it is visible rather than from the challenge.
     queue.firstOrNull { !it.isResolved }?.let { prompt ->
+        LaunchedEffect(prompt) { prompt.markShown() }
         RelayAuthPromptDialog(prompt, accountViewModel, nav) { choice ->
             prompt.respond(choice)
             queue.remove(prompt)

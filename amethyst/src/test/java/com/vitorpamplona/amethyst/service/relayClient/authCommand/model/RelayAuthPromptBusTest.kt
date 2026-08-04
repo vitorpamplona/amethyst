@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
@@ -112,5 +113,66 @@ class RelayAuthPromptBusTest {
             // would strand the caller until the timeout and then silently DISMISS).
             bus.prompts.first().respond(UserAuthChoice.ALLOW_ONCE)
             assertEquals(UserAuthChoice.ALLOW_ONCE, caller.await())
+        }
+
+    @Test
+    fun aQueuedPromptsClockStartsWhenItIsShown() =
+        runTest {
+            val bus = RelayAuthPromptBus(timeoutMs = 1_000L)
+            val relayA = NormalizedRelayUrl("wss://a.relay.test")
+            val relayB = NormalizedRelayUrl("wss://b.relay.test")
+
+            val surfaced = async { bus.prompts.take(2).toList() }
+            val callerA = async { bus.requestDecision(relayA, emptyList(), alice, isMyOwnRelay = false) }
+            val callerB = async { bus.requestDecision(relayB, emptyList(), alice, isMyOwnRelay = false) }
+            val prompts = surfaced.await()
+
+            // The host renders one dialog at a time, so B sits queued and invisible while the user
+            // works through A. Only A is on screen, so only A's clock is running.
+            prompts[0].markShown()
+            delay(600)
+            prompts[0].respond(UserAuthChoice.ALLOW_ONCE)
+            assertEquals(UserAuthChoice.ALLOW_ONCE, callerA.await())
+
+            // B's turn. Its own window opens now — well past the point where a single deadline
+            // measured from the challenge would already have expired it unseen.
+            prompts[1].markShown()
+            delay(600)
+            prompts[1].respond(UserAuthChoice.ALWAYS_ALLOW)
+
+            assertEquals(UserAuthChoice.ALWAYS_ALLOW, callerB.await())
+        }
+
+    @Test
+    fun aPromptNoHostCanEverShowStillTimesOut() =
+        runTest {
+            // Nothing collects the flow, so nobody can answer. The relay coroutine must not hang
+            // waiting for a dialog that will never appear.
+            val bus = RelayAuthPromptBus(timeoutMs = 1_000L, queueWaitMs = 60_000L)
+
+            assertEquals(UserAuthChoice.DISMISS, bus.ask())
+        }
+
+    @Test
+    fun aSecondChallengeNeverResolvesTheDialogTheUserIsLookingAt() =
+        runTest {
+            val bus = RelayAuthPromptBus(timeoutMs = 1_000L)
+
+            val surfaced = async { bus.prompts.first() }
+            val owner = async { bus.ask() }
+            val rider = async { bus.ask() }
+            val prompt = surfaced.await()
+
+            // The prompt is queued behind another dialog well past the rider's old deadline. The
+            // rider has no dialog of its own, so it must simply wait: if it ran its own clock it
+            // would complete the shared deferred at 1000ms and yank this prompt away before the
+            // user ever saw it.
+            delay(1_500)
+            prompt.markShown()
+            delay(300)
+            prompt.respond(UserAuthChoice.ALWAYS_ALLOW)
+
+            assertEquals(UserAuthChoice.ALWAYS_ALLOW, owner.await())
+            assertEquals(UserAuthChoice.ALWAYS_ALLOW, rider.await())
         }
 }
