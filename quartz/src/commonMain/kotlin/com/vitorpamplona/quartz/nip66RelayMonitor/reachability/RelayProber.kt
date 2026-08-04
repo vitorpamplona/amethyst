@@ -29,10 +29,19 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.networkType
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.requirement
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.rtt
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RttType
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.TimeSource
 
@@ -102,7 +111,7 @@ class RelayProber(
         val distinct = relays.toSet()
         var done = 0
         for (wave in distinct.chunked(waveSize.coerceAtLeast(1))) {
-            all += probeWave(wave, timeoutMs)
+            probeWave(wave, timeoutMs) { all += it }
             done += wave.size
             if (distinct.size > wave.size) {
                 val liveSoFar = all.count { it.reachable }
@@ -112,10 +121,33 @@ class RelayProber(
         return Result(all, mark.elapsedNow().inWholeMilliseconds)
     }
 
+    /**
+     * Streaming variant of [probe]: a cold [Flow] that emits each relay's [Verdict]
+     * the moment that relay resolves — an answering relay's verdict arrives as soon
+     * as its EOSE/CLOSED/connect-failure lands, not when the whole census ends. Only
+     * relays that stay silent wait for their wave's [timeoutMs] deadline.
+     *
+     * Probing starts when the flow is collected and pauses between waves while the
+     * collector is busy (emission is sequential). Pair each verdict with
+     * [toDiscoveryEventTemplate] to turn the stream into signable NIP-66 kind:30166
+     * records for another process to sign and publish.
+     */
+    fun probeFlow(
+        relays: Collection<NormalizedRelayUrl>,
+        timeoutMs: Long = 15_000,
+        waveSize: Int = 1000,
+    ): Flow<Verdict> =
+        flow {
+            for (wave in relays.toSet().chunked(waveSize.coerceAtLeast(1))) {
+                probeWave(wave, timeoutMs) { emit(it) }
+            }
+        }
+
     private suspend fun probeWave(
         wave: List<NormalizedRelayUrl>,
         timeoutMs: Long,
-    ): List<Verdict> {
+        onVerdict: suspend (Verdict) -> Unit,
+    ) {
         val mark = TimeSource.Monotonic.markNow()
         val waveSet = wave.toHashSet()
         val openRtt = ConcurrentMap<NormalizedRelayUrl, Long>()
@@ -178,22 +210,7 @@ class RelayProber(
                 }
             }
 
-        client.addConnectionListener(connListener)
-        try {
-            client.subscribe(subId, wave.associateWith { PROBE_FILTERS }, subListener)
-            val remaining = wave.toMutableSet()
-            withTimeoutOrNull(timeoutMs) {
-                while (remaining.isNotEmpty()) {
-                    remaining.remove(terminals.receive())
-                }
-            }
-        } finally {
-            client.unsubscribe(subId)
-            client.removeConnectionListener(connListener)
-            terminals.close()
-        }
-
-        return wave.map { relay ->
+        fun verdictOf(relay: NormalizedRelayUrl): Verdict {
             val opened = openRtt[relay]
             val answered = eoseMs[relay]
             val error = errors[relay]
@@ -202,13 +219,34 @@ class RelayProber(
             // Only a connect failure, or silence with no socket, is dead.
             val cannot = error?.startsWith("cannot:") == true
             val reachable = !cannot && (opened != null || answered != null || error != null)
-            Verdict(
+            return Verdict(
                 relay = relay,
                 reachable = reachable,
                 rttOpenMs = opened ?: -1,
                 rttEoseMs = answered ?: -1,
                 error = error,
             )
+        }
+
+        client.addConnectionListener(connListener)
+        try {
+            client.subscribe(subId, wave.associateWith { PROBE_FILTERS }, subListener)
+            val remaining = wave.toMutableSet()
+            while (remaining.isNotEmpty()) {
+                val left = timeoutMs - mark.elapsedNow().inWholeMilliseconds
+                if (left <= 0) break
+                val relay = withTimeoutOrNull(left) { terminals.receive() } ?: break
+                // The emission happens OUTSIDE the timeout window so a collector that
+                // suspends on a verdict can never be cancelled mid-emission and lose it.
+                if (remaining.remove(relay)) onVerdict(verdictOf(relay))
+            }
+            // Whatever is left resolved nothing by the deadline: dead if the socket
+            // never opened, reachable-but-slow if it did.
+            for (relay in remaining) onVerdict(verdictOf(relay))
+        } finally {
+            client.unsubscribe(subId)
+            client.removeConnectionListener(connListener)
+            terminals.close()
         }
     }
 
@@ -263,3 +301,28 @@ class RelayProber(
         }
     }
 }
+
+/**
+ * This verdict as an UNSIGNED NIP-66 kind:30166 Relay Discovery template — the d-tag
+ * is the normalized relay url; sign it with the consumer's own monitor key (per
+ * NIP-66 a monitor is its own identity, so the prober never signs on its own).
+ *
+ * Only facts this probe actually observed are tagged:
+ *  - `n` network type inferred from the url (clearnet/tor/i2p);
+ *  - `rtt-open` when the relay was reachable — the measured WS-upgrade round trip,
+ *    or 0 for "reachable, latency not observed" (liveness is the tag's PRESENCE);
+ *  - `R auth` when the relay answered the probe REQ with a NIP-42 `auth-required`
+ *    CLOSED — an observed auth wall, not a NIP-11 claim.
+ *
+ * [Verdict.rttEoseMs] is deliberately NOT written as `rtt-read`: it is measured from
+ * the wave start, so it bundles dial, TLS and any handshake queueing with the read —
+ * publishing it as a read round trip would hand aggregators an inflated latency.
+ * The [RelayObserver]/[RelayMonitor] path supplies honest `rtt-read`/`rtt-write`
+ * from real traffic instead.
+ */
+fun RelayProber.Verdict.toDiscoveryEventTemplate(createdAt: Long = TimeUtils.now()): EventTemplate<RelayDiscoveryEvent> =
+    RelayDiscoveryEvent.build(relay, createdAt = createdAt) {
+        networkType(RelayReachabilityStore.networkTypeOf(relay))
+        if (reachable) rtt(RttType.OPEN, rttOpenMs.coerceAtLeast(0))
+        if (error?.startsWith("closed:auth-required") == true) requirement("auth")
+    }
