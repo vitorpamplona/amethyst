@@ -349,21 +349,26 @@ object RelayCommands {
 
         var fileRaw = 0
         var fileRejected = 0
+        var fileOnion = 0
         val fileRelays = HashSet<NormalizedRelayUrl>()
         if (fromFile != null) {
-            File(fromFile).forEachLine { line ->
+            val candidates = File(fromFile)
+            if (!candidates.canRead()) return Output.error("bad_args", "cannot read --file $fromFile")
+            candidates.forEachLine { line ->
                 if (line.isBlank()) return@forEachLine
                 fileRaw++
                 val normalized = line.normalizeRelayUrlOrNull()
                 if (normalized == null) {
                     fileRejected++
-                } else if (!RelayUrlNormalizer.isOnion(normalized.url)) {
+                } else if (RelayUrlNormalizer.isOnion(normalized.url)) {
+                    fileOnion++
+                } else {
                     fileRelays.add(normalized)
                 }
             }
             System.err.println(
                 "[relay-probe] $fromFile: $fileRaw urls → ${fileRelays.size} unique clearnet relays " +
-                    "($fileRejected rejected by the normalizer)",
+                    "($fileRejected rejected by the normalizer, $fileOnion onion skipped)",
             )
         }
 
@@ -412,6 +417,7 @@ object RelayCommands {
                     "file_urls" to (if (fromFile != null) fileRaw else null),
                     "file_normalized" to (if (fromFile != null) fileRelays.size else null),
                     "file_rejected" to (if (fromFile != null) fileRejected else null),
+                    "file_onion_skipped" to (if (fromFile != null) fileOnion else null),
                     "reachable" to result.reachable.size,
                     "dead" to result.dead.size,
                     "closed_by_policy" to authWalled,

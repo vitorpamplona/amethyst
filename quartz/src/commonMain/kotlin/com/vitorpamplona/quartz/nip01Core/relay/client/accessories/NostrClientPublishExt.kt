@@ -141,7 +141,12 @@ suspend fun INostrClient.publishAndCollectResults(
 
                 when (msg) {
                     is OkMessage -> {
-                        if (msg.eventId == event.id) {
+                        // The relayList guard matters, not just the id: the same event may
+                        // have been published to OTHER relays by an earlier call (probe
+                        // waves, republish), and counting their late OKs here would inflate
+                        // receivedResults and end the wait loop before every listed relay
+                        // answered — misreporting the missing ones as NO_RESPONSE.
+                        if (msg.eventId == event.id && relay.url in relayList) {
                             resultChannel.trySend(DetailedResult(relay.url, msg.success, msg.message, mark.elapsedNow().inWholeMilliseconds))
                             Log.d("publishAndConfirm") { "onSendResponse Received response for ${msg.eventId} from relay ${relay.url} message ${msg.message} success ${msg.success}" }
                         }

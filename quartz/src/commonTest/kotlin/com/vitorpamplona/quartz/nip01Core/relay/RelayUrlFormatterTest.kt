@@ -54,6 +54,14 @@ class RelayUrlFormatterTest {
     }
 
     @Test
+    fun trailingPercentTwentyIsTrimmedButBareTrailingZeroIsNot() {
+        assertEquals("wss://nostr.mom/", RelayUrlNormalizer.normalizeOrNull("wss://nostr.mom%20")?.url)
+        // urls merely ending in '%', '2' or '0' (every port ending in zero) must pass untouched
+        assertEquals("wss://nostr.mom:3030/", RelayUrlNormalizer.normalizeOrNull("wss://nostr.mom:3030")?.url)
+        assertEquals("wss://nostr.mom:8020/", RelayUrlNormalizer.normalizeOrNull("wss://nostr.mom:8020")?.url)
+    }
+
+    @Test
     fun httpWithPathIsNotARelay() {
         // Mastodon/bridge actor urls from `proxy` tags: web resources, not relays
         assertNull(RelayUrlNormalizer.normalizeOrNull("https://mastodon.social/users/amanita_muscaria"))

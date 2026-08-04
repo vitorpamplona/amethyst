@@ -299,6 +299,38 @@ class RelayProberFlowTest {
         }
 
     @Test
+    fun foreignRelayOkDoesNotEndTheWriteConfirmationEarly() =
+        runTest {
+            // A relay OUTSIDE the checked set answering with the same event id (a
+            // straggler from an earlier wave that got the same probe event) must not
+            // count toward the confirmation window — before the relayList guard in
+            // publishAndCollectResults, it ended the wait early and misreported the
+            // real relay as silent.
+            val client = ScriptedClient()
+            val signer = NostrSignerInternal(KeyPair())
+            val foreign = RelayUrlNormalizer.normalize("wss://foreign.example.com")
+            var result: Map<NormalizedRelayUrl, RelayProber.ReadWriteVerdict>? = null
+
+            val check =
+                launch {
+                    result = RelayProber(client).readWriteCheck(listOf(fast), signer, timeoutMs = 5_000)
+                }
+            launch {
+                delay(50)
+                client.listener!!.onEose(fast, null)
+                while (client.published == null) delay(10)
+                client.answerOk(foreign, true, "")
+                delay(100)
+                client.answerOk(fast, true, "")
+            }
+            check.join()
+
+            val verdict = result!![fast]!!
+            assertEquals(true, verdict.writeAccepted, "the listed relay's OK must still be awaited and recorded")
+            assertNull(result!![foreign], "the foreign relay must not appear in the result")
+        }
+
+    @Test
     fun silentWriteLeavesTheWriteSideUnobserved() =
         runTest {
             val client = ScriptedClient()

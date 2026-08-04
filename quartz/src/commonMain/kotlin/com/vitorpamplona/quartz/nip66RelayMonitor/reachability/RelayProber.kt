@@ -152,8 +152,11 @@ class RelayProber(
      * [filters] picks the check, as in [probe]: [LIVENESS_FILTERS] (default) or
      * [readTestFilter].
      *
-     * Probing starts when the flow is collected and pauses between waves while the
-     * collector is busy (emission is sequential). Pair each verdict with
+     * Probing starts when the flow is collected, and emission is sequential — a slow
+     * collector delays the next wave AND eats into the current wave's [timeoutMs]
+     * window (the deadline is absolute; answers keep being recorded while the
+     * collector runs, but silent relays get less listening time). Keep per-verdict
+     * work light, or buffer, when precise deadlines matter. Pair each verdict with
      * [toDiscoveryEventTemplate] to turn the stream into signable NIP-66 kind:30166
      * records for another process to sign and publish.
      */
@@ -194,11 +197,14 @@ class RelayProber(
     ): Map<NormalizedRelayUrl, ReadWriteVerdict> {
         val out = HashMap<NormalizedRelayUrl, ReadWriteVerdict>()
         val distinct = relays.toSet()
-        for (wave in distinct.chunked(waveSize.coerceAtLeast(1))) {
+        for ((waveIndex, wave) in distinct.chunked(waveSize.coerceAtLeast(1)).withIndex()) {
             val reads = HashMap<NormalizedRelayUrl, Long>()
             probeWave(wave, timeoutMs, readTestFilter(readLimit)) { reads[it.relay] = it.rttEoseMs }
 
-            val event = signer.sign(RelayProbeWriteTest.build())
+            // A distinct event id per wave (createdAt has second granularity, so the
+            // content must vary) keeps a straggler OK from an earlier wave's relays
+            // from ever matching this wave's confirmation window.
+            val event = signer.sign(RelayProbeWriteTest.build(content = "NIP-66 write probe $waveIndex"))
             val writes = client.publishAndCollectResults(event, wave.toSet(), (timeoutMs / 1000).coerceAtLeast(1))
 
             for (relay in wave) {
