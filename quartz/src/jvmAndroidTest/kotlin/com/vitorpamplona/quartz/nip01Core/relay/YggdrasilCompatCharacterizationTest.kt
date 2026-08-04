@@ -22,29 +22,30 @@ package com.vitorpamplona.quartz.nip01Core.relay
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOverlayNetwork
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.toHttp
 import okhttp3.Request
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertNull
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Characterization of how relay URLs on an Yggdrasil overlay behave today.
+ * Relay URLs on an Yggdrasil overlay, end to end through the normalizer.
  *
- * Yggdrasil gives every node an IPv6 address inside `0200::/7` (nodes) and hands out
- * `0300::/8` subnets, with no DNS and no CA-issuable certificate. A relay on the mesh is
- * therefore always reached as a **bracketed IPv6 literal over plain `ws://`** — a shape
- * the relay stack only partially handles.
+ * Yggdrasil gives every node an IPv6 address inside `0200::/7` (nodes in `0200::/8`, subnets in
+ * `0300::/8`), with no DNS and no CA-issuable certificate. A relay on the mesh is therefore
+ * always a **bracketed IPv6 literal over plain `ws://`**.
  *
- * These tests document the CURRENT behavior (including the gaps) so a later fix has a
- * baseline to diff against. Each gap is marked GAP with what a user sees.
+ * The differential assertions against OkHttp are the point of this file living in
+ * `jvmAndroidTest`: OkHttp is what actually dials the socket, so a normalized url that
+ * disagrees with OkHttp's own canonical host is a relay the app tracks under a name it does
+ * not connect to.
  */
 class YggdrasilCompatCharacterizationTest {
-    // Same node, three legal RFC 4291 spellings of one address.
+    // Same node, several legal RFC 4291 spellings of one address.
     private val canonical = "ws://[201:d0e:9ba5:8bbc::1]:8080"
     private val expanded = "ws://[201:0d0e:9ba5:8bbc:0000:0000:0000:0001]:8080"
     private val uppercase = "ws://[201:D0E:9BA5:8BBC::1]:8080"
@@ -66,51 +67,90 @@ class YggdrasilCompatCharacterizationTest {
     }
 
     @Test
-    fun yggdrasilSubnetAddressesAndUppercaseHexWork() {
+    fun yggdrasilSubnetAddressesWork() {
         assertEquals("ws://[300:1b5d:d0e9:ba58::1]:4848/", "ws://[300:1b5d:d0e9:ba58::1]:4848".normalizeRelayUrl().url)
-        // Hex case IS folded, so the uppercase spelling collapses onto the canonical one.
-        assertEquals(canonical.normalizeRelayUrl(), uppercase.normalizeRelayUrl())
     }
 
     /**
-     * GAP 1 — zero-compression is NOT canonicalized, so one relay gets two identities.
-     *
-     * `NormalizedRelayUrl` is the key of the connection pool, the relay-list sets, the NIP-11
-     * cache and every per-relay stat map. OkHttp collapses both spellings to one host (below),
-     * so the app opens two sockets to the same relay and counts it twice everywhere.
+     * Every legal spelling of one address collapses to one [NormalizedRelayUrl] — the key of the
+     * connection pool, the relay-list sets, the NIP-11 cache and the per-relay stat maps. Without
+     * this the app dials one relay twice and shows it twice.
      */
     @Test
-    fun gapZeroCompressionSplitsOneRelayIntoTwoIdentities() {
-        assertNotEquals(canonical.normalizeRelayUrl(), expanded.normalizeRelayUrl())
-        // ...even though they are literally the same host on the wire:
-        assertEquals(host(canonical), host(expanded))
+    fun everySpellingOfOneAddressIsOneRelay() {
+        val identities = listOf(canonical, expanded, uppercase).map { it.normalizeRelayUrl() }.toSet()
+        assertEquals(setOf("ws://[201:d0e:9ba5:8bbc::1]:8080/"), identities.map { it.url }.toSet())
+        // ...and that one identity is the host OkHttp dials for all of them.
+        assertEquals(setOf("201:d0e:9ba5:8bbc::1"), listOf(canonical, expanded, uppercase).map { host(it) }.toSet())
+    }
+
+    @Test
+    fun normalizedIdentityAlwaysMatchesTheHostOkHttpDials() {
+        listOf(
+            "ws://[201:0d0e:9ba5:8bbc:0000:0000:0000:0001]:8080",
+            "ws://[300:1b5d:d0e9:ba58:0:0:0:1]:4848",
+            "ws://[2001:0DB8:0000:0000:0000:0000:0000:0001]:7777",
+            "ws://[::1]:4869",
+        ).forEach { raw ->
+            val normalized = raw.normalizeRelayUrl().url
+            assertEquals(host(normalized), host(raw), "identity for $raw disagrees with the dialed host")
+        }
     }
 
     /**
-     * GAP 2 — a schemeless IPv6 literal defaults to `wss://`.
-     *
-     * `isLocalHost()` only knows 127.0.0.1 / localhost / umbrel / 192.168. / .local, so an
-     * Yggdrasil address falls through to the clearnet default. No CA issues certificates for
-     * `0200::/7` literals, so the resulting wss:// url can only ever fail its TLS handshake.
+     * A schemeless overlay address defaults to `ws://`: no CA issues certificates for
+     * `0200::/7`, so `wss://` could only ever fail its handshake. The mesh already encrypts
+     * end to end, so this is not a downgrade.
      */
     @Test
-    fun gapSchemelessYggdrasilAddressDefaultsToWss() {
-        assertEquals("wss://[201:d0e:9ba5:8bbc::1]:8080/", "[201:d0e:9ba5:8bbc::1]:8080".normalizeRelayUrl().url)
+    fun schemelessOverlayAddressDefaultsToWs() {
+        assertEquals("ws://[201:d0e:9ba5:8bbc::1]:8080/", "[201:d0e:9ba5:8bbc::1]:8080".normalizeRelayUrl().url)
+        assertTrue("ws://[201:d0e:9ba5:8bbc::1]:8080/".normalizeRelayUrl().isOverlayNetwork())
+        // A clearnet IPv6 relay keeps requiring TLS.
+        assertEquals("wss://[2001:db8::1]:8080/", "[2001:db8::1]:8080".normalizeRelayUrl().url)
+        assertFalse("wss://[2001:db8::1]:8080/".normalizeRelayUrl().isOverlayNetwork())
+    }
+
+    /**
+     * `::1`, `fc00::/7` and `fe80::/10` are the IPv6 twins of 127.0.0.1 and 192.168., so they
+     * answer [isLocalHost] the same way — no TLS, no Tor, never advertised to the network.
+     */
+    @Test
+    fun ipv6LoopbackAndPrivateRangesCountAsLocalHost() {
+        assertEquals("ws://[::1]:4869/", "[::1]:4869".normalizeRelayUrl().url)
+        assertTrue("ws://[::1]:4869/".normalizeRelayUrl().isLocalHost())
+        assertTrue("ws://[fd12:3456::1]:8080/".normalizeRelayUrl().isLocalHost(), "unique local address")
+        assertTrue("ws://[fe80::1]:8080/".normalizeRelayUrl().isLocalHost(), "link local address")
+        assertFalse("wss://[2001:db8::1]:8080/".normalizeRelayUrl().isLocalHost(), "clearnet ipv6")
+        // An overlay relay is reachable across the mesh, so it is NOT localhost.
         assertFalse("ws://[201:d0e:9ba5:8bbc::1]:8080/".normalizeRelayUrl().isLocalHost())
     }
 
     /**
-     * GAP 3 — an unbracketed IPv6 literal is rejected outright.
-     *
-     * `yggdrasilctl getSelf` prints the address unbracketed, which is what a user copies into
-     * the "add a relay" field. Normalization returns null and `RelayUrlEditField.submitRelay`
-     * has no else branch, so the Add button silently does nothing.
+     * `yggdrasilctl getSelf` prints the address unbracketed, which is what a user pastes into
+     * the "add a relay" field. It is bracketed automatically rather than rejected.
      */
     @Test
-    fun gapUnbracketedYggdrasilAddressIsRejected() {
-        assertNull(RelayUrlNormalizer.normalizeOrNull("201:d0e:9ba5:8bbc:f4a1:d34:1c2:eae5"))
-        assertNull(RelayUrlNormalizer.normalizeOrNull("201:d0e:9ba5:8bbc:f4a1:d34:1c2:eae5:8080"))
-        // Bracketing it by hand is the only accepted form.
-        assertTrue(RelayUrlNormalizer.normalizeOrNull("[201:d0e:9ba5:8bbc:f4a1:d34:1c2:eae5]:8080") != null)
+    fun bareUnbracketedLiteralIsBracketedAutomatically() {
+        assertEquals(
+            "ws://[201:d0e:9ba5:8bbc:f4a1:d34:1c2:eae5]/",
+            "201:d0e:9ba5:8bbc:f4a1:d34:1c2:eae5".normalizeRelayUrl().url,
+        )
+        assertEquals("ws://[201:d0e:9ba5:8bbc::1]/", "201:d0e:9ba5:8bbc::1".normalizeRelayUrl().url)
+        assertNotNull(RelayUrlNormalizer.normalizeOrNull("[201:d0e:9ba5:8bbc:f4a1:d34:1c2:eae5]:8080"))
+    }
+
+    /**
+     * Auto-bracketing must not swallow the other colon-bearing strings that reach the
+     * normalizer. Only a string that parses as a whole IPv6 address is bracketed.
+     */
+    @Test
+    fun autoBracketingDoesNotCaptureNonAddresses() {
+        assertEquals("wss://relay.example.com:8080/", "relay.example.com:8080".normalizeRelayUrl().url)
+        assertEquals("ws://localhost:4869/", "localhost:4869".normalizeRelayUrl().url)
+        // addressable-event pointer, not a relay
+        assertEquals(null, RelayUrlNormalizer.normalizeOrNull("31990:abcdef:mydtag"))
+        // two hex-looking groups are a host and a port, not an address
+        assertEquals("wss://abcd:1234/", "abcd:1234".normalizeRelayUrl().url)
     }
 }

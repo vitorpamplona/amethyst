@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.normalizer
 
 import androidx.collection.LruCache
+import com.vitorpamplona.quartz.utils.Ipv6
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.CancellationException
@@ -44,7 +45,51 @@ class RelayUrlNormalizer {
                 url.contains("//umbrel:") ||
                 url.contains("192.168.") ||
                 url.contains(".local:") ||
-                url.contains(".local/")
+                url.contains(".local/") ||
+                isPrivateIpv6(url)
+
+        /**
+         * The IPv6 twins of the literals above: `::1` (127.0.0.1), `fc00::/7` unique local
+         * addresses (192.168.0.0/16) and `fe80::/10` link-local. All three name a host that
+         * only exists on this machine or this LAN, which is what every caller of [isLocalHost]
+         * means by the question — so a relay on one must not be Torified, must not need TLS,
+         * and must not be advertised to the network.
+         */
+        private fun isPrivateIpv6(url: String): Boolean {
+            val bytes = ipv6HostOf(url) ?: return false
+            return Ipv6.isLoopback(bytes) || Ipv6.isUniqueLocal(bytes) || Ipv6.isLinkLocal(bytes)
+        }
+
+        /**
+         * True for a relay inside an encrypted IPv6 overlay mesh — today `0200::/7`, the range
+         * Yggdrasil derives node addresses and subnets from.
+         *
+         * Unlike [isLocalHost] this is not a private address: it is reachable from anywhere on
+         * the mesh. But it is unreachable *off* the mesh, which has two consequences the relay
+         * stack has to honour — it can never be dialed through a SOCKS/Tor proxy, and it can
+         * never present a CA-issued certificate, so it speaks plain `ws://`. Both are safe:
+         * the overlay already encrypts end to end and authenticates the peer by its address,
+         * which is derived from the peer's public key.
+         */
+        fun isOverlayNetwork(url: String): Boolean {
+            val bytes = ipv6HostOf(url) ?: return false
+            return Ipv6.isOverlayMesh(bytes)
+        }
+
+        /**
+         * Extracts the bracketed IPv6 host of [url] as raw bytes, dropping any `%zone` suffix.
+         * Returns null — cheaply, on a single `indexOf` — for the overwhelmingly common case of
+         * a url with a DNS host.
+         */
+        private fun ipv6HostOf(url: String): ByteArray? {
+            val open = url.indexOf('[')
+            if (open < 0) return null
+            val close = url.indexOf(']', open + 1)
+            if (close <= open + 1) return null
+            val zone = url.indexOf('%', open + 1)
+            val end = if (zone in (open + 1) until close) zone else close
+            return Ipv6.parse(url.substring(open + 1, end))
+        }
 
         fun isOnion(url: String) = url.endsWith(".onion") || url.contains(".onion/")
 
@@ -82,7 +127,31 @@ class RelayUrlNormalizer {
             return false
         }
 
-        private fun norm(url: String) = NormalizedRelayUrl(Rfc3986.normalize(url))
+        private fun norm(url: String) = NormalizedRelayUrl(canonicalizeIpv6Host(Rfc3986.normalize(url)))
+
+        /**
+         * Rewrites a bracketed IPv6 host into its RFC 5952 canonical form.
+         *
+         * RFC 4291 lets one address be spelled many ways, and the RFC 3986 pass only folds hex
+         * case — so `[201:0d0e:9ba5:8bbc:0000:0000:0000:0001]` and `[201:d0e:9ba5:8bbc::1]`
+         * survive as two different [NormalizedRelayUrl]s for one host. That value keys the
+         * connection pool, the relay-list sets, the NIP-11 cache and the per-relay stats, so the
+         * app would dial the same relay twice and count it twice. OkHttp canonicalizes to this
+         * exact form when it dials, so folding here makes the stored key the host on the wire.
+         *
+         * Returns [url] itself — no allocation — when there is no literal or it is already
+         * canonical, which is every url with a DNS host.
+         */
+        private fun canonicalizeIpv6Host(url: String): String {
+            val open = url.indexOf('[')
+            if (open < 0) return url
+            val close = url.indexOf(']', open + 1)
+            if (close <= open + 1) return url
+            val inner = url.substring(open + 1, close)
+            val canonical = Ipv6.canonicalizeOrNull(inner) ?: return url
+            if (canonical == inner) return url
+            return url.substring(0, open + 1) + canonical + url.substring(close)
+        }
 
         private fun isInvisible(c: Char) = c == '\u200B' || c == '\u200C' || c == '\u200D' || c == '\u2060' || c == '\uFEFF'
 
@@ -267,15 +336,29 @@ class RelayUrlNormalizer {
             }
 
             // protocol-relative urls (`//host/`) are just missing the scheme
-            val bare = if (trimmed.startsWith("//")) trimmed.drop(2) else trimmed
-            if (bare.length < 4) return null
+            val protocolRelative = if (trimmed.startsWith("//")) trimmed.drop(2) else trimmed
+            if (protocolRelative.length < 4) return null
+
+            // A bare IPv6 literal is missing its brackets, not malformed. This is the shape a
+            // user actually has in hand — `yggdrasilctl getSelf` prints the address unbracketed
+            // — and without the brackets `isBareHostAndPath` rejects it below as a host with too
+            // many colons. Only a string that parses as a whole address is bracketed, so an
+            // addressable-event pointer (`31990:hex:dtag`) or a `host:port` still falls through.
+            val bare =
+                if (protocolRelative[0] != '[' && Ipv6.isLiteral(protocolRelative)) {
+                    "[$protocolRelative]"
+                } else {
+                    protocolRelative
+                }
 
             if (!isBareHostAndPath(bare)) {
                 Log.d("RelayUrlNormalizer") { "Rejected $url" }
                 return null
             }
 
-            return if (isOnion(bare) || isLocalHost(bare)) {
+            // Overlay and localhost relays cannot hold a certificate, so wss:// could only ever
+            // fail its handshake. Both carry their own encryption, so ws:// is not a downgrade.
+            return if (isOnion(bare) || isLocalHost(bare) || isOverlayNetwork(bare)) {
                 "ws://$bare"
             } else {
                 "wss://$bare"

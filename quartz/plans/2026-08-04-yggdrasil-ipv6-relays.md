@@ -1,103 +1,114 @@
-# Amethyst over Yggdrasil (IPv6 overlay) — compatibility assessment
+# Amethyst over Yggdrasil (IPv6 overlay)
 
-Status: **analysis only** — no behavior changed. Characterization tests landed alongside
-this doc pin the current behavior so a fix has a baseline to diff against.
+Status: **fixed** — the four gaps found in the original assessment are closed. The last
+section records what was deliberately left alone.
 
 ## What Yggdrasil looks like to the app
 
 Yggdrasil is an encrypted end-to-end mesh. Every node gets an IPv6 address derived from its
-public key inside `0200::/7`, and hands out `0300::/8` subnets. Consequences that matter here:
+public key inside `0200::/7` (nodes in `0200::/8`, subnets in `0300::/8`). Consequences:
 
-- **No DNS.** A relay on the mesh is addressed as a bracketed IPv6 literal, always.
-- **No certificates.** No CA issues for `0200::/7` literals, so relays run plain `ws://`.
-  This is not a downgrade — the overlay already provides end-to-end encryption and
-  authenticates the peer by its address.
+- **No DNS.** A relay on the mesh is addressed as an IPv6 literal, always.
+- **No certificates.** No CA issues for `0200::/7`, so relays run plain `ws://`. Not a
+  downgrade — the overlay already encrypts end to end and authenticates the peer by an
+  address derived from its public key.
 - **On Android it is a `VpnService`**, so the app's default network becomes the VPN network.
-- The address is a **stable node identifier**, so publishing it is equivalent to publishing
-  a long-lived pseudonymous handle for the device.
+- `0200::/7` is deprecated NSAP space, so nothing else routes there. An address in the range
+  is reachable *only* through a running mesh interface — which is what makes it safe to key
+  behavior off the prefix.
 
-## Verdict
+## What was wrong, and what fixed it
 
-A hand-typed `ws://[…]:port` relay works end to end: it normalizes, survives the RFC 3986
-pass, and OkHttp parses and dials it. Nothing in the stack is IPv4-only, `TcpNoDelaySocketFactory`
-is family-agnostic, and `network_security_config.xml` permits cleartext globally, so the
-`ws://` requirement is already satisfied.
+### 1. One relay, two identities
 
-Everything around that happy path is where it degrades. Four gaps, in severity order.
+`RelayUrlNormalizer` folded hex case but not zero-compression, so
+`[201:0d0e:9ba5:8bbc:0000:0000:0000:0001]` and `[201:d0e:9ba5:8bbc::1]` stayed two distinct
+`NormalizedRelayUrl`s for one host — while OkHttp collapsed both to the same host when
+dialing. Since that value keys the connection pool, the relay-list sets, the NIP-11 cache and
+the per-relay stat maps, the app opened two sockets to one relay and counted it twice.
 
-### GAP 1 — one relay, two identities (correctness)
+**Fix:** new `Ipv6` util (`quartz/utils/Ipv6.kt`) — pure-Kotlin parse, RFC 5952 canonical
+format and range classification, no `java.net`, so it works on every KMP target.
+`RelayUrlNormalizer.norm()` now canonicalizes the bracketed host. The canonical form is
+byte-for-byte what OkHttp renders, so the key the app stores is the host it actually dials —
+asserted differentially against OkHttp in `YggdrasilCompatCharacterizationTest`.
 
-`RelayUrlNormalizer` folds hex case but does **not** canonicalize zero-compression or
-leading zeros:
+Affects every IPv6 relay, not just mesh ones; it only bit Yggdrasil users because on the mesh
+a literal is the *only* way to name a relay. No migration needed: relay lists are rehydrated
+from event tags through `normalizeOrNull`, so stored entries fold on load.
 
-| input | `NormalizedRelayUrl` | OkHttp host |
-|---|---|---|
-| `ws://[201:d0e:9ba5:8bbc::1]:8080` | `ws://[201:d0e:9ba5:8bbc::1]:8080/` | `201:d0e:9ba5:8bbc::1` |
-| `ws://[201:0d0e:9ba5:8bbc:0000:0000:0000:0001]:8080` | `ws://[201:0d0e:…:0001]:8080/` | `201:d0e:9ba5:8bbc::1` |
+### 2. Schemeless entry defaulted to `wss://`
 
-OkHttp collapses both to one host; the app does not. `NormalizedRelayUrl` is the key of the
-connection pool (`PoolRequests`, `RelayPool`), every relay-list set, the NIP-11 cache and the
-per-relay stat maps — so the same relay written two ways gets **two sockets, two REQ sets and
-doubled traffic**, and appears twice in the relay UI. This affects all IPv6 literals, but it
-only bites Yggdrasil users in practice, because on the mesh a literal is the *only* way to
-name a relay. Fix: canonicalize the bracketed literal to RFC 5952 inside `fix()`.
+`isLocalHost()` knew `127.0.0.1` / `localhost` / `//umbrel:` / `192.168.` / `.local`, so a
+mesh address fell through to the clearnet default and produced a `wss://` url whose TLS
+handshake could never succeed.
 
-### GAP 2 — schemeless entry defaults to `wss://` (dead end)
+**Fix:** new `RelayUrlNormalizer.isOverlayNetwork()` recognizes `0200::/7` and joins
+`isOnion` / `isLocalHost` in choosing `ws://`. Clearnet IPv6 (`2001:db8::1`) still gets
+`wss://`.
 
-`RelayUrlNormalizer.isLocalHost()` recognizes `127.0.0.1`, `localhost`, `//umbrel:`,
-`192.168.`, `.local:` / `.local/`. An Yggdrasil address matches none of them, so a schemeless
-`[201:…]:8080` falls through to the clearnet default and becomes `wss://[201:…]:8080/` — a
-URL whose TLS handshake can never succeed. The user must know to type `ws://` themselves.
-Fix: teach `isLocalHost()` (or a sibling `isOverlayNetwork()`) the `0200::/7` prefix.
+`isLocalHost()` separately grew the IPv6 twins of the literals it already knew — `::1`
+(loopback), `fc00::/7` (unique local, the 192.168. analogue) and `fe80::/10` (link-local).
+Those are the same question every caller is asking, so a relay on one now correctly skips TLS
+and Tor and stays out of published relay lists.
 
-### GAP 3 — unbracketed literal is silently rejected (UX)
+### 3. Unbracketed literal silently rejected
 
-`yggdrasilctl getSelf` prints the address **unbracketed**, which is exactly what a user
-copies into the "add a relay" box. `isBareHostAndPath()` rejects it (correctly — it is
-ambiguous with a scheme), so `normalizeOrNull` returns null. But
-`RelayUrlEditField.submitRelay()` has no else branch: the Add button just does nothing, with
-no error. Fix: either auto-bracket a candidate that parses as an IPv6 address, or surface a
-validation message instead of a silent no-op.
+`yggdrasilctl getSelf` prints the address unbracketed — exactly what gets pasted into "add a
+relay". Normalization returned null (correctly: it is ambiguous with a scheme) and
+`RelayUrlEditField.submitRelay` had no else branch, so the Add button did nothing at all.
 
-### GAP 4 — Tor routing sends mesh traffic into the SOCKS proxy (breaks the relay)
+**Fix, two halves:**
+- `fix()` brackets a bare literal automatically, but only when the whole string parses as an
+  IPv6 address — so `31990:hex:dtag` (addressable pointer), `abcd:1234` (host:port) and
+  `relay.example.com:8080` still fall through untouched.
+- The edit field now sets `isError` and shows `relay_url_not_valid` instead of no-opping.
+  That fixes the dead button for *all* invalid input, not just IPv6.
 
-`TorRelayEvaluation` classifies relays as localhost / onion / dm / trusted / new. Yggdrasil
-lands in **new**, so with Tor on and the default "new relays via Tor", the relay is dialed
-through the Tor SOCKS proxy — which cannot route `0200::/7`. The connection can only fail.
-Compare `ws://192.168.1.100:8080/`, which is correctly kept off Tor because `isLocalHost()`
-knows the LAN prefix. Today the only workaround is turning "new relays via Tor" off, which
-weakens the setting for every genuine clearnet relay. The same gap exists on desktop
-(`DesktopHttpClient`) and for non-relay HTTP (`RoleBasedHttpClientBuilder`). Fixing GAP 2's
-prefix check fixes this one too, since both read the same predicate.
+### 4. Tor routing broke mesh relays
 
-## Propagation / privacy note (not a bug, a decision)
+`TorRelayEvaluation` classified mesh relays as "new", so with Tor on and the default "new
+relays via Tor" they were dialed through the SOCKS proxy — which cannot route `0200::/7`.
+Guaranteed failure, not privacy.
 
-An Yggdrasil relay is not filtered out of NIP-65 publishing (`AdvertisedRelayInfoTag` only
-rejects localhost) nor out of the outbox model
-(`RelayListRecommendationProcessor.filterValidRelays`). So a mesh relay in your relay list is
-**published to public relays and recommended to other users**. Two effects:
+**Fix:** `useTor()` returns false for `isOverlayNetwork()`, checked right after the localhost
+branch. Both the Android and desktop relay paths delegate here (`TorRelayState`,
+`DesktopHttpClient`), so one change covers both. `RoleBasedHttpClientBuilder` got the same
+treatment for non-relay HTTP (images, previews, NIP-05, money ops). Clearnet IPv6 relays keep
+following the Tor setting — asserted in `YggdrasilTorRoutingTest`.
+
+## Deliberately not changed
+
+**Mesh relays are still published and recommended.** `AdvertisedRelayInfoTag` (NIP-65) and
+`RelayListRecommendationProcessor.filterValidRelays` only exclude localhost, so a mesh relay
+in your relay list is still published to public relays and offered to other users via the
+outbox model. Two consequences worth a maintainer's decision:
 
 - Peers not on the mesh dial `[201:…]` and burn reconnect attempts on an unreachable host.
 - Your Yggdrasil address — a stable, key-derived node identifier — becomes public.
 
-Onion relays get special handling here (`hasOnionConnection` gates whether they are even
-considered). An overlay-network classification would let Yggdrasil be treated the same way.
+Onion relays already have precedent for both readings: they *are* published, but
+`filterValidRelays` gates them behind `hasOnionConnection`. The equivalent for overlay relays
+would be a `hasMeshConnection` gate. That is a product call about whether mesh relays are
+meant to be discoverable, so it is flagged rather than decided here.
 
-## Not covered
+## Not verified here
 
-- **No live socket test.** The analysis container has no IPv6 stack at all
-  (`AF_INET6` → `EAFNOSUPPORT`), so everything above is verified below the socket: URL
-  normalization, OkHttp URL/host parsing, and the Tor routing decision. An on-device run
-  against a real mesh relay is still needed to confirm the happy path end to end.
+- **No live socket test.** The analysis container has no IPv6 stack at all (`AF_INET6` →
+  `EAFNOSUPPORT`), so everything is verified below the socket: normalization, OkHttp URL/host
+  agreement, and the Tor routing decision. An on-device run against a real mesh relay is
+  still needed to confirm the happy path end to end.
 - **Android VPN interaction untested.** `ConnectivityFlow` uses
-  `registerDefaultNetworkCallback`, so it follows the app's default network into the VPN.
-  Whether `isMeteredOrMobileData()` reads correctly through Yggdrasil's `VpnService` depends
-  on whether that app declares underlying networks; worth checking on device before assuming
+  `registerDefaultNetworkCallback`, so it follows the app into the VPN network. Whether
+  `isMeteredOrMobileData()` reads correctly through Yggdrasil's `VpnService` depends on
+  whether that app declares underlying networks — worth checking on device before assuming
   data-saving mode behaves.
 - Media loading (Coil) and NIP-05 resolution against mesh hosts were not exercised.
 
 ## Tests
 
-- `quartz/src/jvmAndroidTest/…/relay/YggdrasilCompatCharacterizationTest.kt` — GAPs 1–3 plus
-  the working happy path.
-- `commons/src/commonTest/…/tor/YggdrasilTorRoutingTest.kt` — GAP 4.
+- `quartz/…/utils/Ipv6Test.kt` — parser, RFC 5952 formatting, range classification.
+- `quartz/…/relay/YggdrasilCompatCharacterizationTest.kt` — normalization end to end, plus
+  the differential assertions that our identity matches the host OkHttp dials.
+- `commons/…/tor/YggdrasilTorRoutingTest.kt` — overlay relays never Torified, clearnet IPv6
+  still follows the setting.

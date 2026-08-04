@@ -47,3 +47,6 @@ fun NormalizedRelayUrl.toHttp() =
 fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
 
 fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)
+
+/** True for a relay inside an encrypted IPv6 overlay mesh. See [RelayUrlNormalizer.isOverlayNetwork]. */
+fun NormalizedRelayUrl.isOverlayNetwork() = RelayUrlNormalizer.isOverlayNetwork(this.url)

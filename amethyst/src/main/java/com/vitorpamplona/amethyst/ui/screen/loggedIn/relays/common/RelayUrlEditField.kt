@@ -170,6 +170,7 @@ fun RelayUrlEditField(
     nav: INav,
 ) {
     var url by remember { mutableStateOf("") }
+    var isInvalid by remember { mutableStateOf(false) }
 
     fun submitRelay() {
         if (url.isNotBlank()) {
@@ -177,7 +178,13 @@ fun RelayUrlEditField(
             if (relay != null) {
                 onNewRelay(relay)
                 url = ""
+                isInvalid = false
                 relaySuggestions.reset()
+            } else {
+                // Without this the Add button is a silent no-op, which reads as a broken button.
+                // Bare IPv6 literals are the common way to land here: an overlay-mesh address
+                // pasted straight out of `yggdrasilctl getSelf` needs brackets to carry a port.
+                isInvalid = true
             }
         }
     }
@@ -189,7 +196,17 @@ fun RelayUrlEditField(
             value = url,
             onValueChange = {
                 url = it
+                isInvalid = false
                 relaySuggestions.processInput(it)
+            },
+            isError = isInvalid,
+            supportingText = {
+                if (isInvalid) {
+                    Text(
+                        text = stringRes(R.string.relay_url_not_valid),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             },
             placeholder = {
                 Text(

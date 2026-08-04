@@ -26,15 +26,16 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * GAP 4 — an Yggdrasil relay is classified as a plain clearnet relay, so with Tor on it is
- * dialed through the SOCKS proxy. Tor cannot route `0200::/7`: the connection can only fail.
- *
- * Compare `ws://192.168.1.100:8080/`, which [TorRelayEvaluation] correctly keeps off Tor
- * because `isLocalHost()` recognizes the LAN prefix. Yggdrasil has no such recognition.
+ * An overlay-mesh relay (`0200::/7`, e.g. Yggdrasil) must never be dialed through the Tor SOCKS
+ * proxy: Tor cannot route the range, so proxying guarantees failure rather than privacy. The
+ * overlay already encrypts end to end and authenticates the peer by its key-derived address.
  */
 class YggdrasilTorRoutingTest {
     private val yggdrasilRelay = NormalizedRelayUrl("ws://[201:d0e:9ba5:8bbc::1]:8080/")
+    private val yggdrasilSubnetRelay = NormalizedRelayUrl("ws://[300:1b5d:d0e9:ba58::1]:4848/")
     private val lanRelay = NormalizedRelayUrl("ws://192.168.1.100:8080/")
+    private val ulaRelay = NormalizedRelayUrl("ws://[fd12:3456::1]:8080/")
+    private val clearnetIpv6Relay = NormalizedRelayUrl("wss://[2001:db8::1]:8080/")
 
     private fun evaluation(newViaTor: Boolean) =
         TorRelayEvaluation(
@@ -52,14 +53,18 @@ class YggdrasilTorRoutingTest {
         )
 
     @Test
-    fun yggdrasilRelayIsSentThroughTorWhileLanRelayIsNot() {
+    fun overlayRelaysAreNeverTorifiedEvenWhenNewRelaysViaTorIsOn() {
         val eval = evaluation(newViaTor = true)
-        assertTrue(eval.useTor(yggdrasilRelay), "Yggdrasil relay is routed via Tor, which cannot reach 0200::/7")
-        assertFalse(eval.useTor(lanRelay), "LAN relay is correctly kept off Tor")
+        assertFalse(eval.useTor(yggdrasilRelay), "0200::/8 node address must not be proxied")
+        assertFalse(eval.useTor(yggdrasilSubnetRelay), "0300::/8 subnet address must not be proxied")
+        assertFalse(eval.useTor(lanRelay), "LAN relay stays off Tor")
+        assertFalse(eval.useTor(ulaRelay), "IPv6 unique local address stays off Tor")
     }
 
     @Test
-    fun yggdrasilRelayWorksOnlyWhenNewRelaysViaTorIsOff() {
-        assertFalse(evaluation(newViaTor = false).useTor(yggdrasilRelay))
+    fun clearnetIpv6RelaysStillFollowTheTorSetting() {
+        // The overlay exemption must not leak into ordinary IPv6 relays.
+        assertTrue(evaluation(newViaTor = true).useTor(clearnetIpv6Relay))
+        assertFalse(evaluation(newViaTor = false).useTor(clearnetIpv6Relay))
     }
 }
