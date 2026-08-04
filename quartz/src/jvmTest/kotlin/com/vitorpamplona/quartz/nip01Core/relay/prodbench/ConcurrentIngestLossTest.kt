@@ -130,6 +130,7 @@ class ConcurrentIngestLossTest {
                     when (outcome) {
                         is IEventStore.InsertOutcome.Accepted -> accepted.add(e.id)
                         is IEventStore.InsertOutcome.Rejected -> rejected.incrementAndGet()
+                        is IEventStore.InsertOutcome.Failed -> rejected.incrementAndGet()
                     }
                     window.release()
                     if (remaining.decrementAndGet() == 0) done.complete(Unit)

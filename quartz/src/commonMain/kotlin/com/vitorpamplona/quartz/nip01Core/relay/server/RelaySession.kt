@@ -214,6 +214,13 @@ class RelaySession(
                     is IEventStore.InsertOutcome.Rejected -> {
                         send(OkMessage(cmd.event.id, false, outcome.reason))
                     }
+
+                    is IEventStore.InsertOutcome.Failed -> {
+                        // The store's error, not the event's — NIP-01's
+                        // machine-readable prefix for that is "error:".
+                        val reason = outcome.reason
+                        send(OkMessage(cmd.event.id, false, if (reason.startsWith("error:")) reason else "error: $reason"))
+                    }
                 }
             }
         } catch (_: ClosedSendChannelException) {

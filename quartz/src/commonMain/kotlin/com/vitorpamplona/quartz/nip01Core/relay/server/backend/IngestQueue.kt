@@ -268,8 +268,8 @@ class IngestQueue(
      * Run the SQLite transaction for the verified subset of [batch]
      * and stitch outcomes back to a per-batch-index array. Failed
      * verifies pre-mark `Rejected` and skip the insert. A whole-batch
-     * commit failure converts every persisted entry to `Rejected`
-     * with the throw message.
+     * commit failure converts every persisted entry to `Failed` with
+     * the throw message — the events were good; the store was not.
      */
     private suspend fun runInsertStage(
         batch: List<Submission>,
@@ -293,7 +293,7 @@ class IngestQueue(
                 } catch (e: Throwable) {
                     Log.w("IngestQueue") { "batchInsert failed for ${toInsert.size} events: ${e.message}" }
                     val reason = e.message ?: e::class.simpleName ?: "insert failed"
-                    List(toInsert.size) { IEventStore.InsertOutcome.Rejected(reason) }
+                    List(toInsert.size) { IEventStore.InsertOutcome.Failed(reason) }
                 }
             }
 
@@ -349,7 +349,7 @@ class IngestQueue(
          * inserts), so the message is informational, not user-facing.
          */
         private val missingOutcome =
-            IEventStore.InsertOutcome.Rejected("internal error: missing outcome")
+            IEventStore.InsertOutcome.Failed("internal error: missing outcome")
 
         /**
          * Cap per batch. Sized to keep per-batch latency low (each

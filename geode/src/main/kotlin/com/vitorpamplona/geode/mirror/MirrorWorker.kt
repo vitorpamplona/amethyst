@@ -300,6 +300,13 @@ class MirrorWorker(
                                 rejected.incrementAndGet()
                                 Log.d("MirrorWorker") { "rejected ${msg.event.id}: ${outcome.reason}" }
                             }
+                            is IEventStore.InsertOutcome.Failed -> {
+                                // The store's error, not the event's: the event
+                                // was good and nothing will re-offer it. Louder
+                                // than a rejection on purpose.
+                                rejected.incrementAndGet()
+                                Log.w("MirrorWorker") { "store failed ${msg.event.id}: ${outcome.reason}" }
+                            }
                         }
                     }
                 } catch (e: CancellationException) {
@@ -431,6 +438,10 @@ class MirrorWorker(
                             when (outcome) {
                                 IEventStore.InsertOutcome.Accepted -> accepted.incrementAndGet()
                                 is IEventStore.InsertOutcome.Rejected -> rejected.incrementAndGet()
+                                is IEventStore.InsertOutcome.Failed -> {
+                                    rejected.incrementAndGet()
+                                    Log.w("MirrorWorker") { "store failed ${event.id}: ${outcome.reason}" }
+                                }
                             }
                         }
                     } catch (e: CancellationException) {

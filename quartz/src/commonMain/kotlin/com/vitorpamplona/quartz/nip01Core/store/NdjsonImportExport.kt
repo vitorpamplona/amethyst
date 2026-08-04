@@ -52,15 +52,17 @@ object NdjsonImportExport {
         val imported: Long,
         /** Events the store rejected — overwhelmingly duplicates (unique-id). */
         val rejected: Long,
+        /** Good events the store could not write — a store-side error, not the event's. */
+        val failed: Long,
         /** Events dropped for a bad signature (only when verifying). */
         val invalid: Long,
         /** Lines that didn't parse as a NIP-01 event. */
         val malformed: Long,
     ) {
-        operator fun plus(o: ImportStats) = ImportStats(read + o.read, imported + o.imported, rejected + o.rejected, invalid + o.invalid, malformed + o.malformed)
+        operator fun plus(o: ImportStats) = ImportStats(read + o.read, imported + o.imported, rejected + o.rejected, failed + o.failed, invalid + o.invalid, malformed + o.malformed)
 
         companion object {
-            val ZERO = ImportStats(0, 0, 0, 0, 0)
+            val ZERO = ImportStats(0, 0, 0, 0, 0, 0)
         }
     }
 
@@ -81,6 +83,7 @@ object NdjsonImportExport {
         var read = 0L
         var imported = 0L
         var rejected = 0L
+        var failed = 0L
         var invalid = 0L
         var malformed = 0L
         val batch = ArrayList<Event>(batchSize)
@@ -91,6 +94,7 @@ object NdjsonImportExport {
                 when (outcome) {
                     IEventStore.InsertOutcome.Accepted -> imported++
                     is IEventStore.InsertOutcome.Rejected -> rejected++
+                    is IEventStore.InsertOutcome.Failed -> failed++
                 }
             }
             batch.clear()
@@ -112,7 +116,7 @@ object NdjsonImportExport {
             if (batch.size >= batchSize) flush()
         }
         flush()
-        return ImportStats(read, imported, rejected, invalid, malformed)
+        return ImportStats(read, imported, rejected, failed, invalid, malformed)
     }
 
     /**

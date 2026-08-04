@@ -463,8 +463,9 @@ class SQLiteEventStore(
      *    stream still surfaces them; persistence is intentionally a
      *    no-op per NIP-01.
      *
-     * Outer-commit failure throws; the caller treats every entry as
-     * `Rejected` (this is what the IEventStore contract documents).
+     * Outer-commit failure throws; per the IEventStore contract a
+     * throw means "nothing in this batch was written", and the
+     * IngestQueue converts it to per-event `Failed`.
      */
     suspend fun batchInsertEvents(events: List<Event>): List<IEventStore.InsertOutcome> {
         if (events.isEmpty()) return emptyList()
