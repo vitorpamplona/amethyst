@@ -84,17 +84,107 @@ class RelayUrlNormalizer {
 
         private fun norm(url: String) = NormalizedRelayUrl(Rfc3986.normalize(url))
 
+        private fun isInvisible(c: Char) = c == '\u200B' || c == '\u200C' || c == '\u200D' || c == '\u2060' || c == '\uFEFF'
+
+        /**
+         * Scans the authority (host[:port]) that starts at [start] and ends at the first
+         * `/`, `?` or `#`. Returns the end index, or -1 when the authority is empty or
+         * contains characters that never appear in a real relay host (`@` userinfo,
+         * percent-encoding, commas).
+         */
+        private fun authorityEnd(
+            url: String,
+            start: Int,
+        ): Int {
+            if (start >= url.length) return -1
+            var i = start
+            if (url[i] == '[') {
+                // IPv6 literal: defer validation to the RFC 3986 parser
+                while (i < url.length && url[i] != '/' && url[i] != '?' && url[i] != '#') i++
+                return i
+            }
+            while (i < url.length) {
+                val c = url[i]
+                if (c == '/' || c == '?' || c == '#') break
+                if (c == '@' || c == '%' || c == ',') return -1
+                i++
+            }
+            return if (i == start) -1 else i
+        }
+
+        /**
+         * Accepts a ws/wss url whose host starts at [hostStart] if the authority is sane
+         * and the path does not start with `//` (the signature of a second URL or a broken
+         * `https//` pasted after the scheme, e.g. `wss://https//nostr.watch/relay/x`).
+         */
+        private fun fixWs(
+            url: String,
+            hostStart: Int,
+        ): String? {
+            val end = authorityEnd(url, hostStart)
+            if (end < 0) return null
+            if (end + 1 < url.length && url[end] == '/' && url[end + 1] == '/') return null
+            return url
+        }
+
+        /**
+         * Converts an http(s) url to ws(s) only when it is a bare host — nothing after
+         * `host[:port]` but an optional trailing `/`. An http url with a path, query or
+         * fragment (Mastodon actor urls from bridge `proxy` tags, web pages, images) is
+         * a web resource, not a relay: converting it creates a wss:// url that can never
+         * answer and only wastes connection attempts.
+         */
+        private fun fixHttp(
+            url: String,
+            hostStart: Int,
+            newScheme: String,
+        ): String? {
+            val end = authorityEnd(url, hostStart)
+            if (end < 0) return null
+            val bareHost = end == url.length || (end == url.length - 1 && url[end] == '/')
+            if (!bareHost) return null
+            return "$newScheme${url.substring(hostStart)}"
+        }
+
+        /**
+         * Validates a schemeless candidate: the part before the first `/` must look like
+         * `host` or `host:port` — letters, digits, `.`, `-`, `_`, plus at most one `:`
+         * followed by digits only. Rejects addressable-event pointers (`31990:hex:dtag`),
+         * bare scheme leftovers (`wss:`) and anything else that would otherwise be blindly
+         * prefixed with `wss://`.
+         */
+        private fun isBareHostAndPath(url: String): Boolean {
+            if (url[0] == '[') return true // IPv6 literal: defer to the RFC 3986 parser
+            var i = 0
+            var portStart = -1
+            while (i < url.length) {
+                val c = url[i]
+                if (c == '/') break
+                if (c == ':') {
+                    if (portStart >= 0) return false
+                    portStart = i + 1
+                } else if (portStart >= 0) {
+                    if (c < '0' || c > '9') return false
+                } else if (!c.isLetterOrDigit() && c != '.' && c != '-' && c != '_') {
+                    return false
+                }
+                i++
+            }
+            if (i == 0) return false
+            if (portStart >= 0 && portStart == i) return false
+            return true
+        }
+
         @OptIn(ExperimentalContracts::class)
         fun fix(rawUrl: String): String? {
             if (rawUrl.length < 4) return null
             if (rawUrl.contains("%00")) return null
 
-            // Trim trailing %20 (percent-encoded spaces from malformed event data)
-            val url =
-                rawUrl.trimEnd('%', '2', '0').let { trimmed ->
-                    // Only accept if we actually removed a trailing %20 pattern
-                    if (trimmed.length < rawUrl.length && rawUrl.endsWith("%20")) trimmed else rawUrl
-                }
+            // Trim trailing %20 (percent-encoded spaces from malformed event data).
+            // The endsWith gate keeps the hot path allocation-free: trimEnd would
+            // copy the string for ANY url merely ending in '%', '2' or '0' — which
+            // includes every port ending in zero ("wss://host:3030").
+            val url = if (rawUrl.endsWith("%20")) rawUrl.trimEnd('%', '2', '0') else rawUrl
             if (url.length < 4) return null
 
             // Reject URLs with %20 in the middle — these are garbage
@@ -109,17 +199,33 @@ class RelayUrlNormalizer {
                 }
             }
 
-            val trimmed =
+            var trimmed =
                 if (url[0].isWhitespace() || url[url.length - 1].isWhitespace()) {
                     url.trim()
                 } else {
                     url
                 }
 
+            // Single pass: interior whitespace means multiple urls or prose in one field,
+            // backslashes never appear in a real relay url; both are garbage. Invisible
+            // characters (zero-width spaces, BOM) are copy-paste artifacts — strip them.
+            var hasInvisible = false
+            for (c in trimmed) {
+                if (c == '\\') return null
+                if (c.isWhitespace()) return null
+                if (isInvisible(c)) hasInvisible = true
+            }
+            if (hasInvisible) {
+                trimmed = buildString(trimmed.length) { for (c in trimmed) if (!isInvisible(c)) append(c) }
+                if (trimmed.length < 4) return null
+            }
+
             // fast for good wss:// urls
             if (isRelaySchemePrefix(trimmed)) {
-                if (isRelaySchemePrefixSecure(trimmed) || isRelaySchemePrefixInsecure(trimmed)) {
-                    return trimmed
+                if (isRelaySchemePrefixSecure(trimmed)) {
+                    return fixWs(trimmed, 6)
+                } else if (isRelaySchemePrefixInsecure(trimmed)) {
+                    return fixWs(trimmed, 5)
                 }
             }
 
@@ -127,31 +233,31 @@ class RelayUrlNormalizer {
             if (isHttpPrefix(trimmed)) {
                 if (isHttpSSuffix(trimmed)) {
                     // https://
-                    return "wss://${trimmed.drop(8)}"
+                    return fixHttp(trimmed, 8, "wss://")
                 } else if (isHttpSuffix(trimmed)) {
                     // http://
-                    return "ws://${trimmed.drop(7)}"
+                    return fixHttp(trimmed, 7, "ws://")
                 }
             }
 
             // fast for good ww:// urls
             if (trimmed.startsWith("ww://")) {
-                return "wss://${trimmed.drop(5)}"
+                return fixWs("wss://${trimmed.drop(5)}", 6)
             }
 
             // fast for good ww:// urls
             if (trimmed.startsWith("was://")) {
-                return "wss://${trimmed.drop(6)}"
+                return fixWs("wss://${trimmed.drop(6)}", 6)
             }
 
             // fast for good ww:// urls
             if (trimmed.startsWith("Wws://")) {
-                return "wss://${trimmed.drop(6)}"
+                return fixWs("wss://${trimmed.drop(6)}", 6)
             }
 
             // fast for good ww:// urls
             if (trimmed.startsWith("Wss://")) {
-                return "wss://${trimmed.drop(6)}"
+                return fixWs("wss://${trimmed.drop(6)}", 6)
             }
 
             if (trimmed.contains("://")) {
@@ -160,10 +266,19 @@ class RelayUrlNormalizer {
                 return null
             }
 
-            return if (isOnion(trimmed) || isLocalHost(trimmed)) {
-                "ws://$trimmed"
+            // protocol-relative urls (`//host/`) are just missing the scheme
+            val bare = if (trimmed.startsWith("//")) trimmed.drop(2) else trimmed
+            if (bare.length < 4) return null
+
+            if (!isBareHostAndPath(bare)) {
+                Log.d("RelayUrlNormalizer") { "Rejected $url" }
+                return null
+            }
+
+            return if (isOnion(bare) || isLocalHost(bare)) {
+                "ws://$bare"
             } else {
-                "wss://$trimmed"
+                "wss://$bare"
             }
         }
 
@@ -186,6 +301,13 @@ class RelayUrlNormalizer {
                 val fixed = fix(url)
                 if (fixed != null) {
                     val normalized = norm(fixed)
+                    // the RFC 3986 parser can drop or replace the scheme on odd inputs;
+                    // anything that is not ws(s):// at this point cannot be connected to.
+                    if (!isRelayUrl(normalized.url)) {
+                        Log.d("NormalizedRelayUrl") { "Rejected $url" }
+                        normalizedUrls.put(url, NormalizationResult.Error)
+                        return null
+                    }
                     normalizedUrls.put(url, NormalizationResult.Success(normalized))
                     normalized
                 } else {

@@ -22,6 +22,8 @@ package com.vitorpamplona.quartz.nip66RelayMonitor.reachability
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -29,10 +31,20 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.networkType
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.requirement
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.rtt
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RttType
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.TimeSource
 
@@ -74,6 +86,19 @@ class RelayProber(
         val error: String?,
     )
 
+    /**
+     * One relay's read+write check outcome (see [readWriteCheck]). Latencies are
+     * -1 when unobserved; [writeAccepted] is null when the relay never answered
+     * the write with an OK (transport failure or silence).
+     */
+    class ReadWriteVerdict(
+        val relay: NormalizedRelayUrl,
+        val rttReadMs: Long,
+        val rttWriteMs: Long,
+        val writeAccepted: Boolean?,
+        val writeMessage: String?,
+    )
+
     class Result(
         val verdicts: List<Verdict>,
         val elapsedMs: Long,
@@ -91,18 +116,24 @@ class RelayProber(
     /**
      * Probe every relay in [relays], [waveSize] at a time, giving each wave up to
      * [timeoutMs] to reach terminals. Returns one [Verdict] per input relay.
+     *
+     * [filters] is the REQ each relay is asked to answer. The default
+     * [LIVENESS_FILTERS] matches nothing, so an EOSE proves liveness without
+     * streaming a payload; pass [readTestFilter] to make [Verdict.rttEoseMs] a
+     * real read test instead (the relay must query and stream an actual event).
      */
     suspend fun probe(
         relays: Collection<NormalizedRelayUrl>,
         timeoutMs: Long = 15_000,
         waveSize: Int = 1000,
+        filters: List<Filter> = LIVENESS_FILTERS,
     ): Result {
         val mark = TimeSource.Monotonic.markNow()
         val all = ArrayList<Verdict>(relays.size)
         val distinct = relays.toSet()
         var done = 0
         for (wave in distinct.chunked(waveSize.coerceAtLeast(1))) {
-            all += probeWave(wave, timeoutMs)
+            probeWave(wave, timeoutMs, filters) { all += it }
             done += wave.size
             if (distinct.size > wave.size) {
                 val liveSoFar = all.count { it.reachable }
@@ -112,10 +143,94 @@ class RelayProber(
         return Result(all, mark.elapsedNow().inWholeMilliseconds)
     }
 
+    /**
+     * Streaming variant of [probe]: a cold [Flow] that emits each relay's [Verdict]
+     * the moment that relay resolves — an answering relay's verdict arrives as soon
+     * as its EOSE/CLOSED/connect-failure lands, not when the whole census ends. Only
+     * relays that stay silent wait for their wave's [timeoutMs] deadline.
+     *
+     * [filters] picks the check, as in [probe]: [LIVENESS_FILTERS] (default) or
+     * [readTestFilter].
+     *
+     * Probing starts when the flow is collected, and emission is sequential — a slow
+     * collector delays the next wave AND eats into the current wave's [timeoutMs]
+     * window (the deadline is absolute; answers keep being recorded while the
+     * collector runs, but silent relays get less listening time). Keep per-verdict
+     * work light, or buffer, when precise deadlines matter. Pair each verdict with
+     * [toDiscoveryEventTemplate] to turn the stream into signable NIP-66 kind:30166
+     * records for another process to sign and publish.
+     */
+    fun probeFlow(
+        relays: Collection<NormalizedRelayUrl>,
+        timeoutMs: Long = 15_000,
+        waveSize: Int = 1000,
+        filters: List<Filter> = LIVENESS_FILTERS,
+    ): Flow<Verdict> =
+        flow {
+            for (wave in relays.toSet().chunked(waveSize.coerceAtLeast(1))) {
+                probeWave(wave, timeoutMs, filters) { emit(it) }
+            }
+        }
+
+    /**
+     * The deeper, still-honest check pair: READ (a real limit-[readLimit] REQ the
+     * relay must query its store for) and WRITE (one ephemeral [RelayProbeWriteTest]
+     * event signed by [signer], the monitor key, timed to its OK). Everything is a
+     * direct observation — nothing is copied from the relay's NIP-11 self-claims.
+     *
+     * Run it against relays ALREADY PROVEN LIVE — typically [Result.reachable] of a
+     * [probe] that just ran, while the pool's sockets are still open. On a warm
+     * socket both numbers are honest NIP-66 rtts (`rtt-read`, `rtt-write`); against
+     * a cold relay they silently include the dial, so don't.
+     *
+     * A write REJECTION is still a measurement: `OK false` proves the write path
+     * works and documents policy ([ReadWriteVerdict.writeMessage] keeps the NIP-01
+     * machine-readable reason; [toDiscoveryEventTemplate] maps `auth-required:` and
+     * `pow:` to `R` tags). Only silence leaves [ReadWriteVerdict.writeAccepted] null.
+     */
+    suspend fun readWriteCheck(
+        relays: Collection<NormalizedRelayUrl>,
+        signer: NostrSigner,
+        timeoutMs: Long = 15_000,
+        waveSize: Int = 1000,
+        readLimit: Int = 1,
+        readKinds: List<Int>? = listOf(0),
+    ): Map<NormalizedRelayUrl, ReadWriteVerdict> {
+        val out = HashMap<NormalizedRelayUrl, ReadWriteVerdict>()
+        val distinct = relays.toSet()
+        for ((waveIndex, wave) in distinct.chunked(waveSize.coerceAtLeast(1)).withIndex()) {
+            val reads = HashMap<NormalizedRelayUrl, Long>()
+            probeWave(wave, timeoutMs, readTestFilter(readLimit, readKinds)) { reads[it.relay] = it.rttEoseMs }
+
+            // A distinct event id per wave (createdAt has second granularity, so the
+            // content must vary) keeps a straggler OK from an earlier wave's relays
+            // from ever matching this wave's confirmation window.
+            val event = signer.sign(RelayProbeWriteTest.build(content = "NIP-66 write probe $waveIndex"))
+            val writes = client.publishAndCollectResults(event, wave.toSet(), (timeoutMs / 1000).coerceAtLeast(1))
+
+            for (relay in wave) {
+                // Only a real OK (true or false) counts as an answer; transport
+                // failures and silence leave the write side unobserved.
+                val answered = writes[relay]?.takeUnless { it.isTransportFailure || it.message == PublishResult.NO_RESPONSE }
+                out[relay] =
+                    ReadWriteVerdict(
+                        relay = relay,
+                        rttReadMs = reads[relay] ?: -1,
+                        rttWriteMs = answered?.elapsedMs ?: -1,
+                        writeAccepted = answered?.accepted,
+                        writeMessage = answered?.message,
+                    )
+            }
+        }
+        return out
+    }
+
     private suspend fun probeWave(
         wave: List<NormalizedRelayUrl>,
         timeoutMs: Long,
-    ): List<Verdict> {
+        filters: List<Filter>,
+        onVerdict: suspend (Verdict) -> Unit,
+    ) {
         val mark = TimeSource.Monotonic.markNow()
         val waveSet = wave.toHashSet()
         val openRtt = ConcurrentMap<NormalizedRelayUrl, Long>()
@@ -178,22 +293,7 @@ class RelayProber(
                 }
             }
 
-        client.addConnectionListener(connListener)
-        try {
-            client.subscribe(subId, wave.associateWith { PROBE_FILTERS }, subListener)
-            val remaining = wave.toMutableSet()
-            withTimeoutOrNull(timeoutMs) {
-                while (remaining.isNotEmpty()) {
-                    remaining.remove(terminals.receive())
-                }
-            }
-        } finally {
-            client.unsubscribe(subId)
-            client.removeConnectionListener(connListener)
-            terminals.close()
-        }
-
-        return wave.map { relay ->
+        fun verdictOf(relay: NormalizedRelayUrl): Verdict {
             val opened = openRtt[relay]
             val answered = eoseMs[relay]
             val error = errors[relay]
@@ -202,7 +302,7 @@ class RelayProber(
             // Only a connect failure, or silence with no socket, is dead.
             val cannot = error?.startsWith("cannot:") == true
             val reachable = !cannot && (opened != null || answered != null || error != null)
-            Verdict(
+            return Verdict(
                 relay = relay,
                 reachable = reachable,
                 rttOpenMs = opened ?: -1,
@@ -210,13 +310,54 @@ class RelayProber(
                 error = error,
             )
         }
+
+        client.addConnectionListener(connListener)
+        try {
+            client.subscribe(subId, wave.associateWith { filters }, subListener)
+            val remaining = wave.toMutableSet()
+            while (remaining.isNotEmpty()) {
+                val left = timeoutMs - mark.elapsedNow().inWholeMilliseconds
+                if (left <= 0) break
+                val relay = withTimeoutOrNull(left) { terminals.receive() } ?: break
+                // The emission happens OUTSIDE the timeout window so a collector that
+                // suspends on a verdict can never be cancelled mid-emission and lose it.
+                if (remaining.remove(relay)) onVerdict(verdictOf(relay))
+            }
+            // Whatever is left resolved nothing by the deadline: dead if the socket
+            // never opened, reachable-but-slow if it did.
+            for (relay in remaining) onVerdict(verdictOf(relay))
+        } finally {
+            client.unsubscribe(subId)
+            client.removeConnectionListener(connListener)
+            terminals.close()
+        }
     }
 
     companion object {
-        // A filter no event can match (ids are 64-hex of a hash): the relay answers
-        // with an immediate EOSE and never streams a payload. Same trick as the
-        // crawler's warm pool.
-        private val PROBE_FILTERS = listOf(Filter(ids = listOf("0".repeat(64))))
+        /**
+         * A filter no event can match (ids are 64-hex of a hash): the relay answers
+         * with an immediate EOSE and never streams a payload. Same trick as the
+         * crawler's warm pool. This is the default check — pure liveness.
+         */
+        val LIVENESS_FILTERS = listOf(Filter(ids = listOf("0".repeat(64))))
+
+        /**
+         * A REQ the relay must actually WORK for: query its store and stream up to
+         * [limit] real events before the EOSE. Pass to [probe]/[probeFlow] as
+         * [filters] to turn [Verdict.rttEoseMs] into a genuine read test rather
+         * than a liveness ping — the time still counts from the wave start (dial
+         * included), so compare it against [Verdict.rttOpenMs], not across waves.
+         *
+         * [kinds] defaults to kind 0: purpose relays (purplepag.es) reject any REQ
+         * that names no kind with `blocked: filters must specify at least one kind`,
+         * and practically every relay stores SOME profile — so a kind-0, limit-1
+         * query works everywhere. Pass a different list to probe a specific shelf,
+         * or null for a kind-less query on relays known to allow one.
+         */
+        fun readTestFilter(
+            limit: Int = 1,
+            kinds: List<Int>? = listOf(0),
+        ) = listOf(Filter(kinds = kinds, limit = limit))
 
         /**
          * The relay universe the local store knows: every read/write relay advertised
@@ -263,3 +404,43 @@ class RelayProber(
         }
     }
 }
+
+/**
+ * This verdict as an UNSIGNED NIP-66 kind:30166 Relay Discovery template — the d-tag
+ * is the normalized relay url; sign it with the consumer's own monitor key (per
+ * NIP-66 a monitor is its own identity, so the prober never signs on its own).
+ *
+ * Only facts a probe actually observed are tagged:
+ *  - `n` network type inferred from the url (clearnet/tor/i2p);
+ *  - `rtt-open` when the relay was reachable — the measured WS-upgrade round trip,
+ *    or 0 for "reachable, latency not observed" (liveness is the tag's PRESENCE);
+ *  - `rtt-read`/`rtt-write` when a [RelayProber.readWriteCheck] result is passed
+ *    as [readWrite] and actually measured that side;
+ *  - `R auth` when the relay answered a probe with a NIP-42 `auth-required`
+ *    (CLOSED on the REQ, or OK-false on the write) and `R pow` when the write
+ *    was refused with a `pow:` reason — observed walls, not NIP-11 claims.
+ *
+ * NIP-11-derived tags (`N` supported NIPs, `k` kinds, `T` type) are deliberately
+ * absent: those are the relay's self-claims, and asserting them under a monitor
+ * signature without a per-NIP compliance test would launder claims into
+ * measurements. [Verdict.rttEoseMs] is likewise never written as `rtt-read` — it
+ * is wave-relative (dial + TLS + queueing), so the honest read number only comes
+ * from [readWrite] (or the [RelayObserver]/[RelayMonitor] real-traffic path).
+ */
+fun RelayProber.Verdict.toDiscoveryEventTemplate(
+    createdAt: Long = TimeUtils.now(),
+    readWrite: RelayProber.ReadWriteVerdict? = null,
+): EventTemplate<RelayDiscoveryEvent> =
+    RelayDiscoveryEvent.build(relay, createdAt = createdAt) {
+        networkType(RelayReachabilityStore.networkTypeOf(relay))
+        if (reachable) rtt(RttType.OPEN, rttOpenMs.coerceAtLeast(0))
+        if (readWrite != null) {
+            if (readWrite.rttReadMs >= 0) rtt(RttType.READ, readWrite.rttReadMs)
+            if (readWrite.rttWriteMs >= 0) rtt(RttType.WRITE, readWrite.rttWriteMs)
+        }
+        val authWalled =
+            error?.startsWith("closed:auth-required") == true ||
+                readWrite?.writeMessage?.startsWith("auth-required") == true
+        if (authWalled) requirement("auth")
+        if (readWrite?.writeMessage?.startsWith("pow:") == true) requirement("pow")
+    }
