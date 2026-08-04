@@ -85,3 +85,30 @@ skills verified clean):
   `ParseReturn.entity` (the `Nip19Parser.Return.*` sealed class never existed);
   Event Store section corrected from "Android only" to commonMain/all platforms
   with the real `store.sqlite.EventStore` import and suspend generic `query<T>`.
+
+## Phase 4 (2026-08): Store-implementer skills (external consumer request)
+
+Three skills added at the request of an external Quartz consumer
+(vespa-eventstore — a server-side `IEventStore` on Vespa that asserts result
+parity against the SQLite store in CI). All three document the
+**store/relay-implementer's perspective**, which `quartz-integration` and
+`nostr-expert` (client-side) did not cover. Requirements doc: the skill-requests
+file reviewed 2026-08-04; the requester's items #4 (storage-lifecycle-nips) was
+folded into `event-store-semantics` per their own recommendation, and #5
+(relay-server/geode policies) was declined as not currently needed.
+
+- **`event-store-semantics/`** — the `IEventStore`/SQLite-store behavioral
+  contract as named rules (STORE-Fxx/Wxx/Dxx/Cxx/Sxx/Nxx) with a semantics
+  changelog for pin-bump review. Written from `QueryBuilder`,
+  `MergeQueryExecutor`, the seven `*Module.kt` files, and `IEventStore` KDoc.
+- **`nip85-trusted-assertions/`** — the NIP-85 model (10040/30382/30383/30384/
+  30385), full tag vocabulary with value semantics, authorization conventions,
+  worked JSON examples, stability notes.
+- **`searchable-events/`** — the `SearchableEvent` contract + maintenance
+  mandate, with `references/searchable-kinds.md` holding the exhaustive
+  kind → class → `indexableContent()` table (126 classes / 129 kinds) that
+  external search engines diff at version bumps.
+
+Follow-ups suggested but not implemented: a shared JSON test-vector corpus for
+filter semantics (testFixtures both the SQLite tests and external parity suites
+could run), and a snapshot test pinning the searchable-kind set.

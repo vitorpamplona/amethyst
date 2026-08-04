@@ -114,7 +114,7 @@ class ObservableEventStore(
             if (event.kind.isEphemeral()) {
                 outcomes[i] =
                     if (event.isExpired()) {
-                        IEventStore.InsertOutcome.Rejected("blocked: Cannot insert an expired event")
+                        IEventStore.InsertOutcome.Rejected(RejectionReason.EXPIRED)
                     } else {
                         IEventStore.InsertOutcome.Accepted
                     }

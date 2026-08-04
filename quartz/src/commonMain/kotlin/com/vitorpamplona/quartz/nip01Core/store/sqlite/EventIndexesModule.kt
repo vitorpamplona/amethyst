@@ -25,7 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip01Core.store.owner
 
 class EventIndexesModule(
     val hasher: (db: SQLiteConnection) -> TagNameValueHasher,
@@ -206,12 +206,8 @@ class EventIndexesModule(
         val kindLong = event.kind.toLong()
         val pubkeyHash = hasher.hash(event.pubKey)
 
-        val eventOwnerHash =
-            if (event is GiftWrapEvent) {
-                event.recipientPubKey()?.let { hasher.hash(it) } ?: pubkeyHash
-            } else {
-                pubkeyHash
-            }
+        val ownerKey = event.owner()
+        val eventOwnerHash = if (ownerKey == event.pubKey) pubkeyHash else hasher.hash(ownerKey)
 
         val eTagHash = hasher.hashETag(event.id)
 

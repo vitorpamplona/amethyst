@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
+import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
@@ -433,7 +434,7 @@ class SQLiteEventStore(
     }
 
     suspend fun insertEvent(event: Event) {
-        if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
+        if (event.isExpired()) throw SQLiteException(RejectionReason.EXPIRED)
         if (event.kind.isEphemeral()) return
 
         pool.useWriter { db ->
@@ -490,7 +491,7 @@ class SQLiteEventStore(
         delta: LiveIndexDelta?,
     ): IEventStore.InsertOutcome {
         if (event.isExpired()) {
-            return IEventStore.InsertOutcome.Rejected("blocked: Cannot insert an expired event")
+            return IEventStore.InsertOutcome.Rejected(RejectionReason.EXPIRED)
         }
         if (event.kind.isEphemeral()) return IEventStore.InsertOutcome.Accepted
 
@@ -524,9 +525,11 @@ class SQLiteEventStore(
      * the duplicate tally.
      */
     private fun classifyRowError(e: Throwable): IEventStore.InsertOutcome {
-        val message = e.message ?: e::class.simpleName ?: "insert failed"
+        val message = e.message ?: e::class.simpleName ?: RejectionReason.INSERT_FAILED
         val refusal =
             message.contains("blocked:") ||
+                message.contains("duplicate:") ||
+                message.contains(RejectionReason.PREFIX_REPLACED) ||
                 message.contains("not allowed") ||
                 message.contains("constraint", ignoreCase = true)
         return if (refusal) {
@@ -541,7 +544,7 @@ class SQLiteEventStore(
         private val delta: LiveIndexDelta?,
     ) : IEventStore.ITransaction {
         override fun insert(event: Event) {
-            if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
+            if (event.isExpired()) throw SQLiteException(RejectionReason.EXPIRED)
             if (event.kind.isEphemeral()) return
 
             innerInsertEvent(event, db, delta)
