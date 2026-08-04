@@ -28,43 +28,70 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
  * NIP-50 defines the [com.vitorpamplona.quartz.nip01Core.relay.filters.Filter.search]
  * field as "a string describing a query in a human-readable form", optionally
  * carrying `key:value` extension tokens such as `domain:example.com` or
- * `language:en`. This class splits that raw string into the free-text [terms]
- * and the recognized [extensions], giving relays (and search redirectors) a
- * typed view of the query instead of forcing each one to re-parse the string.
+ * `language:en`. This class splits that raw string into the free-text [terms],
+ * the Google-style term syntax ([phrases], [notPhrases], [notTerms]), and the
+ * recognized [extensions], giving relays (and search redirectors) a typed view
+ * of the query instead of forcing each one to re-parse the string.
  *
  * Example:
  * ```
- * val q = SearchQuery.parse("best nostr apps domain:example.com language:en")
- * q.terms      // "best nostr apps"
+ * val q = SearchQuery.parse("best \"nostr apps\" -spam domain:example.com")
+ * q.terms      // "best"
+ * q.phrases    // ["nostr apps"]
+ * q.notTerms   // ["spam"]
  * q.domain     // "example.com"
- * q.language   // "en"
  * ```
  *
- * ## Tokenization
+ * ## Parse order (load-bearing)
  *
- * The string is split on whitespace. A token is treated as an extension when:
- * - it contains a `:`,
- * - the part before the `:` is a non-empty run of lowercase ASCII letters
- *   (`a`–`z`), and
- * - the part after the `:` is non-empty and does not start with `//` (so URLs
- *   like `https://example.com` stay in [terms]).
+ * Quoted spans are lifted off the RAW string FIRST, then the residual is
+ * tokenized for extensions, then `-word` exclusions split off. The order
+ * matters twice over: the extension pass is quote-blind, so a span ending in
+ * an extension-shaped token (`"pizza sort:rank" -spam`) would otherwise lose
+ * its closing quote and the unclosed quote would swallow the rest of the
+ * query; and lifting first lets quotes protect extension-shaped tokens —
+ * `"include:spam"` is the phrase [include, spam], not an extension.
  *
- * Everything else is free text. Per NIP-50 unknown extensions are kept (so they
- * can be forwarded to a backend) — relays "SHOULD ignore extensions they don't
- * support", which this models by simply not having a typed accessor for them;
- * they remain readable through [extensions] / [extension].
+ * ## Term syntax
  *
- * Extension keys are matched case-sensitively against the lowercase forms
- * documented by NIP-50. Duplicate keys keep the last occurrence.
+ * - A `"quoted span"` is an exact-phrase requirement ([phrases]); `-"…"` is a
+ *   phrase exclusion ([notPhrases]). A quote opens a span only at a token
+ *   boundary — mid-token quotes stay ordinary characters. An unclosed span
+ *   runs to the end of the string. Empty spans are dropped, but a positive
+ *   phrase keeps content a text index may not hold ("⚡"): it is an
+ *   unsatisfiable requirement the backend turns into provably-no-match —
+ *   dropping it here would silently flip that into match-all.
+ * - A leading `-` on a 2+ character token makes it an exclusion ([notTerms],
+ *   all leading dashes stripped); a lone `-` stays an ordinary term. There is
+ *   no `-extension` syntax: extension keys are strictly `a`–`z`, so
+ *   `-include:spam` fails the key test and becomes the excluded literal.
+ *
+ * ## Extension tokenization
+ *
+ * The residual is split on whitespace. A token is treated as an extension when
+ * it contains a `:`, the part before the `:` is a non-empty run of lowercase
+ * ASCII letters (`a`–`z`), and the part after is non-empty and does not start
+ * with `//` (so URLs like `https://example.com` stay in [terms]). Per NIP-50
+ * unknown extensions are kept (readable through [extensions] / [extension]) so
+ * they can be forwarded to a backend; relays "SHOULD ignore extensions they
+ * don't support". Extension keys are matched case-sensitively against the
+ * lowercase forms documented by NIP-50. Duplicate keys keep the last
+ * occurrence.
  */
 class SearchQuery(
-    /** The human-readable search terms with all extension tokens removed. */
+    /** The loose human-readable search terms: extensions, phrases, and exclusions all removed. */
     val terms: String,
     /**
      * All recognized `key:value` extension tokens, in the order they appeared.
      * Known keys: [INCLUDE], [DOMAIN], [LANGUAGE], [SENTIMENT], [NSFW].
      */
     val extensions: Map<String, String>,
+    /** Exact-phrase requirements (`"nostr apps"`), quotes removed, in order. */
+    val phrases: List<String> = emptyList(),
+    /** Exact-phrase exclusions (`-"nostr apps"`), quotes removed, in order. */
+    val notPhrases: List<String> = emptyList(),
+    /** Single-word exclusions (`-spam`), dashes removed, in order. */
+    val notTerms: List<String> = emptyList(),
 ) {
     /** `true` when the query carries the `include:spam` token (NIP-50: disable spam filtering). */
     val includeSpam: Boolean
@@ -93,20 +120,41 @@ class SearchQuery(
     val nsfwIncluded: Boolean
         get() = nsfw ?: true
 
+    /**
+     * Whether the query REQUIRES any text — loose terms or phrases. Exclusions
+     * alone don't count: an exclusions-only query is plain recall minus the
+     * excluded words, not a ranked text search.
+     */
+    val hasText: Boolean
+        get() = terms.isNotEmpty() || phrases.isNotEmpty()
+
     /** Returns the raw value of an arbitrary extension key (including unknown ones), or null. */
     fun extension(key: String): String? = extensions[key]
 
-    /** Returns true when there are no free-text terms (the query is extensions-only or empty). */
+    /** Returns true when there are no loose free-text terms. Phrases don't count — see [hasText] for "any required text". */
     fun isTermsEmpty(): Boolean = terms.isEmpty()
 
     /**
-     * Re-assembles a canonical NIP-50 search string: the free-text [terms]
-     * followed by each `key:value` extension. Useful for a redirector that
-     * normalizes the incoming query before forwarding it to a backend.
+     * Re-assembles a canonical NIP-50 search string: the free-text [terms],
+     * then each `"phrase"`, `-exclusion`, `-"phrase exclusion"`, and
+     * `key:value` extension. Canonical, not order-preserving. Useful for a
+     * redirector that normalizes the incoming query before forwarding it.
      */
     fun toSearchString(): String =
         buildString {
             append(terms)
+            for (phrase in phrases) {
+                if (isNotEmpty()) append(' ')
+                append('"').append(phrase).append('"')
+            }
+            for (word in notTerms) {
+                if (isNotEmpty()) append(' ')
+                append('-').append(word)
+            }
+            for (phrase in notPhrases) {
+                if (isNotEmpty()) append(' ')
+                append("-\"").append(phrase).append('"')
+            }
             for ((key, value) in extensions) {
                 if (isNotEmpty()) append(' ')
                 append(key).append(':').append(value)
@@ -134,20 +182,24 @@ class SearchQuery(
 
         private val WHITESPACE = Regex("\\s+")
 
-        /** Empty query — no terms and no extensions. */
+        /** Empty query — no terms, no syntax, no extensions. */
         val EMPTY = SearchQuery("", emptyMap())
 
         /**
          * Parses a raw NIP-50 [search] string into a [SearchQuery]. A null or
-         * blank input yields [EMPTY].
+         * blank input yields [EMPTY]. See the class KDoc for the grammar and
+         * why the quote pass runs before the extension pass.
          */
         fun parse(search: String?): SearchQuery {
             if (search.isNullOrBlank()) return EMPTY
 
+            val quoted = liftQuotedSpans(search)
             val extensions = LinkedHashMap<String, String>()
             val terms = StringBuilder()
+            val notTerms = ArrayList<String>()
 
-            for (token in search.trim().split(WHITESPACE)) {
+            for (token in quoted.residual.trim().split(WHITESPACE)) {
+                if (token.isEmpty()) continue
                 val colon = token.indexOf(':')
                 if (colon > 0 && colon < token.length - 1) {
                     val key = token.substring(0, colon)
@@ -157,18 +209,60 @@ class SearchQuery(
                         continue
                     }
                 }
+                if (token.length > 1 && token[0] == '-') {
+                    notTerms += token.trimStart('-')
+                    continue
+                }
                 if (terms.isNotEmpty()) terms.append(' ')
                 terms.append(token)
             }
 
-            return SearchQuery(terms.toString(), extensions)
+            return SearchQuery(terms.toString(), extensions, quoted.phrases, quoted.notPhrases, notTerms)
         }
 
         private fun isExtensionKey(key: String): Boolean = key.isNotEmpty() && key.all { it in 'a'..'z' }
 
+        /** The quoted spans lifted off the raw text, plus the residual for the extension and `-word` passes. */
+        private class QuotedSpans(
+            val phrases: List<String>,
+            val notPhrases: List<String>,
+            val residual: String,
+        )
+
+        /** Stage one, over the RAW string: lift every `"…"` / `-"…"` span. See the class KDoc for the rules. */
+        private fun liftQuotedSpans(text: String): QuotedSpans {
+            val phrases = ArrayList<String>()
+            val notPhrases = ArrayList<String>()
+            val residual = StringBuilder()
+            var i = 0
+            var boundary = true
+            while (i < text.length) {
+                val c = text[i]
+                val neg = c == '-' && i + 1 < text.length && text[i + 1] == '"'
+                if (boundary && (c == '"' || neg)) {
+                    val start = i + if (neg) 2 else 1
+                    val close = text.indexOf('"', start)
+                    val end = if (close < 0) text.length else close
+                    val span = text.substring(start, end).trim()
+                    i = if (close < 0) text.length else close + 1
+                    if (span.isNotEmpty()) {
+                        if (neg) notPhrases += span else phrases += span
+                    }
+                    // The lifted span's place stays a token boundary for what follows.
+                    residual.append(' ')
+                } else {
+                    residual.append(c)
+                    boundary = c.isWhitespace()
+                    i++
+                }
+            }
+            return QuotedSpans(phrases, notPhrases, residual.toString())
+        }
+
         /**
          * Returns [search] with every `key:value` extension token removed,
-         * leaving only the free-text terms (tokenized as in [parse]).
+         * leaving the free-text query (terms, phrases, and exclusions,
+         * re-assembled as in [toSearchString]).
          *
          * Backends that hand the search string to an engine with its own
          * query syntax — e.g. SQLite FTS, where `:` is column-filter
@@ -184,7 +278,8 @@ class SearchQuery(
         fun stripExtensions(search: String?): String? {
             if (search.isNullOrBlank()) return search
             val parsed = parse(search)
-            return if (parsed.extensions.isEmpty()) search else parsed.terms
+            if (parsed.extensions.isEmpty()) return search
+            return SearchQuery(parsed.terms, emptyMap(), parsed.phrases, parsed.notPhrases, parsed.notTerms).toSearchString()
         }
     }
 }
