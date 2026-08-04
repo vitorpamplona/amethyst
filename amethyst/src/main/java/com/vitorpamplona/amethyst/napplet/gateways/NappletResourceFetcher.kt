@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplet.gateways
 
 import android.util.Base64
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
+import com.vitorpamplona.amethyst.commons.napplet.NappletResourceResult
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -39,9 +40,21 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import okhttp3.Authenticator
+import okhttp3.CookieJar
+import okhttp3.Dns
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.ByteArrayOutputStream
+import java.io.InterruptedIOException
+import java.net.InetAddress
 import java.net.URLDecoder
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
+import java.util.concurrent.TimeUnit
 
 /**
  * Fetches a resource URL on an applet's behalf — the applet has no direct network
@@ -63,40 +76,99 @@ class NappletResourceFetcher(
     private val account: Account,
     private val httpClient: (useProxy: Boolean) -> OkHttpClient,
 ) {
-    /** Fetches an https/data/blossom resource for the applet at [coordinate], or null if unsupported/unavailable. */
+    /** Fetches an https/data/blossom/nostr resource and preserves the NAP-RESOURCE error category. */
     suspend fun fetch(
         url: String,
         coordinate: String,
-    ): NappletResource? =
+    ): NappletResourceResult =
         withContext(Dispatchers.IO) {
-            // Route like the applet's own page: Tor when its network mode is Tor, clearnet otherwise.
-            NappletNetworkRegistry.awaitReady()
-            val client = httpClient(NappletNetworkRegistry.useTor(coordinate))
             when {
                 url.startsWith("data:") -> decodeDataUrl(url)
-                url.startsWith("https://") -> {
-                    runCatching {
-                        client
-                            .newCall(
-                                Request
-                                    .Builder()
-                                    .url(url)
-                                    .get()
-                                    .build(),
-                            ).execute()
-                            .use { r ->
-                                if (!r.isSuccessful) return@withContext null
-                                val body = r.body.bytes()
-                                val type = r.header("Content-Type") ?: "application/octet-stream"
-                                NappletResource(body, type)
-                            }
-                    }.getOrNull()
+                url.startsWith("nostr:") ->
+                    resolveNostr(url)?.let(::success) ?: failure(ERROR_NOT_FOUND, "Nostr resource not found.")
+                url.startsWith("https://") || url.startsWith("blossom:") -> {
+                    // Route like the applet's own page: locked napplets stay on Tor. The derived
+                    // client removes ambient cookies/auth and validates DNS before every hop.
+                    NappletNetworkRegistry.awaitReady()
+                    val client = hardenedClient(httpClient(NappletNetworkRegistry.useTor(coordinate)))
+                    if (url.startsWith("https://")) fetchHttps(url, client) else fetchBlossom(url, client)
                 }
-                url.startsWith("blossom:") -> fetchBlossom(url, client)
-                url.startsWith("nostr:") -> resolveNostr(url)
-                else -> null
+                else -> failure(ERROR_UNSUPPORTED_SCHEME, "Unsupported resource URL scheme.")
             }
         }
+
+    private fun hardenedClient(baseClient: OkHttpClient): OkHttpClient =
+        baseClient
+            .newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .cache(null)
+            .cookieJar(CookieJar.NO_COOKIES)
+            .authenticator(Authenticator.NONE)
+            .proxyAuthenticator(Authenticator.NONE)
+            .callTimeout(FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .dns(
+                Dns { hostname ->
+                    baseClient.dns.lookup(hostname).also { addresses ->
+                        if (addresses.isEmpty() || !addresses.all(::isPublicAddress)) {
+                            throw BlockedResourceException("Resolved address is not public.")
+                        }
+                    }
+                },
+            ).addNetworkInterceptor { chain ->
+                chain.proceed(
+                    chain
+                        .request()
+                        .newBuilder()
+                        .removeHeader("Authorization")
+                        .removeHeader("Cookie")
+                        .removeHeader("Proxy-Authorization")
+                        .build(),
+                )
+            }.build()
+
+    private fun fetchHttps(
+        url: String,
+        client: OkHttpClient,
+    ): NappletResourceResult {
+        var current = safeHttpsUrl(url) ?: return failure(ERROR_BLOCKED, "Only credential-free HTTPS URLs are allowed.")
+        repeat(MAX_REDIRECTS + 1) { hop ->
+            try {
+                client
+                    .newCall(
+                        Request
+                            .Builder()
+                            .url(current)
+                            .get()
+                            .build(),
+                    ).execute()
+                    .use { response ->
+                        if (response.isRedirect) {
+                            if (hop >= MAX_REDIRECTS) return failure(ERROR_BLOCKED, "Redirect limit exceeded.")
+                            val location = response.header("Location") ?: return failure(ERROR_NETWORK, "Redirect has no location.")
+                            current = safeHttpsUrl(current.resolve(location)) ?: return failure(ERROR_BLOCKED, "Redirect left credential-free HTTPS.")
+                            return@repeat
+                        }
+                        if (response.code == 404) return failure(ERROR_NOT_FOUND)
+                        if (!response.isSuccessful) return failure(ERROR_NETWORK, "Upstream returned HTTP ${response.code}.")
+                        if (response.body.contentLength() > MAX_RESOURCE_BYTES) return failure(ERROR_TOO_LARGE)
+                        val body = readBounded(response.body.byteStream()) ?: return failure(ERROR_TOO_LARGE)
+                        return classify(body)
+                    }
+            } catch (e: BlockedResourceException) {
+                return failure(ERROR_BLOCKED, e.message)
+            } catch (_: InterruptedIOException) {
+                return failure(ERROR_TIMEOUT)
+            } catch (_: Exception) {
+                return failure(ERROR_NETWORK)
+            }
+        }
+        return failure(ERROR_BLOCKED, "Redirect limit exceeded.")
+    }
+
+    private fun safeHttpsUrl(url: String): HttpUrl? = url.toHttpUrlOrNull()?.takeIf { isSafeHttpsResourceUrl(url) }
+
+    private fun safeHttpsUrl(url: HttpUrl?): HttpUrl? = url?.takeIf { it.scheme == "https" && it.username.isEmpty() && it.password.isEmpty() }
 
     /**
      * Resolves a `nostr:` URI (NIP-19) to the referenced event and returns its JSON. An `nembed`
@@ -158,62 +230,176 @@ class NappletResourceFetcher(
     private fun fetchBlossom(
         url: String,
         client: OkHttpClient,
-    ): NappletResource? {
-        val hash =
-            url
-                .removePrefix("blossom://")
-                .removePrefix("blossom:")
-                .substringBefore('/')
-                .substringBefore('?')
-                .trim()
-                .lowercase()
-        if (!hash.matches(Regex("^[0-9a-f]{64}$"))) return null
+    ): NappletResourceResult {
+        if (!url.startsWith(BLOSSOM_SHA256_PREFIX)) return failure(ERROR_INVALID_REQUEST, "Malformed Blossom SHA-256 URL.")
+        val hash = url.removePrefix(BLOSSOM_SHA256_PREFIX).lowercase()
+        if (!hash.matches(SHA256)) return failure(ERROR_INVALID_REQUEST, "Malformed Blossom SHA-256 URL.")
 
         val servers =
             account.blossomServers
                 .getBlossomServersList()
                 ?.servers()
                 .orEmpty()
+        var sawHashMismatch = false
         for (candidate in StaticSiteResolver.candidateUrls(servers, hash)) {
-            val bytes =
-                runCatching {
-                    client
-                        .newCall(
-                            Request
-                                .Builder()
-                                .url(candidate)
-                                .get()
-                                .build(),
-                        ).execute()
-                        .use { r ->
-                            if (r.isSuccessful) r.body.bytes() else null
-                        }
-                }.getOrNull() ?: continue
-            if (StaticSiteResolver.verify(bytes, hash)) {
-                return NappletResource(bytes, sniffContentType(bytes) ?: "application/octet-stream")
+            when (val fetched = fetchHttps(candidate, client)) {
+                is NappletResourceResult.Success -> {
+                    if (!StaticSiteResolver.verify(fetched.resource.bytes, hash)) {
+                        sawHashMismatch = true
+                        continue
+                    }
+                    return fetched
+                }
+                is NappletResourceResult.Failure -> if (fetched.error == ERROR_BLOCKED) return fetched
             }
         }
-        return null
+        if (sawHashMismatch) return failure(ERROR_DECODE_FAILED, "Blossom SHA-256 verification failed.")
+        return failure(ERROR_NOT_FOUND, "No Blossom server returned the verified blob.")
     }
 
     /** Parses a `data:[<mediatype>][;base64],<data>` URL into bytes + content type. */
-    private fun decodeDataUrl(url: String): NappletResource? {
+    private fun decodeDataUrl(url: String): NappletResourceResult {
         val comma = url.indexOf(',')
-        if (comma < 0) return null
+        if (comma < 0) return failure(ERROR_INVALID_REQUEST, "Malformed data URL.")
         val meta = url.substring("data:".length, comma)
         val data = url.substring(comma + 1)
+        if (data.length > MAX_DATA_URL_CHARS) return failure(ERROR_TOO_LARGE)
         val isBase64 = meta.endsWith(";base64")
-        val contentType = meta.removeSuffix(";base64").ifEmpty { "text/plain" }
+        val declaredType =
+            meta
+                .removeSuffix(";base64")
+                .substringBefore(';')
+                .ifEmpty { "text/plain" }
+                .lowercase()
         val bytes =
             if (isBase64) {
-                runCatching { Base64.decode(data, Base64.DEFAULT) }.getOrNull() ?: return null
+                runCatching { Base64.decode(data, Base64.DEFAULT) }.getOrNull()
+                    ?: return failure(ERROR_DECODE_FAILED, "Invalid base64 data URL.")
             } else {
-                URLDecoder.decode(data, "UTF-8").encodeToByteArray()
+                runCatching { URLDecoder.decode(data, "UTF-8").encodeToByteArray() }.getOrNull()
+                    ?: return failure(ERROR_DECODE_FAILED, "Invalid escaped data URL.")
             }
-        return NappletResource(bytes, contentType)
+        if (bytes.size > MAX_RESOURCE_BYTES) return failure(ERROR_TOO_LARGE)
+        return classify(bytes, declaredType)
+    }
+
+    private fun classify(
+        bytes: ByteArray,
+        declaredType: String? = null,
+    ): NappletResourceResult {
+        if (looksLikeSvg(bytes)) return failure(ERROR_BLOCKED, "Raw SVG is not delivered by this runtime.")
+        val sniffed = sniffContentType(bytes)
+        val type =
+            when {
+                sniffed in ALLOWED_SNIFFED_TYPES -> sniffed
+                declaredType == "application/json" && isJson(bytes) -> "application/json"
+                declaredType == "text/plain" && isPlainText(bytes) -> "text/plain"
+                else -> null
+            } ?: return failure(ERROR_DECODE_FAILED, "Resource MIME is not in the runtime allowlist.")
+        return success(NappletResource(bytes, type))
+    }
+
+    private fun looksLikeSvg(bytes: ByteArray): Boolean {
+        val prefix = bytes.copyOfRange(0, minOf(bytes.size, MIME_PREFIX_BYTES)).decodeToString().lowercase()
+        return prefix.contains("<svg")
+    }
+
+    private fun isJson(bytes: ByteArray): Boolean = runCatching { Json.parseToJsonElement(bytes.decodeToString()) }.isSuccess
+
+    private fun isPlainText(bytes: ByteArray): Boolean =
+        runCatching {
+            Charsets.UTF_8
+                .newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(bytes))
+        }.isSuccess && bytes.none { it == 0.toByte() }
+
+    private fun success(resource: NappletResource): NappletResourceResult = NappletResourceResult.Success(resource)
+
+    private fun failure(
+        error: String,
+        message: String? = null,
+    ): NappletResourceResult = NappletResourceResult.Failure(error, message)
+
+    private fun readBounded(input: java.io.InputStream): ByteArray? {
+        input.use { source ->
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8 * 1024)
+            var total = 0
+            while (true) {
+                val read = source.read(buffer)
+                if (read < 0) break
+                total += read
+                if (total > MAX_RESOURCE_BYTES) return null
+                output.write(buffer, 0, read)
+            }
+            return output.toByteArray()
+        }
     }
 
     companion object {
+        internal fun isSafeHttpsResourceUrl(url: String): Boolean = url.toHttpUrlOrNull()?.let { it.scheme == "https" && it.username.isEmpty() && it.password.isEmpty() } == true
+
+        internal fun isPublicAddress(address: InetAddress): Boolean {
+            if (address.isAnyLocalAddress || address.isLoopbackAddress || address.isLinkLocalAddress || address.isSiteLocalAddress || address.isMulticastAddress) {
+                return false
+            }
+            val bytes = address.address
+            if (bytes.size == 4) {
+                val first = bytes[0].toInt() and 0xff
+                val second = bytes[1].toInt() and 0xff
+                // Shared address space (100.64/10) and reserved/non-routed ranges Java does not classify.
+                if (first == 0 || first >= 224) return false
+                if (first == 100 && second in 64..127) return false
+                if (first == 192 && second == 0) return false
+                if (first == 198 && second in 18..19) return false
+                if (first == 198 && second == 51 && (bytes[2].toInt() and 0xff) == 100) return false
+                if (first == 203 && second == 0 && (bytes[2].toInt() and 0xff) == 113) return false
+            } else if (bytes.size == 16) {
+                val first = bytes[0].toInt() and 0xff
+                if (first and 0xfe == 0xfc) return false // fc00::/7 unique-local
+                if (
+                    first == 0x20 &&
+                    (bytes[1].toInt() and 0xff) == 0x01 &&
+                    (bytes[2].toInt() and 0xff) == 0x0d &&
+                    (bytes[3].toInt() and 0xff) == 0xb8
+                ) {
+                    return false // 2001:db8::/32 documentation range
+                }
+            }
+            return true
+        }
+
         private const val NOSTR_FETCH_TIMEOUT_MS = 8_000L
+        private const val FETCH_TIMEOUT_SECONDS = 30L
+        private const val MAX_REDIRECTS = 5
+        private const val MIME_PREFIX_BYTES = 8 * 1024
+        private const val MAX_DATA_URL_CHARS = 24 * 1024 * 1024
+        private const val BLOSSOM_SHA256_PREFIX = "blossom:sha256:"
+        const val MAX_RESOURCE_BYTES = 10 * 1024 * 1024
+        private const val ERROR_INVALID_REQUEST = "invalid-request"
+        private const val ERROR_NOT_FOUND = "not-found"
+        private const val ERROR_BLOCKED = "blocked-by-policy"
+        private const val ERROR_TIMEOUT = "timeout"
+        private const val ERROR_TOO_LARGE = "too-large"
+        private const val ERROR_UNSUPPORTED_SCHEME = "unsupported-scheme"
+        private const val ERROR_DECODE_FAILED = "decode-failed"
+        private const val ERROR_NETWORK = "network-error"
+        private val SHA256 = Regex("^[0-9a-f]{64}$")
+        private val ALLOWED_SNIFFED_TYPES =
+            setOf(
+                "image/png",
+                "image/jpeg",
+                "image/gif",
+                "image/webp",
+                "image/bmp",
+                "audio/ogg",
+                "video/mp4",
+            )
     }
+
+    private class BlockedResourceException(
+        message: String,
+    ) : java.io.IOException(message)
 }

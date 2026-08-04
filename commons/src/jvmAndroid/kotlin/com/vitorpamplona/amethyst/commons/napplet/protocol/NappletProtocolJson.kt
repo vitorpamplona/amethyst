@@ -26,6 +26,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
@@ -34,6 +35,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import java.util.Base64
 
@@ -62,7 +64,7 @@ object NappletProtocolJson {
     /** The `subId` of a subscription request, used to key the `relay.event`/`relay.eose` pushes back to it. */
     fun readSubId(envelopeJson: String): String? = json.parseToJsonElement(envelopeJson).jsonObject.str("subId")
 
-    /** A `relay.event` push: delivers one matching [event] to the subscription [subId] (no request id). */
+    /** A `relay.event` push carrying the NAP-RELAY `RelayEventResult` wrapper. */
     fun encodeRelayEvent(
         subId: String,
         event: Event,
@@ -70,7 +72,9 @@ object NappletProtocolJson {
         buildJsonObject {
             put("type", "relay.event")
             put("subId", subId)
-            put("event", json.parseToJsonElement(event.toJson()))
+            putJsonObject("result") {
+                put("event", json.parseToJsonElement(event.toJson()))
+            }
         }.toString()
 
     /** A `relay.eose` push: signals end-of-stored-events for the subscription [subId]. */
@@ -130,29 +134,10 @@ object NappletProtocolJson {
             put("reason", reason)
         }.toString()
 
-    /**
-     * The `shell.init` handshake reply (`@napplet/core`): the capability environment the napplet
-     * caches and answers `shell.supports()` from. [domains] is the set of NAP domains this shell
-     * will broker for the applet; [services] mirrors them. We don't advertise numbered protocols.
-     */
-    fun encodeShellInit(
-        domains: List<String>,
-        services: List<String>,
-    ): String =
-        buildJsonObject {
-            put("type", "shell.init")
-            putJsonObject("capabilities") {
-                put("domains", buildJsonArray { domains.forEach { add(it) } })
-                putJsonObject("protocols") {}
-            }
-            put("services", buildJsonArray { services.forEach { add(it) } })
-        }.toString()
-
     /** Parses a request envelope. Returns `null` for an unrecognized `type` so the broker can deny it. */
     fun decodeRequest(envelopeJson: String): NappletRequest? {
         val o = json.parseToJsonElement(envelopeJson).jsonObject
         return when (o.str("type")) {
-            "shell.supports" -> NappletRequest.ShellSupports(o.req("domain"), o.str("protocol"))
             "theme.get" -> NappletRequest.ThemeGet
             "identity.getPublicKey" -> NappletRequest.GetPublicKey
             "relay.publish" -> {
@@ -181,10 +166,10 @@ object NappletProtocolJson {
                     createdAt = t["created_at"]?.jsonPrimitive?.long ?: (System.currentTimeMillis() / 1000),
                 )
             }
-            "storage.get" -> NappletRequest.StorageGet(o.req("key"))
-            "storage.set" -> NappletRequest.StorageSet(o.req("key"), o.req("value"))
-            "storage.remove" -> NappletRequest.StorageRemove(o.req("key"))
-            "storage.keys" -> NappletRequest.StorageKeys
+            "storage.get" -> NappletRequest.StorageGet(o.req("key"), o.storageScope())
+            "storage.set" -> NappletRequest.StorageSet(o.req("key"), o.req("value"), o.storageScope())
+            "storage.remove" -> NappletRequest.StorageRemove(o.req("key"), o.storageScope())
+            "storage.keys" -> NappletRequest.StorageKeys(o.storageScope())
             "notify.create" -> NappletRequest.NotifyCreate(o.str("title") ?: "", o.str("body") ?: "")
             "notify.list" -> NappletRequest.NotifyList
             "notify.dismiss" -> NappletRequest.NotifyDismiss(o.str("notificationId") ?: o.str("id") ?: "")
@@ -194,7 +179,9 @@ object NappletProtocolJson {
             }
             "keys.unregisterAction" -> NappletRequest.UnregisterAction(o.req("actionId"))
             "value.payInvoice" -> NappletRequest.PayInvoice(o.req("invoice"))
+            "resource.info" -> NappletRequest.ResourceInfo
             "resource.bytes" -> NappletRequest.ResourceBytes(o.req("url"))
+            "resource.bytesMany" -> NappletRequest.ResourceBytesMany(o.getValue("urls").jsonArray.map { it.jsonPrimitive.content })
             "upload.upload" -> {
                 // UploadUploadMessage: { type, id, request: { data, mimeType?, filename?, ... } }.
                 // The Blob in `request.data` is inlined as base64 `request.dataBase64` by shell.html.
@@ -209,7 +196,7 @@ object NappletProtocolJson {
                 // Any other identity.* read (getProfile/getRelays/getFollows/getList/...) routes through
                 // a generic IdentityRead; the broker/gateway decides which are implemented.
                 val type = o.str("type")
-                if (type != null && type.startsWith("identity.")) {
+                if (type != null && type in IDENTITY_READ_TYPES) {
                     NappletRequest.IdentityRead(type.removePrefix("identity."), o.str("listType") ?: o.str("argument"))
                 } else {
                     null
@@ -230,6 +217,7 @@ object NappletProtocolJson {
                 when (response) {
                     is NappletResponse.NotifyCreated -> "notify.created"
                     is NappletResponse.NotifyListed -> "notify.listed"
+                    is NappletResponse.ResourceFailure -> "$requestType.error"
                     else -> "$requestType.result"
                 }
             put("type", responseType)
@@ -247,11 +235,11 @@ object NappletProtocolJson {
                 }
                 is NappletResponse.Events -> {
                     put("ok", true)
-                    put("events", buildJsonArray { response.events.forEach { add(json.parseToJsonElement(it.toJson())) } })
-                }
-                is NappletResponse.Supported -> {
-                    put("ok", true)
-                    put("supported", response.supported)
+                    putJsonArray("events") {
+                        response.events.forEach { event ->
+                            addJsonObject { put("event", json.parseToJsonElement(event.toJson())) }
+                        }
+                    }
                 }
                 is NappletResponse.ActionRegistered -> {
                     put("ok", true)
@@ -278,6 +266,42 @@ object NappletProtocolJson {
                     put("ok", true)
                     put("bytes", Base64.getEncoder().encodeToString(response.bytes))
                     put("mime", response.contentType)
+                }
+                is NappletResponse.ResourceInfo -> {
+                    put("ok", true)
+                    putJsonObject("info") {
+                        putJsonArray("schemes") {
+                            response.schemes.forEach { scheme ->
+                                addJsonObject {
+                                    put("scheme", scheme)
+                                    put("enabled", true)
+                                }
+                            }
+                        }
+                        put("maxBytes", response.maxBytes)
+                        put("maxUrls", response.maxUrls)
+                    }
+                }
+                is NappletResponse.ResourceItems -> {
+                    put("ok", true)
+                    putJsonArray("items") {
+                        response.items.forEach { item ->
+                            addJsonObject {
+                                put("url", item.url)
+                                put("ok", item.resource != null)
+                                item.resource?.let {
+                                    put("bytes", Base64.getEncoder().encodeToString(it.bytes))
+                                    put("mime", it.contentType)
+                                }
+                                item.error?.let { put("error", it) }
+                                item.message?.let { put("message", it) }
+                            }
+                        }
+                    }
+                }
+                is NappletResponse.ResourceFailure -> {
+                    put("error", response.error)
+                    response.message?.let { put("message", it) }
                 }
                 is NappletResponse.Uploaded -> {
                     // UploadResult: { ok, uploadId, status, url?, sha256?, size?, mimeType?, ... }.
@@ -397,6 +421,8 @@ object NappletProtocolJson {
 
     private fun JsonObject.kindOf(): Int = getValue("kind").jsonPrimitive.int
 
+    private fun JsonObject.storageScope(): NappletStorageScope = if (str("scope") == "instance") NappletStorageScope.INSTANCE else NappletStorageScope.SHARED
+
     /** The result field a given identity read returns, matching `@napplet/nap` identity message types. */
     private fun identityResultField(requestType: String): String =
         when (requestType) {
@@ -408,4 +434,16 @@ object NappletProtocolJson {
             "identity.getBadges" -> "badges"
             else -> "result"
         }
+
+    private val IDENTITY_READ_TYPES =
+        setOf(
+            "identity.getRelays",
+            "identity.getProfile",
+            "identity.getFollows",
+            "identity.getList",
+            "identity.getZaps",
+            "identity.getMutes",
+            "identity.getBlocked",
+            "identity.getBadges",
+        )
 }

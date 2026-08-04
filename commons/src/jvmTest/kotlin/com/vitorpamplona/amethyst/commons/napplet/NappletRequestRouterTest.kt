@@ -85,11 +85,12 @@ class NappletRequestRouterTest {
         }
 
     @Test
-    fun resourceCancelRepliesDone() =
+    fun resourceCancelIsSilentlyHandled() =
         runTest {
-            val outcome = route("""{"type":"resource.cancel"}""")
-            assertIs<NappletRequestRouter.Outcome.Reply>(outcome)
-            assertTrue(outcome.payload.contains("resource.cancel.result"))
+            assertEquals(
+                NappletRequestRouter.Outcome.Ignore,
+                route("""{"type":"resource.cancel"}"""),
+            )
         }
 
     @Test
@@ -117,11 +118,11 @@ class NappletRequestRouterTest {
         }
 
     @Test
-    fun malformedRequestRepliesFailed() =
+    fun unknownAndMalformedRequestsAreSilentlyIgnored() =
         runTest {
-            val outcome = route("""{"type":"totally.unknown"}""")
-            assertIs<NappletRequestRouter.Outcome.Reply>(outcome)
-            assertTrue(outcome.payload.contains("failed"))
+            assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"totally.unknown"}"""))
+            assertEquals(NappletRequestRouter.Outcome.Ignore, route("not json"))
+            assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"relay.publish"}"""))
         }
 
     @Test
@@ -153,29 +154,9 @@ class NappletRequestRouterTest {
         }
 
     @Test
-    fun identityWatchWhenDeclaredBecomesWatchIdentity() =
+    fun removedIdentityWatchMessagesAreIgnored() =
         runTest {
-            assertEquals(
-                NappletRequestRouter.Outcome.WatchIdentity,
-                NappletRequestRouter.route(broker(), applet, allDeclared, """{"type":"identity.watch"}"""),
-            )
-        }
-
-    @Test
-    fun identityWatchWithoutDeclarationIsIgnored() =
-        runTest {
-            assertEquals(
-                NappletRequestRouter.Outcome.Ignore,
-                NappletRequestRouter.route(broker(), applet, emptySet(), """{"type":"identity.watch"}"""),
-            )
-        }
-
-    @Test
-    fun identityUnwatchBecomesUnwatchIdentity() =
-        runTest {
-            assertEquals(
-                NappletRequestRouter.Outcome.UnwatchIdentity,
-                NappletRequestRouter.route(broker(), applet, emptySet(), """{"type":"identity.unwatch"}"""),
-            )
+            assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"identity.watch"}"""))
+            assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"identity.unwatch"}"""))
         }
 }

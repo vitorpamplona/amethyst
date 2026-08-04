@@ -34,21 +34,22 @@ import kotlinx.coroutines.launch
  * value is dropped — the applet already has it via `getPublicKey`), encodes and pushes the new key
  * (or `""` when no account is signed in) to the caller-supplied sink.
  *
- * One watch at a time per host binding; [start] replaces any prior one. Reached only after the
- * router confirmed the applet declared the IDENTITY capability.
+ * Watches are keyed by the trusted launch token so concurrent surfaces cannot replace each other's
+ * streams. A watch starts only after that surface successfully obtains its public-key snapshot.
  */
 class NappletIdentityWatch(
     private val scope: CoroutineScope,
     private val pubKey: (boundPubKey: String) -> Flow<String>,
 ) {
-    private var job: Job? = null
+    private val jobs = mutableMapOf<String, Job>()
 
     fun start(
+        watchId: String,
         boundPubKey: String,
         push: (String) -> Unit,
     ) {
-        stop()
-        job =
+        if (jobs.containsKey(watchId)) return
+        jobs[watchId] =
             scope.launch {
                 pubKey(boundPubKey)
                     .distinctUntilChanged()
@@ -57,8 +58,8 @@ class NappletIdentityWatch(
             }
     }
 
-    fun stop() {
-        job?.cancel()
-        job = null
+    fun stopAll() {
+        jobs.values.forEach { it.cancel() }
+        jobs.clear()
     }
 }
