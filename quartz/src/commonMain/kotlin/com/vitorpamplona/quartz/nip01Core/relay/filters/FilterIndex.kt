@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.filters
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.tags.isIndexableTagName
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.PersistentSet
 import kotlinx.collections.immutable.persistentHashMapOf
@@ -238,7 +239,7 @@ class FilterIndex<S : Any> {
         s.kinds[event.kind]?.let { result.addAll(it) }
         if (s.tags.isNotEmpty()) {
             for (tag in event.tags) {
-                if (tag.size >= 2 && tag[0].length == 1) {
+                if (tag.size >= 2 && isIndexableTagName(tag[0])) {
                     s.tags[tag[0]]?.get(tag[1])?.let { result.addAll(it) }
                 }
             }
@@ -348,14 +349,14 @@ class FilterIndex<S : Any> {
         if (!filter.tags.isNullOrEmpty()) {
             val first =
                 filter.tags.entries.firstOrNull {
-                    it.key.length == 1 && it.value.isNotEmpty()
+                    isIndexableTagName(it.key) && it.value.isNotEmpty()
                 }
             if (first != null) return first.value.map { TagKey(first.key, it) }
         }
         if (!filter.tagsAll.isNullOrEmpty()) {
             val first =
                 filter.tagsAll.entries.firstOrNull {
-                    it.key.length == 1 && it.value.isNotEmpty()
+                    isIndexableTagName(it.key) && it.value.isNotEmpty()
                 }
             if (first != null) return first.value.map { TagKey(first.key, it) }
         }
