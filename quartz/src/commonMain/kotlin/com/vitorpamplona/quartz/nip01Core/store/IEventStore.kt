@@ -122,7 +122,7 @@ interface IEventStore : AutoCloseable {
                 insert(event)
                 InsertOutcome.Accepted
             } catch (e: Throwable) {
-                InsertOutcome.Rejected(e.message ?: e::class.simpleName ?: "insert failed")
+                InsertOutcome.Rejected(e.message ?: e::class.simpleName ?: RejectionReason.INSERT_FAILED)
             }
         }
 
