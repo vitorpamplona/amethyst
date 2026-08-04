@@ -29,15 +29,26 @@
 #   amethyst-desktop-1.08.0-linux-x64.AppImage
 #   amethyst-desktop-1.08.0-linux-x64.flatpak
 #   amethyst-desktop-1.08.0-linux-x64.tar.gz
+#   amethyst-desktop-1.08.0-linux-arm64.deb
+#   amethyst-desktop-1.08.0-linux-arm64.rpm
+#   amethyst-desktop-1.08.0-linux-arm64.AppImage
+#   amethyst-desktop-1.08.0-linux-arm64.flatpak
+#   amethyst-desktop-1.08.0-linux-arm64.tar.gz
 #   amy-1.08.0-macos-arm64.tar.gz
 #   amy-1.08.0-macos-x64.tar.gz
 #   amy-1.08.0-linux-x64.tar.gz
 #   amy-1.08.0-linux-x64.deb
 #   amy-1.08.0-linux-x64.rpm
+#   amy-1.08.0-linux-arm64.tar.gz
+#   amy-1.08.0-linux-arm64.deb
+#   amy-1.08.0-linux-arm64.rpm
 #   geode-1.08.0-macos-arm64.tar.gz
 #   geode-1.08.0-linux-x64.tar.gz
 #   geode-1.08.0-linux-x64.deb
 #   geode-1.08.0-linux-x64.rpm
+#   geode-1.08.0-linux-arm64.tar.gz
+#   geode-1.08.0-linux-arm64.deb
+#   geode-1.08.0-linux-arm64.rpm
 #
 # Two assets break the family/arch shape on purpose: the no-JRE jar bundles for
 # Homebrew-core are pure JVM bytecode (no bundled runtime), so a single

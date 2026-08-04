@@ -57,9 +57,12 @@ Install appimagetool locally (CI fetches its own — SHA-verified):
 # Debian/Ubuntu — appimagetool calls desktop-file-validate on the .desktop entry
 sudo apt-get install -y desktop-file-utils
 
-curl -fsSL -o desktopApp/packaging/appimage/appimagetool-x86_64.AppImage \
-  https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
-chmod +x desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
+# createReleaseAppImage picks appimagetool-<arch>.AppImage matching the JVM's
+# os.arch — fetch the one for your host (x86_64 on Intel/AMD, aarch64 on ARM).
+ARCH="$(uname -m)"
+curl -fsSL -o "desktopApp/packaging/appimage/appimagetool-${ARCH}.AppImage" \
+  "https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-${ARCH}.AppImage"
+chmod +x "desktopApp/packaging/appimage/appimagetool-${ARCH}.AppImage"
 ```
 
 ---
@@ -110,8 +113,8 @@ are **not** required to build Amethyst from the committed sources.
 | Windows MSI | `./gradlew :desktopApp:packageReleaseMsi` | `desktopApp/build/compose/binaries/main-release/msi/Amethyst-*.msi` |
 | Linux `.deb` | `./gradlew :desktopApp:packageReleaseDeb` | `desktopApp/build/compose/binaries/main-release/deb/amethyst_*.deb` |
 | Linux `.rpm` | `./gradlew :desktopApp:packageReleaseRpm` | `desktopApp/build/compose/binaries/main-release/rpm/amethyst-*.rpm` |
-| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/Amethyst-*-x86_64.AppImage` |
-| Linux Flatpak | `flatpak-builder` over `createReleaseDistributable` output — see [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md) | `desktopApp/build/flatpak/Amethyst-*-x86_64.flatpak` (CI) |
+| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/Amethyst-*-<arch>.AppImage` (x86_64 or aarch64, from host) |
+| Linux Flatpak | `flatpak-builder` over `createReleaseDistributable` output — see [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md) | `desktopApp/build/flatpak/Amethyst-*-<arch>.flatpak` (CI; x86_64 or aarch64) |
 | Windows `.zip` portable | See below (inline `7z`) | — |
 | Linux `.tar.gz` portable | See below (inline `tar`) | — |
 

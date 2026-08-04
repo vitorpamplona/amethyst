@@ -28,8 +28,12 @@ used two ways:
   manifest (archive source pinned to the release tarball URL + sha256, with
   `x-checker-data` so Flathub's update bot bumps it), its own metainfo
   (carries the permanent `<releases>` history Flathub requires), desktop
-  entry, icon, and `flathub.json` (`only-arches: x86_64` — we publish no
-  aarch64 tarball, and jpackage can't cross-compile one)
+  entry, icon, and `flathub.json` — currently gated to `only-arches:
+  x86_64` so the Flathub build machinery never tries the aarch64 tarball
+  before we've validated it end-to-end on Flathub's aarch64 builders. GitHub
+  releases already ship aarch64 flatpak bundles (built from the same source
+  tree on `ubuntu-24.04-arm`); flipping `only-arches` to include `aarch64`
+  is the follow-up once we've smoke-tested a Flathub aarch64 build.
 
 ## Local build
 

@@ -26,8 +26,12 @@ env:
   # bundle deps — that fights jpackage's self-contained JRE (libjvm.so has
   # $ORIGIN RPATH so ldd can't resolve it standalone). appimagetool only
   # embeds the AppDir as-is, which is what we actually want.
-  APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
-  APPIMAGETOOL_SHA256: 46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1
+  #
+  # Both arch binaries come from the same appimagetool release so their SHA256
+  # values move in lockstep on version bumps.
+  APPIMAGETOOL_VERSION: '1.9.0'
+  APPIMAGETOOL_SHA256_X86_64: 46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1
+  APPIMAGETOOL_SHA256_AARCH64: 04f45ea45b5aa07bb2b071aed9dbf7a5185d3953b11b47358c1311f11ea94a96
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -38,11 +42,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Linux legs run on x64 and arm64 GitHub-hosted runners (the
+        # ubuntu-24.04-arm label is a standard free public-repo runner as of
+        # early 2025). jpackage / jlink / Compose Multiplatform 1.11 all
+        # produce host-native artifacts — no cross-compilation needed.
         include:
-          - { os: macos-14,       arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
-          - { os: windows-latest, arch: x64,   family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
-          - { os: ubuntu-latest,  arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
-          - { os: ubuntu-latest,  arch: x64,   family: linux-portable, tasks: "createReleaseAppImage createReleaseDistributable" }
+          - { os: macos-14,         arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
+          - { os: windows-latest,   arch: x64,   family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
+          - { os: ubuntu-latest,    arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
+          - { os: ubuntu-24.04-arm, arch: arm64, family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
+          - { os: ubuntu-latest,    arch: x64,   family: linux-portable, tasks: "createReleaseAppImage createReleaseDistributable" }
+          - { os: ubuntu-24.04-arm, arch: arm64, family: linux-portable, tasks: "createReleaseAppImage createReleaseDistributable" }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60  # linux-portable leg also downloads the freedesktop runtime + builds the Flatpak bundle
     defaults:
@@ -93,13 +103,21 @@ jobs:
           set -euo pipefail
           # appimagetool 1.9.0 validates the .desktop file via desktop-file-validate.
           sudo apt-get update && sudo apt-get install -y desktop-file-utils
-          curl -fsSL --retry 3 "$APPIMAGETOOL_URL" -o desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
-          actual=$(sha256sum desktopApp/packaging/appimage/appimagetool-x86_64.AppImage | awk '{print $1}')
-          if [[ "$actual" != "$APPIMAGETOOL_SHA256" ]]; then
-            echo "::error::appimagetool SHA256 mismatch. Expected $APPIMAGETOOL_SHA256, got $actual"
+          # Map runner arch → upstream AppImage suffix (x86_64 / aarch64).
+          case "${{ matrix.arch }}" in
+            x64)   TOOL_ARCH=x86_64 ; EXPECTED_SHA="$APPIMAGETOOL_SHA256_X86_64" ;;
+            arm64) TOOL_ARCH=aarch64; EXPECTED_SHA="$APPIMAGETOOL_SHA256_AARCH64" ;;
+            *)     echo "::error::unsupported arch for AppImage: ${{ matrix.arch }}"; exit 1 ;;
+          esac
+          URL="https://github.com/AppImage/appimagetool/releases/download/${APPIMAGETOOL_VERSION}/appimagetool-${TOOL_ARCH}.AppImage"
+          DEST="desktopApp/packaging/appimage/appimagetool-${TOOL_ARCH}.AppImage"
+          curl -fsSL --retry 3 "$URL" -o "$DEST"
+          actual=$(sha256sum "$DEST" | awk '{print $1}')
+          if [[ "$actual" != "$EXPECTED_SHA" ]]; then
+            echo "::error::appimagetool SHA256 mismatch for $TOOL_ARCH. Expected $EXPECTED_SHA, got $actual"
             exit 1
           fi
-          chmod +x desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
+          chmod +x "$DEST"
 
       # Flatpak tooling + the freedesktop runtime/sdk the manifest pins
       # (runtime-version is greped from the manifest so this never drifts).
@@ -208,12 +226,13 @@ jobs:
         run: |
           set -euo pipefail
           VER="${{ steps.ver.outputs.version }}"
+          ARCH="${{ matrix.arch }}"
           APP="desktopApp/build/compose/binaries/main-release/app"
           mkdir -p desktopApp/build/portable
           if [[ "${{ matrix.family }}" == "windows" ]]; then
-            ( cd "$APP" && 7z a -tzip "../../../../portable/amethyst-desktop-${VER}-windows-x64.zip" Amethyst/ )
+            ( cd "$APP" && 7z a -tzip "../../../../portable/amethyst-desktop-${VER}-windows-${ARCH}.zip" Amethyst/ )
           else
-            ( cd "$APP" && tar czf "../../../../portable/amethyst-desktop-${VER}-linux-x64.tar.gz" Amethyst/ )
+            ( cd "$APP" && tar czf "../../../../portable/amethyst-desktop-${VER}-linux-${ARCH}.tar.gz" Amethyst/ )
           fi
 
       # Flatpak bundle: wraps the same createReleaseDistributable tree the
@@ -230,6 +249,17 @@ jobs:
           PKG="desktopApp/packaging/flatpak"
           APP_ID="com.vitorpamplona.amethyst.Desktop"
           OUT="desktopApp/build/flatpak"
+          # AppImage-style arch names for the bundle filename.
+          case "${{ matrix.arch }}" in
+            x64)   BUNDLE_ARCH=x86_64  ; GST_TRIPLET=x86_64-linux-gnu   ;;
+            arm64) BUNDLE_ARCH=aarch64 ; GST_TRIPLET=aarch64-linux-gnu  ;;
+            *)     echo "::error::unsupported arch for Flatpak: ${{ matrix.arch }}"; exit 1 ;;
+          esac
+          # Rewrite the arch-specific GStreamer plugin path in the manifest
+          # (checked-in default is x86_64-linux-gnu). Idempotent — the sed only
+          # matches the original triplet.
+          sed -i "s|/usr/lib/x86_64-linux-gnu/gstreamer-1.0|/usr/lib/${GST_TRIPLET}/gstreamer-1.0|g" \
+            "${PKG}/${APP_ID}.yml"
           # Inject the AppStream <release> entry for this build (the checked-in
           # metainfo deliberately carries none — CI is the source of truth).
           sed -i "s|<releases>|<releases>\n    <release version=\"${VER}\" date=\"$(date -u +%F)\" />|" \
@@ -241,7 +271,7 @@ jobs:
             "${OUT}/build-dir" \
             "${PKG}/${APP_ID}.yml"
           flatpak build-bundle "${OUT}/repo" \
-            "${OUT}/Amethyst-${VER}-x86_64.flatpak" \
+            "${OUT}/Amethyst-${VER}-${BUNDLE_ARCH}.flatpak" \
             "$APP_ID" \
             --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
           ls -la "$OUT"
@@ -325,8 +355,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-14,      arch: arm64, family: macos, tasks: "amyImage" }
-          - { os: ubuntu-latest, arch: x64,   family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
+          - { os: macos-14,         arch: arm64, family: macos, tasks: "amyImage" }
+          - { os: ubuntu-latest,    arch: x64,   family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
+          - { os: ubuntu-24.04-arm, arch: arm64, family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45  # macOS leg also codesigns + notarizes the jlink image
     defaults:
@@ -574,8 +605,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-14,      arch: arm64, family: macos, tasks: "geodeImage" }
-          - { os: ubuntu-latest, arch: x64,   family: linux, tasks: "geodeImage jpackageDeb jpackageRpm" }
+          - { os: macos-14,         arch: arm64, family: macos, tasks: "geodeImage" }
+          - { os: ubuntu-latest,    arch: x64,   family: linux, tasks: "geodeImage jpackageDeb jpackageRpm" }
+          - { os: ubuntu-24.04-arm, arch: arm64, family: linux, tasks: "geodeImage jpackageDeb jpackageRpm" }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45  # macOS leg also codesigns + notarizes the jlink image
     defaults:
