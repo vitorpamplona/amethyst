@@ -29,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -38,10 +37,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
-import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
@@ -51,9 +47,10 @@ import com.vitorpamplona.amethyst.ui.components.collectContentWarningReasons
 import com.vitorpamplona.amethyst.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.types.FileHeaderAttachmentCard
+import com.vitorpamplona.amethyst.ui.note.types.toMediaContent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 
@@ -101,45 +98,22 @@ private fun FileHeaderCardImage(
 
     val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
     val reasons = remember(note) { collectContentWarningReasons(event) }
-    val isImage = remember(note) { event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl) }
+    val mimeType = remember(note) { event.mimeType() }
     val blurHash = remember(note) { event.blurhash() }
     val thumbHash = remember(note) { event.thumbhash() }
     val dimensions = remember(note) { event.dimensions() }
 
-    val content by remember(note) {
-        val hash = event.hash()
-        val description = event.content.ifEmpty { null } ?: event.alt()
-        val uri = note.toNostrUri()
-        val mimeType = event.mimeType()
+    val content = remember(note) { event.toMediaContent(note, fullUrl, mimeType) }
 
-        mutableStateOf<BaseMediaContent>(
-            if (isImage) {
-                MediaUrlImage(
-                    url = fullUrl,
-                    description = description,
-                    hash = hash,
-                    blurhash = blurHash,
-                    dim = dimensions,
-                    uri = uri,
-                    mimeType = mimeType,
-                    thumbhash = thumbHash,
-                )
-            } else {
-                MediaUrlVideo(
-                    url = fullUrl,
-                    description = description,
-                    hash = hash,
-                    blurhash = blurHash,
-                    dim = dimensions,
-                    uri = uri,
-                    authorName = note.author?.toBestDisplayName(),
-                    mimeType = mimeType,
-                    thumbhash = thumbHash,
-                )
-            },
-        )
+    // VideoFeedFilter only admits image/video MIMEs and extensions, so a non-media blob should
+    // never reach this card. Render it as a link anyway rather than keeping an "unknown → video"
+    // default around: that default is what put a webxdc app into ExoPlayer in the note renderer.
+    if (content == null) {
+        FileHeaderAttachmentCard(event, fullUrl, mimeType)
+        return
     }
 
+    val isImage = content is MediaUrlImage
     val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(fullUrl)
 
     ContentWarningGate(

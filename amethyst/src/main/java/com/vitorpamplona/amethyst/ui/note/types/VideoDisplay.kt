@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -55,7 +56,9 @@ fun JustVideoDisplay(
     val imeta = videoEvent.imetaTags().getOrNull(0) ?: return
     val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
     val reasons = remember(note) { collectContentWarningReasons(event) }
-    val isImage = remember(note) { imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url) }
+    // A NIP-71 event asserts its own type, so only an explicit image imeta diverts to the
+    // viewer; an unclassifiable one still belongs in the player. See classifyMedia.
+    val isImage = remember(note) { RichTextParser.classifyMedia(imeta.url, imeta.mimeType) == MediaContentKind.IMAGE }
 
     val content by
         remember(note) {
