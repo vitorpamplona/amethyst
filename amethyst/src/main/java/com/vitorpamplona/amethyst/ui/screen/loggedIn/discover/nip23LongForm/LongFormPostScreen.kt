@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -96,6 +95,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.components.markdown.RenderContentAsMarkdown
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.KeyboardAwareBackHandler
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
@@ -149,7 +149,7 @@ fun LongFormPostScreen(
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
-    BackHandler {
+    KeyboardAwareBackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
             postViewModel.cancel()
