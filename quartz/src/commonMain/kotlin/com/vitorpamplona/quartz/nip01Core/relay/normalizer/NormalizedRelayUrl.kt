@@ -44,7 +44,9 @@ fun NormalizedRelayUrl.toHttp() =
         "https://$url"
     }
 
-fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
+// Delegates rather than re-implementing `contains(".onion/")`: that copy missed
+// `wss://host.onion:8080/`, so an onion relay on an explicit port was never forced onto Tor.
+fun NormalizedRelayUrl.isOnion() = RelayUrlNormalizer.isOnion(this.url)
 
 fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)
 

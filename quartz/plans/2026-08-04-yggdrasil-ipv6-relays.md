@@ -77,6 +77,46 @@ branch. Both the Android and desktop relay paths delegate here (`TorRelayState`,
 treatment for non-relay HTTP (images, previews, NIP-05, money ops). Clearnet IPv6 relays keep
 following the Tor setting — asserted in `YggdrasilTorRoutingTest`.
 
+## Audit round: bugs found in the host predicates
+
+Auditing the change above turned up a family of bugs in `isLocalHost` / `isOnion` that predate
+it. All shared one root cause — the predicates ran `contains` over the **whole url** instead of
+parsing the authority — and all are now anchored, parsed and covered by
+`RelayUrlAuthorityAnchoringTest`.
+
+These predicates decide whether a relay is exempt from Tor, and relay urls arrive from other
+people (NIP-65 lists, relay hints, `r` tags), so they are attacker-controlled input.
+
+| # | Bug | Effect |
+|---|---|---|
+| 1 | A path could impersonate the host: `wss://evil.example.com/127.0.0.1` answered `isLocalHost() == true` | Any relay list could hand the app a url that silently dropped its own Tor routing |
+| 2 | `.onion:8080` never matched the `.onion/` test | An onion relay on an explicit port was not treated as onion — never forced onto Tor, hostname sent to the clearnet DNS resolver |
+| 3 | `.onion.` / `localhost.` (RFC 1034 fully-qualified form) matched nothing | Same leak as #2, via a different spelling |
+| 4 | Host tests were case-sensitive, but `fix()` runs *before* the RFC 3986 pass folds case | `LOCALHOST:8080` and `ABC.ONION:8080` were given a `wss://` scheme neither host can serve |
+| 5 | Private IPv4 was substring-matched | `10.0.0.5`, `172.16.3.4`, `127.1.2.3` were not local (LAN relay got `wss://` and Tor), while `192.168.evil.com` — a registrable domain — was |
+| 6 | `contains("localhost")` matched `notlocalhost.example.com` | Same Tor exemption as #1, via a registrable domain |
+| 7 | A `://` inside a path was read as a scheme separator | `relay.com/x://127.0.0.1` read its path as the authority |
+
+Two bugs were introduced by this branch and caught in the same pass: the IPv6 host lookup had
+the #1 flaw (`wss://evil.example.com/[fd00::1]` read as localhost), and IPv6 canonicalization
+could rewrite a **path** (`/x[0:0:0:0:0:0:0:1]y` → `/x[::1]y`), corrupting the url.
+
+Fixes: a shared `hostStart` / `hostEnd` / `hostEndWithoutPort` trio bounds every test to the
+authority, strips `:port` and trailing dots, and validates the scheme; private ranges are
+parsed via the new `Ipv4` util and `Ipv6` rather than substring-matched; comparisons are
+case-insensitive per RFC 4343; `NormalizedRelayUrl.isOnion()` now delegates instead of keeping
+a second, weaker copy of the test.
+
+Performance: no regression, likely a small win. The old form ran six full-string `contains`
+scans; the new one bounds its work to the authority and rejects a DNS host from an IP parse on
+a single character. `Ipv6.isLiteral` gained a two-colon gate so the schemeless `host:port` case
+answers without allocating the parser's 16-byte buffer.
+
+`Ipv6` itself is pinned by `Ipv6DifferentialTest`: 4000 random addresses round-trip against
+`java.net.InetAddress` in both directions, and the canonical form is asserted equal to
+OkHttp's host for the same address — so the relay identity the app stores provably matches the
+host it dials.
+
 ## Deliberately not changed
 
 **Mesh relays are still published and recommended.** `AdvertisedRelayInfoTag` (NIP-65) and

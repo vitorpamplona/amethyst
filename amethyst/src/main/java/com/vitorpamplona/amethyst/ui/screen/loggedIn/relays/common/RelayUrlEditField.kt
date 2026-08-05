@@ -200,14 +200,19 @@ fun RelayUrlEditField(
                 relaySuggestions.processInput(it)
             },
             isError = isInvalid,
-            supportingText = {
+            // Null, not an empty lambda: a non-null slot reserves its line height even when it
+            // draws nothing, which would pad the field permanently for every user.
+            supportingText =
                 if (isInvalid) {
-                    Text(
-                        text = stringRes(R.string.relay_url_not_valid),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            },
+                    {
+                        Text(
+                            text = stringRes(R.string.relay_url_not_valid),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                } else {
+                    null
+                },
             placeholder = {
                 Text(
                     text = "server.com",

@@ -75,7 +75,7 @@ object Ipv6 {
             if (i < len && address[i] == '.') {
                 // Trailing dotted quad: occupies the last four bytes, so nothing may follow it.
                 if (fill > 12) return null
-                if (!parseIpv4Into(address, groupStart, len, out, fill)) return null
+                if (!Ipv4.parseInto(address, groupStart, len, out, fill)) return null
                 fill += 4
                 i = len
                 break
@@ -178,8 +178,21 @@ object Ipv6 {
         return format(bytes) + address.substring(zoneAt)
     }
 
-    /** True when [address] is a valid bracket-less literal that names more than one group. */
-    fun isLiteral(address: String): Boolean = address.indexOf(':') >= 0 && parse(address) != null
+    /**
+     * True when [address] is a valid bracket-less literal.
+     *
+     * The two-colon gate is what keeps this off the normalizer's hot path: every schemeless
+     * `host:port` reaching [com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer]
+     * has exactly one colon, and a literal needs at least two, so the common case answers
+     * without entering [parse] and allocating its 16-byte buffer.
+     */
+    fun isLiteral(address: String): Boolean {
+        val firstColon = address.indexOf(':')
+        if (firstColon < 0 || address.indexOf(':', firstColon + 1) < 0) return false
+        // A zone id is part of the literal (`fe80::1%25eth0`), not a reason to reject it.
+        val zoneAt = address.indexOf('%')
+        return parse(if (zoneAt < 0) address else address.substring(0, zoneAt)) != null
+    }
 
     /** `::1` — the IPv6 loopback, twin of 127.0.0.1. */
     fun isLoopback(bytes: ByteArray): Boolean {
@@ -215,38 +228,6 @@ object Ipv6 {
             if (k > 0) out.append('.')
             out.append(bytes[from + k].toInt() and 0xFF)
         }
-    }
-
-    /**
-     * Parses `a.b.c.d` in `[from, to)` into four bytes at [at]. Leading zeros are rejected —
-     * they invite the octal reading that makes `010.1.1.1` ambiguous across resolvers.
-     */
-    private fun parseIpv4Into(
-        text: String,
-        from: Int,
-        to: Int,
-        out: ByteArray,
-        at: Int,
-    ): Boolean {
-        var i = from
-        for (octet in 0 until 4) {
-            if (octet > 0) {
-                if (i >= to || text[i] != '.') return false
-                i++
-            }
-            var value = 0
-            var digits = 0
-            while (i < to && text[i] in '0'..'9') {
-                if (digits == 3) return false
-                if (digits == 1 && value == 0) return false // leading zero
-                value = value * 10 + (text[i] - '0')
-                digits++
-                i++
-            }
-            if (digits == 0 || value > 255) return false
-            out[at + octet] = value.toByte()
-        }
-        return i == to
     }
 
     private fun hexDigit(c: Char): Int =

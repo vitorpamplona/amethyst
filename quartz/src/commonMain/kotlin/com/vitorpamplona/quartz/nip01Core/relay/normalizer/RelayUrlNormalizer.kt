@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.normalizer
 
 import androidx.collection.LruCache
+import com.vitorpamplona.quartz.utils.Ipv4
 import com.vitorpamplona.quartz.utils.Ipv6
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.Rfc3986
@@ -39,25 +40,60 @@ val normalizedUrls = LruCache<String, NormalizationResult>(5000)
 
 class RelayUrlNormalizer {
     companion object {
-        fun isLocalHost(url: String) =
-            url.contains("127.0.0.1") ||
-                url.contains("localhost") ||
-                url.contains("//umbrel:") ||
-                url.contains("192.168.") ||
-                url.contains(".local:") ||
-                url.contains(".local/") ||
-                isPrivateIpv6(url)
+        /**
+         * Every host test below is anchored to the **authority** (`host[:port]`), never to the
+         * whole url. A plain `contains` reads the path and query too, so
+         * `wss://evil.example.com/127.0.0.1` used to answer true here — and since [isLocalHost]
+         * is what exempts a relay from Tor, any relay list could hand the app a url that quietly
+         * dropped its own Tor routing. Relay urls arrive from other people (NIP-65 lists, relay
+         * hints, `r` tags), so they are attacker-controlled input and have to be parsed as such.
+         *
+         * Anchoring is also what makes `host:port` work: `.onion:8080` never matched the old
+         * `.onion/` test, so an onion relay on an explicit port was not recognized as onion at
+         * all and its hostname went to the clearnet DNS resolver.
+         */
+        fun isLocalHost(url: String): Boolean {
+            val start = hostStart(url)
+            val end = hostEnd(url, start)
+            if (end <= start) return false
+            val hostEnd = hostEndWithoutPort(url, start, end)
+            return isPrivateIpv4(url, start, hostEnd) ||
+                // RFC 6761: `localhost` and anything under it — the same rule SurgeDns applies
+                // when deciding whether a loopback answer is legitimate. A substring test would
+                // also match `notlocalhost.example.com`, which is registrable.
+                regionEquals(url, "localhost", start, hostEnd) ||
+                regionEndsWith(url, ".localhost", start, hostEnd) ||
+                regionEquals(url, "umbrel", start, hostEnd) ||
+                regionEndsWith(url, ".local", start, hostEnd) ||
+                isPrivateIpv6(url, start, end)
+        }
 
         /**
-         * The IPv6 twins of the literals above: `::1` (127.0.0.1), `fc00::/7` unique local
-         * addresses (192.168.0.0/16) and `fe80::/10` link-local. All three name a host that
-         * only exists on this machine or this LAN, which is what every caller of [isLocalHost]
-         * means by the question — so a relay on one must not be Torified, must not need TLS,
-         * and must not be advertised to the network.
+         * The IPv4 ranges that are never a public relay: `127.0.0.0/8` loopback, the RFC 1918
+         * private blocks, `169.254.0.0/16` link-local and `0.0.0.0/8`.
+         *
+         * Parsed rather than substring-matched, which was wrong both ways: `contains("192.168.")`
+         * missed `10.0.0.5` and `172.16.3.4` — so a LAN relay was given `wss://` and dialed
+         * through Tor — while matching `192.168.evil.com`, a registrable domain that could
+         * therefore exempt itself from Tor.
          */
-        private fun isPrivateIpv6(url: String): Boolean {
-            val bytes = ipv6HostOf(url) ?: return false
-            return Ipv6.isLoopback(bytes) || Ipv6.isUniqueLocal(bytes) || Ipv6.isLinkLocal(bytes)
+        private fun isPrivateIpv4(
+            url: String,
+            start: Int,
+            end: Int,
+        ): Boolean {
+            val bytes = Ipv4.parse(url, start, end) ?: return false
+            return Ipv4.isLoopback(bytes) ||
+                Ipv4.isPrivate(bytes) ||
+                Ipv4.isLinkLocal(bytes) ||
+                Ipv4.isUnspecified(bytes)
+        }
+
+        fun isOnion(url: String): Boolean {
+            val start = hostStart(url)
+            val end = hostEnd(url, start)
+            if (end <= start) return false
+            return regionEndsWith(url, ".onion", start, hostEndWithoutPort(url, start, end))
         }
 
         /**
@@ -72,26 +108,115 @@ class RelayUrlNormalizer {
          * which is derived from the peer's public key.
          */
         fun isOverlayNetwork(url: String): Boolean {
-            val bytes = ipv6HostOf(url) ?: return false
+            val start = hostStart(url)
+            val bytes = ipv6HostOf(url, start, hostEnd(url, start)) ?: return false
             return Ipv6.isOverlayMesh(bytes)
         }
 
         /**
-         * Extracts the bracketed IPv6 host of [url] as raw bytes, dropping any `%zone` suffix.
-         * Returns null — cheaply, on a single `indexOf` — for the overwhelmingly common case of
-         * a url with a DNS host.
+         * The IPv6 twins of the literals in [isLocalHost]: `::1` (127.0.0.1), `fc00::/7` unique
+         * local addresses (192.168.0.0/16) and `fe80::/10` link-local. All three name a host that
+         * only exists on this machine or this LAN, which is what every caller of [isLocalHost]
+         * means by the question — so a relay on one must not be Torified, must not need TLS,
+         * and must not be advertised to the network.
          */
-        private fun ipv6HostOf(url: String): ByteArray? {
-            val open = url.indexOf('[')
-            if (open < 0) return null
-            val close = url.indexOf(']', open + 1)
-            if (close <= open + 1) return null
-            val zone = url.indexOf('%', open + 1)
-            val end = if (zone in (open + 1) until close) zone else close
-            return Ipv6.parse(url.substring(open + 1, end))
+        private fun isPrivateIpv6(
+            url: String,
+            start: Int,
+            end: Int,
+        ): Boolean {
+            val bytes = ipv6HostOf(url, start, end) ?: return false
+            return Ipv6.isLoopback(bytes) || Ipv6.isUniqueLocal(bytes) || Ipv6.isLinkLocal(bytes)
         }
 
-        fun isOnion(url: String) = url.endsWith(".onion") || url.contains(".onion/")
+        /**
+         * Parses the authority of [url] as a bracketed IPv6 literal, dropping any `%zone` suffix.
+         * Returns null — on a single char comparison — for the overwhelmingly common case of a
+         * url with a DNS host.
+         */
+        private fun ipv6HostOf(
+            url: String,
+            start: Int,
+            end: Int,
+        ): ByteArray? {
+            if (start >= end || url[start] != '[') return null
+            val close = url.indexOf(']', start + 1)
+            if (close < 0 || close >= end || close <= start + 1) return null
+            val zone = url.indexOf('%', start + 1)
+            val addressEnd = if (zone in (start + 1) until close) zone else close
+            return Ipv6.parse(url.substring(start + 1, addressEnd))
+        }
+
+        /**
+         * Index of the first char of the authority: past `://`, or 0 for a schemeless host.
+         *
+         * The `://` only counts when what precedes it is a real RFC 3986 scheme
+         * (`ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )`). Otherwise `relay.com/x://127.0.0.1`
+         * would have its *path* read as the authority and answer true to [isLocalHost].
+         */
+        private fun hostStart(url: String): Int {
+            val scheme = url.indexOf("://")
+            if (scheme <= 0 || !url[0].isLetter()) return 0
+            for (i in 1 until scheme) {
+                val c = url[i]
+                if (!c.isLetterOrDigit() && c != '+' && c != '-' && c != '.') return 0
+            }
+            return scheme + 3
+        }
+
+        /** Index just past the authority — the first `/`, `?` or `#`, or the end of [url]. */
+        private fun hostEnd(
+            url: String,
+            start: Int,
+        ): Int {
+            var i = start
+            while (i < url.length) {
+                val c = url[i]
+                if (c == '/' || c == '?' || c == '#') return i
+                i++
+            }
+            return i
+        }
+
+        /**
+         * [end] trimmed back past a `:port` and any trailing dots, so the host tests see the
+         * name alone. RFC 1034's fully-qualified form ends in a dot (`abc.onion.`), and missing
+         * that spelling on [isOnion] would send a `.onion` name to the clearnet DNS resolver.
+         */
+        private fun hostEndWithoutPort(
+            url: String,
+            start: Int,
+            end: Int,
+        ): Int {
+            var stop =
+                if (url[start] == '[') {
+                    // In an IPv6 authority only the `:` after the `]` can start a port.
+                    val close = url.indexOf(']', start + 1)
+                    if (close in start until end) close + 1 else end
+                } else {
+                    val colon = url.lastIndexOf(':', end - 1)
+                    if (colon >= start) colon else end
+                }
+            while (stop > start && url[stop - 1] == '.') stop--
+            return stop
+        }
+
+        // Host names are case-insensitive (RFC 4343), and `fix()` asks these questions *before*
+        // the RFC 3986 pass folds the case — so a case-sensitive test gave `LOCALHOST:8080` and
+        // `ABC.ONION:8080` a `wss://` scheme neither host can ever serve.
+        private fun regionEndsWith(
+            url: String,
+            suffix: String,
+            start: Int,
+            end: Int,
+        ): Boolean = end - start >= suffix.length && url.regionMatches(end - suffix.length, suffix, 0, suffix.length, ignoreCase = true)
+
+        private fun regionEquals(
+            url: String,
+            name: String,
+            start: Int,
+            end: Int,
+        ): Boolean = end - start == name.length && url.regionMatches(start, name, 0, name.length, ignoreCase = true)
 
         fun isRelaySchemePrefix(url: String) = url.length > 6 && url[0] == 'w' && url[1] == 's'
 
@@ -143,10 +268,12 @@ class RelayUrlNormalizer {
          * canonical, which is every url with a DNS host.
          */
         private fun canonicalizeIpv6Host(url: String): String {
-            val open = url.indexOf('[')
-            if (open < 0) return url
+            // Anchored to the authority: a `[...]` in a path or query is data, and rewriting it
+            // would silently corrupt the url.
+            val open = hostStart(url)
+            if (open >= url.length || url[open] != '[') return url
             val close = url.indexOf(']', open + 1)
-            if (close <= open + 1) return url
+            if (close <= open + 1 || close >= hostEnd(url, open)) return url
             val inner = url.substring(open + 1, close)
             val canonical = Ipv6.canonicalizeOrNull(inner) ?: return url
             if (canonical == inner) return url
