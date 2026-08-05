@@ -90,7 +90,7 @@ abstract class PerKeyEoseManager<T, K : Any>(
                     newEose(queryState, relay, TimeUtils.now(), forFilters)
                 }
 
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

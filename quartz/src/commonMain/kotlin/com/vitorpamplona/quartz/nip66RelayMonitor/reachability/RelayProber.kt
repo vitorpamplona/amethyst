@@ -254,7 +254,7 @@ class RelayProber(
         val subId = newSubId()
         val subListener =
             object : SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

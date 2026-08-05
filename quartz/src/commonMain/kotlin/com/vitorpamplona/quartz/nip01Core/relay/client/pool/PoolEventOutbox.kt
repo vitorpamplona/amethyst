@@ -178,7 +178,7 @@ class PoolEventOutbox {
         }
     }
 
-    fun onIncomingMessage(
+    suspend fun onIncomingMessage(
         relay: NormalizedRelayUrl,
         msg: Message,
     ) {

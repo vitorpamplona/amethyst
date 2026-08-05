@@ -126,7 +126,7 @@ class RelayGroupOpenChatHistorySubAssembler(
         // cursors so a late callback can't move another group's cursors. newEose runs regardless.
         val myCursors = cursorsFor(key)
         return object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,

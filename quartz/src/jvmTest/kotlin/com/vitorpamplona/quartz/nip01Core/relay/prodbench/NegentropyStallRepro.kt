@@ -109,7 +109,7 @@ class NegentropyStallRepro {
                         out.onOpen(pingMillis, usingCompression)
                     }
 
-                    override fun onMessage(text: String) {
+                    override suspend fun onMessage(text: String) {
                         val t = tagger(text)
                         recvCounts.getOrPut(t) { AtomicInteger() }.incrementAndGet()
                         if (t == "NEG-MSG") negMsgBytesIn.addAndGet(text.length.toLong())

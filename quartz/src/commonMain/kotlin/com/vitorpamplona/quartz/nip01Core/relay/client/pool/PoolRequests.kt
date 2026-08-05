@@ -238,7 +238,7 @@ class PoolRequests(
     /**
      * When a new message is received by the relay, updates the sub
      */
-    fun onIncomingMessage(
+    suspend fun onIncomingMessage(
         relay: IRelayClient,
         msg: Message,
     ) {
