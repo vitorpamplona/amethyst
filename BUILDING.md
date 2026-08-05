@@ -35,7 +35,9 @@ All platforms:
 Platform-specific:
 
 - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
-- **Windows**: WiX Toolset 3.x on PATH (for MSI). `winget install WiXToolset.WiXToolset`
+- **Windows**: WiX Toolset 3.x on PATH (for MSI). `winget install WiXToolset.WiXToolset`.
+  Windows arm64 builds run on the free public-repo `windows-11-arm` GitHub runner —
+  jpackage on Windows arm64 produces arm64 MSIs natively; no cross-compilation.
 - **Linux (all)**: nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
   `appimagetool` + `desktop-file-utils` for AppImage; `flatpak` +
   `flatpak-builder` for the Flatpak bundle (see
@@ -328,14 +330,17 @@ Quartz library in one pipeline.
 
 3. **Wait** for the `Create Release Assets` workflow to finish (~25–30 min).
 
-4. **Verify** — the GH Release should hold **31 assets**:
-   - **8 desktop** — `dmg` (macOS arm64), `msi` + `zip` (Windows), `deb`, `rpm`,
-     `AppImage`, `flatpak`, `tar.gz` (Linux). There is **no Intel/x64 macOS
-     DMG** — `jpackage` cannot cross-compile and no Intel runner leg is
-     configured, so macOS ships arm64-only.
+4. **Verify** — the GH Release should hold **37 assets**:
+   - **10 desktop** — `dmg` (macOS arm64); `msi` + `zip` per Windows arch
+     (x64 and arm64, 4 files); `deb`, `rpm`, `AppImage`, `flatpak`, `tar.gz`
+     for Linux x64+arm64 (5 formats × 2 arches shipped as one merged set of
+     5 in the current layout — see the previous release for the exact
+     enumeration). There is **no Intel/x64 macOS DMG** — `jpackage` cannot
+     cross-compile and no Intel runner leg is configured, so macOS ships
+     arm64-only.
    - **13 Android** — 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the
      F-Droid `.apks` set built for Accrescent.
-   - **5 amy** + **5 geode** bundles.
+   - **7 amy** + **7 geode** bundles (5 unix + 2 Windows portable zips each).
    - Asset sizes look sane (see §Enforce asset size budget — CI auto-fails at 1 GB/asset)
    - Android flow unchanged
 

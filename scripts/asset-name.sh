@@ -24,6 +24,8 @@
 #   amethyst-desktop-1.08.0-macos-arm64.dmg
 #   amethyst-desktop-1.08.0-windows-x64.msi
 #   amethyst-desktop-1.08.0-windows-x64.zip
+#   amethyst-desktop-1.08.0-windows-arm64.msi
+#   amethyst-desktop-1.08.0-windows-arm64.zip
 #   amethyst-desktop-1.08.0-linux-x64.deb
 #   amethyst-desktop-1.08.0-linux-x64.rpm
 #   amethyst-desktop-1.08.0-linux-x64.AppImage
@@ -42,6 +44,8 @@
 #   amy-1.08.0-linux-arm64.tar.gz
 #   amy-1.08.0-linux-arm64.deb
 #   amy-1.08.0-linux-arm64.rpm
+#   amy-1.08.0-windows-x64.zip
+#   amy-1.08.0-windows-arm64.zip
 #   geode-1.08.0-macos-arm64.tar.gz
 #   geode-1.08.0-linux-x64.tar.gz
 #   geode-1.08.0-linux-x64.deb
@@ -49,6 +53,8 @@
 #   geode-1.08.0-linux-arm64.tar.gz
 #   geode-1.08.0-linux-arm64.deb
 #   geode-1.08.0-linux-arm64.rpm
+#   geode-1.08.0-windows-x64.zip
+#   geode-1.08.0-windows-arm64.zip
 #
 # Two assets break the family/arch shape on purpose: the no-JRE jar bundles for
 # Homebrew-core are pure JVM bytecode (no bundled runtime), so a single
@@ -121,9 +127,13 @@ collect_assets() {
 #
 # Expected inputs:
 #   cli/build/amy-image/amy/    flat app-image built by :cli:amyImage
-#                               (bin/amy + lib/*.jar + runtime/)
+#                               (bin/amy + bin/amy.bat + lib/*.jar + runtime/)
 #   cli/build/jpackage/*.deb    from :cli:jpackageDeb (Linux only)
 #   cli/build/jpackage/*.rpm    from :cli:jpackageRpm (Linux only)
+#
+# On Windows the flat image is packaged as .zip (native archive format,
+# preserves file layout without requiring a tar tool at install time). Every
+# other OS uses tar.gz.
 #
 # Usage: collect_cli_assets <family> <arch> <version> <dest_dir>
 collect_cli_assets() {
@@ -133,14 +143,39 @@ collect_cli_assets() {
     abs_dest="$(cd "$dest" && pwd)"
     shopt -s nullglob
 
-    # 1. Tar the flat app-image into amy-<version>-<family>-<arch>.tar.gz.
-    #    This is the portable-across-OS asset — macOS runners produce only
-    #    this one.
+    # 1. Archive the flat app-image into amy-<version>-<family>-<arch>.<ext>.
+    #    macOS runners produce only this one. Windows uses .zip; every other
+    #    OS uses tar.gz.
     local app_image="cli/build/amy-image/amy"
     if [ -d "$app_image" ]; then
-        local tarball="$abs_dest/$(cli_asset_name "$family" "$arch" "$version" tar.gz)"
-        ( cd "$(dirname "$app_image")" && tar czf "$tarball" "$(basename "$app_image")" )
-        echo "Collected: $tarball"
+        if [ "$family" = "windows" ]; then
+            local zipfile="$abs_dest/$(cli_asset_name "$family" "$arch" "$version" zip)"
+            # Prefer 7z when available (bash+7zip is standard on GH windows runners),
+            # else fall back to a portable python3 zipfile. `zip` itself is not always
+            # present on GH windows runners.
+            if command -v 7z >/dev/null 2>&1; then
+                ( cd "$(dirname "$app_image")" && 7z a -tzip "$zipfile" "$(basename "$app_image")/" >/dev/null )
+            elif command -v zip >/dev/null 2>&1; then
+                ( cd "$(dirname "$app_image")" && zip -qr "$zipfile" "$(basename "$app_image")" )
+            else
+                python3 - "$app_image" "$zipfile" <<'PY'
+import os, sys, zipfile
+src, dst = sys.argv[1], sys.argv[2]
+root = os.path.dirname(src)
+base = os.path.basename(src)
+with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zf:
+    for dirpath, _dirs, files in os.walk(src):
+        for f in files:
+            p = os.path.join(dirpath, f)
+            zf.write(p, os.path.relpath(p, root))
+PY
+            fi
+            echo "Collected: $zipfile"
+        else
+            local tarball="$abs_dest/$(cli_asset_name "$family" "$arch" "$version" tar.gz)"
+            ( cd "$(dirname "$app_image")" && tar czf "$tarball" "$(basename "$app_image")" )
+            echo "Collected: $tarball"
+        fi
     fi
 
     # 2. Linux native installers (.deb, .rpm). jpackage writes them directly
@@ -166,9 +201,13 @@ collect_cli_assets() {
 #
 # Expected inputs:
 #   geode/build/geode-image/geode/  flat app-image built by :geode:geodeImage
-#                                   (bin/geode + lib/*.jar + runtime/ + share/)
+#                                   (bin/geode + bin/geode.bat + lib/*.jar
+#                                    + runtime/ + share/)
 #   geode/build/jpackage/*.deb      from :geode:jpackageDeb (Linux only)
 #   geode/build/jpackage/*.rpm      from :geode:jpackageRpm (Linux only)
+#
+# On Windows the flat image is packaged as .zip; every other OS uses tar.gz.
+# See the matching comment in collect_cli_assets for the tool-selection order.
 #
 # Usage: collect_geode_assets <family> <arch> <version> <dest_dir>
 collect_geode_assets() {
@@ -178,14 +217,36 @@ collect_geode_assets() {
     abs_dest="$(cd "$dest" && pwd)"
     shopt -s nullglob
 
-    # 1. Tar the flat app-image into geode-<version>-<family>-<arch>.tar.gz.
-    #    This is the portable-across-OS asset — macOS runners produce only
-    #    this one.
+    # 1. Archive the flat app-image into geode-<version>-<family>-<arch>.<ext>.
+    #    macOS runners produce only this one. Windows uses .zip; every other
+    #    OS uses tar.gz.
     local app_image="geode/build/geode-image/geode"
     if [ -d "$app_image" ]; then
-        local tarball="$abs_dest/$(geode_asset_name "$family" "$arch" "$version" tar.gz)"
-        ( cd "$(dirname "$app_image")" && tar czf "$tarball" "$(basename "$app_image")" )
-        echo "Collected: $tarball"
+        if [ "$family" = "windows" ]; then
+            local zipfile="$abs_dest/$(geode_asset_name "$family" "$arch" "$version" zip)"
+            if command -v 7z >/dev/null 2>&1; then
+                ( cd "$(dirname "$app_image")" && 7z a -tzip "$zipfile" "$(basename "$app_image")/" >/dev/null )
+            elif command -v zip >/dev/null 2>&1; then
+                ( cd "$(dirname "$app_image")" && zip -qr "$zipfile" "$(basename "$app_image")" )
+            else
+                python3 - "$app_image" "$zipfile" <<'PY'
+import os, sys, zipfile
+src, dst = sys.argv[1], sys.argv[2]
+root = os.path.dirname(src)
+base = os.path.basename(src)
+with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zf:
+    for dirpath, _dirs, files in os.walk(src):
+        for f in files:
+            p = os.path.join(dirpath, f)
+            zf.write(p, os.path.relpath(p, root))
+PY
+            fi
+            echo "Collected: $zipfile"
+        else
+            local tarball="$abs_dest/$(geode_asset_name "$family" "$arch" "$version" tar.gz)"
+            ( cd "$(dirname "$app_image")" && tar czf "$tarball" "$(basename "$app_image")" )
+            echo "Collected: $tarball"
+        fi
     fi
 
     # 2. Linux native installers (.deb, .rpm). jpackage writes them directly

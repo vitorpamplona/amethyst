@@ -254,7 +254,14 @@ val jlinkRuntime =
     }
 
 // Flat app-image: bin/amy launcher + lib/*.jar + runtime/ (the jlink'd JRE).
-// Cross-platform — the release workflow tars this up on every OS.
+// Cross-platform — the release workflow archives this on every OS (tar.gz on
+// unix, zip on Windows). We write BOTH a POSIX `amy` shell launcher AND a
+// Windows `amy.bat` launcher into `bin/` unconditionally so the same tree is
+// runnable on any target after extraction, regardless of which OS built it.
+// (The bundled jlink runtime is host-native — you still need to unzip a
+// Windows-built image on Windows to actually launch it — but the launcher
+// scripts themselves are host-agnostic, which keeps the layout uniform and
+// makes ad-hoc cross-machine inspection painless.)
 val amyImage =
     tasks.register<Sync>("amyImage") {
         group = "distribution"
@@ -282,13 +289,35 @@ val amyImage =
             DIR="${'$'}(cd "${'$'}(dirname "${'$'}0")/.." && pwd)"
             exec "${'$'}DIR/runtime/bin/java" -Djava.awt.headless=true -cp "${'$'}DIR/lib/*" $mainClass "${'$'}@"
             """.trimIndent() + "\n"
+        // Windows launcher. Uses %~dp0 (drive+path of this .bat, always ending in
+        // a backslash) so it resolves the app root without depending on CWD, then
+        // execs the bundled JRE against lib\*. `chcp 65001` pins the console to
+        // UTF-8 so `sun.jnu.encoding` isn't the OS OEM code page — same rationale
+        // as the installDist launcher patch above. CRLF line endings so cmd.exe
+        // parses it correctly.
+        //
+        // The `for %%i in (...) do set DIR=%%~fi` trick canonicalises `\bin\..`
+        // out of DIR to the parent directory — same idiom Gradle's own
+        // installDist .bat uses to resolve APP_HOME. Java tolerates the `..`
+        // segment but canonicalising once here keeps every classpath entry and
+        // error message clean (and matches the loose-directory layout users see
+        // after unzipping the release archive).
+        val windowsLauncher =
+            "@echo off\r\n" +
+                "chcp 65001 > NUL 2>&1\r\n" +
+                "setlocal\r\n" +
+                "set \"DIR=%~dp0..\"\r\n" +
+                "for %%i in (\"%DIR%\") do set \"DIR=%%~fi\"\r\n" +
+                "\"%DIR%\\runtime\\bin\\java.exe\" -Djava.awt.headless=true -cp \"%DIR%\\lib\\*\" $mainClass %*\r\n"
 
         doLast {
             val binDir = amyImageDir.get().asFile.resolve("bin")
             binDir.mkdirs()
-            val launcher = binDir.resolve("amy")
-            launcher.writeText(unixLauncher)
-            launcher.setExecutable(true, false)
+            val unix = binDir.resolve("amy")
+            unix.writeText(unixLauncher)
+            unix.setExecutable(true, false)
+            val windows = binDir.resolve("amy.bat")
+            windows.writeText(windowsLauncher)
         }
     }
 
