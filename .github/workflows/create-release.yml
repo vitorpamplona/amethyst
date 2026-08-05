@@ -44,11 +44,26 @@ jobs:
       matrix:
         # Linux legs run on x64 and arm64 GitHub-hosted runners (the
         # ubuntu-24.04-arm label is a standard free public-repo runner as of
-        # early 2025). jpackage / jlink / Compose Multiplatform 1.11 all
-        # produce host-native artifacts — no cross-compilation needed.
+        # early 2025). Windows arm64 uses windows-11-arm, added to the free
+        # public-repo runner catalogue in 2025 (4 vCPU / 16 GB / arm64).
+        # jpackage / jlink / Compose Multiplatform 1.11 all produce
+        # host-native artifacts — no cross-compilation needed.
+        #
+        # The arm64 Windows leg builds the portable .zip ONLY — no MSI.
+        # jpackage --type msi shells out to WiX 3's heat/candle/light, and the
+        # windows-11-arm runner image ships no WiX (the windows-latest image
+        # has WiX 3.14 preinstalled, which is why the x64 leg can package an
+        # MSI). Installing it here would mean pulling an archived, x86-only
+        # toolchain (wixtoolset/wix3 was archived in Feb 2025; WiX 4+ dropped
+        # the candle/light CLI that JDK 21's jpackage requires) into the job
+        # that publishes signed release assets. The portable zip is the
+        # documented Windows install path for amy/geode already, so arm64
+        # Windows users get that until either the runner image gains WiX or
+        # jpackage learns the WiX 4+ CLI.
         include:
           - { os: macos-14,         arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
           - { os: windows-latest,   arch: x64,   family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
+          - { os: windows-11-arm,   arch: arm64, family: windows,        tasks: "createReleaseDistributable" }
           - { os: ubuntu-latest,    arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
           - { os: ubuntu-24.04-arm, arch: arm64, family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
           - { os: ubuntu-latest,    arch: x64,   family: linux-portable, tasks: "createReleaseAppImage createReleaseDistributable" }
@@ -369,9 +384,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-14,         arch: arm64, family: macos, tasks: "amyImage" }
-          - { os: ubuntu-latest,    arch: x64,   family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
-          - { os: ubuntu-24.04-arm, arch: arm64, family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
+          - { os: macos-14,         arch: arm64, family: macos,   tasks: "amyImage" }
+          - { os: ubuntu-latest,    arch: x64,   family: linux,   tasks: "amyImage jpackageDeb jpackageRpm" }
+          - { os: ubuntu-24.04-arm, arch: arm64, family: linux,   tasks: "amyImage jpackageDeb jpackageRpm" }
+          # Windows legs: only amyImage. .deb/.rpm are Linux-only jpackage types
+          # and jpackageMsi for a CLI is deferred (the portable zip is the
+          # documented Windows install path). The launcher script writes both
+          # `bin/amy` (sh) and `bin/amy.bat`, and the assertion below runs
+          # under bash on GH windows runners (git-bash is on PATH). collect_cli_assets
+          # zips the image on Windows instead of tar.gz.
+          - { os: windows-latest,   arch: x64,   family: windows, tasks: "amyImage" }
+          - { os: windows-11-arm,   arch: arm64, family: windows, tasks: "amyImage" }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45  # macOS leg also codesigns + notarizes the jlink image
     defaults:
@@ -619,9 +642,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-14,         arch: arm64, family: macos, tasks: "geodeImage" }
-          - { os: ubuntu-latest,    arch: x64,   family: linux, tasks: "geodeImage jpackageDeb jpackageRpm" }
-          - { os: ubuntu-24.04-arm, arch: arm64, family: linux, tasks: "geodeImage jpackageDeb jpackageRpm" }
+          - { os: macos-14,         arch: arm64, family: macos,   tasks: "geodeImage" }
+          - { os: ubuntu-latest,    arch: x64,   family: linux,   tasks: "geodeImage jpackageDeb jpackageRpm" }
+          - { os: ubuntu-24.04-arm, arch: arm64, family: linux,   tasks: "geodeImage jpackageDeb jpackageRpm" }
+          # Windows legs: geodeImage only. The .deb/.rpm are Linux-only; MSI is
+          # deferred (portable zip covers the primary use — operators still
+          # deploy geode via the Docker image or the tarball on Linux). The
+          # image writes both `bin/geode` (sh) and `bin/geode.bat`, and the
+          # smoke test below runs under bash on the windows runner.
+          - { os: windows-latest,   arch: x64,   family: windows, tasks: "geodeImage" }
+          - { os: windows-11-arm,   arch: arm64, family: windows, tasks: "geodeImage" }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45  # macOS leg also codesigns + notarizes the jlink image
     defaults:
@@ -676,12 +706,23 @@ jobs:
       # module list is complete for the real relay path (Ktor CIO + SQLite +
       # NIP-11 serialization) — a too-tight module list links fine but fails
       # here with NoClassDefFound instead of on an operator's machine.
+      #
+      # On the Windows legs we invoke bin/geode.bat instead of bin/geode. The
+      # tmp path also differs between git-bash on Windows (which resolves /tmp
+      # to a mingw path that curl -o accepts) and POSIX runners; kept identical
+      # because the workflow's `defaults.run.shell: bash` uses git-bash on
+      # Windows and /tmp is a valid mingw path there.
       - name: Smoke-test the geode image
         run: |
           set -euo pipefail
           IMG="geode/build/geode-image/geode"
-          "$IMG/bin/geode" --version
-          "$IMG/bin/geode" --port 17447 &
+          if [[ "${{ matrix.family }}" == "windows" ]]; then
+            LAUNCHER="$IMG/bin/geode.bat"
+          else
+            LAUNCHER="$IMG/bin/geode"
+          fi
+          "$LAUNCHER" --version
+          "$LAUNCHER" --port 17447 &
           PID=$!
           ok=0
           for i in $(seq 1 20); do
