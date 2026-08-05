@@ -263,6 +263,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BlockedUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.CallSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ComposeSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.DrawerSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HiddenWordsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HomeTabsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.MessagesSettingsScreen
@@ -578,6 +579,7 @@ fun BuildNavigation(
         composableFromEnd<Route.MessagesSettings> { MessagesSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AudioVisualizerSettings> { AudioVisualizerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.BottomBarSettings> { BottomBarSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.DrawerSettings> { DrawerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.HomeTabsSettings> { HomeTabsSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }

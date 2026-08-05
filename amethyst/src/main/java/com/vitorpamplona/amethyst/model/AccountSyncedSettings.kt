@@ -25,6 +25,10 @@ import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.navBarItemsFromNames
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.toNames
+import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -83,6 +87,7 @@ class AccountSyncedSettings(
     val navigation =
         AccountNavigationPreferences(
             MutableStateFlow(internalSettings.navigation.bottomBarItems),
+            MutableStateFlow(DrawerItemVisibility.sanitize(navBarItemsFromNames(internalSettings.navigation.hiddenDrawerItems))),
         )
 
     fun toInternal(): AccountSyncedSettingsInternal =
@@ -124,7 +129,11 @@ class AccountSyncedSettings(
                         .map { it.id }
                         .sorted(),
                 ),
-            navigation = AccountNavigationPreferencesInternal(navigation.bottomBarItems.value),
+            navigation =
+                AccountNavigationPreferencesInternal(
+                    navigation.bottomBarItems.value,
+                    navigation.hiddenDrawerItems.value.toNames(),
+                ),
         )
 
     fun updateFrom(syncedSettingsInternal: AccountSyncedSettingsInternal) {
@@ -220,6 +229,11 @@ class AccountSyncedSettings(
         val newBottomBarItems = syncedSettingsInternal.navigation.bottomBarItems
         if (navigation.bottomBarItems.value != newBottomBarItems) {
             navigation.bottomBarItems.tryEmit(newBottomBarItems)
+        }
+
+        val newHiddenDrawerItems = DrawerItemVisibility.sanitize(navBarItemsFromNames(syncedSettingsInternal.navigation.hiddenDrawerItems))
+        if (navigation.hiddenDrawerItems.value != newHiddenDrawerItems) {
+            navigation.hiddenDrawerItems.tryEmit(newHiddenDrawerItems)
         }
     }
 
@@ -322,6 +336,8 @@ class AccountMediaPreferences(
 @Stable
 class AccountNavigationPreferences(
     val bottomBarItems: MutableStateFlow<List<BottomBarEntry>>,
+    /** Drawer rows switched off by the user. Empty = the stock drawer; see DrawerItemVisibility. */
+    val hiddenDrawerItems: MutableStateFlow<Set<NavBarItem>>,
 )
 
 @Stable

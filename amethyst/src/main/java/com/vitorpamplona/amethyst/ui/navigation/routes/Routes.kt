@@ -457,6 +457,8 @@ sealed class Route {
 
     @Serializable object BottomBarSettings : Route()
 
+    @Serializable object DrawerSettings : Route()
+
     @Serializable object HomeTabsSettings : Route()
 
     @Serializable object ProfileUiSettings : Route()

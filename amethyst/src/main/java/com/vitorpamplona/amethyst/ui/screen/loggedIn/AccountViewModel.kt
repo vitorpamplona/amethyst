@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
@@ -1985,6 +1986,15 @@ class AccountViewModel(
         }
 
     fun bottomBarItemsFlow(): StateFlow<List<BottomBarEntry>> = account.settings.syncedSettings.navigation.bottomBarItems
+
+    fun hiddenDrawerItemsFlow(): StateFlow<Set<NavBarItem>> = account.settings.syncedSettings.navigation.hiddenDrawerItems
+
+    /** Same ordering contract as [changeBottomBarItems]: apply on the caller's thread, publish off it. */
+    fun changeHiddenDrawerItems(items: Set<NavBarItem>) {
+        if (account.applyHiddenDrawerItems(items)) {
+            launchSigner { account.sendNewAppSpecificData() }
+        }
+    }
 
     fun changeBottomBarItems(items: List<BottomBarEntry>) {
         // Apply to the reactive flow synchronously on the caller (UI) thread so rapid edits stay

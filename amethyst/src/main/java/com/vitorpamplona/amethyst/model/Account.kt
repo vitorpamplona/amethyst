@@ -150,6 +150,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
@@ -954,6 +955,9 @@ class Account(
      * re-seeds from this flow). Pair a `true` result with [sendNewAppSpecificData] to publish.
      */
     fun applyBottomBarItems(items: List<BottomBarEntry>): Boolean = settings.changeBottomBarItems(items)
+
+    /** The drawer counterpart of [applyBottomBarItems] — same synchronous-apply, publish-after contract. */
+    fun applyHiddenDrawerItems(items: Set<NavBarItem>): Boolean = settings.changeHiddenDrawerItems(items)
 
     suspend fun toggleChatroomPin(room: ChatroomKey) {
         settings.toggleChatroomPin(room)
