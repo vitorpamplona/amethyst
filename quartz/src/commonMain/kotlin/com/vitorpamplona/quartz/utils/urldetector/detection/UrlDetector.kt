@@ -659,8 +659,14 @@ class UrlDetector(
         // if the url is valid and greater then 0
         if (state == ReadEndState.ValidUrl && buffer.isNotEmpty()) {
             var url = buffer.toString()
-            val last = url.lastOrNull()
-            if (last != null && last in CANNOT_END_URLS_WITH && !url.endsOnBalancedCloser(last)) {
+            // Strips the whole punctuation tail, not just its last character: the path, query and
+            // fragment readers only stop on a space, so a quoted link closing a sentence arrives
+            // here as `https://host/path".` and a single drop would leave the quote glued on.
+            // Each round re-checks the balance, so a url that legitimately ends in a matched
+            // closer (`…/Bitcoin_(disambiguation)`) still stops the strip.
+            while (true) {
+                val last = url.lastOrNull() ?: break
+                if (last !in CANNOT_END_URLS_WITH || url.endsOnBalancedCloser(last)) break
                 url = url.dropLast(1)
             }
             if (url.isNotEmpty()) urlList.add(currentUrlMarker.createUrl(url))
