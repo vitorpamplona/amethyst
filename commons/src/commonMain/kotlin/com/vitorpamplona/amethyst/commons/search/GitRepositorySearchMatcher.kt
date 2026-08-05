@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories
+package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
@@ -76,20 +76,6 @@ object GitRepositorySearchMatcher {
             haystack.any { field -> field.contains(needle) } ||
                 (hexFromBech32 != null && haystack.any { field -> field.contains(hexFromBech32) })
         }
-    }
-
-    /**
-     * Same as [matches] but returns the list of unique repositories
-     * ordered by the caller-provided iteration order. Duplicate `d`
-     * tags collapse to the newest event, because a maintainer publishing
-     * two revisions of `amethyst` is still one repo.
-     */
-    fun filter(
-        events: Sequence<GitRepositoryEvent>,
-        query: String,
-    ): List<GitRepositoryEvent> {
-        if (query.isBlank()) return events.toList()
-        return events.filter { matches(it, query) }.toList()
     }
 
     private fun buildHaystack(event: GitRepositoryEvent): List<String> {

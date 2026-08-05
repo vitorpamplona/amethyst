@@ -18,14 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepositories
+package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Pins the ngit-repository-relevant search matcher used by
@@ -173,22 +172,5 @@ class GitRepositorySearchMatcherTest {
         // description, without throwing.
         val target = repo(description = "npub1notreallybech32 is a placeholder")
         assertTrue(GitRepositorySearchMatcher.matches(target, "npub1notreallybech32"))
-    }
-
-    @Test
-    fun filterReturnsAllMatches() {
-        val a = repo(name = "amethyst")
-        val b = repo(name = "ngit-cli", dTag = "ngit-cli", hashtags = listOf("rust", "git"))
-        val c = repo(name = "shakespeare", dTag = "shakespeare")
-        val hits = GitRepositorySearchMatcher.filter(sequenceOf(a, b, c), "rust")
-        assertEquals(listOf(b), hits)
-    }
-
-    @Test
-    fun filterBlankQueryReturnsEverything() {
-        val a = repo(name = "amethyst")
-        val b = repo(name = "ngit-cli")
-        val hits = GitRepositorySearchMatcher.filter(sequenceOf(a, b), "   ")
-        assertEquals(listOf(a, b), hits)
     }
 }
