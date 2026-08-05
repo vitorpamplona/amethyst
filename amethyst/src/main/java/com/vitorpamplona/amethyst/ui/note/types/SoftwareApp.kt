@@ -65,6 +65,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.commons.util.prettyMime
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
@@ -765,27 +766,6 @@ fun RenderSoftwareAsset(
         }
     }
 }
-
-internal fun prettyMime(mime: String): String =
-    when (mime) {
-        "application/vnd.android.package-archive" -> "APK"
-        "application/vnd.apple.ipa" -> "IPA"
-        "application/x-apple-diskimage" -> "DMG"
-        "application/vnd.apple.installer+xml" -> "PKG"
-        "application/x-msi" -> "MSI"
-        "application/vnd.appimage" -> "AppImage"
-        "application/vnd.flatpak" -> "Flatpak"
-        "application/vnd.oci.image.manifest.v1+json" -> "OCI"
-        "application/x-executable" -> "ELF"
-        "application/x-mach-binary" -> "Mach-O"
-        "application/vnd.microsoft.portable-executable" -> "EXE"
-        "application/vsix" -> "VSIX"
-        "application/x-chrome-extension" -> "CRX"
-        "application/x-xpinstall" -> "XPI"
-        "application/wasm" -> "WASM"
-        "application/webbundle" -> "Web Bundle"
-        else -> mime
-    }
 
 internal fun formatBytes(bytes: Long): String {
     if (bytes < 1024L) return "$bytes B"

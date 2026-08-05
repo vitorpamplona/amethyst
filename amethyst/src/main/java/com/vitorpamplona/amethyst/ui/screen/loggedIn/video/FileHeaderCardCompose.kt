@@ -105,11 +105,22 @@ private fun FileHeaderCardImage(
 
     val content = remember(note) { event.toMediaContent(note, fullUrl, mimeType) }
 
-    // VideoFeedFilter only admits image/video MIMEs and extensions, so a non-media blob should
-    // never reach this card. Render it as a link anyway rather than keeping an "unknown → video"
-    // default around: that default is what put a webxdc app into ExoPlayer in the note renderer.
+    // Reachable despite VideoFeedFilter admitting only image/video types: the filter accepts on
+    // `urls().any { … }` while this card renders `url()`, the first tag — so a multi-mirror event
+    // whose first URL is unrenderable lands here. The gate wraps it for the same reason it wraps
+    // the viewer in FileHeaderDisplay: a content warning is about the file, and the card still
+    // spells out its filename, alt text, MIME and size. Sizing stays on the gate's defaults
+    // (fillMaxWidth, no backdrop) — a link card has no aspect ratio to reserve and no blurhash
+    // to show behind it.
     if (content == null) {
-        FileHeaderAttachmentCard(event, fullUrl, mimeType)
+        ContentWarningGate(
+            isSensitive = isSensitive,
+            reasons = reasons,
+            preloadUrls = emptyList(),
+            accountViewModel = accountViewModel,
+        ) {
+            FileHeaderAttachmentCard(event, fullUrl, mimeType)
+        }
         return
     }
 

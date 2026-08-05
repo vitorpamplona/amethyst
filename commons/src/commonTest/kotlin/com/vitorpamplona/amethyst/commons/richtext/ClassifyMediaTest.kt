@@ -74,6 +74,29 @@ class ClassifyMediaTest {
     }
 
     @Test
+    fun aDeclaredMimeBeatsAContradictingExtension() {
+        // The check this replaced was an OR — `mime.startsWith("image/") || isImageUrl(url)` —
+        // so a poster-named video URL classified as an image. A declared MIME is the publisher
+        // stating the type; the extension is only a guess for when they didn't. Pins the
+        // precedence against a future "simplification" back to OR-semantics.
+        assertEquals(MediaContentKind.VIDEO, RichTextParser.classifyMedia("https://x.com/thumb.jpg", "video/mp4"))
+        assertEquals(MediaContentKind.IMAGE, RichTextParser.classifyMedia("https://x.com/clip.mp4", "image/png"))
+        assertEquals(MediaContentKind.PDF, RichTextParser.classifyMedia("https://x.com/scan.png", "application/pdf"))
+    }
+
+    @Test
+    fun anUnrecognisedMimeDefersToTheExtensionRatherThanVetoingIt() {
+        // Precedence applies only to MIMEs we recognise. An unrecognised one means "no usable
+        // declaration", not "declared unrenderable" — the two are indistinguishable here, and
+        // treating them alike is what lets [extensionRescuesAMalformedMime] work. So a real
+        // video mislabelled `application/x-webxdc` still plays…
+        assertEquals(MediaContentKind.VIDEO, RichTextParser.classifyMedia("https://x.com/bundle.mp4", "application/x-webxdc"))
+        // …while the webxdc app that motivated this class stays unrenderable, because nothing
+        // rescues it: `.xdc` is in no extension list either.
+        assertNull(RichTextParser.classifyMedia("https://x.com/bundle.xdc", "application/x-webxdc"))
+    }
+
+    @Test
     fun extensionRescuesAMalformedMime() {
         // Primal iOS emits `m jpeg` instead of `m image/jpeg`; the extension must still win
         // over "unknown". Preserves the behaviour createMediaContent already documented.

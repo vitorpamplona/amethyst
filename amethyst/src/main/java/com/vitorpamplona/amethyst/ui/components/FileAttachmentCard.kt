@@ -40,8 +40,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
+import com.vitorpamplona.amethyst.commons.util.prettyMime
 import com.vitorpamplona.amethyst.ui.components.pdf.extractFilename
-import com.vitorpamplona.amethyst.ui.note.types.prettyMime
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthWithHorzPadding
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
