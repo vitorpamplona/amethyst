@@ -171,7 +171,12 @@ class SyncCoverage(
             byWindows.getOrPut(windows(filter, span, band.complete, floor)) { mutableListOf() }.add(kind)
         }
         return byWindows.flatMap { (windows, group) ->
-            windows.map { (since, until) -> filter.copy(kinds = group, since = since, until = until) }
+            // toList(): `group` is the mutable accumulator above, and handing
+            // the same instance to every Filter in the group would publish it
+            // through a public return value. Filters are treated as immutable
+            // everywhere else; this keeps that true by construction.
+            val kindsForGroup = group.toList()
+            windows.map { (since, until) -> filter.copy(kinds = kindsForGroup, since = since, until = until) }
         }
     }
 
@@ -244,11 +249,15 @@ class SyncCoverage(
         }
         if (!paged) return
 
+        // Read ONCE. `now` is a clock call, and this was invoking it twice per
+        // entry — so a 40-kind map took 80 readings, and worse, a span's floor
+        // and ceiling were judged against two different instants.
+        val at = now()
         if (observedByKind != null) {
             // Guarded per span for the same reason the aggregate is below.
             val plausible =
                 observedByKind.filterValues {
-                    isPlausible(it.min, now()) && isPlausible(it.max, now())
+                    isPlausible(it.min, at) && isPlausible(it.max, at)
                 }
             if (plausible.isEmpty()) return
             val named = filter.kinds
@@ -302,7 +311,7 @@ class SyncCoverage(
         // claim the whole timeline, and the leg outside it would ask for a
         // range nothing can be in, forever.
         if (observedMin == null || observedMax == null) return
-        if (!isPlausible(observedMin, now()) || !isPlausible(observedMax, now())) return
+        if (!isPlausible(observedMin, at) || !isPlausible(observedMax, at)) return
         put(url, filter, kinds.associateWith { Span(observedMin, observedMax) }, complete = false)
     }
 
