@@ -251,7 +251,31 @@ class SyncCoverage(
                     isPlausible(it.min, now()) && isPlausible(it.max, now())
                 }
             if (plausible.isEmpty()) return
-            put(url, filter, plausible, complete = false)
+            val named = filter.kinds
+            val spans =
+                if (named.isNullOrEmpty()) {
+                    // A filter naming no kinds cannot be split, so [legs] reads
+                    // ALL_KINDS and nothing else. Storing what the walk saw per
+                    // kind would record a band no lookup can ever reach — it
+                    // would exist and do nothing. Collapse to the union, which
+                    // is the only claim such a filter can make.
+                    mapOf(ALL_KINDS to plausible.values.reduce { a, b -> a.widen(b) })
+                } else {
+                    // Only kinds the filter NAMES. A relay may answer with more
+                    // than it was asked for, and a caller whose containment
+                    // check runs against a different filter than the band is
+                    // keyed by passes those straight through. Keeping them
+                    // would be inert for [legs] — which looks up the filter's
+                    // own kinds — but NOT for [Band.minCreatedAt], which the
+                    // state file writes as its rollback-compat `min`/`max`. An
+                    // off-filter kind seen further back would widen those past
+                    // anything the filter's kinds support, so a binary from
+                    // before per-kind spans would read that file and
+                    // over-claim: this fix undone through the compat path.
+                    plausible.filterKeys { it in named }
+                }
+            if (spans.isEmpty()) return
+            put(url, filter, spans, complete = false)
             return
         }
 

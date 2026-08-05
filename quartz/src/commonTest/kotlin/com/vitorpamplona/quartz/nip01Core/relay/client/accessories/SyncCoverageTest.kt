@@ -502,4 +502,61 @@ class SyncCoverageTest {
         assertEquals(listOf(0, 30382), legs[0].kinds)
         assertEquals(1_690_000_000L, legs[0].until)
     }
+
+    @Test
+    fun `a kind the filter never asked for cannot widen the band`() {
+        // A relay may answer with more than it was asked for. Those spans are
+        // inert for legs(), which only looks up the filter's own kinds — but
+        // NOT for Band.minCreatedAt, which the state file writes as its
+        // rollback-compat min/max. Left in, a stray kind seen further back
+        // would widen that past anything the filter's kinds support, and a
+        // binary from before per-kind spans would read the file and over-claim.
+        val c = SyncCoverage()
+        c.record(
+            relay,
+            profiles,
+            null,
+            null,
+            paged = true,
+            observedByKind =
+                mapOf(
+                    0 to SyncCoverage.Span(1_690_000_000L, 1_700_000_000L),
+                    // never asked for, and much older
+                    1 to SyncCoverage.Span(1_600_000_000L, 1_610_000_000L),
+                ),
+        )
+
+        val band = c.band(relay, profiles)!!
+        assertEquals(setOf(0), band.spans.keys, "only the kind the filter names")
+        assertEquals(1_690_000_000L, band.minCreatedAt, "…so the compat floor stays honest")
+    }
+
+    @Test
+    fun `per-kind evidence on a filter naming no kinds collapses to one span`() {
+        // Such a filter cannot be split, so legs() reads ALL_KINDS and nothing
+        // else. Storing per-kind spans here would record a band no lookup can
+        // reach — present in the file, doing nothing.
+        val anyKind = Filter(authors = listOf("a".repeat(64)))
+        val c = SyncCoverage()
+        c.record(
+            relay,
+            anyKind,
+            null,
+            null,
+            paged = true,
+            observedByKind =
+                mapOf(
+                    0 to SyncCoverage.Span(1_690_000_000L, 1_695_000_000L),
+                    30382 to SyncCoverage.Span(1_697_000_000L, 1_700_000_000L),
+                ),
+        )
+
+        val band = c.band(relay, anyKind)!!
+        assertEquals(setOf(SyncCoverage.ALL_KINDS), band.spans.keys)
+        assertEquals(1_690_000_000L, band.spans.getValue(SyncCoverage.ALL_KINDS).min, "the union, not one of them")
+        assertEquals(1_700_000_000L, band.spans.getValue(SyncCoverage.ALL_KINDS).max)
+        // …and it is actually USED, which is the half that was silently missing.
+        assertEquals(2, c.legs(relay, anyKind).size)
+        assertEquals(1_690_000_000L, c.legs(relay, anyKind)[0].until)
+    }
 }
