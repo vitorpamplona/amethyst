@@ -39,13 +39,17 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.moderation.notifications.HostOs
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
@@ -112,7 +116,7 @@ fun NotificationSettingsScreen(onBack: (() -> Unit)? = null) {
                 dispatcher?.nativeAvailable?.collectAsState()
                     ?: remember { mutableStateOf(false) }
             )
-            val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+            val coroutineScope = rememberCoroutineScope()
             var testStatus by remember { mutableStateOf<String?>(null) }
             var requestingPermission by remember { mutableStateOf(false) }
             var sendingTest by remember { mutableStateOf(false) }
@@ -120,33 +124,30 @@ fun NotificationSettingsScreen(onBack: (() -> Unit)? = null) {
             // Re-sync permission state whenever this screen enters composition
             // and whenever the window regains focus — user may have toggled
             // Amethyst in System Settings → Notifications while we were open.
-            val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
-            androidx.compose.runtime.LaunchedEffect(dispatcher) {
+            val windowInfo = LocalWindowInfo.current
+            LaunchedEffect(dispatcher) {
                 dispatcher?.refreshPermission()
             }
-            androidx.compose.runtime.LaunchedEffect(dispatcher, windowInfo) {
-                androidx.compose.runtime
-                    .snapshotFlow { windowInfo.isWindowFocused }
+            LaunchedEffect(dispatcher, windowInfo) {
+                snapshotFlow { windowInfo.isWindowFocused }
                     .collect { focused ->
                         if (focused) dispatcher?.refreshPermission()
                     }
             }
 
-            // Handle the still-broken case that the previous fix missed:
-            // the user granted OS permission in a prior session (either via
-            // the older "Enable OS notifications" button whose auto-enable
-            // guard I initially forgot, via System Settings directly, or on
-            // Windows/Linux where permissionState defaults to NotApplicable).
-            // When they come back to Settings, permissionState == Granted so
-            // the "Enable OS notifications" button doesn't render, the master
-            // switch is still OFF from first-launch defaults, and there is no
-            // affordance that both tells them what's wrong and fixes it in
-            // one click. Auto-enable once per screen entry when we detect
-            // "permission is fine, but master switch is off and the user
-            // has never explicitly disabled it". PreferencesNotificationSettings
-            // exposes [wasExplicitlyDisabled] so we don't overrule a deliberate
-            // opt-out.
-            androidx.compose.runtime.LaunchedEffect(permissionState, enabled) {
+            // Covers the two paths the earlier fix (e9475dd0) missed: the OS
+            // permission was already granted in a prior session (an older
+            // build asked, or the user allowed Amethyst in System Settings
+            // directly), and Windows/Linux, where permissionState is
+            // NotApplicable from startup. On both, permissionState is not
+            // NotRequested, so the "Enable OS notifications" button never
+            // renders, yet the master switch is still OFF from first-launch
+            // defaults — leaving no affordance that both explains the problem
+            // and fixes it. Auto-enable when the permission is fine, the
+            // master switch is off, and the user has never explicitly turned
+            // it off; [NotificationSettings.wasExplicitlyDisabled] is what
+            // keeps a deliberate opt-out from being overruled.
+            LaunchedEffect(permissionState, enabled) {
                 val allowed = permissionState == PermissionState.Granted || permissionState == PermissionState.NotApplicable
                 if (allowed && !enabled && !settings.wasExplicitlyDisabled()) {
                     settings.setEnabled(true)
@@ -240,15 +241,18 @@ fun NotificationSettingsScreen(onBack: (() -> Unit)? = null) {
                         }
                     }
                     PermissionState.Granted, PermissionState.NotApplicable -> {
-                        // Turn-on button: renders only when master switch is
-                        // off *and* the user explicitly disabled it before.
-                        // The LaunchedEffect above auto-enables the switch
-                        // for the common "never touched it" path; this button
-                        // is the recovery for the deliberate-opt-out path.
+                        // Recovery affordance for the deliberate-opt-out path.
+                        // The LaunchedEffect above already re-enables the
+                        // switch for anyone who never touched it, so in
+                        // practice the only state that still reaches here with
+                        // `enabled == false` is an explicit opt-out. Guarding
+                        // on `!enabled` alone (rather than also calling
+                        // wasExplicitlyDisabled) keeps this a pure Compose
+                        // state read and leaves the button visible for the one
+                        // frame before the effect runs.
                         if (!enabled) {
                             OutlinedButton(
                                 onClick = { settings.setEnabled(true) },
-                                enabled = true,
                             ) { Text("Turn on desktop notifications") }
                         }
                         OutlinedButton(
