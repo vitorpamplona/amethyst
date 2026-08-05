@@ -221,6 +221,20 @@ jobs:
           chmod +x scripts/relax-deb-libicu.sh
           scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
+      # jpackage --type deb only auto-generates Depends from dpkg-shlibdeps
+      # against the bundled JRE under lib/runtime/, NOT the app payload under
+      # lib/app/. libskiko-linux-arm64.so has libEGL.so.1 in DT_NEEDED (unlike
+      # the x64 skiko which only links libGL.so.1), so a minimal aarch64
+      # install without EGL crashes at startup with:
+      #   UnsatisfiedLinkError: libEGL.so.1: cannot open shared object file
+      # Rewrite the arm64 .deb to add libegl1 to Depends. x64 .deb is untouched.
+      - name: Add libegl1 dep to arm64 .deb
+        if: matrix.family == 'linux' && matrix.arch == 'arm64'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-libegl-dep.sh
+          scripts/add-deb-libegl-dep.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
       - name: Build portable archives (windows + linux-portable)
         if: matrix.family == 'windows' || matrix.family == 'linux-portable'
         run: |
