@@ -85,7 +85,7 @@ class RelayProberFlowTest {
         }
 
         /** Plays a relay's OK answer for the published event to every armed listener. */
-        fun answerOk(
+        suspend fun answerOk(
             relay: NormalizedRelayUrl,
             success: Boolean,
             message: String,
@@ -235,13 +235,14 @@ class RelayProberFlowTest {
         }
 
     @Test
-    fun writeTestEventIsEphemeralAndSelfExpiring() {
-        val template = RelayProbeWriteTest.build(createdAt = 5000)
+    fun writeTestEventIsEphemeralAndSelfExpiring() =
+        kotlinx.coroutines.test.runTest {
+            val template = RelayProbeWriteTest.build(createdAt = 5000)
 
-        assertEquals(20166, template.kind)
-        assertTrue(template.kind in 20000..29999, "the write probe must be an ephemeral kind")
-        assertTrue(listOf("expiration", "5060") in template.tags.map { it.toList() })
-    }
+            assertEquals(20166, template.kind)
+            assertTrue(template.kind in 20000..29999, "the write probe must be an ephemeral kind")
+            assertTrue(listOf("expiration", "5060") in template.tags.map { it.toList() })
+        }
 
     // ------------------------------------------------------------------
     // readWriteCheck — honest read + write measurements, nothing claimed
@@ -358,108 +359,117 @@ class RelayProberFlowTest {
     private fun tagsOf(template: EventTemplate<*>) = template.tags.map { it.toList() }
 
     @Test
-    fun reachableVerdictTemplateCarriesLivenessAndNetwork() {
-        val template =
-            RelayProber
-                .Verdict(fast, reachable = true, rttOpenMs = 150, rttEoseMs = 480, error = null)
-                .toDiscoveryEventTemplate(createdAt = 1000)
+    fun reachableVerdictTemplateCarriesLivenessAndNetwork() =
+        kotlinx.coroutines.test.runTest {
+            val template =
+                RelayProber
+                    .Verdict(fast, reachable = true, rttOpenMs = 150, rttEoseMs = 480, error = null)
+                    .toDiscoveryEventTemplate(createdAt = 1000)
 
-        val tags = tagsOf(template)
-        assertEquals(30166, template.kind)
-        assertEquals(1000, template.createdAt)
-        assertTrue(listOf("d", fast.url) in tags)
-        assertTrue(listOf("n", "clearnet") in tags)
-        assertTrue(listOf("rtt-open", "150") in tags)
-        // rtt-eose is wave-relative (dial + queue + read) — never published as rtt-read.
-        assertNull(tags.firstOrNull { it[0] == "rtt-read" })
-    }
-
-    @Test
-    fun deadVerdictTemplateHasNoRttOpen() {
-        val template =
-            RelayProber
-                .Verdict(silent, reachable = false, rttOpenMs = -1, rttEoseMs = -1, error = "cannot:timeout")
-                .toDiscoveryEventTemplate()
-
-        val tags = tagsOf(template)
-        assertTrue(listOf("d", silent.url) in tags)
-        // Liveness is the PRESENCE of rtt-open; a dead record must not carry one.
-        assertNull(tags.firstOrNull { it[0] == "rtt-open" })
-    }
+            val tags = tagsOf(template)
+            assertEquals(30166, template.kind)
+            assertEquals(1000, template.createdAt)
+            assertTrue(listOf("d", fast.url) in tags)
+            assertTrue(listOf("n", "clearnet") in tags)
+            assertTrue(listOf("rtt-open", "150") in tags)
+            // rtt-eose is wave-relative (dial + queue + read) — never published as rtt-read.
+            assertNull(tags.firstOrNull { it[0] == "rtt-read" })
+        }
 
     @Test
-    fun reachableWithoutMeasuredLatencyWritesZeroFlag() {
-        val template =
-            RelayProber
-                .Verdict(fast, reachable = true, rttOpenMs = -1, rttEoseMs = 300, error = null)
-                .toDiscoveryEventTemplate()
+    fun deadVerdictTemplateHasNoRttOpen() =
+        kotlinx.coroutines.test.runTest {
+            val template =
+                RelayProber
+                    .Verdict(silent, reachable = false, rttOpenMs = -1, rttEoseMs = -1, error = "cannot:timeout")
+                    .toDiscoveryEventTemplate()
 
-        // 0 = "reachable, latency not observed": the flag form, never an invented number.
-        assertTrue(listOf("rtt-open", "0") in tagsOf(template))
-    }
-
-    @Test
-    fun observedAuthWallBecomesARequirementTag() {
-        val template =
-            RelayProber
-                .Verdict(walled, reachable = true, rttOpenMs = 90, rttEoseMs = -1, error = "closed:auth-required: sign in")
-                .toDiscoveryEventTemplate()
-
-        assertTrue(listOf("R", "auth") in tagsOf(template))
-    }
+            val tags = tagsOf(template)
+            assertTrue(listOf("d", silent.url) in tags)
+            // Liveness is the PRESENCE of rtt-open; a dead record must not carry one.
+            assertNull(tags.firstOrNull { it[0] == "rtt-open" })
+        }
 
     @Test
-    fun policyClosedIsNotAnAuthRequirement() {
-        val template =
-            RelayProber
-                .Verdict(walled, reachable = true, rttOpenMs = 90, rttEoseMs = -1, error = "closed:blocked: not welcome")
-                .toDiscoveryEventTemplate()
+    fun reachableWithoutMeasuredLatencyWritesZeroFlag() =
+        kotlinx.coroutines.test.runTest {
+            val template =
+                RelayProber
+                    .Verdict(fast, reachable = true, rttOpenMs = -1, rttEoseMs = 300, error = null)
+                    .toDiscoveryEventTemplate()
 
-        assertNull(tagsOf(template).firstOrNull { it[0] == "R" })
-    }
-
-    @Test
-    fun readWriteResultsBecomeRttTags() {
-        val verdict = RelayProber.Verdict(fast, reachable = true, rttOpenMs = 100, rttEoseMs = 300, error = null)
-        val readWrite = RelayProber.ReadWriteVerdict(fast, rttReadMs = 40, rttWriteMs = 55, writeAccepted = true, writeMessage = "")
-
-        val tags = tagsOf(verdict.toDiscoveryEventTemplate(readWrite = readWrite))
-        assertTrue(listOf("rtt-read", "40") in tags)
-        assertTrue(listOf("rtt-write", "55") in tags)
-    }
+            // 0 = "reachable, latency not observed": the flag form, never an invented number.
+            assertTrue(listOf("rtt-open", "0") in tagsOf(template))
+        }
 
     @Test
-    fun unobservedReadWriteSidesStayUntagged() {
-        val verdict = RelayProber.Verdict(fast, reachable = true, rttOpenMs = 100, rttEoseMs = -1, error = null)
-        val readWrite = RelayProber.ReadWriteVerdict(fast, rttReadMs = -1, rttWriteMs = -1, writeAccepted = null, writeMessage = null)
+    fun observedAuthWallBecomesARequirementTag() =
+        kotlinx.coroutines.test.runTest {
+            val template =
+                RelayProber
+                    .Verdict(walled, reachable = true, rttOpenMs = 90, rttEoseMs = -1, error = "closed:auth-required: sign in")
+                    .toDiscoveryEventTemplate()
 
-        val tags = tagsOf(verdict.toDiscoveryEventTemplate(readWrite = readWrite))
-        assertNull(tags.firstOrNull { it[0] == "rtt-read" })
-        assertNull(tags.firstOrNull { it[0] == "rtt-write" })
-    }
-
-    @Test
-    fun writeRejectionReasonsBecomeRequirementTags() {
-        val verdict = RelayProber.Verdict(walled, reachable = true, rttOpenMs = 100, rttEoseMs = -1, error = null)
-
-        val pow = RelayProber.ReadWriteVerdict(walled, -1, 30, writeAccepted = false, writeMessage = "pow: 28 bits needed")
-        assertTrue(listOf("R", "pow") in tagsOf(verdict.toDiscoveryEventTemplate(readWrite = pow)))
-
-        val auth = RelayProber.ReadWriteVerdict(walled, -1, 30, writeAccepted = false, writeMessage = "auth-required: sign in")
-        assertTrue(listOf("R", "auth") in tagsOf(verdict.toDiscoveryEventTemplate(readWrite = auth)))
-
-        val blocked = RelayProber.ReadWriteVerdict(walled, -1, 30, writeAccepted = false, writeMessage = "blocked: not welcome")
-        assertNull(tagsOf(verdict.toDiscoveryEventTemplate(readWrite = blocked)).firstOrNull { it[0] == "R" })
-    }
+            assertTrue(listOf("R", "auth") in tagsOf(template))
+        }
 
     @Test
-    fun onionRelayIsTaggedTor() {
-        val onion = RelayUrlNormalizer.normalize("ws://someonionaddressabcdefghijklmnop.onion")
-        val template =
-            RelayProber
-                .Verdict(onion, reachable = true, rttOpenMs = 900, rttEoseMs = -1, error = null)
-                .toDiscoveryEventTemplate()
+    fun policyClosedIsNotAnAuthRequirement() =
+        kotlinx.coroutines.test.runTest {
+            val template =
+                RelayProber
+                    .Verdict(walled, reachable = true, rttOpenMs = 90, rttEoseMs = -1, error = "closed:blocked: not welcome")
+                    .toDiscoveryEventTemplate()
 
-        assertTrue(listOf("n", "tor") in tagsOf(template))
-    }
+            assertNull(tagsOf(template).firstOrNull { it[0] == "R" })
+        }
+
+    @Test
+    fun readWriteResultsBecomeRttTags() =
+        kotlinx.coroutines.test.runTest {
+            val verdict = RelayProber.Verdict(fast, reachable = true, rttOpenMs = 100, rttEoseMs = 300, error = null)
+            val readWrite = RelayProber.ReadWriteVerdict(fast, rttReadMs = 40, rttWriteMs = 55, writeAccepted = true, writeMessage = "")
+
+            val tags = tagsOf(verdict.toDiscoveryEventTemplate(readWrite = readWrite))
+            assertTrue(listOf("rtt-read", "40") in tags)
+            assertTrue(listOf("rtt-write", "55") in tags)
+        }
+
+    @Test
+    fun unobservedReadWriteSidesStayUntagged() =
+        kotlinx.coroutines.test.runTest {
+            val verdict = RelayProber.Verdict(fast, reachable = true, rttOpenMs = 100, rttEoseMs = -1, error = null)
+            val readWrite = RelayProber.ReadWriteVerdict(fast, rttReadMs = -1, rttWriteMs = -1, writeAccepted = null, writeMessage = null)
+
+            val tags = tagsOf(verdict.toDiscoveryEventTemplate(readWrite = readWrite))
+            assertNull(tags.firstOrNull { it[0] == "rtt-read" })
+            assertNull(tags.firstOrNull { it[0] == "rtt-write" })
+        }
+
+    @Test
+    fun writeRejectionReasonsBecomeRequirementTags() =
+        kotlinx.coroutines.test.runTest {
+            val verdict = RelayProber.Verdict(walled, reachable = true, rttOpenMs = 100, rttEoseMs = -1, error = null)
+
+            val pow = RelayProber.ReadWriteVerdict(walled, -1, 30, writeAccepted = false, writeMessage = "pow: 28 bits needed")
+            assertTrue(listOf("R", "pow") in tagsOf(verdict.toDiscoveryEventTemplate(readWrite = pow)))
+
+            val auth = RelayProber.ReadWriteVerdict(walled, -1, 30, writeAccepted = false, writeMessage = "auth-required: sign in")
+            assertTrue(listOf("R", "auth") in tagsOf(verdict.toDiscoveryEventTemplate(readWrite = auth)))
+
+            val blocked = RelayProber.ReadWriteVerdict(walled, -1, 30, writeAccepted = false, writeMessage = "blocked: not welcome")
+            assertNull(tagsOf(verdict.toDiscoveryEventTemplate(readWrite = blocked)).firstOrNull { it[0] == "R" })
+        }
+
+    @Test
+    fun onionRelayIsTaggedTor() =
+        kotlinx.coroutines.test.runTest {
+            val onion = RelayUrlNormalizer.normalize("ws://someonionaddressabcdefghijklmnop.onion")
+            val template =
+                RelayProber
+                    .Verdict(onion, reachable = true, rttOpenMs = 900, rttEoseMs = -1, error = null)
+                    .toDiscoveryEventTemplate()
+
+            assertTrue(listOf("n", "tor") in tagsOf(template))
+        }
 }

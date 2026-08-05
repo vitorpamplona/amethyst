@@ -163,7 +163,7 @@ suspend fun INostrClient.negentropySync(
     idBufferBatches: Int = maxConcurrentReqs * 4,
     localEntries: List<IdAndTime> = emptyList(),
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropySyncResult {
     val need = AtomicInt(0)
     val windows = AtomicInt(0)
@@ -242,7 +242,7 @@ suspend fun INostrClient.negentropySync(
     idBufferBatches: Int = maxConcurrentReqs * 4,
     localEntries: List<IdAndTime> = emptyList(),
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropySyncResult =
     negentropySync(
         relay = RelayUrlNormalizer.normalize(relay),
@@ -309,14 +309,14 @@ suspend fun INostrClient.negentropySyncOrFetch(
     idBufferBatches: Int = maxConcurrentReqs * 4,
     localEntries: List<IdAndTime> = emptyList(),
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropyOrFetchResult {
     val seen = HashSet<HexKey>()
     var delivered = 0
 
     // Shared dedup + cap across both phases. Returns true if the event was new and
     // delivered. Both phases run sequentially, so no concurrent access.
-    fun accept(event: Event): Boolean {
+    suspend fun accept(event: Event): Boolean {
         if ((maxEvents <= 0 || delivered < maxEvents) && seen.add(event.id)) {
             delivered++
             onEvent(event)
@@ -364,7 +364,7 @@ suspend fun INostrClient.negentropySyncOrFetch(
     idBufferBatches: Int = maxConcurrentReqs * 4,
     localEntries: List<IdAndTime> = emptyList(),
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropyOrFetchResult =
     negentropySyncOrFetch(
         relay = RelayUrlNormalizer.normalize(relay),
@@ -876,7 +876,7 @@ private suspend fun INostrClient.reconcileStreaming(
                 if (relay.url == targetUrl) clock.bump()
             }
 
-            override fun onIncomingMessage(
+            override suspend fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
                 msg: Message,
@@ -1103,7 +1103,7 @@ internal suspend fun INostrClient.fetchByIds(
 
     val listener =
         object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,

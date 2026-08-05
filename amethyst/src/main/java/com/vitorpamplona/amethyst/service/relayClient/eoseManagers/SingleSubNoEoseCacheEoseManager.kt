@@ -53,7 +53,7 @@ abstract class SingleSubNoEoseCacheEoseManager<T>(
                     }
                 }
 
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

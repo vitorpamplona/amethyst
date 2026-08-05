@@ -197,7 +197,7 @@ class DispatchStageBenchmark {
                                 continue
                             }
                             for (subId in subIds) {
-                                client.onIncomingMessage(relayClient, "", EventMessage(subId, event))
+                                kotlinx.coroutines.runBlocking { client.onIncomingMessage(relayClient, "", EventMessage(subId, event)) }
                             }
                         }
                     }
@@ -259,7 +259,7 @@ class DispatchStageBenchmark {
                     Thread {
                         for (event in events) {
                             for (subId in subIds) {
-                                pool.onIncomingMessage(relayClient, EventMessage(subId, event))
+                                kotlinx.coroutines.runBlocking { pool.onIncomingMessage(relayClient, EventMessage(subId, event)) }
                             }
                         }
                     }
@@ -299,12 +299,13 @@ class DispatchStageBenchmark {
     }
 
     @Test
-    fun dispatchStageBenchmark() {
-        println("=== DISPATCH STAGE BENCHMARK (post-parse, pre-verify) ===")
-        println("cores=${Runtime.getRuntime().availableProcessors()} uniqueEvents=$UNIQUE_EVENTS subsPerRelay=$SUBS_PER_RELAY")
+    fun dispatchStageBenchmark() =
+        kotlinx.coroutines.test.runTest {
+            println("=== DISPATCH STAGE BENCHMARK (post-parse, pre-verify) ===")
+            println("cores=${Runtime.getRuntime().availableProcessors()} uniqueEvents=$UNIQUE_EVENTS subsPerRelay=$SUBS_PER_RELAY")
 
-        // warmup pass (JIT), then the measured pass
-        runAllVariants(print = false)
-        runAllVariants(print = true)
-    }
+            // warmup pass (JIT), then the measured pass
+            runAllVariants(print = false)
+            runAllVariants(print = true)
+        }
 }

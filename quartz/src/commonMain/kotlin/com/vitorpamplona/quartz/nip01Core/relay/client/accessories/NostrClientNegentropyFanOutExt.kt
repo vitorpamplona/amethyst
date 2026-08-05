@@ -83,7 +83,7 @@ suspend fun negentropySyncFanOut(
     idleTimeoutMs: Long = 120_000L,
     reconcileConcurrency: Int = 2,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropyFanOutResult {
     require(clients.isNotEmpty()) { "at least one client is required" }
 

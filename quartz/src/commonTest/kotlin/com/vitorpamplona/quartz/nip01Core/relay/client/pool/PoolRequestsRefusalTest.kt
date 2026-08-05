@@ -75,123 +75,129 @@ class PoolRequestsRefusalTest {
         return sent
     }
 
-    private fun close(
+    private suspend fun close(
         pool: PoolRequests,
         subId: String,
         reason: String,
     ) = pool.onIncomingMessage(FakeRelayClient(relay), ClosedMessage(subId, reason))
 
     @Test
-    fun stopsReplayingAThriceRefusedFilterAcrossReconnects() {
-        val pool = PoolRequests(maxRefusalsBeforeSuppress = 3)
-        pool.addOrUpdate("sub", mapOf(relay to plainFilter()), null)
+    fun stopsReplayingAThriceRefusedFilterAcrossReconnects() =
+        kotlinx.coroutines.test.runTest {
+            val pool = PoolRequests(maxRefusalsBeforeSuppress = 3)
+            pool.addOrUpdate("sub", mapOf(relay to plainFilter()), null)
 
-        // Under the threshold, each reconnect still replays the REQ (giving the relay a chance).
-        repeat(3) { attempt ->
-            val sent = reconnectAndSync(pool)
-            assertEquals(1, sent.filterIsInstance<ReqCmd>().size, "reconnect #$attempt should replay the REQ")
-            close(pool, "sub", "unsupported: too many filters")
+            // Under the threshold, each reconnect still replays the REQ (giving the relay a chance).
+            repeat(3) { attempt ->
+                val sent = reconnectAndSync(pool)
+                assertEquals(1, sent.filterIsInstance<ReqCmd>().size, "reconnect #$attempt should replay the REQ")
+                close(pool, "sub", "unsupported: too many filters")
+            }
+
+            // Once the same filter has been refused [maxRefusalsBeforeSuppress] times, stop replaying it.
+            val suppressed = reconnectAndSync(pool)
+            assertTrue(suppressed.filterIsInstance<ReqCmd>().isEmpty(), "a thrice-refused filter must not be replayed again")
         }
 
-        // Once the same filter has been refused [maxRefusalsBeforeSuppress] times, stop replaying it.
-        val suppressed = reconnectAndSync(pool)
-        assertTrue(suppressed.filterIsInstance<ReqCmd>().isEmpty(), "a thrice-refused filter must not be replayed again")
-    }
-
     @Test
-    fun aMeaningfulFilterChangeReEnablesTheReq() {
-        val pool = PoolRequests(maxRefusalsBeforeSuppress = 2)
-        pool.addOrUpdate("sub", mapOf(relay to plainFilter(1)), null)
+    fun aMeaningfulFilterChangeReEnablesTheReq() =
+        kotlinx.coroutines.test.runTest {
+            val pool = PoolRequests(maxRefusalsBeforeSuppress = 2)
+            pool.addOrUpdate("sub", mapOf(relay to plainFilter(1)), null)
 
-        repeat(2) {
-            reconnectAndSync(pool)
-            close(pool, "sub", "unsupported: too many filters")
-        }
-        assertTrue(reconnectAndSync(pool).filterIsInstance<ReqCmd>().isEmpty(), "refused filter is suppressed")
+            repeat(2) {
+                reconnectAndSync(pool)
+                close(pool, "sub", "unsupported: too many filters")
+            }
+            assertTrue(reconnectAndSync(pool).filterIsInstance<ReqCmd>().isEmpty(), "refused filter is suppressed")
 
-        // The app changes the subscription's filter (different kind) — the relay may now accept it.
-        pool.addOrUpdate("sub", mapOf(relay to plainFilter(30023)), null)
-        assertEquals(1, reconnectAndSync(pool).filterIsInstance<ReqCmd>().size, "a changed filter must be tried again")
-    }
-
-    @Test
-    fun aSearchOnlyRelayStopsReceivingPlainReqsFromEveryNewSubOnOneConnection() {
-        // The search.nos.today case: 6 different subscriptions, one connection, each a
-        // distinct plain feed filter the relay CLOSES with `error: search filter is required`.
-        // Per-filter memory can't help (the filters differ); the relay-wide block must.
-        val pool = PoolRequests(relayRefusals = RelayReqRefusals(threshold = 2))
-
-        val sent = mutableListOf<Pair<String, Boolean>>() // subId -> did a REQ go out
-
-        fun mountSub(
-            subId: String,
-            filter: List<Filter>,
-        ) {
-            val affected = pool.addOrUpdate(subId, mapOf(relay to filter), null)
-            var reqSent = false
-            pool.sendToRelayIfChanged(subId, affected) { _, cmd -> if (cmd is ReqCmd) reqSent = true }
-            sent.add(subId to reqSent)
-            close(pool, subId, "error: search filter is required")
+            // The app changes the subscription's filter (different kind) — the relay may now accept it.
+            pool.addOrUpdate("sub", mapOf(relay to plainFilter(30023)), null)
+            assertEquals(1, reconnectAndSync(pool).filterIsInstance<ReqCmd>().size, "a changed filter must be tried again")
         }
 
-        mountSub("sub1", plainFilter(1))
-        mountSub("sub2", plainFilter(2))
-        mountSub("sub3", plainFilter(3))
-        mountSub("sub4", plainFilter(4))
-
-        assertTrue(sent[0].second && sent[1].second, "the first two plain subs are sent (learning the relay is search-only)")
-        assertTrue(!sent[2].second && !sent[3].second, "after two refusals, further plain subs are not sent to a search-only relay")
-    }
-
     @Test
-    fun aCapabilityBlockedRelayIsDroppedFromDesiredRelays() {
-        // The socket-closing half: once a relay is capability-blocked and no desired sub can
-        // use it, it leaves the desired-relay set so the pool disconnects it.
-        val pool = PoolRequests(relayRefusals = RelayReqRefusals(threshold = 2))
-        pool.addOrUpdate("sub", mapOf(relay to plainFilter()), null)
-        assertTrue(relay in pool.desiredRelays.value, "the relay is wanted before it refuses anything")
+    fun aSearchOnlyRelayStopsReceivingPlainReqsFromEveryNewSubOnOneConnection() =
+        kotlinx.coroutines.test.runTest {
+            // The search.nos.today case: 6 different subscriptions, one connection, each a
+            // distinct plain feed filter the relay CLOSES with `error: search filter is required`.
+            // Per-filter memory can't help (the filters differ); the relay-wide block must.
+            val pool = PoolRequests(relayRefusals = RelayReqRefusals(threshold = 2))
 
-        close(pool, "sub", "error: search filter is required")
-        assertTrue(relay in pool.desiredRelays.value, "one refusal doesn't drop it yet")
+            val sent = mutableListOf<Pair<String, Boolean>>() // subId -> did a REQ go out
 
-        close(pool, "sub", "error: search filter is required")
-        assertTrue(relay !in pool.desiredRelays.value, "a search-only relay with only plain subs is dropped (socket closes)")
-    }
+            suspend fun mountSub(
+                subId: String,
+                filter: List<Filter>,
+            ) {
+                val affected = pool.addOrUpdate(subId, mapOf(relay to filter), null)
+                var reqSent = false
+                pool.sendToRelayIfChanged(subId, affected) { _, cmd -> if (cmd is ReqCmd) reqSent = true }
+                sent.add(subId to reqSent)
+                close(pool, subId, "error: search filter is required")
+            }
 
-    @Test
-    fun aSearchOnlyRelayStaysWantedWhileASearchSubNeedsIt() {
-        val pool = PoolRequests(relayRefusals = RelayReqRefusals(threshold = 2))
-        pool.addOrUpdate("plain", mapOf(relay to plainFilter()), null)
-        pool.addOrUpdate("search", mapOf(relay to listOf(Filter(kinds = listOf(1), search = "nostr"))), null)
+            mountSub("sub1", plainFilter(1))
+            mountSub("sub2", plainFilter(2))
+            mountSub("sub3", plainFilter(3))
+            mountSub("sub4", plainFilter(4))
 
-        close(pool, "plain", "error: search filter is required")
-        close(pool, "plain", "error: search filter is required")
-
-        assertTrue(relay in pool.desiredRelays.value, "the relay stays wanted: a search sub still has a usable filter for it")
-    }
-
-    @Test
-    fun authRequiredAndRateLimitedAreNeverSuppressed() {
-        val pool = PoolRequests(maxRefusalsBeforeSuppress = 2)
-        pool.addOrUpdate("sub", mapOf(relay to plainFilter()), null)
-
-        repeat(4) {
-            reconnectAndSync(pool)
-            close(pool, "sub", MachineReadablePrefix.AUTH_REQUIRED.format("authenticate first"))
+            assertTrue(sent[0].second && sent[1].second, "the first two plain subs are sent (learning the relay is search-only)")
+            assertTrue(!sent[2].second && !sent[3].second, "after two refusals, further plain subs are not sent to a search-only relay")
         }
-        assertEquals(1, reconnectAndSync(pool).filterIsInstance<ReqCmd>().size, "auth-required must keep replaying (auth resolves it)")
 
-        val pool2 = PoolRequests(maxRefusalsBeforeSuppress = 2)
-        pool2.addOrUpdate("sub", mapOf(relay to plainFilter()), null)
-        repeat(4) {
+    @Test
+    fun aCapabilityBlockedRelayIsDroppedFromDesiredRelays() =
+        kotlinx.coroutines.test.runTest {
+            // The socket-closing half: once a relay is capability-blocked and no desired sub can
+            // use it, it leaves the desired-relay set so the pool disconnects it.
+            val pool = PoolRequests(relayRefusals = RelayReqRefusals(threshold = 2))
+            pool.addOrUpdate("sub", mapOf(relay to plainFilter()), null)
+            assertTrue(relay in pool.desiredRelays.value, "the relay is wanted before it refuses anything")
+
+            close(pool, "sub", "error: search filter is required")
+            assertTrue(relay in pool.desiredRelays.value, "one refusal doesn't drop it yet")
+
+            close(pool, "sub", "error: search filter is required")
+            assertTrue(relay !in pool.desiredRelays.value, "a search-only relay with only plain subs is dropped (socket closes)")
+        }
+
+    @Test
+    fun aSearchOnlyRelayStaysWantedWhileASearchSubNeedsIt() =
+        kotlinx.coroutines.test.runTest {
+            val pool = PoolRequests(relayRefusals = RelayReqRefusals(threshold = 2))
+            pool.addOrUpdate("plain", mapOf(relay to plainFilter()), null)
+            pool.addOrUpdate("search", mapOf(relay to listOf(Filter(kinds = listOf(1), search = "nostr"))), null)
+
+            close(pool, "plain", "error: search filter is required")
+            close(pool, "plain", "error: search filter is required")
+
+            assertTrue(relay in pool.desiredRelays.value, "the relay stays wanted: a search sub still has a usable filter for it")
+        }
+
+    @Test
+    fun authRequiredAndRateLimitedAreNeverSuppressed() =
+        kotlinx.coroutines.test.runTest {
+            val pool = PoolRequests(maxRefusalsBeforeSuppress = 2)
+            pool.addOrUpdate("sub", mapOf(relay to plainFilter()), null)
+
+            repeat(4) {
+                reconnectAndSync(pool)
+                close(pool, "sub", MachineReadablePrefix.AUTH_REQUIRED.format("authenticate first"))
+            }
+            assertEquals(1, reconnectAndSync(pool).filterIsInstance<ReqCmd>().size, "auth-required must keep replaying (auth resolves it)")
+
+            val pool2 = PoolRequests(maxRefusalsBeforeSuppress = 2)
+            pool2.addOrUpdate("sub", mapOf(relay to plainFilter()), null)
+            repeat(4) {
+                pool2.onConnecting(relay)
+                val sent = mutableListOf<Command>()
+                pool2.syncState(relay) { sent.add(it) }
+                pool2.onIncomingMessage(FakeRelayClient(relay), ClosedMessage("sub", MachineReadablePrefix.RATE_LIMITED.format("slow down")))
+            }
             pool2.onConnecting(relay)
             val sent = mutableListOf<Command>()
             pool2.syncState(relay) { sent.add(it) }
-            pool2.onIncomingMessage(FakeRelayClient(relay), ClosedMessage("sub", MachineReadablePrefix.RATE_LIMITED.format("slow down")))
+            assertEquals(1, sent.filterIsInstance<ReqCmd>().size, "rate-limited must keep replaying (the limiter spaces it out)")
         }
-        pool2.onConnecting(relay)
-        val sent = mutableListOf<Command>()
-        pool2.syncState(relay) { sent.add(it) }
-        assertEquals(1, sent.filterIsInstance<ReqCmd>().size, "rate-limited must keep replaying (the limiter spaces it out)")
-    }
 }

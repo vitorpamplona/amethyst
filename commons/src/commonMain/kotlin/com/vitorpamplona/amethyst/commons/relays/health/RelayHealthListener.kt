@@ -44,7 +44,7 @@ class RelayHealthListener(
         store.recordConnect(relay.url, TimeUtils.now())
     }
 
-    override fun onIncomingMessage(
+    override suspend fun onIncomingMessage(
         relay: IRelayClient,
         msgStr: String,
         msg: Message,

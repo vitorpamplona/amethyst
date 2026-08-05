@@ -63,7 +63,7 @@ fun INostrClient.fetchAsFlow(
 
         val listener =
             object : SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

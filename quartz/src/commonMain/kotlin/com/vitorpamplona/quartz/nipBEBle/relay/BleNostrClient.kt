@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nipBEBle.relay
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nipBEBle.BleConfig
@@ -31,8 +32,14 @@ import com.vitorpamplona.quartz.nipBEBle.protocol.BleChunkAssembler
 import com.vitorpamplona.quartz.nipBEBle.protocol.BleMessageChunker
 import com.vitorpamplona.quartz.nipBEBle.transport.BleTransport
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -71,6 +78,31 @@ class BleNostrClient(
     private val assembler = BleChunkAssembler()
     private val sendQueue = Channel<Array<ByteArray>>(Channel.UNLIMITED)
     private val isSending = AtomicBoolean(false)
+
+    /** Parsed messages waiting to reach the suspending listener — see [onChunkReceived]. */
+    private val incoming = Channel<Pair<String, Message>>(Channel.UNLIMITED)
+
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    private val pump =
+        scope.launch {
+            for ((raw, msg) in incoming) {
+                try {
+                    listener.onIncomingMessage(this@BleNostrClient, raw, msg)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // One peer's bad message must not end the pump for the rest.
+                    Log.e("BleNostrClient", "Failure handling message from ${peer.deviceUuid}: $raw", e)
+                }
+            }
+        }
+
+    /** Stops the [pump]; the client is unusable afterwards, like a closed socket. */
+    fun release() {
+        incoming.close()
+        scope.cancel()
+    }
 
     override fun isConnected(): Boolean = connected
 
@@ -144,7 +176,13 @@ class BleNostrClient(
 
         try {
             val msg = OptimizedJsonMapper.fromJsonToMessage(message)
-            listener.onIncomingMessage(this, message, msg)
+            // The platform hands BLE notifications to a callback that cannot
+            // suspend, and the listener chain now does — so the message is
+            // handed off rather than delivered here. Same shape the websocket
+            // transport already uses: UNLIMITED so this callback never blocks
+            // the BLE stack, drained by ONE coroutine so message order survives
+            // the boundary.
+            incoming.trySend(message to msg)
         } catch (e: Exception) {
             Log.e("BleNostrClient", "Failed to parse message from ${peer.deviceUuid}: $message", e)
         }

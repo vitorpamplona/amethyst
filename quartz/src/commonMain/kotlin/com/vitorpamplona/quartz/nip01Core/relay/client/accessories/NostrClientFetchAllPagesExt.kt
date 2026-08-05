@@ -94,7 +94,7 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): Int {
     var until: Long? = null
     var totalEvents = 0
@@ -172,7 +172,7 @@ suspend fun INostrClient.fetchAllPages(
         try {
             val listener =
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -320,7 +320,7 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): Int =
     fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),

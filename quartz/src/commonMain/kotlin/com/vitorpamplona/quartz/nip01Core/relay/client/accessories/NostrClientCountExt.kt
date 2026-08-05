@@ -59,7 +59,7 @@ suspend fun INostrClient.count(
 
     val listener =
         object : RelayConnectionListener {
-            override fun onIncomingMessage(
+            override suspend fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
                 msg: Message,
@@ -117,7 +117,7 @@ suspend fun INostrClient.count(
 
     val listener =
         object : RelayConnectionListener {
-            override fun onIncomingMessage(
+            override suspend fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
                 msg: Message,

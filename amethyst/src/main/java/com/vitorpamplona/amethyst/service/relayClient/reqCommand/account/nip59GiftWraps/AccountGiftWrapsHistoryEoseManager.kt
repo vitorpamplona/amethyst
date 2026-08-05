@@ -115,7 +115,7 @@ class AccountGiftWrapsHistoryEoseManager(
         // cursors so a late callback can't move another account's cursors. newEose runs regardless.
         val myCursors = key.account.chatroomList.giftWrapHistory
         return object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,

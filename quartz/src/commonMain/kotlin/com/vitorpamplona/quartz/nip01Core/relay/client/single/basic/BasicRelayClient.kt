@@ -156,7 +156,7 @@ open class BasicRelayClient(
             listener.onConnected(this@BasicRelayClient, pingMillis, compression)
         }
 
-        override fun onMessage(text: String) {
+        override suspend fun onMessage(text: String) {
             try {
                 val msg = decoder.decode(text)
                 listener.onIncomingMessage(this@BasicRelayClient, text, msg)

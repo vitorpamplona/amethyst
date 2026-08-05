@@ -116,7 +116,7 @@ class ChatroomNip04HistorySubAssembler(
         // so a late callback can't move another room's cursors. newEose (framework bookkeeping) runs anyway.
         val myCursors = cursorsFor(key)
         return object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,

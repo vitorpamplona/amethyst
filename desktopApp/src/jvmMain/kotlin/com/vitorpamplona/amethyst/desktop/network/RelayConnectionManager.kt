@@ -200,7 +200,7 @@ open class RelayConnectionManager(
             filters = filterMap,
             listener =
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -264,7 +264,7 @@ open class RelayConnectionManager(
         }
     }
 
-    override fun onIncomingMessage(
+    override suspend fun onIncomingMessage(
         relay: IRelayClient,
         msgStr: String,
         msg: Message,
