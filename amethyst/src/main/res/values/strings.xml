@@ -214,6 +214,7 @@
     <string name="connection_success_rate_description">Percentage of successful connections to the relay</string>
     <string name="search_and_add_a_user">Search and add user</string>
     <string name="add_a_relay">Add a Relay</string>
+    <string name="relay_url_not_valid">Not a valid relay address. Use a host name, or an IP address in brackets (for example [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">My @tag name</string>
     <string name="display_name">Display Name</string>
     <string name="my_display_name">My display name</string>
