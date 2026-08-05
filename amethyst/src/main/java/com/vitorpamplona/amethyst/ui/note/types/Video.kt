@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -88,7 +89,9 @@ fun VideoDisplay(
     val content: BaseMediaContent =
         remember(note) {
             val description = videoEvent.content.ifBlank { null } ?: event.alt()
-            val isImage = imeta.mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(imeta.url)
+            // A NIP-71 event asserts its own type, so only an explicit image imeta diverts to the
+            // viewer; an unclassifiable one still belongs in the player. See classifyMedia.
+            val isImage = RichTextParser.classifyMedia(imeta.url, imeta.mimeType) == MediaContentKind.IMAGE
             val uri = note.toNostrUri()
 
             if (isImage) {
