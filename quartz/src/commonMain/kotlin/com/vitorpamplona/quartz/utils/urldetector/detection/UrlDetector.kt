@@ -91,7 +91,17 @@ class UrlDetector(
         while (!reader.eof()) {
             // read the next char to process.
             when (val curr = reader.read()) {
-                ' ' -> {
+                // A quote can never be part of a host name, so a note that wraps a bare domain in
+                // quotes (`the relay "relay.example.com" is down`) must not glue the opening quote
+                // onto the url. Quotes therefore end the current token exactly like a space does.
+                // Kept as literals (instead of `in QUOTES`) so this hot branch stays a tableswitch;
+                // the list must mirror [QUOTES], which the punctuation round-trip test enforces.
+                ' ', '"', '\'', '`',
+                '\u00AB', '\u00BB',
+                '\u2018', '\u2019', '\u201A', '\u201B',
+                '\u201C', '\u201D', '\u201E', '\u201F',
+                '\u2039', '\u203A',
+                -> {
                     // space found; if we have a scheme, attempt to read the domain before resetting
                     if (buffer.isNotEmpty() && hasScheme) {
                         reader.goBack()
@@ -719,6 +729,30 @@ class UrlDetector(
                 "$it//"
             }
 
+        /**
+         * Quotes never belong to a url. The opening side is already dropped when [readDefault]
+         * breaks the token on them, but the closing side can still be swallowed by the path,
+         * query or fragment readers (which only stop on a space), so it is stripped on [readEnd].
+         */
+        val QUOTES =
+            setOf(
+                '"',
+                '\'',
+                '`',
+                '\u00AB',
+                '\u00BB',
+                '\u2018',
+                '\u2019',
+                '\u201A',
+                '\u201B',
+                '\u201C',
+                '\u201D',
+                '\u201E',
+                '\u201F',
+                '\u2039',
+                '\u203A',
+            )
+
         val CANNOT_BEGIN_URLS_WITH =
             setOf(
                 ',',
@@ -734,7 +768,7 @@ class UrlDetector(
                 '\u3002',
                 '\uFF0E',
                 '\uFF61',
-            )
+            ) + QUOTES
 
         val CANNOT_END_URLS_WITH =
             setOf(
@@ -752,6 +786,6 @@ class UrlDetector(
                 '\u3002',
                 '\uFF0E',
                 '\uFF61',
-            )
+            ) + QUOTES
     }
 }

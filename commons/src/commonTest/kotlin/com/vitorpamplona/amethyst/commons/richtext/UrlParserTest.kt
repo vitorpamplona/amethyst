@@ -350,6 +350,34 @@ class UrlParserTest {
         )
 
     @Test
+    fun testQuotedRelayName() =
+        test(
+            "It seems like this bridge-relay \"relay.momostr.pink\" doesn't appear in the feed at all",
+            Urls(withoutScheme = setOf("relay.momostr.pink")),
+        )
+
+    @Test
+    fun testSingleQuotedRelayName() =
+        test(
+            "It seems like this bridge-relay 'relay.momostr.pink' doesn't appear in the feed at all",
+            Urls(withoutScheme = setOf("relay.momostr.pink")),
+        )
+
+    @Test
+    fun testQuotedUrlWithScheme() =
+        test(
+            "the docs are at \"https://example.com/some/page?a=b\" if you need them",
+            Urls(withScheme = setOf("https://example.com/some/page?a=b")),
+        )
+
+    @Test
+    fun testQuotedRelayUrl() =
+        test(
+            "add \"wss://relay.momostr.pink\" to your list",
+            Urls(relayUrls = setOf("wss://relay.momostr.pink")),
+        )
+
+    @Test
     fun testBlossom() {
         val blossom = "blossom:b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553.pdf?xs=cdn.satellite.earth"
         test(blossom, Urls(blossomUris = setOf(blossom)))
