@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.rememberAfterKeyboardCloses
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.HalfHorzPadding
@@ -46,10 +45,6 @@ fun ActionTopBar(
     onPost: () -> Unit,
     additionalActions: @Composable (() -> Unit)? = null,
 ) {
-    // Both exits pop the screen, and on a composer the keyboard is up while typing — the same
-    // pop-during-IME-animation race the back gesture avoids, just reached by a tap instead.
-    val afterKeyboardCloses = rememberAfterKeyboardCloses()
-
     ShorterTopAppBar(
         title = {
             if (titleRes != null) {
@@ -65,7 +60,7 @@ fun ActionTopBar(
         navigationIcon = {
             CloseButton(
                 modifier = HalfHorzPadding,
-                onPress = { afterKeyboardCloses(onCancel) },
+                onPress = onCancel,
             )
         },
         actions = {
@@ -75,7 +70,7 @@ fun ActionTopBar(
             Button(
                 modifier = HalfHorzPadding,
                 enabled = isActive(),
-                onClick = { afterKeyboardCloses(onPost) },
+                onClick = onPost,
             ) {
                 Text(text = stringRes(postRes))
             }
