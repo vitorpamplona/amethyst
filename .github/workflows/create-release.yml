@@ -48,10 +48,22 @@ jobs:
         # public-repo runner catalogue in 2025 (4 vCPU / 16 GB / arm64).
         # jpackage / jlink / Compose Multiplatform 1.11 all produce
         # host-native artifacts — no cross-compilation needed.
+        #
+        # The arm64 Windows leg builds the portable .zip ONLY — no MSI.
+        # jpackage --type msi shells out to WiX 3's heat/candle/light, and the
+        # windows-11-arm runner image ships no WiX (the windows-latest image
+        # has WiX 3.14 preinstalled, which is why the x64 leg can package an
+        # MSI). Installing it here would mean pulling an archived, x86-only
+        # toolchain (wixtoolset/wix3 was archived in Feb 2025; WiX 4+ dropped
+        # the candle/light CLI that JDK 21's jpackage requires) into the job
+        # that publishes signed release assets. The portable zip is the
+        # documented Windows install path for amy/geode already, so arm64
+        # Windows users get that until either the runner image gains WiX or
+        # jpackage learns the WiX 4+ CLI.
         include:
           - { os: macos-14,         arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
           - { os: windows-latest,   arch: x64,   family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
-          - { os: windows-11-arm,   arch: arm64, family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
+          - { os: windows-11-arm,   arch: arm64, family: windows,        tasks: "createReleaseDistributable" }
           - { os: ubuntu-latest,    arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
           - { os: ubuntu-24.04-arm, arch: arm64, family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
           - { os: ubuntu-latest,    arch: x64,   family: linux-portable, tasks: "createReleaseAppImage createReleaseDistributable" }

@@ -36,8 +36,11 @@ Platform-specific:
 
 - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
 - **Windows**: WiX Toolset 3.x on PATH (for MSI). `winget install WiXToolset.WiXToolset`.
-  Windows arm64 builds run on the free public-repo `windows-11-arm` GitHub runner —
-  jpackage on Windows arm64 produces arm64 MSIs natively; no cross-compilation.
+  Windows arm64 builds run on the free public-repo `windows-11-arm` GitHub runner
+  and produce the portable `.zip` only — that image ships no WiX, so CI cannot
+  package an arm64 MSI. Locally you *can* build one on an arm64 Windows box with
+  WiX 3.x installed (jpackage produces host-native artifacts; the WiX 3 binaries
+  themselves are x86 and run under emulation).
 - **Linux (all)**: nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
   `appimagetool` + `desktop-file-utils` for AppImage; `flatpak` +
   `flatpak-builder` for the Flatpak bundle (see
@@ -330,17 +333,27 @@ Quartz library in one pipeline.
 
 3. **Wait** for the `Create Release Assets` workflow to finish (~25–30 min).
 
-4. **Verify** — the GH Release should hold **37 assets**:
-   - **10 desktop** — `dmg` (macOS arm64); `msi` + `zip` per Windows arch
-     (x64 and arm64, 4 files); `deb`, `rpm`, `AppImage`, `flatpak`, `tar.gz`
-     for Linux x64+arm64 (5 formats × 2 arches shipped as one merged set of
-     5 in the current layout — see the previous release for the exact
-     enumeration). There is **no Intel/x64 macOS DMG** — `jpackage` cannot
-     cross-compile and no Intel runner leg is configured, so macOS ships
-     arm64-only.
+4. **Verify** — the GH Release should hold **47 assets**:
+   - **14 desktop**, one per matrix leg × format:
+     - macOS arm64: `dmg` (1)
+     - Windows x64: `msi` + portable `zip` (2)
+     - Windows arm64: portable `zip` only (1) — **no arm64 MSI**, see below
+     - Linux x64 / arm64: `deb` + `rpm` (4)
+     - Linux-portable x64 / arm64: `AppImage` + `tar.gz` + `flatpak` (6)
+
+     There is **no Intel/x64 macOS DMG** — `jpackage` cannot cross-compile
+     and no Intel runner leg is configured, so macOS ships arm64-only.
+     There is **no Windows arm64 MSI**: `jpackage --type msi` shells out to
+     WiX 3's `heat`/`candle`/`light`, and the `windows-11-arm` runner image
+     ships no WiX (`windows-latest` has WiX 3.14 preinstalled, which is why
+     the x64 leg gets an MSI). Revisit if that image gains WiX, or if
+     jpackage learns the WiX 4+ `wix build` CLI.
    - **13 Android** — 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the
      F-Droid `.apks` set built for Accrescent.
-   - **7 amy** + **7 geode** bundles (5 unix + 2 Windows portable zips each).
+   - **10 amy** — `tar.gz` (macOS arm64, Linux x64, Linux arm64),
+     `deb` + `rpm` per Linux arch, portable `zip` per Windows arch, and the
+     one arch-independent no-JRE `amy-<ver>-jvm.tar.gz` for Homebrew-core.
+   - **10 geode** — same shape as amy.
    - Asset sizes look sane (see §Enforce asset size budget — CI auto-fails at 1 GB/asset)
    - Android flow unchanged
 
