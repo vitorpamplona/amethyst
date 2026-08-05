@@ -203,6 +203,7 @@
     <string name="connection_success_rate_description">सफल संयोजनों का प्रतिशत पुनःप्रसारक के साथ</string>
     <string name="search_and_add_a_user">ढूँढें तथा प्रयेक्ता जोडें</string>
     <string name="add_a_relay">पुनःप्रसारक जोडें</string>
+    <string name="relay_url_not_valid">मान्य पुनःप्रसारक पता नहीं। एक जालावास नाम का उपयोग करें। अथवा कोष्ठकों में एक अंकीय जालपता उदाहरण [201:d0e:9ba5:8bbc::1]:8080 के जैसे।</string>
     <string name="my_name">मेरा @सूचक नाम</string>
     <string name="display_name">प्रदर्शन नाम</string>
     <string name="my_display_name">मेरा प्रदर्शन नाम</string>
