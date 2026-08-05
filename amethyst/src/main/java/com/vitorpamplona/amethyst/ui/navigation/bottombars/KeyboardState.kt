@@ -20,15 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imeAnimationTarget
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 
@@ -59,41 +55,4 @@ fun keyboardAsState(): State<KeyboardState> {
             if (imeInsets.getBottom(density) > 0) KeyboardState.Opened else KeyboardState.Closed
         }
     }
-}
-
-/**
- * A [BackHandler] that lets the system dismiss the soft keyboard before it consumes back.
- *
- * Chat composers (and draft-saving editors) intercept back to flush a draft and pop the screen.
- * While the keyboard is up we do NOT consume back, so the system dismisses it first with its own
- * animation — which completes cleanly, and on recent Android follows the back gesture rather than
- * snapping. The next back runs [onBack] as before.
- *
- * This is a UX preference, not the safety mechanism: the actual pop-during-IME-animation race is
- * handled for every exit in the app by
- * [ImeSettler][com.vitorpamplona.amethyst.ui.navigation.navs.ImeSettler] on `Nav`, so [onBack] is
- * safe to run whenever it fires.
- *
- * The gate reads [WindowInsets.imeAnimationTarget] — where the IME is *heading* — not the animated
- * [WindowInsets.ime]. Gating on the animated value left a hole: it stays above zero for the whole
- * close animation, ~250ms in which the IME has already stopped consuming back but this handler was
- * still disabled, so a second back fell through to the NavController and popped the screen without
- * ever running [onBack] — silently dropping the draft it exists to save, since nothing else saves
- * one. The target flips to zero the moment the hide begins, so back keeps reaching [onBack]
- * throughout the animation.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun KeyboardAwareBackHandler(
-    enabled: Boolean = true,
-    onBack: () -> Unit,
-) {
-    val density = LocalDensity.current
-    val imeTarget = WindowInsets.imeAnimationTarget
-
-    val keyboardIsStaying by remember(density, imeTarget) {
-        derivedStateOf { imeTarget.getBottom(density) > 0 }
-    }
-
-    BackHandler(enabled = enabled && !keyboardIsStaying, onBack = onBack)
 }
