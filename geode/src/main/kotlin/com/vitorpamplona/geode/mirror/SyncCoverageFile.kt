@@ -100,8 +100,7 @@ class SyncCoverageFile(
                 root.mapValues { (_, v) ->
                     val o = v.jsonObject
                     SyncCoverage.Band(
-                        o.getValue("min").jsonPrimitive.long,
-                        o.getValue("max").jsonPrimitive.long,
+                        spansOf(o),
                         o["complete"]?.jsonPrimitive?.boolean ?: false,
                         o["fullAt"]?.jsonPrimitive?.long ?: 0L,
                     )
@@ -110,6 +109,30 @@ class SyncCoverageFile(
         }.onFailure {
             Log.w("SyncCoverageFile") { "could not read ${file.path} (${it.message}); starting fresh" }
         }
+    }
+
+    /**
+     * The per-kind spans, or the single pre-split span read as covering every
+     * kind under [SyncCoverage.ALL_KINDS].
+     *
+     * A file written before coverage was tracked per kind carries only
+     * `min`/`max`, and that is exactly the over-wide claim per-kind spans
+     * exist to stop — so it is loaded as what it always meant rather than
+     * discarded, and the first paged walk that reports per kind replaces it.
+     * Dropping it instead would re-download every upstream's corpus once on
+     * upgrade, which is the cost bands exist to avoid.
+     */
+    private fun spansOf(o: JsonObject): Map<Int, SyncCoverage.Span> {
+        o["spans"]?.jsonObject?.let { spans ->
+            return spans.entries.associate { (kind, v) ->
+                val span = v.jsonObject
+                kind.toInt() to SyncCoverage.Span(span.getValue("min").jsonPrimitive.long, span.getValue("max").jsonPrimitive.long)
+            }
+        }
+        return mapOf(
+            SyncCoverage.ALL_KINDS to
+                SyncCoverage.Span(o.getValue("min").jsonPrimitive.long, o.getValue("max").jsonPrimitive.long),
+        )
     }
 
     @Synchronized
@@ -121,10 +144,30 @@ class SyncCoverageFile(
                         put(
                             key,
                             buildJsonObject {
+                                // min/max are the outer edges across every
+                                // kind, and are written for two readers: a
+                                // human debugging why an upstream re-synced,
+                                // and a ROLLBACK — a binary from before spans
+                                // were per kind reads these and behaves as it
+                                // always did, rather than failing to parse.
                                 put("min", band.minCreatedAt)
                                 put("max", band.maxCreatedAt)
                                 put("complete", band.complete)
                                 put("fullAt", band.fullAt)
+                                put(
+                                    "spans",
+                                    buildJsonObject {
+                                        band.spans.forEach { (kind, span) ->
+                                            put(
+                                                kind.toString(),
+                                                buildJsonObject {
+                                                    put("min", span.min)
+                                                    put("max", span.max)
+                                                },
+                                            )
+                                        }
+                                    },
+                                )
                             },
                         )
                     }
