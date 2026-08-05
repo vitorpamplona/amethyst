@@ -382,4 +382,124 @@ class SyncCoverageTest {
         val copy = Filter(kinds = listOf(30382), authors = (1..500).map { it.toString(16).padStart(64, '0') })
         assertEquals(1_700_001_000L, c.band(relay, copy)?.minCreatedAt, "identity caching must not change the key")
     }
+
+    // ---- per-kind spans: one interval cannot speak for several kinds -------
+
+    private val mixed = Filter(kinds = listOf(0, 30382))
+
+    /** Does any leg still ask [kind] about the instant [at]? */
+    private fun reaches(
+        legs: List<Filter>,
+        kind: Int,
+        at: Long,
+    ) = legs.any {
+        (it.kinds?.contains(kind) ?: true) &&
+            (it.since ?: Long.MIN_VALUE) <= at &&
+            at <= (it.until ?: Long.MAX_VALUE)
+    }
+
+    @Test
+    fun `a long-lived kind no longer vouches for a short-lived one`() {
+        // THE BUG. Ask for profiles and score cards together: the relay has
+        // profiles going back years and score cards only from last month. One
+        // interval per band recorded 2020..now for the pair, and the next run
+        // skipped that whole interior for BOTH — so score cards written inside
+        // it were never asked for again, and nothing anywhere said so.
+        val c = SyncCoverage()
+        c.record(
+            relay,
+            mixed,
+            null,
+            null,
+            paged = true,
+            observedByKind =
+                mapOf(
+                    0 to SyncCoverage.Span(1_600_000_000L, 1_700_000_000L),
+                    30382 to SyncCoverage.Span(1_690_000_000L, 1_700_000_000L),
+                ),
+        )
+        val legs = c.legs(relay, mixed)
+
+        assertTrue(!reaches(legs, 0, 1_650_000_000L), "kind 0 really was walked there — do not re-read it")
+        assertTrue(reaches(legs, 30382, 1_650_000_000L), "kind 30382 never was, and must still be asked")
+        // Both keep the ground they actually earned.
+        assertTrue(!reaches(legs, 30382, 1_695_000_000L), "…but not its own covered interior")
+        assertTrue(reaches(legs, 0, 1_500_000_000L), "and both still reach below everything walked")
+    }
+
+    @Test
+    fun `kinds whose coverage agrees stay a single ask`() {
+        // The cost control. Splitting per kind would turn two legs into two
+        // per kind on every filter, which is the common case made worse to fix
+        // the rare one. Kinds are regrouped by the windows they want, so
+        // identical coverage collapses back to exactly what it was before.
+        val c = SyncCoverage()
+        val span = SyncCoverage.Span(1_690_000_000L, 1_700_000_000L)
+        c.record(relay, mixed, null, null, paged = true, observedByKind = mapOf(0 to span, 30382 to span))
+
+        val legs = c.legs(relay, mixed)
+        assertEquals(2, legs.size, "two legs, not two per kind")
+        assertEquals(listOf(0, 30382), legs[0].kinds, "and both kinds ride in one ask")
+    }
+
+    @Test
+    fun `a multi-kind paged walk with no per-kind evidence earns no band`() {
+        // The caller did not say which kind it saw where, so the only band
+        // available is the over-wide one. Refused: a band that over-claims
+        // skips events silently, which is worse than re-reading them. The
+        // walk resumes from nothing, exactly as it did before bands existed.
+        val c = SyncCoverage()
+        c.record(relay, mixed, 1_690_000_000L, 1_700_000_000L, paged = true)
+
+        assertNull(c.band(relay, mixed))
+        assertEquals(listOf(mixed), c.legs(relay, mixed))
+
+        // A filter naming ONE kind is unaffected: there, the aggregate IS the
+        // per-kind answer and nothing was ever ambiguous about it.
+        c.record(relay, profiles, 1_690_000_000L, 1_700_000_000L, paged = true)
+        assertEquals(2, c.legs(relay, profiles).size)
+    }
+
+    @Test
+    fun `a finished reconcile covers every kind the filter names`() {
+        // Negentropy compares the filter's whole id set in one pass, so it
+        // either covers every kind in it or none — no per-kind evidence needed,
+        // and none invented.
+        val c = SyncCoverage()
+        c.record(relay, mixed, null, null, paged = false, reconciledThrough = 1_700_000_000L)
+
+        assertEquals(setOf(0, 30382), c.band(relay, mixed)!!.spans.keys)
+        val legs = c.legs(relay, mixed)
+        assertEquals(1, legs.size, "complete: no older leg, and one shared newer one")
+        assertEquals(1_700_000_000L, legs[0].since)
+    }
+
+    @Test
+    fun `a band restored from a pre-split file still narrows every kind`() {
+        // Files written before spans were per kind carry one interval. It is
+        // the old, wider claim — loaded as what it always meant rather than
+        // discarded, because discarding it would re-download every upstream's
+        // corpus once on upgrade. The first per-kind walk replaces it.
+        val seed = SyncCoverage()
+        // A plausible span, or record() correctly drops it and there is no key to read.
+        seed.record(relay, mixed, null, null, paged = true, observedByKind = mapOf(0 to SyncCoverage.Span(1_690_000_000L, 1_700_000_000L)))
+        val key = seed.export().keys.single()
+
+        val restored = SyncCoverage()
+        restored.restore(
+            mapOf(
+                key to
+                    SyncCoverage.Band(
+                        mapOf(SyncCoverage.ALL_KINDS to SyncCoverage.Span(1_690_000_000L, 1_700_000_000L)),
+                        complete = false,
+                        fullAt = now(),
+                    ),
+            ),
+        )
+
+        val legs = restored.legs(relay, mixed)
+        assertEquals(2, legs.size, "one shared pair of legs, which is the old behaviour exactly")
+        assertEquals(listOf(0, 30382), legs[0].kinds)
+        assertEquals(1_690_000_000L, legs[0].until)
+    }
 }
