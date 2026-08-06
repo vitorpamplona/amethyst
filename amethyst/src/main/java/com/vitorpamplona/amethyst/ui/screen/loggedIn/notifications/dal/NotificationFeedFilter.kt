@@ -67,6 +67,12 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
@@ -173,6 +179,18 @@ class NotificationFeedFilter(
                 GitPatchEvent.KIND,
                 GitPullRequestEvent.KIND,
                 GitPullRequestUpdateEvent.KIND,
+                // NIP-34 threaded activity: legacy comment (1622, deprecated by
+                // NIP-22 but still in the wild) and the four status transitions
+                // (open/applied/closed/draft, kinds 1630-1633). Included so
+                // "someone merged/closed my PR" and "someone commented on my
+                // patch" surface on the Notifications tab — without this the
+                // status kinds arrive via the p-tag subscription and sit in
+                // LocalCache invisible.
+                GitReplyEvent.KIND,
+                GitStatusOpenEvent.KIND,
+                GitStatusAppliedEvent.KIND,
+                GitStatusClosedEvent.KIND,
+                GitStatusDraftEvent.KIND,
                 HighlightEvent.KIND,
                 TextNoteEvent.KIND,
                 ReactionEvent.KIND,
@@ -262,8 +280,15 @@ class NotificationFeedFilter(
             }
 
             if (event is GitIssueEvent || event is GitPatchEvent ||
-                event is GitPullRequestEvent || event is GitPullRequestUpdateEvent
+                event is GitPullRequestEvent || event is GitPullRequestUpdateEvent ||
+                event is GitReplyEvent || event is GitStatusEvent
             ) {
+                // NIP-34 events reach the notifications tab only via the p-tag
+                // relay filter, which already selected them because the current
+                // user is on the participant list. Any further check would
+                // require walking a chain of prior status/reply events that
+                // aren't guaranteed to be in cache; short-circuit to trust the
+                // p-tag — same policy applied to issues/patches/PRs above.
                 return true
             }
 

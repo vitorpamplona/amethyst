@@ -47,6 +47,11 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
@@ -105,7 +110,9 @@ class NotificationDispatcher(
         // consumeFromCache can't route it. It's delivered directly via
         // [notifyWelcome] from processMarmotWelcomeFlow, which does know the
         // recipient account.
-        private val NOTIFICATION_KINDS: Set<Int> =
+        // `internal` (was `private`) so the notification-kinds contract test
+        // can pin the push-side kind set against the in-app feed's kind set.
+        internal val NOTIFICATION_KINDS: Set<Int> =
             setOf(
                 // Direct-arrival
                 PrivateDmEvent.KIND,
@@ -131,6 +138,14 @@ class NotificationDispatcher(
                 GitIssueEvent.KIND,
                 GitPullRequestEvent.KIND,
                 GitPullRequestUpdateEvent.KIND,
+                // NIP-34 threaded activity: legacy git-reply comment (1622)
+                // and the four status transitions (open/applied/closed/draft,
+                // kinds 1630-1633). Same push channel as issues/patches/PRs.
+                GitReplyEvent.KIND,
+                GitStatusOpenEvent.KIND,
+                GitStatusAppliedEvent.KIND,
+                GitStatusClosedEvent.KIND,
+                GitStatusDraftEvent.KIND,
                 HighlightEvent.KIND,
                 LongTextNoteEvent.KIND,
                 WikiNoteEvent.KIND,

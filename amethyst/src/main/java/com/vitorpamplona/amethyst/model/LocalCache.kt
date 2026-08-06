@@ -1278,6 +1278,22 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 event.tagsWithoutCitations().filter { it != event.repository()?.toTag() }.mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is GitPullRequestUpdateEvent -> {
+                // Link the update to its parent PR so it lands in the PR's
+                // replies collection (and picks up its target for threading).
+                // The repository ATag isn't a reply target — skip it.
+                listOfNotNull(event.parentPullRequestId()?.let { checkGetOrCreateNote(it) })
+            }
+
+            is GitStatusEvent -> {
+                // A status event roots itself at a patch/PR/issue via a
+                // marked-`root` `e` tag; link only that so the transition
+                // appears in the target's replies (GitStatusIndex reduces the
+                // observed stream separately and doesn't need this wiring, but
+                // ThreadFeedView and the notifications-tab reply chain do).
+                listOfNotNull(event.rootEventId()?.let { checkGetOrCreateNote(it) })
+            }
+
             is TextNoteEvent -> {
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }

@@ -35,12 +35,26 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 
 /**
  * Git / code notifications — NIP-34 issues (1621), patches (1617), pull requests
- * (1618) and PR updates (1619) on repos you maintain. Rendered as a slate card
- * titled by the action ("X opened an issue" …) with the subject as the body.
+ * (1618), PR updates (1619), replies (1622, legacy), and status transitions
+ * (1630 open, 1631 applied/merged, 1632 closed, 1633 draft) on repos or threads
+ * you're p-tagged into. Rendered as a slate card titled by the action ("X opened
+ * an issue", "X merged a pull request", …) with the subject as the body.
  * Author name + avatar enriched observably.
+ *
+ * Status kinds resolve their title from the *target* event's kind (patch/PR/issue)
+ * when it's in cache, so a merge on a PR reads "merged a pull request" but the
+ * same 1631 targeting a plain kind-1617 patch reads "applied a patch". Falls
+ * back to a generic wording when the target isn't yet resolved (rare: the
+ * notification lands after the target because the p-tag subscription pulls
+ * status events regardless of whether the target has been seen).
  */
 object CodeNotification {
     suspend fun notify(
@@ -66,6 +80,89 @@ object CodeNotification {
         account: Account,
         event: GitPullRequestUpdateEvent,
     ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_pr_update, event.content)
+
+    suspend fun notify(
+        context: Context,
+        account: Account,
+        event: GitReplyEvent,
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_reply, event.content)
+
+    suspend fun notify(
+        context: Context,
+        account: Account,
+        event: GitStatusOpenEvent,
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_status_open, event.content)
+
+    suspend fun notify(
+        context: Context,
+        account: Account,
+        event: GitStatusAppliedEvent,
+    ) = post(
+        context,
+        account,
+        event.id,
+        event.createdAt,
+        event.pubKey,
+        titleRes =
+            titleForStatusOnTarget(
+                event.rootEventId(),
+                pr = R.string.app_notification_code_channel_message_status_applied_pr,
+                patch = R.string.app_notification_code_channel_message_status_applied_patch,
+                issue = R.string.app_notification_code_channel_message_status_applied_issue,
+                fallback = R.string.app_notification_code_channel_message_status_applied,
+            ),
+        subject = event.content,
+    )
+
+    suspend fun notify(
+        context: Context,
+        account: Account,
+        event: GitStatusClosedEvent,
+    ) = post(
+        context,
+        account,
+        event.id,
+        event.createdAt,
+        event.pubKey,
+        titleRes =
+            titleForStatusOnTarget(
+                event.rootEventId(),
+                pr = R.string.app_notification_code_channel_message_status_closed_pr,
+                patch = R.string.app_notification_code_channel_message_status_closed_patch,
+                issue = R.string.app_notification_code_channel_message_status_closed_issue,
+                fallback = R.string.app_notification_code_channel_message_status_closed,
+            ),
+        subject = event.content,
+    )
+
+    suspend fun notify(
+        context: Context,
+        account: Account,
+        event: GitStatusDraftEvent,
+    ) = post(context, account, event.id, event.createdAt, event.pubKey, R.string.app_notification_code_channel_message_status_draft, event.content)
+
+    /**
+     * Pick a title string for a status event based on the *target*'s kind, so
+     * a 1631 on a kind-1618 PR reads "merged a pull request" while the same
+     * status kind on a kind-1617 patch reads "applied a patch". [rootId] is
+     * the marked-`root` `e` tag on the status event; when the target isn't in
+     * cache we return [fallback] which is deliberately generic.
+     */
+    private fun titleForStatusOnTarget(
+        rootId: String?,
+        pr: Int,
+        patch: Int,
+        issue: Int,
+        fallback: Int,
+    ): Int {
+        val targetKind = rootId?.let { LocalCache.getNoteIfExists(it)?.event?.kind } ?: return fallback
+        return when (targetKind) {
+            GitPullRequestEvent.KIND -> pr
+            GitPatchEvent.KIND -> patch
+            GitIssueEvent.KIND -> issue
+            else -> fallback
+        }
+    }
 
     private suspend fun post(
         context: Context,

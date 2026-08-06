@@ -2085,11 +2085,22 @@
     <!-- Code &amp; git -->
     <string name="app_notification_code_channel_id" translatable="false">CodeID</string>
     <string name="app_notification_code_channel_name">Code &amp; Git</string>
-    <string name="app_notification_code_channel_description">Notifies you about issues, patches, and pull requests</string>
+    <string name="app_notification_code_channel_description">Notifies you about issues, patches, pull requests, comments, merges, and closes</string>
     <string name="app_notification_code_channel_message_issue">%1$s opened an issue</string>
     <string name="app_notification_code_channel_message_patch">%1$s sent a patch</string>
     <string name="app_notification_code_channel_message_pr">%1$s opened a pull request</string>
     <string name="app_notification_code_channel_message_pr_update">%1$s updated a pull request</string>
+    <string name="app_notification_code_channel_message_reply">%1$s commented</string>
+    <string name="app_notification_code_channel_message_status_open">%1$s reopened a thread</string>
+    <string name="app_notification_code_channel_message_status_applied_pr">%1$s merged a pull request</string>
+    <string name="app_notification_code_channel_message_status_applied_patch">%1$s applied a patch</string>
+    <string name="app_notification_code_channel_message_status_applied_issue">%1$s resolved an issue</string>
+    <string name="app_notification_code_channel_message_status_applied">%1$s merged/resolved a thread</string>
+    <string name="app_notification_code_channel_message_status_closed_pr">%1$s closed a pull request</string>
+    <string name="app_notification_code_channel_message_status_closed_patch">%1$s closed a patch</string>
+    <string name="app_notification_code_channel_message_status_closed_issue">%1$s closed an issue</string>
+    <string name="app_notification_code_channel_message_status_closed">%1$s closed a thread</string>
+    <string name="app_notification_code_channel_message_status_draft">%1$s marked a thread as draft</string>
     <string name="app_notification_code_summary">New code activity</string>
 
     <!-- Badges -->
@@ -4518,6 +4529,10 @@
     <string name="kind_git_reply">Git Reply</string>
     <string name="kind_git_pr">Pull Request</string>
     <string name="kind_git_pr_update">PR Update</string>
+    <string name="kind_git_status_open">Git Status: Open</string>
+    <string name="kind_git_status_applied">Git Status: Applied</string>
+    <string name="kind_git_status_closed">Git Status: Closed</string>
+    <string name="kind_git_status_draft">Git Status: Draft</string>
     <string name="kind_zap_goals">Zap Goals</string>
     <string name="kind_hashtag_follows">Hashtag Follows</string>
     <string name="kind_highlights">Highlights</string>
