@@ -18,14 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
+package com.vitorpamplona.amethyst.commons.relayClient.user.watchers
 
-import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
-import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
+import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
@@ -37,7 +36,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 class UserWatcherSubAssembler(
     client: INostrClient,
-    val cache: LocalCache,
+    val cache: ICacheProvider,
     val failureTracker: RelayOfflineTracker,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : BaseEoseManager<UserFinderQueryState>(client, allKeys) {
@@ -100,20 +99,18 @@ class UserWatcherSubAssembler(
         // account and the users are whoever is on screen, so with several askers none of them owns it.
         val soleAccountPubKey =
             keys
-                .mapTo(mutableSetOf()) { it.account.userProfile().pubkeyHex }
+                .mapTo(mutableSetOf()) { it.account.userFinderPubkeyHex }
                 .singleOrNull()
 
         val indexRelays = mutableSetOf<NormalizedRelayUrl>()
         keys.mapTo(mutableSetOf()) { it.account }.forEach {
-            indexRelays.addAll(
-                it.indexerRelayList.flow.value
-                    .ifEmpty { DefaultIndexerRelayList },
-            )
+            indexRelays.addAll(it.indexRelays())
         }
 
         val newFilters =
             filterUserMetadataForKey(
                 users,
+                cache.relayHints,
                 indexRelays,
                 failureTracker.cannotConnectRelays,
                 latestEOSEs,

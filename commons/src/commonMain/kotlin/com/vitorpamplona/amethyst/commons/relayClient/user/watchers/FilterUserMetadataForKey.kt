@@ -18,16 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
+package com.vitorpamplona.amethyst.commons.relayClient.user.watchers
 
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
+import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -60,6 +60,7 @@ val UserMetadataForKeyKinds =
 
 fun filterUserMetadataForKey(
     authors: Set<User>,
+    relayHints: HintIndexer,
     indexRelays: Set<NormalizedRelayUrl>,
     cannotConnectRelays: Set<NormalizedRelayUrl>,
     since: EOSEAccountFast<User>,
@@ -72,7 +73,7 @@ fun filterUserMetadataForKey(
                 val relays =
                     when {
                         outbox == null ->
-                            key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays
+                            key.allUsedRelays() + relayHints.hintsForKey(key.pubkeyHex) + indexRelays
                         // Outbox is published but exhausted (every relay either EOSE'd
                         // or is known-unreachable) and metadata is still missing —
                         // widen to indexers so a misconfigured outbox doesn't strand

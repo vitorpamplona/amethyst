@@ -18,18 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders
+package com.vitorpamplona.amethyst.commons.relayClient.user.loaders
 
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.pickRelaysToLoadUsers
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
-import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.user.pickRelaysToLoadUsers
+import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 
 class UserOutboxFinderSubAssembler(
     client: INostrClient,
-    val cache: LocalCache,
+    val cache: ICacheProvider,
     val failureTracker: RelayOfflineTracker,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : BaseEoseManager<UserFinderQueryState>(client, allKeys) {
@@ -108,19 +108,37 @@ class UserOutboxFinderSubAssembler(
         // and the users being resolved are whoever is on screen rather than anyone's follow list — so
         // with several accounts active there is no single honest owner for a given filter, and
         // splitting the sweep per account would re-issue the same lookups once per account.
-        // Deduped by pubkey, not by `Account`: that class uses identity equality, so two objects for
-        // the same logged-in user would look like two accounts and suppress attribution entirely.
+        // Deduped by pubkey, not by account identity: two objects for the same logged-in user would
+        // look like two accounts and suppress attribution entirely.
         val soleAccountPubKey =
             accounts
-                .mapTo(mutableSetOf()) { it.userProfile().pubkeyHex }
+                .mapTo(mutableSetOf()) { it.userFinderPubkeyHex }
                 .singleOrNull()
+
+        // Union of every asking account's relay tiers. The UserFinderAccount getters already apply the
+        // platform default fallbacks (index/search), matching the prior outer pickRelaysToLoadUsers.
+        val cannotConnect = failureTracker.cannotConnectRelays
+        val indexRelays = mutableSetOf<NormalizedRelayUrl>()
+        val homeRelays = mutableSetOf<NormalizedRelayUrl>()
+        val searchRelays = mutableSetOf<NormalizedRelayUrl>()
+        val commonRelays = mutableSetOf<NormalizedRelayUrl>()
+        accounts.forEach { account ->
+            indexRelays.addAll(account.indexRelays())
+            homeRelays.addAll(account.outboxHomeRelays())
+            searchRelays.addAll(account.searchRelays())
+            commonRelays.addAll(account.commonRelays())
+        }
 
         val perRelayKeysBoth =
             pickRelaysToLoadUsers(
                 noOutboxList,
-                accounts,
+                cache.relayHints,
+                indexRelays - cannotConnect,
+                homeRelays - cannotConnect,
+                searchRelays - cannotConnect,
                 connectedRelays,
-                failureTracker.cannotConnectRelays,
+                commonRelays - cannotConnect,
+                cannotConnect,
                 hasTried,
             )
 
