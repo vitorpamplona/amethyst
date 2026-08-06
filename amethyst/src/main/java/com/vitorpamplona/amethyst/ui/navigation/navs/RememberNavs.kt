@@ -29,9 +29,10 @@ import androidx.navigation.compose.rememberNavController
 fun rememberNav(): Nav {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
+    val ime = rememberImeSettler()
 
-    return remember(navController, scope) {
-        Nav(navController, scope)
+    return remember(navController, scope, ime) {
+        Nav(navController, scope, ime)
     }
 }
 

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -66,7 +67,6 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
-import com.vitorpamplona.amethyst.ui.navigation.bottombars.KeyboardAwareBackHandler
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
@@ -177,7 +177,7 @@ fun GenericCommentPostScreen(
 
     StrippingFailureDialog(postViewModel.strippingFailureConfirmation)
 
-    KeyboardAwareBackHandler {
+    BackHandler {
         accountViewModel.launchSigner {
             postViewModel.sendDraftSync()
             postViewModel.cancel()
