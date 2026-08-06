@@ -121,10 +121,18 @@ class MessageDeserializer : StdDeserializer<Message>(Message::class.java) {
                 }
 
                 NegErrMessage.LABEL -> {
-                    NegErrMessage(
-                        subId = jp.nextTextValue(),
-                        reason = jp.nextTextValue() ?: "",
-                    )
+                    val subId = jp.nextTextValue()
+                    val reason = jp.nextTextValue() ?: ""
+                    // The optional fourth element, the relay's own cap. Read by
+                    // stepping one token: anything that is not a number leaves
+                    // the loop below to drain the frame, as before.
+                    val cap =
+                        if (jp.nextToken() == JsonToken.VALUE_NUMBER_INT) {
+                            jp.longValue
+                        } else {
+                            null
+                        }
+                    NegErrMessage(subId, reason, cap)
                 }
 
                 else -> {

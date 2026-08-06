@@ -129,6 +129,7 @@ class MessageSerializer : StdSerializer<Message>(Message::class.java) {
             is NegErrMessage -> {
                 gen.writeString(msg.subId)
                 gen.writeString(msg.reason)
+                msg.cap?.let { gen.writeNumber(it) }
             }
         }
 
