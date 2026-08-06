@@ -124,6 +124,70 @@ class Nip77SerializationTest {
         assertEquals(msg.reason, jacksonDeserialized.reason)
     }
 
+    @Test
+    fun serializeNegErrMessageWithCap_matchesJackson() {
+        val msg = NegErrMessage("neg-sub1", "blocked: too many query results", 1_000_000L)
+        val jacksonJson = JacksonMapper.toJson(msg)
+        val kotlinJson = KotlinSerializationMapper.toJson(msg)
+
+        assertEquals(jacksonJson, kotlinJson)
+        assertEquals("""["NEG-ERR","neg-sub1","blocked: too many query results",1000000]""", kotlinJson)
+    }
+
+    @Test
+    fun serializeNegErrMessageWithoutCap_staysThreeElements() {
+        // NIP-77 describes a three-element NEG-ERR. A refusal with no cap to
+        // state must stay exactly that, rather than growing a fourth element
+        // every existing reader then has to tolerate.
+        val msg = NegErrMessage("neg-sub1", "closed: timeout")
+        assertEquals("""["NEG-ERR","neg-sub1","closed: timeout"]""", KotlinSerializationMapper.toJson(msg))
+        assertEquals("""["NEG-ERR","neg-sub1","closed: timeout"]""", JacksonMapper.toJson(msg))
+    }
+
+    @Test
+    fun deserializeNegErrMessageWithCap_bothMappers() {
+        val json = """["NEG-ERR","neg-sub1","blocked: too many query results",1000000]"""
+
+        val jackson = JacksonMapper.fromJsonToMessage(json)
+        assertTrue(jackson is NegErrMessage)
+        assertEquals(1_000_000L, jackson.cap)
+        assertEquals(1_000_000L, jackson.statedCap)
+
+        val kotlin = KotlinSerializationMapper.fromJsonToMessage(json)
+        assertTrue(kotlin is NegErrMessage)
+        assertEquals(1_000_000L, kotlin.cap)
+    }
+
+    @Test
+    fun deserializeNegErrMessageWithGarbageFourthElement_bothMappers() {
+        // A relay that puts something else there is telling us nothing; it must
+        // not break the frame that carries the reason.
+        val json = """["NEG-ERR","neg-sub1","blocked: too many query results","soon"]"""
+
+        val jackson = JacksonMapper.fromJsonToMessage(json)
+        assertTrue(jackson is NegErrMessage)
+        assertEquals("blocked: too many query results", jackson.reason)
+        assertEquals(null, jackson.cap)
+
+        val kotlin = KotlinSerializationMapper.fromJsonToMessage(json)
+        assertTrue(kotlin is NegErrMessage)
+        assertEquals("blocked: too many query results", kotlin.reason)
+        assertEquals(null, kotlin.cap)
+    }
+
+    @Test
+    fun negErrMessageWithCap_crossDeserialization() {
+        val msg = NegErrMessage("neg-sub1", "blocked: too many records", 500_000L)
+
+        val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(JacksonMapper.toJson(msg))
+        assertTrue(kotlinDeserialized is NegErrMessage)
+        assertEquals(500_000L, kotlinDeserialized.cap)
+
+        val jacksonDeserialized = JacksonMapper.fromJsonToMessage(KotlinSerializationMapper.toJson(msg))
+        assertTrue(jacksonDeserialized is NegErrMessage)
+        assertEquals(500_000L, jacksonDeserialized.cap)
+    }
+
     // =========================================================================
     // NEG-OPEN Command (client-to-relay) Tests
     // =========================================================================
