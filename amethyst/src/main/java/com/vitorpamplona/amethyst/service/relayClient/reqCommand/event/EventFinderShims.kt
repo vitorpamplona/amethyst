@@ -21,30 +21,30 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+/**
+ * Back-compat aliases: the per-note event finder moved to commons
+ * (`com.vitorpamplona.amethyst.commons.relayClient.event`). Existing Android call
+ * sites that reference these by their old names resolve here.
+ */
+typealias EventFinderFilterAssembler = com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler
+
+typealias EventFinderQueryState = com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
+
+/**
+ * Android convenience overload: pulls the account + shared event-finder data source
+ * out of [accountViewModel] and delegates to the commons subscription. `Account`
+ * is-a `UserFinderAccount`, so no adaptation is needed.
+ */
 @Composable
 fun EventFinderFilterAssemblerSubscription(
     note: Note,
     accountViewModel: AccountViewModel,
-) = EventFinderFilterAssemblerSubscription(note, accountViewModel.account, accountViewModel.dataSources().eventFinder)
-
-@Composable
-fun EventFinderFilterAssemblerSubscription(
-    note: Note,
-    account: Account,
-    dataSource: EventFinderFilterAssembler,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(note, account) {
-            EventFinderQueryState(note, account)
-        }
-
-    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
-}
+) = EventFinderFilterAssemblerSubscription(
+    note,
+    accountViewModel.account,
+    accountViewModel.dataSources().eventFinder,
+)

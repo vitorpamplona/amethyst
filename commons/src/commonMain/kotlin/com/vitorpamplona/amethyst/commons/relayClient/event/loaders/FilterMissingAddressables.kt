@@ -18,33 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
+package com.vitorpamplona.amethyst.commons.relayClient.event.loaders
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
 
-fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl> {
+fun potentialRelaysToFindAddress(
+    cache: ICacheProvider,
+    note: AddressableNote,
+): Set<NormalizedRelayUrl> {
     val set = mutableSetOf<NormalizedRelayUrl>()
 
-    LocalCache.getOrCreateUser(note.address.pubKeyHex).outboxRelays()?.let {
+    cache.getOrCreateUser(note.address.pubKeyHex)?.outboxRelays()?.let {
         set.addAll(it)
     }
 
-    set.addAll(LocalCache.relayHints.hintsForAddress(note.idHex))
+    set.addAll(cache.relayHints.hintsForAddress(note.idHex))
 
-    LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
+    cache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
 
     note.replyTo?.forEach { parentNote ->
         set.addAll(parentNote.relays)
 
-        LocalCache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
+        cache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
 
         parentNote.author?.inboxRelays()?.let { set.addAll(it) }
     }
@@ -52,7 +55,7 @@ fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl>
     note.replies.forEach { childNote ->
         set.addAll(childNote.relays)
 
-        LocalCache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
+        cache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
 
         childNote.author?.outboxRelays()?.let { set.addAll(it) }
     }
@@ -72,13 +75,16 @@ fun potentialRelaysToFindAddress(note: AddressableNote): Set<NormalizedRelayUrl>
     return set
 }
 
-fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBasedFilter> {
+fun filterMissingAddressables(
+    cache: ICacheProvider,
+    keys: List<EventFinderQueryState>,
+): List<RelayBasedFilter> {
     val addressesPerRelay =
         mapOfSet {
             keys.forEach { key ->
-                val default = key.account.followPlusAllMineWithSearch.flow.value
+                val default = key.account.followPlusAllMineWithSearchRelays()
                 if (key.note is AddressableNote && key.note.event == null) {
-                    potentialRelaysToFindAddress(key.note).ifEmpty { default }.forEach { relayUrl ->
+                    potentialRelaysToFindAddress(cache, key.note).ifEmpty { default }.forEach { relayUrl ->
                         add(relayUrl, key.note.address)
                     }
                 }
@@ -86,7 +92,7 @@ fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBase
                 // loads threading that is event-based
                 key.note.replyTo?.forEach { note ->
                     if (note is AddressableNote && note.event == null) {
-                        potentialRelaysToFindAddress(note).ifEmpty { default }.forEach { relayUrl ->
+                        potentialRelaysToFindAddress(cache, note).ifEmpty { default }.forEach { relayUrl ->
                             add(relayUrl, note.address)
                         }
                     }

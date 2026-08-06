@@ -18,15 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.watchers
+package com.vitorpamplona.amethyst.commons.relayClient.event.watchers
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
-import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
-import com.vitorpamplona.amethyst.service.relays.MutableTime
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
+import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
+import com.vitorpamplona.amethyst.commons.relays.MutableTime
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -67,7 +67,7 @@ class EventWatcherSubAssembler(
         // the same logged-in user would look like two accounts and suppress attribution entirely.
         val soleAccountPubKey =
             keys
-                .mapTo(mutableSetOf()) { it.account.userProfile().pubkeyHex }
+                .mapTo(mutableSetOf()) { it.account.userFinderPubkeyHex }
                 .singleOrNull()
 
         return groupByRelayPresence(lastNotesOnFilter, latestEOSEs)

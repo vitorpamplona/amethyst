@@ -18,33 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
+package com.vitorpamplona.amethyst.commons.relayClient.event.loaders
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
 
-fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
+fun potentialRelaysToFindEvent(
+    cache: ICacheProvider,
+    note: Note,
+): Set<NormalizedRelayUrl> {
     val set = mutableSetOf<NormalizedRelayUrl>()
 
-    set.addAll(LocalCache.relayHints.hintsForEvent(note.idHex))
+    set.addAll(cache.relayHints.hintsForEvent(note.idHex))
 
     note.author?.outboxRelays()?.let { set.addAll(it) }
 
-    LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
+    cache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
 
     note.replyTo?.forEach { parentNote ->
         set.addAll(parentNote.relays)
 
-        LocalCache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
+        cache.getAnyChannel(parentNote)?.relays()?.let { set.addAll(it) }
 
         parentNote.author?.inboxRelays()?.let { set.addAll(it) }
     }
@@ -52,7 +55,7 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
     note.replies.forEach { childNote ->
         set.addAll(childNote.relays)
 
-        LocalCache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
+        cache.getAnyChannel(childNote)?.relays()?.let { set.addAll(it) }
 
         childNote.author?.outboxRelays()?.let { set.addAll(it) }
     }
@@ -81,7 +84,7 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
                 val noteEvent = parent.event
                 if (noteEvent is PubKeyHintProvider) {
                     noteEvent.linkedPubKeys().forEach { potentialAuthor ->
-                        LocalCache.checkGetOrCreateUser(potentialAuthor)?.let { potentialAuthor ->
+                        cache.checkGetOrCreateUser(potentialAuthor)?.let { potentialAuthor ->
                             potentialAuthor.outboxRelays()?.let { set.addAll(it) }
                             potentialAuthor.inboxRelays()?.let { set.addAll(it) }
                         }
@@ -98,18 +101,21 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
     return set
 }
 
-fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilter> {
+fun filterMissingEvents(
+    cache: ICacheProvider,
+    keys: List<EventFinderQueryState>,
+): List<RelayBasedFilter> {
     val eventsPerRelay =
         mapOfSet {
             keys.forEach { key ->
-                val default = key.account.followPlusAllMineWithSearch.flow.value
+                val default = key.account.followPlusAllMineWithSearchRelays()
 
                 if (key.note !is AddressableNote && key.note.event == null) {
-                    potentialRelaysToFindEvent(key.note).ifEmpty { default }.forEach { relayUrl ->
+                    potentialRelaysToFindEvent(cache, key.note).ifEmpty { default }.forEach { relayUrl ->
                         add(relayUrl, key.note.idHex)
                     }
 
-                    key.account.searchRelayList.flow.value.forEach { relayUrl ->
+                    key.account.searchRelays().forEach { relayUrl ->
                         add(relayUrl, key.note.idHex)
                     }
                 }
@@ -117,7 +123,7 @@ fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilte
                 // loads threading that is event-based
                 key.note.replyTo?.forEach { note ->
                     if (note !is AddressableNote && note.event == null) {
-                        potentialRelaysToFindEvent(note).ifEmpty { default }.forEach { relayUrl ->
+                        potentialRelaysToFindEvent(cache, note).ifEmpty { default }.forEach { relayUrl ->
                             add(relayUrl, note.idHex)
                         }
                     }

@@ -18,11 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
+package com.vitorpamplona.amethyst.commons.relayClient.eoseManagers
 
-import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
-import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -85,9 +83,10 @@ abstract class SingleSubNoEoseCacheEoseManager<T>(
     /**
      * The account behind [key], when the key is account-scoped. Null for keys about other users.
      *
-     * Keyed on [AccountScopedQuery] rather than a concrete query-state type: the home feed uses
-     * HomeQueryState, notifications use AccountQueryState, and checking one concrete class filed the
-     * other under "not attributed" despite both being built from a single account's data.
+     * Account-agnostic in commons: front ends that want single-account attribution override this
+     * (see the amethyst `AccountScopedSingleSubNoEoseCacheEoseManager`, which reads
+     * `(key as? AccountScopedQuery)?.account?.userProfile()?.pubkeyHex`). The default returns null,
+     * so pooled / cross-account subscriptions are filed as "not attributed".
      */
-    private fun accountPubKeyOf(key: Any?): String? = (key as? AccountScopedQuery)?.account?.userProfile()?.pubkeyHex
+    open fun accountPubKeyOf(key: Any?): String? = null
 }

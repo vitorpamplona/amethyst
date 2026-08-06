@@ -142,5 +142,15 @@ interface ICacheProvider {
      */
     fun getOrCreateUser(pubkey: HexKey): User?
 
+    /**
+     * Gets or creates a User by public key hex, swallowing any failure.
+     * Used by the event-finder relay-hint scan, which touches many potentially
+     * malformed pubkeys and must never throw mid-scan.
+     *
+     * @param key The user's public key in hex format
+     * @return The User (existing or newly created), or null on failure
+     */
+    fun checkGetOrCreateUser(key: HexKey): User? = runCatching { getOrCreateUser(key) }.getOrNull()
+
     fun justConsumeMyOwnEvent(event: Event): Boolean
 }
