@@ -191,8 +191,10 @@ object MessageKSerializer : KSerializer<Message> {
                     reason = if (array.size > 2) array[2].jsonPrimitive.content else "",
                     // Optional, and only a number: a relay that puts something
                     // else there is telling us nothing rather than breaking the
-                    // frame.
-                    cap = if (array.size > 3) array[3].jsonPrimitive.longOrNull else null,
+                    // frame. `as?` rather than `.jsonPrimitive`, which THROWS on
+                    // an object or array — that would fail the whole message and
+                    // lose the reason, where before this element was ignored.
+                    cap = if (array.size > 3) (array[3] as? JsonPrimitive)?.longOrNull else null,
                 )
             }
 

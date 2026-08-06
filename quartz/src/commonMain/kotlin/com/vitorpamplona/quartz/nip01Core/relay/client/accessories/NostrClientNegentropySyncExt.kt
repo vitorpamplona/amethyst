@@ -329,6 +329,7 @@ class NegentropyOrFetchResult(
  * Use [negentropySync] directly if you want to decide the fallback yourself (try
  * another relay, narrow the filter, abort, …) instead of always paging.
  */
+@OptIn(ExperimentalAtomicApi::class)
 suspend fun INostrClient.negentropySyncOrFetch(
     relay: NormalizedRelayUrl,
     filter: Filter,
@@ -346,18 +347,29 @@ suspend fun INostrClient.negentropySyncOrFetch(
 ): NegentropyOrFetchResult {
     val seen = HashSet<HexKey>()
     var delivered = 0
-    var pagedWindows = 0
+    val pagedWindows = AtomicInt(0)
 
-    // Shared dedup + cap across both phases. Returns true if the event was new and
-    // delivered. Both phases run sequentially, so no concurrent access.
-    suspend fun accept(event: Event): Boolean {
-        if ((maxEvents <= 0 || delivered < maxEvents) && seen.add(event.id)) {
-            delivered++
-            onEvent(event)
-            return true
+    // Shared dedup + cap across every path that delivers.
+    //
+    // The lock is not optional. The two phases used to run strictly one after
+    // the other, but a paged window now runs DURING the negentropy phase, on a
+    // reconciler coroutine, while the sync's own delivery consumer is calling
+    // this too — an unguarded HashSet between them can corrupt, and the count
+    // can lose updates. onEvent stays INSIDE the lock deliberately: callers are
+    // promised it never runs concurrently with itself, and some of them keep
+    // unsynchronised state in it.
+    val gate = Mutex()
+
+    suspend fun accept(event: Event): Boolean =
+        gate.withLock {
+            if ((maxEvents <= 0 || delivered < maxEvents) && seen.add(event.id)) {
+                delivered++
+                onEvent(event)
+                true
+            } else {
+                false
+            }
         }
-        return false
-    }
 
     return try {
         val result =
@@ -379,7 +391,7 @@ suspend fun INostrClient.negentropySyncOrFetch(
                 // already reconciled cleanly walked again over REQ, which on a
                 // large corpus is the entire cost negentropy was there to save.
                 onUnreconcilableWindow = { window ->
-                    pagedWindows++
+                    pagedWindows.incrementAndFetch()
                     val pageTimeoutMs = if (idleTimeoutMs > 0) idleTimeoutMs else DEFAULT_DOWNLOAD_IDLE_MS
                     fetchAllPages(relay, listOf(window), pageTimeoutMs) { event ->
                         if (accept(event)) onProgress?.invoke(delivered, delivered)
@@ -392,10 +404,10 @@ suspend fun INostrClient.negentropySyncOrFetch(
             // Any paged window makes this not a clean reconcile — see the
             // property doc: under-reporting it would let a caller record
             // coverage it never compared.
-            pagedFallback = pagedWindows > 0,
+            pagedFallback = pagedWindows.load() > 0,
             negentropy = result,
             fallbackCause = null,
-            pagedWindows = pagedWindows,
+            pagedWindows = pagedWindows.load(),
         )
     } catch (e: NegentropySyncException) {
         // Negentropy couldn't enumerate the set — page the whole filter instead,
@@ -411,7 +423,7 @@ suspend fun INostrClient.negentropySyncOrFetch(
             pagedFallback = true,
             negentropy = null,
             fallbackCause = e,
-            pagedWindows = pagedWindows,
+            pagedWindows = pagedWindows.load(),
         )
     }
 }
@@ -567,7 +579,9 @@ internal suspend fun reconcileWindows(
     onPeerCap: ((Long) -> Unit)? = null,
     // Given a minimal window the relay will not reconcile at any size, instead
     // of throwing. The caller drains it however it can (paging it over REQ) and
-    // the sweep carries on with the rest of the filter.
+    // the sweep carries on with the rest of the filter. It runs ON the reconciler
+    // that hit the window, so a slow drain holds that reconciler — with
+    // reconcileConcurrency = 1 the rest of the sweep waits for it.
     onUnreconcilableWindow: (suspend (Filter) -> Unit)? = null,
     sendNeedBatch: suspend (List<HexKey>) -> Unit,
     sendHaveBatch: (suspend (List<HexKey>) -> Unit)?,
@@ -597,25 +611,57 @@ internal suspend fun reconcileWindows(
     // targetWindow at 0 nothing below this line does anything.
     val budget = AtomicInt(targetWindow)
 
-    // Splits a window in two and queues both halves. Returns false when the
-    // window is already minimal — `created_at` is in seconds, so that is the
-    // floor, not a tuning choice.
-    fun splitInto(
+    // Every budget move goes through here. With reconcileConcurrency > 1 two
+    // reconcilers adjust it at once, and read-then-store can drop one of them —
+    // a lost SHRINK being the one that costs something real, since the next
+    // window is then asked at a size the relay has already refused.
+    fun budgetTo(next: (Int) -> Int) {
+        while (true) {
+            val now = budget.load()
+            val want = next(now)
+            if (want == now || budget.compareAndSet(now, want)) return
+        }
+    }
+
+    /**
+     * Cuts `[lo, hi]` into [pieces] equal spans of time and queues them all. A
+     * window already at the floor is left alone — `created_at` is in seconds, so
+     * that is where splitting ends, not a tuning choice. Both callers check that
+     * themselves; the guard here is so a third one cannot silently lose a window.
+     *
+     * [pieces] > 2 exists for the count-driven split, where we know HOW FAR over
+     * the budget a window is and can land near the right size in one step.
+     * Halving instead costs a store count per level of a tree that can be ~15
+     * deep on a large corpus, and — since the queue is FIFO — every one of those
+     * counts happens before the first window is reconciled at all.
+     */
+    suspend fun splitInto(
         pendingWindow: Filter,
         lo: Long,
         hi: Long,
-    ): Boolean {
-        if (hi - lo <= MIN_WINDOW_SECONDS) return false
-        val mid = lo + (hi - lo) / 2
-        remaining.incrementAndFetch()
-        // The lower child gets the finite midpoint; the upper child KEEPS this
-        // window's original `until` (which may be null = unbounded). Replacing
-        // null with `now()` here would drop every event dated after now()
-        // (clock skew) once any split happens, while the un-split path would
-        // have included them.
-        pending.trySend(pendingWindow.copy(since = lo, until = mid))
-        pending.trySend(pendingWindow.copy(since = mid + 1, until = pendingWindow.until))
-        return true
+        pieces: Int = 2,
+    ) {
+        if (hi - lo <= MIN_WINDOW_SECONDS) return
+        val span = hi - lo + 1
+        // Never more pieces than there are seconds to give them.
+        val n = pieces.toLong().coerceIn(2L, minOf(span, MAX_SPLIT_FANOUT.toLong())).toInt()
+        val step = span / n
+        remaining.addAndFetch(n - 1)
+        var start = lo
+        repeat(n) { i ->
+            val last = i == n - 1
+            // The top piece KEEPS this window's original `until` (which may be
+            // null = unbounded). Replacing null with `now()` here would drop
+            // every event dated after now() (clock skew) once any split happens,
+            // while the un-split path would have included them.
+            if (last) {
+                pending.send(pendingWindow.copy(since = start, until = pendingWindow.until))
+            } else {
+                val end = start + step - 1
+                pending.send(pendingWindow.copy(since = start, until = end))
+                start = end + 1
+            }
+        }
     }
 
     val reconcilers =
@@ -636,7 +682,14 @@ internal suspend fun reconcileWindows(
                     if (ceiling > 0 && hi - lo > MIN_WINDOW_SECONDS) {
                         val mine = local.count(window)
                         if (mine != null && mine > ceiling) {
-                            splitInto(window, lo, hi)
+                            // How many windows this one is worth, not just "two":
+                            // the count says how far over budget we are, and
+                            // uneven density is corrected by the same check on
+                            // each piece.
+                            // Long arithmetic: `mine` can be near Int.MAX on a
+                            // corpus this size, and the +ceiling would wrap.
+                            val over = (mine.toLong() + ceiling - 1) / ceiling
+                            splitInto(window, lo, hi, pieces = over.coerceAtMost(MAX_SPLIT_FANOUT.toLong()).toInt())
                             continue
                         }
                     }
@@ -662,9 +715,12 @@ internal suspend fun reconcileWindows(
                             // asked for, so a sync that met one dense stretch
                             // does not stay small for the rest of the timeline.
                             if (targetWindow > 0) {
-                                val now = budget.load()
-                                if (now < targetWindow) {
-                                    budget.store(minOf(targetWindow, (now * BUDGET_GROWTH).toInt().coerceAtLeast(now + 1)))
+                                budgetTo { now ->
+                                    if (now >= targetWindow) {
+                                        now
+                                    } else {
+                                        minOf(targetWindow, (now * BUDGET_GROWTH).toInt().coerceAtLeast(now + 1))
+                                    }
                                 }
                             }
                             if (remaining.decrementAndFetch() == 0) pending.close()
@@ -677,13 +733,16 @@ internal suspend fun reconcileWindows(
                             outcome.cap?.let { cap ->
                                 onPeerCap?.invoke(cap)
                                 if (targetWindow > 0) {
-                                    val fitted = (cap * CAP_MARGIN).toInt().coerceAtLeast(1)
-                                    if (fitted < budget.load()) budget.store(fitted)
+                                    val fitted =
+                                        (cap * CAP_MARGIN)
+                                            .coerceIn(1.0, Int.MAX_VALUE.toDouble())
+                                            .toInt()
+                                    budgetTo { now -> minOf(now, fitted) }
                                 }
                             }
                             if (outcome.cap == null && targetWindow > 0) {
                                 // No number to go on: halve and find out.
-                                budget.store((budget.load() / 2).coerceAtLeast(1))
+                                budgetTo { now -> (now / 2).coerceAtLeast(1) }
                             }
                             if (hi - lo <= MIN_WINDOW_SECONDS) {
                                 // A minimal window that still overflows:
@@ -1294,6 +1353,14 @@ private const val MIN_WINDOW_SECONDS = 1L
  * margin; crossing it fails the sync over to paging instead of storming the relay.
  */
 private const val MAX_WINDOWS = 100_000
+
+/**
+ * Most pieces one count-driven split may cut a window into. Bounds both the
+ * queue and the depth: with 32, a corpus 30,000 windows wide is reached in
+ * three levels instead of fifteen, and the pieces that guessed wrong are
+ * re-split by the same rule.
+ */
+private const val MAX_SPLIT_FANOUT = 32
 
 /**
  * How much of a relay's stated `max_sync_events` a window actually aims for.

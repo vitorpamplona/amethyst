@@ -176,6 +176,24 @@ class Nip77SerializationTest {
     }
 
     @Test
+    fun deserializeNegErrMessageWithStructuredFourthElement_bothMappers() {
+        // A fourth element that is an object or array must degrade to no cap,
+        // NOT fail the frame — the reason is the part that matters, and before
+        // this element existed any extra was simply ignored.
+        val json = """["NEG-ERR","neg-sub1","blocked: too many query results",{"max":10}]"""
+
+        val jackson = JacksonMapper.fromJsonToMessage(json)
+        assertTrue(jackson is NegErrMessage)
+        assertEquals("blocked: too many query results", jackson.reason)
+        assertEquals(null, jackson.cap)
+
+        val kotlin = KotlinSerializationMapper.fromJsonToMessage(json)
+        assertTrue(kotlin is NegErrMessage)
+        assertEquals("blocked: too many query results", kotlin.reason)
+        assertEquals(null, kotlin.cap)
+    }
+
+    @Test
     fun negErrMessageWithCap_crossDeserialization() {
         val msg = NegErrMessage("neg-sub1", "blocked: too many records", 500_000L)
 
