@@ -2025,6 +2025,12 @@
     </plurals>
     <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d relay</item>
+        <item quantity="few">%1$s \u00b7 %2$d relaye</item>
+        <item quantity="many">%1$s \u00b7 %2$d relaye</item>
+        <item quantity="other">%1$s \u00b7 %2$d relayů</item>
+    </plurals>
     <string name="relay_purpose_browsing">Procházení</string>
     <string name="relay_purpose_media">Média</string>
     <string name="relay_purpose_tags">Hashtagy</string>
@@ -2063,6 +2069,7 @@
     <string name="relay_purpose_your_wallet">Peněženka</string>
     <string name="relay_purpose_nutzap_inbox">Schránka nutzapů</string>
     <string name="relay_purpose_mint_directory">Adresář mintů</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
     <string name="relay_purpose_community_chats">Chaty komunit</string>
     <string name="relay_purpose_community_feeds">Zdroje komunit</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
@@ -2093,12 +2100,19 @@
         <item quantity="many">%1$d filtru</item>
         <item quantity="other">%1$d filtrů</item>
     </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="few">%1$d relaye</item>
+        <item quantity="many">%1$d relaye</item>
+        <item quantity="other">%1$d relayů</item>
+    </plurals>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d filtr zatím není přiřazen</item>
         <item quantity="few">%1$d filtry zatím nejsou přiřazeny</item>
         <item quantity="many">%1$d filtru zatím není přiřazeno</item>
         <item quantity="other">%1$d filtrů zatím není přiřazeno</item>
     </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
     <string name="active_subs_unattributed">Nepřiřazeno k žádnému účtu</string>
     <string name="active_subs_no_entity">Vše</string>
     <string name="active_subs_scope_global">Všichni</string>
@@ -4804,6 +4818,7 @@
     <string name="buzz_workflow_gate_needs_you">Potřebuje vaše schválení</string>
     <string name="buzz_workflow_gate_awaiting">Čeká na schválení</string>
     <string name="buzz_workflow_no_description">(bez popisu)</string>
+    <string name="buzz_workflow_id_prefix">Workflow: %1$s</string>
     <string name="buzz_workflow_by">od</string>
     <string name="buzz_workflow_waiting_on">čeká na</string>
     <string name="buzz_workflow_readonly_approver">Jste schvalovatel, ale toto přihlášení nemůže rozhodnutí podepsat.</string>
@@ -4839,6 +4854,7 @@
     <string name="buzz_workflow_no_defs_hint">Zatím žádná workflow. Otevřete nabídku výše, zvolte „Nová definice…“, vytvořte ho a pak spusťte.</string>
     <string name="buzz_workflow_task_label">Co má udělat?</string>
     <string name="buzz_workflow_trigger_run">Spustit běh</string>
+    <string name="buzz_workflow_picker_label">Workflow</string>
     <string name="buzz_workflow_picker_empty">Zatím nejsou definována žádná workflow</string>
     <string name="buzz_workflow_picker_choose">Vyberte workflow</string>
     <string name="buzz_workflow_new_definition">Nová definice…</string>
