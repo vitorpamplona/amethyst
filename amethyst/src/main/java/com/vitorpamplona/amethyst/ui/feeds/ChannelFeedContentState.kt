@@ -151,6 +151,11 @@ class ChannelFeedContentState(
         }
     }
 
+    /** See [com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState.invalidateDataIfLoaded]. */
+    fun invalidateDataIfLoaded() {
+        if (_feedContent.value !is ChannelFeedState.Loading) invalidateData()
+    }
+
     fun checkKeysInvalidateDataAndSendToTop() {
         if (lastFeedKey != localFilter.feedKey()) {
             bundler.invalidate(false) {

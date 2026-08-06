@@ -214,6 +214,22 @@ class FeedContentState(
         }
     }
 
+    /**
+     * Full rebuild, but only for a feed that has already been built once.
+     *
+     * A filter-wide setting change (the max-hashtag limit, a new mute) invalidates
+     * every feed at once, and the additive path cannot express it: raising a limit
+     * re-admits notes that are not in any incoming batch, and lowering it must drop
+     * notes already on the list. Both need a fresh [refreshSuspended].
+     *
+     * Feeds still in [FeedState.Loading] have never scanned the cache, so rebuilding
+     * them here would pay the full scan for every tab the user never opened. They pick
+     * the new setting up on their first build.
+     */
+    fun invalidateDataIfLoaded() {
+        if (_feedContent.value !is FeedState.Loading) invalidateData()
+    }
+
     fun checkKeysInvalidateDataAndSendToTop() {
         if (lastFeedKey != localFilter.feedKey()) {
             bundler.invalidate(false) {

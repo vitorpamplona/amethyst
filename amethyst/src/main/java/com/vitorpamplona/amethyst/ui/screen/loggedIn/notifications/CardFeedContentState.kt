@@ -495,6 +495,17 @@ class CardFeedContentState(
         }
     }
 
+    /**
+     * See [com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState.invalidateDataIfLoaded].
+     * [clear] first because [refreshSuspended] takes an additive-only path while `lastNotes` is
+     * populated, which would keep cards for notes that no longer pass the filter.
+     */
+    fun invalidateDataIfLoaded() {
+        if (_feedContent.value is CardFeedState.Loading) return
+        clear()
+        invalidateData()
+    }
+
     fun checkKeysInvalidateDataAndSendToTop() {
         if (lastFeedKey != localFilter.feedKey()) {
             clear()

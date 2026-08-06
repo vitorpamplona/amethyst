@@ -274,6 +274,22 @@ class AccountFeedContentStates(
                 }
         }
 
+        // The max-hashtag limit reaches every feed through LiveHiddenUsers → FilterByListParams,
+        // but nothing tells the feeds to look again: no event flows through LocalCache when the
+        // user moves the stepper, and the additive path can't express the change in either
+        // direction — raising the limit re-admits notes that are in no incoming batch, lowering
+        // it must drop notes already on the list. Without this the new value only took effect on
+        // the next full rebuild (switching the top-nav list, or restarting the app), which is why
+        // relaxing the limit left the filtered posts missing. Rebuild every feed the user has
+        // actually opened.
+        scope.launch(Dispatchers.IO) {
+            account.settings.syncedSettings.security.maxHashtagLimit
+                .drop(1)
+                .collect {
+                    rebuildLoadedFeeds()
+                }
+        }
+
         scope.launch(Dispatchers.IO) {
             account.hiddenUsers.flow.collect {
                 dmKnown.invalidateData()
@@ -422,6 +438,72 @@ class AccountFeedContentStates(
         drafts.deleteFromFeed(newNotes)
 
         webBookmarks.deleteFromFeed(newNotes)
+    }
+
+    /**
+     * Full rebuild of every feed the user has already opened, for changes that alter what the
+     * filters accept without producing an event: the max-hashtag limit today, any future
+     * filter-wide preference.
+     *
+     * Feeds still in their Loading state are skipped — they have never scanned the cache and
+     * would otherwise make a settings tap pay for every tab that was never visited.
+     */
+    fun rebuildLoadedFeeds() {
+        checkNotInMainThread()
+
+        homeLive.invalidateDataIfLoaded()
+        homeNewThreads.invalidateDataIfLoaded()
+        homeReplies.invalidateDataIfLoaded()
+        homeEverything.invalidateDataIfLoaded()
+
+        dmKnown.invalidateDataIfLoaded()
+        dmNew.invalidateDataIfLoaded()
+
+        videoFeed.invalidateDataIfLoaded()
+
+        discoverFollowSets.invalidateDataIfLoaded()
+        discoverReads.invalidateDataIfLoaded()
+        discoverMarketplace.invalidateDataIfLoaded()
+        discoverDVMs.invalidateDataIfLoaded()
+        discoverLive.invalidateDataIfLoaded()
+        discoverCommunities.invalidateDataIfLoaded()
+        discoverPublicChats.invalidateDataIfLoaded()
+
+        pollsFeed.invalidateDataIfLoaded()
+        openPollsFeed.invalidateDataIfLoaded()
+        closedPollsFeed.invalidateDataIfLoaded()
+
+        badgesFeed.invalidateDataIfLoaded()
+        browseEmojiSetsFeed.invalidateDataIfLoaded()
+        communitiesList.invalidateDataIfLoaded()
+
+        picturesFeed.invalidateDataIfLoaded()
+        workoutsFeed.invalidateDataIfLoaded()
+        gitRepositoriesFeed.invalidateDataIfLoaded()
+        highlightsFeed.invalidateDataIfLoaded()
+        relayGroupsDiscoveryFeed.invalidateDataIfLoaded()
+        calendarAppointmentsFeed.invalidateDataIfLoaded()
+        calendarCollectionsFeed.invalidateDataIfLoaded()
+        productsFeed.invalidateDataIfLoaded()
+        shortsFeed.invalidateDataIfLoaded()
+        publicChatsFeed.invalidateDataIfLoaded()
+        followPacksFeed.invalidateDataIfLoaded()
+        liveStreamsFeed.invalidateDataIfLoaded()
+        nestsFeed.invalidateDataIfLoaded()
+        longsFeed.invalidateDataIfLoaded()
+        articlesFeed.invalidateDataIfLoaded()
+        musicTracksFeed.invalidateDataIfLoaded()
+        musicPlaylistsFeed.invalidateDataIfLoaded()
+        podcastEpisodesFeed.invalidateDataIfLoaded()
+        podcastsFeed.invalidateDataIfLoaded()
+        softwareAppsFeed.invalidateDataIfLoaded()
+
+        notifications.invalidateDataIfLoaded()
+        notificationsFollowing.invalidateDataIfLoaded()
+        notificationsEveryone.invalidateDataIfLoaded()
+
+        drafts.invalidateDataIfLoaded()
+        webBookmarks.invalidateDataIfLoaded()
     }
 
     fun trimFeedsToSize(maxItems: Int) {
