@@ -1946,6 +1946,7 @@
         <item quantity="other">%1$s \u00b7 %2$d reläer</item>
     </plurals>
     <string name="relay_purpose_browsing">Bläddring</string>
+    <string name="relay_purpose_media">Media</string>
     <string name="relay_purpose_tags">Hashtaggar</string>
     <string name="relay_purpose_topics">Ämnen</string>
     <string name="relay_purpose_thread">Konversation</string>
@@ -1980,6 +1981,7 @@
     <string name="relay_purpose_your_wallet">Plånbok</string>
     <string name="relay_purpose_nutzap_inbox">Nutzap-inkorg</string>
     <string name="relay_purpose_mint_directory">Mint-katalog</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
     <string name="relay_purpose_community_chats">Gemenskapschattar</string>
     <string name="relay_purpose_community_feeds">Gemenskapsflöden</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
@@ -2004,6 +2006,10 @@
     <string name="active_subs_title">Aktiva reläprenumerationer</string>
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d filter</item>
+        <item quantity="other">%1$d filter</item>
+    </plurals>
     <plurals name="active_subs_relays">
         <item quantity="one">%1$d relä</item>
         <item quantity="other">%1$d reläer</item>
@@ -2012,6 +2018,7 @@
         <item quantity="one">%1$d filter är inte kopplat ännu</item>
         <item quantity="other">%1$d filter är inte kopplade ännu</item>
     </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
     <string name="active_subs_unattributed">Inte kopplat till något konto</string>
     <string name="active_subs_no_entity">Allt</string>
     <string name="active_subs_scope_global">Alla</string>
