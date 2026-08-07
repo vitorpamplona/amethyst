@@ -49,8 +49,10 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
  * occasional and self-heal on the next filter change or full re-walk.
  *
  * Persistence is the caller's: [export] the map on a schedule and [restore]
- * it at startup. [onChange] fires whenever a band changes, so a persistence
- * layer can mark itself dirty without polling.
+ * it at startup, both keyed by [BandKey] so a file layer can lay the two
+ * halves out however it likes without having to know how a key is spelled.
+ * [onChange] fires whenever a band changes, so a persistence layer can mark
+ * itself dirty without polling.
  *
  * Not to be confused with the `relay.client.paging` package: its
  * `RelayLoadingCursors` are in-memory POSITIONS for demand-driven UI paging
@@ -65,6 +67,41 @@ class SyncCoverage(
     private val now: () -> Long = { TimeUtils.now() },
     private val onChange: () -> Unit = {},
 ) {
+    /**
+     * What one band is about: the relay's url, and the filter as [Filter.toJson]
+     * renders it.
+     *
+     * A pair, not a joined string, for two reasons. A persistence layer needs
+     * the halves — one that lays its file out by relay, or by filter, or by
+     * both, had to split the key back apart, and the separator was folklore it
+     * could only learn by reading this class. And on the hot path a joined key
+     * COPIES the filter's json on every lookup: `legs()` runs once per relay
+     * per cycle, an author-scoped filter's json runs to tens of thousands of
+     * characters, and a fan-out over thousands of relays paid that copy — plus
+     * a fresh hash over all of it, since a newly built string has none cached —
+     * on every one of them. A pair hashes the two halves it already holds.
+     *
+     * [encode] and [decode] are the joined form, kept HERE so a file that wants
+     * one key per line still gets the separator from the class that mints it.
+     * A normalized relay url contains no space, which is what makes splitting
+     * at the first one exact.
+     */
+    data class BandKey(
+        val relay: String,
+        val filter: String,
+    ) {
+        fun encode(): String = "$relay $filter"
+
+        companion object {
+            /** The inverse of [encode], or null for a key that names no pair. */
+            fun decode(key: String): BandKey? {
+                val at = key.indexOf(' ')
+                if (at <= 0 || at == key.length - 1) return null
+                return BandKey(key.substring(0, at), key.substring(at + 1))
+            }
+        }
+    }
+
     /** A covered `created_at` interval, inclusive at both ends. */
     data class Span(
         val min: Long,
@@ -115,7 +152,7 @@ class SyncCoverage(
         }
     }
 
-    private val bands = ConcurrentMap<String, Band>()
+    private val bands = ConcurrentMap<BandKey, Band>()
 
     // filter -> its canonical json. Filter.toJson() runs to tens of thousands
     // of characters for author-scoped filters, and a fan-out keys once per
@@ -379,10 +416,10 @@ class SyncCoverage(
     fun size(): Int = bands.size()
 
     /** A point-in-time copy of every band, for a persistence layer to write out. */
-    fun export(): Map<String, Band> = bands.snapshot()
+    fun export(): Map<BandKey, Band> = bands.snapshot()
 
     /** Load previously [export]ed bands, e.g. at startup. */
-    fun restore(entries: Map<String, Band>) {
+    fun restore(entries: Map<BandKey, Band>) {
         for ((key, band) in entries) bands[key] = band
     }
 
@@ -395,7 +432,7 @@ class SyncCoverage(
     private fun key(
         url: NormalizedRelayUrl,
         filter: Filter,
-    ): String {
+    ): BandKey {
         val fingerprint =
             fingerprints[filter]
                 ?: filter.toJson().also {
@@ -404,7 +441,7 @@ class SyncCoverage(
                     // pays the toJson each time instead of growing the heap.
                     if (fingerprints.size() < MAX_FINGERPRINTS) fingerprints[filter] = it
                 }
-        return "${url.url} $fingerprint"
+        return BandKey(url.url, fingerprint)
     }
 
     // One line per process, not per walk: the point is to tell a caller it has

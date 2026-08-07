@@ -96,15 +96,22 @@ class SyncCoverageFile(
         if (!file.isFile) return
         runCatching {
             val root = Json.parseToJsonElement(file.readText()).jsonObject
+            // The file's key is the joined form, decoded by the class that
+            // mints it — this layer never has to know the separator. A key it
+            // cannot read names no pair and is dropped, which costs one
+            // upstream's re-walk rather than the whole file.
             coverage.restore(
-                root.mapValues { (_, v) ->
-                    val o = v.jsonObject
-                    SyncCoverage.Band(
-                        spansOf(o),
-                        o["complete"]?.jsonPrimitive?.boolean ?: false,
-                        o["fullAt"]?.jsonPrimitive?.long ?: 0L,
-                    )
-                },
+                root.entries
+                    .mapNotNull { (k, v) ->
+                        val key = SyncCoverage.BandKey.decode(k) ?: return@mapNotNull null
+                        val o = v.jsonObject
+                        key to
+                            SyncCoverage.Band(
+                                spansOf(o),
+                                o["complete"]?.jsonPrimitive?.boolean ?: false,
+                                o["fullAt"]?.jsonPrimitive?.long ?: 0L,
+                            )
+                    }.toMap(),
             )
         }.onFailure {
             Log.w("SyncCoverageFile") { "could not read ${file.path} (${it.message}); starting fresh" }
@@ -142,7 +149,7 @@ class SyncCoverageFile(
                 buildJsonObject {
                     coverage.export().forEach { (key, band) ->
                         put(
-                            key,
+                            key.encode(),
                             buildJsonObject {
                                 // min/max are the outer edges across every
                                 // kind, and are written for two readers: a
