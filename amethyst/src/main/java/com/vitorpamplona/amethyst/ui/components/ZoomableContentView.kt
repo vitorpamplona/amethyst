@@ -1103,7 +1103,7 @@ private suspend fun shareImageFile(
         val (uri, fileExtension) = ShareHelper.getSharableUriFromUrl(context, videoUri)
 
         // Determine mime type, use provided or derive from extension
-        val determinedMimeType = ShareHelper.resolveShareMimeType(mimeType, fileExtension, "image")
+        val determinedMimeType = ShareHelper.resolveShareMimeType(mimeType, fileExtension)
 
         // Create share intent
         val shareIntent =
@@ -1161,7 +1161,7 @@ private suspend fun shareVideoFile(
             sharedFile = sharableFile
 
             // Determine mime type
-            val determinedMimeType = ShareHelper.resolveShareMimeType(mimeType, extension, "video")
+            val determinedMimeType = ShareHelper.resolveShareMimeType(mimeType, extension)
 
             // Create share intent
             val shareIntent =
@@ -1227,7 +1227,7 @@ private suspend fun shareLocalVideoFile(
             val (uri, extension) = ShareHelper.getSharableUriForLocalVideo(context, localFile)
 
             // Determine mime type
-            val determinedMimeType = ShareHelper.resolveShareMimeType(mimeType, extension, "video")
+            val determinedMimeType = ShareHelper.resolveShareMimeType(mimeType, extension)
 
             // Create share intent
             val shareIntent =

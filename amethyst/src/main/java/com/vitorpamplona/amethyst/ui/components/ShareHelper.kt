@@ -39,6 +39,7 @@ object ShareHelper {
     private const val DEFAULT_IMAGE_EXTENSION = "jpg"
     private const val DEFAULT_VIDEO_EXTENSION = "mp4"
     private const val SHARED_FILE_PREFIX = "shared_media"
+    private const val GENERIC_BINARY_MIME_TYPE = "application/octet-stream"
 
     data class SharableFile(
         val uri: Uri,
@@ -70,23 +71,21 @@ object ShareHelper {
     /**
      * Picks the MIME type to put on an `ACTION_SEND` intent.
      *
-     * `Intent.type` has to be a real `type/subtype`: an `IntentFilter` matches the two halves
-     * separately, so a slash-less value like `jpeg` matches nothing and the chooser opens empty —
-     * the share silently does nothing. Events can absolutely carry such a value, because NIP-92
-     * `imeta`/NIP-94 `m` tags are author-supplied and some clients write the bare subtype (Primal
-     * iOS emits `m jpeg`). Treat the declared type as a hint, not as truth.
-     *
-     * [fileExtension] is the safer signal — [getMediaExtension] sniffs it from the file's magic
-     * numbers rather than trusting the event — so it backs up an unusable declaration.
+     * `Intent.type` has to be a real `type/subtype` — an `IntentFilter` matches the two halves
+     * separately, so a slash-less value matches nothing and the chooser opens empty. The declared
+     * type is author-supplied and may be unusable (see [normalizeMimeType]), so it is treated as a
+     * hint; [fileExtension] is the safer signal because [getMediaExtension] sniffs it from the
+     * file's magic numbers rather than trusting the event.
      */
     internal fun resolveShareMimeType(
         declaredMimeType: String?,
         fileExtension: String,
-        defaultTypePrefix: String,
     ): String =
         normalizeMimeType(declaredMimeType)
             ?: mimeTypeMap[fileExtension.lowercase()]
-            ?: "$defaultTypePrefix/$fileExtension"
+            // Unreachable today: getMediaExtension only ever returns keys of mimeTypeMap. Kept so
+            // the return type stays a well-formed MIME if that ever stops holding.
+            ?: GENERIC_BINARY_MIME_TYPE
 
     suspend fun getSharableUriFromUrl(
         context: Context,

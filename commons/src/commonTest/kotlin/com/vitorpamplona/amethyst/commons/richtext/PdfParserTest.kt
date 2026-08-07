@@ -67,11 +67,10 @@ class PdfParserTest {
         assertTrue(RichTextParser.isPdfUrl("https://example.com/doc.pdf?sig=abc"))
     }
 
-    // Primal iOS writes a bare subtype (`m jpeg`) instead of a full MIME (`m image/jpeg`).
-    // The bare subtype matches none of the `image/`/`video/`/`application/pdf` prefixes, so before
-    // the extension fallback the whole imeta was dropped: the URL rendered as a plain link, losing
-    // the `dim` needed to reserve the image's height (feed jump) and forcing a URL-preview fetch.
-    // The `.jpg` extension must still route it to a MediaUrlImage that carries `dim`.
+    // Primal iOS writes a bare subtype (`m jpeg`) instead of a full MIME (`m image/jpeg`); see
+    // normalizeMimeType. End-to-end here because the failure was never just the render decision:
+    // dropping the imeta also lost the `dim` that reserves the image's height (feed jump) and
+    // forced a URL-preview fetch to rediscover a type the imeta had already declared.
     @Test
     fun detectsImageFromMalformedImetaMimeWithImageExtension() {
         val url = "https://blossom.primal.net/33e7c01afbea894a64e1db44dece460b09a2426108f47143754e1cf4bfdf747c.jpg"
@@ -88,6 +87,9 @@ class PdfParserTest {
 
         val imageMedia = state.mediaForPager[url]
         assertTrue(imageMedia is MediaUrlImage, "Expected MediaUrlImage despite the malformed `m jpeg` mime")
+        // Repaired on the model too, not just for the render decision: this field becomes
+        // Intent.type when the image is shared, and a slash-less one matches no IntentFilter.
+        assertEquals("image/jpeg", imageMedia.mimeType, "The bare subtype must not survive onto the model")
         assertEquals("1009x680", imageMedia.dim?.toString(), "The imeta dim must survive so the loader can reserve space")
         assertEquals(1009f / 680f, imageMedia.dim?.aspectRatio())
 
@@ -112,37 +114,20 @@ class PdfParserTest {
         assertTrue(videoMedia is MediaUrlVideo, "Expected MediaUrlVideo despite the malformed `m mp4` mime")
     }
 
-    // A bare-subtype mime is recovered from the imeta itself, so an extensionless URL — the shape
-    // Blossom hands out, where the imeta is the only type signal there is — still renders.
+    // An extensionless URL is the shape Blossom hands out, where the imeta is the only type signal
+    // there is: a recognizable bare subtype now carries it, and an unrecognizable one leaves
+    // nothing to recover from. The second half documents the limit so it isn't read as a
+    // regression.
     @Test
-    fun malformedImetaMimeWithoutExtensionIsRecoveredFromTheMime() {
+    fun malformedImetaMimeWithoutExtensionIsRecoveredFromTheMimeAlone() {
         val url = "https://files.example.com/abcd1234"
-        val tags =
-            ImmutableListOfLists(
-                arrayOf(
-                    arrayOf("imeta", "url $url", "m jpeg"),
-                ),
-            )
 
-        val state = RichTextParser().parseText(url, tags, null)
+        fun parse(mime: String) =
+            RichTextParser()
+                .parseText(url, ImmutableListOfLists(arrayOf(arrayOf("imeta", "url $url", "m $mime"))), null)
+                .mediaForPager[url]
 
-        assertTrue(state.mediaForPager[url] is MediaUrlImage, "`m jpeg` alone is enough to classify the media")
-    }
-
-    // The boundary: a bare token that maps to no known type, on a URL with no extension, has
-    // nothing left to recover from. This documents the limit so it isn't mistaken for a regression.
-    @Test
-    fun unrecognizableImetaMimeWithoutExtensionStaysUnclassified() {
-        val url = "https://files.example.com/abcd1234"
-        val tags =
-            ImmutableListOfLists(
-                arrayOf(
-                    arrayOf("imeta", "url $url", "m notarealtype"),
-                ),
-            )
-
-        val state = RichTextParser().parseText(url, tags, null)
-
-        assertEquals(null, state.mediaForPager[url], "Nothing to recover from -> not treated as media")
+        assertTrue(parse("jpeg") is MediaUrlImage, "`m jpeg` alone is enough to classify the media")
+        assertEquals(null, parse("notarealtype"), "Nothing to recover from -> not treated as media")
     }
 }

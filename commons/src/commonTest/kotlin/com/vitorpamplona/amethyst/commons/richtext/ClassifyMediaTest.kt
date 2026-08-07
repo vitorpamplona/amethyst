@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.richtext
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ClassifyMediaTest {
     @Test
@@ -97,10 +99,67 @@ class ClassifyMediaTest {
     }
 
     @Test
-    fun extensionRescuesAMalformedMime() {
-        // Primal iOS emits `m jpeg` instead of `m image/jpeg`; the extension must still win
-        // over "unknown". Preserves the behaviour createMediaContent already documented.
+    fun aMalformedMimeIsRepairedRatherThanIgnored() {
+        // Primal iOS emits `m jpeg` instead of `m image/jpeg`. The bare subtype is mapped back to
+        // its canonical MIME here, so it classifies even on the extensionless URLs Blossom hands
+        // out, where the imeta is the only type signal there is.
         assertEquals(MediaContentKind.IMAGE, RichTextParser.classifyMedia("https://x.com/a.jpg", "jpeg"))
+        assertEquals(MediaContentKind.IMAGE, RichTextParser.classifyMedia("https://x.com/abcd1234", "jpeg"))
+        assertEquals(MediaContentKind.VIDEO, RichTextParser.classifyMedia("https://x.com/abcd1234", "quicktime"))
+        // A token that maps to no known type has nothing to recover from; the extension decides.
+        assertNull(RichTextParser.classifyMedia("https://x.com/abcd1234", "notarealtype"))
+        assertEquals(MediaContentKind.IMAGE, RichTextParser.classifyMedia("https://x.com/a.jpg", "notarealtype"))
+    }
+
+    // A subtype that names more than one top-level type identifies no family on its own. Guessing
+    // one is worse than not repairing: `audio/mpeg` classifies as VIDEO either way, but it also
+    // satisfies isAudioContent, which strips the picture and renders an MPEG video as a bare audio
+    // track. Leaving it unresolved hands the decision back to the extension, which knows.
+    @Test
+    fun anAmbiguousBareSubtypeIsLeftForTheExtensionToDecide() {
+        assertNull(normalizeMimeType("mpeg"), "`mpeg` names both audio/mpeg and video/mpeg")
+        // `ogg` reaches the same guard even though mimeTypeMap answers it: the extension table
+        // holds audio/ogg (its video/ogg entry is a dead duplicate key), so short-circuiting there
+        // is exactly the audio mis-flag this guard exists to stop.
+        assertNull(normalizeMimeType("ogg"), "`ogg` names both audio/ogg and video/ogg")
+
+        val url = "https://x.com/clip.mpg"
+        val media = RichTextParser().createMediaContent(url, mapOf(url to imeta(url, "mpeg")), null)
+
+        assertTrue(media is MediaUrlVideo, "the .mpg extension still classifies it")
+        assertFalse(RichTextParser.isAudioContent(media.mimeType, url), "an MPEG video is not an audio track")
+
+        // The case that actually reached a user: an OGG video must not be flagged as an audio track.
+        val ogv = "https://x.com/clip.ogv"
+        assertFalse(
+            RichTextParser.isAudioContent(normalizeMimeType("ogg"), ogv),
+            "an OGG video must not be rendered as a pictureless audio track",
+        )
+    }
+
+    // Declining is reserved for the destructive direction. `audio/` is the one family that strips
+    // the picture, so an ambiguous token whose extension spelling already resolves to `video/`
+    // keeps its rescue — an extensionless Blossom URL with `m mp4` still renders.
+    @Test
+    fun anAmbiguousSubtypeThatResolvesToVideoKeepsItsRescue() {
+        assertEquals("video/mp4", normalizeMimeType("mp4"))
+        assertEquals("video/webm", normalizeMimeType("webm"))
+        assertEquals(MediaContentKind.VIDEO, RichTextParser.classifyMedia("https://x.com/abcd1234", "mp4"))
+
+        // Unambiguously-audio tokens are untouched by the guard.
+        assertEquals("audio/mpeg", normalizeMimeType("mp3"))
+        assertEquals("audio/flac", normalizeMimeType("flac"))
+    }
+
+    // The unambiguous half must keep working: these are subtypes no extension in the table spells,
+    // so they resolve only through the subtype index.
+    @Test
+    fun anUnambiguousBareSubtypeStillResolves() {
+        assertEquals("video/quicktime", normalizeMimeType("quicktime"))
+        assertEquals("video/x-matroska", normalizeMimeType("x-matroska"))
+        assertEquals("image/svg+xml", normalizeMimeType("svg+xml"))
+        // An extension spelling that is also a subtype keeps the extension's family.
+        assertEquals("video/mp4", normalizeMimeType("mp4"))
     }
 
     @Test
@@ -135,6 +194,9 @@ class ClassifyMediaTest {
                 "https://x.com/a.xdc" to "application/x-webxdc",
                 "https://x.com/a.zip" to "application/zip",
                 "https://x.com/a.jpg" to "jpeg",
+                "https://x.com/abcd1234" to "jpeg",
+                "https://x.com/abcd1234" to "notarealtype",
+                "https://x.com/clip.mpg" to "mpeg",
                 "data:image/png;base64,AAAA" to null,
                 "data:application/zip;base64,AAAAmp4" to null,
             )
