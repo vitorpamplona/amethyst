@@ -25,14 +25,16 @@ import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
 import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
-import com.vitorpamplona.quartz.concord.crypto.GroupKey
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -97,7 +99,7 @@ object ConcordModeration {
 
     private suspend fun wrap(
         actor: NostrSigner,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
         kind: ControlEntityKind,
         entityId: ByteArray,
         version: Long,
@@ -116,7 +118,7 @@ object ConcordModeration {
      */
     suspend fun defineRole(
         actor: NostrSigner,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
         roleId: ByteArray,
         role: RoleEntity,
         current: List<ControlEdition>,
@@ -138,7 +140,7 @@ object ConcordModeration {
      */
     suspend fun defineChannel(
         actor: NostrSigner,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
         channelId: ByteArray,
         channel: ChannelEntity,
         current: List<ControlEdition>,
@@ -159,7 +161,7 @@ object ConcordModeration {
      */
     suspend fun editMetadata(
         actor: NostrSigner,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
         communityId: ByteArray,
         metadata: MetadataEntity,
         current: List<ControlEdition>,
@@ -172,10 +174,18 @@ object ConcordModeration {
         return wrap(actor, controlPlane, ControlEntityKind.METADATA, communityId, version, prev, content, createdAt, citation)
     }
 
-    /** Grants [member] exactly [roleIds] (replaces their prior grant). Empty list revokes all roles. */
+    /**
+     * Grants [member] exactly [roleIds] (replaces their prior grant). Empty list revokes all roles.
+     *
+     * A Grant that first makes its member **staff** must deliver the current
+     * `control_root` in the same edition (CORD-04 §3): pass [controlWrap] built with
+     * [ControlRootWrap.build] for the current epoch. A current staffer may also
+     * re-issue a Grant with a fresh wrap to re-deliver (a lost key, a superseded
+     * head). Leave null for a non-staff grant, a revoke, or a legacy community.
+     */
     suspend fun grant(
         actor: NostrSigner,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
         communityId: ByteArray,
         member: HexKey,
         roleIds: List<String>,
@@ -183,17 +193,63 @@ object ConcordModeration {
         createdAt: Long,
         citation: AuthorityCitation? = null,
         owner: HexKey,
+        controlWrap: String? = null,
     ): Event {
         val entityId = ConcordKeyDerivation.grantCoordinate(communityId, member.hexToByteArray())
         val (version, prev) = versioning(current, entityId, owner)
-        val content = ConcordJson.instance.encodeToString(GrantEntity.serializer(), GrantEntity(member = member, roleIds = roleIds))
+        val content = ConcordJson.instance.encodeToString(GrantEntity.serializer(), GrantEntity(member = member, roleIds = roleIds, controlWrap = controlWrap))
         return wrap(actor, controlPlane, ControlEntityKind.GRANT, entityId, version, prev, content, createdAt, citation)
+    }
+
+    /**
+     * [grant], deciding the staff delivery for the caller: when [roleIds] hands the
+     * member any Control-writing bit ([ConcordPermissions.STAFF_BITS]) and we hold the
+     * [controlRoot] to deliver, the edition carries a `control_wrap` fresh for [epoch]
+     * (CORD-04 §3). A non-staff grant, a revoke, a legacy community, or a granter who
+     * does not hold the secret all produce a plain Grant.
+     *
+     * The role bits are read off the same authority-gated fold the readers use, so a
+     * role a reader would drop never triggers a delivery — and a role we cannot resolve
+     * yet (its edition unseen) conservatively doesn't either, which the spec's re-issue
+     * path covers: any current staffer MAY re-issue a Grant with a fresh wrap.
+     */
+    suspend fun grantWithStaffDelivery(
+        actor: NostrSigner,
+        controlPlane: ControlPlaneKeys,
+        communityId: ByteArray,
+        member: HexKey,
+        roleIds: List<String>,
+        current: List<ControlEdition>,
+        createdAt: Long,
+        citation: AuthorityCitation? = null,
+        owner: HexKey,
+        controlRoot: ByteArray?,
+        epoch: Long,
+    ): Event {
+        val wrap =
+            if (controlRoot != null && makesStaff(roleIds, current, owner)) {
+                ControlRootWrap.build(actor, member, epoch, controlRoot)
+            } else {
+                null
+            }
+        return grant(actor, controlPlane, communityId, member, roleIds, current, createdAt, citation, owner, wrap)
+    }
+
+    /** True when any of [roleIds] resolves to a role carrying a Control-writing bit (CORD-04 §3). */
+    fun makesStaff(
+        roleIds: List<String>,
+        current: List<ControlEdition>,
+        owner: HexKey,
+    ): Boolean {
+        if (roleIds.isEmpty()) return false
+        val roles = AuthorityResolver.resolve(current, owner).roles()
+        return roleIds.any { roles[it]?.permissionBits()?.hasAny(ConcordPermissions.STAFF_BITS) == true }
     }
 
     /** Adds [member] to the banlist (union with the current head). */
     suspend fun ban(
         actor: NostrSigner,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
         communityId: ByteArray,
         member: HexKey,
         current: List<ControlEdition>,
@@ -205,7 +261,7 @@ object ConcordModeration {
     /** Removes [member] from the banlist. */
     suspend fun unban(
         actor: NostrSigner,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
         communityId: ByteArray,
         member: HexKey,
         current: List<ControlEdition>,
@@ -231,7 +287,7 @@ object ConcordModeration {
 
     private suspend fun setBanlist(
         actor: NostrSigner,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
         communityId: ByteArray,
         banned: Set<HexKey>,
         current: List<ControlEdition>,

@@ -76,7 +76,10 @@ object ConcordStrandedRecovery {
     ): ConcordCommunityListEntry? {
         if (!isStranded(entry, bundle)) return null
 
-        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root)).distinctBy { it.epoch }
+        // Bank the epoch we are leaving with its control_pk, so its Control Plane
+        // stays re-subscribable for the anti-rollback floor (a split epoch's address
+        // is held, never derivable — CORD-02 §2).
+        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root, entry.controlPk, entry.controlRoot)).distinctBy { it.epoch }
 
         return ConcordCommunityListEntry(
             id = entry.id,
@@ -84,6 +87,9 @@ object ConcordStrandedRecovery {
             ownerSalt = entry.ownerSalt,
             root = bundle.communityRoot,
             rootEpoch = bundle.rootEpoch,
+            // The re-minted bundle carries the new epoch's control_pk (CORD-05 §1);
+            // absent means the community is (still) legacy at that epoch.
+            controlPk = bundle.controlPk,
             heldRoots = held,
             privateChannels = entry.privateChannels,
             relays = if (bundle.relays.isNotEmpty()) bundle.relays else entry.relays,

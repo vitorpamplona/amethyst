@@ -22,10 +22,13 @@ package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
+import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -34,6 +37,8 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ConcordModerationTest {
@@ -213,5 +218,82 @@ class ConcordModerationTest {
             val state = ConcordCommunityState.fold(poisoned + next, community.ownerPubKey)
             assertTrue(state.authority.isBanned(troll.pubKey), "the forged unban must not free the troll")
             assertTrue(state.authority.isBanned(stranger.pubKey))
+        }
+
+    /**
+     * The staff-delivery decision (CORD-04 §3): a Grant that hands out a Control-writing
+     * bit must carry the `control_root` in the same edition (`control_wrap`), and every
+     * other shape of Grant must not — a non-staff role, a revoke, an unresolvable role,
+     * or a granter who holds no secret to deliver.
+     */
+    @Test
+    fun aStaffMakingGrantDeliversTheControlRootAndNothingElseDoes() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val cp = community.controlPlane
+            val communityId = community.communityId
+            val editions = ConcordActions.controlEditions(community.genesisWraps, cp).toMutableList()
+
+            // A staff role (BAN writes Control editions) and a non-staff one (KICK writes the Guestbook).
+            val staffRoleId = ByteArray(32) { 0x51 }
+            val staffRoleIdHex = staffRoleId.toHexKey()
+            val kickRoleId = ByteArray(32) { 0x52 }
+            val kickRoleIdHex = kickRoleId.toHexKey()
+            editions +=
+                ConcordActions.controlEditions(
+                    listOf(
+                        ConcordModeration.defineRole(owner, cp, staffRoleId, RoleEntity(name = "Mod", position = 2, permissions = ConcordPermissions.of(ConcordPermissions.BAN).toWire()), editions, createdAt = 2L, owner = community.ownerPubKey),
+                    ),
+                    cp,
+                )
+            editions +=
+                ConcordActions.controlEditions(
+                    listOf(
+                        ConcordModeration.defineRole(owner, cp, kickRoleId, RoleEntity(name = "Bouncer", position = 3, permissions = ConcordPermissions.of(ConcordPermissions.KICK).toWire()), editions, createdAt = 3L, owner = community.ownerPubKey),
+                    ),
+                    cp,
+                )
+
+            assertTrue(ConcordModeration.makesStaff(listOf(staffRoleIdHex), editions, community.ownerPubKey))
+            assertFalse(ConcordModeration.makesStaff(listOf(kickRoleIdHex), editions, community.ownerPubKey))
+            assertFalse(ConcordModeration.makesStaff(emptyList(), editions, community.ownerPubKey), "a revoke hands out nothing")
+            assertFalse(ConcordModeration.makesStaff(listOf("ee".repeat(32)), editions, community.ownerPubKey), "an unresolvable role must not trigger a delivery")
+
+            suspend fun grantEntity(
+                roleIds: List<String>,
+                controlRoot: ByteArray?,
+            ): GrantEntity {
+                val wrap =
+                    ConcordModeration.grantWithStaffDelivery(
+                        actor = owner,
+                        controlPlane = cp,
+                        communityId = communityId,
+                        member = admin.pubKey,
+                        roleIds = roleIds,
+                        current = editions,
+                        createdAt = 4L,
+                        owner = community.ownerPubKey,
+                        controlRoot = controlRoot,
+                        epoch = community.rootEpoch,
+                    )
+                val edition = ConcordActions.controlEditions(listOf(wrap), cp).single()
+                return ConcordJson.decodeOrNull<GrantEntity>(edition.content)!!
+            }
+
+            // A staff-making Grant carries the wrap; the promotee opens it and it derives to the
+            // control_pk every member holds for the epoch — the adoption gate (CORD-04 §3).
+            val staffGrant = grantEntity(listOf(staffRoleIdHex), community.controlRoot)
+            val controlWrap = staffGrant.controlWrap
+            assertNotNull(controlWrap, "a staff-making Grant must deliver the write key in the same edition")
+            val opened = ControlRootWrap.openOrNull(controlWrap, admin, owner.pubKey)
+            assertNotNull(opened, "the promotee must be able to open the delivery")
+            assertEquals(community.rootEpoch, opened.epoch, "the wrap must be fresh for the current epoch")
+            assertTrue(ControlRootWrap.derivesTo(opened.controlRoot, communityId, community.rootEpoch, community.controlPkHex))
+
+            // Every other shape is a plain Grant.
+            assertNull(grantEntity(listOf(kickRoleIdHex), community.controlRoot).controlWrap, "a Guestbook-writing role needs no key")
+            assertNull(grantEntity(emptyList(), community.controlRoot).controlWrap, "a revoke delivers nothing")
+            assertNull(grantEntity(listOf("ee".repeat(32)), community.controlRoot).controlWrap, "an unresolved role conservatively delivers nothing")
+            assertNull(grantEntity(listOf(staffRoleIdHex), controlRoot = null).controlWrap, "no held secret, no delivery (legacy community or keyless granter)")
         }
 }

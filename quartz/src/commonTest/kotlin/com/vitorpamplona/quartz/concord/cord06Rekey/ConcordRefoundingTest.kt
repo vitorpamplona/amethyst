@@ -48,6 +48,9 @@ class ConcordRefoundingTest {
     private val carol = NostrSignerInternal(KeyPair()) // removed
 
     private val newRoot = ByteArray(32) { 0x5A }
+
+    /** The fresh staff write key minted beside [newRoot] at every Refounding (CORD-02 §2). */
+    private val newControlRoot = ByteArray(32) { 0x6B }
     private val now = 1_700_000_000L
 
     @Test
@@ -64,10 +67,12 @@ class ConcordRefoundingTest {
                     communityId = communityId,
                     priorRoot = priorRoot,
                     newRoot = newRoot,
+                    newControlRoot = newControlRoot,
                     rootEpoch = community.rootEpoch,
                     priorControlWraps = community.genesisWraps,
-                    priorControlKey = priorControl,
+                    priorControlKeys = priorControl,
                     recipientsXOnly = listOf(alice.pubKey, bob.pubKey),
+                    staffXOnly = setOf(owner.pubKey),
                     createdAt = now,
                 )
 
@@ -77,9 +82,9 @@ class ConcordRefoundingTest {
             val baseRekeyKey = ConcordKeyDerivation.baseRekeyAddress(priorRoot, communityId, build.newEpoch)
 
             // Alice and Bob find the new root; Carol (no blob) does not.
-            val aliceRoot = ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, alice, priorRoot, community.rootEpoch)
-            val bobRoot = ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, bob, priorRoot, community.rootEpoch)
-            val carolRoot = ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, carol, priorRoot, community.rootEpoch)
+            val aliceRoot = ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, alice, communityId, priorRoot, community.rootEpoch)
+            val bobRoot = ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, bob, communityId, priorRoot, community.rootEpoch)
+            val carolRoot = ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, carol, communityId, priorRoot, community.rootEpoch)
 
             assertNotNull(aliceRoot)
             assertContentEquals(newRoot, aliceRoot.newRoot)
@@ -101,14 +106,16 @@ class ConcordRefoundingTest {
                     communityId = communityId,
                     priorRoot = community.communityRoot,
                     newRoot = newRoot,
+                    newControlRoot = newControlRoot,
                     rootEpoch = community.rootEpoch,
                     priorControlWraps = community.genesisWraps,
-                    priorControlKey = community.controlPlane,
+                    priorControlKeys = community.controlPlane,
                     recipientsXOnly = listOf(alice.pubKey),
+                    staffXOnly = setOf(owner.pubKey),
                     createdAt = now,
                 )
 
-            val newControl = ConcordKeyDerivation.controlPlaneKey(newRoot, communityId, build.newEpoch)
+            val newControl = build.newControlKeys
 
             // Re-open the compacted wraps under the NEW control key and fold: same authority + metadata.
             val editions =
@@ -170,14 +177,16 @@ class ConcordRefoundingTest {
                     communityId = communityId,
                     priorRoot = community.communityRoot,
                     newRoot = newRoot,
+                    newControlRoot = newControlRoot,
                     rootEpoch = community.rootEpoch,
                     priorControlWraps = priorWraps,
-                    priorControlKey = control,
+                    priorControlKeys = control,
                     recipientsXOnly = listOf(alice.pubKey),
+                    staffXOnly = setOf(owner.pubKey),
                     createdAt = now,
                 )
 
-            val newControl = ConcordKeyDerivation.controlPlaneKey(newRoot, communityId, build.newEpoch)
+            val newControl = build.newControlKeys
             val editions =
                 build.controlWraps.mapNotNull { wrap ->
                     ConcordStreamEnvelope.openOrNull(wrap, newControl)?.let { ControlEdition.fromRumor(it.rumor) }
@@ -207,16 +216,18 @@ class ConcordRefoundingTest {
                     communityId = community.communityId,
                     priorRoot = community.communityRoot,
                     newRoot = newRoot,
+                    newControlRoot = newControlRoot,
                     rootEpoch = community.rootEpoch,
                     priorControlWraps = community.genesisWraps,
-                    priorControlKey = community.controlPlane,
+                    priorControlKeys = community.controlPlane,
                     recipientsXOnly = listOf(alice.pubKey),
+                    staffXOnly = setOf(owner.pubKey),
                     createdAt = now,
                 )
             val baseRekeyKey = ConcordKeyDerivation.baseRekeyAddress(community.communityRoot, community.communityId, build.newEpoch)
 
             // Alice claims a different prior root: prevcommit mismatch ⇒ rotation rejected.
             val wrongRoot = ByteArray(32) { 0x11 }
-            assertNull(ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, alice, wrongRoot, community.rootEpoch))
+            assertNull(ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, alice, community.communityId, wrongRoot, community.rootEpoch))
         }
 }

@@ -46,6 +46,8 @@ class ConcordSessionRegistryTest {
         ownerSalt = community.ownerSalt.toHexKey(),
         root = community.communityRoot.toHexKey(),
         rootEpoch = community.rootEpoch,
+        controlPk = community.controlPkHex,
+        controlRoot = community.controlRoot.toHexKey(),
         relays = listOf("wss://r.example"),
         name = name,
     )
@@ -66,8 +68,8 @@ class ConcordSessionRegistryTest {
             assertNotNull(registry.sessionFor(beta.communityIdHex))
 
             // Both control-plane addresses are in the subscribe set from the entries alone.
-            assertTrue(registry.subscribeAddresses().contains(alpha.controlPlane.publicKeyHex))
-            assertTrue(registry.subscribeAddresses().contains(beta.controlPlane.publicKeyHex))
+            assertTrue(registry.subscribeAddresses().contains(alpha.controlPlane.address))
+            assertTrue(registry.subscribeAddresses().contains(beta.controlPlane.address))
 
             // A genesis control wrap routes to Alpha's session and folds it (STRUCTURAL).
             alpha.genesisWraps.forEach { assertEquals(ConcordIngestOutcome.STRUCTURAL_FOLD, registry.ingest(it)) }

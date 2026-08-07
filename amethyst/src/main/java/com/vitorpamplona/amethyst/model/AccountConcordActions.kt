@@ -24,20 +24,28 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityList.withControlRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
+import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
+import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
+import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -138,6 +146,10 @@ class AccountConcordActions(
                 ownerSalt = community.ownerSalt.toHexKey(),
                 root = community.communityRoot.toHexKey(),
                 rootEpoch = community.rootEpoch,
+                // The creator is the founding staff member (CORD-02 §2): it keeps the write
+                // secret and publishes only the derived pubkey to everyone else.
+                controlPk = community.controlPkHex,
+                controlRoot = community.controlRoot.toHexKey(),
                 relays = relayUrls,
                 name = name,
                 addedAt = TimeUtils.now() * 1000,
@@ -168,6 +180,9 @@ class AccountConcordActions(
                 rootEpoch = entry.rootEpoch,
                 name = entry.name,
                 relays = entry.relays,
+                // The joiner can never derive the Control Plane address, so the bundle carries
+                // it (CORD-05 §1). Null on a legacy community, which has none to carry.
+                controlPk = entry.controlPk,
             )
         val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), entry.relays)
 
@@ -245,6 +260,9 @@ class AccountConcordActions(
                 ownerSalt = bundle.ownerSalt,
                 root = bundle.communityRoot,
                 rootEpoch = bundle.rootEpoch,
+                // Read access to the Control Plane, never write (CORD-05 §1). Absent = the
+                // community is still pre-split, so we fold it at the legacy address.
+                controlPk = bundle.controlPk,
                 relays = bundle.relays,
                 name = bundle.name,
                 addedAt = TimeUtils.now() * 1000,
@@ -451,6 +469,24 @@ class AccountConcordActions(
     // every client's AuthorityResolver, so a call by someone who doesn't outrank the
     // target is simply dropped on fold. Owner-authored calls always take effect.
 
+    /**
+     * The Control Plane keys for a moderation write, or null when this account cannot
+     * publish there: on a split epoch only `control_root` holders can mint a wrap that
+     * verifies at the plane's address (CORD-02 §2), and wrapping without the secret
+     * throws rather than missigning. Rank and key possession can diverge — a freshly
+     * promoted staffer writes only once their `control_wrap` is adopted (CORD-04 §3),
+     * and the UI gates on rank — so every moderation verb no-ops through this check
+     * instead of crashing on a rank-gated action.
+     */
+    private fun controlKeysForWrite(session: ConcordCommunitySession): ControlPlaneKeys? {
+        val cp = session.controlPlaneKeys()
+        if (!cp.canWrite) {
+            Log.w("Concord") { "Control write refused for ${session.entry.id}: control_root not held at epoch ${session.entry.rootEpoch} (CORD-02 §2)" }
+            return null
+        }
+        return cp
+    }
+
     /** Grant [member] exactly [roleIds] (empty list revokes their roles). */
     suspend fun grantConcordRole(
         communityId: String,
@@ -459,7 +495,23 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val wrap = ConcordModeration.grant(account.signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, roleIds, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val cp = controlKeysForWrite(session) ?: return false
+        // A Grant that first makes its member staff must deliver the control_root in the same
+        // edition (CORD-04 §3) — grantWithStaffDelivery attaches the pairwise wrap when the
+        // roles carry a Control-writing bit and we hold the secret to hand over.
+        val wrap =
+            ConcordModeration.grantWithStaffDelivery(
+                actor = account.signer,
+                controlPlane = cp,
+                communityId = communityId.hexToByteArray(),
+                member = member,
+                roleIds = roleIds,
+                current = session.controlEditions(),
+                createdAt = TimeUtils.now(),
+                owner = session.entry.owner,
+                controlRoot = session.entry.controlRoot?.hexToByteArray(),
+                epoch = session.entry.rootEpoch,
+            )
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -494,11 +546,11 @@ class AccountConcordActions(
         val author = note.author?.pubkeyHex ?: note.event?.pubKey ?: return null
         if (author == account.signer.pubKey) return null
         val communityId = channel.channelId.communityId
-        val state =
-            account.concordSessions
-                .sessionFor(communityId)
-                ?.state
-                ?.value ?: return null
+        val session = account.concordSessions.sessionFor(communityId) ?: return null
+        val state = session.state.value ?: return null
+        // Rank alone isn't enough on a split epoch: the Grant edition takes the control_root
+        // (CORD-02 §2), so don't offer an action the verb would refuse.
+        if (!session.controlPlaneKeys().canWrite) return null
         if (state.authority.isOwner(author) || !state.authority.isOwner(account.signer.pubKey)) return null
         val adminRoleId =
             state.roles.entries
@@ -515,7 +567,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = session.controlPlaneKey()
+        val cp = controlKeysForWrite(session) ?: return false
 
         val existing =
             session.state.value
@@ -530,7 +582,22 @@ class AccountConcordActions(
                 roleId.toHexKey()
             }
 
-        val grantWrap = ConcordModeration.grant(account.signer, cp, communityId.hexToByteArray(), member, listOf(roleIdHex), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        // Admin carries every management bit, so this Grant makes its member staff: it must
+        // deliver the control_root alongside the rank (CORD-04 §3), or the new admin holds
+        // authority it cannot publish under.
+        val grantWrap =
+            ConcordModeration.grantWithStaffDelivery(
+                actor = account.signer,
+                controlPlane = cp,
+                communityId = communityId.hexToByteArray(),
+                member = member,
+                roleIds = listOf(roleIdHex),
+                current = session.controlEditions(),
+                createdAt = TimeUtils.now(),
+                owner = session.entry.owner,
+                controlRoot = session.entry.controlRoot?.hexToByteArray(),
+                epoch = session.entry.rootEpoch,
+            )
         publishConcordWrap(session.entry, grantWrap)
         return true
     }
@@ -542,7 +609,8 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val grantWrap = ConcordModeration.grant(account.signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, emptyList(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val cp = controlKeysForWrite(session) ?: return false
+        val grantWrap = ConcordModeration.grant(account.signer, cp, communityId.hexToByteArray(), member, emptyList(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, grantWrap)
         return true
     }
@@ -568,12 +636,11 @@ class AccountConcordActions(
         val author = note.author?.pubkeyHex ?: note.event?.pubKey ?: return null
         if (author == account.signer.pubKey) return null
         val communityId = channel.channelId.communityId
-        val authority =
-            account.concordSessions
-                .sessionFor(communityId)
-                ?.state
-                ?.value
-                ?.authority ?: return null
+        val session = account.concordSessions.sessionFor(communityId) ?: return null
+        val authority = session.state.value?.authority ?: return null
+        // Rank alone isn't enough on a split epoch: the banlist edition takes the control_root
+        // (CORD-02 §2), so don't offer an action the verb would refuse.
+        if (!session.controlPlaneKeys().canWrite) return null
         if (authority.isOwner(author)) return null
         // The owner short-circuits rather than going through canActOn: canActOn starts at
         // hasPermission, which is false while banned, and a rogue BAN holder *can* currently put
@@ -590,7 +657,8 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val wrap = ConcordModeration.ban(account.signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val cp = controlKeysForWrite(session) ?: return false
+        val wrap = ConcordModeration.ban(account.signer, cp, communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -602,7 +670,8 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val wrap = ConcordModeration.unban(account.signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val cp = controlKeysForWrite(session) ?: return false
+        val wrap = ConcordModeration.unban(account.signer, cp, communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -636,12 +705,16 @@ class AccountConcordActions(
         if (!iCanBan) return false
         val removedLower = removed.mapTo(HashSet()) { it.lowercase() }
         if (removedLower.isEmpty() || removedLower.any { authority.isOwner(it) }) return false
+        // A Refounding writes the current plane (the pre-rotation bans) and the new one (the
+        // compaction), so on a split epoch it takes the current control_root (CORD-02 §2). A
+        // rank-qualified refounder whose secret hasn't arrived yet must wait for re-delivery.
+        val cp = controlKeysForWrite(session) ?: return false
 
         // 1. Ban the removed members on the current Control Plane so the compacted snapshot —
         //    and thus the new epoch — carries the ban. publishConcordWrap folds it in locally
         //    first, so each subsequent edition chains onto the updated banlist head.
         for (target in removedLower) {
-            val banWrap = ConcordModeration.ban(account.signer, session.controlPlaneKey(), communityId.hexToByteArray(), target, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+            val banWrap = ConcordModeration.ban(account.signer, cp, communityId.hexToByteArray(), target, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
             publishConcordWrap(session.entry, banWrap)
         }
 
@@ -667,16 +740,27 @@ class AccountConcordActions(
         // 3. Build the refounding: new root, compacted Control Plane, per-recipient rekey blobs.
         val entry = session.entry
         val newRoot = RandomInstance.bytes(32)
+        // A fresh control_root is minted beside the new root at every Refounding (CORD-02 §2),
+        // so a demoted staffer's retained secret dies with the epoch — and a legacy community
+        // upgrades to the split as a side effect of its next ban (CORD-06 §3).
+        val newControlRoot = RandomInstance.bytes(32)
+        // The staff set the new secret goes to: the owner plus everyone holding a
+        // Control-writing bit (CORD-04 §3). They get the 136-byte blob, every other
+        // recipient the 104-byte one carrying the pubkey alone. (The builder mints a
+        // blob per recipient, so staff who aren't recipients are simply never reached.)
+        val staff = authority.staffMembers()
         val build =
             ConcordActions.buildRefounding(
                 rotatorSigner = account.signer,
                 communityId = communityId,
                 priorRoot = entry.root.hexToByteArray(),
                 newRoot = newRoot,
+                newControlRoot = newControlRoot,
                 rootEpoch = entry.rootEpoch,
                 priorControlWraps = session.controlPlaneWraps(),
-                priorControlKey = session.controlPlaneKey(),
+                priorControlKeys = cp,
                 recipientsXOnly = recipients,
+                staffXOnly = staff,
                 createdAt = TimeUtils.now(),
             )
 
@@ -690,7 +774,7 @@ class AccountConcordActions(
 
         // 5. Adopt the new epoch ourselves. This rebuilds our session under the new root and
         //    re-folds the compacted Control Plane (with the ban), dropping the removed members.
-        adoptConcordRoot(entry, newRoot, build.newEpoch)
+        adoptConcordRoot(entry, newRoot, build.newEpoch, build.newControlKeys.address.hexToByteArray(), newControlRoot)
         return true
     }
 
@@ -710,9 +794,14 @@ class AccountConcordActions(
         entry: ConcordCommunityListEntry,
         newRoot: ByteArray,
         newEpoch: Long,
+        newControlPk: ByteArray? = null,
+        newControlRoot: ByteArray? = null,
     ) {
         if (!adoptedConcordRotations.add("${entry.id}:$newEpoch")) return
-        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root)).distinctBy { it.epoch }
+        // The epoch we're leaving is banked with the address it was folded at, so its Control
+        // Plane stays subscribable for the anti-rollback floor (a split epoch's address can
+        // never be re-derived, only remembered — CORD-02 §2).
+        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root, entry.controlPk, entry.controlRoot)).distinctBy { it.epoch }
         val next =
             ConcordCommunityListEntry(
                 id = entry.id,
@@ -720,6 +809,11 @@ class AccountConcordActions(
                 ownerSalt = entry.ownerSalt,
                 root = newRoot.toHexKey(),
                 rootEpoch = newEpoch,
+                // A rotation that delivered no control material is a legacy, pre-split one
+                // (CORD-06 §3): the new epoch keeps folding at the legacy address, and the
+                // stale prior-epoch values must NOT be carried into it.
+                controlPk = newControlPk?.toHexKey(),
+                controlRoot = newControlRoot?.toHexKey(),
                 heldRoots = held,
                 privateChannels = entry.privateChannels,
                 relays = entry.relays,
@@ -769,6 +863,7 @@ class AccountConcordActions(
                     wraps = wraps,
                     baseRekey = session.nextBaseRekeyKey(),
                     recipientSigner = account.signer,
+                    communityId = entry.id,
                     priorRoot = entry.root.hexToByteArray(),
                     rootEpoch = entry.rootEpoch,
                 ) ?: continue
@@ -779,7 +874,62 @@ class AccountConcordActions(
             // who has themselves been banned could still rotate the whole community.
             val authorized = authority.isOwner(received.rotator) || authority.hasPermission(received.rotator, ConcordPermissions.BAN)
             if (!authorized) continue
-            adoptConcordRoot(entry, received.newRoot, received.newEpoch)
+            adoptConcordRoot(entry, received.newRoot, received.newEpoch, received.newControlPk, received.newControlRoot)
+        }
+    }
+
+    /**
+     * Adopt a `control_root` delivered to us by a staff-making Grant (CORD-04 §3): the
+     * promoting edition carries the secret in `control_wrap`, NIP-44-encrypted under the
+     * granter↔member pairwise key, so promotion and key delivery are one signed edition
+     * with nothing separate to watch an inbox for.
+     *
+     * Adoption is gated twice and fails closed both times. The secret is adopted only if
+     * it derives to exactly the `control_pk` we already hold for the named epoch — a
+     * garbage wrap is attributable griefing, nothing worse — and only from a Grant our own
+     * fold honors, so a rogue cannot feed us a key by minting an edition nobody accepts.
+     * The epoch check matters because compaction re-wraps a Grant head verbatim across
+     * Refoundings, so a folded head can legitimately carry a wrap minted for a prior epoch.
+     *
+     * Idempotent: once the entry holds the secret there is nothing to adopt. Runs on the
+     * revision tick, like the rekey drain.
+     */
+    internal suspend fun drainConcordStaffGrants() {
+        if (!account.isWriteable()) return
+        val me = account.signer.pubKey.lowercase()
+        for (session in account.concordSessions.sessions()) {
+            val entry = session.entry
+            // Already staff at this epoch, or a legacy community with no split to join.
+            val heldControlPk = entry.controlPk
+            if (entry.controlRoot != null || heldControlPk == null) continue
+            val state = session.state.value ?: continue
+            // Only a Grant our fold honors can deliver: an unauthorized edition hands us nothing.
+            if (!state.authority.isStaff(me)) continue
+
+            val myGrantCoordinate =
+                ConcordKeyDerivation
+                    .grantCoordinate(entry.id.hexToByteArray(), me.hexToByteArray())
+                    .toHexKey()
+            val delivered =
+                session
+                    .controlEditions()
+                    .filter { it.entityKind == ControlEntityKind.GRANT && it.entityIdHex == myGrantCoordinate }
+                    // Newest first: a re-issued Grant (a lost key, a head superseded before we
+                    // fetched it) carries the fresher wrap.
+                    .sortedByDescending { it.version }
+                    .firstNotNullOfOrNull { edition ->
+                        val wrap = ConcordJson.decodeOrNull<GrantEntity>(edition.content)?.controlWrap ?: return@firstNotNullOfOrNull null
+                        val opened = ControlRootWrap.openOrNull(wrap, account.signer, edition.author) ?: return@firstNotNullOfOrNull null
+                        if (opened.epoch != entry.rootEpoch) return@firstNotNullOfOrNull null
+                        // Fails closed: a secret that doesn't derive to the pk we hold is dropped,
+                        // never adopted — we will not split ourselves off from the plane's readers.
+                        if (!ControlRootWrap.derivesTo(opened.controlRoot, entry.id.hexToByteArray(), entry.rootEpoch, heldControlPk)) return@firstNotNullOfOrNull null
+                        opened.controlRoot
+                    } ?: continue
+
+            account.sendMyPublicAndPrivateOutbox(
+                account.concordChannelList.follow(entry.withControlRoot(delivered.toHexKey())),
+            )
         }
     }
 
@@ -859,8 +1009,9 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
+        val cp = controlKeysForWrite(session) ?: return false
         val metadata = MetadataEntity(name = name, icon = icon, banner = banner, description = description, relays = relays)
-        val wrap = ConcordModeration.editMetadata(account.signer, session.controlPlaneKey(), communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val wrap = ConcordModeration.editMetadata(account.signer, cp, communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -876,9 +1027,10 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
+        val cp = controlKeysForWrite(session) ?: return false
         val channelId = RandomInstance.bytes(32)
         val channel = ChannelEntity(name = name.trim())
-        val wrap = ConcordModeration.defineChannel(account.signer, session.controlPlaneKey(), channelId, channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val wrap = ConcordModeration.defineChannel(account.signer, cp, channelId, channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -891,6 +1043,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
+        val cp = controlKeysForWrite(session) ?: return false
         // Carry the standing definition forward and change only the name. A ChannelEntity built from
         // scratch defaults `private` and `voice` to false, so renaming a private channel used to
         // publish an edition declaring it PUBLIC — and a voice channel became a text channel.
@@ -900,7 +1053,7 @@ class AccountConcordActions(
                 ?.get(channelIdHex)
                 ?.definition
         val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false)
-        val wrap = ConcordModeration.defineChannel(account.signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val wrap = ConcordModeration.defineChannel(account.signer, cp, channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }
@@ -913,6 +1066,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
+        val cp = controlKeysForWrite(session) ?: return false
         // Same as rename: preserve the standing flags so a tombstone does not also silently
         // reclassify the channel it retires.
         val standing =
@@ -921,7 +1075,7 @@ class AccountConcordActions(
                 ?.get(channelIdHex)
                 ?.definition
         val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false, deleted = true)
-        val wrap = ConcordModeration.defineChannel(account.signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
+        val wrap = ConcordModeration.defineChannel(account.signer, cp, channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
     }

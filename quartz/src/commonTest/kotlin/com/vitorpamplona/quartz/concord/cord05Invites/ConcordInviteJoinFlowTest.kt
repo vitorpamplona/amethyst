@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.concord.cord05Invites
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityFactory
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
-import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -52,6 +52,9 @@ class ConcordInviteJoinFlowTest {
             ownerSalt = community.ownerSalt.toHexKey(),
             communityRoot = community.communityRoot.toHexKey(),
             rootEpoch = community.rootEpoch,
+            // Read access to the Control Plane, never write (CORD-05 §1): the joiner cannot
+            // derive this address, so the bundle is the only place it can come from.
+            controlPk = community.controlPkHex,
             relays = listOf("wss://relay.example"),
             name = "Nostrichs",
         )
@@ -73,13 +76,18 @@ class ConcordInviteJoinFlowTest {
             assertTrue(ConcordInviteBundle.validate(invite))
             assertEquals(community.communityIdHex, invite.communityId)
 
-            // Reconstruct the root, derive the Control Plane, and read the genesis.
+            // Reconstruct the root and open the Control Plane as a plain member does: the
+            // delivered control_pk is the address to verify against, the derived read key
+            // decrypts (CORD-02 §5). No write key anywhere on this path.
+            assertNotNull(invite.controlPk)
             val controlPlane =
-                ConcordKeyDerivation.controlPlaneKey(
+                ControlPlaneKeys.forMember(
                     invite.communityRoot.hexToByteArray(),
                     invite.communityId.hexToByteArray(),
                     invite.rootEpoch,
+                    invite.controlPk,
                 )
+            assertFalse(controlPlane.canWrite, "an invite must never hand a joiner the write key")
             val editions = community.genesisWraps.mapNotNull { ControlEdition.fromRumor(ConcordStreamEnvelope.open(it, controlPlane).rumor) }
             val state = ConcordCommunityState.fold(editions, invite.owner)
             assertEquals("Nostrichs", state.metadata?.name)

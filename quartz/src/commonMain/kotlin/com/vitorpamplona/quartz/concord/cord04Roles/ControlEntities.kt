@@ -92,11 +92,20 @@ data class RoleEntity(
  * A Grant's content (CORD-04): maps a [member] to the set of [roleIds] they hold.
  * Honored only if the granting actor outranks every assigned Role and the chain
  * terminates at the owner (see [AuthorityResolver]).
+ *
+ * A staff-making Grant also delivers the Control Plane write secret in
+ * [controlWrap] (CORD-04 §3): the `control_root` NIP-44-encrypted under the
+ * granter↔member pairwise conversation key, its plaintext the fixed-width 40
+ * bytes `epoch_be[8] ‖ control_root[32]` (see [ControlRootWrap]). Delivery, never
+ * authority — every reader but the member treats it as opaque bytes, and the
+ * member adopts the secret only if it derives to the `control_pk` they hold for
+ * the named epoch.
  */
 @Serializable
 data class GrantEntity(
     val member: String = "",
     @SerialName("role_ids") val roleIds: List<String> = emptyList(),
+    @SerialName("control_wrap") val controlWrap: String? = null,
 )
 
 /**

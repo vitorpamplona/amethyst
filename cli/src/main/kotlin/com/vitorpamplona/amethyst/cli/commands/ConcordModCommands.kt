@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
-import com.vitorpamplona.quartz.concord.crypto.GroupKey
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -93,6 +93,7 @@ object ConcordModCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val (cp, editions) = load(ctx, sc)
+            writeGuard(cp)?.let { return it }
             val roleId = RandomInstance.bytes(32)
             val role = RoleEntity(name = name, position = position, permissions = ConcordPermissions.of(*permBits.toIntArray()).toWire())
             val wrap = ConcordModeration.defineRole(ctx.signer, cp, roleId, role, editions, TimeUtils.now(), owner = sc.owner)
@@ -119,7 +120,23 @@ object ConcordModCommands {
             ctx.prepare()
             val member = ctx.requireUserHex(userRef)
             val (cp, editions) = load(ctx, sc)
-            val wrap = ConcordModeration.grant(ctx.signer, cp, sc.communityId.hexToByteArray(), member, listOf(roleId), editions, TimeUtils.now(), owner = sc.owner)
+            writeGuard(cp)?.let { return it }
+            // A Grant that first makes its member staff must carry the write secret in the same
+            // edition (CORD-04 §3); ConcordModeration wraps it pairwise when the granted roles
+            // hold a Control-writing bit and we hold the secret to deliver.
+            val wrap =
+                ConcordModeration.grantWithStaffDelivery(
+                    actor = ctx.signer,
+                    controlPlane = cp,
+                    communityId = sc.communityId.hexToByteArray(),
+                    member = member,
+                    roleIds = listOf(roleId),
+                    current = editions,
+                    createdAt = TimeUtils.now(),
+                    owner = sc.owner,
+                    controlRoot = sc.controlRoot.ifBlank { null }?.hexToByteArray(),
+                    epoch = sc.rootEpoch,
+                )
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, wrap.id)?.let { return it }
             Output.emit(mapOf("member" to member, "roles" to listOf(roleId)) + RawEventSupport.ackFields(ack))
@@ -154,6 +171,7 @@ object ConcordModCommands {
             ctx.prepare()
             val member = ctx.requireUserHex(userRef)
             val (cp, editions) = load(ctx, sc)
+            writeGuard(cp)?.let { return it }
             val cid = sc.communityId.hexToByteArray()
             val wrap =
                 if (ban) {
@@ -168,18 +186,32 @@ object ConcordModCommands {
         }
     }
 
-    /** Drain the control plane and return its key + current editions to chain onto. */
+    /** Drain the control plane and return its keys + current editions to chain onto. */
     private suspend fun load(
         ctx: Context,
         sc: StoredCommunity,
-    ): Pair<GroupKey, List<ControlEdition>> {
-        val cp = ConcordActions.controlPlane(sc.root.hexToByteArray(), sc.communityId.hexToByteArray(), sc.rootEpoch)
+    ): Pair<ControlPlaneKeys, List<ControlEdition>> {
+        val cp = ConcordCommands.controlPlaneKeysFor(sc)
         val relays = ConcordCommands.relaysFor(ctx, sc)
-        // Concord relays serve the plane's kind-1059 only to a connection AUTHed as the derived
-        // stream key — register the control key so the drain isn't refused (else the fold is empty).
-        ctx.registerConcordStreamKeys(relays, listOf(cp.secretKey))
-        val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
+        // Concord relays serve the plane's kind-1059 only to a connection AUTHed as the stream
+        // key — register it so the drain isn't refused (else the fold is empty). On a split epoch
+        // that secret is staff-only (CORD-02 §2), and a member simply has nothing to register.
+        ctx.registerConcordStreamKeys(relays, listOfNotNull(cp.signer?.secretKey))
+        val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.address)) }, pendingOnAuthRequired = true).map { it.second }
         return cp to ConcordActions.controlEditions(wraps, cp)
+    }
+
+    /**
+     * Refuses a moderation command that this account cannot publish: on a split epoch
+     * only `control_root` holders can mint a wrap the plane accepts (CORD-02 §2), so a
+     * member would otherwise sign an edition every relay and reader drops. Possession is
+     * a spam gate, never authority — holding the key still does not make the action
+     * honored, which the Roster decides at fold (CORD-04 §5).
+     */
+    private fun writeGuard(cp: ControlPlaneKeys): Int? {
+        if (cp.canWrite) return null
+        Output.error("forbidden", "this account holds no control_root for the community, so it cannot publish Control Plane editions (CORD-02 §2) — ask a staff member to grant you a Control-writing role")
+        return 1
     }
 
     private fun permByName(name: String): Int? =
