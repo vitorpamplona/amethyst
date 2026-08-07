@@ -4711,4 +4711,29 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
+    <string name="drawer_settings">Menu lateral</string>
+    <string name="drawer_settings_title">Seu menu lateral</string>
+    <string name="drawer_settings_description">Abra uma seção e desligue as linhas que você nunca usa. Configurações permanece sempre visível, então você sempre pode voltar aqui. A ordem das seções é fixa.</string>
+    <string name="drawer_settings_sections">Seções</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d oculta</item>
+        <item quantity="other">%1$d ocultas</item>
+    </plurals>
+    <string name="drawer_settings_visible">Visíveis</string>
+    <string name="drawer_settings_hidden">Ocultas</string>
+    <string name="drawer_settings_always_on">Sempre ativo</string>
+    <string name="drawer_settings_show_all">Mostrar tudo</string>
+    <string name="drawer_settings_hide_all">Ocultar tudo</string>
+    <string name="git_repositories_search_open">Filtrar repositórios</string>
+    <string name="git_repositories_search_close">Fechar filtro</string>
+    <string name="git_repositories_search_placeholder">Filtrar por nome, tópico, host, mantenedor…</string>
+    <string name="git_repositories_search_no_results">Nenhum repositório no feed atual corresponde a esta pesquisa.</string>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d relay</item>
+        <item quantity="other">%1$s \u00b7 %2$d relays</item>
+    </plurals>
 </resources>

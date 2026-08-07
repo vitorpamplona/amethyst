@@ -3353,7 +3353,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="drawer_settings_title">Twoje menu boczne</string>
     <string name="drawer_settings_description">Otwórz sekcję i wyłącz wiersze, których nigdy nie używasz. Ustawienia zawsze pozostają widoczne, więc zawsze możesz tu wrócić. Kolejność sekcji jest ustalona.</string>
     <string name="drawer_settings_sections">Sekcje</string>
-    <string name="drawer_settings_hidden_count">%1$d ukrytych</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d ukryta</item>
+        <item quantity="few">%1$d ukryte</item>
+        <item quantity="many">%1$d ukrytych</item>
+        <item quantity="other">%1$d ukrytych</item>
+    </plurals>
     <string name="drawer_settings_visible">Widoczne</string>
     <string name="drawer_settings_hidden">Ukryte</string>
     <string name="drawer_settings_always_on">Zawsze włączony</string>

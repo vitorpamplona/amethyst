@@ -3517,7 +3517,10 @@
     <string name="drawer_settings_title">Your side menu</string>
     <string name="drawer_settings_description">Open a section and switch off the rows you never use. Settings always stays visible, so you can always get back here. Section order is fixed.</string>
     <string name="drawer_settings_sections">Sections</string>
-    <string name="drawer_settings_hidden_count">%1$d hidden</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d hidden</item>
+        <item quantity="other">%1$d hidden</item>
+    </plurals>
     <string name="drawer_settings_visible">Visible</string>
     <string name="drawer_settings_hidden">Hidden</string>
     <string name="drawer_settings_always_on">Always on</string>

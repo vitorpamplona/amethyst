@@ -3226,7 +3226,10 @@
     <string name="drawer_settings_title">आपकी पार्श्व विकल्पसूची</string>
     <string name="drawer_settings_description">एक विभाग खोलें तथा उन पंक्तियों को निष्क्रिय करें जिनका उपयोग आप कभी नहीं करते। स्थापना विकल्प सर्वदा दृश्यमान रहते हैं। जिससे कि आप यहाँ कभी भी लौट सकेंगे। विभाग क्रम स्थायी है।</string>
     <string name="drawer_settings_sections">विभाग</string>
-    <string name="drawer_settings_hidden_count">%1$d छिपे हुए</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d छिपा हुआ</item>
+        <item quantity="other">%1$d छिपे हुए</item>
+    </plurals>
     <string name="drawer_settings_visible">दृश्यमान</string>
     <string name="drawer_settings_hidden">छिपे हुए</string>
     <string name="drawer_settings_always_on">सर्वदा सक्रिय</string>

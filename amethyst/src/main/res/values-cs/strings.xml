@@ -4905,4 +4905,23 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
+    <string name="drawer_settings">Boční nabídka</string>
+    <string name="drawer_settings_title">Vaše boční nabídka</string>
+    <string name="drawer_settings_description">Otevřete sekci a vypněte řádky, které nikdy nepoužíváte. Nastavení zůstává vždy viditelné, takže se sem vždy vrátíte. Pořadí sekcí je pevné.</string>
+    <string name="drawer_settings_sections">Sekce</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d skrytá</item>
+        <item quantity="few">%1$d skryté</item>
+        <item quantity="many">%1$d skrytých</item>
+        <item quantity="other">%1$d skrytých</item>
+    </plurals>
+    <string name="drawer_settings_visible">Viditelné</string>
+    <string name="drawer_settings_hidden">Skryté</string>
+    <string name="drawer_settings_always_on">Vždy zapnuto</string>
+    <string name="drawer_settings_show_all">Zobrazit vše</string>
+    <string name="drawer_settings_hide_all">Skrýt vše</string>
+    <string name="git_repositories_search_open">Filtrovat repozitáře</string>
+    <string name="git_repositories_search_close">Zavřít filtr</string>
+    <string name="git_repositories_search_placeholder">Filtrovat podle názvu, tématu, hostitele, správce…</string>
+    <string name="git_repositories_search_no_results">Tomuto hledání neodpovídají žádné repozitáře v aktuálním kanálu.</string>
 </resources>

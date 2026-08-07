@@ -3227,7 +3227,10 @@
     <string name="drawer_settings_title">Saját oldalsó menü</string>
     <string name="drawer_settings_description">Nyisson meg egy szakaszt, és kapcsolja ki azokat a sorokat, amelyeket soha nem használ. A beállítások mindig láthatók maradnak, így bármikor visszatérhet ide. A szakaszok sorrendje rögzített.</string>
     <string name="drawer_settings_sections">Szakaszok</string>
-    <string name="drawer_settings_hidden_count">%1$d rejtett</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d rejtett</item>
+        <item quantity="other">%1$d rejtett</item>
+    </plurals>
     <string name="drawer_settings_visible">Látható</string>
     <string name="drawer_settings_hidden">Rejtett</string>
     <string name="drawer_settings_always_on">Mindig bekapcsolva</string>

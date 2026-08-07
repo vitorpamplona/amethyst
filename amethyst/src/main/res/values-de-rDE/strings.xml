@@ -4713,4 +4713,21 @@
     <string name="buzz_persona_avatar">Avatar-URL (optional)</string>
     <string name="buzz_persona_publishing">Wird veröffentlicht…</string>
     <string name="buzz_persona_publish">Persona veröffentlichen</string>
+    <string name="drawer_settings">Seitenmenü</string>
+    <string name="drawer_settings_title">Dein Seitenmenü</string>
+    <string name="drawer_settings_description">Öffne einen Bereich und schalte die Zeilen aus, die du nie nutzt. Einstellungen bleibt immer sichtbar, damit du jederzeit hierher zurückkommst. Die Reihenfolge der Bereiche ist fest.</string>
+    <string name="drawer_settings_sections">Bereiche</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d ausgeblendet</item>
+        <item quantity="other">%1$d ausgeblendet</item>
+    </plurals>
+    <string name="drawer_settings_visible">Sichtbar</string>
+    <string name="drawer_settings_hidden">Ausgeblendet</string>
+    <string name="drawer_settings_always_on">Immer an</string>
+    <string name="drawer_settings_show_all">Alle anzeigen</string>
+    <string name="drawer_settings_hide_all">Alle ausblenden</string>
+    <string name="git_repositories_search_open">Repositories filtern</string>
+    <string name="git_repositories_search_close">Filter schließen</string>
+    <string name="git_repositories_search_placeholder">Nach Name, Thema, Host, Betreuer filtern…</string>
+    <string name="git_repositories_search_no_results">Keine Repositories im aktuellen Feed passen zu dieser Suche.</string>
 </resources>
