@@ -112,10 +112,10 @@ class PdfParserTest {
         assertTrue(videoMedia is MediaUrlVideo, "Expected MediaUrlVideo despite the malformed `m mp4` mime")
     }
 
-    // A malformed mime on a URL with *no* recognizable extension can't be recovered — it stays a
-    // link. This documents the boundary of the fallback so it isn't mistaken for a regression.
+    // A bare-subtype mime is recovered from the imeta itself, so an extensionless URL — the shape
+    // Blossom hands out, where the imeta is the only type signal there is — still renders.
     @Test
-    fun malformedImetaMimeWithoutExtensionStaysUnclassified() {
+    fun malformedImetaMimeWithoutExtensionIsRecoveredFromTheMime() {
         val url = "https://files.example.com/abcd1234"
         val tags =
             ImmutableListOfLists(
@@ -126,6 +126,23 @@ class PdfParserTest {
 
         val state = RichTextParser().parseText(url, tags, null)
 
-        assertEquals(null, state.mediaForPager[url], "No extension to recover from -> not treated as media")
+        assertTrue(state.mediaForPager[url] is MediaUrlImage, "`m jpeg` alone is enough to classify the media")
+    }
+
+    // The boundary: a bare token that maps to no known type, on a URL with no extension, has
+    // nothing left to recover from. This documents the limit so it isn't mistaken for a regression.
+    @Test
+    fun unrecognizableImetaMimeWithoutExtensionStaysUnclassified() {
+        val url = "https://files.example.com/abcd1234"
+        val tags =
+            ImmutableListOfLists(
+                arrayOf(
+                    arrayOf("imeta", "url $url", "m notarealtype"),
+                ),
+            )
+
+        val state = RichTextParser().parseText(url, tags, null)
+
+        assertEquals(null, state.mediaForPager[url], "Nothing to recover from -> not treated as media")
     }
 }

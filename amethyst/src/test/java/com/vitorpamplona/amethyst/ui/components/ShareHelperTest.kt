@@ -162,4 +162,41 @@ class ShareHelperTest {
         file.writeBytes(bytes)
         return file
     }
+
+    // A slash-less Intent.type matches no IntentFilter, so the chooser opens with zero targets and
+    // the share silently fails. Author-supplied `m` tags can carry exactly that (Primal iOS emits
+    // `m jpeg`), so a bare subtype must be repaired rather than forwarded.
+    @Test
+    fun resolveShareMimeType_bareSubtype_isExpandedToFullMimeType() {
+        assertEquals("image/jpeg", ShareHelper.resolveShareMimeType("jpeg", "jpg", "image"))
+        assertEquals("video/mp4", ShareHelper.resolveShareMimeType("mp4", "mp4", "video"))
+    }
+
+    @Test
+    fun resolveShareMimeType_wellFormedDeclaration_isPreserved() {
+        assertEquals("image/png", ShareHelper.resolveShareMimeType("image/png", "png", "image"))
+    }
+
+    // An unusable declaration falls back to the extension, which is sniffed from the file's magic
+    // numbers and so is not attacker-controlled.
+    @Test
+    fun resolveShareMimeType_unrecognizableDeclaration_fallsBackToSniffedExtension() {
+        assertEquals("image/png", ShareHelper.resolveShareMimeType("notatype", "png", "image"))
+    }
+
+    @Test
+    fun resolveShareMimeType_noDeclaration_usesCanonicalTypeForExtension() {
+        // Not "image/jpg" -- jpg is not a registered subtype.
+        assertEquals("image/jpeg", ShareHelper.resolveShareMimeType(null, "jpg", "image"))
+        assertEquals("video/quicktime", ShareHelper.resolveShareMimeType(null, "mov", "video"))
+    }
+
+    @Test
+    fun resolveShareMimeType_alwaysProducesASlashSeparatedType() {
+        val cases = listOf(null, "", "jpeg", "image/jpeg", "notatype", "JPEG")
+        cases.forEach { declared ->
+            val resolved = ShareHelper.resolveShareMimeType(declared, "jpg", "image")
+            assertTrue("`$declared` resolved to un-matchable type `$resolved`", resolved.contains("/"))
+        }
+    }
 }

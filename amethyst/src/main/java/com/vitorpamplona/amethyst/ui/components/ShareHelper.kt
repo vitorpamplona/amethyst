@@ -25,6 +25,8 @@ import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.richtext.mimeTypeMap
+import com.vitorpamplona.amethyst.commons.richtext.normalizeMimeType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -64,6 +66,27 @@ object ShareHelper {
     private val MP4_BRAND_MP41 = "mp41".toByteArray()
     private val MP4_BRAND_MP42 = "mp42".toByteArray()
     private val MOV_BRAND_QT = "qt  ".toByteArray()
+
+    /**
+     * Picks the MIME type to put on an `ACTION_SEND` intent.
+     *
+     * `Intent.type` has to be a real `type/subtype`: an `IntentFilter` matches the two halves
+     * separately, so a slash-less value like `jpeg` matches nothing and the chooser opens empty —
+     * the share silently does nothing. Events can absolutely carry such a value, because NIP-92
+     * `imeta`/NIP-94 `m` tags are author-supplied and some clients write the bare subtype (Primal
+     * iOS emits `m jpeg`). Treat the declared type as a hint, not as truth.
+     *
+     * [fileExtension] is the safer signal — [getMediaExtension] sniffs it from the file's magic
+     * numbers rather than trusting the event — so it backs up an unusable declaration.
+     */
+    internal fun resolveShareMimeType(
+        declaredMimeType: String?,
+        fileExtension: String,
+        defaultTypePrefix: String,
+    ): String =
+        normalizeMimeType(declaredMimeType)
+            ?: mimeTypeMap[fileExtension.lowercase()]
+            ?: "$defaultTypePrefix/$fileExtension"
 
     suspend fun getSharableUriFromUrl(
         context: Context,

@@ -59,7 +59,7 @@ class RichTextParser {
 
         val tags = eventTags.get(fullUrl)?.properties ?: emptyMap()
 
-        val contentType = frags[MimeTypeTag.TAG_NAME] ?: tags[MimeTypeTag.TAG_NAME]?.firstOrNull()
+        val contentType = normalizeMimeType(frags[MimeTypeTag.TAG_NAME] ?: tags[MimeTypeTag.TAG_NAME]?.firstOrNull())
 
         // Returning null here drops the URL to a plain link, discarding the imeta's `dim`/blurhash
         // and forcing a URL-preview round-trip to rediscover a type the imeta already declared —
@@ -681,3 +681,23 @@ val mimeTypeMap: Map<String, String> =
         // Documents
         "pdf" to "application/pdf",
     )
+
+/**
+ * NIP-92's `m` property is meant to carry a full `type/subtype`, but several clients emit the
+ * bare subtype instead — Primal iOS writes `m jpeg` rather than `m image/jpeg`. That value is
+ * useless as a MIME type: it matches none of the `startsWith("image/")`-style checks, and once
+ * it is stored on the media model it travels all the way into Android's `ACTION_SEND` as
+ * `Intent.type = "jpeg"`. No `<data android:mimeType>` filter matches a type without a slash,
+ * so the share sheet opens with zero targets and the image cannot be shared at all.
+ *
+ * Map a bare subtype back onto its canonical MIME so every downstream consumer (the share
+ * intent, the gallery entry's published `m` tag, the player's type hint) sees a well-formed
+ * value. Anything already containing a `/` is passed through untouched, and an unrecognised
+ * bare token is dropped to null rather than propagated — that leaves the caller's
+ * extension-based detection to decide, which is strictly better than carrying garbage forward.
+ */
+fun normalizeMimeType(rawMimeType: String?): String? {
+    if (rawMimeType == null) return null
+    if (rawMimeType.contains('/')) return rawMimeType
+    return mimeTypeMap[rawMimeType.lowercase()]
+}
