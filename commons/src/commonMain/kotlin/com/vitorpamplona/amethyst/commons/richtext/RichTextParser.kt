@@ -557,10 +557,10 @@ class RichTextParser {
          * Resolves which renderer can display a declared blob — the single decision every media
          * renderer must make, from a NIP-94 `m` tag, a NIP-92 imeta, or a bare URL.
          *
-         * A declared MIME type wins; the URL extension is the fallback both for the no-MIME case
-         * and for a *malformed* MIME (Primal iOS emits `m jpeg` rather than `m image/jpeg`, which
-         * matches no prefix below). `data:` URIs carry their type in the prefix, so a miss there is
-         * genuine and the base64 payload is never extension-probed.
+         * A declared MIME type wins, after [normalizeMimeType] repairs the bare-subtype form some
+         * clients emit; the URL extension is the fallback both for the no-MIME case and for a
+         * declaration too mangled to repair. `data:` URIs carry their type in the prefix, so a miss
+         * there is genuine and the base64 payload is never extension-probed.
          *
          * Returns **null** when nothing can render the file. Callers must not substitute a media
          * kind for that null: handing an arbitrary blob — a webxdc app, a zip, an APK — to the
@@ -570,8 +570,9 @@ class RichTextParser {
          */
         fun classifyMedia(
             url: String,
-            mimeType: String?,
+            rawMimeType: String?,
         ): MediaContentKind? {
+            val mimeType = normalizeMimeType(rawMimeType)
             if (mimeType != null) {
                 if (mimeType.startsWith("image/")) return MediaContentKind.IMAGE
                 // HLS playlists are advertised with a non-`video/*` MIME; see [isHlsMimeType].
@@ -666,6 +667,9 @@ val mimeTypeMap: Map<String, String> =
         // Video
         "mp4" to "video/mp4",
         "webm" to "video/webm",
+        // Dead entry: "ogg" is re-keyed under Audio below and mapOf keeps the last, so every
+        // lookup of it yields audio/ogg. Kept only to show the extension is genuinely ambiguous —
+        // see [ambiguousMimeSubtypes]. Don't read this line as reachable.
         "ogg" to "video/ogg",
         "mov" to "video/quicktime",
         "avi" to "video/x-msvideo",
@@ -681,3 +685,53 @@ val mimeTypeMap: Map<String, String> =
         // Documents
         "pdf" to "application/pdf",
     )
+
+/**
+ * Subtypes that name more than one top-level type: `mpeg`, `mp4`, `ogg`, `webm` and `3gpp` all exist
+ * as both `audio/` and `video/`, so a bare token spelling one of them identifies no family on its
+ * own. See [normalizeMimeType] for what that costs them.
+ */
+private val ambiguousMimeSubtypes = setOf("mpeg", "mp4", "ogg", "webm", "3gpp")
+
+/**
+ * The subtype half of every MIME in [mimeTypeMap], so a bare token can be looked up as what it
+ * actually is. [mimeTypeMap] is keyed by *extension*, which only doubles as a subtype index where
+ * the two spellings coincide — `quicktime`, `x-matroska` and `svg+xml` are subtypes no extension
+ * spells. Consulted after [mimeTypeMap] so the extension spelling keeps priority where they
+ * disagree (`mp4` stays `video/mp4` rather than the later `audio/mp4` entry).
+ */
+private val mimeSubtypeMap: Map<String, String> = mimeTypeMap.values.associateBy { it.substringAfter('/') }
+
+/**
+ * NIP-92's `m` property is meant to carry a full `type/subtype`, but several clients emit the
+ * bare subtype instead — Primal iOS writes `m jpeg` rather than `m image/jpeg`. That value is
+ * useless as a MIME type: it matches none of the `startsWith("image/")`-style checks, and once
+ * it is stored on the media model it travels all the way into Android's `ACTION_SEND` as
+ * `Intent.type = "jpeg"`. No `<data android:mimeType>` filter matches a type without a slash,
+ * so the share sheet opens with zero targets and the image cannot be shared at all.
+ *
+ * Map a bare subtype back onto its canonical MIME. This is called from the two chokepoints every
+ * `m` value passes through — [RichTextParser.classifyMedia] for the render decision and
+ * [MediaUrlContent] for the value the share intent and the gallery entry's republished `m` tag
+ * read — so consumers see a well-formed type without each having to remember to repair it.
+ *
+ * Anything already containing a `/` is passed through untouched, and an unrecognised bare token is
+ * dropped to null rather than propagated — that leaves the caller's extension-based detection to
+ * decide, which is strictly better than carrying garbage forward.
+ *
+ * The same refusal covers a token in [ambiguousMimeSubtypes] that would land in `audio/`. `audio/`
+ * is the one destructive family: it is what [RichTextParser.isAudioContent] reads to drop the
+ * picture, so guessing it for what may be a video loses content, while guessing `video/` for what
+ * may be audio only costs some chrome. That asymmetry is why the guard is one-sided rather than a
+ * blanket refusal — `mp4` and `webm` resolve to `video/` and keep their rescue, so an extensionless
+ * Blossom URL declaring `m mp4` still renders, whereas `ogg` (whose only live [mimeTypeMap] entry
+ * is `audio/ogg`, its `video/ogg` one being a dead duplicate key) and `mpeg` decline.
+ */
+fun normalizeMimeType(rawMimeType: String?): String? {
+    if (rawMimeType == null) return null
+    if (rawMimeType.contains('/')) return rawMimeType
+    val token = rawMimeType.lowercase()
+    val resolved = mimeTypeMap[token] ?: mimeSubtypeMap[token] ?: return null
+    if (token in ambiguousMimeSubtypes && resolved.startsWith("audio/")) return null
+    return resolved
+}
