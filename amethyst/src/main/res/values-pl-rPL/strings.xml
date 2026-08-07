@@ -211,6 +211,8 @@
     <string name="connection_success_rate_description">Odsetek udanych połączeń z transmiterem</string>
     <string name="search_and_add_a_user">Szukaj i dodaj użytkownika</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
+    <string name="relay_url_not_valid">Nieprawidłowy adres transmitera. Użyj nazwy hosta lub adresu IP w nawiasach (na przykład
+[201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Moje imię @tag</string>
     <string name="display_name">Nazwa użytkownika</string>
     <string name="my_display_name">Mój nick</string>
@@ -3347,6 +3349,16 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="bottom_bar_category_feeds">Kanały</string>
     <string name="bottom_bar_category_apps">Aplikacje &amp; Strony</string>
     <string name="bottom_bar_category_other">Inne</string>
+    <string name="drawer_settings">Menu boczne</string>
+    <string name="drawer_settings_title">Twoje menu boczne</string>
+    <string name="drawer_settings_description">Otwórz sekcję i wyłącz wiersze, których nigdy nie używasz. Ustawienia zawsze pozostają widoczne, więc zawsze możesz tu wrócić. Kolejność sekcji jest ustalona.</string>
+    <string name="drawer_settings_sections">Sekcje</string>
+    <string name="drawer_settings_hidden_count">%1$d ukrytych</string>
+    <string name="drawer_settings_visible">Widoczne</string>
+    <string name="drawer_settings_hidden">Ukryte</string>
+    <string name="drawer_settings_always_on">Zawsze włączony</string>
+    <string name="drawer_settings_show_all">Pokaż wszystkie</string>
+    <string name="drawer_settings_hide_all">Ukryj wszystkie</string>
     <string name="home_tabs_settings">Karty główne</string>
     <string name="home_tabs_settings_description">Wybierz, które karty pojawiają się na ekranie głównym. Gdy tylko jedna karta jest aktywna, pasek karty jest ukryty.</string>
     <string name="home_tab_everything">Wszystko</string>
@@ -3726,6 +3738,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="git_repo_settings_save">Zapisz</string>
     <string name="git_repositories">Repozytoria Git</string>
     <string name="highlights">Wyróżnienia</string>
+    <string name="git_repositories_search_open">Filtruj repozytoria</string>
+    <string name="git_repositories_search_close">Zamknij filtr</string>
+    <string name="git_repositories_search_placeholder">Filtruj według nazwy, tematu, hosta, opiekuna…</string>
+    <string name="git_repositories_search_no_results">Brak repozytoriów w bieżącym kanale pasujących do tego wyszukiwania.</string>
     <string name="nsite_title">Statyczna Witryna: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Uprawnienia:</string>
