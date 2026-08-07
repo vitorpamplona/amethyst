@@ -3219,6 +3219,19 @@
     <string name="bottom_bar_category_feeds">Flöden</string>
     <string name="bottom_bar_category_apps">Appar &amp; webb</string>
     <string name="bottom_bar_category_other">Övrigt</string>
+    <string name="drawer_settings">Sidomeny</string>
+    <string name="drawer_settings_title">Din sidomeny</string>
+    <string name="drawer_settings_description">Öppna en sektion och stäng av raderna du aldrig använder. Inställningar förblir alltid synligt, så du kan alltid ta dig tillbaka hit. Sektionernas ordning är fast.</string>
+    <string name="drawer_settings_sections">Sektioner</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d dold</item>
+        <item quantity="other">%1$d dolda</item>
+    </plurals>
+    <string name="drawer_settings_visible">Synliga</string>
+    <string name="drawer_settings_hidden">Dolda</string>
+    <string name="drawer_settings_always_on">Alltid på</string>
+    <string name="drawer_settings_show_all">Visa alla</string>
+    <string name="drawer_settings_hide_all">Dölj alla</string>
     <string name="home_tabs_settings">Hemflikar</string>
     <string name="home_tabs_settings_description">Välj vilka flikar som visas på startskärmen. När endast en flik är aktiv döljs flikraden.</string>
     <string name="home_tab_everything">Allt</string>
@@ -3592,6 +3605,10 @@
     <string name="git_repo_settings_save">Spara</string>
     <string name="git_repositories">Git-repositories</string>
     <string name="highlights">Höjdpunkter</string>
+    <string name="git_repositories_search_open">Filtrera repositories</string>
+    <string name="git_repositories_search_close">Stäng filter</string>
+    <string name="git_repositories_search_placeholder">Filtrera på namn, ämne, värd, underhållare…</string>
+    <string name="git_repositories_search_no_results">Inga repositories i det aktuella flödet matchar den här sökningen.</string>
     <string name="nsite_title">Statisk webbplats: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Behörigheter:</string>
@@ -4725,21 +4742,4 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
-    <string name="drawer_settings">Sidomeny</string>
-    <string name="drawer_settings_title">Din sidomeny</string>
-    <string name="drawer_settings_description">Öppna en sektion och stäng av raderna du aldrig använder. Inställningar förblir alltid synligt, så du kan alltid ta dig tillbaka hit. Sektionernas ordning är fast.</string>
-    <string name="drawer_settings_sections">Sektioner</string>
-    <plurals name="drawer_settings_hidden_count">
-        <item quantity="one">%1$d dold</item>
-        <item quantity="other">%1$d dolda</item>
-    </plurals>
-    <string name="drawer_settings_visible">Synliga</string>
-    <string name="drawer_settings_hidden">Dolda</string>
-    <string name="drawer_settings_always_on">Alltid på</string>
-    <string name="drawer_settings_show_all">Visa alla</string>
-    <string name="drawer_settings_hide_all">Dölj alla</string>
-    <string name="git_repositories_search_open">Filtrera repositories</string>
-    <string name="git_repositories_search_close">Stäng filter</string>
-    <string name="git_repositories_search_placeholder">Filtrera på namn, ämne, värd, underhållare…</string>
-    <string name="git_repositories_search_no_results">Inga repositories i det aktuella flödet matchar den här sökningen.</string>
 </resources>
