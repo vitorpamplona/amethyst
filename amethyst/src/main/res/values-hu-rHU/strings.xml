@@ -204,6 +204,7 @@
     <string name="connection_success_rate_description">Az átjátszóhoz való sikeres kapcsolatok százalékos aránya</string>
     <string name="search_and_add_a_user">Felhasználó keresése és hozzáadása</string>
     <string name="add_a_relay">Egy átjátszó hozzáadása</string>
+    <string name="relay_url_not_valid">Az átjátszó címe érvénytelen. Használjon gazdagépnevet vagy zárójelben megadott IP-címet (például: [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Saját @említési név</string>
     <string name="display_name">Megjelenítendő név</string>
     <string name="my_display_name">Saját megjelenítendő név</string>
@@ -3222,6 +3223,16 @@
     <string name="bottom_bar_category_feeds">Hírfolyamok</string>
     <string name="bottom_bar_category_apps">Alkalmazások és web</string>
     <string name="bottom_bar_category_other">Egyéb</string>
+    <string name="drawer_settings">Oldalsó menü</string>
+    <string name="drawer_settings_title">Saját oldalsó menü</string>
+    <string name="drawer_settings_description">Nyisson meg egy szakaszt, és kapcsolja ki azokat a sorokat, amelyeket soha nem használ. A beállítások mindig láthatók maradnak, így bármikor visszatérhet ide. A szakaszok sorrendje rögzített.</string>
+    <string name="drawer_settings_sections">Szakaszok</string>
+    <string name="drawer_settings_hidden_count">%1$d rejtett</string>
+    <string name="drawer_settings_visible">Látható</string>
+    <string name="drawer_settings_hidden">Rejtett</string>
+    <string name="drawer_settings_always_on">Mindig bekapcsolva</string>
+    <string name="drawer_settings_show_all">Összes megjelenítése</string>
+    <string name="drawer_settings_hide_all">Összes elrejtése</string>
     <string name="home_tabs_settings">Kezdőlap lapjai</string>
     <string name="home_tabs_settings_description">Válassza ki, mely lapok jelenjenek meg a kezdőlapon. Ha csak egy lap aktív, akkor a lapsáv rejtett.</string>
     <string name="home_tab_everything">Minden</string>
@@ -3595,6 +3606,10 @@
     <string name="git_repo_settings_save">Mentés</string>
     <string name="git_repositories">Git-tárolók</string>
     <string name="highlights">Kiemelések</string>
+    <string name="git_repositories_search_open">Tárolók szűrése</string>
+    <string name="git_repositories_search_close">Szűrő bezárása</string>
+    <string name="git_repositories_search_placeholder">Szűrés név, téma, kiszolgáló, karbantartó szerint…</string>
+    <string name="git_repositories_search_no_results">A jelenlegi hírcsatornában nincs olyan tároló, amely megfelelne ennek a keresésnek.</string>
     <string name="nsite_title">nOldal: %1$s</string>
     <string name="napplet_card_title">nKisalkalmazás: %1$s</string>
     <string name="napplet_card_permissions">Engedélyek:</string>
