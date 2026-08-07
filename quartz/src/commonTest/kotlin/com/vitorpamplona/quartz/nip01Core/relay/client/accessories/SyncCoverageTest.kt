@@ -355,6 +355,26 @@ class SyncCoverageTest {
     }
 
     @Test
+    fun `a band key round-trips through the joined form a file writes`() {
+        // A file that wants one key per line joins and splits with these, so
+        // the separator stays in the class that mints the key instead of being
+        // rediscovered by every persistence layer downstream.
+        val c = SyncCoverage()
+        c.record(relay, profiles, 1_700_001_000L, 1_700_002_000L, paged = true)
+        val key = c.export().keys.single()
+
+        assertEquals(relay.url, key.relay)
+        assertEquals(profiles.toJson(), key.filter)
+        assertEquals(key, SyncCoverage.BandKey.decode(key.encode()))
+
+        // A key naming no pair is refused rather than read as a relay with an
+        // empty filter, which would key a band nothing can ever look up.
+        assertNull(SyncCoverage.BandKey.decode("no-space-here"))
+        assertNull(SyncCoverage.BandKey.decode(" {\"kinds\":[0]}"))
+        assertNull(SyncCoverage.BandKey.decode("wss://relay.example/ "))
+    }
+
+    @Test
     fun `onChange fires when a band changes so persistence can mark dirty`() {
         var changes = 0
         val c = SyncCoverage(onChange = { changes++ })
