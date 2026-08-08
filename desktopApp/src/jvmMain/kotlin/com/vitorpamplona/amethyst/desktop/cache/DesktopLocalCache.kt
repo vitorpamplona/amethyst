@@ -904,9 +904,9 @@ class DesktopLocalCache : ICacheProvider {
             Note(hexKey)
         }
 
-    override fun getOrCreateAddressableNote(key: Address): AddressableNote =
-        addressableNotes.getOrCreate(key.toValue()) {
-            AddressableNote(key)
+    override fun getOrCreateAddressableNote(address: Address): AddressableNote =
+        addressableNotes.getOrCreate(address.toValue()) {
+            AddressableNote(address)
         }
 
     // ----- Channel operations -----

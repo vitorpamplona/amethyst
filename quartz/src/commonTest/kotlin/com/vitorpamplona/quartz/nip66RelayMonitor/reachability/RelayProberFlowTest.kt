@@ -327,9 +327,9 @@ class RelayProberFlowTest {
             }
             check.join()
 
-            val verdict = result!![fast]!!
-            assertEquals(true, verdict.writeAccepted, "the listed relay's OK must still be awaited and recorded")
-            assertNull(result!![foreign], "the foreign relay must not appear in the result")
+            val verdicts = result!!
+            assertEquals(true, verdicts[fast]!!.writeAccepted, "the listed relay's OK must still be awaited and recorded")
+            assertNull(verdicts[foreign], "the foreign relay must not appear in the result")
         }
 
     @Test

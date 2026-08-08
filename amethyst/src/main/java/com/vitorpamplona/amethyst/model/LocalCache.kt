@@ -685,12 +685,12 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
 
     fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
 
-    override fun getOrCreateUser(hex: HexKey): User {
-        require(isValidHex(key = hex)) { "$hex is not a valid hex" }
+    override fun getOrCreateUser(pubkey: HexKey): User {
+        require(isValidHex(key = pubkey)) { "$pubkey is not a valid hex" }
         // Pass `this` as the UserContext — User now resolves each pinned
         // addressable note (kind:10002 / 10050 / 10019) lazily on first
         // read, instead of all-or-nothing at construction time.
-        return users.getOrCreate(hex) { User(it, userContext) }
+        return users.getOrCreate(pubkey) { User(it, userContext) }
     }
 
     /** [UserContext] bridge to this cache's addressable lookup. */

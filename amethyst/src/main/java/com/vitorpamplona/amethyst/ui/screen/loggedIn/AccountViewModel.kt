@@ -2106,7 +2106,7 @@ class AccountViewModel(
 
     fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
-    override fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
+    override fun getOrCreateUser(pubkey: HexKey): User = LocalCache.getOrCreateUser(pubkey)
 
     fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 

@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * needing the full [LocalCache] API.
  */
 interface Dao {
-    fun getOrCreateUser(hex: HexKey): User
+    fun getOrCreateUser(pubkey: HexKey): User
 
     fun getOrCreateNote(hex: HexKey): Note
 

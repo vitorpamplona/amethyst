@@ -128,8 +128,8 @@ class LimitsPolicy(
      */
     private fun capLimits(filters: List<Filter>): List<Filter> {
         val max = limits.maxLimit ?: return filters
-        if (filters.none { it.limit != null && it.limit!! > max }) return filters
-        return filters.map { if (it.limit != null && it.limit!! > max) it.copy(limit = max) else it }
+        if (filters.none { it.limit != null && it.limit > max }) return filters
+        return filters.map { if (it.limit != null && it.limit > max) it.copy(limit = max) else it }
     }
 
     private fun targetLimit(current: Int?): Int? =

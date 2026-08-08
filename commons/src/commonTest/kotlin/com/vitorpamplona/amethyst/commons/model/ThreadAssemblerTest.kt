@@ -181,7 +181,7 @@ class ThreadAssemblerTest {
 
         override fun checkGetOrCreateNote(hexKey: HexKey): Note? = notesById[hexKey]
 
-        override fun getOrCreateAddressableNote(key: Address): AddressableNote = error("not used by ThreadAssembler in this test")
+        override fun getOrCreateAddressableNote(address: Address): AddressableNote = error("not used by ThreadAssembler in this test")
 
         override fun getEventStream(): ICacheEventStream = error("not used by ThreadAssembler in this test")
 

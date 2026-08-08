@@ -39,7 +39,7 @@ import org.junit.Test
 class NewMessageTaggerKeyParseTest {
     val dao: Dao =
         object : Dao {
-            override fun getOrCreateUser(hex: String): User = User(hex) { addr -> getOrCreateAddressableNoteInternal(addr) }
+            override fun getOrCreateUser(pubkey: String): User = User(pubkey) { addr -> getOrCreateAddressableNoteInternal(addr) }
 
             override fun getOrCreateNote(hex: String) =
                 com.vitorpamplona.amethyst.model

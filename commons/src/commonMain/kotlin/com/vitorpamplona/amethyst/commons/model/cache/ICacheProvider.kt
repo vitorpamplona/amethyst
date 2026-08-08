@@ -93,7 +93,7 @@ interface ICacheProvider {
      * @param address The note's ID in address format
      * @return The AddressableNote (existing or newly created)
      */
-    fun getOrCreateAddressableNote(key: Address): AddressableNote
+    fun getOrCreateAddressableNote(address: Address): AddressableNote
 
     /**
      * Gets the event stream for cache updates.
