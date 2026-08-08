@@ -43,7 +43,22 @@ import java.io.File
  */
 class ResourceUsageStore(
     private val storageFile: File,
-    private val keepDays: Long = 30,
+    /**
+     * Retention, in days.
+     *
+     * Seven because that is the widest window anything reads: the summary tables and
+     * the trend chart both span `today - 6 .. today`, the alert evaluator looks at
+     * two days, and the report's raw dump is byte-bounded well below a week. At 30 —
+     * the previous value — twenty-three days were rewritten on every flush and read
+     * by nothing.
+     *
+     * That is not free: [persist] rewrites the whole file on every merge, and the
+     * relay-churn counters took a day's bucket from ~57 keys to ~241. Retention is
+     * therefore a write-amplification setting as much as a history setting — cutting
+     * it to a week is what keeps those counters at ~18% over the previous file size
+     * rather than ~5x.
+     */
+    private val keepDays: Long = 7,
 ) {
     data class UsageFile(
         val version: Int = 1,
