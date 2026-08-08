@@ -20,13 +20,18 @@
  */
 package com.vitorpamplona.amethyst.service.cast.chromecast
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.google.android.gms.cast.CastMediaControlIntent
+import com.google.android.gms.cast.CastStatusCodes
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadRequestData
 import com.google.android.gms.cast.MediaMetadata
@@ -54,6 +59,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 private const val TAG = "ChromecastCaster"
 private const val SESSION_START_TIMEOUT_MS = 30_000L
 private const val STOP_AWAIT_TIMEOUT_MS = 5_000L
+
+/** Android 17 — the first release to enforce Local Network Protection. See [ChromecastCaster.localNetworkState]. */
+private const val LOCAL_NETWORK_PROTECTION_SDK = 37
 
 /**
  * Google Cast (Chromecast) caster.
@@ -123,7 +131,7 @@ class ChromecastCaster(
             override fun onStatusUpdated() {
                 val client = currentMediaClient ?: return
                 val status = client.mediaStatus
-                Log.d(TAG) {
+                Log.i(TAG) {
                     "media.onStatusUpdated playerState=${playerStateName(client.playerState)} " +
                         "idleReason=${idleReasonName(status?.idleReason ?: -1)} " +
                         "pos=${client.approximateStreamPosition}/${client.streamDuration}ms"
@@ -155,6 +163,14 @@ class ChromecastCaster(
         currentMediaClient = null
     }
 
+    /**
+     * Cast surfaces failures as bare ints spread across several unrelated ranges (CommonStatusCodes,
+     * CastStatusCodes, and internal codes documented nowhere). [CastStatusCodes.getStatusCodeString]
+     * is the SDK's own lookup, so it decodes far more than the public constants do — keep the raw
+     * number alongside it for the ones it doesn't recognise either.
+     */
+    private fun statusName(code: Int): String = "$code(${CastStatusCodes.getStatusCodeString(code)})"
+
     private fun playerStateName(state: Int): String =
         when (state) {
             MediaStatus.PLAYER_STATE_IDLE -> "IDLE"
@@ -185,7 +201,7 @@ class ChromecastCaster(
                 session: CastSession,
                 sessionId: String,
             ) {
-                Log.d(TAG) { "session.onStarted id=$sessionId connected=${session.isConnected} hasClient=${session.remoteMediaClient != null}" }
+                Log.i(TAG) { "session.onStarted id=$sessionId connected=${session.isConnected} hasClient=${session.remoteMediaClient != null}" }
                 attachMediaClientCallback(session)
                 pendingSessionStart?.complete(true)
                 pendingSessionStart = null
@@ -195,7 +211,7 @@ class ChromecastCaster(
                 session: CastSession,
                 error: Int,
             ) {
-                Log.w(TAG) { "session.onStartFailed error=$error" }
+                Log.w(TAG) { "session.onStartFailed error=${statusName(error)}" }
                 pendingSessionStart?.complete(false)
                 pendingSessionStart = null
                 sessionFlow.value = CastSessionState.Error(currentDevice(), "Cast session failed (code $error)")
@@ -209,7 +225,7 @@ class ChromecastCaster(
                 session: CastSession,
                 error: Int,
             ) {
-                Log.d(TAG) { "session.onEnded error=$error" }
+                Log.i(TAG) { "session.onEnded error=${statusName(error)}" }
                 // If a cast() was awaiting a session start, this is also a terminal
                 // outcome — the session never reached a usable state. Without
                 // completing here the cast coroutine hangs and the discovery
@@ -242,7 +258,7 @@ class ChromecastCaster(
                 session: CastSession,
                 error: Int,
             ) {
-                Log.w(TAG) { "session.onResumeFailed error=$error" }
+                Log.w(TAG) { "session.onResumeFailed error=${statusName(error)}" }
                 pendingSessionStart?.complete(false)
                 pendingSessionStart = null
             }
@@ -275,7 +291,7 @@ class ChromecastCaster(
         val gms = GoogleApiAvailability.getInstance()
         val status = gms.isGooglePlayServicesAvailable(appContext)
         if (status != ConnectionResult.SUCCESS) {
-            Log.d(TAG) { "Google Play services unavailable (status=$status); Chromecast disabled." }
+            Log.w(TAG) { "Google Play services unavailable (status=$status); Chromecast disabled." }
             return null
         }
         return try {
@@ -301,15 +317,15 @@ class ChromecastCaster(
     }
 
     fun startDiscovery() {
-        Log.d(TAG) { "startDiscovery (already registered? $registered)" }
+        Log.i(TAG) { "startDiscovery (already registered? $registered) ${localNetworkState()}" }
         main.post {
             if (registered) {
-                Log.d(TAG) { "startDiscovery: already registered, no-op" }
+                Log.i(TAG) { "startDiscovery: already registered, no-op" }
                 return@post
             }
             val ctx = ensureCastContext()
             if (ctx == null) {
-                Log.d(TAG) { "startDiscovery: CastContext unavailable, aborting" }
+                Log.w(TAG) { "startDiscovery: CastContext unavailable, aborting" }
                 return@post
             }
             val router = MediaRouter.getInstance(appContext)
@@ -322,9 +338,23 @@ class ChromecastCaster(
             mediaRouter = router
             routeSelector = selector
             registered = true
-            Log.d(TAG) { "startDiscovery: registered router callback (sessionListener already attached)" }
+            Log.i(TAG) { "startDiscovery: registered router callback (sessionListener already attached)" }
             updateRoutes(router)
         }
+    }
+
+    /**
+     * Android 17 (API 37) Local Network Protection gates the mDNS/multicast traffic the Cast SDK
+     * uses for discovery behind [Manifest.permission.ACCESS_LOCAL_NETWORK]. When it is denied the
+     * SDK reports no error at all — the picker simply stays empty forever — so the grant state is
+     * the single most important thing a discovery log can tell us apart from the route count.
+     */
+    private fun localNetworkState(): String {
+        if (Build.VERSION.SDK_INT < LOCAL_NETWORK_PROTECTION_SDK) return "lnp=n/a(sdk${Build.VERSION.SDK_INT})"
+        val granted =
+            ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_LOCAL_NETWORK) ==
+                PackageManager.PERMISSION_GRANTED
+        return "lnp=sdk${Build.VERSION.SDK_INT} ACCESS_LOCAL_NETWORK=${if (granted) "GRANTED" else "DENIED"}"
     }
 
     fun stopDiscovery() {
@@ -357,7 +387,11 @@ class ChromecastCaster(
                     name = route.name,
                 )
             }
-        Log.d(TAG) { "updateRoutes: count=${list.size} -> [${list.joinToString { it.name }}]" }
+        // Log the unfiltered router total alongside the kept count: an empty picker with
+        // seen=0 means discovery itself never saw anything (LNP / Wi-Fi / mDNS), whereas
+        // seen>0 with count=0 means the routes exist but none advertises the Cast control
+        // category — two completely different faults that look identical from the UI.
+        Log.i(TAG) { "updateRoutes: seen=${router.routes.size} kept=${list.size} -> [${list.joinToString { it.name }}]" }
         devicesFlow.value = list
     }
 
@@ -365,7 +399,7 @@ class ChromecastCaster(
         device: CastDevice,
         request: CastRequest,
     ) {
-        Log.d(TAG) { "cast device=${device.name} url=${request.url}" }
+        Log.i(TAG) { "cast device=${device.name} url=${request.url}" }
         val ctx = withContext(Dispatchers.Main) { ensureCastContext() }
         if (ctx == null) {
             Log.w(TAG, "cast: CastContext unavailable")
@@ -438,8 +472,28 @@ class ChromecastCaster(
                     false
                 } else {
                     try {
-                        client.load(buildLoadRequest(request))
-                        Log.d(TAG) { "cast: load() submitted (status=${client.playerState})" }
+                        val loadRequest = buildLoadRequest(request)
+                        val info = loadRequest.mediaInfo
+                        Log.i(TAG) {
+                            "cast: load() submitting contentType=${info?.contentType} " +
+                                "streamType=${info?.streamType} url=${info?.contentId}"
+                        }
+                        // load() returns a PendingResult carrying the receiver's verdict. Dropping it
+                        // (as this used to) makes a refused load indistinguishable from a successful
+                        // one: the coroutine reports Casting, the TV sits on its splash screen, and
+                        // nothing anywhere records why. This callback is the only place the receiver
+                        // ever tells us what it disliked about the media.
+                        client.load(loadRequest).setResultCallback { result ->
+                            val status = result.status
+                            if (status.isSuccess) {
+                                Log.i(TAG) { "cast: load() accepted by receiver" }
+                            } else {
+                                Log.w(TAG) {
+                                    "cast: load() REFUSED by receiver code=${statusName(status.statusCode)} " +
+                                        "msg=${status.statusMessage}"
+                                }
+                            }
+                        }
                         true
                     } catch (t: Throwable) {
                         Log.w(TAG, "cast: remoteMediaClient.load failed", t)
