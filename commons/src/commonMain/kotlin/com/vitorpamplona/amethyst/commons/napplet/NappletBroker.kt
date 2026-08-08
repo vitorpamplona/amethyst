@@ -122,12 +122,6 @@ class NappletBroker(
     ): NappletResponse {
         val capability = request.capability
 
-        // shell.supports is capability negotiation: always answerable, no declaration/consent.
-        if (request is NappletRequest.ShellSupports) {
-            val cap = NappletCapability.fromNapDomain(request.domain)
-            return NappletResponse.Supported(cap != null && cap in declared)
-        }
-
         if (capability !in declared) {
             return NappletResponse.Denied(capability, "This napplet did not declare the '${capability.name.lowercase()}' capability.")
         }
@@ -149,7 +143,7 @@ class NappletBroker(
                 // Keyboard/command action registration is a shell-mediated UI affordance, not key
                 // access — declared is enough; it never prompts.
                 request is NappletRequest.RegisterAction || request is NappletRequest.UnregisterAction -> true
-                // Cosmetic/negotiation capabilities (theme) never prompt.
+                // Cosmetic capabilities (theme) never prompt.
                 !capability.requiresConsent -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
                 ledger.decide(identity, capability) == PermissionDecision.ALLOW && !capability.requiresPerUseConsent -> true
@@ -219,9 +213,6 @@ class NappletBroker(
         request: NappletRequest,
     ): NappletResponse =
         when (request) {
-            // Negotiation is resolved in handle(); execute() is never reached for it.
-            is NappletRequest.ShellSupports -> NappletResponse.Supported(true)
-
             is NappletRequest.GetPublicKey -> NappletResponse.PublicKey(signer.pubKey)
 
             is NappletRequest.ThemeGet -> {
@@ -267,24 +258,24 @@ class NappletBroker(
 
             is NappletRequest.StorageGet -> {
                 val store = storage ?: return NappletResponse.Unsupported("storage.getItem")
-                NappletResponse.StorageValue(store.get(identity.coordinate, request.key))
+                NappletResponse.StorageValue(store.get(storageCoordinate(identity, request.scope), request.key))
             }
 
             is NappletRequest.StorageSet -> {
                 val store = storage ?: return NappletResponse.Unsupported("storage.setItem")
-                store.set(identity.coordinate, request.key, request.value)
+                store.set(storageCoordinate(identity, request.scope), request.key, request.value)
                 NappletResponse.Done
             }
 
             is NappletRequest.StorageRemove -> {
                 val store = storage ?: return NappletResponse.Unsupported("storage.removeItem")
-                store.remove(identity.coordinate, request.key)
+                store.remove(storageCoordinate(identity, request.scope), request.key)
                 NappletResponse.Done
             }
 
             is NappletRequest.StorageKeys -> {
                 val store = storage ?: return NappletResponse.Unsupported("storage.keys")
-                NappletResponse.Strings(store.keys(identity.coordinate))
+                NappletResponse.Strings(store.keys(storageCoordinate(identity, request.scope)))
             }
 
             is NappletRequest.NotifyCreate -> {
@@ -316,8 +307,38 @@ class NappletBroker(
 
             is NappletRequest.ResourceBytes -> {
                 val gateway = resource ?: return NappletResponse.Unsupported("resource.bytes")
-                val fetched = gateway.fetch(request.url, identity.coordinate) ?: return NappletResponse.Failed("Could not fetch the resource.")
-                NappletResponse.Bytes(fetched.bytes, fetched.contentType)
+                when (val fetched = gateway.fetch(request.url, identity.coordinate)) {
+                    is NappletResourceResult.Success -> NappletResponse.Bytes(fetched.resource.bytes, fetched.resource.contentType)
+                    is NappletResourceResult.Failure -> NappletResponse.ResourceFailure(fetched.error, fetched.message)
+                }
+            }
+
+            is NappletRequest.ResourceInfo -> {
+                resource ?: return NappletResponse.Unsupported("resource.info")
+                NappletResponse.ResourceInfo(
+                    schemes = listOf("data", "https", "blossom", "nostr"),
+                    maxBytes = RESOURCE_MAX_BYTES,
+                    maxUrls = RESOURCE_MAX_URLS,
+                )
+            }
+
+            is NappletRequest.ResourceBytesMany -> {
+                val gateway = resource ?: return NappletResponse.Unsupported("resource.bytesMany")
+                if (request.urls.isEmpty()) return NappletResponse.ResourceFailure("invalid-request", "Resource URL list is empty.")
+                if (request.urls.size > RESOURCE_MAX_URLS) return NappletResponse.ResourceFailure("too-large", "Resource URL limit exceeded.")
+                NappletResponse.ResourceItems(
+                    request.urls.map { url ->
+                        when (val fetched = gateway.fetch(url, identity.coordinate)) {
+                            is NappletResourceResult.Success ->
+                                NappletResponse.ResourceItem(
+                                    url = url,
+                                    resource = NappletResponse.Bytes(fetched.resource.bytes, fetched.resource.contentType),
+                                )
+                            is NappletResourceResult.Failure ->
+                                NappletResponse.ResourceItem(url = url, error = fetched.error, message = fetched.message)
+                        }
+                    },
+                )
             }
 
             is NappletRequest.UploadBlob -> {
@@ -351,6 +372,15 @@ class NappletBroker(
             tags
         } else {
             tags + arrayOf(arrayOf("p", recipient))
+        }
+
+    private fun storageCoordinate(
+        identity: NappletIdentity,
+        scope: com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope,
+    ): String =
+        when (scope) {
+            com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope.SHARED -> identity.storageCoordinate
+            com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope.INSTANCE -> identity.instanceStorageCoordinate
         }
 
     /**
@@ -505,16 +535,6 @@ class NappletBroker(
         }
     }
 
-    /**
-     * True when [capability] carries a standing denial for [identity]. Push-subscription edge ops
-     * (identity.watch and friends) short-circuit before [handle], so they have to apply the same
-     * "a standing denial always wins" rule themselves rather than trusting the declaration alone.
-     */
-    suspend fun isDenied(
-        identity: NappletIdentity,
-        capability: NappletCapability,
-    ): Boolean = ledger.decide(identity, capability) == PermissionDecision.DENY
-
     companion object {
         /**
          * How long (ms) a Cancel on the first-connect dialog suppresses re-prompting for the same app.
@@ -522,5 +542,7 @@ class NappletBroker(
          * the dialog per request; short enough that a deliberate user retry seconds later prompts again.
          */
         private const val CANCEL_REPROMPT_COOLDOWN_MS = 3_000L
+        private const val RESOURCE_MAX_BYTES = 10L * 1024L * 1024L
+        private const val RESOURCE_MAX_URLS = 16
     }
 }

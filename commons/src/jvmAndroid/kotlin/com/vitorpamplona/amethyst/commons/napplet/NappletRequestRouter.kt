@@ -55,12 +55,6 @@ object NappletRequestRouter {
             val subId: String,
         ) : Outcome
 
-        /** Start streaming `identity.changed` pushes when the active user's key changes (fire-and-forget). */
-        data object WatchIdentity : Outcome
-
-        /** Stop the `identity.changed` stream (fire-and-forget; no reply). */
-        data object UnwatchIdentity : Outcome
-
         /** Push these envelope(s) to the applet immediately, unkeyed (e.g. an EOSE closing a refused sub). */
         data class Push(
             val payloads: List<String>,
@@ -89,7 +83,7 @@ object NappletRequestRouter {
         declared: Set<NappletCapability>,
         payload: String,
     ): Outcome {
-        val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: "napplet"
+        val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: return Outcome.Ignore
 
         // Fire-and-forget edge ops that never reach the broker.
         when (requestType) {
@@ -97,25 +91,9 @@ object NappletRequestRouter {
                 val subId = runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull()
                 return if (subId != null) Outcome.CloseSubscription(subId) else Outcome.Ignore
             }
-            "resource.cancel" ->
-                return Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, NappletResponse.Done))
-            // identity.watch/unwatch are a push subscription (like relay.subscribe), gated on the
-            // IDENTITY declaration directly — the actual pubkey stream is the host's job. The
-            // ledger still gets a say: this bypasses NappletBroker.handle, so without an explicit
-            // check a standing IDENTITY denial would not stop the pushes (and would keep leaking
-            // account-switch timing and every npub the user rotates between).
-            "identity.watch" ->
-                return if (NappletCapability.IDENTITY in declared &&
-                    !broker.isDenied(identity, NappletCapability.IDENTITY)
-                ) {
-                    Outcome.WatchIdentity
-                } else {
-                    Outcome.Ignore
-                }
-            "identity.unwatch" ->
-                return Outcome.UnwatchIdentity
+            "resource.cancel" -> return Outcome.Ignore
             // inc bus: a topic pub/sub between napplets/services, authorized on the INC declaration
-            // alone (like identity.watch) — no per-call consent. The host owns the cross-session fan-out.
+            // alone. The host owns the cross-session fan-out.
             "inc.subscribe" -> {
                 val topic = runCatching { NappletProtocolJson.readTopic(payload) }.getOrNull()
                 return if (topic != null && NappletCapability.INC in declared) Outcome.SubscribeInc(topic) else Outcome.Ignore
@@ -136,7 +114,7 @@ object NappletRequestRouter {
 
         val request =
             runCatching { NappletProtocolJson.decodeRequest(payload) }.getOrNull()
-                ?: return Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("Malformed or unsupported request.")))
+                ?: return Outcome.Ignore
 
         val response = broker.handle(identity, request, declared)
 

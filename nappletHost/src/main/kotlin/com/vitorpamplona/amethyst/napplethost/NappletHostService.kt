@@ -54,8 +54,6 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
-import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
-import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -201,7 +199,8 @@ class NappletHostService : Service() {
         if (author.isEmpty() || launchToken.isEmpty()) return null
 
         val requires = data.getStringArrayList(NappletHostContract.EXTRA_REQUIRES) ?: emptyList()
-        val declaredDomains = (listOf("shell") + resolveRequiredCapabilities(requires).capabilities.map { it.name.lowercase() }).distinct()
+        val profile = HostProfile.fromName(data.getString(NappletHostContract.EXTRA_HOST_PROFILE))
+        val declaredDomains = profile.declaredCapabilities(requires).map { it.name.lowercase() }.distinct()
 
         val tab =
             NappletTab(
@@ -212,7 +211,7 @@ class NappletHostService : Service() {
                 author = author,
                 identifier = data.getString(NappletHostContract.EXTRA_IDENTIFIER).orEmpty(),
                 launchToken = launchToken,
-                profile = HostProfile.fromName(data.getString(NappletHostContract.EXTRA_HOST_PROFILE)),
+                profile = profile,
                 useTor = data.getBoolean(NappletHostContract.EXTRA_USE_TOR, true),
                 proxyPort = data.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1),
                 bgColor = data.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE),
@@ -300,7 +299,19 @@ class NappletHostService : Service() {
         NappletWebViewProfile.apply(context, wv, tab.webViewProfile)
         val appOrigin = NappletWebContract.appOrigin(deriveAppId(tab.author, tab.identifier))
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
-        tab.contentServer = NappletContentServer(tab.paths, tab.servers, effectiveProxy, cacheDir, shellHtml, shimJs, appOrigin, tab.profile, imeProxy = true)
+        tab.contentServer =
+            NappletContentServer(
+                tab.paths,
+                tab.servers,
+                effectiveProxy,
+                cacheDir,
+                shellHtml,
+                shimJs,
+                appOrigin,
+                tab.profile,
+                tab.declaredDomains,
+                imeProxy = true,
+            )
 
         hardenWebView(wv, tab)
         // Theme the pre-load background so the shell/app loading shows Amethyst's background, not white.
@@ -467,11 +478,6 @@ class NappletHostService : Service() {
 
         val raw = message.data ?: return
         val envelope = runCatching { JSONObject(raw) }.getOrNull() ?: return
-
-        if (envelope.optString("type") == "shell.ready") {
-            runCatching { replyProxy.postMessage(NappletProtocolJson.encodeShellInit(tab.declaredDomains, tab.declaredDomains)) }
-            return
-        }
 
         // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
         if (envelope.optString("type").startsWith("ime.")) {
