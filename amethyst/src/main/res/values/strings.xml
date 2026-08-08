@@ -4188,8 +4188,10 @@
     <string name="resource_usage_memory_chatrooms">Chatroom lists in memory</string>
     <string name="resource_usage_memory_device_class">Device memory class</string>
     <string name="resource_usage_send_section">Share with the developers</string>
-    <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, or browsing details. Nothing is sent until you tap Send in the message screen.</string>
+    <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM, or copy it and share it yourself. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, relay names, or browsing details. The report leaves this screen only when you send, copy, or share it.</string>
     <string name="resource_usage_send_button">Send report via DM</string>
+    <string name="resource_usage_copy_button">Copy</string>
+    <string name="resource_usage_share_button">Share</string>
     <string name="resource_usage_alert_title">High resource usage detected</string>
     <string name="resource_usage_alert_message">Amethyst consumed more than expected recently: %1$s. Would you like to send a usage report to the developers in an encrypted DM? You will see the full report before anything is sent.</string>
     <string name="resource_usage_reason_bg_data">%1$s of cellular data in the background in one day</string>
