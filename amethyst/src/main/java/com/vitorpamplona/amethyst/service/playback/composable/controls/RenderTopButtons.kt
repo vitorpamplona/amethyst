@@ -74,10 +74,12 @@ import com.vitorpamplona.amethyst.model.VideoButtonLocation
 import com.vitorpamplona.amethyst.model.VideoPlayerAction
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
+import com.vitorpamplona.amethyst.service.cast.resolveCastLiveness
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
+import com.vitorpamplona.amethyst.service.playback.diskCache.HlsLivenessCache
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
 import com.vitorpamplona.amethyst.ui.cast.CastDevicePickerDialog
 import com.vitorpamplona.amethyst.ui.cast.rememberCastWithLocalNetworkPermission
@@ -501,6 +503,13 @@ fun RenderTopButtons(
                         mimeType = mediaData.mimeType,
                         title = mediaData.title,
                         artworkUri = mediaData.artworkUri,
+                        // By the time the cast button is reachable the player has already parsed the
+                        // playlist, so the learned verdict is normally available here.
+                        isLive =
+                            resolveCastLiveness(
+                                learned = HlsLivenessCache.verdict(mediaData.videoUri),
+                                metadataFlag = mediaData.isLiveStream,
+                            ),
                     ),
                 onDismiss = { castDialogVisible.value = false },
             )

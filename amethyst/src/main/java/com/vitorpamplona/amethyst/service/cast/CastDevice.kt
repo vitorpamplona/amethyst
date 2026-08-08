@@ -34,7 +34,29 @@ data class CastRequest(
     val mimeType: String? = null,
     val title: String? = null,
     val artworkUri: String? = null,
+    /**
+     * Whether the receiver should treat this as an endless live stream rather than a seekable
+     * recording. Resolve it with [resolveCastLiveness] — never from the URL, which cannot tell a
+     * live `.m3u8` from an on-demand one.
+     */
+    val isLive: Boolean = false,
 )
+
+/**
+ * Decides what to tell the Cast receiver about a stream's liveness.
+ *
+ * [learned] is ExoPlayer's verdict for this URL (see HlsLivenessCache), recorded once it has parsed
+ * the playlist — the only signal that actually distinguishes a live `.m3u8` from an on-demand one.
+ * It wins whenever we have it. [metadataFlag] is the kind:30311 live-activity flag, which is right
+ * when set but absent for a live stream shared in a plain kind:1 note, so it is only the fallback.
+ *
+ * Defaulting to non-live when we know nothing keeps the previous behaviour for the common case
+ * (progressive MP4), where a live claim would cost the receiver its seek bar and duration.
+ */
+fun resolveCastLiveness(
+    learned: Boolean?,
+    metadataFlag: Boolean,
+): Boolean = learned ?: metadataFlag
 
 // Critical for HLS: sending an `.m3u8` URL with `video/mp4` makes the default
 // Cast receiver try to demux a playlist as MP4 and crash, wiping the TV's Cast

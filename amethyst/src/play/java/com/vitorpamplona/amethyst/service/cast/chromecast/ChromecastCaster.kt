@@ -45,8 +45,10 @@ import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.images.WebImage
 import com.vitorpamplona.amethyst.service.cast.CastDevice
 import com.vitorpamplona.amethyst.service.cast.CastRequest
+import com.vitorpamplona.amethyst.service.cast.CastRoutePlan
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
 import com.vitorpamplona.amethyst.service.cast.effectiveMimeType
+import com.vitorpamplona.amethyst.service.cast.planRouteSelection
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -225,12 +227,21 @@ class ChromecastCaster(
                 session: CastSession,
                 error: Int,
             ) {
+                detachMediaClientCallback()
+                // Moving to a different receiver ends the outgoing session by design, and that
+                // callback lands *after* cast() has installed the pending start for the incoming
+                // one. Failing it here is what made every device-to-device switch report
+                // "session start refused" and skip the load.
+                if (expectingSessionSwapEnd) {
+                    expectingSessionSwapEnd = false
+                    Log.i(TAG) { "session.onEnded error=${statusName(error)} — expected teardown while switching receivers" }
+                    return
+                }
                 Log.i(TAG) { "session.onEnded error=${statusName(error)}" }
                 // If a cast() was awaiting a session start, this is also a terminal
                 // outcome — the session never reached a usable state. Without
                 // completing here the cast coroutine hangs and the discovery
                 // ref-count leaks +1 for every failed attempt.
-                detachMediaClientCallback()
                 pendingSessionStart?.complete(false)
                 pendingSessionStart = null
                 sessionFlow.value = CastSessionState.Idle
@@ -278,6 +289,15 @@ class ChromecastCaster(
 
     @Volatile
     private var pendingSessionStart: CompletableDeferred<Boolean>? = null
+
+    /**
+     * Armed while a [CastRoutePlan.SWAP_RECEIVER] is in flight — between asking MediaRouter to move
+     * to a different receiver and the outgoing session's teardown callback. That teardown is the
+     * expected consequence of the move, not the new attempt failing, and must not complete the
+     * pending start. Cleared as soon as the attempt resolves, so a later genuine end still counts.
+     */
+    @Volatile
+    private var expectingSessionSwapEnd = false
 
     private fun currentDevice(): CastDevice? =
         when (val s = sessionFlow.value) {
@@ -424,21 +444,34 @@ class ChromecastCaster(
                 Log.d(TAG) {
                     "cast: existing session connected=${existing?.isConnected} hasClient=${existing?.remoteMediaClient != null}"
                 }
+                val plan =
+                    planRouteSelection(
+                        targetRouteId = route.id,
+                        selectedRouteId = mediaRouter?.selectedRoute?.id,
+                        hasConnectedSession = existing?.isConnected == true,
+                    )
+                Log.i(TAG) { "cast: plan=$plan target=${route.id} selected=${mediaRouter?.selectedRoute?.id}" }
+
                 val pending = CompletableDeferred<Boolean>()
                 // If a previous cast() is still awaiting a callback, fail it
                 // before swapping in our deferred — otherwise the earlier call
                 // hangs to the 30s timeout.
                 pendingSessionStart?.complete(false)
                 pendingSessionStart = pending
+                // Arm this before selectRoute, not after: the teardown callback for the outgoing
+                // session can arrive on the very next main-thread tick.
+                expectingSessionSwapEnd = plan.expectsPreviousSessionToEnd
                 try {
-                    Log.d(TAG) { "cast: selectRoute id=${route.id}" }
-                    mediaRouter?.selectRoute(route)
-                    if (existing?.isConnected == true) {
-                        Log.d(TAG) { "cast: reusing already-connected session, completing immediately" }
+                    if (plan.needsRouteSelection) {
+                        Log.i(TAG) { "cast: selectRoute id=${route.id}" }
+                        mediaRouter?.selectRoute(route)
+                    } else {
+                        Log.i(TAG) { "cast: reusing the session already connected to this receiver" }
                         pending.complete(true)
                     }
                 } catch (t: Throwable) {
                     Log.w(TAG, "cast: selectRoute threw", t)
+                    expectingSessionSwapEnd = false
                     pending.complete(false)
                 }
                 // Defence in depth: if a callback is somehow missed (SDK bug,
@@ -451,6 +484,9 @@ class ChromecastCaster(
                     Log.w(TAG) { "cast: session start timed out after ${SESSION_START_TIMEOUT_MS}ms" }
                     pendingSessionStart = null
                 }
+                // However this attempt ended, the swap it was waiting on is over. Leaving the flag
+                // armed would make the *next* genuine session end get swallowed as an expected one.
+                expectingSessionSwapEnd = false
                 outcome ?: false
             }
 
@@ -516,10 +552,19 @@ class ChromecastCaster(
         request.artworkUri?.let {
             runCatching { metadata.addImage(WebImage(it.toUri())) }
         }
+        // A live HLS playlist has no #EXT-X-ENDLIST and no duration. Declaring it BUFFERED asks the
+        // receiver for a seekable stream of known length, which it cannot resolve — the LG webOS
+        // receiver sits in LOADING forever rather than reporting an error.
+        val streamType =
+            if (request.isLive) {
+                MediaInfo.STREAM_TYPE_LIVE
+            } else {
+                MediaInfo.STREAM_TYPE_BUFFERED
+            }
         val info =
             MediaInfo
                 .Builder(request.url)
-                .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
+                .setStreamType(streamType)
                 .setContentType(request.effectiveMimeType())
                 .setMetadata(metadata)
                 .build()
