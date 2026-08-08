@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkTypeTag
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RequirementTag
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RttType
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
 
 /**
  * A durable, shareable relay-reachability cache backed by an [IEventStore] as
@@ -143,8 +144,10 @@ class RelayReachabilityStore(
         rttOpenMs: Long = 0,
     ) {
         val current = currentRecords(reachable + dead)
-        for (relay in reachable) writeSafely { writeOne(relay, up = true, now, rttOpenMs, current[relay]) }
-        for (relay in dead) if (relay !in reachable) writeSafely { writeOne(relay, up = false, now, rttOpenMs, current[relay]) }
+        val up = reachable.toList()
+        val down = dead.filterNot { it in reachable }
+        eachRelay(up.size) { i -> writeOne(up[i], up = true, now, rttOpenMs, current[up[i]]) }
+        eachRelay(down.size) { i -> writeOne(down[i], up = false, now, rttOpenMs, current[down[i]]) }
     }
 
     /**
@@ -159,8 +162,10 @@ class RelayReachabilityStore(
         now: Long = TimeUtils.now(),
     ) {
         val current = currentRecords(reachableRttMs.keys + dead)
-        for ((relay, rtt) in reachableRttMs) writeSafely { writeOne(relay, up = true, now, rtt.coerceAtLeast(0), current[relay]) }
-        for (relay in dead) if (relay !in reachableRttMs) writeSafely { writeOne(relay, up = false, now, 0, current[relay]) }
+        val up = reachableRttMs.toList()
+        val down = dead.filterNot { it in reachableRttMs }
+        eachRelay(up.size) { i -> writeOne(up[i].first, up = true, now, up[i].second.coerceAtLeast(0), current[up[i].first]) }
+        eachRelay(down.size) { i -> writeOne(down[i], up = false, now, 0, current[down[i]]) }
     }
 
     /**
@@ -178,46 +183,53 @@ class RelayReachabilityStore(
     ): Int {
         val reported = observations.filter { it.reachable || it.error != null }
         val current = currentRecords(reported.map { it.url })
-        var written = 0
-        for (o in reported) {
-            if (writeSafely { writeObserved(o, now, current[o.url]) }) written++
-        }
-        return written
+        return eachRelay(reported.size) { i -> writeObserved(reported[i], now, current[reported[i].url]) }
     }
 
     /**
-     * Run one relay's write, keeping its failure to that relay.
+     * Run every relay's write, then fail if any of them did.
      *
-     * The read-modify-write below spans a store round trip and [IEventStore]
-     * offers no read inside a transaction, so a concurrent writer to the same
-     * address can still win the race — and on a store enforcing replaceable
-     * semantics our now-stale insert is REJECTED. Unisolated, that one throw
-     * ends the loop and drops every relay after it; the run reports fewer
-     * records than it measured and nothing says why.
+     * The read-modify-write spans a store round trip and [IEventStore] offers
+     * no read inside a transaction, so a concurrent writer to the same address
+     * can win the race and our now-stale insert is REJECTED. One such throw
+     * must not end the loop and drop every relay after it — but it must not
+     * vanish either: [RelayObserver.collectUnreported] has already cleared the
+     * flags by the time this runs, so a swallowed failure loses the
+     * measurement for good and the caller cannot tell an empty run from a
+     * failed one. So: attempt all, remember the first failure, rethrow it.
+     *
+     * Cancellation is never caught. A shutdown flush wrapped in `withTimeout`
+     * — the pattern [RelayMonitor.close] prescribes — would otherwise be
+     * unabortable, grinding through every remaining relay with each write
+     * throwing and being swallowed.
      */
-    private inline fun writeSafely(write: () -> Unit): Boolean =
-        try {
-            write()
-            true
-        } catch (e: Exception) {
-            false
+    private suspend inline fun eachRelay(
+        count: Int,
+        write: (Int) -> Unit,
+    ): Int {
+        var first: Exception? = null
+        var written = 0
+        for (i in 0 until count) {
+            try {
+                write(i)
+                written++
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (first == null) first = e
+            }
         }
+        first?.let { throw it }
+        return written
+    }
 
     private suspend fun writeObserved(
         o: RelayObserver.Observation,
         now: Long,
         current: RelayDiscoveryEvent?,
     ) {
-        // Owns the `auth` REQUIREMENT VALUE, not the whole `R` tag name: an
-        // observation learns whether this relay challenged us and may clear
-        // that, but `R payment`, `R pow` and the negated forms — written by
-        // RelayProber among others — are somebody else's measurement.
         val template =
-            edit(o.url, now, current, { tag ->
-                tag.firstOrNull() == NetworkTypeTag.TAG_NAME ||
-                    tag.firstOrNull() in ALL_RTT ||
-                    (tag.firstOrNull() == RequirementTag.TAG_NAME && tag.getOrNull(1) == AUTH_REQUIREMENT)
-            }) {
+            edit(o.url, now, current, ::ownsLiveness) {
                 networkType(networkTypeOf(o.url))
                 if (o.reachable) {
                     // Liveness is the presence of rtt-open, per NIP-66. A relay we
@@ -244,19 +256,8 @@ class RelayReachabilityStore(
         rttOpenMs: Long,
         current: RelayDiscoveryEvent?,
     ) {
-        // Owns every rtt only when writing a DEAD record: liveness is the
-        // presence of rtt-open, so a relay that went down must lose all of
-        // them. On the reachable path it owns rtt-open alone — deleting a
-        // `rtt-read` this call never measured is the same silent loss this
-        // whole change exists to stop.
-        val owned =
-            if (up) {
-                { tag: Array<String> -> tag.firstOrNull() == NetworkTypeTag.TAG_NAME || tag.firstOrNull() == RttType.OPEN.tagName }
-            } else {
-                { tag: Array<String> -> tag.firstOrNull() == NetworkTypeTag.TAG_NAME || tag.firstOrNull() in ALL_RTT }
-            }
         val template =
-            edit(relay, now, current, owned) {
+            edit(relay, now, current, ::ownsLiveness) {
                 networkType(networkTypeOf(relay))
                 if (up) rtt(RttType.OPEN, rttOpenMs)
             }
@@ -288,14 +289,15 @@ class RelayReachabilityStore(
      * whose clock runs slightly ahead — are ordinary. An update lost that way
      * is indistinguishable from one that had nothing to say.
      *
-     * That bump is CAPPED at [MAX_FUTURE_SKEW_SECONDS] past `now`. Without a
-     * ceiling a `created_at` that once landed in the future is sticky: every
-     * later edit derives from the bad value and never re-anchors, so the record
-     * never ages out of [snapshot]'s TTL window (a stale `isKnownDead` that can
-     * never expire) and relays enforcing future-timestamp limits reject
-     * everything this monitor publishes for that relay. Capped, a pathological
-     * record costs the updates made while `now` catches up — bounded, and it
-     * heals itself — instead of poisoning the slot permanently.
+     * The bump is deliberately NOT capped to some window past `now`. Capping
+     * it looks prudent and is worse: a record already further ahead than the
+     * cap can then never be replaced at all, because every stamp we are willing
+     * to write is older than what is stored, so the relay's live/dead verdict
+     * freezes until the wall clock catches up. It does not even buy the thing
+     * it appears to — [snapshot] selects on `since` alone, so a future-stamped
+     * record sits inside the freshness window either way. A record stamped
+     * ahead of the clock is a defect in whatever produced it; this class's job
+     * is to keep updating it, not to freeze it.
      */
     private fun edit(
         relay: NormalizedRelayUrl,
@@ -306,13 +308,42 @@ class RelayReachabilityStore(
     ) = RelayDiscoveryEvent.build(
         relay,
         current?.content ?: "",
-        createdAt = minOf(maxOf(now, (current?.createdAt ?: 0L) + 1), now + MAX_FUTURE_SKEW_SECONDS),
+        createdAt = maxOf(now, (current?.createdAt ?: 0L) + 1),
     ) {
         current?.tags?.forEach { tag ->
             if (tag.firstOrNull() != "d" && !owns(tag)) add(tag)
         }
         measured()
     }
+
+    /**
+     * The tags this class measures, and may therefore replace.
+     *
+     * Everything here expires together with the record: a 30166 carries ONE
+     * `created_at` for the whole document, so a tag carried across is re-dated
+     * as a current measurement. Keeping a `rtt-read` from an earlier
+     * observation beside a fresh `rtt-open` would republish a stale latency as
+     * today's — and [RelayObserver] documents exactly how wrong a queued rtt
+     * can be. So this class's own liveness facts are rewritten wholesale on
+     * every write, including clearing `R auth` when nothing re-asserts it: a
+     * permanent auth flag is worse than a missing one, because it discourages
+     * the very connection that could clear it.
+     *
+     * Both polarities of the auth requirement are owned. Owning only the
+     * positive form let `R !auth` survive while `requirement("auth")` appended
+     * the opposite, publishing a record that asserted both at once.
+     *
+     * Everything NOT matched here — `R pow`, `R payment`, annotations another
+     * writer keeps on this address, tags this version has never heard of — is
+     * somebody else's measurement and is carried across untouched.
+     */
+    private fun ownsLiveness(tag: Array<String>): Boolean =
+        when (tag.firstOrNull()) {
+            NetworkTypeTag.TAG_NAME -> true
+            in ALL_RTT -> true
+            RequirementTag.TAG_NAME -> tag.getOrNull(1) in AUTH_REQUIREMENT_FORMS
+            else -> false
+        }
 
     /**
      * This monitor's own current record for each relay, in one query.
@@ -324,10 +355,13 @@ class RelayReachabilityStore(
         if (relays.isEmpty()) return emptyMap()
         val out = HashMap<NormalizedRelayUrl, RelayDiscoveryEvent>()
         // CHUNKED: a `d` filter binds one host parameter per url, and callers
-        // pass the whole relay universe — RelayProber's own measurement puts
-        // that at 16,507. A bundled SQLite refuses past 32,766 variables, and
-        // the throw would land BEFORE anything was written, losing an entire
-        // probe run's records rather than one relay's.
+        // pass the whole relay universe — the fan-out this module measures
+        // itself against is 16,507 relays (see RelayObserver). Measured on
+        // BundledSQLiteDriver, 32,765 `d` values pass and 32,766 fails with
+        // "too many SQL variables"; the throw lands BEFORE anything is
+        // written, so an entire probe run's records are lost rather than one
+        // relay's. The headroom here is deliberate — the ceiling is a property
+        // of the driver, not of this query.
         for (chunk in relays.map { it.url }.distinct().chunked(RELAYS_PER_QUERY)) {
             val held =
                 store.query<RelayDiscoveryEvent>(
@@ -349,13 +383,8 @@ class RelayReachabilityStore(
         /** The one NIP-66 requirement an observation can prove: the relay challenged us. */
         const val AUTH_REQUIREMENT = "auth"
 
-        /**
-         * How far past `now` an edit may stamp itself to clear a record that
-         * is already ahead of the clock. Enough to cover ordinary skew between
-         * two writers; small enough that a pathological record heals in
-         * minutes rather than never. See [edit].
-         */
-        const val MAX_FUTURE_SKEW_SECONDS = 60L
+        /** Both polarities, so an update cannot leave the record asserting `auth` and `!auth` at once. */
+        private val AUTH_REQUIREMENT_FORMS = setOf(AUTH_REQUIREMENT, "!$AUTH_REQUIREMENT")
 
         /**
          * Urls per `d` lookup. Well under a bundled SQLite's 32,766-variable

@@ -186,12 +186,16 @@ class RelayReachabilityStoreTest {
         }
 
     /**
-     * Without a ceiling the bump is sticky: a record that once landed in the
-     * future is derived from forever, so it never ages out of the TTL window
-     * and relays enforcing future-timestamp limits reject every publish.
+     * A record stamped ahead of the clock is a defect in whatever produced it.
+     * Capping our stamp to some window past `now` looks prudent and is worse:
+     * every stamp we would write is then older than what is stored, so the
+     * insert is rejected and the relay's live/dead verdict freezes until the
+     * wall clock catches up. It does not even buy freshness — snapshot()
+     * selects on `since` alone, so the future record is inside the window
+     * either way.
      */
     @Test
-    fun `a record already far in the future is never pushed further ahead`() =
+    fun `a record stamped ahead of the clock can still be updated`() =
         runBlocking {
             val store = store()
             val signer = NostrSignerInternal(KeyPair())
@@ -201,17 +205,17 @@ class RelayReachabilityStoreTest {
             cache.recordProbed(mapOf(live1 to 120L), emptySet(), now = now + 86_400)
             cache.recordProbed(mapOf(live1 to 131L), emptySet(), now = now)
 
-            val held =
-                store
-                    .query<RelayDiscoveryEvent>(
-                        Filter(kinds = listOf(RelayDiscoveryEvent.KIND), authors = listOf(signer.pubKey), tags = mapOf("d" to listOf(live1.url))),
-                    ).maxByOrNull { it.createdAt }
-            assertEquals(now + 86_400, held?.createdAt, "the pathological stamp was carried forward instead of capped")
+            assertEquals("131", tagsOf(store, signer, live1).first { it[0] == RttType.OPEN.tagName }[1])
         }
 
-    /** writeOne measures rtt-open only; deleting a read/write latency it never took is the loss this guards. */
+    /**
+     * A 30166 carries ONE created_at, so a carried tag is re-dated as a current
+     * measurement. This class's own liveness facts must therefore be rewritten
+     * wholesale, or a stale rtt-read is republished as today's number — which
+     * aggregators rank on.
+     */
     @Test
-    fun `a reachable update keeps latencies it did not measure`() =
+    fun `a later observation does not re-date an older latency`() =
         runBlocking {
             val store = store()
             val signer = NostrSignerInternal(KeyPair())
@@ -226,8 +230,79 @@ class RelayReachabilityStoreTest {
             cache.recordProbed(mapOf(live1 to 120L), emptySet(), now = 1_700_000_100)
 
             val after = tagsOf(store, signer, live1)
-            assertEquals("55", after.first { it[0] == RttType.READ.tagName }[1], "rtt-read was deleted by a writer that never measured it")
+            assertTrue(RttType.READ.tagName !in names(after), "a stale rtt-read was carried onto a fresh record")
             assertEquals("120", after.first { it[0] == RttType.OPEN.tagName }[1])
+        }
+
+    /**
+     * Only [writeObserved] can clear `auth`, and it needs a connection the flag
+     * discourages — so carrying it forward would make it permanent. It expires
+     * with the rest of this class's liveness facts.
+     */
+    @Test
+    fun `an auth requirement does not outlive the observation that set it`() =
+        runBlocking {
+            val store = store()
+            val signer = NostrSignerInternal(KeyPair())
+            val cache = RelayReachabilityStore(store, signer, ttlSeconds = 3600)
+
+            val walled = RelayObserver()
+            walled.record(live1, true, 100L, null)
+            walled.observationOf(live1)?.authRequired = true
+            cache.record(walled.collectUnreported(), now = 1_700_000_000)
+            assertTrue(RequirementTag.TAG_NAME in names(tagsOf(store, signer, live1)))
+
+            cache.recordProbed(mapOf(live1 to 120L), emptySet(), now = 1_700_000_100)
+
+            assertTrue(RequirementTag.TAG_NAME !in names(tagsOf(store, signer, live1)), "the auth wall became permanent")
+        }
+
+    /** Owning only the positive form left `!auth` in place while appending `auth`. */
+    @Test
+    fun `an update never leaves the record asserting both auth polarities`() =
+        runBlocking {
+            val store = store()
+            val signer = NostrSignerInternal(KeyPair())
+            val cache = RelayReachabilityStore(store, signer, ttlSeconds = 3600)
+
+            cache.recordProbed(mapOf(live1 to 120L), emptySet(), now = 1_700_000_000)
+            val existing = tagsOf(store, signer, live1)
+            val negated =
+                RelayDiscoveryEvent.build(live1, "", createdAt = 1_700_000_001) {
+                    existing.forEach { if (it.firstOrNull() != "d") add(it) }
+                    add(arrayOf(RequirementTag.TAG_NAME, "!auth"))
+                }
+            store.insert(signer.sign(negated))
+
+            val walled = RelayObserver()
+            walled.record(live1, true, 100L, null)
+            walled.observationOf(live1)?.authRequired = true
+            cache.record(walled.collectUnreported(), now = 1_700_000_002)
+
+            val reqs = tagsOf(store, signer, live1).filter { it[0] == RequirementTag.TAG_NAME }.map { it[1] }
+            assertEquals(listOf(RelayReachabilityStore.AUTH_REQUIREMENT), reqs, "record asserts contradictory requirements: " + reqs)
+        }
+
+    /**
+     * collectUnreported() has already cleared the flags by the time a write
+     * runs, so a swallowed failure loses the measurement for good and an empty
+     * run is indistinguishable from a failed one.
+     */
+    @Test
+    fun `a failing write is reported, not swallowed`() =
+        runBlocking {
+            val store = store()
+            val signer = NostrSignerInternal(KeyPair())
+            val cache = RelayReachabilityStore(store, signer, ttlSeconds = 3600)
+            store.close()
+
+            var threw = false
+            try {
+                cache.recordProbed(mapOf(live1 to 120L, live2 to 130L), emptySet(), now = 1_700_000_000)
+            } catch (e: Exception) {
+                threw = true
+            }
+            assertTrue(threw, "every write failed and the run reported success")
         }
 
     /** An observation proves `R auth` and nothing else; other requirements belong to whoever measured them. */
