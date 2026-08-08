@@ -38,7 +38,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.service.cast.CastErrorMessage
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
@@ -120,8 +119,4 @@ fun CastDevicePickerDialog(
 }
 
 @Composable
-private fun castErrorText(error: CastSessionState.Error): String =
-    when (val message = error.message) {
-        is CastErrorMessage.Raw -> message.text
-        is CastErrorMessage.Localized -> stringRes(message.text, error.device?.name ?: stringRes(Res.string.cast_generic_receiver))
-    }
+private fun castErrorText(error: CastSessionState.Error): String = stringRes(error.message.text, error.device?.name ?: stringRes(Res.string.cast_generic_receiver))

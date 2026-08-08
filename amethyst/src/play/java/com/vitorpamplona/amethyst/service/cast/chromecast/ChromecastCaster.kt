@@ -45,6 +45,10 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.images.WebImage
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cast_error_connect_failed
+import com.vitorpamplona.amethyst.commons.resources.cast_error_device_offline
+import com.vitorpamplona.amethyst.commons.resources.cast_error_load_failed
+import com.vitorpamplona.amethyst.commons.resources.cast_error_play_services_unavailable
 import com.vitorpamplona.amethyst.commons.resources.cast_error_playback_failed
 import com.vitorpamplona.amethyst.commons.resources.cast_error_receiver_not_responding
 import com.vitorpamplona.amethyst.commons.resources.cast_error_unsupported_media
@@ -61,12 +65,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "ChromecastCaster"
 private const val SESSION_START_TIMEOUT_MS = 30_000L
 private const val STOP_AWAIT_TIMEOUT_MS = 5_000L
+
+/**
+ * How long to wait for the session to actually end after asking the receiver app to stop.
+ *
+ * Unselecting the route drops the connection, so doing it before the receiver has processed
+ * STOP_APP leaves the app running and the TV parked on the Default Media Receiver splash — the
+ * "default renderer" screen the user has to leave with the TV remote. Observed at ~25-170ms on a
+ * webOS TV, longer the more playback there was to flush, so this is generous.
+ */
+private const val SESSION_END_TIMEOUT_MS = 5_000L
 
 /**
  * How long the receiver gets to move off LOADING before we call it stalled.
@@ -241,9 +256,21 @@ class ChromecastCaster(
                 error: Int,
             ) {
                 Log.w(TAG) { "session.onStartFailed error=${statusName(error)}" }
+                cancelLoadWatchdog()
                 pendingSessionStart?.complete(false)
                 pendingSessionStart = null
-                sessionFlow.value = CastSessionState.Error(currentDevice(), CastErrorMessage.Raw("Cast session failed (code $error)"))
+                if (error == CastStatusCodes.CANCELED) {
+                    // The user backed out of the connection; that is not a failure to report.
+                    sessionFlow.value = CastSessionState.Idle
+                    return
+                }
+                // The raw SDK integer belongs in the log, not in front of the user. Every code that
+                // reaches here means the same thing to them — the device would not accept a
+                // connection — and on a webOS TV whose Cast service has died (2252, seen repeatedly
+                // once it wedges) restarting it is genuinely the fix.
+                val device = currentDevice()
+                sessionFlow.value =
+                    CastSessionState.Error(device, CastErrorMessage(Res.string.cast_error_connect_failed))
             }
 
             override fun onSessionEnding(session: CastSession) {
@@ -255,6 +282,9 @@ class ChromecastCaster(
                 error: Int,
             ) {
                 detachMediaClientCallback()
+                // Whoever is tearing down gets told first, before any of the swap/failure handling
+                // below decides to return early — stopCasting() is blocked on this.
+                pendingSessionEnd?.complete(Unit)
                 // Moving to a different receiver ends the outgoing session by design, and that
                 // callback lands *after* cast() has installed the pending start for the incoming
                 // one. Failing it here is what made every device-to-device switch report
@@ -344,13 +374,17 @@ class ChromecastCaster(
                 "load watchdog: still ${playerStateName(state ?: -1)} after ${LOAD_PROGRESS_TIMEOUT_MS}ms on ${device?.name}"
             }
             sessionFlow.value =
-                CastSessionState.Error(device, CastErrorMessage.Localized(Res.string.cast_error_receiver_not_responding))
+                CastSessionState.Error(device, CastErrorMessage(Res.string.cast_error_receiver_not_responding))
             watchedDevice = null
         }
 
     /** The device a load is currently being watched for, so the message can name it. */
     @Volatile
     private var watchedDevice: CastDevice? = null
+
+    /** Set while [stopCasting] waits for the receiver app to actually go away. */
+    @Volatile
+    private var pendingSessionEnd: CompletableDeferred<Unit>? = null
 
     private fun armLoadWatchdog(device: CastDevice) {
         main.removeCallbacks(loadWatchdog)
@@ -386,7 +420,7 @@ class ChromecastCaster(
                 else -> Res.string.cast_error_playback_failed
             }
         Log.w(TAG) { "media failure surfaced to UI: code=$detailedErrorCode device=${device?.name}" }
-        sessionFlow.value = CastSessionState.Error(device, CastErrorMessage.Localized(message))
+        sessionFlow.value = CastSessionState.Error(device, CastErrorMessage(message))
     }
 
     private fun currentDevice(): CastDevice? =
@@ -513,7 +547,8 @@ class ChromecastCaster(
         val ctx = withContext(Dispatchers.Main) { ensureCastContext() }
         if (ctx == null) {
             Log.w(TAG, "cast: CastContext unavailable")
-            sessionFlow.value = CastSessionState.Error(device, CastErrorMessage.Raw("Google Play services unavailable"))
+            sessionFlow.value =
+                CastSessionState.Error(device, CastErrorMessage(Res.string.cast_error_play_services_unavailable))
             return
         }
         val route =
@@ -522,7 +557,7 @@ class ChromecastCaster(
             }
         if (route == null) {
             Log.w(TAG) { "cast: route ${device.id} not in current set; offline?" }
-            sessionFlow.value = CastSessionState.Error(device, CastErrorMessage.Raw("Device went offline"))
+            sessionFlow.value = CastSessionState.Error(device, CastErrorMessage(Res.string.cast_error_device_offline))
             return
         }
 
@@ -582,7 +617,10 @@ class ChromecastCaster(
 
         if (!started) {
             Log.w(TAG, "cast: session start refused")
-            sessionFlow.value = CastSessionState.Error(device, CastErrorMessage.Raw("Cast session refused"))
+            // onSessionStartFailed usually got here first with a better-informed message; keep it.
+            sessionFlow.value =
+                sessionFlow.value as? CastSessionState.Error
+                    ?: CastSessionState.Error(device, CastErrorMessage(Res.string.cast_error_connect_failed))
             return
         }
 
@@ -642,7 +680,7 @@ class ChromecastCaster(
             when {
                 reportedFailure != null -> reportedFailure
                 ok -> CastSessionState.Casting(device, request)
-                else -> CastSessionState.Error(device, CastErrorMessage.Raw("Could not load media on receiver"))
+                else -> CastSessionState.Error(device, CastErrorMessage(Res.string.cast_error_load_failed))
             }
     }
 
@@ -675,8 +713,29 @@ class ChromecastCaster(
             .build()
     }
 
+    /**
+     * Serialises teardown. A stop against an unresponsive receiver can take seconds to ack, so the
+     * user reasonably presses stop again — and two overlapping teardowns wreck each other: both
+     * call `stop()` (the second erroring), both call `endCurrentSession`, and the later one installs
+     * its session-end wait after `onSessionEnded` has already fired, so it waits out the full
+     * timeout for an event that will never come again.
+     */
+    private val stopInFlight = Mutex()
+
     suspend fun stopCasting() {
-        Log.d(TAG) { "stopCasting (hasClient=${currentMediaClient != null})" }
+        if (!stopInFlight.tryLock()) {
+            Log.i(TAG) { "stopCasting: a teardown is already running; ignoring the repeat request" }
+            return
+        }
+        try {
+            stopCastingLocked()
+        } finally {
+            stopInFlight.unlock()
+        }
+    }
+
+    private suspend fun stopCastingLocked() {
+        Log.i(TAG) { "stopCasting (hasClient=${currentMediaClient != null})" }
         withContext(Dispatchers.Main) { cancelLoadWatchdog() }
         // Await MEDIA_STOP before endCurrentSession() — racing them on the
         // same main-thread tick loses the stop on some receivers (LG webOS).
@@ -687,8 +746,8 @@ class ChromecastCaster(
                 try {
                     client.stop().setResultCallback { result ->
                         val status = result.status
-                        Log.d(TAG) {
-                            "remoteMediaClient.stop ack code=${status.statusCode} msg=${status.statusMessage}"
+                        Log.i(TAG) {
+                            "remoteMediaClient.stop ack code=${statusName(status.statusCode)} msg=${status.statusMessage}"
                         }
                         stopAck.complete(status.statusCode)
                     }
@@ -702,16 +761,37 @@ class ChromecastCaster(
                 Log.w(TAG) { "remoteMediaClient.stop did not ack within ${STOP_AWAIT_TIMEOUT_MS}ms" }
             }
         }
+        val ended = CompletableDeferred<Unit>()
         withContext(Dispatchers.Main) {
+            pendingSessionEnd = ended
             try {
-                // false: receiver app already halted media via stop() above.
-                // true previously triggered an extra teardown that compounded
-                // the race — keep the receiver running on its splash screen
-                // so the next cast can reuse the connection cleanly.
-                castContext?.sessionManager?.endCurrentSession(false)
+                // true: shut the receiver application down, don't just detach from it.
+                //
+                // This was false, to "keep the receiver running on its splash screen so the next
+                // cast can reuse the connection cleanly". That is what strands an LG webOS TV on the
+                // Default Media Receiver holding screen instead of returning it to its home screen,
+                // and the reused connection is not clean: the SDK hands the same session id back to
+                // later casts, and after a few stop/start cycles the receiver stops accepting
+                // connections at all (every start fails 2252) until the TV is power-cycled.
+                //
+                // The race that motivated false is now handled directly — the MEDIA_STOP ack is
+                // awaited above before we get here, and a receiver swap no longer mistakes the
+                // outgoing session's teardown for a failure of the incoming one.
+                Log.i(TAG) { "stopCasting: ending session and stopping the receiver app" }
+                castContext?.sessionManager?.endCurrentSession(true)
             } catch (t: Throwable) {
                 Log.w(TAG, "endCurrentSession failed", t)
+                ended.complete(Unit)
             }
+        }
+        // Wait for the session to be gone before unselecting. Unselecting drops the connection the
+        // STOP_APP message travels over, so doing it on the same tick — as this used to — can beat
+        // the message to the TV and leave the receiver running on its splash screen.
+        if (withTimeoutOrNull(SESSION_END_TIMEOUT_MS) { ended.await() } == null) {
+            Log.w(TAG) { "stopCasting: session did not end within ${SESSION_END_TIMEOUT_MS}ms; unselecting anyway" }
+        }
+        withContext(Dispatchers.Main) {
+            pendingSessionEnd = null
             mediaRouter?.unselect(MediaRouter.UNSELECT_REASON_STOPPED)
         }
         sessionFlow.value = CastSessionState.Idle

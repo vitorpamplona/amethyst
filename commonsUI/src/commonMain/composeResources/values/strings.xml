@@ -2701,6 +2701,10 @@
     <string name="cast_error_unsupported_media">%1$s can't play this video's format</string>
     <string name="cast_error_playback_failed">%1$s couldn't play this video</string>
     <string name="cast_error_receiver_not_responding">%1$s stopped responding. Restarting the device usually fixes it.</string>
+    <string name="cast_error_connect_failed">Couldn't connect to %1$s. Restarting the device usually fixes it.</string>
+    <string name="cast_error_device_offline">%1$s went offline</string>
+    <string name="cast_error_load_failed">Couldn't load this video on %1$s</string>
+    <string name="cast_error_play_services_unavailable">Casting needs Google Play services, which aren't available on this device</string>
     <string name="hls_pick_video_primary">Pick a video</string>
     <string name="hls_pick_video_helper">Your video will be transcoded into multiple resolutions so viewers get smooth playback on any connection.</string>
     <string name="hls_change_video">Change</string>

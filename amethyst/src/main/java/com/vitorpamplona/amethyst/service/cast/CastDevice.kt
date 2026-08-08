@@ -97,19 +97,12 @@ sealed class CastSessionState {
  * What went wrong, in a form the picker resolves in composition. The caster reports failures from
  * Cast SDK callbacks, where there is no blocking way to read a Compose resource, so it hands over
  * the resource and the UI formats it.
+ *
+ * [text] is `%1$s`-shaped, naming the receiver: the picker supplies the [CastSessionState.Error]
+ * device's name, or a generic noun when the failure happens before or after we know which device
+ * it was.
  */
 @Immutable
-sealed interface CastErrorMessage {
-    /** Not yet localized. */
-    data class Raw(
-        val text: String,
-    ) : CastErrorMessage
-
-    /**
-     * A `%1$s`-shaped message naming the receiver — the picker supplies the [CastSessionState.Error]
-     * device's name, or a generic noun when the device is unknown.
-     */
-    data class Localized(
-        val text: StringResource,
-    ) : CastErrorMessage
-}
+data class CastErrorMessage(
+    val text: StringResource,
+)
