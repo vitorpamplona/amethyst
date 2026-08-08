@@ -30,8 +30,10 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class ConcordSessionRegistryTest {
@@ -40,12 +42,16 @@ class ConcordSessionRegistryTest {
     private fun entryFor(
         community: NewConcordCommunity,
         name: String,
+        controlRoot: String? = community.controlRoot.toHexKey(),
+        rootEpoch: Long = community.rootEpoch,
     ) = ConcordCommunityListEntry(
         id = community.communityIdHex,
         owner = community.ownerPubKey,
         ownerSalt = community.ownerSalt.toHexKey(),
         root = community.communityRoot.toHexKey(),
-        rootEpoch = community.rootEpoch,
+        rootEpoch = rootEpoch,
+        controlPk = community.controlPkHex,
+        controlRoot = controlRoot,
         relays = listOf("wss://r.example"),
         name = name,
     )
@@ -66,8 +72,8 @@ class ConcordSessionRegistryTest {
             assertNotNull(registry.sessionFor(beta.communityIdHex))
 
             // Both control-plane addresses are in the subscribe set from the entries alone.
-            assertTrue(registry.subscribeAddresses().contains(alpha.controlPlane.publicKeyHex))
-            assertTrue(registry.subscribeAddresses().contains(beta.controlPlane.publicKeyHex))
+            assertTrue(registry.subscribeAddresses().contains(alpha.controlPlane.address))
+            assertTrue(registry.subscribeAddresses().contains(beta.controlPlane.address))
 
             // A genesis control wrap routes to Alpha's session and folds it (STRUCTURAL).
             alpha.genesisWraps.forEach { assertEquals(ConcordIngestOutcome.STRUCTURAL_FOLD, registry.ingest(it)) }
@@ -101,5 +107,60 @@ class ConcordSessionRegistryTest {
             // A wrap from an unknown community is routed nowhere.
             val gamma = ConcordCommunityFactory.create(owner, "Gamma", createdAt = 1L, relays = listOf("wss://r.example"))
             assertEquals(ConcordIngestOutcome.NOT_MINE, registry.ingest(gamma.genesisWraps.first()))
+        }
+
+    /**
+     * A promotion to staff delivers the `control_root` inside the fold itself (CORD-04 §3),
+     * so it lands on an entry whose session was built as a read-only member long before. The
+     * session must pick the key up **without** being rebuilt: a rebuild would drop the
+     * buffered Control Plane wraps and fold the community empty, which is exactly what the
+     * user would see instead of their new moderation powers.
+     */
+    @Test
+    fun adoptsAControlRootDeliveredMidSessionWithoutLosingTheFold() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Alpha", createdAt = 1L, relays = listOf("wss://r.example"))
+            val registry = ConcordSessionRegistry()
+
+            // Joined as a plain member: the address is held, the write secret is not.
+            val asMember = entryFor(community, "Alpha", controlRoot = null)
+            registry.sync(listOf(asMember), owner.pubKey)
+            val session = registry.sessionFor(community.communityIdHex)!!
+            community.genesisWraps.forEach { registry.ingest(it) }
+
+            assertEquals(
+                "Alpha",
+                session.state.value
+                    ?.metadata
+                    ?.name,
+            )
+            assertFalse(session.controlPlaneKeys().canWrite, "a member holds no control_root")
+
+            // The staff-making Grant lands and the drain writes the secret onto the entry.
+            val asStaff = entryFor(community, "Alpha")
+            val createdOnAdopt = registry.sync(listOf(asStaff), owner.pubKey)
+
+            // Adopted in place: same session object, no rebuild.
+            assertTrue(createdOnAdopt.isEmpty(), "adopting a control_root must not rebuild the session")
+            assertSame(session, registry.sessionFor(community.communityIdHex))
+
+            // The write key is live...
+            assertTrue(session.controlPlaneKeys().canWrite, "the delivered control_root must flip canWrite")
+            assertEquals(community.controlRoot.toHexKey(), session.entry.controlRoot, "the entry carries it onward for the next Grant")
+            assertTrue(session.streamKeys().any { it.publicKeyHex == community.controlPkHex }, "staff now AUTHs as the plane")
+
+            // ...and the address and the fold are untouched — the bug this guards.
+            assertEquals(community.controlPlane.address, session.controlPlaneAddress)
+            assertEquals(
+                "Alpha",
+                session.state.value
+                    ?.metadata
+                    ?.name,
+                "adoption must not discard the buffered wraps",
+            )
+
+            // A real rotation still rebuilds rather than adopting in place.
+            val nextEpoch = entryFor(community, "Alpha", rootEpoch = community.rootEpoch + 1)
+            assertEquals(setOf(community.communityIdHex), registry.sync(listOf(nextEpoch), owner.pubKey))
         }
 }

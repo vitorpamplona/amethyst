@@ -42,6 +42,9 @@ value class ConcordPermissions(
     /** True if every bit set in [other] is also set here (used for role-vs-actor checks). */
     fun hasAll(other: ConcordPermissions): Boolean = (bits and other.bits) == other.bits
 
+    /** True if at least one bit set in [other] is also set here. */
+    fun hasAny(other: ConcordPermissions): Boolean = (bits and other.bits) != 0uL
+
     infix fun union(other: ConcordPermissions): ConcordPermissions = ConcordPermissions(bits or other.bits)
 
     fun with(bit: Int): ConcordPermissions = ConcordPermissions(bits or (1uL shl bit))
@@ -71,7 +74,21 @@ value class ConcordPermissions(
         const val VIEW_AUDIT_LOG = 8
         const val MENTION_EVERYONE = 9
 
-        // bits 10-12 reserved
+        // bits 10 and 12 reserved (MANAGE_EMOJI, MANAGE_EVENTS)
+
+        const val PIN_MESSAGES = 11
+
+        /**
+         * The **staff** bits (CORD-04 §3): the six permissions whose actions land as
+         * Control Plane editions. A member holding any of them, plus always the
+         * owner, is staff — the set that holds the `control_root` (CORD-02 §2).
+         * `KICK` writes to the Guestbook and `MANAGE_MESSAGES` to Chat planes, so
+         * neither is here. The spec's list is **normative**: a future CORD
+         * introducing a permission whose actions are Control editions MUST amend it
+         * explicitly, so no implementation judges membership of the set for itself —
+         * extend this constant only when the spec's list changes.
+         */
+        val STAFF_BITS: ConcordPermissions get() = of(MANAGE_ROLES, MANAGE_CHANNELS, MANAGE_METADATA, BAN, CREATE_INVITE, PIN_MESSAGES)
 
         fun of(vararg bits: Int): ConcordPermissions {
             var acc = 0uL

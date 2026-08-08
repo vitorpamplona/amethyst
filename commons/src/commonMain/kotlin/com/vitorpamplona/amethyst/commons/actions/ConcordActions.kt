@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
 import com.vitorpamplona.quartz.concord.cord06Rekey.ReceivedRefounding
 import com.vitorpamplona.quartz.concord.cord06Rekey.RefoundingBuild
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -89,11 +90,51 @@ data class HistoricalChannelPlane(
 object ConcordActions {
     // ---- plane key derivation -------------------------------------------------
 
+    /**
+     * The **legacy** Control Plane group key (pre-split epochs, CORD-06 §3), which
+     * doubles as the split epochs' *read* key derivation. For anything that opens
+     * or writes the Control Plane, prefer [controlPlaneKeys].
+     */
     fun controlPlane(
         communityRoot: ByteArray,
         communityId: ByteArray,
         rootEpoch: Long,
     ): GroupKey = ConcordKeyDerivation.controlPlaneKey(communityRoot, communityId, rootEpoch)
+
+    /**
+     * The Control Plane keys as this account holds them (CORD-02 §5): staff when
+     * [controlRoot] is held, read-only member when only [controlPk] is, and the
+     * legacy single-key plane when neither (a pre-split epoch).
+     */
+    fun controlPlaneKeys(
+        communityRoot: ByteArray,
+        communityId: ByteArray,
+        rootEpoch: Long,
+        controlPk: HexKey? = null,
+        controlRoot: HexKey? = null,
+    ): ControlPlaneKeys = ControlPlaneKeys.of(communityRoot, communityId, rootEpoch, controlPk, controlRoot)
+
+    /** The Control Plane keys described by a joined-list [entry]. */
+    fun controlPlaneKeysFor(entry: ConcordCommunityListEntry): ControlPlaneKeys =
+        controlPlaneKeys(
+            entry.root.hexToByteArray(),
+            entry.id.hexToByteArray(),
+            entry.rootEpoch,
+            entry.controlPk,
+            entry.controlRoot,
+        )
+
+    /**
+     * The Control Plane's stream address for a subscription: the held `control_pk`
+     * on a split epoch, else the legacy derived address. Cheaper than
+     * [controlPlaneKeys] when only the address is needed.
+     */
+    fun controlPlaneAddress(
+        communityRoot: ByteArray,
+        communityId: ByteArray,
+        rootEpoch: Long,
+        controlPk: HexKey?,
+    ): HexKey = controlPk?.lowercase() ?: controlPlane(communityRoot, communityId, rootEpoch).publicKeyHex
 
     fun publicChannel(
         communityRoot: ByteArray,
@@ -178,7 +219,7 @@ object ConcordActions {
     /** Opens the control-plane [wraps] into their [ControlEdition]s (drops any that don't open/parse). */
     fun controlEditions(
         wraps: List<Event>,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
     ): List<ControlEdition> =
         wraps.mapNotNull { wrap ->
             ConcordStreamEnvelope.openOrNull(wrap, controlPlane)?.let { ControlEdition.fromRumor(it.rumor) }
@@ -187,7 +228,7 @@ object ConcordActions {
     /** Opens the control-plane [wraps] and folds them into the live community state. */
     fun foldCommunity(
         wraps: List<Event>,
-        controlPlane: GroupKey,
+        controlPlane: ControlPlaneKeys,
         ownerPubKey: HexKey,
     ): ConcordCommunityState = ConcordCommunityState.fold(controlEditions(wraps, controlPlane), ownerPubKey)
 
@@ -360,7 +401,12 @@ object ConcordActions {
 
     // ---- invites --------------------------------------------------------------
 
-    /** Builds a [CommunityInvite] from a freshly created (or joined) community's public info. */
+    /**
+     * Builds a [CommunityInvite] from a freshly created (or joined) community's
+     * public info. [controlPk] is the Control Plane's signer pubkey at [rootEpoch]
+     * (CORD-05 §1) — read access for the joiner, never write; null only for a
+     * legacy, pre-split community.
+     */
     fun inviteFor(
         communityIdHex: HexKey,
         ownerPubKey: HexKey,
@@ -369,6 +415,7 @@ object ConcordActions {
         rootEpoch: Long,
         name: String,
         relays: List<String>,
+        controlPk: HexKey? = null,
     ): CommunityInvite =
         CommunityInvite(
             communityId = communityIdHex,
@@ -376,6 +423,7 @@ object ConcordActions {
             ownerSalt = ownerSaltHex,
             communityRoot = communityRootHex,
             rootEpoch = rootEpoch,
+            controlPk = controlPk,
             relays = relays,
             name = name,
         )
@@ -427,8 +475,18 @@ object ConcordActions {
         nowMs: Long = TimeUtils.nowMillis(),
     ): InviteBundleStatus = ConcordInviteBundle.classify(wraps, token, nowMs)
 
-    /** Derives the control plane described by a redeemed [invite] so the joiner can read it. */
-    fun controlPlaneFor(invite: CommunityInvite): GroupKey = controlPlane(invite.communityRoot.hexToByteArray(), invite.communityId.hexToByteArray(), invite.rootEpoch)
+    /**
+     * The Control Plane keys described by a redeemed [invite] so the joiner can
+     * read it: the bundle's `control_pk` on a split community, the legacy plane
+     * when absent (CORD-05 §1). Never a writer — an invite delivers no secret.
+     */
+    fun controlPlaneFor(invite: CommunityInvite): ControlPlaneKeys =
+        controlPlaneKeys(
+            invite.communityRoot.hexToByteArray(),
+            invite.communityId.hexToByteArray(),
+            invite.rootEpoch,
+            controlPk = invite.controlPk,
+        )
 
     // ---- guestbook (CORD-02 §5) ----------------------------------------------
 
@@ -468,19 +526,23 @@ object ConcordActions {
 
     /**
      * Builds a whole-community Refounding (CORD-06 §3): the compacted Control Plane
-     * re-sealed under [newRoot] plus the base-rotation rekey blobs delivering
-     * [newRoot] to [recipientsXOnly]. Pure — the caller sources the recipient set
-     * and owns publish + persistence.
+     * re-sealed at the new epoch's split Control address plus the base-rotation
+     * rekey blobs delivering [newRoot] + the new `control_pk` to [recipientsXOnly]
+     * — the [staffXOnly] subset also receiving [newControlRoot] (CORD-06 §1). Pure
+     * — the caller sources the recipient and staff sets (the folded Roster's
+     * `staffMembers()`, CORD-04 §3) and owns publish + persistence.
      */
     suspend fun buildRefounding(
         rotatorSigner: NostrSigner,
         communityId: HexKey,
         priorRoot: ByteArray,
         newRoot: ByteArray,
+        newControlRoot: ByteArray,
         rootEpoch: Long,
         priorControlWraps: List<Event>,
-        priorControlKey: GroupKey,
+        priorControlKeys: ControlPlaneKeys,
         recipientsXOnly: List<HexKey>,
+        staffXOnly: Set<HexKey>,
         createdAt: Long,
     ): RefoundingBuild =
         ConcordRefounding.build(
@@ -488,24 +550,29 @@ object ConcordActions {
             communityId = communityId.hexToByteArray(),
             priorRoot = priorRoot,
             newRoot = newRoot,
+            newControlRoot = newControlRoot,
             rootEpoch = rootEpoch,
             priorControlWraps = priorControlWraps,
-            priorControlKey = priorControlKey,
+            priorControlKeys = priorControlKeys,
             recipientsXOnly = recipientsXOnly,
+            staffXOnly = staffXOnly,
             createdAt = createdAt,
         )
 
     /**
      * Receives an inbound base rotation for the member behind [recipientSigner]:
      * finds the delivered new root across the buffered kind-3303 [wraps], verifying
-     * scope, epoch and continuity against the [priorRoot] the member holds. Returns
-     * the new root + rotator (for the caller to authorize) or null if not re-keyed.
+     * scope, epoch and continuity against the [priorRoot] the member holds — and,
+     * on a staff blob, that the delivered `control_root` derives to the delivered
+     * `control_pk` (CORD-06 §1). Returns the new root + Control keys + rotator
+     * (for the caller to authorize) or null if not re-keyed.
      */
     suspend fun openBaseRekey(
         wraps: List<Event>,
         baseRekey: GroupKey,
         recipientSigner: NostrSigner,
+        communityId: HexKey,
         priorRoot: ByteArray,
         rootEpoch: Long,
-    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, priorRoot, rootEpoch)
+    ): ReceivedRefounding? = ConcordRefounding.findNewRoot(wraps, baseRekey, recipientSigner, communityId.hexToByteArray(), priorRoot, rootEpoch)
 }

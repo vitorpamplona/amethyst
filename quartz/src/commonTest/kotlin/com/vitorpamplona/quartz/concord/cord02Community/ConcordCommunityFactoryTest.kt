@@ -31,6 +31,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -55,12 +56,22 @@ class ConcordCommunityFactoryTest {
                 community.communityId,
             )
 
-            // Two genesis wraps, both authored by the Control Plane address.
+            // Two genesis wraps, both authored by the Control Plane address — which on a fresh
+            // community is the control_root-derived signer, not the community_root (CORD-02 §5).
             assertEquals(2, community.genesisWraps.size)
             community.genesisWraps.forEach {
                 assertEquals(ConcordStreamEnvelope.KIND_WRAP, it.kind)
-                assertEquals(community.controlPlane.publicKeyHex, it.pubKey)
+                assertEquals(community.controlPlane.address, it.pubKey)
             }
+            assertEquals(
+                ConcordKeyDerivation.controlSignerKey(community.controlRoot, community.communityId, community.rootEpoch).publicKeyHex,
+                community.controlPkHex,
+            )
+            // The plane is genuinely split: its address is NOT the legacy community_root derivation.
+            assertNotEquals(
+                ConcordKeyDerivation.controlPlaneKey(community.communityRoot, community.communityId, community.rootEpoch).publicKeyHex,
+                community.controlPkHex,
+            )
 
             // Genesis wraps open with plaintext (20014) seals, authored by the owner.
             val opened = community.genesisWraps.map { ConcordStreamEnvelope.open(it, community.controlPlane) }

@@ -3563,6 +3563,9 @@ class Account(
                 refreshConcordChannelIndex()
                 // A revision also bumps when a base-rotation rekey lands; adopt ours if present.
                 runCatching { concord.drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
+                // A promotion to staff delivers the Control Plane write key inside the Grant
+                // itself (CORD-04 §3), so the fold that seats the role is also when it arrives.
+                runCatching { concord.drainConcordStaffGrants() }.onFailure { Log.w("Concord", "staff grant drain failed", it) }
                 // A rotation we were *excluded* from produces no rekey to drain, so it can only be
                 // found by re-resolving the invite link we joined through. Rate-limited internally.
                 runCatching { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }

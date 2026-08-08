@@ -100,6 +100,20 @@ data class AuthorityResolver private constructor(
     ): Boolean = !isBanned(pubKey) && effectivePermissions(pubKey).has(bit)
 
     /**
+     * True if the member is **staff** (CORD-04 §3): the owner, or any non-banned
+     * holder of a Control-writing bit ([ConcordPermissions.STAFF_BITS]) — the set
+     * that holds the `control_root` (CORD-02 §2).
+     */
+    fun isStaff(pubKey: String): Boolean = isOwner(pubKey) || (!isBanned(pubKey) && effectivePermissions(pubKey).hasAny(ConcordPermissions.STAFF_BITS))
+
+    /**
+     * The staff roster (lowercase hex): the owner plus every role-holder whose
+     * effective permissions carry a staff bit. This is the recipient set that gets
+     * the `control_root` in a base rotation's 136-byte blobs (CORD-06 §1).
+     */
+    fun staffMembers(): Set<String> = memberRoles.keys.filterTo(hashSetOf(ownerLower)) { isStaff(it) }
+
+    /**
      * Whether [actor] may take the action guarded by permission [bit] against
      * [target]. Requires: actor not banned, actor holds [bit], the owner is never
      * a valid target (unremovable), and actor strictly outranks target — "equal

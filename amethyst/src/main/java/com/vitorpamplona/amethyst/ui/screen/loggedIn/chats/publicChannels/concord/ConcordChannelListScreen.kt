@@ -167,11 +167,15 @@ fun ConcordChannelListScreen(
 
     // Channel create/rename/delete are gated on MANAGE_CHANNELS (or owner) — the same predicate the
     // fold enforces, so an unauthorized action would be a silent no-op we shouldn't even offer.
+    // Rank alone isn't enough on a split epoch: publishing any Control edition also takes the
+    // control_root (CORD-02 §2), which a freshly promoted staffer may not hold yet (CORD-04 §3),
+    // so the affordance waits for the key too.
     val canManageChannels =
         state?.authority?.let {
             it.isOwner(account.signer.pubKey) ||
                 it.effectivePermissions(account.signer.pubKey).has(ConcordPermissions.MANAGE_CHANNELS)
-        } == true
+        } == true &&
+            session?.controlPlaneKeys()?.canWrite == true
 
     // channelIdHex == null → create; else → rename that channel.
     var channelEditor by remember { mutableStateOf<ConcordChannelEditor?>(null) }
@@ -234,11 +238,13 @@ fun ConcordChannelListScreen(
                     }
                 },
                 actions = {
+                    // Rank + the Control write key (CORD-02 §2), like [canManageChannels] above.
                     val canEdit =
                         state?.authority?.let {
                             it.isOwner(account.signer.pubKey) ||
                                 it.effectivePermissions(account.signer.pubKey).has(ConcordPermissions.MANAGE_METADATA)
-                        } == true
+                        } == true &&
+                            session?.controlPlaneKeys()?.canWrite == true
 
                     IconButton(onClick = { nav.nav(Route.ConcordMembers(communityId)) }) {
                         SymbolIcon(symbol = MaterialSymbols.Group, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_members_title))

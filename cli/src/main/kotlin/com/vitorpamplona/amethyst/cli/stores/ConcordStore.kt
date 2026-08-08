@@ -37,6 +37,12 @@ data class StoredCommunity(
     val ownerSalt: String = "",
     val root: String = "",
     val rootEpoch: Long = 0,
+    // The Control Plane signer's pubkey at [rootEpoch] (CORD-02 §2): read access, never write.
+    // Blank = a legacy, pre-split community, whose Control Plane is keyed the old way.
+    val controlPk: String = "",
+    // The staff write key at [rootEpoch], held only when this account is the owner or staff
+    // (CORD-02 §2). Blank for a regular member, who can read the plane but not publish to it.
+    val controlRoot: String = "",
     val generalChannelId: String = "",
     val relays: List<String> = emptyList(),
     // Past access roots kept per epoch (CORD-06 Refounding rotates the root). Lets `read --epoch <n>`
@@ -48,6 +54,8 @@ data class StoredCommunity(
 data class StoredHeldRoot(
     val epoch: Long = 0,
     val root: String = "",
+    /** That epoch's Control Plane address; blank for a legacy, pre-split epoch (CORD-02 §5). */
+    val controlPk: String = "",
 )
 
 /**
