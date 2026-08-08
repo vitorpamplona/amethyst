@@ -375,7 +375,7 @@ class ChromecastCaster(
             val progressed = state == MediaStatus.PLAYER_STATE_PLAYING || state == MediaStatus.PLAYER_STATE_BUFFERING
             if (progressed || sessionFlow.value is CastSessionState.Error) return@Runnable
 
-            val device = watchedDevice ?: currentDevice()
+            val device = watchedDevice ?: currentDevice() ?: castingDevice
             Log.w(TAG) {
                 "load watchdog: still ${playerStateName(state ?: -1)} after ${LOAD_PROGRESS_TIMEOUT_MS}ms on ${device?.name}"
             }
@@ -397,6 +397,14 @@ class ChromecastCaster(
     /** What the in-flight cast is, so a failure can say what the receiver refused. */
     @Volatile
     private var castingFormat: String? = null
+
+    /**
+     * Which device the in-flight cast targets. [currentDevice] reads it back off the session state,
+     * which a teardown has usually already reset by the time a late failure arrives — leaving the
+     * message to name "the cast device" instead of the TV the user was looking at.
+     */
+    @Volatile
+    private var castingDevice: CastDevice? = null
 
     /** Set while [stopCasting] waits for the receiver app to actually go away. */
     @Volatile
@@ -426,7 +434,7 @@ class ChromecastCaster(
     private fun reportMediaFailure(detailedErrorCode: Int?) {
         cancelLoadWatchdog()
         if (sessionFlow.value is CastSessionState.Error) return
-        val device = currentDevice()
+        val device = currentDevice() ?: castingDevice
         val unsupported =
             detailedErrorCode == MediaError.DetailedErrorCode.MEDIA_SRC_NOT_SUPPORTED ||
                 detailedErrorCode == MediaError.DetailedErrorCode.MEDIA_DECODE
@@ -658,6 +666,7 @@ class ChromecastCaster(
                         val loadRequest = buildLoadRequest(request)
                         val info = loadRequest.mediaInfo
                         castingFormat = request.formatSummary
+                        castingDevice = device
                         Log.i(TAG) {
                             "cast: load() submitting contentType=${info?.contentType} " +
                                 "streamType=${info?.streamType} media=${request.formatSummary ?: "unknown"} " +
@@ -678,9 +687,12 @@ class ChromecastCaster(
                                     "cast: load() REFUSED by receiver code=${statusName(status.statusCode)} " +
                                         "msg=${status.statusMessage}"
                                 }
-                                // The receiver answered, so the watchdog is moot — but nothing else
-                                // turns a refusal into something the user can read.
-                                reportMediaFailure(null)
+                                // CANCELED is what the receiver answers when the load was
+                                // abandoned because we tore the session down — i.e. the user pressed
+                                // stop. That is the outcome they asked for, not a failure to report.
+                                if (status.statusCode != CastStatusCodes.CANCELED) {
+                                    reportMediaFailure(null)
+                                }
                             }
                         }
                         true
