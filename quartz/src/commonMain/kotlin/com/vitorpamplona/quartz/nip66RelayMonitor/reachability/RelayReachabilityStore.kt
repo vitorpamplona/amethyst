@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip66RelayMonitor.reachability
 
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -30,6 +31,8 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.networkType
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.requirement
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.rtt
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkType
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkTypeTag
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RequirementTag
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RttType
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -139,8 +142,9 @@ class RelayReachabilityStore(
         now: Long = TimeUtils.now(),
         rttOpenMs: Long = 0,
     ) {
-        for (relay in reachable) writeOne(relay, up = true, now, rttOpenMs)
-        for (relay in dead) if (relay !in reachable) writeOne(relay, up = false, now, rttOpenMs)
+        val current = currentRecords(reachable + dead)
+        for (relay in reachable) writeOne(relay, up = true, now, rttOpenMs, current[relay])
+        for (relay in dead) if (relay !in reachable) writeOne(relay, up = false, now, rttOpenMs, current[relay])
     }
 
     /**
@@ -154,8 +158,9 @@ class RelayReachabilityStore(
         dead: Set<NormalizedRelayUrl>,
         now: Long = TimeUtils.now(),
     ) {
-        for ((relay, rtt) in reachableRttMs) writeOne(relay, up = true, now, rtt.coerceAtLeast(0))
-        for (relay in dead) if (relay !in reachableRttMs) writeOne(relay, up = false, now, 0)
+        val current = currentRecords(reachableRttMs.keys + dead)
+        for ((relay, rtt) in reachableRttMs) writeOne(relay, up = true, now, rtt.coerceAtLeast(0), current[relay])
+        for (relay in dead) if (relay !in reachableRttMs) writeOne(relay, up = false, now, 0, current[relay])
     }
 
     /**
@@ -171,10 +176,11 @@ class RelayReachabilityStore(
         observations: Collection<RelayObserver.Observation>,
         now: Long = TimeUtils.now(),
     ): Int {
+        val reported = observations.filter { it.reachable || it.error != null }
+        val current = currentRecords(reported.map { it.url })
         var written = 0
-        for (o in observations) {
-            if (!o.reachable && o.error == null) continue
-            writeObserved(o, now)
+        for (o in reported) {
+            writeObserved(o, now, current[o.url])
             written++
         }
         return written
@@ -183,9 +189,14 @@ class RelayReachabilityStore(
     private suspend fun writeObserved(
         o: RelayObserver.Observation,
         now: Long,
+        current: RelayDiscoveryEvent?,
     ) {
+        // `R` is included in the owned set here and NOT in [writeOne]: an
+        // observation knows whether this relay challenged us, so it may clear a
+        // requirement that no longer holds. writeOne never learns that, so it
+        // leaves the tag alone rather than deleting what it cannot re-measure.
         val template =
-            RelayDiscoveryEvent.build(o.url, createdAt = now) {
+            edit(o.url, now, current, OWNED_LIVENESS + RequirementTag.TAG_NAME) {
                 networkType(networkTypeOf(o.url))
                 if (o.reachable) {
                     // Liveness is the presence of rtt-open, per NIP-66. A relay we
@@ -210,16 +221,91 @@ class RelayReachabilityStore(
         up: Boolean,
         now: Long,
         rttOpenMs: Long,
+        current: RelayDiscoveryEvent?,
     ) {
         val template =
-            RelayDiscoveryEvent.build(relay, createdAt = now) {
+            edit(relay, now, current, OWNED_LIVENESS) {
                 networkType(networkTypeOf(relay))
                 if (up) rtt(RttType.OPEN, rttOpenMs)
             }
         store.insert(signer.sign(template))
     }
 
+    /**
+     * Build this monitor's next record for [relay] as an EDIT of [current]
+     * rather than a fresh document.
+     *
+     * A 30166 is addressable, so a relay has exactly one record per monitor —
+     * and this class is not necessarily its only writer. Anything else keeping
+     * per-relay knowledge under the same identity (an operator marking a relay
+     * as a mirror of another, a crawler recording which kinds it served) writes
+     * into this same slot, and a build-from-scratch silently deletes it. The
+     * result still signs, still parses, and still reads as a valid NIP-66
+     * record — it just says less than it did, and the reader downstream has no
+     * way to know something was lost.
+     *
+     * [owned] is what this writer measured and may therefore replace.
+     * Everything else is carried across untouched, including tags this version
+     * of quartz has never heard of.
+     *
+     * The timestamp is `max(now, current + 1)`, not `now`: a store enforcing
+     * replaceable semantics REJECTS a record that is not strictly newer than
+     * the one it replaces, and two writers inside the same second — or a peer
+     * whose clock runs ahead of ours — are ordinary. An update lost that way is
+     * indistinguishable from one that had nothing to say.
+     */
+    private fun edit(
+        relay: NormalizedRelayUrl,
+        now: Long,
+        current: RelayDiscoveryEvent?,
+        owned: Set<String>,
+        measured: TagArrayBuilder<RelayDiscoveryEvent>.() -> Unit,
+    ) = RelayDiscoveryEvent.build(
+        relay,
+        current?.content ?: "",
+        createdAt = maxOf(now, (current?.createdAt ?: 0L) + 1),
+    ) {
+        current?.tags?.forEach { tag ->
+            if (tag.firstOrNull() != "d" && tag.firstOrNull() !in owned) add(tag)
+        }
+        measured()
+    }
+
+    /**
+     * This monitor's own current record for each relay, in one query.
+     *
+     * Only OUR records: merging another monitor's tags into a document signed
+     * with this key would republish their claims as ours.
+     */
+    private suspend fun currentRecords(relays: Collection<NormalizedRelayUrl>): Map<NormalizedRelayUrl, RelayDiscoveryEvent> {
+        if (relays.isEmpty()) return emptyMap()
+        val held =
+            store.query<RelayDiscoveryEvent>(
+                Filter(
+                    kinds = listOf(RelayDiscoveryEvent.KIND),
+                    authors = listOf(signer.pubKey),
+                    tags = mapOf("d" to relays.map { it.url }.distinct()),
+                ),
+            )
+        val out = HashMap<NormalizedRelayUrl, RelayDiscoveryEvent>(held.size)
+        for (ev in held) {
+            val relay = ev.relay() ?: continue
+            val seen = out[relay]
+            if (seen == null || ev.createdAt > seen.createdAt) out[relay] = ev
+        }
+        return out
+    }
+
     companion object {
+        /**
+         * The tags this class measures on every write, and may therefore
+         * replace. A dead record must be able to CLEAR a stale rtt — liveness
+         * is the presence of `rtt-open` — so all three rtt types are owned even
+         * though only `rtt-open` is written by every path.
+         */
+        private val OWNED_LIVENESS =
+            setOf(NetworkTypeTag.TAG_NAME, RttType.OPEN.tagName, RttType.READ.tagName, RttType.WRITE.tagName)
+
         /** Default freshness window: a relay's status is trusted for a day, then re-probed. */
         const val DEFAULT_TTL_SECONDS = 24L * 60 * 60
 
