@@ -37,8 +37,15 @@ import java.util.concurrent.atomic.AtomicLong
  * AtomicLong (not LongAdder) because draining must be loss-free: getAndSet(0)
  * hands off the accumulated value atomically, whereas remove+sum on a
  * LongAdder can strand a racing increment on an orphaned cell. Entries stay
- * in the map after a drain — the key space is small and fixed (dims x areas),
- * so this costs a few hundred boxed zeros at most.
+ * in the map after a drain — the key space is small and *mostly* fixed
+ * (dims x areas), so this costs a few hundred boxed zeros at most.
+ *
+ * The exception is the per-relay churn counters (`relay.host.<host>.*`), whose
+ * cardinality follows the user's relay list rather than a compile-time set:
+ * two keys per relay, so a few hundred more entries for a large list. Still
+ * negligible in memory, but it does mean neither this map nor the persisted
+ * store has a fixed upper bound any more. Keep that in mind before adding
+ * another counter keyed on runtime data.
  *
  * Counters added from inside a pre-flush hook (the CPU sampler, the segment
  * integrators closing an open segment) never re-arm the debounce: they are
@@ -74,7 +81,10 @@ class ResourceUsageAccountant(
         amount: Long,
     ) {
         if (amount <= 0) return
-        live.computeIfAbsent(key) { AtomicLong() }.addAndGet(amount)
+        // Plain get first: computeIfAbsent locks the bin head when the key is present
+        // but not the head node, and the churn counters roughly tripled the key count
+        // (so collisions) on a path that runs per relay frame.
+        (live[key] ?: live.computeIfAbsent(key) { AtomicLong() }).addAndGet(amount)
         if (inHookRun.get() == true) return
         if (flushScheduled.compareAndSet(false, true)) {
             scope.launch {

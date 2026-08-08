@@ -206,7 +206,11 @@ open class BasicRelayClient(
                         !msg.startsWith("failed to connect to /127.0.0.1") &&
                             msg != "Socket closed" &&
                             msg != "Socket is closed" &&
-                            msg != "Cancelled"
+                            // OkHttp spells it with one L (RealCall throws
+                            // IOException("Canceled")). "Cancelled" never matched, so
+                            // client-initiated cancels were being reported as connection
+                            // failures and inflating the relay.connfails counter.
+                            msg != "Canceled"
                     )
                 ) {
                     if (code != null || response != null) {

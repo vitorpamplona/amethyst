@@ -723,6 +723,7 @@ class AppModules(
             torManager.status,
             client,
             applicationIOScope,
+            onTrigger = { cause -> resourceUsage.add(UsageKeys.relayTrigger(cause), 1) },
         )
 
     // Verifies and inserts in the cache from all relays, all subscriptions

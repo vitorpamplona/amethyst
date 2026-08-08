@@ -29,8 +29,9 @@ import java.util.Locale
  * Assembles the Markdown resource-usage report the user can DM to the
  * developers via NIP-17 — same shape as the crash ReportAssembler: a device
  * header table, a human-readable summary, then the full per-day counter dump
- * as the technical payload. Counters are sizes/durations/counts only; no
- * URLs, relay names, or content.
+ * as the technical payload. Counters are sizes/durations/counts only, and never
+ * content.
+ *
  */
 class ResourceUsageReportAssembler {
     fun buildReport(
@@ -131,6 +132,8 @@ class ResourceUsageReportAssembler {
     companion object {
         /** Markdown table header/body separator row. */
         private const val TABLE_SEPARATOR = "| --- | --- |\n"
+
+        /** Caps how many relay hosts a shared report can name. See the class doc. */
 
         fun formatBytes(bytes: Long): String =
             when {
