@@ -273,4 +273,54 @@ class BannedStaffEscalationTest {
 
         assertTrue(AuthorityResolver.resolve(editions, owner).isBanned(alice), "the puppet does not outrank its creator")
     }
+
+    @Test
+    fun aForkedBanlistThatOmitsHimCannotLaunderTheBanAway() {
+        // A malicious client is not limited to what the ban/unban verb will author. The sharpest
+        // hand-crafted route does not try to REMOVE his ban — removal is what the strict-outrank-self
+        // rule guards — it forks at genesis and simply never mentions him, at a version high enough
+        // to win the head fold. The head's own effective list then never carried his ban, so there is
+        // nothing to remove and the rank rule never fires.
+        //
+        // §4's re-heal is what closes it: the owner's edition is authorized and is NOT on the forked
+        // head's back-chain, so it is unioned back in as a concurrent ban.
+        val editions = community() + ownerBansAlice + banlist(alice, 99, null, carol)
+
+        assertTrue(AuthorityResolver.resolve(editions, owner).isBanned(alice), "the re-heal union must put the owner's ban back")
+    }
+
+    @Test
+    fun aPrivateBanlistChainOfHisOwnCannotLaunderTheBanAway() {
+        // The same idea two editions deep, so the winning head has a clean ancestry entirely of his
+        // own making. Ancestry is walked over the full pool, so the owner's ban is still recognised
+        // as a concurrent fork rather than a superseded ancestor.
+        val mine = banlist(alice, 50, null)
+        val editions = community() + ownerBansAlice + mine + banlist(alice, 51, mine.hash)
+
+        assertTrue(AuthorityResolver.resolve(editions, owner).isBanned(alice), "a self-authored chain must not launder the ban away")
+    }
+
+    @Test
+    fun aRogueRotatorCompactsTheBanAwayForEveryClientWithoutAFloor() {
+        // The route that does work, and the one no signature check can catch. A CORD-06 §3 compaction
+        // re-wraps ONE edition per entity and the ROTATOR picks it, so a rotator can simply not carry
+        // the banlist forward. Every edition it serves is genuine; the ban is erased by omission.
+        //
+        // A banned member cannot rotate (drainConcordRekeys gates the rotator on hasPermission, which
+        // is ban-aware) — but the puppet minted above is not banned, and it can. EntityFloor is the
+        // whole defense, so this splits the community in two: clients that already folded the ban
+        // refuse the rollback, while fresh joiners have no floor to refuse with and see no ban at all.
+        val editions = community() + ownerBansAlice
+        val floors = ConcordCommunityState.authorizedHeads(editions, owner)
+        val compacted = editions.filter { it.entityKind != ControlEntityKind.BANLIST }
+
+        assertFalse(
+            ConcordCommunityState.fold(compacted, owner).authority.isBanned(alice),
+            "ESCALATION: a fresh joiner holds no floor, so the omitted ban simply never existed",
+        )
+        assertTrue(
+            ConcordCommunityState.fold(compacted, owner, floors).authority.isBanned(alice),
+            "a client that already folded the ban must refuse the rollback",
+        )
+    }
 }
