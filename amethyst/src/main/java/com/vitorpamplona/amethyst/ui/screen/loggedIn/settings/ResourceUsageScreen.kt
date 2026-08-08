@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import android.content.Intent
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -46,11 +47,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +70,7 @@ import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssem
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatConnHours
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageReportAssembler.Companion.formatDurationMs
 import com.vitorpamplona.amethyst.service.resourceusage.UsageSummary
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
@@ -77,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.warningColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
@@ -579,6 +584,10 @@ private fun SendReportSection(
     today: Long,
     memory: MemorySnapshot?,
 ) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
     SettingsSection(R.string.resource_usage_send_section) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -589,21 +598,55 @@ private fun SendReportSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(
-                onClick = {
-                    val report = ResourceUsageReportAssembler().buildReport(days, today, memory)
-                    nav.nav {
-                        routeToMessage(
-                            user = LocalCache.getOrCreateUser(DEV_REPORT_PUBKEY),
-                            draftMessage = report,
-                            accountViewModel = accountViewModel,
-                            expiresDays = 30,
-                        )
-                    }
-                },
+            // The DM route needs a composer to exist before the text does, which makes
+            // it a poor fit for reading the report yourself — copying out of a draft
+            // message is the only way to get at it. Copy and Share hand over the same
+            // string directly, for pasting into an issue or saving to a file.
+            Row(
                 modifier = Modifier.align(Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringRes(R.string.resource_usage_send_button))
+                TextButton(
+                    onClick = {
+                        val report = ResourceUsageReportAssembler().buildReport(days, today, memory)
+                        scope.launch { clipboard.setText(report) }
+                    },
+                ) {
+                    Text(stringRes(R.string.resource_usage_copy_button))
+                }
+                TextButton(
+                    onClick = {
+                        val report = ResourceUsageReportAssembler().buildReport(days, today, memory)
+                        val send =
+                            Intent().apply {
+                                action = Intent.ACTION_SEND
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, report)
+                                putExtra(Intent.EXTRA_TITLE, stringRes(context, R.string.resource_usage_send_section))
+                            }
+                        context.startActivity(
+                            Intent.createChooser(send, stringRes(context, R.string.resource_usage_share_button)),
+                        )
+                    },
+                ) {
+                    Text(stringRes(R.string.resource_usage_share_button))
+                }
+                Button(
+                    onClick = {
+                        val report = ResourceUsageReportAssembler().buildReport(days, today, memory)
+                        nav.nav {
+                            routeToMessage(
+                                user = LocalCache.getOrCreateUser(DEV_REPORT_PUBKEY),
+                                draftMessage = report,
+                                accountViewModel = accountViewModel,
+                                expiresDays = 30,
+                            )
+                        }
+                    },
+                ) {
+                    Text(stringRes(R.string.resource_usage_send_button))
+                }
             }
         }
     }
