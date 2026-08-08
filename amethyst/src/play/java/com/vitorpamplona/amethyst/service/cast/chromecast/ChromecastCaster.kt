@@ -50,8 +50,11 @@ import com.vitorpamplona.amethyst.commons.resources.cast_error_device_offline
 import com.vitorpamplona.amethyst.commons.resources.cast_error_load_failed
 import com.vitorpamplona.amethyst.commons.resources.cast_error_play_services_unavailable
 import com.vitorpamplona.amethyst.commons.resources.cast_error_playback_failed
+import com.vitorpamplona.amethyst.commons.resources.cast_error_playback_failed_detail
 import com.vitorpamplona.amethyst.commons.resources.cast_error_receiver_not_responding
+import com.vitorpamplona.amethyst.commons.resources.cast_error_receiver_not_responding_detail
 import com.vitorpamplona.amethyst.commons.resources.cast_error_unsupported_media
+import com.vitorpamplona.amethyst.commons.resources.cast_error_unsupported_media_detail
 import com.vitorpamplona.amethyst.service.cast.CastDevice
 import com.vitorpamplona.amethyst.service.cast.CastErrorMessage
 import com.vitorpamplona.amethyst.service.cast.CastRequest
@@ -182,7 +185,10 @@ class ChromecastCaster(
             }
 
             override fun onMediaError(mediaError: MediaError) {
-                Log.w(TAG) { "media.onMediaError code=${mediaError.detailedErrorCode} reason=${mediaError.reason} type=${mediaError.type}" }
+                Log.w(TAG) {
+                    "media.onMediaError code=${mediaError.detailedErrorCode} reason=${mediaError.reason} " +
+                        "type=${mediaError.type} media=${castingFormat ?: "unknown"} customData=${mediaError.customData}"
+                }
                 reportMediaFailure(mediaError.detailedErrorCode)
             }
         }
@@ -373,14 +379,24 @@ class ChromecastCaster(
             Log.w(TAG) {
                 "load watchdog: still ${playerStateName(state ?: -1)} after ${LOAD_PROGRESS_TIMEOUT_MS}ms on ${device?.name}"
             }
-            sessionFlow.value =
-                CastSessionState.Error(device, CastErrorMessage(Res.string.cast_error_receiver_not_responding))
+            val format = castingFormat
+            val message =
+                if (format != null) {
+                    Res.string.cast_error_receiver_not_responding_detail
+                } else {
+                    Res.string.cast_error_receiver_not_responding
+                }
+            sessionFlow.value = CastSessionState.Error(device, CastErrorMessage(message, format))
             watchedDevice = null
         }
 
     /** The device a load is currently being watched for, so the message can name it. */
     @Volatile
     private var watchedDevice: CastDevice? = null
+
+    /** What the in-flight cast is, so a failure can say what the receiver refused. */
+    @Volatile
+    private var castingFormat: String? = null
 
     /** Set while [stopCasting] waits for the receiver app to actually go away. */
     @Volatile
@@ -411,16 +427,19 @@ class ChromecastCaster(
         cancelLoadWatchdog()
         if (sessionFlow.value is CastSessionState.Error) return
         val device = currentDevice()
+        val unsupported =
+            detailedErrorCode == MediaError.DetailedErrorCode.MEDIA_SRC_NOT_SUPPORTED ||
+                detailedErrorCode == MediaError.DetailedErrorCode.MEDIA_DECODE
+        val format = castingFormat
         val message =
-            when (detailedErrorCode) {
-                MediaError.DetailedErrorCode.MEDIA_SRC_NOT_SUPPORTED,
-                MediaError.DetailedErrorCode.MEDIA_DECODE,
-                ->
-                    Res.string.cast_error_unsupported_media
+            when {
+                unsupported && format != null -> Res.string.cast_error_unsupported_media_detail
+                unsupported -> Res.string.cast_error_unsupported_media
+                format != null -> Res.string.cast_error_playback_failed_detail
                 else -> Res.string.cast_error_playback_failed
             }
         Log.w(TAG) { "media failure surfaced to UI: code=$detailedErrorCode device=${device?.name}" }
-        sessionFlow.value = CastSessionState.Error(device, CastErrorMessage(message))
+        sessionFlow.value = CastSessionState.Error(device, CastErrorMessage(message, format))
     }
 
     private fun currentDevice(): CastDevice? =
@@ -638,9 +657,11 @@ class ChromecastCaster(
                     try {
                         val loadRequest = buildLoadRequest(request)
                         val info = loadRequest.mediaInfo
+                        castingFormat = request.formatSummary
                         Log.i(TAG) {
                             "cast: load() submitting contentType=${info?.contentType} " +
-                                "streamType=${info?.streamType} url=${info?.contentId}"
+                                "streamType=${info?.streamType} media=${request.formatSummary ?: "unknown"} " +
+                                "url=${info?.contentId}"
                         }
                         // load() returns a PendingResult carrying the receiver's verdict. Dropping it
                         // (as this used to) makes a refused load indistinguishable from a successful

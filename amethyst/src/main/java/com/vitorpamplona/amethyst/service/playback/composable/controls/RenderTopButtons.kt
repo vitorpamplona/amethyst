@@ -232,6 +232,7 @@ fun RenderTopButtons(
     RenderTopButtons(
         mediaData = mediaData,
         hasMultipleQualities = hasMultipleQualities,
+        castFormatSummary = castFormatSummary(videoGroup),
         qualityButton = {
             VideoQualityButton(
                 player = player,
@@ -297,6 +298,9 @@ fun RenderTopButtons(
 fun RenderTopButtons(
     mediaData: MediaItemData,
     hasMultipleQualities: Boolean,
+    // What the local player decoded this as. Only the Cast failure messages use it: a receiver that
+    // refuses a video usually will not say why, so this is the only description of it available.
+    castFormatSummary: String? = null,
     qualityButton: @Composable () -> Unit,
     controllerVisible: MutableState<Boolean>,
     startingMuteState: Boolean,
@@ -510,6 +514,10 @@ fun RenderTopButtons(
                                 learned = HlsLivenessCache.verdict(mediaData.videoUri),
                                 metadataFlag = mediaData.isLiveStream,
                             ),
+                        // The local player has already decoded this, so it knows what the receiver
+                        // is about to be handed — the only description of the media available when
+                        // the receiver refuses it without saying why.
+                        formatSummary = castFormatSummary,
                     ),
                 onDismiss = { castDialogVisible.value = false },
             )

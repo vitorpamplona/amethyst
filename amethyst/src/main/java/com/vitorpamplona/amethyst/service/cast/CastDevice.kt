@@ -41,6 +41,12 @@ data class CastRequest(
      * live `.m3u8` from an on-demand one.
      */
     val isLive: Boolean = false,
+    /**
+     * What the video is — "H.265 (HEVC) 1920x1080" — taken from the local player, which has already
+     * decoded it. Reported when a cast fails, because the receiver itself rarely says why. See
+     * [summarizeCastFormat].
+     */
+    val formatSummary: String? = null,
 )
 
 /**
@@ -98,11 +104,12 @@ sealed class CastSessionState {
  * Cast SDK callbacks, where there is no blocking way to read a Compose resource, so it hands over
  * the resource and the UI formats it.
  *
- * [text] is `%1$s`-shaped, naming the receiver: the picker supplies the [CastSessionState.Error]
- * device's name, or a generic noun when the failure happens before or after we know which device
- * it was.
+ * [text] names the receiver as `%1$s`: the picker supplies the [CastSessionState.Error] device's
+ * name, or a generic noun when the failure happens before or after we know which device it was.
+ * A `_detail` resource also takes [detail] — what the video was — as `%2$s`.
  */
 @Immutable
 data class CastErrorMessage(
     val text: StringResource,
+    val detail: String? = null,
 )

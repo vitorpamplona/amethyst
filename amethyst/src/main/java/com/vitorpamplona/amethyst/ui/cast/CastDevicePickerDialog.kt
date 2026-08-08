@@ -119,4 +119,9 @@ fun CastDevicePickerDialog(
 }
 
 @Composable
-private fun castErrorText(error: CastSessionState.Error): String = stringRes(error.message.text, error.device?.name ?: stringRes(Res.string.cast_generic_receiver))
+private fun castErrorText(error: CastSessionState.Error): String =
+    stringRes(
+        error.message.text,
+        error.device?.name ?: stringRes(Res.string.cast_generic_receiver),
+        error.message.detail,
+    )
