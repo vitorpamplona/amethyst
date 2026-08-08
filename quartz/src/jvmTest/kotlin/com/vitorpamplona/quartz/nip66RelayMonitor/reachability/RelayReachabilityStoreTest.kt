@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkType
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RequirementTag
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RttType
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -176,10 +177,99 @@ class RelayReachabilityStoreTest {
             val signer = NostrSignerInternal(KeyPair())
             val cache = RelayReachabilityStore(store, signer, ttlSeconds = 3600)
 
-            cache.recordProbed(mapOf(live1 to 120L), emptySet(), now = 1_700_003_600)
+            // Ordinary skew: the record ahead of our clock by seconds, which is
+            // what two writers or a slightly fast peer produce.
+            cache.recordProbed(mapOf(live1 to 120L), emptySet(), now = 1_700_000_010)
             cache.recordProbed(mapOf(live1 to 131L), emptySet(), now = 1_700_000_000)
 
             assertEquals("131", tagsOf(store, signer, live1).first { it[0] == RttType.OPEN.tagName }[1])
+        }
+
+    /**
+     * Without a ceiling the bump is sticky: a record that once landed in the
+     * future is derived from forever, so it never ages out of the TTL window
+     * and relays enforcing future-timestamp limits reject every publish.
+     */
+    @Test
+    fun `a record already far in the future is never pushed further ahead`() =
+        runBlocking {
+            val store = store()
+            val signer = NostrSignerInternal(KeyPair())
+            val cache = RelayReachabilityStore(store, signer, ttlSeconds = 3600)
+            val now = 1_700_000_000L
+
+            cache.recordProbed(mapOf(live1 to 120L), emptySet(), now = now + 86_400)
+            cache.recordProbed(mapOf(live1 to 131L), emptySet(), now = now)
+
+            val held =
+                store
+                    .query<RelayDiscoveryEvent>(
+                        Filter(kinds = listOf(RelayDiscoveryEvent.KIND), authors = listOf(signer.pubKey), tags = mapOf("d" to listOf(live1.url))),
+                    ).maxByOrNull { it.createdAt }
+            assertEquals(now + 86_400, held?.createdAt, "the pathological stamp was carried forward instead of capped")
+        }
+
+    /** writeOne measures rtt-open only; deleting a read/write latency it never took is the loss this guards. */
+    @Test
+    fun `a reachable update keeps latencies it did not measure`() =
+        runBlocking {
+            val store = store()
+            val signer = NostrSignerInternal(KeyPair())
+            val cache = RelayReachabilityStore(store, signer, ttlSeconds = 3600)
+
+            val observed = RelayObserver()
+            observed.record(live1, true, 100L, null)
+            observed.observationOf(live1)?.rttReadMs = 55L
+            cache.record(observed.collectUnreported(), now = 1_700_000_000)
+            assertTrue(RttType.READ.tagName in names(tagsOf(store, signer, live1)))
+
+            cache.recordProbed(mapOf(live1 to 120L), emptySet(), now = 1_700_000_100)
+
+            val after = tagsOf(store, signer, live1)
+            assertEquals("55", after.first { it[0] == RttType.READ.tagName }[1], "rtt-read was deleted by a writer that never measured it")
+            assertEquals("120", after.first { it[0] == RttType.OPEN.tagName }[1])
+        }
+
+    /** An observation proves `R auth` and nothing else; other requirements belong to whoever measured them. */
+    @Test
+    fun `an observation clears only the auth requirement`() =
+        runBlocking {
+            val store = store()
+            val signer = NostrSignerInternal(KeyPair())
+            val cache = RelayReachabilityStore(store, signer, ttlSeconds = 3600)
+
+            cache.recordProbed(mapOf(live1 to 120L), emptySet(), now = 1_700_000_000)
+            val existing = tagsOf(store, signer, live1)
+            val withReqs =
+                RelayDiscoveryEvent.build(live1, "", createdAt = 1_700_000_001) {
+                    existing.forEach { if (it.firstOrNull() != "d") add(it) }
+                    add(arrayOf(RequirementTag.TAG_NAME, "pow"))
+                    add(arrayOf(RequirementTag.TAG_NAME, RelayReachabilityStore.AUTH_REQUIREMENT))
+                }
+            store.insert(signer.sign(withReqs))
+
+            // Reached without a challenge: auth no longer holds, pow was never ours.
+            val observed = RelayObserver()
+            observed.record(live1, true, 100L, null)
+            cache.record(observed.collectUnreported(), now = 1_700_000_002)
+
+            val after = tagsOf(store, signer, live1).filter { it[0] == RequirementTag.TAG_NAME }.map { it[1] }
+            assertTrue("pow" in after, "another writer's requirement was erased: " + after)
+            assertTrue(RelayReachabilityStore.AUTH_REQUIREMENT !in after, "auth should have been cleared: " + after)
+        }
+
+    /** One `d` filter binds one host parameter per url, and callers pass the whole relay universe. */
+    @Test
+    fun `a flush wider than one query chunk still writes every relay`() =
+        runBlocking {
+            val store = store()
+            val signer = NostrSignerInternal(KeyPair())
+            val cache = RelayReachabilityStore(store, signer, ttlSeconds = 3600)
+            val many = (0 until RelayReachabilityStore.RELAYS_PER_QUERY * 2 + 7).map { RelayUrlNormalizer.normalize("wss://r" + it + ".example.com") }
+
+            cache.record(reachable = many.toSet(), dead = emptySet(), now = 1_700_000_000)
+
+            assertEquals(many.size, cache.snapshot(now = 1_700_000_100).live.size)
         }
 
     /** A relay that went down must lose its rtt, or it still reads as live. */
