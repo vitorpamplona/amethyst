@@ -588,6 +588,14 @@ private fun SendReportSection(
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
+    // Suspending, and off Main: assembling the report walks every counter of every
+    // retained day (UsageSummary makes ~54 passes per summary) over a key space the
+    // churn counters grew by an order of magnitude. `scope` is Main.immediate, so a
+    // bare `scope.launch { }` would still build it on the UI thread — the
+    // withContext is what actually moves it. Only the handover (clipboard, chooser,
+    // navigation) stays on Main.
+    suspend fun buildReport(): String = withContext(Dispatchers.Default) { ResourceUsageReportAssembler().buildReport(days, today, memory) }
+
     SettingsSection(R.string.resource_usage_send_section) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -609,39 +617,41 @@ private fun SendReportSection(
             ) {
                 TextButton(
                     onClick = {
-                        val report = ResourceUsageReportAssembler().buildReport(days, today, memory)
-                        scope.launch { clipboard.setText(report) }
+                        scope.launch { clipboard.setText(buildReport()) }
                     },
                 ) {
                     Text(stringRes(R.string.resource_usage_copy_button))
                 }
                 TextButton(
                     onClick = {
-                        val report = ResourceUsageReportAssembler().buildReport(days, today, memory)
-                        val send =
-                            Intent().apply {
-                                action = Intent.ACTION_SEND
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, report)
-                                putExtra(Intent.EXTRA_TITLE, stringRes(context, R.string.resource_usage_send_section))
-                            }
-                        context.startActivity(
-                            Intent.createChooser(send, stringRes(context, R.string.resource_usage_share_button)),
-                        )
+                        scope.launch {
+                            val send =
+                                Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, buildReport())
+                                    putExtra(Intent.EXTRA_TITLE, stringRes(context, R.string.resource_usage_send_section))
+                                }
+                            context.startActivity(
+                                Intent.createChooser(send, stringRes(context, R.string.resource_usage_share_button)),
+                            )
+                        }
                     },
                 ) {
                     Text(stringRes(R.string.resource_usage_share_button))
                 }
                 Button(
                     onClick = {
-                        val report = ResourceUsageReportAssembler().buildReport(days, today, memory)
-                        nav.nav {
-                            routeToMessage(
-                                user = LocalCache.getOrCreateUser(DEV_REPORT_PUBKEY),
-                                draftMessage = report,
-                                accountViewModel = accountViewModel,
-                                expiresDays = 30,
-                            )
+                        scope.launch {
+                            val report = buildReport()
+                            nav.nav {
+                                routeToMessage(
+                                    user = LocalCache.getOrCreateUser(DEV_REPORT_PUBKEY),
+                                    draftMessage = report,
+                                    accountViewModel = accountViewModel,
+                                    expiresDays = 30,
+                                )
+                            }
                         }
                     },
                 ) {

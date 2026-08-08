@@ -37,15 +37,10 @@ import java.util.concurrent.atomic.AtomicLong
  * AtomicLong (not LongAdder) because draining must be loss-free: getAndSet(0)
  * hands off the accumulated value atomically, whereas remove+sum on a
  * LongAdder can strand a racing increment on an orphaned cell. Entries stay
- * in the map after a drain — the key space is small and *mostly* fixed
- * (dims x areas), so this costs a few hundred boxed zeros at most.
- *
- * The exception is the per-relay churn counters (`relay.host.<host>.*`), whose
- * cardinality follows the user's relay list rather than a compile-time set:
- * two keys per relay, so a few hundred more entries for a large list. Still
- * negligible in memory, but it does mean neither this map nor the persisted
- * store has a fixed upper bound any more. Keep that in mind before adding
- * another counter keyed on runtime data.
+ * in the map after a drain — the key space is small and fixed (dims x areas),
+ * so this costs a few hundred boxed zeros at most. The churn counters roughly
+ * tripled it, but every one of them is still compile-time bounded: no counter
+ * is keyed on a relay url, a host, or any other runtime string.
  *
  * Counters added from inside a pre-flush hook (the CPU sampler, the segment
  * integrators closing an open segment) never re-arm the debounce: they are
@@ -86,6 +81,11 @@ class ResourceUsageAccountant(
         // (so collisions) on a path that runs per relay frame.
         (live[key] ?: live.computeIfAbsent(key) { AtomicLong() }).addAndGet(amount)
         if (inHookRun.get() == true) return
+        // Plain read before the CAS: in steady state a flush is always already armed,
+        // and the churn counters made this 5-8 calls per relay frame — every one of
+        // which would otherwise be a read-modify-write on the same shared cache line
+        // from every relay's socket thread, only to fail.
+        if (flushScheduled.get()) return
         if (flushScheduled.compareAndSet(false, true)) {
             scope.launch {
                 delay(flushDebounceMs)

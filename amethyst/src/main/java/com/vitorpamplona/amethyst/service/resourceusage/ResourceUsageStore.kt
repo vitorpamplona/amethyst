@@ -34,11 +34,10 @@ import java.io.File
  * Jackson + Mutex + write-to-tmp-then-rename + version envelope.
  *
  * Day keys are UTC epoch-days (stringified for JSON). Buckets older than
- * [keepDays] are pruned on every merge, so the file stays small — a few KB, plus
- * two keys per relay per day now that the churn counters are keyed on runtime
- * data (see [ResourceUsageAccountant], which owns that caveat). The whole file is
- * re-serialized on every flush (debounced to ~30s while traffic flows), so that
- * growth is paid on each write, not just at rest.
+ * [keepDays] are pruned on every merge, so the file stays small (a few KB, on a
+ * key space the churn counters tripled but left compile-time bounded). The whole
+ * file is re-serialized on every flush (debounced to ~30s while traffic flows),
+ * so that size is paid on each write, not just at rest.
  * Also carries the high-consumption alert state (last prompt time, opt-out)
  * so the whole feature has exactly one file.
  */

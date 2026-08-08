@@ -1552,3 +1552,51 @@ class NoticeReasonTest {
         assertEquals(UsageKeys.relayNotice(UsageKeys.NOTICE_UNCLASSIFIED), UsageKeys.relayNotice("something-invented"))
     }
 }
+
+/**
+ * The report is sent as a NIP-17 DM, so its size is a correctness property, not a
+ * cosmetic one: relays cap events and an oversized report is simply never delivered.
+ */
+class ReportSizeTest {
+    private fun day(keys: Int) = (0 until keys).associate { "relay.purpose.p$it.bytes" to 123_456L }
+
+    @Test
+    fun aFullLedgerStaysSendable() {
+        // 30 retained days at the density a busy day now produces.
+        val days = (1L..30L).associateWith { day(1_200) }
+        val report = ResourceUsageReportAssembler().buildReport(days, today = 30L)
+
+        assertTrue("report was ${report.length} chars", report.length < 100_000)
+        assertTrue("nothing was said about the omission", report.contains("omitted to keep this report sendable"))
+    }
+
+    @Test
+    fun aSmallLedgerIsNotTruncatedAndSaysNothingAboutOmission() {
+        val days = (1L..3L).associateWith { day(20) }
+        val report = ResourceUsageReportAssembler().buildReport(days, today = 3L)
+
+        assertTrue(report.contains("day 1 "))
+        assertTrue(report.contains("day 3 "))
+        assertFalse(report.contains("omitted"))
+    }
+
+    @Test
+    fun theNewestDayIsKeptEvenIfItAloneExceedsTheBudget() {
+        // Dropping everything would leave a report that says nothing at all.
+        val days = mapOf(1L to day(50), 2L to day(20_000))
+        val report = ResourceUsageReportAssembler().buildReport(days, today = 2L)
+
+        assertTrue("newest day missing", report.contains("day 2 "))
+        assertTrue(report.contains("1 earlier day(s) omitted"))
+    }
+
+    @Test
+    fun omittedDaysStillCountTowardTheSummaryTables() {
+        // The tables are built from every day; only the raw dump is bounded.
+        val days = (1L..30L).associateWith { mapOf(UsageKeys.relayConnects(mobile = false, foreground = true) to 10L) }
+        val report = ResourceUsageReportAssembler().buildReport(days, today = 30L)
+
+        // 7 days x 10 connections in the week table.
+        assertTrue(report.contains("| Relay reconnections | 70 "))
+    }
+}

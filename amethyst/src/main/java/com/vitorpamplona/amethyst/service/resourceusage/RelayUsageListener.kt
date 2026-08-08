@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.service.resourceusage
 
 import android.os.SystemClock
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.purposeOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
@@ -106,10 +106,13 @@ class RelayUsageListener(
     /**
      * Event ids delivered recently, as the first 64 bits of the id.
      *
-     * Held as a Long rather than the 64-char hex: at the window size below that is
-     * the difference between ~200 KB and several MB on a 512 MB-class device, for a
-     * counter that only has to spot repetition. 64 bits makes a collision between
-     * distinct ids negligible where a 32-bit hash would not be.
+     * Held as a Long rather than the 64-char hex, which saves the id strings
+     * themselves — but a boxed `Long` plus its map node still costs ~56 bytes an
+     * entry, so a full window is ~3 MB, not the few hundred KB the raw payload
+     * suggests. Worth knowing before raising [MAX_TRACKED_EVENTS] on a 512 MB-class
+     * device; an unboxed open-addressed `LongArray` would be ~400 KB if it ever needs
+     * to grow. 64 bits makes a collision between distinct ids negligible where a
+     * 32-bit hash would not be.
      *
      * The window only needs to span the fan-out, not the session: the same event
      * arrives from every relay carrying it within seconds, so near-term memory
@@ -120,7 +123,11 @@ class RelayUsageListener(
      */
     private val recentEventIds = ConcurrentHashMap.newKeySet<Long>()
 
-    /** Relay -> when this dial was decided, so the pre-request cost can be separated from the handshake. */
+    /**
+     * Relay -> when this dial was decided, so the pre-request cost can be separated
+     * from the handshake. Consumed by whichever of `onConnected`/`onCannotConnect`
+     * ends the dial, so an entry never outlives the attempt that made it.
+     */
     private val dialStartedAt = ConcurrentHashMap<NormalizedRelayUrl, Long>()
 
     /** Notice texts already logged, so one wording costs one line however often it arrives. */
@@ -132,44 +139,48 @@ class RelayUsageListener(
         cmd: Command,
         success: Boolean,
     ) {
-        if (success) {
-            val bytes = cmdStr.length.toLong()
-            val mobile = isMobile()
-            val fg = isForeground()
-            accountant.add(UsageKeys.relayMsg(mobile, fg, received = false), bytes)
-            accountant.add(UsageKeys.relayVerb(cmd.label(), received = false, mobile, fg), bytes)
+        if (!success) return
 
-            when (cmd.label()) {
-                ReqCmd.LABEL -> {
-                    accountant.add(UsageKeys.relaySubsSent(mobile, fg), 1)
+        val bytes = cmdStr.length.toLong()
+        val mobile = isMobile()
+        val fg = isForeground()
+        accountant.add(UsageKeys.relayMsg(mobile, fg, received = false), bytes)
+        accountant.add(UsageKeys.relayVerb(cmd.label(), received = false, mobile, fg), bytes)
 
-                    val purpose = purposeOf(cmd)
-                    accountant.add(UsageKeys.relayPurposeSent(purpose), 1)
-                    accountant.add(UsageKeys.relayPurposeBytes(purpose), bytes)
+        when (cmd) {
+            is ReqCmd -> {
+                accountant.add(UsageKeys.relaySubsSent(mobile, fg), 1)
 
-                    // Already open on this connection, so this REQ replaces a live
-                    // subscription rather than starting one.
-                    val subId = (cmd as ReqCmd).subId
-                    if (subPurpose.size >= MAX_TRACKED_SUBS) subPurpose.clear()
-                    subPurpose[subId] = purpose
+                val purpose = purposeOf(cmd)
+                accountant.add(UsageKeys.relayPurposeSent(purpose), 1)
+                accountant.add(UsageKeys.relayPurposeBytes(purpose), bytes)
 
-                    val known = openSubs.getOrPut(relay.url) { ConcurrentHashMap.newKeySet() }
-                    if (!known.add(subId)) {
-                        accountant.add(UsageKeys.relaySubsResent(mobile, fg), 1)
-                    }
-                    // Within the window after this relay's connect, so almost certainly
-                    // part of syncState's replay rather than a user action. A time
-                    // window because nothing on this side marks a frame as belonging to
-                    // it; see UsageKeys.relaySubsReplay.
-                    val since = connectedSince[relay.url]
-                    if (since != null && nowMs() - since <= UsageKeys.REPLAY_WINDOW_MS) {
-                        accountant.add(UsageKeys.relaySubsReplay(mobile, fg), 1)
-                    }
+                if (subPurpose.size >= MAX_TRACKED_SUBS) subPurpose.clear()
+                subPurpose[cmd.subId] = purpose
+
+                // Already open on this connection, so this REQ replaces a live
+                // subscription rather than starting one.
+                // computeIfAbsent, not getOrPut: the latter is get-then-put and two
+                // threads racing the first REQ after a (re)connect would each build a
+                // set, the losing put's subId vanishing with its orphaned set.
+                // `sendIfConnected` deliberately calls listeners outside PoolRequests'
+                // stripe lock, so same-relay concurrency here is by design.
+                val known = openSubs.computeIfAbsent(relay.url) { ConcurrentHashMap.newKeySet() }
+                if (!known.add(cmd.subId)) {
+                    accountant.add(UsageKeys.relaySubsResent(mobile, fg), 1)
                 }
-                CloseCmd.LABEL -> {
-                    accountant.add(UsageKeys.relaySubsClosed(mobile, fg), 1)
-                    openSubs[relay.url]?.remove((cmd as CloseCmd).subId)
+                // Within the window after this relay's connect, so almost certainly
+                // part of syncState's replay rather than a user action. A time
+                // window because nothing on this side marks a frame as belonging to
+                // it; see UsageKeys.relaySubsReplay.
+                val since = connectedSince[relay.url]
+                if (since != null && nowMs() - since <= UsageKeys.REPLAY_WINDOW_MS) {
+                    accountant.add(UsageKeys.relaySubsReplay(mobile, fg), 1)
                 }
+            }
+            is CloseCmd -> {
+                accountant.add(UsageKeys.relaySubsClosed(mobile, fg), 1)
+                openSubs[relay.url]?.remove(cmd.subId)
             }
         }
     }
@@ -250,12 +261,15 @@ class RelayUsageListener(
         val fg = isForeground()
         // Doubles as the lifetime histogram's denominator — one session begins here.
         accountant.add(UsageKeys.relayConnects(mobile, fg), 1)
+        // Consumed unconditionally: the gap needs a handshake to subtract, but the
+        // stamp has to go either way or a dial that cannot be timed leaks its entry.
+        val dialedAt = dialStartedAt.remove(relay.url)
         // pingMillis is the transport's own handshake timing; <= 0 means it could
         // not measure it, and a fabricated 0 would be worse than no record.
         if (pingMillis > 0) {
             accountant.add(UsageKeys.relayHandshake(pingMillis.toLong(), mobile, fg), 1)
-            dialStartedAt.remove(relay.url)?.let { startedAt ->
-                val gap = nowMs() - startedAt - pingMillis
+            if (dialedAt != null) {
+                val gap = nowMs() - dialedAt - pingMillis
                 if (gap >= 0) accountant.add(UsageKeys.relayDialGap(gap, mobile, fg), 1)
             }
         }
@@ -289,16 +303,29 @@ class RelayUsageListener(
      * subscription's. A REQ whose filters are plain [com.vitorpamplona.quartz.nip01Core.relay.filters.Filter]s
      * predates #3832's tagging and is counted separately rather than guessed at.
      */
-    private fun purposeOf(cmd: Command): String {
-        val filters = (cmd as? ReqCmd)?.filters ?: return UsageKeys.PURPOSE_UNEXPLAINED
-        val explained =
-            filters.firstOrNull { it is ExplainedFilter } as? ExplainedFilter
-                ?: return UsageKeys.PURPOSE_UNEXPLAINED
-        return UsageKeys.purposeKeyPart(explained.purpose)
-    }
+    private fun purposeOf(cmd: ReqCmd): String =
+        cmd.filters
+            .firstNotNullOfOrNull { it.purposeOrNull() }
+            ?.let { UsageKeys.purposeKeyPart(it) }
+            ?: UsageKeys.PURPOSE_UNEXPLAINED
 
-    /** The first 64 bits of an event id, or null if it is not a well-formed id. */
-    private fun idPrefix(id: String): Long? = if (id.length < 16) null else runCatching { id.substring(0, 16).toULong(16).toLong() }.getOrNull()
+    /**
+     * The first 64 bits of an event id, or null if it is not a well-formed id.
+     *
+     * Parsed in place rather than `substring(0, 16).toULongOrNull(16)`: this runs on
+     * every inbound EVENT frame, and the substring would be a String plus its backing
+     * array per event, thrown away immediately.
+     */
+    private fun idPrefix(id: String): Long? {
+        if (id.length < 16) return null
+        var acc = 0L
+        for (i in 0 until 16) {
+            val digit = Character.digit(id[i], 16)
+            if (digit < 0) return null
+            acc = (acc shl 4) or digit.toLong()
+        }
+        return acc
+    }
 
     /** The subscription a frame belongs to, when it names one. */
     private fun subIdOf(msg: Message): String? =
@@ -315,6 +342,9 @@ class RelayUsageListener(
         errorMessage: String,
     ) {
         accountant.add(UsageKeys.relayConnectFails(isMobile(), isForeground()), 1)
+        // A dial that ends here never reaches onConnected, so nothing else would
+        // ever consume its start stamp.
+        dialStartedAt.remove(relay.url)
     }
 
     companion object {

@@ -22,6 +22,13 @@ package com.vitorpamplona.amethyst.service.resourceusage
 
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix.AUTH_REQUIRED
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix.BLOCKED
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix.ERROR
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix.INVALID
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix.RATE_LIMITED
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix.RESTRICTED
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix.UNSUPPORTED
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayObserver
 import java.util.concurrent.ConcurrentHashMap
 
@@ -110,7 +117,10 @@ object UsageKeys {
     private fun dimKeys(
         prefix: String,
         suffix: String? = null,
-    ): Array<String> = Array(DIMS.size) { if (suffix == null) "$prefix.${DIMS[it]}" else "$prefix.${DIMS[it]}.$suffix" }
+    ): Array<String> {
+        val tail = if (suffix == null) "" else ".$suffix"
+        return Array(DIMS.size) { "$prefix.${DIMS[it]}$tail" }
+    }
 
     /** `net.image.mobile.bg.rx` — HTTP bytes for a subsystem. */
     fun net(
@@ -342,13 +352,15 @@ object UsageKeys {
             "too many" in text || "too costly" in text || "too expensive" in text -> NOTICE_QUERY_COST
             "does not accept" in text || "denied" in text || "not accepting" in text -> NOTICE_REQ_REFUSED
             "keepalive" in text || "perf:" in text -> NOTICE_BENIGN
-            "rate-limited" in prefixes || ("rate" in text && "limit" in text) -> NOTICE_RATE_LIMITED
-            "auth-required" in prefixes || ("auth" in text && "required" in text) -> NOTICE_AUTH_REQUIRED
-            "restricted" in prefixes -> NOTICE_RESTRICTED
-            "invalid" in prefixes -> NOTICE_INVALID
-            "blocked" in prefixes -> NOTICE_BLOCKED
-            "unsupported" in prefixes -> NOTICE_UNSUPPORTED
-            "error" in prefixes -> NOTICE_ERROR
+            // Wire codes come from the enum rather than being hand-written a third
+            // time (after the enum itself and the NOTICE_* key segments).
+            RATE_LIMITED.code in prefixes || ("rate" in text && "limit" in text) -> NOTICE_RATE_LIMITED
+            AUTH_REQUIRED.code in prefixes || ("auth" in text && "required" in text) -> NOTICE_AUTH_REQUIRED
+            RESTRICTED.code in prefixes -> NOTICE_RESTRICTED
+            INVALID.code in prefixes -> NOTICE_INVALID
+            BLOCKED.code in prefixes -> NOTICE_BLOCKED
+            UNSUPPORTED.code in prefixes -> NOTICE_UNSUPPORTED
+            ERROR.code in prefixes -> NOTICE_ERROR
             else -> NOTICE_UNCLASSIFIED
         }
     }
@@ -369,43 +381,61 @@ object UsageKeys {
     const val SHORT_SESSION_MS = BasicRelayClient.STABLE_CONNECTION_IN_SECS * 1_000L
 
     /**
-     * Half-open upper bounds, in ms, for the [relayLife] histogram. Deliberately
-     * straddles [SHORT_SESSION_MS]: a mean cannot tell a tight cluster sitting on
-     * that bar from a bimodal mix; this can.
+     * A half-open millisecond histogram: ascending upper [bounds], the derived
+     * bucket labels, and the `<prefix>.<bucket>.<dim>` key table they index.
+     *
+     * Shared by all three histograms below (`relay.life`, `relay.hs`, `relay.gap`),
+     * which differ only in their bounds and in whether the label reads in seconds or
+     * milliseconds. Deriving the names from the bounds is what keeps a bound change
+     * from leaving a label lying about it.
      */
-    private val LIFE_BUCKET_BOUNDS_MS =
-        longArrayOf(5_000, 30_000, SHORT_SESSION_MS, 120_000, 300_000).also {
-            // [lifeBucketIndex] linear-scans for the first bound greater than the
-            // elapsed time, so the bounds must ascend. One of them is derived from
+    private class MsHistogram(
+        prefix: String,
+        private val bounds: LongArray,
+        label: (Long) -> String,
+    ) {
+        init {
+            // [indexOf] linear-scans for the first bound greater than the elapsed
+            // time, so the bounds must ascend. One of relay.life's is derived from
             // BasicRelayClient.STABLE_CONNECTION_IN_SECS, and raising that to five
             // minutes — exactly the retune commit 2 of the churn plan contemplates —
             // would push it past the two bounds after it. The buckets between would
             // become unreachable and the labels would start lying. Fail at class-init
             // with the reason rather than as a puzzling boundary-test failure.
-            require(it.asList() == it.sorted()) {
-                "relay.life bounds must ascend, got ${it.toList()}. " +
+            require(bounds.asList() == bounds.sorted()) {
+                "$prefix bounds must ascend, got ${bounds.toList()}. " +
                     "SHORT_SESSION_MS is ${SHORT_SESSION_MS}ms — reorder the bounds to match."
             }
         }
 
-    /** Derived from the bounds so a bound change can never leave a label lying about it. */
-    private val LIFE_BUCKET_NAMES =
-        Array(LIFE_BUCKET_BOUNDS_MS.size + 1) { i ->
-            if (i < LIFE_BUCKET_BOUNDS_MS.size) {
-                "lt${LIFE_BUCKET_BOUNDS_MS[i] / 1000}s"
-            } else {
-                "gte${LIFE_BUCKET_BOUNDS_MS.last() / 1000}s"
+        val names = Array(bounds.size + 1) { i -> if (i < bounds.size) "lt${label(bounds[i])}" else "gte${label(bounds.last())}" }
+
+        private val keys = Array(names.size) { dimKeys("$prefix.${names[it]}") }
+
+        fun indexOf(ms: Long): Int {
+            for (i in bounds.indices) {
+                if (ms < bounds[i]) return i
             }
+            return bounds.size
         }
 
-    private fun lifeBucketIndex(elapsedMs: Long): Int {
-        for (i in LIFE_BUCKET_BOUNDS_MS.indices) {
-            if (elapsedMs < LIFE_BUCKET_BOUNDS_MS[i]) return i
-        }
-        return LIFE_BUCKET_BOUNDS_MS.size
+        fun nameOf(ms: Long): String = names[indexOf(ms)]
+
+        fun key(
+            ms: Long,
+            mobile: Boolean,
+            foreground: Boolean,
+        ): String = keys[indexOf(ms)][dimIndex(mobile, foreground)]
     }
 
-    fun lifeBucket(elapsedMs: Long): String = LIFE_BUCKET_NAMES[lifeBucketIndex(elapsedMs)]
+    /**
+     * Bounds for the [relayLife] histogram deliberately straddle [SHORT_SESSION_MS]:
+     * a mean cannot tell a tight cluster sitting on that bar from a bimodal mix;
+     * this can.
+     */
+    private val LIFE = MsHistogram("relay.life", longArrayOf(5_000, 30_000, SHORT_SESSION_MS, 120_000, 300_000)) { "${it / 1000}s" }
+
+    fun lifeBucket(elapsedMs: Long): String = LIFE.nameOf(elapsedMs)
 
     /**
      * `relay.life.lt60s.mobile.bg` — connections that closed after living this long.
@@ -415,9 +445,7 @@ object UsageKeys {
         elapsedMs: Long,
         mobile: Boolean,
         foreground: Boolean,
-    ): String = RELAY_LIFE[lifeBucketIndex(elapsedMs)][dimIndex(mobile, foreground)]
-
-    private val RELAY_LIFE = Array(LIFE_BUCKET_NAMES.size) { dimKeys("relay.life.${LIFE_BUCKET_NAMES[it]}") }
+    ): String = LIFE.key(elapsedMs, mobile, foreground)
 
     /**
      * `relay.life.overwrite` — a connect arrived for a relay that already had an
@@ -478,10 +506,15 @@ object UsageKeys {
      * purpose at all means an assembler #3832 did not reach, which is a different
      * fact from one that declared itself uncategorised — and if that bucket is large,
      * the attribution below cannot be trusted.
+     *
+     * Memoized for the same reason [relayVerb] is, and more urgently: [relayPurposeDown]
+     * and [relayPurposeDownCount] both run on every inbound frame that names a
+     * subscription, so interpolating would build two strings per frame on the hottest
+     * path in the app. The purpose space is the enum plus the three fallbacks below.
      */
-    fun relayPurposeSent(purpose: String): String = "relay.purpose.$purpose.sent"
+    fun relayPurposeSent(purpose: String): String = purposeKeys(purpose)[P_SENT]
 
-    fun relayPurposeBytes(purpose: String): String = "relay.purpose.$purpose.bytes"
+    fun relayPurposeBytes(purpose: String): String = purposeKeys(purpose)[P_BYTES]
 
     /**
      * `relay.purpose.moderation.down` — bytes received on subscriptions opened for
@@ -494,7 +527,7 @@ object UsageKeys {
      * of the download it was causing — every re-subscription can make the relay
      * re-send everything that matches.
      */
-    fun relayPurposeDown(purpose: String): String = "relay.purpose.$purpose.down"
+    fun relayPurposeDown(purpose: String): String = purposeKeys(purpose)[P_DOWN]
 
     /**
      * `relay.purpose.home_feed.downn` — inbound frames, alongside the bytes.
@@ -506,7 +539,7 @@ object UsageKeys {
      * how much of the download is the same events arriving from different relays
      * under the outbox fan-out.
      */
-    fun relayPurposeDownCount(purpose: String): String = "relay.purpose.$purpose.downn"
+    fun relayPurposeDownCount(purpose: String): String = purposeKeys(purpose)[P_DOWNN]
 
     /**
      * `relay.purpose.user_profile.dupbytes` — of that purpose's inbound bytes, how
@@ -519,7 +552,20 @@ object UsageKeys {
      * points at completely different fixes — suppress redundant delivery, or stop
      * fetching the large thing per relay.
      */
-    fun relayPurposeDupBytes(purpose: String): String = "relay.purpose.$purpose.dupbytes"
+    fun relayPurposeDupBytes(purpose: String): String = purposeKeys(purpose)[P_DUPBYTES]
+
+    private const val P_SENT = 0
+    private const val P_BYTES = 1
+    private const val P_DOWN = 2
+    private const val P_DOWNN = 3
+    private const val P_DUPBYTES = 4
+
+    private val PURPOSE_SUFFIXES = arrayOf("sent", "bytes", "down", "downn", "dupbytes")
+
+    private val PURPOSE_KEYS = ConcurrentHashMap<String, Array<String>>()
+
+    /** The five `relay.purpose.<purpose>.*` keys, indexed by the `P_` constants above. */
+    private fun purposeKeys(purpose: String): Array<String> = PURPOSE_KEYS.getOrPut(purpose) { Array(PURPOSE_SUFFIXES.size) { "relay.purpose.$purpose.${PURPOSE_SUFFIXES[it]}" } }
 
     /** A frame whose subscription id we never saw opened — counters wiped mid-session, or a sub from before this connection. */
     const val PURPOSE_UNATTRIBUTED = "unattributed"
@@ -534,8 +580,17 @@ object UsageKeys {
      * The key segment for a [SubPurpose]. The one place the enum is turned into a
      * key, so the reserved-segment rename cannot drift between the producer and the
      * test that guards it — which is exactly how it drifted the first time.
+     *
+     * Tabled by ordinal: this runs per REQ, and `name.lowercase()` would allocate a
+     * fresh String each time for one of a dozen fixed answers.
      */
-    fun purposeKeyPart(purpose: SubPurpose): String = if (purpose == SubPurpose.OTHER) PURPOSE_OTHER else purpose.name.lowercase()
+    fun purposeKeyPart(purpose: SubPurpose): String = PURPOSE_PARTS[purpose.ordinal]
+
+    private val PURPOSE_PARTS =
+        Array(SubPurpose.entries.size) {
+            val purpose = SubPurpose.entries[it]
+            if (purpose == SubPurpose.OTHER) PURPOSE_OTHER else purpose.name.lowercase()
+        }
 
     /**
      * `relay.subs.resent.mobile.bg` — a REQ for a subscription id this relay already
@@ -554,23 +609,8 @@ object UsageKeys {
 
     private val RELAY_SUBS_RESENT = dimKeys("relay.subs.resent")
 
-    /**
-     * Half-open bounds, in ms, for the two connect-timing histograms below.
-     */
-    private val CONNECT_BUCKET_BOUNDS_MS = longArrayOf(100, 500, 2_000, 10_000, 30_000)
-    private val CONNECT_BUCKET_NAMES =
-        Array(CONNECT_BUCKET_BOUNDS_MS.size + 1) { i ->
-            if (i < CONNECT_BUCKET_BOUNDS_MS.size) "lt${CONNECT_BUCKET_BOUNDS_MS[i]}ms" else "gte${CONNECT_BUCKET_BOUNDS_MS.last()}ms"
-        }
-
-    private fun connectBucketIndex(ms: Long): Int {
-        for (i in CONNECT_BUCKET_BOUNDS_MS.indices) {
-            if (ms < CONNECT_BUCKET_BOUNDS_MS[i]) return i
-        }
-        return CONNECT_BUCKET_BOUNDS_MS.size
-    }
-
-    fun connectBucket(ms: Long): String = CONNECT_BUCKET_NAMES[connectBucketIndex(ms)]
+    /** Half-open bounds, in ms, shared by the two connect-timing histograms below. */
+    private val CONNECT_BOUNDS_MS = longArrayOf(100, 500, 2_000, 10_000, 30_000)
 
     /**
      * `relay.hs.lt500ms.wifi.fg` — the websocket upgrade round-trip, as the
@@ -589,9 +629,9 @@ object UsageKeys {
         ms: Long,
         mobile: Boolean,
         foreground: Boolean,
-    ): String = RELAY_HS[connectBucketIndex(ms)][dimIndex(mobile, foreground)]
+    ): String = HANDSHAKE.key(ms, mobile, foreground)
 
-    private val RELAY_HS = Array(CONNECT_BUCKET_NAMES.size) { dimKeys("relay.hs.${CONNECT_BUCKET_NAMES[it]}") }
+    private val HANDSHAKE = MsHistogram("relay.hs", CONNECT_BOUNDS_MS) { "${it}ms" }
 
     /**
      * `relay.gap.lt2000ms.wifi.fg` — everything between deciding to dial and the
@@ -609,9 +649,9 @@ object UsageKeys {
         ms: Long,
         mobile: Boolean,
         foreground: Boolean,
-    ): String = RELAY_GAP[connectBucketIndex(ms)][dimIndex(mobile, foreground)]
+    ): String = DIAL_GAP.key(ms, mobile, foreground)
 
-    private val RELAY_GAP = Array(CONNECT_BUCKET_NAMES.size) { dimKeys("relay.gap.${CONNECT_BUCKET_NAMES[it]}") }
+    private val DIAL_GAP = MsHistogram("relay.gap", CONNECT_BOUNDS_MS) { "${it}ms" }
 
     /**
      * `relay.events.seen.wifi.fg` — inbound EVENT frames, and of those, how many
@@ -757,11 +797,8 @@ object UsageKeys {
      */
     fun Map<String, Long>.sumMatching(vararg parts: String): Long {
         var total = 0L
-        outer@ for ((key, value) in this) {
-            for (part in parts) {
-                if (!key.hasSegment(part)) continue@outer
-            }
-            total += value
+        for ((key, value) in this) {
+            if (parts.all { key.hasSegment(it) }) total += value
         }
         return total
     }
