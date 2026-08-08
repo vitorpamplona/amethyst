@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.concurrent.Volatile
 
 /**
  * A validated inner chat rumor emitted by a session: its parent [communityId] and
@@ -97,10 +98,23 @@ enum class ConcordIngestOutcome {
  * [ConcordActions]/[ConcordPlaneRegistry] helpers.
  */
 class ConcordCommunitySession(
-    val entry: ConcordCommunityListEntry,
+    entry: ConcordCommunityListEntry,
     val myPubKey: HexKey,
     private val onRumor: ConcordRumorSink = { _, _, _, _ -> },
 ) {
+    /**
+     * The joined-list entry this session projects. Replaced in place — only ever by
+     * [adoptControlMaterial], and only within one epoch — because the Control Plane
+     * write key can arrive long after the session was built (CORD-04 §3). A change
+     * that moves the *planes* (a Refounding) rebuilds the session instead.
+     *
+     * Volatile because the ingest path, the UI and the adopting drain are different
+     * threads: the write happens under [lock], but readers take it unsynchronized.
+     */
+    @Volatile
+    var entry: ConcordCommunityListEntry = entry
+        private set
+
     private val root = entry.root.hexToByteArray()
     private val communityIdBytes = entry.id.hexToByteArray()
 
@@ -109,7 +123,8 @@ class ConcordCommunitySession(
      * carries a `control_pk` (plus the write key when this account is staff and
      * holds the `control_root`), legacy single-key otherwise.
      */
-    private val controlKeys: ControlPlaneKeys = ConcordActions.controlPlaneKeysFor(entry)
+    @Volatile
+    private var controlKeys: ControlPlaneKeys = ConcordActions.controlPlaneKeysFor(entry)
 
     /** The Guestbook Plane at this epoch — where member join/leave motions ride (CORD-02 §5). */
     private val guestbookKey: GroupKey = ConcordActions.guestbookPlane(root, communityIdBytes, entry.rootEpoch)
@@ -329,7 +344,38 @@ class ConcordCommunitySession(
      * editions. [ControlPlaneKeys.canWrite] is false for a regular member on a split
      * epoch (CORD-02 §2) — the caller must not attempt to publish an edition then.
      */
-    fun controlPlaneKeys(): ControlPlaneKeys = controlKeys
+    fun controlPlaneKeys(): ControlPlaneKeys = lock.withLock { controlKeys }
+
+    /**
+     * Adopt Control Plane key material that arrived *after* this session was built, at
+     * the same epoch: the `control_root` a staff-making Grant delivers (CORD-04 §3), or
+     * a `control_pk` filled in by a same-epoch Community List merge (CORD-02 §8).
+     *
+     * Done in place rather than by rebuilding the session, because a rebuild would drop
+     * the buffered Control Plane wraps and leave the community folded empty until every
+     * wrap happened to be re-delivered. Nothing about the *plane* moves here: adoption is
+     * gated on the secret deriving to exactly the `control_pk` already held (CORD-02 §5),
+     * so the address, the read key, the buffered wraps and the subscription set are all
+     * invariant — only [ControlPlaneKeys.signer] appears, flipping
+     * [ControlPlaneKeys.canWrite] and adding the stream key to [streamKeys].
+     *
+     * Fails closed and returns false when [newEntry] is not the same community at the
+     * same root and epoch, or when the material it carries would move the plane's
+     * address — a caller must rebuild the session for that, never mutate it. Returns
+     * false too when nothing changed, so the caller can skip a needless revision bump.
+     */
+    fun adoptControlMaterial(newEntry: ConcordCommunityListEntry): Boolean =
+        lock.withLock {
+            if (newEntry.id != entry.id || newEntry.root != entry.root || newEntry.rootEpoch != entry.rootEpoch) return@withLock false
+            if (newEntry.controlPk == entry.controlPk && newEntry.controlRoot == entry.controlRoot) return@withLock false
+            val newKeys = ConcordActions.controlPlaneKeysFor(newEntry)
+            // The plane is where the buffered wraps already are. If the new material points
+            // somewhere else, this is not an adoption — refuse and let the caller rebuild.
+            if (newKeys.address != controlKeys.address) return@withLock false
+            entry = newEntry
+            controlKeys = newKeys
+            true
+        }
 
     /** This account's standing, from the current fold. */
     fun membership(): ConcordMembership {
