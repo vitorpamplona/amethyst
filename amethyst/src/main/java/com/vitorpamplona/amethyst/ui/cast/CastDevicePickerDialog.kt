@@ -31,12 +31,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cast_generic_receiver
 import com.vitorpamplona.amethyst.commons.resources.cast_searching_for_devices
 import com.vitorpamplona.amethyst.commons.resources.cast_to_device_dialog_title
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.service.cast.CastErrorMessage
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
@@ -105,9 +107,10 @@ fun CastDevicePickerDialog(
             }
         }
 
-        if (sessionState is CastSessionState.Error) {
+        val error = sessionState as? CastSessionState.Error
+        if (error != null) {
             Text(
-                text = (sessionState as CastSessionState.Error).message,
+                text = castErrorText(error),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
@@ -115,3 +118,10 @@ fun CastDevicePickerDialog(
         }
     }
 }
+
+@Composable
+private fun castErrorText(error: CastSessionState.Error): String =
+    when (val message = error.message) {
+        is CastErrorMessage.Raw -> message.text
+        is CastErrorMessage.Localized -> stringRes(message.text, error.device?.name ?: stringRes(Res.string.cast_generic_receiver))
+    }

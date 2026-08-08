@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.cast
 
 import androidx.compose.runtime.Immutable
+import org.jetbrains.compose.resources.StringResource
 
 @Immutable
 data class CastDevice(
@@ -88,6 +89,27 @@ sealed class CastSessionState {
 
     data class Error(
         val device: CastDevice?,
-        val message: String,
+        val message: CastErrorMessage,
     ) : CastSessionState()
+}
+
+/**
+ * What went wrong, in a form the picker resolves in composition. The caster reports failures from
+ * Cast SDK callbacks, where there is no blocking way to read a Compose resource, so it hands over
+ * the resource and the UI formats it.
+ */
+@Immutable
+sealed interface CastErrorMessage {
+    /** Not yet localized. */
+    data class Raw(
+        val text: String,
+    ) : CastErrorMessage
+
+    /**
+     * A `%1$s`-shaped message naming the receiver — the picker supplies the [CastSessionState.Error]
+     * device's name, or a generic noun when the device is unknown.
+     */
+    data class Localized(
+        val text: StringResource,
+    ) : CastErrorMessage
 }

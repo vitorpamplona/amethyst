@@ -32,6 +32,7 @@ import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.CastStatusCodes
+import com.google.android.gms.cast.MediaError
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadRequestData
 import com.google.android.gms.cast.MediaMetadata
@@ -43,7 +44,12 @@ import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.images.WebImage
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cast_error_playback_failed
+import com.vitorpamplona.amethyst.commons.resources.cast_error_receiver_not_responding
+import com.vitorpamplona.amethyst.commons.resources.cast_error_unsupported_media
 import com.vitorpamplona.amethyst.service.cast.CastDevice
+import com.vitorpamplona.amethyst.service.cast.CastErrorMessage
 import com.vitorpamplona.amethyst.service.cast.CastRequest
 import com.vitorpamplona.amethyst.service.cast.CastRoutePlan
 import com.vitorpamplona.amethyst.service.cast.CastSessionState
@@ -61,6 +67,16 @@ import kotlinx.coroutines.withTimeoutOrNull
 private const val TAG = "ChromecastCaster"
 private const val SESSION_START_TIMEOUT_MS = 30_000L
 private const val STOP_AWAIT_TIMEOUT_MS = 5_000L
+
+/**
+ * How long the receiver gets to move off LOADING before we call it stalled.
+ *
+ * A healthy receiver takes ~1s. A wedged one — the state an LG webOS TV lands in after its Cast
+ * service crashes, cleared only by power-cycling the TV — accepts the load, reports LOADING, and
+ * then reports nothing ever again: no progress, no error, no session end. Generous by design, since
+ * overshooting only delays an error message while undershooting aborts a slow but working load.
+ */
+private const val LOAD_PROGRESS_TIMEOUT_MS = 20_000L
 
 /** Android 17 — the first release to enforce Local Network Protection. See [ChromecastCaster.localNetworkState]. */
 private const val LOCAL_NETWORK_PROTECTION_SDK = 37
@@ -133,15 +149,26 @@ class ChromecastCaster(
             override fun onStatusUpdated() {
                 val client = currentMediaClient ?: return
                 val status = client.mediaStatus
+                val idleReason = status?.idleReason ?: -1
                 Log.i(TAG) {
                     "media.onStatusUpdated playerState=${playerStateName(client.playerState)} " +
-                        "idleReason=${idleReasonName(status?.idleReason ?: -1)} " +
+                        "idleReason=${idleReasonName(idleReason)} " +
                         "pos=${client.approximateStreamPosition}/${client.streamDuration}ms"
+                }
+                // Any real progress means the receiver is alive and the watchdog has done its job.
+                if (client.playerState == MediaStatus.PLAYER_STATE_PLAYING || client.playerState == MediaStatus.PLAYER_STATE_BUFFERING) {
+                    cancelLoadWatchdog()
+                }
+                // The receiver can also fail without ever calling onMediaError — dropping to IDLE
+                // with an ERROR reason is the terminal signal in that case.
+                if (client.playerState == MediaStatus.PLAYER_STATE_IDLE && idleReason == MediaStatus.IDLE_REASON_ERROR) {
+                    reportMediaFailure(null)
                 }
             }
 
-            override fun onMediaError(mediaError: com.google.android.gms.cast.MediaError) {
+            override fun onMediaError(mediaError: MediaError) {
                 Log.w(TAG) { "media.onMediaError code=${mediaError.detailedErrorCode} reason=${mediaError.reason} type=${mediaError.type}" }
+                reportMediaFailure(mediaError.detailedErrorCode)
             }
         }
 
@@ -216,7 +243,7 @@ class ChromecastCaster(
                 Log.w(TAG) { "session.onStartFailed error=${statusName(error)}" }
                 pendingSessionStart?.complete(false)
                 pendingSessionStart = null
-                sessionFlow.value = CastSessionState.Error(currentDevice(), "Cast session failed (code $error)")
+                sessionFlow.value = CastSessionState.Error(currentDevice(), CastErrorMessage.Raw("Cast session failed (code $error)"))
             }
 
             override fun onSessionEnding(session: CastSession) {
@@ -238,6 +265,7 @@ class ChromecastCaster(
                     return
                 }
                 Log.i(TAG) { "session.onEnded error=${statusName(error)}" }
+                cancelLoadWatchdog()
                 // If a cast() was awaiting a session start, this is also a terminal
                 // outcome — the session never reached a usable state. Without
                 // completing here the cast coroutine hangs and the discovery
@@ -298,6 +326,68 @@ class ChromecastCaster(
      */
     @Volatile
     private var expectingSessionSwapEnd = false
+
+    /**
+     * Fires when the receiver accepted a load and then went quiet — see [LOAD_PROGRESS_TIMEOUT_MS].
+     * Nothing else covers this: the media callbacks only speak when the receiver does, and the
+     * session is still perfectly connected, so without this the picker claims to be casting forever
+     * while the device sits on its splash screen.
+     */
+    private val loadWatchdog =
+        Runnable {
+            val state = currentMediaClient?.playerState
+            val progressed = state == MediaStatus.PLAYER_STATE_PLAYING || state == MediaStatus.PLAYER_STATE_BUFFERING
+            if (progressed || sessionFlow.value is CastSessionState.Error) return@Runnable
+
+            val device = watchedDevice ?: currentDevice()
+            Log.w(TAG) {
+                "load watchdog: still ${playerStateName(state ?: -1)} after ${LOAD_PROGRESS_TIMEOUT_MS}ms on ${device?.name}"
+            }
+            sessionFlow.value =
+                CastSessionState.Error(device, CastErrorMessage.Localized(Res.string.cast_error_receiver_not_responding))
+            watchedDevice = null
+        }
+
+    /** The device a load is currently being watched for, so the message can name it. */
+    @Volatile
+    private var watchedDevice: CastDevice? = null
+
+    private fun armLoadWatchdog(device: CastDevice) {
+        main.removeCallbacks(loadWatchdog)
+        watchedDevice = device
+        main.postDelayed(loadWatchdog, LOAD_PROGRESS_TIMEOUT_MS)
+    }
+
+    private fun cancelLoadWatchdog() {
+        main.removeCallbacks(loadWatchdog)
+        watchedDevice = null
+    }
+
+    /**
+     * Turns a receiver-side playback failure into a [CastSessionState.Error] the picker can show.
+     *
+     * Without this the UI stays on [CastSessionState.Casting] — set the moment `load()` is
+     * submitted — while the receiver has already given up, so a rejected video looks exactly like a
+     * working one: the device sits on its splash screen and nothing ever explains why.
+     *
+     * The first report wins. A failure usually arrives twice (onMediaError, then IDLE/ERROR) and the
+     * earlier one carries the detailed code, so it is the more specific of the two.
+     */
+    private fun reportMediaFailure(detailedErrorCode: Int?) {
+        cancelLoadWatchdog()
+        if (sessionFlow.value is CastSessionState.Error) return
+        val device = currentDevice()
+        val message =
+            when (detailedErrorCode) {
+                MediaError.DetailedErrorCode.MEDIA_SRC_NOT_SUPPORTED,
+                MediaError.DetailedErrorCode.MEDIA_DECODE,
+                ->
+                    Res.string.cast_error_unsupported_media
+                else -> Res.string.cast_error_playback_failed
+            }
+        Log.w(TAG) { "media failure surfaced to UI: code=$detailedErrorCode device=${device?.name}" }
+        sessionFlow.value = CastSessionState.Error(device, CastErrorMessage.Localized(message))
+    }
 
     private fun currentDevice(): CastDevice? =
         when (val s = sessionFlow.value) {
@@ -423,7 +513,7 @@ class ChromecastCaster(
         val ctx = withContext(Dispatchers.Main) { ensureCastContext() }
         if (ctx == null) {
             Log.w(TAG, "cast: CastContext unavailable")
-            sessionFlow.value = CastSessionState.Error(device, "Google Play services unavailable")
+            sessionFlow.value = CastSessionState.Error(device, CastErrorMessage.Raw("Google Play services unavailable"))
             return
         }
         val route =
@@ -432,7 +522,7 @@ class ChromecastCaster(
             }
         if (route == null) {
             Log.w(TAG) { "cast: route ${device.id} not in current set; offline?" }
-            sessionFlow.value = CastSessionState.Error(device, "Device went offline")
+            sessionFlow.value = CastSessionState.Error(device, CastErrorMessage.Raw("Device went offline"))
             return
         }
 
@@ -492,7 +582,7 @@ class ChromecastCaster(
 
         if (!started) {
             Log.w(TAG, "cast: session start refused")
-            sessionFlow.value = CastSessionState.Error(device, "Cast session refused")
+            sessionFlow.value = CastSessionState.Error(device, CastErrorMessage.Raw("Cast session refused"))
             return
         }
 
@@ -519,6 +609,7 @@ class ChromecastCaster(
                         // one: the coroutine reports Casting, the TV sits on its splash screen, and
                         // nothing anywhere records why. This callback is the only place the receiver
                         // ever tells us what it disliked about the media.
+                        armLoadWatchdog(device)
                         client.load(loadRequest).setResultCallback { result ->
                             val status = result.status
                             if (status.isSuccess) {
@@ -528,21 +619,30 @@ class ChromecastCaster(
                                     "cast: load() REFUSED by receiver code=${statusName(status.statusCode)} " +
                                         "msg=${status.statusMessage}"
                                 }
+                                // The receiver answered, so the watchdog is moot — but nothing else
+                                // turns a refusal into something the user can read.
+                                reportMediaFailure(null)
                             }
                         }
                         true
                     } catch (t: Throwable) {
+                        cancelLoadWatchdog()
                         Log.w(TAG, "cast: remoteMediaClient.load failed", t)
                         false
                     }
                 }
             }
 
+        // A receiver can reject the media before this coroutine gets here — onMediaError has been
+        // seen ~150ms after load(). This attempt set Connecting on entry, so any Error sitting here
+        // now came from its own callbacks and carries the receiver's reason; don't paper over it
+        // with a Casting state that claims a video is playing when it already failed.
+        val reportedFailure = sessionFlow.value as? CastSessionState.Error
         sessionFlow.value =
-            if (ok) {
-                CastSessionState.Casting(device, request)
-            } else {
-                CastSessionState.Error(device, "Could not load media on receiver")
+            when {
+                reportedFailure != null -> reportedFailure
+                ok -> CastSessionState.Casting(device, request)
+                else -> CastSessionState.Error(device, CastErrorMessage.Raw("Could not load media on receiver"))
             }
     }
 
@@ -577,6 +677,7 @@ class ChromecastCaster(
 
     suspend fun stopCasting() {
         Log.d(TAG) { "stopCasting (hasClient=${currentMediaClient != null})" }
+        withContext(Dispatchers.Main) { cancelLoadWatchdog() }
         // Await MEDIA_STOP before endCurrentSession() — racing them on the
         // same main-thread tick loses the stop on some receivers (LG webOS).
         val client = currentMediaClient
