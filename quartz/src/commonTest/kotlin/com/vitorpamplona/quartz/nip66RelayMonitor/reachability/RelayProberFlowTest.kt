@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -472,4 +473,58 @@ class RelayProberFlowTest {
 
             assertTrue(listOf("n", "tor") in tagsOf(template))
         }
+    // ---- merging into an existing record ----------------------------------
+
+    /**
+     * A 30166 is addressable, so a consumer that follows this function's KDoc —
+     * sign with the monitor key, insert — replaces whatever else is on that
+     * address. Built from the verdict alone it deletes it.
+     */
+    @Test
+    fun probeTemplateKeepsTagsItDidNotMeasure() {
+        val verdict = RelayProber.Verdict(fast, reachable = true, rttOpenMs = 120, rttEoseMs = 200, error = null)
+        val existing =
+            RelayDiscoveryEvent(
+                "id",
+                "pubkey",
+                1_000,
+                arrayOf(
+                    arrayOf("d", fast.url),
+                    arrayOf("R", "pow"),
+                    arrayOf("redirect", "wss://canonical.example.com/"),
+                ),
+                "",
+                "sig",
+            )
+
+        val tags = tagsOf(verdict.toDiscoveryEventTemplate(createdAt = 2_000, current = existing))
+
+        assertTrue(listOf("redirect", "wss://canonical.example.com/") in tags, "a foreign tag was deleted: $tags")
+        // No write probe ran, so `R pow` is somebody else's finding.
+        assertTrue(listOf("R", "pow") in tags, "an unmeasured requirement was deleted: $tags")
+    }
+
+    /** With a write verdict the probe DOES measure pow, so a stale one must not be re-dated. */
+    @Test
+    fun probeTemplateReplacesRequirementsItDidMeasure() {
+        val verdict = RelayProber.Verdict(fast, reachable = true, rttOpenMs = 120, rttEoseMs = 200, error = null)
+        val existing =
+            RelayDiscoveryEvent("id", "pubkey", 1_000, arrayOf(arrayOf("d", fast.url), arrayOf("R", "pow")), "", "sig")
+        val clean = RelayProber.ReadWriteVerdict(fast, rttReadMs = 10, rttWriteMs = 20, writeAccepted = true, writeMessage = null)
+
+        val tags = tagsOf(verdict.toDiscoveryEventTemplate(createdAt = 2_000, readWrite = clean, current = existing))
+
+        assertTrue(listOf("R", "pow") !in tags, "a stale requirement was carried onto a fresh measurement: $tags")
+    }
+
+    /** Replaceable ordering: an update not strictly newer is rejected and lost. */
+    @Test
+    fun probeTemplateStampsPastTheRecordItReplaces() {
+        val verdict = RelayProber.Verdict(fast, reachable = true, rttOpenMs = 120, rttEoseMs = 200, error = null)
+        val existing = RelayDiscoveryEvent("id", "pubkey", 9_000, arrayOf(arrayOf("d", fast.url)), "", "sig")
+
+        val template = verdict.toDiscoveryEventTemplate(createdAt = 2_000, current = existing)
+
+        assertTrue(template.createdAt > 9_000, "stamped ${template.createdAt}, which cannot replace 9000")
+    }
 }
