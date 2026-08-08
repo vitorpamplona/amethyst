@@ -90,7 +90,7 @@ class ConcordChannelListLeaveTest {
 
         override fun checkGetOrCreateNote(hexKey: HexKey): Note? = null
 
-        override fun getOrCreateAddressableNote(key: Address): AddressableNote = AddressableNote(key)
+        override fun getOrCreateAddressableNote(address: Address): AddressableNote = AddressableNote(address)
 
         override fun getEventStream(): ICacheEventStream = error("not used")
 

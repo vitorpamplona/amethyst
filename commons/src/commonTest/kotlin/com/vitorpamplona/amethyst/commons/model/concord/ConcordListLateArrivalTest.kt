@@ -88,7 +88,7 @@ class ConcordListLateArrivalTest {
 
         override fun checkGetOrCreateNote(hexKey: HexKey): Note? = null
 
-        override fun getOrCreateAddressableNote(key: Address): AddressableNote = notes.getOrPut(key.toValue()) { AddressableNote(key) }
+        override fun getOrCreateAddressableNote(address: Address): AddressableNote = notes.getOrPut(address.toValue()) { AddressableNote(address) }
 
         override fun getEventStream(): ICacheEventStream = error("not used")
 

@@ -103,10 +103,10 @@ class NegentropyStallRepro {
                 object : WebSocketListener {
                     override fun onOpen(
                         pingMillis: Int,
-                        usingCompression: Boolean,
+                        compression: Boolean,
                     ) {
-                        log("  [<-open] ${url.url} ping=${pingMillis}ms deflate=$usingCompression")
-                        out.onOpen(pingMillis, usingCompression)
+                        log("  [<-open] ${url.url} ping=${pingMillis}ms deflate=$compression")
+                        out.onOpen(pingMillis, compression)
                     }
 
                     override suspend fun onMessage(text: String) {
@@ -130,10 +130,10 @@ class NegentropyStallRepro {
                     override fun onFailure(
                         t: Throwable,
                         code: Int?,
-                        errorMessage: String?,
+                        response: String?,
                     ) {
-                        log("  [<-failure] ${url.url} code=$code msg=$errorMessage err=${t.message}")
-                        out.onFailure(t, code, errorMessage)
+                        log("  [<-failure] ${url.url} code=$code msg=$response err=${t.message}")
+                        out.onFailure(t, code, response)
                     }
                 }
 
