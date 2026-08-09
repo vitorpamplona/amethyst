@@ -31,8 +31,10 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -61,6 +63,9 @@ object ConcordCommands {
         |          [--epoch N] [--root HEX]             --epoch/--root read a prior epoch's plane
         |  concord invite COMMUNITY [--base URL]       mint + publish a shareable invite link
         |  concord join URL                            redeem an invite link and save the community
+        |  concord recover [COMMUNITY]                 re-resolve the joined-through invite link and
+        |                                               follow a Refounding we were left out of
+        |                                               (CORD-06); refuses if that epoch banned us
         |  concord roles COMMUNITY                     list live roles + current banlist (CORD-04)
         |  concord role COMMUNITY NAME POSITION PERM…  define a role (perms by name, e.g. BAN KICK)
         |  concord grant COMMUNITY USER ROLE-ID        grant a role to a member
@@ -75,7 +80,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|send|read|invite|join|roles|role|grant|ban|unban>",
+            "concord <create|list|import|channels|send|read|invite|join|recover|roles|role|grant|ban|unban>",
             help = USAGE,
             routes =
                 mapOf(
@@ -87,6 +92,7 @@ object ConcordCommands {
                     "read" to { rest -> ConcordChannelCommands.read(dataDir, rest) },
                     "invite" to { rest -> invite(dataDir, rest) },
                     "join" to { rest -> join(dataDir, rest) },
+                    "recover" to { rest -> recover(dataDir, rest) },
                     "roles" to { rest -> ConcordModCommands.roles(dataDir, rest) },
                     "role" to { rest -> ConcordModCommands.defineRole(dataDir, rest) },
                     "grant" to { rest -> ConcordModCommands.grant(dataDir, rest) },
@@ -214,6 +220,9 @@ object ConcordCommands {
                             generalChannelId = prior?.generalChannelId ?: "",
                             relays = e.relays,
                             heldRoots = e.heldRoots.map { StoredHeldRoot(it.epoch, it.key, it.controlPk ?: "") },
+                            // Survives every merge: losing the anchor makes the NEXT exclusion
+                            // unrecoverable, so a list entry without one must not clear ours.
+                            inviteRef = e.inviteRef ?: prior?.inviteRef ?: "",
                         ),
                     )
                     mapOf(
@@ -289,6 +298,9 @@ object ConcordCommands {
                     // community is still pre-split and folds at the legacy address.
                     controlPk = bundle.controlPk ?: "",
                     relays = bundle.relays,
+                    // The stranded-recovery anchor: if a later Refounding leaves us out, re-resolving
+                    // this link is the only way back (CORD-05/06). Stored bare, domain-agnostic.
+                    inviteRef = ConcordActions.bareInviteRef(url) ?: "",
                 ),
             )
             Output.emit(mapOf("community_id" to bundle.communityId, "name" to bundle.name, "relays" to bundle.relays))
@@ -339,23 +351,139 @@ object ConcordCommands {
         sc: StoredCommunity,
         editions: List<ControlEdition>,
     ): Pair<StoredCommunity, ControlPlaneKeys>? {
-        val entry =
-            ConcordCommunityListEntry(
-                id = sc.communityId,
-                owner = sc.owner,
-                ownerSalt = sc.ownerSalt,
-                root = sc.root,
-                rootEpoch = sc.rootEpoch,
-                controlPk = sc.controlPk.ifBlank { null },
-                controlRoot = sc.controlRoot.ifBlank { null },
-                relays = sc.relays,
-                name = sc.name,
-            )
+        val entry = entryFor(sc)
         val authority = AuthorityResolver.resolve(editions, sc.owner)
         val delivered = ConcordReceive.deliveredControlRoot(entry, editions, authority, ctx.signer) ?: return null
         val updated = sc.copy(controlRoot = delivered)
         ConcordStore(dataDir.concordFile).upsert(updated)
         return updated to controlPlaneKeysFor(updated)
+    }
+
+    /** The quartz list entry a [StoredCommunity] describes — the shape every commons helper takes. */
+    fun entryFor(sc: StoredCommunity) =
+        ConcordCommunityListEntry(
+            id = sc.communityId,
+            owner = sc.owner,
+            ownerSalt = sc.ownerSalt,
+            root = sc.root,
+            rootEpoch = sc.rootEpoch,
+            controlPk = sc.controlPk.ifBlank { null },
+            controlRoot = sc.controlRoot.ifBlank { null },
+            heldRoots = sc.heldRoots.map { HeldRoot(it.epoch, it.root, it.controlPk.ifBlank { null }) },
+            relays = sc.relays,
+            name = sc.name,
+            inviteRef = sc.inviteRef.ifBlank { null },
+        )
+
+    /** Folds [entry] back into the stored shape after a rotation is adopted. */
+    fun storedFrom(
+        sc: StoredCommunity,
+        entry: ConcordCommunityListEntry,
+    ) = sc.copy(
+        root = entry.root,
+        rootEpoch = entry.rootEpoch,
+        controlPk = entry.controlPk ?: "",
+        controlRoot = entry.controlRoot ?: "",
+        heldRoots = entry.heldRoots.map { StoredHeldRoot(it.epoch, it.key, it.controlPk ?: "") },
+        relays = entry.relays,
+        name = entry.name.ifBlank { sc.name },
+        inviteRef = entry.inviteRef ?: sc.inviteRef,
+    )
+
+    /**
+     * `concord recover [COMMUNITY]` — the stranded-recovery receive path (CORD-05/06 A2).
+     *
+     * A Refounding carries only `(newRoot, newEpoch, rotator)` and **no recipient list**, so a
+     * member simply left out of the rekey receives nothing and sits on the dead epoch forever while
+     * everyone else moves on. There is no message to miss, which is why the rekey drain cannot help.
+     * The way back is the invite link the membership was joined through: the community keeps
+     * re-minting its bundle at the same addressable coordinate, so a live bundle at a **strictly
+     * higher** epoch than ours proves we were left behind — and carries the new root.
+     *
+     * Amethyst sweeps this on a timer; amy makes it an explicit verb, so it stays deterministic and
+     * scriptable rather than a background loop.
+     *
+     * The ban gate is the point of care. A removed member keeps the link's unlock token forever, so
+     * without it this walks them straight back into the epoch they were rotated out of. It reads the
+     * banlist of the epoch we are **leaving** (the last Control Plane we can still fold) and **fails
+     * closed**: a community whose plane will not fold yields no verdict and is skipped, never
+     * recovered.
+     */
+    private suspend fun recover(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positionalOrNull(0)
+        args.rejectUnknown()
+        val store = ConcordStore(dataDir.concordFile)
+        val targets =
+            if (handle != null) {
+                listOf(store.find(handle) ?: return notFound(handle))
+            } else {
+                store.load()
+            }
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val results = mutableListOf<Map<String, Any?>>()
+            for (sc in targets) {
+                val inviteRef = sc.inviteRef.ifBlank { null }
+                if (inviteRef == null) {
+                    results += mapOf("community_id" to sc.communityId, "name" to sc.name, "recovered" to false, "reason" to "no_invite_ref")
+                    continue
+                }
+                val parsed = ConcordActions.parseInviteLink(inviteRef)
+                if (parsed == null) {
+                    results += mapOf("community_id" to sc.communityId, "name" to sc.name, "recovered" to false, "reason" to "bad_invite_ref")
+                    continue
+                }
+                val relays = (normalize(parsed.fragment.relays) + normalize(sc.relays)).ifEmpty { ctx.outboxRelays() }
+                val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }).map { it.second }
+                // Only a LIVE bundle recovers: an expired or revoked link is not a rotation we missed.
+                val bundle = (ConcordActions.classifyInvite(wraps, parsed.fragment.token) as? InviteBundleStatus.Live)?.invite
+                if (bundle == null) {
+                    results += mapOf("community_id" to sc.communityId, "name" to sc.name, "recovered" to false, "reason" to "no_live_bundle")
+                    continue
+                }
+
+                // Fold the epoch we are leaving to learn whether it banned us. No fold, no verdict,
+                // no recovery — the gate fails closed rather than assuming "not banned".
+                val cp = controlPlaneKeysFor(sc)
+                ctx.registerConcordStreamKeys(relays, listOfNotNull(cp.signer?.secretKey))
+                val controlWraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.address)) }, pendingOnAuthRequired = true).map { it.second }
+                val editions = ConcordActions.controlEditions(controlWraps, cp)
+                if (editions.isEmpty()) {
+                    results += mapOf("community_id" to sc.communityId, "name" to sc.name, "recovered" to false, "reason" to "control_plane_not_folded")
+                    continue
+                }
+                val bannedHere = AuthorityResolver.resolve(editions, sc.owner).isBanned(ctx.signer.pubKey)
+
+                val merged = ConcordActions.recoverStranded(entryFor(sc), bundle, bannedHere)
+                if (merged == null) {
+                    results +=
+                        mapOf(
+                            "community_id" to sc.communityId,
+                            "name" to sc.name,
+                            "recovered" to false,
+                            "reason" to if (bannedHere) "banned" else "already_current",
+                            "root_epoch" to sc.rootEpoch,
+                        )
+                    continue
+                }
+                store.upsert(storedFrom(sc, merged))
+                results +=
+                    mapOf(
+                        "community_id" to sc.communityId,
+                        "name" to sc.name,
+                        "recovered" to true,
+                        "from_epoch" to sc.rootEpoch,
+                        "root_epoch" to merged.rootEpoch,
+                    )
+            }
+            Output.emit(mapOf("communities" to results))
+            return 0
+        }
     }
 
     fun notFound(handle: String): Int {

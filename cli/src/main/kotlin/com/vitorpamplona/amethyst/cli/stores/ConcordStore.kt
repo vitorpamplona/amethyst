@@ -48,6 +48,11 @@ data class StoredCommunity(
     // Past access roots kept per epoch (CORD-06 Refounding rotates the root). Lets `read --epoch <n>`
     // re-derive a prior epoch's Chat Plane to reach pre-refounding history. Populated by `import`.
     val heldRoots: List<StoredHeldRoot> = emptyList(),
+    // The bare `<naddr>#<fragment>` invite this membership was joined through — the stranded-recovery
+    // anchor (CORD-05/06). A Refounding carries no recipient list, so a member simply left out of the
+    // rekey has no message to miss: re-resolving this link is the only way back. Blank for a direct
+    // invite or a community joined before amy stored it.
+    val inviteRef: String = "",
 )
 
 /** A past community_root for a specific epoch, mirroring quartz `HeldRoot`. */
