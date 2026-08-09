@@ -454,7 +454,8 @@ object ConcordActions {
     fun recoverStranded(
         entry: ConcordCommunityListEntry,
         bundle: CommunityInvite,
-    ): ConcordCommunityListEntry? = ConcordStrandedRecovery.mergeForward(entry, bundle)
+        bannedAtCurrentEpoch: Boolean,
+    ): ConcordCommunityListEntry? = ConcordStrandedRecovery.mergeForward(entry, bundle, bannedAtCurrentEpoch)
 
     /** Decrypts + validates a fetched bundle event with the link token; null if invalid. */
     fun openBundle(

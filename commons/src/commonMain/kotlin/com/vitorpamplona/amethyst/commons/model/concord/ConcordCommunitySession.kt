@@ -486,6 +486,9 @@ class ConcordCommunitySession(
         if (!ChannelChat.isTyping(rumor) || !ChannelChat.isBoundTo(rumor, channelIdHex, epoch)) return
         val who = rumor.pubKey.lowercase()
         if (who == myPubKey.lowercase()) return // never show my own typing back to me
+        // A banned member's messages are dropped everywhere, so their typing heartbeat must be too —
+        // otherwise they sit in the "… is typing" row forever in a channel they cannot be heard in.
+        if (_state.value?.authority?.isBanned(who) == true) return
         val now = TimeUtils.now()
         // Update the map and publish inside the lock so a concurrent heartbeat on another
         // channel can't publish an older snapshot last and drop this channel's typers.
