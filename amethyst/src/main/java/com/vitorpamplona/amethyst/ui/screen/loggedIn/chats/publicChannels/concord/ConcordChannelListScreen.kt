@@ -167,11 +167,19 @@ fun ConcordChannelListScreen(
 
     // Channel create/rename/delete are gated on MANAGE_CHANNELS (or owner) — the same predicate the
     // fold enforces, so an unauthorized action would be a silent no-op we shouldn't even offer.
+    // Rank alone isn't enough on a split epoch: publishing any Control edition also takes the
+    // control_root (CORD-02 §2), which a freshly promoted staffer may not hold yet (CORD-04 §3),
+    // so the affordance waits for the key too.
+    // hasPermission, never effectivePermissions: the latter reads the roles alone, so a banned
+    // moderator kept seeing every control here. The editions they authored were dropped by everyone's
+    // fold, which made these buttons silently no-op — worse than absent, and the same trap this file
+    // already avoids for the Roles… menu.
     val canManageChannels =
         state?.authority?.let {
             it.isOwner(account.signer.pubKey) ||
-                it.effectivePermissions(account.signer.pubKey).has(ConcordPermissions.MANAGE_CHANNELS)
-        } == true
+                it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_CHANNELS)
+        } == true &&
+            session?.controlPlaneKeys()?.canWrite == true
 
     // channelIdHex == null → create; else → rename that channel.
     var channelEditor by remember { mutableStateOf<ConcordChannelEditor?>(null) }
@@ -234,10 +242,21 @@ fun ConcordChannelListScreen(
                     }
                 },
                 actions = {
+                    // Rank + the Control write key (CORD-02 §2), like [canManageChannels] above.
                     val canEdit =
                         state?.authority?.let {
                             it.isOwner(account.signer.pubKey) ||
-                                it.effectivePermissions(account.signer.pubKey).has(ConcordPermissions.MANAGE_METADATA)
+                                it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_METADATA)
+                        } == true &&
+                            session?.controlPlaneKeys()?.canWrite == true
+
+                    // Minting an invite hands out a working key to the community, so it takes
+                    // CREATE_INVITE like any other privileged action. This button used to be the one
+                    // control on the screen with no gate at all.
+                    val canInvite =
+                        state?.authority?.let {
+                            it.isOwner(account.signer.pubKey) ||
+                                it.hasPermission(account.signer.pubKey, ConcordPermissions.CREATE_INVITE)
                         } == true
 
                     IconButton(onClick = { nav.nav(Route.ConcordMembers(communityId)) }) {
@@ -248,22 +267,24 @@ fun ConcordChannelListScreen(
                             SymbolIcon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_edit_title))
                         }
                     }
-                    IconButton(
-                        enabled = !minting,
-                        onClick = {
-                            minting = true
-                            scope.launch {
-                                try {
-                                    inviteLink = account.concord.mintConcordInvite(communityId)
-                                } finally {
-                                    // Always clear the flag — a thrown mint would otherwise leave the
-                                    // button disabled until the screen is recreated.
-                                    minting = false
+                    if (canInvite) {
+                        IconButton(
+                            enabled = !minting,
+                            onClick = {
+                                minting = true
+                                scope.launch {
+                                    try {
+                                        inviteLink = account.concord.mintConcordInvite(communityId)
+                                    } finally {
+                                        // Always clear the flag — a thrown mint would otherwise leave the
+                                        // button disabled until the screen is recreated.
+                                        minting = false
+                                    }
                                 }
-                            }
-                        },
-                    ) {
-                        SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_action))
+                            },
+                        ) {
+                            SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_action))
+                        }
                     }
 
                     // Overflow, mirroring the NIP-29 relay-group top bar: destructive membership

@@ -389,7 +389,7 @@ class KtorRelayTest {
                 "close-test",
                 mapOf(server.url.normalizeRelayUrl() to listOf(Filter(kinds = listOf(1)))),
                 object : com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: com.vitorpamplona.quartz.nip01Core.core.Event,
                         isLive: Boolean,
                         relay: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,

@@ -72,7 +72,7 @@ suspend fun NostrClient.collectUntilEoseMulti(
         subId,
         mapOf(relay to filters),
         object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,

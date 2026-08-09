@@ -44,6 +44,13 @@ import kotlin.reflect.KClass
 class Nav(
     val controller: NavHostController,
     override val navigationScope: CoroutineScope,
+    /**
+     * Awaited before every transition below. Leaving a screen while the soft keyboard is still
+     * animating strands `imePadding()` app-wide; see [ImeSettler]. Every in-app navigation goes
+     * through this class, so this is the one place that has to get it right — no screen, top bar
+     * or back handler needs to think about the keyboard on its way out.
+     */
+    private val ime: ImeSettler = ImeSettler.None,
 ) : INav {
     override val drawerState = DrawerState(DrawerValue.Closed)
 
@@ -63,6 +70,7 @@ class Nav(
 
     override fun nav(route: Route) {
         navigationScope.launch {
+            ime.settle()
             if (getRouteWithArguments(route::class, controller) != route) {
                 controller.navigate(route)
             }
@@ -71,6 +79,7 @@ class Nav(
 
     override fun nav(computeRoute: suspend () -> Route?) {
         navigationScope.launch {
+            ime.settle()
             val route = computeRoute()
             if (route != null && getRouteWithArguments(route::class, controller) != route) {
                 controller.navigate(route)
@@ -80,6 +89,7 @@ class Nav(
 
     override fun newStack(route: Route) {
         navigationScope.launch {
+            ime.settle()
             controller.navigate(route) {
                 popUpTo(route) {
                     inclusive = true
@@ -91,6 +101,7 @@ class Nav(
 
     override fun navBottomBar(route: Route) {
         navigationScope.launch {
+            ime.settle()
             controller.navigate(route) {
                 // Clear sibling bottom-nav entries but keep Home (the start
                 // destination) below, so back-swipe from any tab returns to
@@ -149,6 +160,7 @@ class Nav(
 
     override fun popBack() {
         navigationScope.launch {
+            ime.settle()
             controller.navigateUp()
         }
     }
@@ -159,6 +171,7 @@ class Nav(
         klass: KClass<T>,
     ) {
         navigationScope.launch {
+            ime.settle()
             controller.navigate(route) {
                 popUpTo(klass) { inclusive = true }
             }

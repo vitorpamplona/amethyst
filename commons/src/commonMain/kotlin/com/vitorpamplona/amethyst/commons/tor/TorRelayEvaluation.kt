@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.tor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOverlayNetwork
 
 class TorRelayEvaluation(
     val torSettings: TorRelaySettings,
@@ -35,6 +36,11 @@ class TorRelayEvaluation(
             false
         } else {
             if (relay.isLocalHost()) {
+                false
+            } else if (relay.isOverlayNetwork()) {
+                // An overlay-mesh relay (0200::/7, e.g. Yggdrasil) is reachable only through the
+                // local mesh interface: Tor cannot route the range at all, so proxying it would
+                // guarantee failure rather than privacy. The overlay already encrypts end to end.
                 false
             } else if (relay.isOnion()) {
                 // .onion is only reachable over Tor regardless of any other classification.

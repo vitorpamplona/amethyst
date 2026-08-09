@@ -46,6 +46,7 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 object MessageKSerializer : KSerializer<Message> {
     override val descriptor: SerialDescriptor =
@@ -112,6 +113,10 @@ object MessageKSerializer : KSerializer<Message> {
                     is NegErrMessage -> {
                         add(JsonPrimitive(value.subId))
                         add(JsonPrimitive(value.reason))
+                        // Only written when there is one: a three-element
+                        // NEG-ERR is what NIP-77 describes, and that is what a
+                        // refusal with nothing to state stays.
+                        value.cap?.let { add(JsonPrimitive(it)) }
                     }
                 }
             }
@@ -184,6 +189,12 @@ object MessageKSerializer : KSerializer<Message> {
                 NegErrMessage(
                     subId = array[1].jsonPrimitive.content,
                     reason = if (array.size > 2) array[2].jsonPrimitive.content else "",
+                    // Optional, and only a number: a relay that puts something
+                    // else there is telling us nothing rather than breaking the
+                    // frame. `as?` rather than `.jsonPrimitive`, which THROWS on
+                    // an object or array — that would fail the whole message and
+                    // lose the reason, where before this element was ignored.
+                    cap = if (array.size > 3) (array[3] as? JsonPrimitive)?.longOrNull else null,
                 )
             }
 

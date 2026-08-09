@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 
@@ -48,8 +49,10 @@ import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
  * occasional and self-heal on the next filter change or full re-walk.
  *
  * Persistence is the caller's: [export] the map on a schedule and [restore]
- * it at startup. [onChange] fires whenever a band changes, so a persistence
- * layer can mark itself dirty without polling.
+ * it at startup, both keyed by [BandKey] so a file layer can lay the two
+ * halves out however it likes without having to know how a key is spelled.
+ * [onChange] fires whenever a band changes, so a persistence layer can mark
+ * itself dirty without polling.
  *
  * Not to be confused with the `relay.client.paging` package: its
  * `RelayLoadingCursors` are in-memory POSITIONS for demand-driven UI paging
@@ -65,24 +68,112 @@ class SyncCoverage(
     private val onChange: () -> Unit = {},
 ) {
     /**
+     * What one band is about: the relay's url, and the filter as [Filter.toJson]
+     * renders it.
+     *
+     * A pair, not a joined string, for two reasons. A persistence layer needs
+     * the halves — one that lays its file out by relay, or by filter, or by
+     * both, had to split the key back apart, and the separator was folklore it
+     * could only learn by reading this class. And on the hot path a joined key
+     * COPIES the filter's json on every lookup: `legs()` runs once per relay
+     * per cycle, an author-scoped filter's json runs to tens of thousands of
+     * characters, and a fan-out over thousands of relays paid that copy — plus
+     * a fresh hash over all of it, since a newly built string has none cached —
+     * on every one of them. A pair hashes the two halves it already holds.
+     *
+     * [encode] and [decode] are the joined form, kept HERE so a file that wants
+     * one key per line still gets the separator from the class that mints it.
+     * A normalized relay url contains no space, which is what makes splitting
+     * at the first one exact.
+     */
+    data class BandKey(
+        val relay: String,
+        val filter: String,
+    ) {
+        fun encode(): String = "$relay $filter"
+
+        companion object {
+            /** The inverse of [encode], or null for a key that names no pair. */
+            fun decode(key: String): BandKey? {
+                val at = key.indexOf(' ')
+                if (at <= 0 || at == key.length - 1) return null
+                return BandKey(key.substring(0, at), key.substring(at + 1))
+            }
+        }
+    }
+
+    /**
+     * A covered `created_at` interval, inclusive at both ends.
+     *
+     * [complete] is the difference between "we walked this interval" and "there
+     * is nothing below it". A paged fetch earns the first by seeing events; it
+     * earns the second only when the relay EOSEs on an empty page, which is the
+     * one answer that distinguishes an exhausted corpus from a relay that capped
+     * us or went quiet (see `fetchAllPages`'s `onDrained`). A finished negentropy
+     * reconcile earns it too, by comparing the whole range at once.
+     *
+     * It lives HERE rather than on [Band] because a paged leg does not have to
+     * cover every kind: once kinds diverge, [legs] hands each group its own ask,
+     * so a walk that drained `kinds: [10002]` says nothing about kind 0. A
+     * band-level flag set from such a leg would claim both.
+     */
+    data class Span(
+        val min: Long,
+        val max: Long,
+        val complete: Boolean = false,
+    ) {
+        fun widen(other: Span) = Span(minOf(min, other.min), maxOf(max, other.max), complete || other.complete)
+    }
+
+    /**
      * What is already covered for one (relay, filter) pair.
      *
-     * [complete] is the difference between "we walked this span" (a paged
-     * fetch) and "we are in sync below this point" (a finished negentropy
-     * reconcile, which compared the whole range). Only a complete band may
-     * skip its older leg.
+     * [spans] is PER KIND, and that is the whole point of it. A band used to
+     * hold one interval for the entire filter, which is a claim no multi-kind
+     * walk can support: ask for `kinds: [0, 30382]`, see profiles back to 2020
+     * and score cards only from 2025, and the band reads 2020..2026 — so the
+     * next run skips 2020..2025 for BOTH, and the score cards in that interior
+     * are never asked for again. A long-lived kind vouched for a short-lived
+     * one. Per kind, each carries only the evidence actually collected for it.
+     *
+     * Filters that name no kinds at all cannot be split, so they keep a single
+     * span under [ALL_KINDS] — the same claim as before, correctly scoped to
+     * the case where it is the only claim available.
+     *
+     * Completeness is per kind, on [Span] — see there for why a paged leg
+     * cannot speak for kinds it did not ask about.
      *
      * [fullAt] is when the last pass that started from nothing finished — the
      * clock for the periodic re-walk.
      */
     data class Band(
-        val minCreatedAt: Long,
-        val maxCreatedAt: Long,
-        val complete: Boolean = false,
+        val spans: Map<Int, Span>,
         val fullAt: Long = 0,
-    )
+    ) {
+        /** The outer edges across every kind — for logging and for the file's compatibility fields. */
+        val minCreatedAt: Long get() = spans.values.minOfOrNull { it.min } ?: 0
+        val maxCreatedAt: Long get() = spans.values.maxOfOrNull { it.max } ?: 0
 
-    private val bands = ConcurrentMap<String, Band>()
+        /**
+         * The band-level claim, DERIVED: true only when every kind is complete.
+         *
+         * Kept for the state files, which still write a `complete` beside
+         * `min`/`max` so a build from before per-kind completeness reads them and
+         * behaves as it always did. `all` rather than `any` is the safe direction
+         * for that reader: it cannot see the per-kind detail, so it must be told
+         * the weakest true thing, not the strongest.
+         */
+        val complete: Boolean get() = spans.isNotEmpty() && spans.values.all { it.complete }
+
+        /** Widen each kind by its counterpart, keeping kinds only one side knows. */
+        fun widen(other: Band): Band {
+            val merged = spans.toMutableMap()
+            for ((kind, span) in other.spans) merged[kind] = merged[kind]?.widen(span) ?: span
+            return Band(merged, fullAt)
+        }
+    }
+
+    private val bands = ConcurrentMap<BandKey, Band>()
 
     // filter -> its canonical json. Filter.toJson() runs to tens of thousands
     // of characters for author-scoped filters, and a fan-out keys once per
@@ -114,31 +205,79 @@ class SyncCoverage(
         // Time for another full pass: relays gain old events, and without
         // this the band's claim is never re-tested.
         if (isStale(band)) return listOf(filter)
-        val legs = mutableListOf<Filter>()
+        if (band.spans.isEmpty()) return listOf(filter)
 
-        // Older: up to and including the band's floor, but not past the
-        // filter's (or, when the filter has no `since`, the caller's
-        // [floor] — a sync window the filter itself must not carry, or it
-        // would change the band's key every run). A complete band compared
-        // its whole range already, but only down to the floor it ran
-        // against: a caller now reaching deeper — a raised backfill window
-        // — re-opens the span below the band.
+        val kinds = filter.kinds
+        if (kinds.isNullOrEmpty()) {
+            // Nothing to split by. One span, exactly as before.
+            val span = band.spans[ALL_KINDS]
+            return windows(filter, span, span?.complete == true, floor)
+                .map { (since, until) -> filter.copy(since = since, until = until) }
+        }
+
+        // Per kind, then REGROUPED by the windows each one wants. Kinds whose
+        // coverage agrees — the overwhelmingly common case, and the only case
+        // at all until they diverge — collapse back into one ask, so a filter
+        // that used to produce two legs still produces two rather than two per
+        // kind. Only a kind whose evidence genuinely differs earns its own.
+        val byWindows = LinkedHashMap<List<Pair<Long?, Long?>>, MutableList<Int>>()
+        for (kind in kinds) {
+            // ALL_KINDS as the fallback: a band written before coverage was
+            // tracked per kind, restored from such a file. It carries the old,
+            // wider claim for every kind — the behaviour this replaces — and
+            // self-corrects on the first paged walk that reports per kind.
+            val span = band.spans[kind] ?: band.spans[ALL_KINDS]
+            // Completeness comes from the SPAN, so a leg that drained one kind
+            // drops only that kind's older leg. Before this it came from the
+            // band, and a reconcile was the only thing that could set it — which
+            // is why a drained paged walk over `kinds: [10002]` used to leave an
+            // older leg that no future walk could ever close.
+            byWindows.getOrPut(windows(filter, span, span?.complete == true, floor)) { mutableListOf() }.add(kind)
+        }
+        return byWindows.flatMap { (windows, group) ->
+            // toList(): `group` is the mutable accumulator above, and handing
+            // the same instance to every Filter in the group would publish it
+            // through a public return value. Filters are treated as immutable
+            // everywhere else; this keeps that true by construction.
+            val kindsForGroup = group.toList()
+            windows.map { (since, until) -> filter.copy(kinds = kindsForGroup, since = since, until = until) }
+        }
+    }
+
+    /**
+     * The `(since, until)` pairs still outstanding for ONE span — the leg
+     * arithmetic, with the filter's own bounds applied and nothing else.
+     * A null [span] means no evidence at all, so the whole filter is wanted.
+     */
+    private fun windows(
+        filter: Filter,
+        span: Span?,
+        complete: Boolean,
+        floor: Long?,
+    ): List<Pair<Long?, Long?>> {
+        if (span == null) return listOf(filter.since to filter.until)
+        val out = mutableListOf<Pair<Long?, Long?>>()
+
+        // Older: up to and including the span's floor, but not past the
+        // filter's (or, when the filter has no `since`, the caller's [floor] —
+        // a sync window the filter itself must not carry, or it would change
+        // the band's key every run). A complete band compared its whole range
+        // already, but only down to the floor it ran against: a caller now
+        // reaching deeper — a raised backfill window — re-opens the span below.
         val since = filter.since ?: floor
         val wantsOlder =
-            if (band.complete) {
-                since != null && since < band.minCreatedAt
+            if (complete) {
+                since != null && since < span.min
             } else {
-                since == null || band.minCreatedAt >= since
+                since == null || span.min >= since
             }
-        if (wantsOlder) {
-            legs.add(filter.copy(until = minOf(band.minCreatedAt, filter.until ?: Long.MAX_VALUE)))
-        }
+        if (wantsOlder) out.add(filter.since to minOf(span.min, filter.until ?: Long.MAX_VALUE))
 
-        // Newer: from the band's ceiling on, but not past the filter's.
-        if (filter.until == null || band.maxCreatedAt <= filter.until) {
-            legs.add(filter.copy(since = maxOf(band.maxCreatedAt, filter.since ?: Long.MIN_VALUE)))
+        // Newer: from the span's ceiling on, but not past the filter's.
+        if (filter.until == null || span.max <= filter.until) {
+            out.add(maxOf(span.max, filter.since ?: Long.MIN_VALUE) to filter.until)
         }
-        return legs
+        return out
     }
 
     /**
@@ -154,6 +293,19 @@ class SyncCoverage(
      * the sync STARTED — recorded against that instant rather than the newest
      * event seen, because "the relay had nothing newer" and "we never asked"
      * must not look alike.
+     *
+     * [drained] is the paged equivalent, and the only way a paged walk can ever
+     * claim its older leg is finished. Pass it from `fetchAllPages`'s
+     * `onDrained` — the relay EOSEd on an empty page, so there is nothing below
+     * what was seen. Without it a paged band only ever says "walked this far",
+     * and the leg below it is re-asked every cycle forever: against a relay
+     * whose corpus for a kind simply starts later than the others', that leg
+     * returns nothing, records nothing, and so can never close itself.
+     *
+     * It marks only the kinds that produced evidence. A kind the walk never saw
+     * at all has no interval to anchor a claim to, and inventing one would be
+     * the over-claim [Span] exists to prevent — so it keeps no band and is
+     * asked again, which is the safe direction.
      */
     fun record(
         url: NormalizedRelayUrl,
@@ -162,20 +314,87 @@ class SyncCoverage(
         observedMax: Long?,
         paged: Boolean,
         reconciledThrough: Long? = null,
+        observedByKind: Map<Int, Span>? = null,
+        drained: Boolean = false,
     ) {
         if (reconciledThrough != null) {
-            put(url, filter, observedMin ?: reconciledThrough, reconciledThrough, complete = true)
+            // A reconcile compares the filter's whole id set in one pass, so
+            // the span it earns is the same for every kind the filter names —
+            // no per-kind evidence needed or possible.
+            val span = Span(observedMin ?: reconciledThrough, reconciledThrough, complete = true)
+            put(url, filter, kindsOf(filter).associateWith { span })
             return
         }
         if (!paged) return
+
+        // Read ONCE. `now` is a clock call, and this was invoking it twice per
+        // entry — so a 40-kind map took 80 readings, and worse, a span's floor
+        // and ceiling were judged against two different instants.
+        val at = now()
+        if (observedByKind != null) {
+            // Guarded per span for the same reason the aggregate is below.
+            val plausible =
+                observedByKind.filterValues {
+                    isPlausible(it.min, at) && isPlausible(it.max, at)
+                }
+            if (plausible.isEmpty()) return
+            val named = filter.kinds
+            val spans: Map<Int, Span> =
+                if (named.isNullOrEmpty()) {
+                    // A filter naming no kinds cannot be split, so [legs] reads
+                    // ALL_KINDS and nothing else. Storing what the walk saw per
+                    // kind would record a band no lookup can ever reach — it
+                    // would exist and do nothing. Collapse to the union, which
+                    // is the only claim such a filter can make.
+                    mapOf(ALL_KINDS to plausible.values.reduce { a, b -> a.widen(b) })
+                } else {
+                    // Only kinds the filter NAMES. A relay may answer with more
+                    // than it was asked for, and a caller whose containment
+                    // check runs against a different filter than the band is
+                    // keyed by passes those straight through. Keeping them
+                    // would be inert for [legs] — which looks up the filter's
+                    // own kinds — but NOT for [Band.minCreatedAt], which the
+                    // state file writes as its rollback-compat `min`/`max`. An
+                    // off-filter kind seen further back would widen those past
+                    // anything the filter's kinds support, so a binary from
+                    // before per-kind spans would read that file and
+                    // over-claim: this fix undone through the compat path.
+                    plausible.filterKeys { it in named }
+                }
+            if (spans.isEmpty()) return
+            put(url, filter, if (drained) spans.mapValues { it.value.copy(complete = true) } else spans)
+            return
+        }
+
+        // No per-kind evidence. For a filter naming one kind (or none) the
+        // aggregate IS the per-kind answer and nothing is lost. For a filter
+        // naming several it is not: attributing one interval to all of them is
+        // exactly the over-claim [Band.spans] exists to stop, and a band that
+        // over-claims skips events silently — strictly worse than re-reading
+        // them. So record nothing and say why, once. The caller resumes as if
+        // it had no band, which is where it was before bands existed.
+        val kinds = kindsOf(filter)
+        if (kinds.size > 1) {
+            if (!warnedAboutUnattributed) {
+                warnedAboutUnattributed = true
+                Log.w("SyncCoverage") {
+                    "paged record for a ${kinds.size}-kind filter with no per-kind spans — no band recorded, so this " +
+                        "walk will not resume. Pass observedByKind (see SyncCoverage.observe) to earn one."
+                }
+            }
+            return
+        }
         // Guarded even though callers should filter with [isPlausible] per
         // event: a 1970 floor or a far-future ceiling would make the band
         // claim the whole timeline, and the leg outside it would ask for a
         // range nothing can be in, forever.
         if (observedMin == null || observedMax == null) return
-        if (!isPlausible(observedMin, now()) || !isPlausible(observedMax, now())) return
-        put(url, filter, observedMin, observedMax, complete = false)
+        if (!isPlausible(observedMin, at) || !isPlausible(observedMax, at)) return
+        put(url, filter, kinds.associateWith { Span(observedMin, observedMax, complete = drained) })
     }
+
+    /** The kinds a band is keyed by: the filter's, or [ALL_KINDS] when it names none. */
+    private fun kindsOf(filter: Filter): List<Int> = filter.kinds?.takeIf { it.isNotEmpty() } ?: listOf(ALL_KINDS)
 
     /**
      * Widen (or reset) the band. A pass that ran because the previous band
@@ -185,22 +404,11 @@ class SyncCoverage(
     private fun put(
         url: NormalizedRelayUrl,
         filter: Filter,
-        min: Long,
-        max: Long,
-        complete: Boolean,
+        spans: Map<Int, Span>,
     ) {
-        val fresh = Band(min, max, complete, now())
+        val fresh = Band(spans, now())
         bands.merge(key(url, filter), fresh) { old, new ->
-            if (isStale(old)) {
-                new
-            } else {
-                Band(
-                    minOf(old.minCreatedAt, new.minCreatedAt),
-                    maxOf(old.maxCreatedAt, new.maxCreatedAt),
-                    old.complete || new.complete,
-                    old.fullAt,
-                )
-            }
+            if (isStale(old)) new else old.widen(new)
         }
         onChange()
     }
@@ -248,10 +456,10 @@ class SyncCoverage(
     fun size(): Int = bands.size()
 
     /** A point-in-time copy of every band, for a persistence layer to write out. */
-    fun export(): Map<String, Band> = bands.snapshot()
+    fun export(): Map<BandKey, Band> = bands.snapshot()
 
     /** Load previously [export]ed bands, e.g. at startup. */
-    fun restore(entries: Map<String, Band>) {
+    fun restore(entries: Map<BandKey, Band>) {
         for ((key, band) in entries) bands[key] = band
     }
 
@@ -264,7 +472,7 @@ class SyncCoverage(
     private fun key(
         url: NormalizedRelayUrl,
         filter: Filter,
-    ): String {
+    ): BandKey {
         val fingerprint =
             fingerprints[filter]
                 ?: filter.toJson().also {
@@ -273,10 +481,48 @@ class SyncCoverage(
                     // pays the toJson each time instead of growing the heap.
                     if (fingerprints.size() < MAX_FINGERPRINTS) fingerprints[filter] = it
                 }
-        return "${url.url} $fingerprint"
+        return BandKey(url.url, fingerprint)
     }
 
+    // One line per process, not per walk: the point is to tell a caller it has
+    // not been migrated, and repeating it every leg would bury the log it is
+    // trying to be read in.
+    private var warnedAboutUnattributed = false
+
     companion object {
+        /**
+         * The span key for a filter that names no kinds, and the fallback for
+         * a band restored from a file written before spans were per kind.
+         * Negative because NIP-01 kinds are not.
+         */
+        const val ALL_KINDS = -1
+
+        /**
+         * Widen [into] with one event's stamp, so a caller can accumulate the
+         * per-kind evidence [record] wants as events arrive:
+         *
+         *     val seen = mutableMapOf<Int, SyncCoverage.Span>()
+         *     ... onEvent { SyncCoverage.observe(seen, it.kind, it.createdAt) }
+         *     coverage.record(url, filter, …, paged = true, observedByKind = seen)
+         *
+         * Implausible stamps are dropped here rather than by each caller —
+         * per EVENT, never over a leg's aggregate, because one misdated event
+         * among hundreds of thousands would otherwise discard the whole band.
+         *
+         * Not synchronized: it replaces a pair of plain `var`s at each call
+         * site and is meant for the same single-consumer callback.
+         */
+        fun observe(
+            into: MutableMap<Int, Span>,
+            kind: Int,
+            createdAt: Long,
+            now: Long = TimeUtils.now(),
+        ) {
+            if (!isPlausible(createdAt, now)) return
+            val one = Span(createdAt, createdAt)
+            into[kind] = into[kind]?.widen(one) ?: one
+        }
+
         // More filter instances than any deliberate configuration holds; only
         // a caller rebuilding filters per cycle ever reaches it.
         private const val MAX_FINGERPRINTS = 1_000

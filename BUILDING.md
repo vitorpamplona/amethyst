@@ -35,7 +35,12 @@ All platforms:
 Platform-specific:
 
 - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
-- **Windows**: WiX Toolset 3.x on PATH (for MSI). `winget install WiXToolset.WiXToolset`
+- **Windows**: WiX Toolset 3.x on PATH (for MSI). `winget install WiXToolset.WiXToolset`.
+  Windows arm64 builds run on the free public-repo `windows-11-arm` GitHub runner
+  and produce the portable `.zip` only — that image ships no WiX, so CI cannot
+  package an arm64 MSI. Locally you *can* build one on an arm64 Windows box with
+  WiX 3.x installed (jpackage produces host-native artifacts; the WiX 3 binaries
+  themselves are x86 and run under emulation).
 - **Linux (all)**: nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
   `appimagetool` + `desktop-file-utils` for AppImage; `flatpak` +
   `flatpak-builder` for the Flatpak bundle (see
@@ -57,9 +62,12 @@ Install appimagetool locally (CI fetches its own — SHA-verified):
 # Debian/Ubuntu — appimagetool calls desktop-file-validate on the .desktop entry
 sudo apt-get install -y desktop-file-utils
 
-curl -fsSL -o desktopApp/packaging/appimage/appimagetool-x86_64.AppImage \
-  https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
-chmod +x desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
+# createReleaseAppImage picks appimagetool-<arch>.AppImage matching the JVM's
+# os.arch — fetch the one for your host (x86_64 on Intel/AMD, aarch64 on ARM).
+ARCH="$(uname -m)"
+curl -fsSL -o "desktopApp/packaging/appimage/appimagetool-${ARCH}.AppImage" \
+  "https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-${ARCH}.AppImage"
+chmod +x "desktopApp/packaging/appimage/appimagetool-${ARCH}.AppImage"
 ```
 
 ---
@@ -110,8 +118,8 @@ are **not** required to build Amethyst from the committed sources.
 | Windows MSI | `./gradlew :desktopApp:packageReleaseMsi` | `desktopApp/build/compose/binaries/main-release/msi/Amethyst-*.msi` |
 | Linux `.deb` | `./gradlew :desktopApp:packageReleaseDeb` | `desktopApp/build/compose/binaries/main-release/deb/amethyst_*.deb` |
 | Linux `.rpm` | `./gradlew :desktopApp:packageReleaseRpm` | `desktopApp/build/compose/binaries/main-release/rpm/amethyst-*.rpm` |
-| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/Amethyst-*-x86_64.AppImage` |
-| Linux Flatpak | `flatpak-builder` over `createReleaseDistributable` output — see [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md) | `desktopApp/build/flatpak/Amethyst-*-x86_64.flatpak` (CI) |
+| Linux AppImage | `./gradlew :desktopApp:createReleaseAppImage` | `desktopApp/build/appimage/Amethyst-*-<arch>.AppImage` (x86_64 or aarch64, from host) |
+| Linux Flatpak | `flatpak-builder` over `createReleaseDistributable` output — see [`desktopApp/packaging/flatpak/README.md`](desktopApp/packaging/flatpak/README.md) | `desktopApp/build/flatpak/Amethyst-*-<arch>.flatpak` (CI; x86_64 or aarch64) |
 | Windows `.zip` portable | See below (inline `7z`) | — |
 | Linux `.tar.gz` portable | See below (inline `tar`) | — |
 
@@ -325,14 +333,27 @@ Quartz library in one pipeline.
 
 3. **Wait** for the `Create Release Assets` workflow to finish (~25–30 min).
 
-4. **Verify** — the GH Release should hold **31 assets**:
-   - **8 desktop** — `dmg` (macOS arm64), `msi` + `zip` (Windows), `deb`, `rpm`,
-     `AppImage`, `flatpak`, `tar.gz` (Linux). There is **no Intel/x64 macOS
-     DMG** — `jpackage` cannot cross-compile and no Intel runner leg is
-     configured, so macOS ships arm64-only.
+4. **Verify** — the GH Release should hold **47 assets**:
+   - **14 desktop**, one per matrix leg × format:
+     - macOS arm64: `dmg` (1)
+     - Windows x64: `msi` + portable `zip` (2)
+     - Windows arm64: portable `zip` only (1) — **no arm64 MSI**, see below
+     - Linux x64 / arm64: `deb` + `rpm` (4)
+     - Linux-portable x64 / arm64: `AppImage` + `tar.gz` + `flatpak` (6)
+
+     There is **no Intel/x64 macOS DMG** — `jpackage` cannot cross-compile
+     and no Intel runner leg is configured, so macOS ships arm64-only.
+     There is **no Windows arm64 MSI**: `jpackage --type msi` shells out to
+     WiX 3's `heat`/`candle`/`light`, and the `windows-11-arm` runner image
+     ships no WiX (`windows-latest` has WiX 3.14 preinstalled, which is why
+     the x64 leg gets an MSI). Revisit if that image gains WiX, or if
+     jpackage learns the WiX 4+ `wix build` CLI.
    - **13 Android** — 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the
      F-Droid `.apks` set built for Accrescent.
-   - **5 amy** + **5 geode** bundles.
+   - **10 amy** — `tar.gz` (macOS arm64, Linux x64, Linux arm64),
+     `deb` + `rpm` per Linux arch, portable `zip` per Windows arch, and the
+     one arch-independent no-JRE `amy-<ver>-jvm.tar.gz` for Homebrew-core.
+   - **10 geode** — same shape as amy.
    - Asset sizes look sane (see §Enforce asset size budget — CI auto-fails at 1 GB/asset)
    - Android flow unchanged
 

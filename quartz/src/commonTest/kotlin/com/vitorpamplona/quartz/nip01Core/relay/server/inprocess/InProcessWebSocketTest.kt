@@ -74,7 +74,7 @@ class InProcessWebSocketTest {
                             callbacks.trySend("open")
                         }
 
-                        override fun onMessage(text: String) {
+                        override suspend fun onMessage(text: String) {
                             callbacks.trySend("message")
                         }
 
@@ -132,7 +132,7 @@ class InProcessWebSocketTest {
                         ) {
                         }
 
-                        override fun onMessage(text: String) {
+                        override suspend fun onMessage(text: String) {
                             // Answer the AUTH challenge immediately, the way
                             // RelayAuthenticator does. The socket must be fully
                             // wired by the time any server frame is delivered,

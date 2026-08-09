@@ -42,7 +42,7 @@ class RelaySpeedLogger(
 
     private val clientListener =
         object : RelayConnectionListener {
-            override fun onIncomingMessage(
+            override suspend fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
                 msg: Message,

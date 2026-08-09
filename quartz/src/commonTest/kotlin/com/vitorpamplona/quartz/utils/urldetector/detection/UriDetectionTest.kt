@@ -882,6 +882,61 @@ class UriDetectionTest {
         runTest("visit example.com,", "example.com")
     }
 
+    @Test
+    fun testQuotedUrlsDropTheQuotes() {
+        // a bare domain wrapped in quotes must not glue the opening quote onto the host.
+        runTest(
+            "It seems like this bridge-relay \"relay.momostr.pink\" doesn't appear in the feed",
+            "relay.momostr.pink",
+        )
+
+        UrlDetector.QUOTES.forEach { quote ->
+            runTest("$quote relay.momostr.pink $quote", "relay.momostr.pink")
+            runTest("${quote}relay.momostr.pink$quote", "relay.momostr.pink")
+            runTest("${quote}wss://relay.momostr.pink$quote", "wss://relay.momostr.pink")
+
+            // the closing quote is swallowed by the path/query/fragment readers, which only stop
+            // on a space, so it has to be stripped at the end of the url instead.
+            runTest("say ${quote}https://example.com/foo$quote out", "https://example.com/foo")
+            runTest("say ${quote}https://example.com/foo?a=b$quote out", "https://example.com/foo?a=b")
+            runTest("say ${quote}https://example.com/foo#b$quote out", "https://example.com/foo#b")
+
+            // a quote glued to the previous word is a boundary too: `href="www.google.com"`.
+            runTest("href=${quote}www.google.com$quote", "www.google.com")
+        }
+    }
+
+    @Test
+    fun testWholePunctuationTailIsStripped() {
+        // The path/query/fragment readers only stop on a space, so a quoted link that closes a
+        // sentence reaches readEnd as `https://host/path".` — every trailing delimiter has to go,
+        // not just the last one.
+        runTest("He linked \"https://example.com/some/path\".", "https://example.com/some/path")
+        runTest("(see \"https://example.com/some/path\")", "https://example.com/some/path")
+        runTest("read \"https://example.com/a?b=c\", then go", "https://example.com/a?b=c")
+        runTest("\"https://example.com/x\"!", "https://example.com/x")
+        runTest("\"https://example.com/x#frag\"...", "https://example.com/x#frag")
+        runTest("wait... example.com/path...", "example.com/path")
+
+        // a balanced closer still stops the strip, even behind a longer tail.
+        runTest(
+            "(see https://en.wikipedia.org/wiki/Bitcoin_(disambiguation))",
+            "https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)",
+        )
+        runTest(
+            "[link](https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)).",
+            "https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)",
+        )
+    }
+
+    @Test
+    fun testApostropheStillEndsTheHostForGroupInviteLinks() {
+        // NIP-29 invite links are `<relay>'<groupId>`; UrlParser recovers the suffix from the
+        // content, so the detector must keep reporting the relay url alone.
+        runTest("wss://relay.example.com'groupid", "wss://relay.example.com")
+        runTest("wss://relay.example.com'groupid?code=xyz", "wss://relay.example.com")
+    }
+
     private fun runTest(
         text: String,
         vararg expected: String?,

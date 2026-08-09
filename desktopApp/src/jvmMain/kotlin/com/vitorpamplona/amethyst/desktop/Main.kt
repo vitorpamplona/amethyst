@@ -1786,7 +1786,7 @@ fun MainContent(
             filters = listOf(filter),
             listener =
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: com.vitorpamplona.quartz.nip01Core.core.Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -1845,7 +1845,7 @@ fun MainContent(
                 relays = outbox,
                 listener =
                     object : SubscriptionListener {
-                        override fun onEvent(
+                        override suspend fun onEvent(
                             event: com.vitorpamplona.quartz.nip01Core.core.Event,
                             isLive: Boolean,
                             relay: NormalizedRelayUrl,

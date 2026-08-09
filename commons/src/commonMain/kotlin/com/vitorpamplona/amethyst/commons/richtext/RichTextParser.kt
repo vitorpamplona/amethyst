@@ -61,41 +61,12 @@ class RichTextParser {
 
         val contentType = frags[MimeTypeTag.TAG_NAME] ?: tags[MimeTypeTag.TAG_NAME]?.firstOrNull()
 
-        var isImage = false
-        var isVideo = false
-        var isPdf = false
+        // Returning null here drops the URL to a plain link, discarding the imeta's `dim`/blurhash
+        // and forcing a URL-preview round-trip to rediscover a type the imeta already declared —
+        // which is why classifyMedia falls back to the extension before giving up.
+        val kind = classifyMedia(fullUrl, contentType)
 
-        if (contentType != null) {
-            isImage = contentType.startsWith("image/")
-            // HLS playlists are advertised with a non-`video/*` MIME (`application/vnd.apple.mpegurl`
-            // and three legacy aliases). Without these, an imeta-described `.m3u8` falls into the
-            // null bucket below and the renderer drops back to a plain hyperlink — even though
-            // the matching extension would have routed it to MediaUrlVideo. Mirror the canonical
-            // list used by MediaItemCache.toExoPlayerMimeType / GalleryThumb.isHlsMimeType.
-            isVideo = contentType.startsWith("video/") || contentType.startsWith("audio/") || isHlsMimeType(contentType)
-            isPdf = contentType.startsWith("application/pdf")
-        } else if (fullUrl.startsWith("data:")) {
-            isImage = fullUrl.startsWith("data:image/")
-            isVideo = fullUrl.startsWith("data:video/") || fullUrl.startsWith("data:audio/")
-            isPdf = fullUrl.startsWith("data:application/pdf")
-        }
-
-        // Fall back to file-extension detection when the type is still unknown. This covers both
-        // the no-MIME case and a *malformed* imeta MIME — e.g. Primal iOS emits `m jpeg` instead
-        // of `m image/jpeg`, which matches none of the `startsWith` prefixes above. Without this
-        // fallback such a URL returns null and drops to a plain link: that discards the imeta
-        // `dim`/blurhash (so the loading placeholder can't reserve the image's height and the
-        // feed jumps once the bitmap arrives) and forces a needless URL-preview network
-        // round-trip just to rediscover the type the imeta already declared. `data:` URIs carry
-        // their type in the prefix, so a miss there is genuine — don't extension-probe them.
-        if (!isImage && !isVideo && !isPdf && !fullUrl.startsWith("data:")) {
-            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(fullUrl)
-            isImage = imageExtensions.any { removedParamsFromUrl.endsWith(it) }
-            isVideo = videoExtensions.any { removedParamsFromUrl.endsWith(it) }
-            isPdf = pdfExtensions.any { removedParamsFromUrl.endsWith(it) }
-        }
-
-        return if (isImage) {
+        return if (kind == MediaContentKind.IMAGE) {
             MediaUrlImage(
                 url = fullUrl,
                 description = description ?: frags[AltTag.TAG_NAME] ?: tags[AltTag.TAG_NAME]?.firstOrNull(),
@@ -108,7 +79,7 @@ class RichTextParser {
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
             )
-        } else if (isVideo) {
+        } else if (kind == MediaContentKind.VIDEO) {
             MediaUrlVideo(
                 url = fullUrl,
                 description = description ?: frags[AltTag.TAG_NAME] ?: tags[AltTag.TAG_NAME]?.firstOrNull(),
@@ -125,7 +96,7 @@ class RichTextParser {
                 thumbhash = frags[ThumbhashTag.TAG_NAME] ?: tags[ThumbhashTag.TAG_NAME]?.firstOrNull(),
                 authorPubKey = authorPubKey,
             )
-        } else if (isPdf) {
+        } else if (kind == MediaContentKind.PDF) {
             MediaUrlPdf(
                 url = fullUrl,
                 description = description ?: frags[AltTag.TAG_NAME] ?: tags[AltTag.TAG_NAME]?.firstOrNull(),
@@ -582,6 +553,47 @@ class RichTextParser {
             return pdfExtensions.any { removedParamsFromUrl.endsWith(it) }
         }
 
+        /**
+         * Resolves which renderer can display a declared blob — the single decision every media
+         * renderer must make, from a NIP-94 `m` tag, a NIP-92 imeta, or a bare URL.
+         *
+         * A declared MIME type wins, after [normalizeMimeType] repairs the bare-subtype form some
+         * clients emit; the URL extension is the fallback both for the no-MIME case and for a
+         * declaration too mangled to repair. `data:` URIs carry their type in the prefix, so a miss
+         * there is genuine and the base64 payload is never extension-probed.
+         *
+         * Returns **null** when nothing can render the file. Callers must not substitute a media
+         * kind for that null: handing an arbitrary blob — a webxdc app, a zip, an APK — to the
+         * video player yields a permanently-buffering ExoPlayer where a plain link belongs. The one
+         * defensible default is on kinds whose *event* already asserts the type (a NIP-71 video
+         * event is a video however odd its imeta), and those call sites say so explicitly.
+         */
+        fun classifyMedia(
+            url: String,
+            rawMimeType: String?,
+        ): MediaContentKind? {
+            val mimeType = normalizeMimeType(rawMimeType)
+            if (mimeType != null) {
+                if (mimeType.startsWith("image/")) return MediaContentKind.IMAGE
+                // HLS playlists are advertised with a non-`video/*` MIME; see [isHlsMimeType].
+                if (mimeType.startsWith("video/") || mimeType.startsWith("audio/") || isHlsMimeType(mimeType)) return MediaContentKind.VIDEO
+                if (mimeType.startsWith("application/pdf")) return MediaContentKind.PDF
+            } else if (url.startsWith("data:")) {
+                if (url.startsWith("data:image/")) return MediaContentKind.IMAGE
+                if (url.startsWith("data:video/") || url.startsWith("data:audio/")) return MediaContentKind.VIDEO
+                if (url.startsWith("data:application/pdf")) return MediaContentKind.PDF
+            }
+
+            if (url.startsWith("data:")) return null
+
+            val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
+            if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) return MediaContentKind.IMAGE
+            if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) return MediaContentKind.VIDEO
+            if (pdfExtensions.any { removedParamsFromUrl.endsWith(it) }) return MediaContentKind.PDF
+
+            return null
+        }
+
         fun isValidURL(url: String?): Boolean = isValidUrl(url)
 
         fun parseImageOrVideo(fullUrl: String): BaseMediaContent {
@@ -655,6 +667,9 @@ val mimeTypeMap: Map<String, String> =
         // Video
         "mp4" to "video/mp4",
         "webm" to "video/webm",
+        // Dead entry: "ogg" is re-keyed under Audio below and mapOf keeps the last, so every
+        // lookup of it yields audio/ogg. Kept only to show the extension is genuinely ambiguous —
+        // see [ambiguousMimeSubtypes]. Don't read this line as reachable.
         "ogg" to "video/ogg",
         "mov" to "video/quicktime",
         "avi" to "video/x-msvideo",
@@ -670,3 +685,53 @@ val mimeTypeMap: Map<String, String> =
         // Documents
         "pdf" to "application/pdf",
     )
+
+/**
+ * Subtypes that name more than one top-level type: `mpeg`, `mp4`, `ogg`, `webm` and `3gpp` all exist
+ * as both `audio/` and `video/`, so a bare token spelling one of them identifies no family on its
+ * own. See [normalizeMimeType] for what that costs them.
+ */
+private val ambiguousMimeSubtypes = setOf("mpeg", "mp4", "ogg", "webm", "3gpp")
+
+/**
+ * The subtype half of every MIME in [mimeTypeMap], so a bare token can be looked up as what it
+ * actually is. [mimeTypeMap] is keyed by *extension*, which only doubles as a subtype index where
+ * the two spellings coincide — `quicktime`, `x-matroska` and `svg+xml` are subtypes no extension
+ * spells. Consulted after [mimeTypeMap] so the extension spelling keeps priority where they
+ * disagree (`mp4` stays `video/mp4` rather than the later `audio/mp4` entry).
+ */
+private val mimeSubtypeMap: Map<String, String> = mimeTypeMap.values.associateBy { it.substringAfter('/') }
+
+/**
+ * NIP-92's `m` property is meant to carry a full `type/subtype`, but several clients emit the
+ * bare subtype instead — Primal iOS writes `m jpeg` rather than `m image/jpeg`. That value is
+ * useless as a MIME type: it matches none of the `startsWith("image/")`-style checks, and once
+ * it is stored on the media model it travels all the way into Android's `ACTION_SEND` as
+ * `Intent.type = "jpeg"`. No `<data android:mimeType>` filter matches a type without a slash,
+ * so the share sheet opens with zero targets and the image cannot be shared at all.
+ *
+ * Map a bare subtype back onto its canonical MIME. This is called from the two chokepoints every
+ * `m` value passes through — [RichTextParser.classifyMedia] for the render decision and
+ * [MediaUrlContent] for the value the share intent and the gallery entry's republished `m` tag
+ * read — so consumers see a well-formed type without each having to remember to repair it.
+ *
+ * Anything already containing a `/` is passed through untouched, and an unrecognised bare token is
+ * dropped to null rather than propagated — that leaves the caller's extension-based detection to
+ * decide, which is strictly better than carrying garbage forward.
+ *
+ * The same refusal covers a token in [ambiguousMimeSubtypes] that would land in `audio/`. `audio/`
+ * is the one destructive family: it is what [RichTextParser.isAudioContent] reads to drop the
+ * picture, so guessing it for what may be a video loses content, while guessing `video/` for what
+ * may be audio only costs some chrome. That asymmetry is why the guard is one-sided rather than a
+ * blanket refusal — `mp4` and `webm` resolve to `video/` and keep their rescue, so an extensionless
+ * Blossom URL declaring `m mp4` still renders, whereas `ogg` (whose only live [mimeTypeMap] entry
+ * is `audio/ogg`, its `video/ogg` one being a dead duplicate key) and `mpeg` decline.
+ */
+fun normalizeMimeType(rawMimeType: String?): String? {
+    if (rawMimeType == null) return null
+    if (rawMimeType.contains('/')) return rawMimeType
+    val token = rawMimeType.lowercase()
+    val resolved = mimeTypeMap[token] ?: mimeSubtypeMap[token] ?: return null
+    if (token in ambiguousMimeSubtypes && resolved.startsWith("audio/")) return null
+    return resolved
+}

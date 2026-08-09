@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.concord.cord04Roles
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Resolves the owner-rooted authority state of a Concord community from its
@@ -100,6 +101,20 @@ data class AuthorityResolver private constructor(
     ): Boolean = !isBanned(pubKey) && effectivePermissions(pubKey).has(bit)
 
     /**
+     * True if the member is **staff** (CORD-04 §3): the owner, or any non-banned
+     * holder of a Control-writing bit ([ConcordPermissions.STAFF_BITS]) — the set
+     * that holds the `control_root` (CORD-02 §2).
+     */
+    fun isStaff(pubKey: String): Boolean = isOwner(pubKey) || (!isBanned(pubKey) && effectivePermissions(pubKey).hasAny(ConcordPermissions.STAFF_BITS))
+
+    /**
+     * The staff roster (lowercase hex): the owner plus every role-holder whose
+     * effective permissions carry a staff bit. This is the recipient set that gets
+     * the `control_root` in a base rotation's 136-byte blobs (CORD-06 §1).
+     */
+    fun staffMembers(): Set<String> = memberRoles.keys.filterTo(hashSetOf(ownerLower)) { isStaff(it) }
+
+    /**
      * Whether [actor] may take the action guarded by permission [bit] against
      * [target]. Requires: actor not banned, actor holds [bit], the owner is never
      * a valid target (unremovable), and actor strictly outranks target — "equal
@@ -118,12 +133,101 @@ data class AuthorityResolver private constructor(
     }
 
     companion object {
+        private const val TAG = "ConcordAuthorityResolver"
+
         /** The owner's rank — supreme and unremovable. No Role may claim it. */
         const val OWNER_RANK = 0L
 
+        /**
+         * How many times [resolve] will re-fold chasing a stable banlist. Real communities settle on
+         * the first or second — the mask only moves when a banned member authored a *ban*, and it
+         * stops moving as soon as those are gone. The cap is a termination backstop for an
+         * adversarial edition set, not a tuning knob.
+         */
+        private const val MAX_BAN_RESOLUTION_PASSES = 4
+
+        /**
+         * The owner-rooted authority state of a community, with the banlist honored **against the
+         * Control Plane itself** (CORD-04 §4: a reader "drops every event from a banned npub —
+         * message, reaction, edit, or authority action").
+         *
+         * This is a bounded two-pass, because the rule is circular as stated: you cannot know who is
+         * banned until you fold the Banlist, and you cannot decide who may write the Banlist without
+         * knowing who is banned. `docs/concord-banlist-rank-conformance.md` §4 row 3 flagged that to
+         * the spec authors and left it open. We resolve it by making authority only ever **shrink**:
+         *
+         *  - **Pass A** resolves exactly as before, ban-blind, and yields a candidate banlist.
+         *  - **Pass B** re-resolves with every author in that banlist treated as unauthorized, for
+         *    roles, grants and the banlist alike.
+         *
+         * Two passes, always, so it terminates by construction — pass B never feeds back. It cannot
+         * oscillate on mutual bans either, because the rank rule makes them unreachable: only a
+         * member who strictly outranks you may ban you, and you cannot outrank them back.
+         *
+         * **This cascades, deliberately.** Every edition a banned member ever authored is dropped,
+         * including grants they made while in good standing — so banning an admin also demotes
+         * everyone that admin promoted. That is the literal reading of §4, and it is the point: the
+         * escalation in `docs/concord-soft-ban-audit.md` B2 was a banned staffer minting a fresh,
+         * un-banned npub and acting through it, and dropping the grant is what kills the puppet. The
+         * cost is that a legitimate promotion by a later-banned admin vanishes too, and the owner has
+         * to re-issue it.
+         *
+         * **Consensus-affecting.** Armada gates the Control Plane on role-derived permissions alone,
+         * so until it ships the same rule the two clients can disagree about any community where a
+         * privileged member was banned.
+         */
         fun resolve(
             editions: Collection<ControlEdition>,
             ownerPubKey: String,
+        ): AuthorityResolver {
+            val passA = resolveOnce(editions, ownerPubKey, bannedAuthors = emptySet())
+            // A further pass costs a whole fold, so skip it unless it could change something. Nobody
+            // banned, or nobody banned who ever wrote to the Control Plane — the overwhelmingly common
+            // shape, since most bans land on plain members who hold no role and author no editions —
+            // and the next pass is provably identical to this one. Armada's fold checks the same.
+            if (passA.banned.isEmpty()) return passA
+            if (editions.none { it.author.lowercase() in passA.banned }) return passA
+
+            // Iterate to a fixpoint where the mask a pass was resolved UNDER equals the banlist that
+            // pass produced. Stopping at two passes leaves those two disagreeing, and the disagreement
+            // is not cosmetic: a moderator whose only ban came from an admin the owner banned
+            // concurrently is released by pass 2 — correctly — but pass 2 dropped her editions too,
+            // because she was on pass 1's list. The fold then reports her as a moderator in good
+            // standing whose promotions have silently vanished, and it does so deterministically, so
+            // she never gets them back.
+            //
+            // The mask cannot simply be assumed to shrink: masking an author can strip a THIRD
+            // member's role, dropping their rank to "roleless", which lets a junior BAN holder who
+            // could not previously reach them ban them after all. So this is bounded rather than
+            // proven monotone, and it keeps the last pass it computed if it somehow does not settle —
+            // still strictly better than the two-pass answer, and it always terminates.
+            var mask = passA.banned
+            var result = passA
+            repeat(MAX_BAN_RESOLUTION_PASSES) {
+                result = resolveOnce(editions, ownerPubKey, bannedAuthors = mask)
+                if (result.banned == mask) return result
+                mask = result.banned
+            }
+            // Exhausted the cap without settling. The returned roster was folded under a mask that is
+            // no longer the banlist beside it, so this is reported rather than swallowed — the same
+            // reasoning as EditionFold.LOG_GAP: an unsettled fold is either an adversarial edition set
+            // or a rule of ours that does not converge, and both are things a reader wants to know.
+            Log.w(TAG) {
+                "Banlist resolution did not settle in $MAX_BAN_RESOLUTION_PASSES passes for owner $ownerPubKey " +
+                    "(${editions.size} editions, ${result.banned.size} banned): keeping the last pass"
+            }
+            return result
+        }
+
+        /**
+         * One resolution pass. [bannedAuthors] are treated as holding no authority at all — their
+         * role, grant and banlist editions are dropped rather than merely being unable to act on
+         * others. Empty on pass A; pass A's banlist on pass B. See [resolve].
+         */
+        private fun resolveOnce(
+            editions: Collection<ControlEdition>,
+            ownerPubKey: String,
+            bannedAuthors: Set<String>,
         ): AuthorityResolver {
             val ownerLower = ownerPubKey.lowercase()
 
@@ -177,6 +281,7 @@ data class AuthorityResolver private constructor(
                 ): Boolean {
                     val author = e.author.lowercase()
                     if (author == ownerLower) return true
+                    if (author in bannedAuthors) return false
                     if (!holdsManageRoles(author)) return false
                     val authorRank = rankOf(author) ?: return false
                     val r = ConcordJson.decodeOrNull<RoleEntity>(e.content) ?: return false
@@ -209,6 +314,7 @@ data class AuthorityResolver private constructor(
                 fun grantGate(e: ControlEdition): Boolean {
                     val granter = e.author.lowercase()
                     if (granter == ownerLower) return true
+                    if (granter in bannedAuthors) return false
                     if (!holdsManageRoles(granter)) return false
                     val granterRank = rankOf(granter) ?: return false
                     val g = ConcordJson.decodeOrNull<GrantEntity>(e.content) ?: return false
@@ -255,7 +361,10 @@ data class AuthorityResolver private constructor(
             // a concurrent ban is never lost, while an on-chain unban still takes effect.
             val allBanlist = editions.filter { it.entityKind == ControlEntityKind.BANLIST }
 
-            fun banGate(e: ControlEdition): Boolean = e.author.lowercase() == ownerLower || effectivePermissionsOf(e.author.lowercase()).has(ConcordPermissions.BAN)
+            fun banGate(e: ControlEdition): Boolean {
+                val author = e.author.lowercase()
+                return author == ownerLower || (author !in bannedAuthors && effectivePermissionsOf(author).has(ConcordPermissions.BAN))
+            }
             val authorizedBanlist = allBanlist.filter(::banGate)
 
             // CORD-04 §3's rank rule binds "every action", and it names banning as its example ("an
@@ -278,6 +387,7 @@ data class AuthorityResolver private constructor(
                 // owner is never a valid target — not even for themselves.
                 if (target == ownerLower) return false
                 if (author == ownerLower) return true
+                if (author in bannedAuthors) return false
                 if (!effectivePermissionsOf(author).has(ConcordPermissions.BAN)) return false
                 val authorRank = rankOf(author) ?: return false
                 val targetRank = rankOf(target) ?: Long.MAX_VALUE // no roles ⇒ lowest authority

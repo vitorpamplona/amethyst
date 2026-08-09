@@ -33,6 +33,80 @@ import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 
 /**
+ * Why ONE page stopped. The three terminal signals used to be indistinguishable —
+ * all of them put a bare `Unit` on the page's channel — and [fetchAllPages] only
+ * ever asked *whether* a page ended, never *how*. [PagedFetchResult] needs the
+ * difference: an empty page is proof the relay has nothing older only when the
+ * relay actually said so.
+ */
+private enum class PageSignal {
+    /** The relay finished serving its stored events for this REQ. */
+    EOSE,
+
+    /** The relay ended the subscription itself — auth required, rate limited, policy. */
+    CLOSED,
+
+    /** Never got to ask. */
+    CANNOT_CONNECT,
+}
+
+/**
+ * What a [fetchAllPages] walk delivered, and why it stopped.
+ *
+ * The count alone cannot answer the question that matters to anything recording
+ * coverage: is there nothing older, or did the relay simply stop giving us more?
+ * Those look identical from `downloaded`, and a caller that guesses wrong either
+ * re-walks a corpus forever or claims history it never read.
+ */
+data class PagedFetchResult(
+    /** Total number of distinct events delivered across all pages. */
+    val downloaded: Int,
+    val end: End,
+) {
+    enum class End {
+        /**
+         * A page came back empty and the relay EOSEd it: there is nothing at or
+         * below the last cursor. The only ending that proves ABSENCE, and so the
+         * only one a coverage claim may be built on.
+         */
+        DRAINED,
+
+        /**
+         * A [Filter.limit] was fulfilled. The caller bounded the download itself,
+         * so the walk stopped on its own instruction, not at the end of the
+         * corpus — nothing below the last event was ever asked for.
+         */
+        LIMIT_REACHED,
+
+        /**
+         * The relay went quiet for `idleTimeoutMs` without ending the page.
+         * Silence is not an answer; everything delivered so far is still good.
+         */
+        IDLE,
+
+        /** The relay ended the subscription — auth required, rate limited, policy. */
+        CLOSED,
+
+        /** Never got to ask. */
+        CANNOT_CONNECT,
+
+        /**
+         * The walk cannot advance its cursor: only `search` hits came back (NIP-50
+         * results are relevance-ranked, so they never page), or a first page
+         * delivered nothing any active filter matched.
+         */
+        UNPAGEABLE,
+    }
+
+    /**
+     * Shorthand for the one ending that licenses skipping work later. Read this
+     * rather than comparing to [End.DRAINED] by hand, so the meaning stays in one
+     * place if the enum grows.
+     */
+    val drained: Boolean get() = end == End.DRAINED
+}
+
+/**
  * Downloads all pages of events matching [filters] from a single [relay] using
  * paginated `until` cursors.
  *
@@ -87,17 +161,25 @@ import kotlin.coroutines.coroutineContext
  *   bounds this walk is a [Filter.limit] (the documented way to cap a download) or
  *   cancelling the caller, which the [ensureActive] at the top of each page honors.
  * @param onEvent     Called once for every distinct event delivered, in page order.
- * @return Total number of distinct events delivered across all pages.
+ * @return What was delivered and WHY the walk stopped — see [PagedFetchResult].
+ *   The reason is part of the answer, not a detail: `downloaded` cannot tell
+ *   "the relay has nothing older" from "the relay stopped answering", and a
+ *   caller recording sync coverage may only treat the range below the oldest
+ *   event it saw as verified-empty in the first case.
  */
 suspend fun INostrClient.fetchAllPages(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
-): Int {
+    onEvent: suspend (Event) -> Unit,
+): PagedFetchResult {
     var until: Long? = null
     var totalEvents = 0
+    // Overwritten by whichever break ends the loop. UNPAGEABLE is the honest
+    // default: the two breaks that leave it alone are both "the cursor cannot
+    // advance", and it is the reading that licenses the least.
+    var end = PagedFetchResult.End.UNPAGEABLE
 
     // Track how many matching events each filter has received so far.
     val matchCountPerFilter = IntArray(filters.size)
@@ -148,14 +230,25 @@ suspend fun INostrClient.fetchAllPages(
                 stillNeedsMore && pageableThisPage
             }
 
-        if (activeFilters.isEmpty()) break
+        if (activeFilters.isEmpty()) {
+            // Every filter either met its limit or is a search that has had its
+            // one page. The first is the caller stopping the walk; the second
+            // cannot page at all. Neither is the corpus ending.
+            end =
+                if (filters.any { it.limit != null }) {
+                    PagedFetchResult.End.LIMIT_REACHED
+                } else {
+                    PagedFetchResult.End.UNPAGEABLE
+                }
+            break
+        }
 
         // Announce the page only now that we know it will actually be fetched: a
         // search-only filter drops out of activeFilters above and breaks with no
         // REQ, so firing this earlier would report a page that never happens.
         if (until != null) onNewPage?.invoke(until)
 
-        val doneChannel = Channel<Unit>(Channel.CONFLATED)
+        val doneChannel = Channel<PageSignal>(Channel.CONFLATED)
 
         // Idle watchdog for this page: every arriving event bumps it, so the page's
         // timeout measures silence since the relay's most recent message (the same
@@ -169,10 +262,16 @@ suspend fun INostrClient.fetchAllPages(
         var pageMinTs = Long.MAX_VALUE
         val idsAtPageMin = HashSet<HexKey>()
 
+        // How this page ended, read after the wait: null for an idle timeout, which
+        // [receiveWithinIdle] reports by returning null. Only an EOSE can support a
+        // drain claim below — silence is not an answer, and a CLOSED is the relay
+        // declining to give one.
+        var pageEnd: PageSignal? = null
+
         try {
             val listener =
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -241,7 +340,7 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(Unit)
+                        doneChannel.trySend(PageSignal.EOSE)
                     }
 
                     override fun onClosed(
@@ -249,7 +348,7 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(Unit)
+                        doneChannel.trySend(PageSignal.CLOSED)
                     }
 
                     override fun onCannotConnect(
@@ -257,7 +356,7 @@ suspend fun INostrClient.fetchAllPages(
                         message: String,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(Unit)
+                        doneChannel.trySend(PageSignal.CANNOT_CONNECT)
                     }
                 }
 
@@ -266,7 +365,7 @@ suspend fun INostrClient.fetchAllPages(
             // Wait for the page's terminal signal (EOSE / CLOSED / cannot-connect),
             // giving up only after [idleTimeoutMs] of silence — the wait resets on every
             // arriving event, so an actively streaming page is never cut mid-delivery.
-            doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
+            pageEnd = doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
 
             unsubscribe(subId)
             doneChannel.close()
@@ -277,8 +376,34 @@ suspend fun INostrClient.fetchAllPages(
 
         totalEvents += delivered
 
-        // The relay sent nothing at-or-below `until` → the whole set is drained.
-        if (received == 0) break
+        // The relay sent nothing at-or-below `until`. Whether that DRAINS the set
+        // depends on why the page ended and on what was asked:
+        //
+        //  - only an EOSE proves absence. An idle timeout (`pageEnd == null`) is
+        //    silence and a CLOSED is the relay declining to answer; reading either
+        //    as "nothing older exists" would durably record coverage the relay
+        //    never served, which is the one error a coverage claim must not make.
+        //  - a filter that reached its [Filter.limit] stopped early on the caller's
+        //    own instruction, so nothing below its last event was ever asked for.
+        //  - a `search` filter runs on the first page only, so every page after it
+        //    dropped out never carried it and cannot speak for it.
+        if (received == 0) {
+            val cappedByLimit =
+                filters.indices.any { i ->
+                    val limit = filters[i].limit
+                    limit != null && matchCountPerFilter[i] >= limit
+                }
+            end =
+                when {
+                    pageEnd == PageSignal.CLOSED -> PagedFetchResult.End.CLOSED
+                    pageEnd == PageSignal.CANNOT_CONNECT -> PagedFetchResult.End.CANNOT_CONNECT
+                    pageEnd == null -> PagedFetchResult.End.IDLE
+                    cappedByLimit -> PagedFetchResult.End.LIMIT_REACHED
+                    filters.any { it.search != null } -> PagedFetchResult.End.UNPAGEABLE
+                    else -> PagedFetchResult.End.DRAINED
+                }
+            break
+        }
 
         if (delivered == 0) {
             // Every event this page was a boundary-second duplicate; nothing older
@@ -288,14 +413,17 @@ suspend fun INostrClient.fetchAllPages(
             // recovers progress, dropping only the second's unreachable tail). Both
             // are resolved by stepping strictly past it. `boundary` is null only on
             // the first page, which has no dedup and so can't be all-duplicate.
-            val step = boundary ?: break
+            val step = boundary ?: break // first page, all-duplicate: impossible, and `end` stays UNPAGEABLE
             until = step - 1
             seenAtBoundary = HashSet()
             continue
         }
 
         // Only search hits advanced nothing pageable → can't page further.
-        if (pageMinTs == Long.MAX_VALUE) break
+        if (pageMinTs == Long.MAX_VALUE) {
+            end = PagedFetchResult.End.UNPAGEABLE
+            break
+        }
 
         // Advance inclusively to the oldest second seen, carrying its dedup set:
         // still the same boundary → accumulate; a genuinely older one → replace.
@@ -312,7 +440,7 @@ suspend fun INostrClient.fetchAllPages(
         until = nextUntil
     }
 
-    return totalEvents
+    return PagedFetchResult(totalEvents, end)
 }
 
 suspend fun INostrClient.fetchAllPages(
@@ -320,8 +448,8 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
-): Int =
+    onEvent: suspend (Event) -> Unit,
+): PagedFetchResult =
     fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,

@@ -97,7 +97,7 @@ class DmInboxRelayResolverOutboxTest {
                 filterList.forEach { filter ->
                     filter.kinds?.forEach { kind ->
                         script[kind to relay]?.forEach { event ->
-                            listener?.onEvent(event, isLive = false, relay = relay, forFilters = null)
+                            kotlinx.coroutines.runBlocking { listener?.onEvent(event, isLive = false, relay = relay, forFilters = null) }
                         }
                     }
                 }

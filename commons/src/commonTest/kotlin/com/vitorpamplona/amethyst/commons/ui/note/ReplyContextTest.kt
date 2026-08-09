@@ -121,7 +121,7 @@ class ReplyContextTest {
 
         override fun checkGetOrCreateNote(hexKey: HexKey): Note? = notesById[hexKey]
 
-        override fun getOrCreateAddressableNote(key: Address): AddressableNote = error("not used by ReplyContext.from")
+        override fun getOrCreateAddressableNote(address: Address): AddressableNote = error("not used by ReplyContext.from")
 
         override fun getEventStream(): ICacheEventStream = error("not used by ReplyContext.from")
 

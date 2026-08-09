@@ -150,12 +150,14 @@ object ConcordChannelCommands {
         ctx: Context,
         sc: StoredCommunity,
     ): ConcordCommunityState {
-        val controlPlane = ConcordActions.controlPlane(sc.root.hexToByteArray(), sc.communityId.hexToByteArray(), sc.rootEpoch)
+        val controlPlane = ConcordCommands.controlPlaneKeysFor(sc)
         val relays = ConcordCommands.relaysFor(ctx, sc)
-        // The relays gate the plane's kind-1059 behind NIP-42 as the derived stream key — register
-        // it so the drain's AUTH challenge is answered as the control plane, not the account.
-        ctx.registerConcordStreamKeys(relays, listOf(controlPlane.secretKey))
-        val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(controlPlane.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
+        // The relays gate the plane's kind-1059 behind NIP-42 as the stream key — register it so
+        // the drain's AUTH challenge is answered as the control plane, not the account. On a split
+        // epoch only staff hold that secret (CORD-02 §2); a plain member registers nothing and
+        // relies on the relay serving the plane unauthenticated.
+        ctx.registerConcordStreamKeys(relays, listOfNotNull(controlPlane.signer?.secretKey))
+        val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(controlPlane.address)) }, pendingOnAuthRequired = true).map { it.second }
         return ConcordActions.foldCommunity(wraps, controlPlane, sc.owner)
     }
 

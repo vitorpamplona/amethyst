@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.concord.cord06Rekey
 
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -34,25 +36,48 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 
 /**
  * The events a Refounding produces (CORD-06 §3): the [controlWraps] (the current
- * Control Plane, compacted to its per-entity head editions and re-sealed under the
- * fresh [newRoot] at [newEpoch]) and the [rekeyWraps] (kind-3303 base-rotation
- * blobs, sealed under the **prior** root, that deliver [newRoot] to every retained
- * member and to nobody else). Publish [controlWraps] first (the new epoch's state)
- * then [rekeyWraps] (the key that unlocks it).
+ * Control Plane, compacted to its per-entity head editions and re-sealed at the
+ * new epoch's split Control address — signed by the fresh `control_root`-derived
+ * signer, readable under the fresh [newRoot]-derived read key) and the
+ * [rekeyWraps] (kind-3303 base-rotation blobs, sealed under the **prior** root,
+ * that deliver [newRoot] + the new `control_pk` to every retained member — and
+ * the [newControlRoot] secret to staff — and to nobody else). Publish
+ * [controlWraps] first (the new epoch's state) then [rekeyWraps] (the key that
+ * unlocks it).
  */
 class RefoundingBuild(
     val newRoot: ByteArray,
+    /** The fresh staff write key, minted beside [newRoot] (CORD-02 §2). */
+    val newControlRoot: ByteArray,
     val newEpoch: Long,
+    /** The new epoch's split Control Plane keys (rotator view: signer held). */
+    val newControlKeys: ControlPlaneKeys,
     val controlWraps: List<Event>,
     val rekeyWraps: List<Event>,
-)
+) {
+    /** The new epoch's Control Plane address, delivered to every member in the base blobs. */
+    val newControlPk: ByteArray get() = newControlKeys.address.hexToByteArray()
+}
 
-/** A retained member's decrypted rekey result: the [newRoot] delivered at [newEpoch] by [rotator]. */
+/**
+ * A retained member's decrypted rekey result: the [newRoot] delivered at
+ * [newEpoch] by [rotator], plus the next epoch's Control Plane keys — the
+ * [newControlPk] every member's blob carries, and, for a staff recipient, the
+ * [newControlRoot] write secret (CORD-06 §1). A null [newControlPk] marks a
+ * legacy, pre-split 72-byte rotation (CORD-06 §3): its acceptor folds that
+ * epoch's Control at the legacy address, honored when reading old rotations and
+ * never minted by a compliant Rotator.
+ */
 class ReceivedRefounding(
     val newRoot: ByteArray,
     val newEpoch: Long,
     val rotator: HexKey,
-)
+    val newControlPk: ByteArray? = null,
+    val newControlRoot: ByteArray? = null,
+) {
+    /** True when this was a legacy pre-split rotation (72-byte base blob). */
+    val legacy: Boolean get() = newControlPk == null
+}
 
 /**
  * Whole-community Refounding (CORD-06 §3): rotate `community_root` to sever a
@@ -60,37 +85,51 @@ class ReceivedRefounding(
  * derive from the root, so rolling it rotates every plane at once; Private Channels
  * (independently keyed) are rekeyed separately and are not handled here.
  *
+ * A compliant Rotator performing any base rotation MUST mint the `control_root`
+ * split (CORD-02 §2) — a fresh secret beside the new root, both riding the same
+ * blobs — so a legacy Community upgrades as a side effect of its next Refounding,
+ * with nobody deciding to.
+ *
  * The builder is pure — the caller sources the retained-recipient set (from the
- * Guestbook membership minus the removed/banned) and owns publish + persistence.
- * All crypto is signer-based so a NIP-46 bunker owner can refound without exposing
- * a raw key.
+ * Guestbook membership minus the removed/banned) and the staff subset (the folded
+ * Roster's `staffMembers()`, CORD-04 §3) and owns publish + persistence. All
+ * crypto is signer-based so a NIP-46 bunker owner can refound without exposing a
+ * raw key.
  */
 object ConcordRefounding {
     /**
-     * Builds a Refounding: compacts the Control Plane under [newRoot] and mints the
-     * base-rotation rekey blobs delivering [newRoot] to [recipientsXOnly].
+     * Builds a Refounding: compacts the Control Plane onto the new epoch's split
+     * Control address and mints the base-rotation rekey blobs delivering [newRoot]
+     * + the new `control_pk` to [recipientsXOnly] (the [staffXOnly] subset also
+     * receiving [newControlRoot]).
      *
      * @param priorRoot         the community_root being rotated out (at [rootEpoch])
      * @param newRoot           the freshly generated 32-byte community_root
+     * @param newControlRoot    the freshly minted 32-byte staff write key (CORD-02 §2)
      * @param priorControlWraps the current Control Plane's kind-1059 wraps (any subset that folds)
-     * @param priorControlKey   the Control Plane group key at [rootEpoch]
+     * @param priorControlKeys  the Control Plane keys at [rootEpoch] (split or legacy)
      * @param recipientsXOnly   the retained members' x-only pubkeys (hex) to re-key
+     * @param staffXOnly        the subset of [recipientsXOnly] that is staff (owner + Control-writing
+     *                          permission holders, CORD-04 §3) and receives the 136-byte blob
      */
     suspend fun build(
         rotatorSigner: NostrSigner,
         communityId: ByteArray,
         priorRoot: ByteArray,
         newRoot: ByteArray,
+        newControlRoot: ByteArray,
         rootEpoch: Long,
         priorControlWraps: List<Event>,
-        priorControlKey: GroupKey,
+        priorControlKeys: ControlPlaneKeys,
         recipientsXOnly: List<HexKey>,
+        staffXOnly: Set<HexKey>,
         createdAt: Long,
+        ownerPubKey: HexKey,
     ): RefoundingBuild {
         val newEpoch = rootEpoch + 1
-        val newControlKey = ConcordKeyDerivation.controlPlaneKey(newRoot, communityId, newEpoch)
+        val newControlKeys = ControlPlaneKeys.forStaff(newRoot, communityId, newEpoch, newControlRoot)
 
-        val controlWraps = compactControlPlane(priorControlWraps, priorControlKey, newControlKey)
+        val controlWraps = compactControlPlane(priorControlWraps, priorControlKeys, newControlKeys, ownerPubKey)
 
         val baseRekeyKey = ConcordKeyDerivation.baseRekeyAddress(priorRoot, communityId, newEpoch)
         val prevCommit = ConcordKeyDerivation.epochKeyCommitment(rootEpoch, priorRoot).toHexKey()
@@ -99,46 +138,78 @@ object ConcordRefounding {
                 rotatorSigner = rotatorSigner,
                 baseRekeyKey = baseRekeyKey,
                 recipientsXOnly = recipientsXOnly,
+                staffXOnly = staffXOnly,
                 newRoot = newRoot,
+                newControlPk = newControlKeys.address.hexToByteArray(),
+                newControlRoot = newControlRoot,
                 newEpoch = newEpoch,
                 prevEpoch = rootEpoch,
                 prevCommit = prevCommit,
                 createdAt = createdAt,
             )
 
-        return RefoundingBuild(newRoot, newEpoch, controlWraps, rekeyWraps)
+        return RefoundingBuild(newRoot, newControlRoot, newEpoch, newControlKeys, controlWraps, rekeyWraps)
     }
 
     /**
-     * Compacts [priorWraps] into a slim snapshot re-published under [newControlKey]
+     * Compacts [priorWraps] into a slim snapshot re-published under [newControlKeys]
      * (CORD-06 §3): keep only the head (highest-version) edition per entity and
      * re-wrap its **original plaintext seal** — which carries the original author's
-     * signature — under the new root. Because Control Plane seals are plaintext
-     * (CORD-02 §5), re-encryption preserves those signatures, so a fresh joiner
-     * verifies the compacted state exactly as it verified the full chain.
+     * signature — at the new epoch's Control address. Because Control Plane seals
+     * are plaintext (CORD-02 §5), re-encryption preserves those signatures, so a
+     * fresh joiner verifies the compacted state exactly as it verified the full
+     * chain. [priorControlKeys] may be legacy (a pre-split epoch's compaction is
+     * exactly how a Community upgrades to the split) or split; [newControlKeys]
+     * must hold the new signer. A Rotator MUST NOT mirror editions to the new
+     * epoch's legacy-derived address to appease stale readers — the mirror
+     * re-opens exactly the member-writable surface the split closes.
      */
     fun compactControlPlane(
         priorWraps: List<Event>,
-        priorControlKey: GroupKey,
-        newControlKey: GroupKey,
+        priorControlKeys: ControlPlaneKeys,
+        newControlKeys: ControlPlaneKeys,
+        ownerPubKey: HexKey,
     ): List<Event> {
-        // entity coordinate -> (head edition, its verified seal)
-        val heads = HashMap<String, Pair<ControlEdition, Event>>()
+        // entity coordinate -> every edition we can open, paired with its verified seal.
+        val byCoordinate = HashMap<String, MutableList<Pair<ControlEdition, Event>>>()
         for (wrap in priorWraps) {
-            val opened = ConcordStreamEnvelope.openOrNull(wrap, priorControlKey) ?: continue
+            val opened = ConcordStreamEnvelope.openOrNull(wrap, priorControlKeys) ?: continue
             val edition = ControlEdition.fromRumor(opened.rumor) ?: continue
             val coord = edition.entityKind.wire + ":" + edition.entityIdHex
-            val current = heads[coord]
-            if (current == null || edition.version > current.first.version) {
-                heads[coord] = edition to opened.seal
-            }
+            byCoordinate.getOrPut(coord) { ArrayList() }.add(edition to opened.seal)
         }
-        return heads.values.map { (_, seal) -> ConcordStreamEnvelope.wrapSeal(seal, newControlKey, createdAt = seal.createdAt) }
+
+        // The head to carry forward is the one every READER honors — the authority-gated head — not
+        // the highest version and not the bare structural chain head.
+        //
+        // Raw highest version made an honest rotator the delivery mechanism for a disconnected stray:
+        // an edition minted at an arbitrary version never joins the chain, but it won that comparison
+        // and was re-wrapped into the new epoch as the entity's whole history (B1 in
+        // `docs/concord-soft-ban-audit.md`). The bare chain walk is *worse*, and this is the trap:
+        // with no floor it anchors at the lowest-version edition carrying no `prev`, and after a prior
+        // compaction the real head's `prev` dangles by design — so a forged `version = 1, prev = null`
+        // decoy outranks a genuine v50→v52 chain and, because nothing here checks signatures, becomes
+        // the entity's entire carried-forward state. A forged empty banlist would erase every ban.
+        //
+        // Gating on the owner-rooted roster is the only selection that cannot be gamed by an
+        // unprivileged author, and it is exactly what ConcordCommunityState.fold would seat, so the
+        // compacted epoch starts where the previous one left off.
+        val editions = byCoordinate.values.flatten()
+        val honored = ConcordCommunityState.authorizedHeads(editions.map { it.first }, ownerPubKey)
+        val out = ArrayList<Event>(honored.size)
+        for ((_, floor) in honored) {
+            val head = floor.known ?: continue
+            val seal = editions.firstOrNull { it.first.rumorId == head.rumorId }?.second ?: continue
+            out.add(ConcordStreamEnvelope.wrapSeal(seal, newControlKeys, createdAt = seal.createdAt))
+        }
+        return out
     }
 
     /**
-     * Mints the base-rotation rekey blobs delivering [newRoot] to [recipientsXOnly],
-     * chunked at [ConcordRekey.MAX_BLOBS_PER_CHUNK] and wrapped (encrypted seal,
+     * Mints the base-rotation rekey blobs delivering [newRoot] + [newControlPk] to
+     * [recipientsXOnly] — the [staffXOnly] subset also receiving [newControlRoot]
+     * in the 136-byte staff form (CORD-06 §1) — chunked at
+     * [ConcordRekey.MAX_BLOBS_PER_CHUNK] and wrapped (encrypted seal,
      * rotator-signed) on the [baseRekeyKey] address so every current member — who
      * precomputes that address from the prior root — receives it live.
      */
@@ -146,16 +217,28 @@ object ConcordRefounding {
         rotatorSigner: NostrSigner,
         baseRekeyKey: GroupKey,
         recipientsXOnly: List<HexKey>,
+        staffXOnly: Set<HexKey>,
         newRoot: ByteArray,
+        newControlPk: ByteArray,
+        newControlRoot: ByteArray,
         newEpoch: Long,
         prevEpoch: Long,
         prevCommit: HexKey,
         createdAt: Long,
     ): List<Event> {
         if (recipientsXOnly.isEmpty()) return emptyList()
+        val staffLower = staffXOnly.mapTo(HashSet()) { it.lowercase() }
         val blobs =
             recipientsXOnly.map { recipient ->
-                ConcordRekey.blobForSigner(rotatorSigner, recipient.hexToByteArray(), ConcordRekey.ROOT_SCOPE, newEpoch, newRoot)
+                ConcordRekey.blobForSigner(
+                    rotatorSigner = rotatorSigner,
+                    recipientXOnly = recipient.hexToByteArray(),
+                    scopeId = ConcordRekey.ROOT_SCOPE,
+                    newEpoch = newEpoch,
+                    newKey = newRoot,
+                    newControlPk = newControlPk,
+                    newControlRoot = if (recipient.lowercase() in staffLower) newControlRoot else null,
+                )
             }
         val chunks = blobs.chunked(ConcordRekey.MAX_BLOBS_PER_CHUNK)
         val total = chunks.size
@@ -170,15 +253,19 @@ object ConcordRefounding {
      * Receives a base rotation for the member behind [recipientSigner]: opens the
      * kind-3303 [wraps] at the member's next base-rekey address ([baseRekeyKey]),
      * verifies each is a well-formed root rotation to [newEpoch] whose `prevcommit`
-     * continues the [priorRoot] the member holds, and returns the delivered new root
-     * (with the rotator's real pubkey, so the caller can authorize it against the
-     * folded roster). Null if no chunk carries this member's blob — which only means
+     * continues the [priorRoot] the member holds, and returns the delivered new
+     * root and Control Plane keys (with the rotator's real pubkey, so the caller
+     * can authorize it against the folded roster). A staff blob's delivered secret
+     * must derive to exactly the delivered `control_pk` (CORD-02 §5) — a
+     * mismatched pair is refused rather than adopting a plane split from its
+     * readers. Null if no chunk carries this member's blob — which only means
      * "removed" once the caller confirms it holds every chunk of the rotation.
      */
     suspend fun findNewRoot(
         wraps: List<Event>,
         baseRekeyKey: GroupKey,
         recipientSigner: NostrSigner,
+        communityId: ByteArray,
         priorRoot: ByteArray,
         rootEpoch: Long,
     ): ReceivedRefounding? {
@@ -195,8 +282,16 @@ object ConcordRefounding {
 
             val blobs = ConcordRekey.decodeContent(rumor.content)
             val rotatorXOnly = opened.author.hexToByteArray()
-            val newRoot = ConcordRekey.findNewKeyWithSigner(blobs, recipientSigner, rotatorXOnly, ConcordRekey.ROOT_SCOPE, newEpoch) ?: continue
-            return ReceivedRefounding(newRoot, newEpoch, opened.author)
+            val payload = ConcordRekey.findPayloadWithSigner(blobs, recipientSigner, rotatorXOnly, ConcordRekey.ROOT_SCOPE, newEpoch) ?: continue
+            val controlRoot = payload.newControlRoot
+            val controlPk = payload.newControlPk
+            if (controlRoot != null && controlPk != null) {
+                // The staff derive-check (CORD-06 §1): refuse a pair whose secret does not
+                // derive to the pk the other members were handed — fails closed.
+                val derived = ConcordKeyDerivation.controlSignerKey(controlRoot, communityId, newEpoch).publicKey
+                if (!derived.contentEquals(controlPk)) continue
+            }
+            return ReceivedRefounding(payload.newKey, newEpoch, opened.author, controlPk, controlRoot)
         }
         return null
     }

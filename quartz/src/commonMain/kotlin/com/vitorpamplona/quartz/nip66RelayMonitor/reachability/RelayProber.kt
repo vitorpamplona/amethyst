@@ -39,6 +39,8 @@ import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.networkType
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.requirement
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.rtt
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.NetworkTypeTag
+import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RequirementTag
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.tags.RttType
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
@@ -254,7 +256,7 @@ class RelayProber(
         val subId = newSubId()
         val subListener =
             object : SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,
@@ -430,8 +432,18 @@ class RelayProber(
 fun RelayProber.Verdict.toDiscoveryEventTemplate(
     createdAt: Long = TimeUtils.now(),
     readWrite: RelayProber.ReadWriteVerdict? = null,
+    current: RelayDiscoveryEvent? = null,
 ): EventTemplate<RelayDiscoveryEvent> =
-    RelayDiscoveryEvent.build(relay, createdAt = createdAt) {
+    RelayDiscoveryEvent.build(
+        relay,
+        current?.content ?: "",
+        // Strictly newer than what it replaces, or a store enforcing
+        // replaceable semantics rejects it and the probe is lost silently.
+        createdAt = maxOf(createdAt, (current?.createdAt ?: 0L) + 1),
+    ) {
+        current?.tags?.forEach { tag ->
+            if (tag.firstOrNull() != "d" && !probeOwns(tag, readWrite != null)) add(tag)
+        }
         networkType(RelayReachabilityStore.networkTypeOf(relay))
         if (reachable) rtt(RttType.OPEN, rttOpenMs.coerceAtLeast(0))
         if (readWrite != null) {
@@ -441,6 +453,37 @@ fun RelayProber.Verdict.toDiscoveryEventTemplate(
         val authWalled =
             error?.startsWith("closed:auth-required") == true ||
                 readWrite?.writeMessage?.startsWith("auth-required") == true
-        if (authWalled) requirement("auth")
-        if (readWrite?.writeMessage?.startsWith("pow:") == true) requirement("pow")
+        if (authWalled) requirement(RelayReachabilityStore.AUTH_REQUIREMENT)
+        if (readWrite?.writeMessage?.startsWith("pow:") == true) requirement(POW_REQUIREMENT)
+    }
+
+/** The NIP-66 requirement a write probe can prove, alongside `auth`. */
+private const val POW_REQUIREMENT = "pow"
+
+/**
+ * What a probe verdict measured, and may therefore replace in [current].
+ *
+ * A 30166 carries ONE `created_at`, so any tag carried across is re-dated as a
+ * current measurement — this verdict's own facts must be rewritten wholesale or
+ * a stale latency is republished as today's number.
+ *
+ * [hasReadWrite] narrows it: without a [RelayProber.ReadWriteVerdict] this probe
+ * never exercised the write path, so `R pow` is somebody else's finding and is
+ * carried across rather than deleted. Both polarities of each requirement are
+ * owned, so an update cannot leave the record asserting `pow` and `!pow` at once.
+ */
+private fun probeOwns(
+    tag: Array<String>,
+    hasReadWrite: Boolean,
+): Boolean =
+    when (tag.firstOrNull()) {
+        NetworkTypeTag.TAG_NAME -> true
+        RttType.OPEN.tagName, RttType.READ.tagName, RttType.WRITE.tagName -> true
+        RequirementTag.TAG_NAME ->
+            when (tag.getOrNull(1)) {
+                RelayReachabilityStore.AUTH_REQUIREMENT, "!" + RelayReachabilityStore.AUTH_REQUIREMENT -> true
+                POW_REQUIREMENT, "!" + POW_REQUIREMENT -> hasReadWrite
+                else -> false
+            }
+        else -> false
     }

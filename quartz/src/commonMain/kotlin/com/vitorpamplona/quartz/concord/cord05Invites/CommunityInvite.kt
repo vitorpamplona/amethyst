@@ -58,6 +58,19 @@ class CommunityInvite(
     @SerialName("owner_salt") val ownerSalt: String,
     @SerialName("community_root") val communityRoot: String,
     @SerialName("root_epoch") val rootEpoch: Long = 0,
+    /**
+     * The Control Plane's signer pubkey at [rootEpoch] (CORD-02 §5): subscribe,
+     * verify, read — never write. Absent = a legacy, pre-split Community; the
+     * joiner folds Control at the legacy address instead (CORD-06 §3).
+     *
+     * Taken on trust in a way the other fields are not: it derives from a secret
+     * the joiner will never hold, so nothing in the bundle can prove it. A wrong
+     * one is eclipse-class self-harm by the inviter (a stale or empty Control
+     * read), the same trust class as a hostile [relays] list — never forged
+     * authority, since every edition still verifies against the owner-rooted
+     * Roster, and a later base rotation re-delivers the true key.
+     */
+    @SerialName("control_pk") val controlPk: String? = null,
     val channels: List<InviteChannel> = emptyList(),
     val relays: List<String> = emptyList(),
     val name: String = "",

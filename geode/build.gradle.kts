@@ -236,7 +236,9 @@ val jlinkRuntime =
 
 // Flat app-image: bin/geode launcher + lib/*.jar + runtime/ (the jlink'd JRE) +
 // share/geode/ (config.example.toml + the systemd unit). Cross-platform — the
-// release workflow tars this up on every OS.
+// release workflow archives it on every OS (tar.gz on unix, zip on Windows).
+// Both a POSIX shell launcher and a Windows .bat launcher are written so the
+// tree layout is uniform regardless of build host.
 val geodeImage =
     tasks.register<Sync>("geodeImage") {
         group = "distribution"
@@ -271,13 +273,33 @@ val geodeImage =
             DIR="${'$'}(cd "${'$'}(dirname "${'$'}0")/.." && pwd)"
             exec "${'$'}DIR/runtime/bin/java" -cp "${'$'}DIR/lib/*" $mainClass "${'$'}@"
             """.trimIndent() + "\n"
+        // Windows launcher: %~dp0 anchors on the .bat's own directory (drive+
+        // path, always trailing backslash) so geode.bat works no matter where
+        // it's invoked from. CRLF for cmd.exe. We do NOT force UTF-8 here — the
+        // relay is a network daemon that logs and speaks JSON over sockets, and
+        // its stdout is machine-readable; leaving the console code page alone
+        // matches the geode launcher on POSIX which similarly doesn't touch
+        // LANG.
+        //
+        // The `for %%i in (...) do set DIR=%%~fi` trick canonicalises `\bin\..`
+        // out of DIR to the parent directory — same idiom Gradle's own
+        // installDist .bat uses to resolve APP_HOME. See the matching comment on
+        // the amy launcher for the rationale (log cleanliness, not correctness).
+        val windowsLauncher =
+            "@echo off\r\n" +
+                "setlocal\r\n" +
+                "set \"DIR=%~dp0..\"\r\n" +
+                "for %%i in (\"%DIR%\") do set \"DIR=%%~fi\"\r\n" +
+                "\"%DIR%\\runtime\\bin\\java.exe\" -cp \"%DIR%\\lib\\*\" $mainClass %*\r\n"
 
         doLast {
             val binDir = geodeImageDir.get().asFile.resolve("bin")
             binDir.mkdirs()
-            val launcher = binDir.resolve("geode")
-            launcher.writeText(unixLauncher)
-            launcher.setExecutable(true, false)
+            val unix = binDir.resolve("geode")
+            unix.writeText(unixLauncher)
+            unix.setExecutable(true, false)
+            val windows = binDir.resolve("geode.bat")
+            windows.writeText(windowsLauncher)
         }
     }
 

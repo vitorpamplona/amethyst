@@ -141,7 +141,7 @@ class NostrConnectSignerServiceTest {
             published.add(event)
         }
 
-        fun deliver(event: Event) {
+        suspend fun deliver(event: Event) {
             listener?.onEvent(event, isLive = true, relay = RelayUrlNormalizer.normalizeOrNull("wss://relay.example.com")!!, forFilters = null)
         }
     }

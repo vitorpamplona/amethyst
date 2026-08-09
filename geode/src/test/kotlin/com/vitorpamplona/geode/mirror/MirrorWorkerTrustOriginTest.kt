@@ -99,7 +99,7 @@ class MirrorWorkerTrustOriginTest {
         override fun connect() {
             connected = true
             out.onOpen(0, false)
-            out.onMessage(frame)
+            kotlinx.coroutines.runBlocking { out.onMessage(frame) }
         }
 
         override fun disconnect() {

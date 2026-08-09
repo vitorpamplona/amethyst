@@ -498,6 +498,12 @@ class MirrorWorker(
                 val syncStartedAt = TimeUtils.now()
                 var seenMin: Long? = null
                 var seenMax: Long? = null
+                // Per KIND as well as in aggregate: one interval for a
+                // multi-kind filter lets a long-lived kind vouch for a
+                // short-lived one, and the band then skips the interior for
+                // both. The aggregate is still tracked because the reconcile
+                // path records against the leg's floor, not per kind.
+                val seenByKind = mutableMapOf<Int, SyncCoverage.Span>()
 
                 fun observe(event: Event) {
                     // Same containment as the live path: even a trusted
@@ -509,6 +515,7 @@ class MirrorWorker(
                             seenMin = minOf(seenMin ?: event.createdAt, event.createdAt)
                             seenMax = maxOf(seenMax ?: event.createdAt, event.createdAt)
                         }
+                        SyncCoverage.observe(seenByKind, event.kind, event.createdAt)
                         handoff.trySendBlocking(event)
                     } else {
                         filtered.incrementAndGet()
@@ -537,10 +544,11 @@ class MirrorWorker(
                     } catch (e: NegentropySyncException) {
                         seenMin = null
                         seenMax = null
+                        seenByKind.clear()
                         // The watchdog matches negentropySync's default rather
                         // than fetchAllPages' shorter one: a paged catch-up
                         // sits behind the same slow upstreams.
-                        downloaded += client.fetchAllPages(up.url, listOf(leg), idleTimeoutMs = 120_000L) { observe(it) }
+                        downloaded += client.fetchAllPages(up.url, listOf(leg), idleTimeoutMs = 120_000L) { observe(it) }.downloaded
                         true
                     }
                 paged = paged || legPaged
@@ -558,6 +566,13 @@ class MirrorWorker(
                         seenMin,
                         seenMax?.coerceAtMost(syncStartedAt),
                         paged = true,
+                        // Capped the same way the aggregate is: one
+                        // future-dated event must not lift a kind's ceiling
+                        // past what was actually asked for.
+                        observedByKind =
+                            seenByKind.mapValues { (_, span) ->
+                                SyncCoverage.Span(span.min, span.max.coerceAtMost(syncStartedAt))
+                            },
                     )
                 } else {
                     val legFloor = leg.since ?: initialSince
@@ -686,7 +701,7 @@ class MirrorWorker(
         val watermark = AtomicLong(initialSince)
         val listener =
             object : SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

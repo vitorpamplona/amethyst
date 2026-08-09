@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.cli.stores.StoredHeldRoot
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -119,6 +120,10 @@ object ConcordCommands {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    // The creator is the founding staff member: it keeps the write secret and
+                    // publishes the pubkey to everyone else (CORD-02 §2).
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     generalChannelId = community.generalChannelIdHex,
                     relays = relays,
                 ),
@@ -179,6 +184,14 @@ object ConcordCommands {
             val imported =
                 entries.map { e ->
                     val prior = existing[e.id]
+                    // Control key material is per-epoch (CORD-02 §2): a stored value may only
+                    // backstop a list entry from the SAME epoch (e.g. another client republished
+                    // the list without the extension fields). Across a rotation the old pair is
+                    // stale — a prior-epoch control_root would derive a wrong address entirely,
+                    // and a prior-epoch control_pk would shadow a legacy rotation's address — so
+                    // it must never be carried forward (the invariant adoption enforces with its
+                    // derive-check, which this path has no way to run).
+                    val priorSameEpoch = prior?.takeIf { it.rootEpoch == e.rootEpoch }
                     store.upsert(
                         StoredCommunity(
                             name = e.name.ifBlank { prior?.name ?: "" },
@@ -187,15 +200,23 @@ object ConcordCommands {
                             ownerSalt = e.ownerSalt,
                             root = e.root,
                             rootEpoch = e.rootEpoch,
+                            // Carried straight from the list entry: the Control Plane address is
+                            // delivered, never derivable (CORD-02 §2), and the write secret only
+                            // rides the list when this account is staff. Both blank on a legacy
+                            // community, which keeps its old single-key plane.
+                            controlPk = e.controlPk ?: priorSameEpoch?.controlPk ?: "",
+                            controlRoot = e.controlRoot ?: priorSameEpoch?.controlRoot ?: "",
                             generalChannelId = prior?.generalChannelId ?: "",
                             relays = e.relays,
-                            heldRoots = e.heldRoots.map { StoredHeldRoot(it.epoch, it.key) },
+                            heldRoots = e.heldRoots.map { StoredHeldRoot(it.epoch, it.key, it.controlPk ?: "") },
                         ),
                     )
                     mapOf(
                         "name" to e.name,
                         "community_id" to e.id,
                         "root_epoch" to e.rootEpoch,
+                        "control_pk" to (e.controlPk ?: ""),
+                        "staff" to (e.controlRoot != null),
                         "held_roots" to e.heldRoots.map { mapOf("epoch" to it.epoch, "root" to it.key) },
                     )
                 }
@@ -216,7 +237,9 @@ object ConcordCommands {
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return notFound(handle)
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val invite = ConcordActions.inviteFor(sc.communityId, sc.owner, sc.ownerSalt, sc.root, sc.rootEpoch, sc.name, sc.relays)
+            // The joiner cannot derive the Control Plane address, so the invite carries it
+            // (CORD-05 §1); omitted for a legacy community, which has none to carry.
+            val invite = ConcordActions.inviteFor(sc.communityId, sc.owner, sc.ownerSalt, sc.root, sc.rootEpoch, sc.name, sc.relays, sc.controlPk.ifBlank { null })
             val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), sc.relays)
             val ack = ctx.publish(minted.bundleEvent, relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, minted.bundleEvent.id)?.let { return it }
@@ -257,6 +280,9 @@ object ConcordCommands {
                     ownerSalt = bundle.ownerSalt,
                     root = bundle.communityRoot,
                     rootEpoch = bundle.rootEpoch,
+                    // Read access to the Control Plane, never write (CORD-05 §1). Absent = the
+                    // community is still pre-split and folds at the legacy address.
+                    controlPk = bundle.controlPk ?: "",
                     relays = bundle.relays,
                 ),
             )
@@ -275,6 +301,20 @@ object ConcordCommands {
         ctx: Context,
         sc: StoredCommunity,
     ): Set<NormalizedRelayUrl> = normalize(sc.relays).ifEmpty { ctx.outboxRelays() }
+
+    /**
+     * The Control Plane keys for [sc] as this account holds them (CORD-02 §5): staff
+     * (write key held), member (address held, read-only), or legacy (pre-split, keyed
+     * by the `community_root` alone).
+     */
+    fun controlPlaneKeysFor(sc: StoredCommunity) =
+        ConcordActions.controlPlaneKeys(
+            communityRoot = sc.root.hexToByteArray(),
+            communityId = sc.communityId.hexToByteArray(),
+            rootEpoch = sc.rootEpoch,
+            controlPk = sc.controlPk.ifBlank { null },
+            controlRoot = sc.controlRoot.ifBlank { null },
+        )
 
     fun notFound(handle: String): Int {
         Output.error("not_found", "no joined community matching '$handle' — run `amy concord list`")

@@ -150,6 +150,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
@@ -954,6 +955,9 @@ class Account(
      * re-seeds from this flow). Pair a `true` result with [sendNewAppSpecificData] to publish.
      */
     fun applyBottomBarItems(items: List<BottomBarEntry>): Boolean = settings.changeBottomBarItems(items)
+
+    /** The drawer counterpart of [applyBottomBarItems] — same synchronous-apply, publish-after contract. */
+    fun applyHiddenDrawerItems(items: Set<NavBarItem>): Boolean = settings.changeHiddenDrawerItems(items)
 
     suspend fun toggleChatroomPin(room: ChatroomKey) {
         settings.toggleChatroomPin(room)
@@ -3559,6 +3563,9 @@ class Account(
                 refreshConcordChannelIndex()
                 // A revision also bumps when a base-rotation rekey lands; adopt ours if present.
                 runCatching { concord.drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
+                // A promotion to staff delivers the Control Plane write key inside the Grant
+                // itself (CORD-04 §3), so the fold that seats the role is also when it arrives.
+                runCatching { concord.drainConcordStaffGrants() }.onFailure { Log.w("Concord", "staff grant drain failed", it) }
                 // A rotation we were *excluded* from produces no rekey to drain, so it can only be
                 // found by re-resolving the invite link we joined through. Rate-limited internally.
                 runCatching { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
