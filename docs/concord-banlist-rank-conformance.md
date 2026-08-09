@@ -213,6 +213,29 @@ to re-issue it. If you read §4 as scoping only to editions authored *after* the
 implementable too, but it needs the spec to define an ordering between an edition and a Banlist
 entry, which today it does not.
 
+We checked your implementation before writing this, and you got there first: `foldControlState`
+already runs the same two-pass, with the same §4 justification in the comment. So this is us catching
+up, not diverging — with one narrower difference. You keep **pass 1's** Banlist as the final word;
+we recompute it in pass 2. So a banned admin's mass-ban of everyone beneath them still stands for you
+and is dropped by us. Your stated reason is to stop the anti-roster erasing itself; ours is that an
+edition should not outlive its author's removal, and the self-erasure case is unreachable under the
+rank rule anyway, since only a member who strictly outranks you can ban you. We would rather converge
+than be right — tell us which way and we will move.
+
+Two more things that fell out of reading `src/concord-v2/` side by side, both worth their own look:
+
+- **`bootstrapHead` has no bound** (`lib/version.ts`), and `headCandidates` uses it for the
+  compaction arm while `pickHead` then raises the stored floor to whatever won. One authorized
+  edition at `version = 2^63 - 1` therefore becomes an entity's permanent head: the floor rises to
+  match, nothing honest can exceed it, and even a Refounding that drops the edition falls back to the
+  remembered head — which is that edition. It needs no ban and no sockpuppet, just one ordinary
+  permission bit. This is the second bug both implementations share by reading the same section the
+  same way; ours is described in `docs/concord-soft-ban-audit.md` (B1), and we bounded the jump the
+  arm will follow.
+- **Your Banlist takes only the gated head's content**, with no §4 re-heal union. We union in every
+  authorized non-ancestor edition, which is what defeats an attempt to launder a ban away by forking
+  the list at genesis. So we honor concurrent bans you drop. Which is normative?
+
 A chain-local rule is not enough, and this is the trap worth flagging: "the author must not be banned
 by the state their edition chains from" is bypassed by forking the Banlist at genesis, where no
 parent ever mentions the ban and §4's re-heal union carries it in anyway. The rule has to bind the

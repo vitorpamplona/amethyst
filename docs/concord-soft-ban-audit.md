@@ -62,7 +62,7 @@ Two structural causes account for most of both halves:
 | # | Finding | Severity | Needs a ban? | Status |
 |---|---------|----------|--------------|--------|
 | [B1](#b1) | One edition at `version = Long.MAX_VALUE` pins an entity forever | **Critical** | No — any bit-holder | **Fixed** |
-| [B2](#b2) | A banned staffer keeps Role/Grant/Banlist authority | **Critical** | Yes | **Fixed** (consensus-affecting) |
+| [B2](#b2) | A banned staffer keeps Role/Grant/Banlist authority | **Critical** | Yes | **Fixed** (matches Armada) |
 | [B3](#b3) | A rogue rotator compacts the banlist away | High | Via B2 | **Mitigated** by B2 |
 | [B4](#b4) | The Refounding recipient set is attacker-inflatable | High | No | **Fixed** (bounded) |
 | [B5](#b5) | The ban is per-pubkey; the channel key is not revoked | High | Yes | Inherent — Refounding is the answer |
@@ -111,10 +111,13 @@ button on the same. This is contained, uncontroversial, and closes the realistic
 
 ## <a name="a2"></a>A2 — Stranded recovery runs on a timer and never checks the banlist
 
-**Status: security half fixed; liveness half open.** `isStranded` / `mergeForward` now take
-`bannedAtCurrentEpoch` as a *required* argument, so a removed member is no longer walked back in.
-Whether anything should re-mint at a stable coordinate — without which legitimate recovery never
-fires for anyone — still needs a spec answer and is untouched.
+**Status: security half fixed; liveness half open — and the fork is now resolved.** `isStranded` /
+`mergeForward` take `bannedAtCurrentEpoch` as a *required* argument, so a removed member is no longer
+walked back in. The open question was whether anything re-mints at a stable coordinate. **Armada
+does** — `useLinkRefreshWatch2` re-posts every bundle on each epoch change — so in any cross-client
+community this was a *live* removal bypass, not a hypothetical, and the fix was load-bearing. The
+liveness half stands: Amethyst re-mints nothing, so legitimate recovery never fires for an
+Amethyst-only community. See [the Armada comparison](#armada) for the two ways out.
 
 
 **Critical, and it forks.** *Read:* `ConcordStrandedRecovery`,
@@ -275,13 +278,13 @@ The first is the smallest change and closes the unrecoverability; the third shou
 
 ## <a name="b2"></a>B2 — A banned staffer keeps Role, Grant and Banlist authority
 
-**Status: fixed — and consensus-affecting.** `AuthorityResolver.resolve` is now a bounded two-pass
+**Status: fixed. Not consensus-affecting after all** — see [Armada comparison](#armada). Armada
+already implements the same two-pass, so this brings us *into* line rather than out of it. One
+narrower divergence remains, described there. `AuthorityResolver.resolve` is now a bounded two-pass
 where authority only shrinks. Note the deliberate cascade it brings: every edition a banned member
 ever authored is dropped, so banning an admin also demotes everyone that admin promoted. That is the
 literal reading of CORD-04 §4 and it is what kills the sockpuppet, but a legitimate promotion by a
-later-banned admin vanishes with it and has to be re-issued. Until Armada ships the same rule the two
-clients can disagree about any community where a privileged member was banned.
-
+later-banned admin vanishes with it and has to be re-issued. 
 
 **Critical.** *Verified:* `quartz/…/cord04Roles/BannedStaffEscalationTest.kt` (13 tests).
 
@@ -439,6 +442,65 @@ Nothing on the client side can evict them — kicking them from the UI does not 
 It would be the one place where a ban fails *audibly*, in real time, in front of everyone, so it is
 worth designing the roster check in before shipping rather than after.
 
+
+
+---
+
+## <a name="armada"></a>Armada comparison (checked 2026-08-09)
+
+Read against `gitlab.com/soapbox-pub/armada` at `src/concord-v2/`. Worth doing before shipping any of
+this, and it changed two conclusions.
+
+**B2 — they already do it, and we had it backwards.** `foldControlState` (`lib/control.ts`) runs the
+same bounded two-pass: fold once, take the banlist, and if any edition was authored by someone on it,
+re-fold with those editions excluded. Independently arrived at, same shape, same CORD-04 §4
+justification in the comment. So this change brings us *into* line with Armada rather than out of it,
+and the consensus warning in the earlier revision of this doc was wrong.
+
+One real divergence remains, and it is ours to defend: Armada keeps **pass 1's** banlist as the final
+word ("the first pass's Banlist stays the final word"), while we recompute the banlist in pass 2. So
+a banned admin's mass-ban of everyone beneath them still stands in Armada and is dropped by us — the
+`aBannedAdminBansEveryoneBeneathThemWithoutNeedingAPuppetAtAll` case. Their stated reason is to stop
+the anti-roster erasing itself; ours is that an edition from a banned author should not survive its
+own author's removal. Both are defensible; ours closes an attack theirs leaves open, and the
+self-erasure they worry about is unreachable for us because the rank rule makes mutual bans
+impossible (only someone who strictly outranks you can ban you). Worth raising with them.
+
+**B1 — the same bug, unfixed, in exactly the same place.** `bootstrapHead` (`lib/version.ts:155`)
+takes the highest version at or above the floor with no bound; `headCandidates` uses it for the
+compaction arm; `pickHead` then raises the stored floor to whatever won. That is the whole
+version-exhaustion chain. This is now the second bug both implementations share because both read
+the same section the same way, and it deserves the same treatment as the rank rule: a written report.
+
+**A1 — ours alone.** Armada gates invite creation on `CREATE_INVITE` in both the hook
+(`useInvites2.ts`) and the page (`canCreateInvite`). We were the only client handing a banned member
+a working invite button.
+
+**A2 — different architecture, and it is better.** Armada's catch-up is **push**, not pull: a
+privileged member sends a stranded member a direct invite carrying the fresher root
+(`useDirectInvites2`, `catchUp`), so a human authorizes each re-admission. `useRekeyWatch2` merely
+reports `{ stranded: boolean }` for the UI. They also ship `useBanSelfRemove2`: a banned member's own
+client silently drops the community from their private list — network-silent, deliberately narrower
+than rekey-exclusion, because "a rotation can be a mistake; a ban is a judgment". Our pull-from-my-own-
+old-link design is what made the bypass possible, and their per-epoch bundle refresh is what would
+have supplied the higher epoch to pull. Two ways forward: adopt a refresh of our own (restores
+liveness, keeps the pull design and its risk), or move to their push model (safer, and it is what the
+one existing implementation does).
+
+**C1 — still open on their side.** `banlistGate` remains a bare `isAuthorized(roster, author, owner,
+BAN)`: no rank check, no delta rule. The divergence from
+`docs/concord-banlist-rank-conformance.md` is unchanged.
+
+**A divergence in the other direction.** Armada's banlist takes only the gated head's content —
+there is no §4 re-heal union. Ours unions in every authorized non-ancestor edition, which is what
+defeats the genesis-fork laundering attempt in `BannedStaffEscalationTest`. So we honor concurrent
+bans they drop. Worth a spec question about which is normative.
+
+**A4 — shared gap.** No ban filter on typing there either.
+
+**B4 — not established.** I could not locate a recipient-set bound in their rekey path, but I also
+could not locate the recipient-set construction itself with confidence, so treat this as unchecked
+rather than as a finding either way.
 
 ---
 
