@@ -102,12 +102,27 @@ class SyncCoverage(
         }
     }
 
-    /** A covered `created_at` interval, inclusive at both ends. */
+    /**
+     * A covered `created_at` interval, inclusive at both ends.
+     *
+     * [complete] is the difference between "we walked this interval" and "there
+     * is nothing below it". A paged fetch earns the first by seeing events; it
+     * earns the second only when the relay EOSEs on an empty page, which is the
+     * one answer that distinguishes an exhausted corpus from a relay that capped
+     * us or went quiet (see `fetchAllPages`'s `onDrained`). A finished negentropy
+     * reconcile earns it too, by comparing the whole range at once.
+     *
+     * It lives HERE rather than on [Band] because a paged leg does not have to
+     * cover every kind: once kinds diverge, [legs] hands each group its own ask,
+     * so a walk that drained `kinds: [10002]` says nothing about kind 0. A
+     * band-level flag set from such a leg would claim both.
+     */
     data class Span(
         val min: Long,
         val max: Long,
+        val complete: Boolean = false,
     ) {
-        fun widen(other: Span) = Span(minOf(min, other.min), maxOf(max, other.max))
+        fun widen(other: Span) = Span(minOf(min, other.min), maxOf(max, other.max), complete || other.complete)
     }
 
     /**
@@ -125,30 +140,36 @@ class SyncCoverage(
      * span under [ALL_KINDS] — the same claim as before, correctly scoped to
      * the case where it is the only claim available.
      *
-     * [complete] is the difference between "we walked this span" (a paged
-     * fetch) and "we are in sync below this point" (a finished negentropy
-     * reconcile, which compared the whole range). Only a complete band may
-     * skip its older leg. It is a property of the BAND rather than of a span:
-     * a reconcile compares the filter's whole id set at once, so it either
-     * covers every kind in it or none.
+     * Completeness is per kind, on [Span] — see there for why a paged leg
+     * cannot speak for kinds it did not ask about.
      *
      * [fullAt] is when the last pass that started from nothing finished — the
      * clock for the periodic re-walk.
      */
     data class Band(
         val spans: Map<Int, Span>,
-        val complete: Boolean = false,
         val fullAt: Long = 0,
     ) {
         /** The outer edges across every kind — for logging and for the file's compatibility fields. */
         val minCreatedAt: Long get() = spans.values.minOfOrNull { it.min } ?: 0
         val maxCreatedAt: Long get() = spans.values.maxOfOrNull { it.max } ?: 0
 
+        /**
+         * The band-level claim, DERIVED: true only when every kind is complete.
+         *
+         * Kept for the state files, which still write a `complete` beside
+         * `min`/`max` so a build from before per-kind completeness reads them and
+         * behaves as it always did. `all` rather than `any` is the safe direction
+         * for that reader: it cannot see the per-kind detail, so it must be told
+         * the weakest true thing, not the strongest.
+         */
+        val complete: Boolean get() = spans.isNotEmpty() && spans.values.all { it.complete }
+
         /** Widen each kind by its counterpart, keeping kinds only one side knows. */
         fun widen(other: Band): Band {
             val merged = spans.toMutableMap()
             for ((kind, span) in other.spans) merged[kind] = merged[kind]?.widen(span) ?: span
-            return Band(merged, complete || other.complete, fullAt)
+            return Band(merged, fullAt)
         }
     }
 
@@ -189,7 +210,8 @@ class SyncCoverage(
         val kinds = filter.kinds
         if (kinds.isNullOrEmpty()) {
             // Nothing to split by. One span, exactly as before.
-            return windows(filter, band.spans[ALL_KINDS], band.complete, floor)
+            val span = band.spans[ALL_KINDS]
+            return windows(filter, span, span?.complete == true, floor)
                 .map { (since, until) -> filter.copy(since = since, until = until) }
         }
 
@@ -205,7 +227,12 @@ class SyncCoverage(
             // wider claim for every kind — the behaviour this replaces — and
             // self-corrects on the first paged walk that reports per kind.
             val span = band.spans[kind] ?: band.spans[ALL_KINDS]
-            byWindows.getOrPut(windows(filter, span, band.complete, floor)) { mutableListOf() }.add(kind)
+            // Completeness comes from the SPAN, so a leg that drained one kind
+            // drops only that kind's older leg. Before this it came from the
+            // band, and a reconcile was the only thing that could set it — which
+            // is why a drained paged walk over `kinds: [10002]` used to leave an
+            // older leg that no future walk could ever close.
+            byWindows.getOrPut(windows(filter, span, span?.complete == true, floor)) { mutableListOf() }.add(kind)
         }
         return byWindows.flatMap { (windows, group) ->
             // toList(): `group` is the mutable accumulator above, and handing
@@ -266,6 +293,19 @@ class SyncCoverage(
      * the sync STARTED — recorded against that instant rather than the newest
      * event seen, because "the relay had nothing newer" and "we never asked"
      * must not look alike.
+     *
+     * [drained] is the paged equivalent, and the only way a paged walk can ever
+     * claim its older leg is finished. Pass it from `fetchAllPages`'s
+     * `onDrained` — the relay EOSEd on an empty page, so there is nothing below
+     * what was seen. Without it a paged band only ever says "walked this far",
+     * and the leg below it is re-asked every cycle forever: against a relay
+     * whose corpus for a kind simply starts later than the others', that leg
+     * returns nothing, records nothing, and so can never close itself.
+     *
+     * It marks only the kinds that produced evidence. A kind the walk never saw
+     * at all has no interval to anchor a claim to, and inventing one would be
+     * the over-claim [Span] exists to prevent — so it keeps no band and is
+     * asked again, which is the safe direction.
      */
     fun record(
         url: NormalizedRelayUrl,
@@ -275,13 +315,14 @@ class SyncCoverage(
         paged: Boolean,
         reconciledThrough: Long? = null,
         observedByKind: Map<Int, Span>? = null,
+        drained: Boolean = false,
     ) {
         if (reconciledThrough != null) {
             // A reconcile compares the filter's whole id set in one pass, so
             // the span it earns is the same for every kind the filter names —
             // no per-kind evidence needed or possible.
-            val span = Span(observedMin ?: reconciledThrough, reconciledThrough)
-            put(url, filter, kindsOf(filter).associateWith { span }, complete = true)
+            val span = Span(observedMin ?: reconciledThrough, reconciledThrough, complete = true)
+            put(url, filter, kindsOf(filter).associateWith { span })
             return
         }
         if (!paged) return
@@ -298,7 +339,7 @@ class SyncCoverage(
                 }
             if (plausible.isEmpty()) return
             val named = filter.kinds
-            val spans =
+            val spans: Map<Int, Span> =
                 if (named.isNullOrEmpty()) {
                     // A filter naming no kinds cannot be split, so [legs] reads
                     // ALL_KINDS and nothing else. Storing what the walk saw per
@@ -321,7 +362,7 @@ class SyncCoverage(
                     plausible.filterKeys { it in named }
                 }
             if (spans.isEmpty()) return
-            put(url, filter, spans, complete = false)
+            put(url, filter, if (drained) spans.mapValues { it.value.copy(complete = true) } else spans)
             return
         }
 
@@ -349,7 +390,7 @@ class SyncCoverage(
         // range nothing can be in, forever.
         if (observedMin == null || observedMax == null) return
         if (!isPlausible(observedMin, at) || !isPlausible(observedMax, at)) return
-        put(url, filter, kinds.associateWith { Span(observedMin, observedMax) }, complete = false)
+        put(url, filter, kinds.associateWith { Span(observedMin, observedMax, complete = drained) })
     }
 
     /** The kinds a band is keyed by: the filter's, or [ALL_KINDS] when it names none. */
@@ -364,9 +405,8 @@ class SyncCoverage(
         url: NormalizedRelayUrl,
         filter: Filter,
         spans: Map<Int, Span>,
-        complete: Boolean,
     ) {
-        val fresh = Band(spans, complete, now())
+        val fresh = Band(spans, now())
         bands.merge(key(url, filter), fresh) { old, new ->
             if (isStale(old)) new else old.widen(new)
         }

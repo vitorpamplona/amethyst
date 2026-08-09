@@ -33,6 +33,24 @@ import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 
 /**
+ * Why one page stopped. The three terminal signals used to be indistinguishable —
+ * all of them put a bare `Unit` on the page's channel — and [fetchAllPages] only
+ * ever asked *whether* a page ended, never *how*. [onDrained] needs the
+ * difference: an empty page is proof the relay has nothing older only when the
+ * relay actually said so.
+ */
+private enum class PageEnd {
+    /** The relay finished serving its stored events for this REQ. */
+    EOSE,
+
+    /** The relay ended the subscription itself — auth required, rate limited, policy. */
+    CLOSED,
+
+    /** Never got to ask. */
+    CANNOT_CONNECT,
+}
+
+/**
  * Downloads all pages of events matching [filters] from a single [relay] using
  * paginated `until` cursors.
  *
@@ -87,6 +105,19 @@ import kotlin.coroutines.coroutineContext
  *   bounds this walk is a [Filter.limit] (the documented way to cap a download) or
  *   cancelling the caller, which the [ensureActive] at the top of each page honors.
  * @param onEvent     Called once for every distinct event delivered, in page order.
+ * @param onDrained   Called at most once, just before returning, when the walk ended
+ *   because the relay served everything [filters] match at-or-below the starting
+ *   `until` — an empty page confirmed by an EOSE. That is the difference between
+ *   "the relay has nothing older" and "the relay stopped answering", which the
+ *   `Int` return cannot express: a caller recording sync coverage may treat the
+ *   range below the oldest event it saw as verified-empty ONLY in the first case.
+ *   Every other ending — an idle timeout, a CLOSED, a failed connect, a fulfilled
+ *   [Filter.limit] — leaves it unfired, because none of them prove absence.
+ *
+ *   A callback rather than a richer return type on purpose: this function has
+ *   ~25 call sites across quartz, geode and downstream repos that use the `Int`,
+ *   and none of them should have to change to learn a fact they do not want. It
+ *   follows the shape [onNewPage] already set.
  * @return Total number of distinct events delivered across all pages.
  */
 suspend fun INostrClient.fetchAllPages(
@@ -94,10 +125,12 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
+    onDrained: (() -> Unit)? = null,
     onEvent: suspend (Event) -> Unit,
 ): Int {
     var until: Long? = null
     var totalEvents = 0
+    var drained = false
 
     // Track how many matching events each filter has received so far.
     val matchCountPerFilter = IntArray(filters.size)
@@ -155,7 +188,7 @@ suspend fun INostrClient.fetchAllPages(
         // REQ, so firing this earlier would report a page that never happens.
         if (until != null) onNewPage?.invoke(until)
 
-        val doneChannel = Channel<Unit>(Channel.CONFLATED)
+        val doneChannel = Channel<PageEnd>(Channel.CONFLATED)
 
         // Idle watchdog for this page: every arriving event bumps it, so the page's
         // timeout measures silence since the relay's most recent message (the same
@@ -168,6 +201,12 @@ suspend fun INostrClient.fetchAllPages(
         var delivered = 0
         var pageMinTs = Long.MAX_VALUE
         val idsAtPageMin = HashSet<HexKey>()
+
+        // How this page ended, read after the wait: null for an idle timeout, which
+        // [receiveWithinIdle] reports by returning null. Only an EOSE can support a
+        // drain claim below — silence is not an answer, and a CLOSED is the relay
+        // declining to give one.
+        var pageEnd: PageEnd? = null
 
         try {
             val listener =
@@ -241,7 +280,7 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(Unit)
+                        doneChannel.trySend(PageEnd.EOSE)
                     }
 
                     override fun onClosed(
@@ -249,7 +288,7 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(Unit)
+                        doneChannel.trySend(PageEnd.CLOSED)
                     }
 
                     override fun onCannotConnect(
@@ -257,7 +296,7 @@ suspend fun INostrClient.fetchAllPages(
                         message: String,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(Unit)
+                        doneChannel.trySend(PageEnd.CANNOT_CONNECT)
                     }
                 }
 
@@ -266,7 +305,7 @@ suspend fun INostrClient.fetchAllPages(
             // Wait for the page's terminal signal (EOSE / CLOSED / cannot-connect),
             // giving up only after [idleTimeoutMs] of silence — the wait resets on every
             // arriving event, so an actively streaming page is never cut mid-delivery.
-            doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
+            pageEnd = doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
 
             unsubscribe(subId)
             doneChannel.close()
@@ -277,8 +316,26 @@ suspend fun INostrClient.fetchAllPages(
 
         totalEvents += delivered
 
-        // The relay sent nothing at-or-below `until` → the whole set is drained.
-        if (received == 0) break
+        // The relay sent nothing at-or-below `until`. Whether that DRAINS the set
+        // depends on why the page ended and on what was asked:
+        //
+        //  - only an EOSE proves absence. An idle timeout (`pageEnd == null`) is
+        //    silence and a CLOSED is the relay declining to answer; reading either
+        //    as "nothing older exists" would durably record coverage the relay
+        //    never served, which is the one error a coverage claim must not make.
+        //  - a filter that reached its [Filter.limit] stopped early on the caller's
+        //    own instruction, so nothing below its last event was ever asked for.
+        //  - a `search` filter runs on the first page only, so every page after it
+        //    dropped out never carried it and cannot speak for it.
+        if (received == 0) {
+            val cappedByLimit =
+                filters.indices.any { i ->
+                    val limit = filters[i].limit
+                    limit != null && matchCountPerFilter[i] >= limit
+                }
+            drained = pageEnd == PageEnd.EOSE && !cappedByLimit && filters.none { it.search != null }
+            break
+        }
 
         if (delivered == 0) {
             // Every event this page was a boundary-second duplicate; nothing older
@@ -312,6 +369,10 @@ suspend fun INostrClient.fetchAllPages(
         until = nextUntil
     }
 
+    // After the loop, not at the break: every other exit above leaves `drained`
+    // false, and firing from one place keeps "at most once" true by construction.
+    if (drained) onDrained?.invoke()
+
     return totalEvents
 }
 
@@ -320,6 +381,7 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
+    onDrained: (() -> Unit)? = null,
     onEvent: suspend (Event) -> Unit,
 ): Int =
     fetchAllPages(
@@ -327,5 +389,6 @@ suspend fun INostrClient.fetchAllPages(
         filters = filters,
         idleTimeoutMs = idleTimeoutMs,
         onNewPage = onNewPage,
+        onDrained = onDrained,
         onEvent = onEvent,
     )

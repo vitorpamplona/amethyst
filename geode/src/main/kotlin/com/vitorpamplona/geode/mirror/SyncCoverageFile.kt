@@ -108,7 +108,6 @@ class SyncCoverageFile(
                         key to
                             SyncCoverage.Band(
                                 spansOf(o),
-                                o["complete"]?.jsonPrimitive?.boolean ?: false,
                                 o["fullAt"]?.jsonPrimitive?.long ?: 0L,
                             )
                     }.toMap(),
@@ -128,17 +127,31 @@ class SyncCoverageFile(
      * discarded, and the first paged walk that reports per kind replaces it.
      * Dropping it instead would re-download every upstream's corpus once on
      * upgrade, which is the cost bands exist to avoid.
+     *
+     * Completeness is read the same way, one level down: a span written before
+     * it was per kind has no `complete` of its own, so it inherits the band's —
+     * which is precisely what that flag used to mean for every kind at once.
      */
     private fun spansOf(o: JsonObject): Map<Int, SyncCoverage.Span> {
+        val bandComplete = o["complete"]?.jsonPrimitive?.boolean ?: false
         o["spans"]?.jsonObject?.let { spans ->
             return spans.entries.associate { (kind, v) ->
                 val span = v.jsonObject
-                kind.toInt() to SyncCoverage.Span(span.getValue("min").jsonPrimitive.long, span.getValue("max").jsonPrimitive.long)
+                kind.toInt() to
+                    SyncCoverage.Span(
+                        span.getValue("min").jsonPrimitive.long,
+                        span.getValue("max").jsonPrimitive.long,
+                        span["complete"]?.jsonPrimitive?.boolean ?: bandComplete,
+                    )
             }
         }
         return mapOf(
             SyncCoverage.ALL_KINDS to
-                SyncCoverage.Span(o.getValue("min").jsonPrimitive.long, o.getValue("max").jsonPrimitive.long),
+                SyncCoverage.Span(
+                    o.getValue("min").jsonPrimitive.long,
+                    o.getValue("max").jsonPrimitive.long,
+                    bandComplete,
+                ),
         )
     }
 
@@ -170,6 +183,7 @@ class SyncCoverageFile(
                                                 buildJsonObject {
                                                     put("min", span.min)
                                                     put("max", span.max)
+                                                    put("complete", span.complete)
                                                 },
                                             )
                                         }

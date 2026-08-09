@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -511,7 +512,6 @@ class SyncCoverageTest {
                 key to
                     SyncCoverage.Band(
                         mapOf(SyncCoverage.ALL_KINDS to SyncCoverage.Span(1_690_000_000L, 1_700_000_000L)),
-                        complete = false,
                         fullAt = now(),
                     ),
             ),
@@ -578,5 +578,123 @@ class SyncCoverageTest {
         // …and it is actually USED, which is the half that was silently missing.
         assertEquals(2, c.legs(relay, anyKind).size)
         assertEquals(1_690_000_000L, c.legs(relay, anyKind)[0].until)
+    }
+
+    // ---- draining: the leg a paged walk is finally allowed to close ---------
+
+    @Test
+    fun `a drained paged walk stops asking about the past`() {
+        // THE OTHER HALF OF THE BUG ABOVE. Per-kind spans stopped kind 0 from
+        // vouching for 30382 — but they left 30382 an older leg that nothing
+        // could ever close. The relay's corpus for it simply starts later, so
+        // that leg comes back empty every cycle, records nothing (an empty
+        // fetch earns no band), and the floor never moves. Forever.
+        //
+        // A drain is the missing evidence: the relay EOSEd on an empty page, so
+        // there IS nothing below what we saw, and the leg is done.
+        val walked = SyncCoverage()
+        walked.record(relay, profiles, 1_690_000_000L, 1_700_000_000L, paged = true)
+        assertEquals(2, walked.legs(relay, profiles).size, "not drained: still asks below the floor")
+
+        val drained = SyncCoverage()
+        drained.record(relay, profiles, 1_690_000_000L, 1_700_000_000L, paged = true, drained = true)
+        val legs = drained.legs(relay, profiles)
+        assertEquals(1, legs.size, "drained: only the newer leg is left")
+        assertEquals(1_700_000_000L, legs[0].since)
+        assertNull(legs[0].until)
+    }
+
+    @Test
+    fun `a drained leg closes its own kind and not the others`() {
+        // Why completeness had to move from the band onto the span. After the
+        // kinds diverge, legs() hands each group its own ask — so a walk that
+        // drained `kinds: [30382]` proves nothing whatever about kind 0. A
+        // band-level flag set from that leg would have claimed both, which is
+        // the same over-claim per-kind spans exist to prevent, just one level up.
+        val c = SyncCoverage()
+        c.record(
+            relay,
+            mixed,
+            null,
+            null,
+            paged = true,
+            observedByKind = mapOf(30382 to SyncCoverage.Span(1_690_000_000L, 1_700_000_000L)),
+            drained = true,
+        )
+        // Kind 0 has no evidence at all here, so it keeps asking for everything.
+        c.record(
+            relay,
+            mixed,
+            null,
+            null,
+            paged = true,
+            observedByKind = mapOf(0 to SyncCoverage.Span(1_600_000_000L, 1_700_000_000L)),
+        )
+
+        val legs = c.legs(relay, mixed)
+        assertTrue(!reaches(legs, 30382, 1_650_000_000L), "30382 drained — its past is settled")
+        assertTrue(reaches(legs, 0, 1_500_000_000L), "kind 0 did not drain, so its older leg stands")
+    }
+
+    @Test
+    fun `a band is complete only when every kind is`() {
+        // The band-level flag is derived now, and the state files still write it
+        // for a reader that predates per-kind completeness. That reader cannot
+        // see the detail, so it has to be told the weakest true thing.
+        val c = SyncCoverage()
+        c.record(
+            relay,
+            mixed,
+            null,
+            null,
+            paged = true,
+            observedByKind = mapOf(0 to SyncCoverage.Span(1_690_000_000L, 1_700_000_000L)),
+            drained = true,
+        )
+        assertTrue(c.band(relay, mixed)!!.complete, "the only kind with a span drained")
+
+        c.record(
+            relay,
+            mixed,
+            null,
+            null,
+            paged = true,
+            observedByKind = mapOf(30382 to SyncCoverage.Span(1_695_000_000L, 1_700_000_000L)),
+        )
+        assertFalse(c.band(relay, mixed)!!.complete, "…and now one of the two has not")
+    }
+
+    @Test
+    fun `widening carries a drain forward rather than losing it`() {
+        // Two legs of one walk against the same relay land in the same span.
+        // Widening must not let the second, undrained one erase what the first
+        // proved: the past below the merged floor really was checked.
+        val c = SyncCoverage()
+        c.record(relay, profiles, 1_690_000_000L, 1_695_000_000L, paged = true, drained = true)
+        c.record(relay, profiles, 1_696_000_000L, 1_700_000_000L, paged = true)
+
+        assertTrue(
+            c
+                .band(relay, profiles)!!
+                .spans
+                .getValue(0)
+                .complete,
+        )
+        assertEquals(1, c.legs(relay, profiles).size, "still done with the past")
+    }
+
+    @Test
+    fun `a deeper floor still re-opens history below a drained band`() {
+        // A drain says "nothing below what this walk asked for", not "nothing
+        // below, ever". A caller that now reaches deeper than the band's floor
+        // gets its older leg back — the same escape hatch a finished reconcile
+        // has, and the reason `since` is consulted at all.
+        val c = SyncCoverage()
+        c.record(relay, profiles, 1_690_000_000L, 1_700_000_000L, paged = true, drained = true)
+
+        assertEquals(1, c.legs(relay, profiles).size)
+        val deeper = c.legs(relay, profiles, floor = 1_600_000_000L)
+        assertEquals(2, deeper.size, "the caller's floor dropped below the band, so the past re-opens")
+        assertEquals(1_690_000_000L, deeper[0].until)
     }
 }
