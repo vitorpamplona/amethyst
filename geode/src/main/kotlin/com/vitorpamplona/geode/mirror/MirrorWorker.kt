@@ -548,7 +548,7 @@ class MirrorWorker(
                         // The watchdog matches negentropySync's default rather
                         // than fetchAllPages' shorter one: a paged catch-up
                         // sits behind the same slow upstreams.
-                        downloaded += client.fetchAllPages(up.url, listOf(leg), idleTimeoutMs = 120_000L) { observe(it) }
+                        downloaded += client.fetchAllPages(up.url, listOf(leg), idleTimeoutMs = 120_000L) { observe(it) }.downloaded
                         true
                     }
                 paged = paged || legPaged

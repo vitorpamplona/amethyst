@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagedFetchResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -37,14 +38,13 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Pins `onDrained` — the one signal that tells a caller the relay served
- * *everything* below where the walk stopped, rather than merely stopping there.
+ * Pins [PagedFetchResult.End] — WHY a walk stopped, which is the half of the
+ * answer `downloaded` cannot carry.
  *
- * The distinction is invisible in the `Int` return and matters enormously to
- * anything recording sync coverage: without it, "the relay has nothing older"
- * and "the relay capped us / went quiet / hung up" look identical, so a coverage
- * band can never close its oldest leg and re-asks a range that will always come
- * back empty, every cycle, forever.
+ * It matters enormously to anything recording sync coverage: without it, "the
+ * relay has nothing older" and "the relay capped us / went quiet / hung up" look
+ * identical, so a coverage band can never close its oldest leg and re-asks a
+ * range that will always come back empty, every cycle, forever.
  *
  * Real-clock ([runBlocking]) for the same reason the idle-timeout suite is: the
  * page watchdog is a monotonic clock bumped from the socket reader thread.
@@ -103,18 +103,17 @@ class NostrClientFetchAllPagesDrainTest {
                     client.listener!!.onEose(relay, null)
                 }
 
-            var drained = false
-            val total =
+            val result =
                 client.fetchAllPages(
                     relay = relay,
                     filters = listOf(Filter(kinds = listOf(1))),
                     idleTimeoutMs = 2_000,
-                    onDrained = { drained = true },
                 ) { }
             feeder.join()
 
-            assertEquals(2, total)
-            assertTrue(drained, "an empty page the relay EOSEd is proof there is nothing older")
+            assertEquals(2, result.downloaded)
+            assertEquals(PagedFetchResult.End.DRAINED, result.end, "an empty page the relay EOSEd is proof there is nothing older")
+            assertTrue(result.drained)
         }
 
     @Test
@@ -133,18 +132,17 @@ class NostrClientFetchAllPagesDrainTest {
                     client.awaitPage(2)
                 }
 
-            var drained = false
-            val total =
+            val result =
                 client.fetchAllPages(
                     relay = relay,
                     filters = listOf(Filter(kinds = listOf(1))),
                     idleTimeoutMs = 200,
-                    onDrained = { drained = true },
                 ) { }
             feeder.join()
 
-            assertEquals(2, total, "the events already delivered are still kept")
-            assertFalse(drained, "an idle timeout says nothing about what the relay holds")
+            assertEquals(2, result.downloaded, "the events already delivered are still kept")
+            assertEquals(PagedFetchResult.End.IDLE, result.end)
+            assertFalse(result.drained, "an idle timeout says nothing about what the relay holds")
         }
 
     @Test
@@ -164,16 +162,16 @@ class NostrClientFetchAllPagesDrainTest {
                     client.listener!!.onClosed("auth-required: we don't serve that", relay, null)
                 }
 
-            var drained = false
-            client.fetchAllPages(
-                relay = relay,
-                filters = listOf(Filter(kinds = listOf(1))),
-                idleTimeoutMs = 2_000,
-                onDrained = { drained = true },
-            ) { }
+            val result =
+                client.fetchAllPages(
+                    relay = relay,
+                    filters = listOf(Filter(kinds = listOf(1))),
+                    idleTimeoutMs = 2_000,
+                ) { }
             feeder.join()
 
-            assertFalse(drained, "a CLOSED is the relay declining, not an empty corpus")
+            assertEquals(PagedFetchResult.End.CLOSED, result.end, "a CLOSED is the relay declining, not an empty corpus")
+            assertFalse(result.drained)
         }
 
     @Test
@@ -186,16 +184,16 @@ class NostrClientFetchAllPagesDrainTest {
                     client.listener!!.onCannotConnect(relay, "connection refused", null)
                 }
 
-            var drained = false
-            client.fetchAllPages(
-                relay = relay,
-                filters = listOf(Filter(kinds = listOf(1))),
-                idleTimeoutMs = 2_000,
-                onDrained = { drained = true },
-            ) { }
+            val result =
+                client.fetchAllPages(
+                    relay = relay,
+                    filters = listOf(Filter(kinds = listOf(1))),
+                    idleTimeoutMs = 2_000,
+                ) { }
             feeder.join()
 
-            assertFalse(drained, "never got to ask")
+            assertEquals(PagedFetchResult.End.CANNOT_CONNECT, result.end, "never got to ask")
+            assertFalse(result.drained)
         }
 
     @Test
@@ -213,18 +211,17 @@ class NostrClientFetchAllPagesDrainTest {
                     client.listener!!.onEose(relay, null)
                 }
 
-            var drained = false
-            val total =
+            val result =
                 client.fetchAllPages(
                     relay = relay,
                     filters = listOf(Filter(kinds = listOf(1), limit = 2)),
                     idleTimeoutMs = 2_000,
-                    onDrained = { drained = true },
                 ) { }
             feeder.join()
 
-            assertEquals(2, total)
+            assertEquals(2, result.downloaded)
             assertEquals(1, client.subscribeCount, "the limit was met, so there was no second page")
-            assertFalse(drained, "a fulfilled limit is the caller stopping, not the corpus ending")
+            assertEquals(PagedFetchResult.End.LIMIT_REACHED, result.end, "a fulfilled limit is the caller stopping, not the corpus ending")
+            assertFalse(result.drained)
         }
 }

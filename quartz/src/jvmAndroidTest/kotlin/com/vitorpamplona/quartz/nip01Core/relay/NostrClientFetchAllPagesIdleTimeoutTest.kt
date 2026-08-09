@@ -111,7 +111,7 @@ class NostrClientFetchAllPagesIdleTimeoutTest {
                 ) { got.add(it) }
             feeder.join()
 
-            assertEquals(6, total, "a slowly-but-actively streaming page must never be cropped")
+            assertEquals(6, total.downloaded, "a slowly-but-actively streaming page must never be cropped")
             assertEquals(6, got.size)
             assertEquals(1, client.subscribeCount, "the whole stream must arrive in ONE page — a hard deadline would truncate and re-subscribe")
             assertEquals(0, pages, "no pagination should be needed")
@@ -145,7 +145,7 @@ class NostrClientFetchAllPagesIdleTimeoutTest {
             feeder.join()
             val elapsedMs = start.elapsedNow().inWholeMilliseconds
 
-            assertEquals(2, total, "events delivered before the stall are kept")
+            assertEquals(2, total.downloaded, "events delivered before the stall are kept")
             assertTrue(elapsedMs >= 300, "must wait out at least one idle window, took ${elapsedMs}ms")
             assertTrue(elapsedMs < 5_000, "a stalled page must end promptly after the idle window, took ${elapsedMs}ms")
         }
