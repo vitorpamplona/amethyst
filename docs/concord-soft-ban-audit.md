@@ -502,6 +502,46 @@ bans they drop. Worth a spec question about which is normative.
 could not locate the recipient-set construction itself with confidence, so treat this as unchecked
 rather than as a finding either way.
 
+
+---
+
+## Performance of the fixes
+
+Measured on the JVM with a synthetic Control Plane (throwaway benchmark, not committed —
+`ConcordCommunityState.fold` over 226 and 2059 editions, 200 reps after warmup). Pass A of the
+two-pass resolver is byte-for-byte the old algorithm, so the single-pass rows below *are* the
+before-numbers.
+
+| Case | µs / fold |
+|---|---|
+| 226 editions, no bans | 1457 |
+| 226 editions, 20 bans, none of them authors | 994 |
+| 226 editions, 20 bans, one an author → pass B runs | 1881 |
+| 2059 editions, no bans | 2194 |
+| 2059 editions, 50 bans, none of them authors | 2001 |
+| 2059 editions, 50 bans, one an author → pass B runs | 5697 |
+| 2059 editions, with floors (B1's compaction arm) | 2015 |
+
+Two things to take from it.
+
+**B1 costs nothing measurable.** Trying the floor-anchored chain before the raw-version bootstrap
+adds a per-entity version index on the compaction arm, but an entity carries a handful of editions,
+and the floored fold measures the same as the unfloored one.
+
+**B2 costs a second fold, but only when it can change the answer.** `resolve` skips pass B when
+nobody is banned *or* when nobody banned ever authored a Control edition — the overwhelmingly common
+shape, since bans land on plain members who hold no role and write nothing. Those rows show no
+regression. When a banned member *did* author editions — a banned staffer, exactly the case B2 exists
+for — the fold costs ~2–3× more. That is the price of the fix and it is paid only by communities
+under the attack.
+
+**Worth knowing, unrelated to this work:** Amethyst re-folds the whole buffer from scratch on every
+Control Plane change, and `resolve` runs once per held epoch inside `controlFloorsLocked` plus once
+in `fold`, so a refresh is already several folds. Armada memoizes the fold by
+`(community, owner, floors, snapshot, edition ids)`; we do not. That is the real optimization here,
+it predates these fixes, and it would also absorb the pass-B cost. Left alone deliberately — it is a
+change to make on its own merits, with its own measurements.
+
 ---
 
 ## What was NOT examined

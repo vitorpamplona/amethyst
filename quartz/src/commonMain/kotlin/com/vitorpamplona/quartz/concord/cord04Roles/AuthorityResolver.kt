@@ -170,7 +170,12 @@ data class AuthorityResolver private constructor(
             ownerPubKey: String,
         ): AuthorityResolver {
             val passA = resolveOnce(editions, ownerPubKey, bannedAuthors = emptySet())
+            // Pass B costs a whole second fold, so skip it unless it could change something. Nobody
+            // banned, or nobody banned who ever wrote to the Control Plane — the overwhelmingly common
+            // shape, since most bans land on plain members who hold no role and author no editions —
+            // and pass B is provably identical to pass A. This is also what Armada's fold checks.
             if (passA.banned.isEmpty()) return passA
+            if (editions.none { it.author.lowercase() in passA.banned }) return passA
             return resolveOnce(editions, ownerPubKey, bannedAuthors = passA.banned)
         }
 
