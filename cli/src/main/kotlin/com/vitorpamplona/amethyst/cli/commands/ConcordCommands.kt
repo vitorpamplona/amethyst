@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.cli.stores.StoredHeldRoot
-import com.vitorpamplona.amethyst.cli.stores.StoredMintedInvite
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -35,6 +34,10 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEven
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteList
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -266,18 +269,25 @@ object ConcordCommands {
             val ack = ctx.publish(minted.bundleEvent, relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, minted.bundleEvent.id)?.let { return it }
 
-            // Keep the link signer + token so a later Refounding can refresh THIS coordinate rather
-            // than orphaning the link at a dead epoch — the liveness half of stranded recovery (A2).
-            ConcordStore(dataDir.concordFile).upsert(
-                sc.copy(
-                    mintedInvites =
-                        sc.mintedInvites +
-                            StoredMintedInvite(
-                                linkSignerPrivKey = minted.linkSignerPrivKey.toHexKey(),
-                                token = minted.token.toHexKey(),
-                                createdAt = TimeUtils.now(),
+            // Record the link in the CORD-05 Invite List (kind 13303) so any of this creator's
+            // clients — Amethyst, Armada — can later refresh THIS coordinate instead of orphaning
+            // the link at a dead epoch. That list is the liveness half of stranded recovery (A2).
+            publishInviteList(
+                ctx,
+                extraRelays = relaysFor(ctx, sc),
+                patch =
+                    ConcordInviteListDocument(
+                        entries =
+                            listOf(
+                                ConcordInviteListEntry(
+                                    token = minted.token.toHexKey(),
+                                    signerSk = minted.linkSignerPrivKey.toHexKey(),
+                                    communityId = sc.communityId,
+                                    url = minted.url,
+                                    createdAt = TimeUtils.now(),
+                                ),
                             ),
-                ),
+                    ),
             )
 
             Output.emit(
@@ -568,6 +578,43 @@ object ConcordCommands {
             Output.emit(mapOf("communities" to results))
             return 0
         }
+    }
+
+    /**
+     * This account's CORD-05 Invite List (kind 13303) — the creator's private, self-encrypted record
+     * of every link they minted, so a rotation can refresh those links instead of orphaning them.
+     * Empty when none was ever published.
+     */
+    suspend fun readInviteList(
+        ctx: Context,
+        extraRelays: Set<NormalizedRelayUrl> = emptySet(),
+    ): ConcordInviteListDocument {
+        val relays = ctx.outboxRelays() + extraRelays
+        if (relays.isEmpty()) return ConcordInviteListDocument.EMPTY
+        val filter = Filter(kinds = listOf(ConcordInviteListEvent.KIND), authors = listOf(ctx.signer.pubKey))
+        val newest =
+            ctx
+                .drain(relays.associateWith { listOf(filter) })
+                .map { it.second }
+                .maxByOrNull { it.createdAt }
+        return (newest as? ConcordInviteListEvent)?.decrypt(ctx.signer) ?: ConcordInviteListDocument.EMPTY
+    }
+
+    /**
+     * Merges [patch] into the published list and republishes it. Read-merge-write rather than
+     * overwrite: the list is replaceable and per-creator, so two devices minting concurrently would
+     * otherwise delete each other's links (and their `signer_sk`, which is unrecoverable).
+     */
+    suspend fun publishInviteList(
+        ctx: Context,
+        patch: ConcordInviteListDocument,
+        extraRelays: Set<NormalizedRelayUrl> = emptySet(),
+    ) {
+        val relays = ctx.outboxRelays() + extraRelays
+        if (relays.isEmpty()) return
+        val merged = ConcordInviteList.merge(readInviteList(ctx, extraRelays), patch)
+        val event = ConcordInviteListEvent.create(ctx.signer, merged, TimeUtils.now())
+        ctx.publish(event, relays)
     }
 
     fun notFound(handle: String): Int {

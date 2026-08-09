@@ -53,22 +53,6 @@ data class StoredCommunity(
     // rekey has no message to miss: re-resolving this link is the only way back. Blank for a direct
     // invite or a community joined before amy stored it.
     val inviteRef: String = "",
-    // Invite links WE minted for this community, kept so a Refounding can re-publish each bundle at
-    // its own coordinate for the new epoch. Without this the link a member joined through points at
-    // a dead epoch forever and stranded recovery can never fire (A2). Holds link-signer secrets, so
-    // it sits beside `root`/`controlRoot` in the same already-secret file.
-    val mintedInvites: List<StoredMintedInvite> = emptyList(),
-)
-
-/**
- * One invite link this account minted: enough to re-sign at its addressable coordinate later. The
- * coordinate is the link signer's pubkey, so keeping the private key is what lets a Refounding
- * refresh the link (and, in future, revoke it) instead of orphaning it.
- */
-data class StoredMintedInvite(
-    val linkSignerPrivKey: String = "",
-    val token: String = "",
-    val createdAt: Long = 0,
 )
 
 /** A past community_root for a specific epoch, mirroring quartz `HeldRoot`. */

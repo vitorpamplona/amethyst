@@ -346,15 +346,20 @@ object ConcordModCommands {
                     stored.relays,
                     stored.controlPk.ifBlank { null },
                 )
+            val now = TimeUtils.now()
             var refreshed = 0
-            for (link in stored.mintedInvites) {
+            for (link in ConcordCommands.readInviteList(ctx, relays).entries) {
+                if (link.communityId != stored.communityId) continue
+                // An elapsed link can no longer be joined, so re-posting it would only resurrect a
+                // dead URL at a live epoch (CORD-05).
+                if (link.isExpired(now)) continue
                 runCatching {
                     val event =
                         ConcordActions.remintBundleAt(
-                            linkSignerPrivKey = link.linkSignerPrivKey.hexToByteArray(),
+                            linkSignerPrivKey = link.signerSk.hexToByteArray(),
                             token = link.token.hexToByteArray(),
                             invite = refreshedInvite,
-                            createdAt = TimeUtils.now(),
+                            createdAt = now,
                         )
                     ctx.publish(event, relays)
                     refreshed++
