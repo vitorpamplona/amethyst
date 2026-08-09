@@ -852,6 +852,7 @@ class AccountConcordActions(
                 recipientsXOnly = recipients,
                 staffXOnly = staff,
                 createdAt = TimeUtils.now(),
+                ownerPubKey = entry.owner,
             )
 
         // 4. Publish the compacted Control Plane (the new epoch's state) then the rekey blobs
@@ -1123,13 +1124,24 @@ class AccountConcordActions(
             // walks them straight back into the epoch they were rotated out of — see A2 in
             // docs/concord-soft-ban-audit.md. Read off the epoch we are LEAVING, which is the last
             // one whose Control Plane we can still fold.
-            val bannedHere =
+            //
+            // Fails CLOSED. `?.isBanned(..) == true` reads "not banned" for a session that does not
+            // exist yet or whose first fold has not landed, and this sweep runs on the revision tick
+            // — so a banned member's own client would have hit that window on cold start and
+            // recovered itself, which is precisely the bypass this gate exists to stop. No verdict
+            // means no recovery; the next sweep retries once the roster is known.
+            val authority =
                 account.concordSessions
                     .sessionFor(entry.id)
                     ?.state
                     ?.value
                     ?.authority
-                    ?.isBanned(account.signer.pubKey) == true
+            if (authority == null) {
+                Log.i("Concord") { "Stranded-recovery check deferred for ${entry.id}: control plane not folded yet" }
+                lastConcordRecoveryCheck.remove(entry.id)
+                continue
+            }
+            val bannedHere = authority.isBanned(account.signer.pubKey)
             val merged = ConcordActions.recoverStranded(entry, bundle, bannedHere) ?: continue
             if (!adoptedConcordRotations.add("${entry.id}:${merged.rootEpoch}")) continue
             Log.i("Concord", "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}")

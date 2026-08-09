@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.concord.cord04Roles
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Resolves the owner-rooted authority state of a Concord community from its
@@ -132,6 +133,8 @@ data class AuthorityResolver private constructor(
     }
 
     companion object {
+        private const val TAG = "ConcordAuthorityResolver"
+
         /** The owner's rank — supreme and unremovable. No Role may claim it. */
         const val OWNER_RANK = 0L
 
@@ -204,6 +207,14 @@ data class AuthorityResolver private constructor(
                 result = resolveOnce(editions, ownerPubKey, bannedAuthors = mask)
                 if (result.banned == mask) return result
                 mask = result.banned
+            }
+            // Exhausted the cap without settling. The returned roster was folded under a mask that is
+            // no longer the banlist beside it, so this is reported rather than swallowed — the same
+            // reasoning as EditionFold.LOG_GAP: an unsettled fold is either an adversarial edition set
+            // or a rule of ours that does not converge, and both are things a reader wants to know.
+            Log.w(TAG) {
+                "Banlist resolution did not settle in $MAX_BAN_RESOLUTION_PASSES passes for owner $ownerPubKey " +
+                    "(${editions.size} editions, ${result.banned.size} banned): keeping the last pass"
             }
             return result
         }
@@ -350,9 +361,10 @@ data class AuthorityResolver private constructor(
             // a concurrent ban is never lost, while an on-chain unban still takes effect.
             val allBanlist = editions.filter { it.entityKind == ControlEntityKind.BANLIST }
 
-            fun banGate(e: ControlEdition): Boolean =
-                e.author.lowercase() == ownerLower ||
-                    (e.author.lowercase() !in bannedAuthors && effectivePermissionsOf(e.author.lowercase()).has(ConcordPermissions.BAN))
+            fun banGate(e: ControlEdition): Boolean {
+                val author = e.author.lowercase()
+                return author == ownerLower || (author !in bannedAuthors && effectivePermissionsOf(author).has(ConcordPermissions.BAN))
+            }
             val authorizedBanlist = allBanlist.filter(::banGate)
 
             // CORD-04 §3's rank rule binds "every action", and it names banning as its example ("an

@@ -545,6 +545,7 @@ object ConcordActions {
         recipientsXOnly: List<HexKey>,
         staffXOnly: Set<HexKey>,
         createdAt: Long,
+        ownerPubKey: HexKey,
     ): RefoundingBuild =
         ConcordRefounding.build(
             rotatorSigner = rotatorSigner,
@@ -558,6 +559,7 @@ object ConcordActions {
             recipientsXOnly = recipientsXOnly,
             staffXOnly = staffXOnly,
             createdAt = createdAt,
+            ownerPubKey = ownerPubKey,
         )
 
     /**

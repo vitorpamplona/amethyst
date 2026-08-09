@@ -78,7 +78,7 @@ class ConcordRollbackFloorTest {
             // new epoch's plane is split and addressed by the derived signer, not the root.
             val newControlRoot = ByteArray(32) { 0x44 }
             val newControl = ControlPlaneKeys.forStaff(newRoot, community.communityId, newEpoch, newControlRoot)
-            val rolledBack = ConcordRefounding.compactControlPlane(community.genesisWraps, community.controlPlane, newControl)
+            val rolledBack = ConcordRefounding.compactControlPlane(community.genesisWraps, community.controlPlane, newControl, community.ownerPubKey)
 
             val entry =
                 ConcordCommunityListEntry(
@@ -145,7 +145,7 @@ class ConcordRollbackFloorTest {
             val newControlRoot = ByteArray(32) { 0x44 }
             val newControl = ControlPlaneKeys.forStaff(newRoot, community.communityId, newEpoch, newControlRoot)
             // Honest: compacted from the FULL prior plane, so each entity's head (metadata v1) survives.
-            val honest = ConcordRefounding.compactControlPlane(epoch0Wraps, community.controlPlane, newControl)
+            val honest = ConcordRefounding.compactControlPlane(epoch0Wraps, community.controlPlane, newControl, community.ownerPubKey)
 
             val entry =
                 ConcordCommunityListEntry(
@@ -186,7 +186,7 @@ class ConcordRollbackFloorTest {
             // new epoch's plane is split and addressed by the derived signer, not the root.
             val newControlRoot = ByteArray(32) { 0x44 }
             val newControl = ControlPlaneKeys.forStaff(newRoot, community.communityId, newEpoch, newControlRoot)
-            val compacted = ConcordRefounding.compactControlPlane(community.genesisWraps, community.controlPlane, newControl)
+            val compacted = ConcordRefounding.compactControlPlane(community.genesisWraps, community.controlPlane, newControl, community.ownerPubKey)
 
             val entry =
                 ConcordCommunityListEntry(
