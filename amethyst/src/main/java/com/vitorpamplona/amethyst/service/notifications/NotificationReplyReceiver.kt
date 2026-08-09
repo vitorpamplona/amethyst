@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelAndPrune
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.cancelChildlessGroupSummaries
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -60,7 +62,13 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
         when (intent.action) {
             NotificationUtils.MARK_READ_ACTION -> {
-                notificationManager.cancel(notificationId)
+                notificationManager.cancelAndPrune(notificationId)
+            }
+
+            // The user swiped the notification away. It is already gone; all that is left
+            // is to take its group summary with it when it was the last child.
+            NotificationUtils.DISMISS_ACTION -> {
+                notificationManager.cancelChildlessGroupSummaries(alreadyGone = notificationId)
             }
 
             NotificationUtils.REPLY_ACTION -> {
@@ -138,7 +146,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
             try {
                 block()
-                notificationManager.cancel(notificationId)
+                notificationManager.cancelAndPrune(notificationId)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.e("NotificationReply") { "Failed to send reply: ${e.message}" }
