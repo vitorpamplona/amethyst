@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEven
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
@@ -75,6 +76,15 @@ private const val CONCORD_ADMIN_ROLE = "Admin"
  * relay-fetch loop.
  */
 private const val RECOVERY_CHECK_INTERVAL_MS = 15 * 60 * 1000L
+
+/**
+ * How many recipients one Refounding will re-key. See `AccountConcordActions.boundRecipients`.
+ *
+ * 120 blobs ride in each kind-3303 chunk, so this is ~42 published events and ~5k NIP-44
+ * encryptions at the ceiling — heavy but survivable on a phone, and far above any real community.
+ * Raising it raises the cost of the attack it exists to bound, not the safety.
+ */
+private const val MAX_REFOUNDING_RECIPIENTS = 5_000
 
 /**
  * Concord (encrypted communities) orchestration for an [Account]: join/create/
@@ -810,7 +820,7 @@ class AccountConcordActions(
                 .apply {
                     removeAll(removedLower)
                     removeAll(authority.bannedMembers())
-                }.toList()
+                }.let { candidates -> boundRecipients(candidates, authority) }
 
         // 3. Build the refounding: new root, compacted Control Plane, per-recipient rekey blobs.
         val entry = session.entry
@@ -851,6 +861,42 @@ class AccountConcordActions(
         //    re-folds the compacted Control Plane (with the ban), dropping the removed members.
         adoptConcordRoot(entry, newRoot, build.newEpoch, build.newControlKeys.address.hexToByteArray(), newControlRoot)
         return true
+    }
+
+    /**
+     * Caps the Refounding recipient set, keeping the members whose standing we can actually vouch
+     * for when there are too many.
+     *
+     * `allMembers()` is the Guestbook ∪ `observedAuthors` ∪ the roster, and the first two are
+     * unbounded and attacker-writable: a Guestbook Join is self-signed by any key at all, and every
+     * author we decrypt is folded in by design (CORD-02 §5, "observably present"). So each throwaway
+     * npub someone posts from, or simply announces, becomes one more mandatory blob in the next
+     * Refounding — meaning the attack inflates the cost of its own remedy, and the remedy is the only
+     * hard removal Concord has. See B4 in `docs/concord-soft-ban-audit.md`.
+     *
+     * The roster and the owner are kept unconditionally: they are owner-rooted, so they cannot be
+     * padded from outside. The remainder fills the budget, and anything dropped is **logged rather
+     * than silently truncated** — a dropped member is stranded on the dead epoch and their only way
+     * back is a recovery path that needs to know it happened.
+     */
+    private fun boundRecipients(
+        candidates: Set<HexKey>,
+        authority: AuthorityResolver,
+    ): List<HexKey> {
+        if (candidates.size <= MAX_REFOUNDING_RECIPIENTS) return candidates.toList()
+
+        val vouched = authority.roleHolders() + authority.staffMembers()
+        val kept = LinkedHashSet<HexKey>(MAX_REFOUNDING_RECIPIENTS)
+        candidates.filterTo(kept) { it in vouched }
+        for (candidate in candidates) {
+            if (kept.size >= MAX_REFOUNDING_RECIPIENTS) break
+            kept.add(candidate)
+        }
+        Log.w("Concord") {
+            "Refounding recipient set capped at $MAX_REFOUNDING_RECIPIENTS of ${candidates.size}: " +
+                "${candidates.size - kept.size} member(s) will be stranded on the prior epoch"
+        }
+        return kept.toList()
     }
 
     // Rotations we've already adopted ("communityId:epoch"), so a base-rekey wrap still buffered

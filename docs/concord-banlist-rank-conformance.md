@@ -1,7 +1,8 @@
 # Concord: the Banlist is not rank-gated in any implementation (CORD-04 conformance)
 
 **Status:** conformance bug. Reproduced in Amethyst and **fixed there** (see §6); present by
-inspection in Armada.
+inspection in Armada. Finding #3, left open in §4 as a fixpoint-ordering question, is now also
+implemented in Amethyst — see the 2026-08-09 update before §Rollout status.
 **Severity:** privilege escalation. Any `BAN` holder can neutralise every authority above them,
 including the owner.
 **Reported by:** Amethyst (MIT), 2026-07-20. Findings verified by unit test; see "Evidence" below.
@@ -189,6 +190,38 @@ Rationale for each clause:
 We'd also suggest **§4 restating the rank half inline**, the way §2 does for Grants and CORD-02 §5
 does for Kicks. Both independent implementations read §4 in isolation and both got it wrong the same
 way; that is strong evidence the section is the problem, not the readers.
+
+### Update, 2026-08-09: we have now implemented #3
+
+Amethyst now answers the ordering question rather than leaving it open, because #3 turned out to be
+the doorway to a full community takeover and not merely an inconsistency — a banned staffer who kept
+`control_root` kept the entire roster, and could mint a fresh un-banned npub that passed every
+ban-aware gate. The write-up is `docs/concord-soft-ban-audit.md` (B2).
+
+The rule we shipped: **authority only ever shrinks, over two passes.** Pass A resolves exactly as
+before and yields a candidate banlist; pass B re-resolves with every author on that list treated as
+holding no authority at all, for roles, grants and the Banlist alike. Two passes, always, so it
+terminates by construction. It cannot oscillate on mutual bans either, because the rank rule makes
+them unreachable: only a member who strictly outranks you may ban you, and you cannot outrank them
+back.
+
+Note what it costs, because it is not obvious and you would hit it too: this **cascades**. Every
+edition a banned member ever authored is dropped, grants included, so banning an admin also demotes
+everyone that admin promoted. We think that is the literal reading of §4 and it is what kills the
+sockpuppet — but a legitimate promotion by a later-banned admin vanishes with it, and the owner has
+to re-issue it. If you read §4 as scoping only to editions authored *after* the ban, say so; that is
+implementable too, but it needs the spec to define an ordering between an edition and a Banlist
+entry, which today it does not.
+
+A chain-local rule is not enough, and this is the trap worth flagging: "the author must not be banned
+by the state their edition chains from" is bypassed by forking the Banlist at genesis, where no
+parent ever mentions the ban and §4's re-heal union carries it in anyway. The rule has to bind the
+union, which is why ours is a whole-pass mask rather than a per-edition check.
+
+This widens the divergence in §6: we now drop editions you honor in any community where a privileged
+member was banned, not only where a signer failed to outrank their target.
+
+---
 
 Separately, please rule on **#3**: whether a banned npub's Banlist edition is honored. Our reading of
 §4 ("drops every event from a banned npub — message, reaction, edit, or authority action") is that it
