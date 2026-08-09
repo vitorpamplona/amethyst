@@ -294,9 +294,10 @@ class NappletConsentSummary(
                     context.getString(R.string.napplet_consent_pay_no_amount)
                 }
             }
-            is NappletRequest.ResourceBytes -> context.getString(R.string.napplet_consent_resource)
+            NappletRequest.ResourceInfo, is NappletRequest.ResourceBytes, is NappletRequest.ResourceBytesMany ->
+                context.getString(R.string.napplet_consent_resource)
             is NappletRequest.UploadBlob -> context.getString(R.string.napplet_consent_upload)
             // Resolved in the broker before consent (negotiation / shell-mediated / cosmetic); never shown.
-            is NappletRequest.ShellSupports, is NappletRequest.RegisterAction, is NappletRequest.UnregisterAction, is NappletRequest.ThemeGet -> ""
+            is NappletRequest.RegisterAction, is NappletRequest.UnregisterAction, is NappletRequest.ThemeGet -> ""
         }
 }

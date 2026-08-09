@@ -76,7 +76,7 @@ object NappletLaunchRegistry {
         accountPubKey: HexKey,
     ): String {
         val token = ByteArray(32).also(secureRandom::nextBytes).toHexKey()
-        sessions[token] = Session(identity, declared, accountPubKey)
+        sessions[token] = Session(identity.copy(instanceId = token), declared, accountPubKey)
         return token
     }
 

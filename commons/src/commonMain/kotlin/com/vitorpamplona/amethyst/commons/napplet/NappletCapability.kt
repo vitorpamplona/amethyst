@@ -25,14 +25,11 @@ package com.vitorpamplona.amethyst.commons.napplet
  * (`napplet/naps`, `@napplet/web`). A napplet declares the domains it needs via `requires` tags;
  * [fromNapDomain] maps each bare domain string to the capability the broker enforces.
  *
- * The mapping is **default-deny**: an unrecognized NAP domain maps to `null` and the shell must
- * surface it as unknown rather than silently granting it. Domains we don't yet broker
- * (`intent`, `media`, `config`, `outbox`, `ifc`, `cvm`) therefore resolve to `null` for now.
+ * The mapping is **default-deny**: an unrecognized or only partially implemented NAP domain maps
+ * to `null`. Keeping a broker implementation below does not advertise conformance; only domains
+ * whose current NAP contract is implemented are injected into `window.napplet`.
  */
 enum class NappletCapability {
-    /** `shell` — capability negotiation (`shell.supports`). Always available; needs no consent. */
-    SHELL,
-
     /** `identity` — read-only identity queries (`getPublicKey`, `onChanged`). */
     IDENTITY,
 
@@ -70,13 +67,13 @@ enum class NappletCapability {
     ;
 
     /**
-     * Whether using this capability requires user consent. Negotiation ([SHELL]) and the cosmetic,
-     * read-only theme read ([THEME]) never prompt; everything else does (subject to the broker's
+     * Whether using this capability requires user consent. The cosmetic, read-only theme read
+     * ([THEME]) never prompts; everything else does (subject to the broker's
      * signer-self-gating and standing-grant rules). [INC] is authorized at the router edge on its
      * declaration alone, so it never reaches the consent path regardless of this flag.
      */
     val requiresConsent: Boolean
-        get() = this != SHELL && this != THEME
+        get() = this != THEME
 
     /**
      * Whether the user must confirm **every single use** — no standing auto-approval. True for
@@ -96,25 +93,22 @@ enum class NappletCapability {
 
     companion object {
         /**
-         * Maps a bare NAP domain to the capability the broker enforces, case-insensitively.
-         * Returns `null` for any domain the shell does not recognize — callers MUST treat that as
-         * "unknown, do not grant".
+         * Maps a bare, currently supported NAP domain to the capability the broker enforces.
+         * Returns `null` for unknown and partial/legacy domains — callers MUST treat that as
+         * "unavailable, do not inject or grant". NIP-5D domain names are exact lowercase strings.
          */
         fun fromNapDomain(domain: String): NappletCapability? =
-            when (domain.trim().lowercase()) {
-                "shell" -> SHELL
+            when (domain) {
                 "identity" -> IDENTITY
-                "keys" -> KEYS
-                "relay", "relays" -> RELAY
+                "relay" -> RELAY
                 "storage" -> STORAGE
-                "value" -> VALUE
                 "resource" -> RESOURCE
-                "upload" -> UPLOAD
                 "theme" -> THEME
-                "notify" -> NOTIFY
-                "inc" -> INC
                 else -> null
             }
+
+        /** Exact NIP-5D domain names Amethyst currently exposes through its injection prelude. */
+        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme")
     }
 }
 

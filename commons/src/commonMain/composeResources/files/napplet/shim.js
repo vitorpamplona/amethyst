@@ -79,7 +79,7 @@
     // Subscription pushes are keyed by subId, not a request id.
     if (msg.type === 'relay.event' || msg.type === 'relay.eose' || msg.type === 'relay.closed') {
       var sub = subs[msg.subId]; if (!sub) return;
-      if (msg.type === 'relay.event') { if (sub.onEvent) sub.onEvent(msg.event); }
+      if (msg.type === 'relay.event') { if (sub.onEvent) sub.onEvent(msg.result); }
       else if (msg.type === 'relay.eose') { if (sub.onEose) sub.onEose(); }
       else { delete subs[msg.subId]; if (sub.onClosed) sub.onClosed(msg.reason); }
       return;
@@ -91,7 +91,7 @@
     // identity.changed push: the active user's key changed (account switch / connect / disconnect).
     if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
     if (!msg.id) return;
-    var p = pending[msg.id]; if (!p) return; delete pending[msg.id];
+    var p = pending[msg.id]; if (!p) return; delete pending[msg.id]; if (p.cleanup) p.cleanup();
     if (msg.ok) p.resolve(msg);
     else { var err = new Error(msg.reason || msg.operation || msg.error || 'napplet error'); err.napplet = msg; p.reject(err); }
   }
@@ -101,16 +101,31 @@
     window.addEventListener('message', function(e){ if (e.source !== parent) return; onIncoming(e.data); });
   }
   function field(promise, name){ return promise.then(function(m){ return m[name]; }); }
-  function normFilters(filters){ return Array.isArray(filters) ? { filters: filters } : { filter: filters || {} }; }
+  function resourceCall(type, fields, opts){
+    var signal = opts && opts.signal;
+    if (signal && signal.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+    return new Promise(function(resolve, reject){
+      var env = { type: type }; for (var k in fields) env[k] = fields[k];
+      var id = send(env), onAbort;
+      var cleanup = function(){ if (signal && onAbort) signal.removeEventListener('abort', onAbort); };
+      pending[id] = { resolve: resolve, reject: reject, cleanup: cleanup };
+      if (signal) {
+        onAbort = function(){
+          if (!pending[id]) return;
+          delete pending[id]; cleanup();
+          post('resource.cancel', { id: id });
+          reject(new DOMException('Aborted', 'AbortError'));
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+      }
+    });
+  }
+  function normFilters(filters){ return { filters: Array.isArray(filters) ? filters : [filters || {}] }; }
   function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
-  var napplet = {
-    shell: {
-      // supports() is synchronous in @napplet/shim; we expose a sync proxy backed by an async check.
-      supports: function(domain, protocol){ return field(call('shell.supports', { domain: domain, protocol: protocol }), 'supported'); },
-      ready: function(){ return Promise.resolve({}); },
-      onReady: function(cb){ if (typeof cb === 'function') cb({}); return { close: function(){} }; },
-      services: []
-    },
+  // Build the methods Amethyst actually implements, then project only the explicit domains the
+  // trusted host authorized for this launch. Domain-object presence is the NIP-5D availability
+  // signal; there is deliberately no legacy window.napplet.shell capability probe.
+  var available = {
     identity: {
       getPublicKey: function(){ return field(call('identity.getPublicKey'), 'pubkey'); },
       getProfile: function(){ return field(call('identity.getProfile'), 'profile'); },
@@ -121,15 +136,12 @@
       getList: function(listType){ return field(call('identity.getList', { listType: listType }), 'entries'); },
       getZaps: function(){ return field(call('identity.getZaps'), 'zaps'); },
       getBadges: function(){ return field(call('identity.getBadges'), 'badges'); },
-      // onChanged: the shell pushes identity.changed when the active user's key changes. The first
-      // handler opens the watch (identity.watch); closing the last one stops it (identity.unwatch).
+      // The runtime owns identity.changed delivery; handlers are entirely local to the shim.
       onChanged: function(handler){
         if (typeof handler !== 'function') return { close: function(){} };
         identityHandlers.push(handler);
-        if (identityHandlers.length === 1) post('identity.watch');
         return { close: function(){
           var i = identityHandlers.indexOf(handler); if (i >= 0) identityHandlers.splice(i, 1);
-          if (identityHandlers.length === 0) post('identity.unwatch');
         } };
       }
     },
@@ -152,6 +164,7 @@
         var subId = 's' + (seq++);
         subs[subId] = { onEvent: onEvent, onEose: onEose };
         var env = normFilters(filters); env.subId = subId;
+        if (options && options.relay) env.relay = options.relay;
         post('relay.subscribe', env);
         return { close: function(){ delete subs[subId]; post('relay.close', { subId: subId }); } };
       }
@@ -161,23 +174,49 @@
       getItem: function(key){ return field(call('storage.get', { key: key }), 'value'); },
       setItem: function(key, value){ return call('storage.set', { key: key, value: value }).then(function(){}); },
       removeItem: function(key){ return call('storage.remove', { key: key }).then(function(){}); },
-      keys: function(){ return field(call('storage.keys'), 'keys'); }
+      keys: function(){ return field(call('storage.keys'), 'keys'); },
+      instance: {
+        getItem: function(key){ return field(call('storage.get', { key: key, scope: 'instance' }), 'value'); },
+        setItem: function(key, value){ return call('storage.set', { key: key, value: value, scope: 'instance' }).then(function(){}); },
+        removeItem: function(key){ return call('storage.remove', { key: key, scope: 'instance' }).then(function(){}); },
+        keys: function(){ return field(call('storage.keys', { scope: 'instance' }), 'keys'); }
+      }
     },
     // value.payInvoice is an Amethyst-specific extension (not part of @napplet/shim).
     value: {
       payInvoice: function(invoice){ return field(call('value.payInvoice', { invoice: invoice }), 'preimage'); }
     },
     resource: {
-      // The shell rebuilds the Blob from the host's base64 before this resolves.
-      bytes: function(url){ return field(call('resource.bytes', { url: url }), 'blob'); },
-      bytesAsObjectURL: function(url){ return field(call('resource.bytes', { url: url }), 'blob').then(function(blob){ return URL.createObjectURL(blob); }); }
+      info: function(){ return field(call('resource.info'), 'info'); },
+      // The shell rebuilds Blobs from the host's base64 before these resolve.
+      bytes: function(url, opts){ return field(resourceCall('resource.bytes', { url: url }, opts), 'blob'); },
+      bytesMany: function(urls, opts){ return field(resourceCall('resource.bytesMany', { urls: Array.from(urls || []) }, opts), 'items'); },
+      bytesAsObjectURL: function(url){
+        var objectUrl = '', revoked = false;
+        var handle = { url: '', revoke: function(){ if (revoked) return; revoked = true; if (objectUrl) URL.revokeObjectURL(objectUrl); } };
+        var ready = available.resource.bytes(url).then(function(blob){
+          if (revoked) return;
+          objectUrl = URL.createObjectURL(blob); handle.url = objectUrl; return objectUrl;
+        });
+        Object.defineProperty(handle, 'ready', { value: ready, enumerable: false });
+        return handle;
+      }
     },
     upload: {
       // Sends the SDK's upload.upload; we inline the bytes as base64 (shell.html does the same for
       // a Blob from a stock napplet). Resolves to the uploaded URL.
       blob: function(bytes, contentType){ return field(call('upload.upload', { request: { dataBase64: bytesToB64(bytes), mimeType: contentType } }), 'url'); }
+    },
+    theme: {
+      get: function(){ return field(call('theme.get'), 'theme'); }
     }
   };
+  var requested = [];
+  try { if (Array.isArray(window.__nappletDomains)) requested = window.__nappletDomains; } catch (_) {}
+  var napplet = {};
+  requested.forEach(function(domain){
+    if (typeof domain === 'string' && Object.prototype.hasOwnProperty.call(available, domain)) napplet[domain] = available[domain];
+  });
   window.napplet = Object.freeze(napplet);
 
   // ---- IME agent (in-app browser only) -------------------------------------------------------

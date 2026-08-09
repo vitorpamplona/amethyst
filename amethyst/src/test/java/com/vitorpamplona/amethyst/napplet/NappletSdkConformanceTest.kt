@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -114,17 +115,31 @@ class NappletSdkConformanceTest {
         // RelayQueryResultMessage: { type:'relay.query.result', id, events, error? }
         val o = result("relay.query", NappletResponse.Events(listOf(sampleEvent())))
         assertEquals(1, o["events"]?.jsonArray?.size)
+        assertEquals(
+            "a".repeat(64),
+            o["events"]
+                ?.jsonArray
+                ?.first()
+                ?.jsonObject
+                ?.get("event")
+                ?.jsonObject
+                ?.get("id")
+                ?.jsonPrimitive
+                ?.content,
+        )
     }
 
     @Test
     fun relayEventAndEosePushesMatchTheSdk() {
-        // RelayEventMessage (PUSH): { type:'relay.event', subId, event }
+        // RelayEventMessage (PUSH): { type:'relay.event', subId, result:{event, sidecar?} }
         val ev = json.parseToJsonElement(NappletProtocolJson.encodeRelayEvent("s1", sampleEvent())).jsonObject
         assertEquals("relay.event", ev["type"]?.jsonPrimitive?.content)
         assertEquals("s1", ev["subId"]?.jsonPrimitive?.content)
         assertEquals(
             "a".repeat(64),
-            ev["event"]
+            ev["result"]
+                ?.jsonObject
+                ?.get("event")
                 ?.jsonObject
                 ?.get("id")
                 ?.jsonPrimitive
@@ -175,7 +190,11 @@ class NappletSdkConformanceTest {
         assertEquals(NappletRequest.StorageGet("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.get","id":"1","key":"k"}"""))
         assertEquals(NappletRequest.StorageSet("k", "v"), NappletProtocolJson.decodeRequest("""{"type":"storage.set","id":"1","key":"k","value":"v"}"""))
         assertEquals(NappletRequest.StorageRemove("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.remove","id":"1","key":"k"}"""))
-        assertEquals(NappletRequest.StorageKeys, NappletProtocolJson.decodeRequest("""{"type":"storage.keys","id":"1"}"""))
+        assertEquals(NappletRequest.StorageKeys(), NappletProtocolJson.decodeRequest("""{"type":"storage.keys","id":"1"}"""))
+        assertEquals(
+            NappletRequest.StorageGet("k", NappletStorageScope.INSTANCE),
+            NappletProtocolJson.decodeRequest("""{"type":"storage.get","id":"1","key":"k","scope":"instance"}"""),
+        )
 
         // StorageGetResultMessage.value, StorageKeysResultMessage.keys
         assertTrue(result("storage.get", NappletResponse.StorageValue("v")).containsKey("value"))
@@ -186,7 +205,12 @@ class NappletSdkConformanceTest {
 
     @Test
     fun resourceBytesRequestAndResultMatch() {
+        assertEquals(NappletRequest.ResourceInfo, NappletProtocolJson.decodeRequest("""{"type":"resource.info","id":"0"}"""))
         assertEquals(NappletRequest.ResourceBytes("https://x"), NappletProtocolJson.decodeRequest("""{"type":"resource.bytes","id":"1","url":"https://x"}"""))
+        assertEquals(
+            NappletRequest.ResourceBytesMany(listOf("https://x", "data:text/plain,hi")),
+            NappletProtocolJson.decodeRequest("""{"type":"resource.bytesMany","id":"2","urls":["https://x","data:text/plain,hi"]}"""),
+        )
         // The host emits base64 bytes + mime; shell.html rebuilds the Blob the SDK expects.
         val o = result("resource.bytes", NappletResponse.Bytes("Hi".encodeToByteArray(), "text/plain"))
         assertEquals("SGk=", o["bytes"]?.jsonPrimitive?.content)
@@ -201,29 +225,6 @@ class NappletSdkConformanceTest {
         assertTrue(result("relay.publish", NappletResponse.Denied(NappletCapability.RELAY, "no")).containsKey("error"))
         assertTrue(result("identity.getProfile", NappletResponse.Unsupported("identity.getProfile")).containsKey("error"))
         assertTrue(result("relay.query", NappletResponse.Failed("boom")).containsKey("error"))
-    }
-
-    // ---------- shell handshake (ShellReadyMessage / ShellInitMessage) ----------
-
-    @Test
-    fun shellInitAdvertisesTheCapabilityEnvironment() {
-        // shell.ready is answered by the host (not the codec) with this shell.init env, which the
-        // SDK caches and answers shell.supports() from locally. ShellInitMessage:
-        // { type:'shell.init', capabilities:{ domains, protocols }, services }.
-        val o = json.parseToJsonElement(NappletProtocolJson.encodeShellInit(listOf("shell", "relay"), listOf("shell", "relay"))).jsonObject
-        assertEquals("shell.init", o["type"]?.jsonPrimitive?.content)
-        assertEquals(
-            2,
-            o["capabilities"]
-                ?.jsonObject
-                ?.get("domains")
-                ?.jsonArray
-                ?.size,
-        )
-        assertTrue(o["capabilities"]?.jsonObject?.containsKey("protocols") == true)
-        assertEquals(2, o["services"]?.jsonArray?.size)
-        // shell.ready stays a host-layer message — the codec doesn't treat it as a broker request.
-        assertNull(NappletProtocolJson.decodeRequest("""{"type":"shell.ready"}"""))
     }
 
     // ---------- keys (keyboard/command actions) ----------

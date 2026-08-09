@@ -18,22 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets
+package com.vitorpamplona.amethyst.commons.napplet
 
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteAggregateHash
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 
-internal fun NappletCapability.symbol(): MaterialSymbol =
-    when (this) {
-        NappletCapability.IDENTITY -> MaterialSymbols.AccountCircle
-        NappletCapability.KEYS -> MaterialSymbols.Key
-        NappletCapability.RELAY -> MaterialSymbols.Public
-        NappletCapability.STORAGE -> MaterialSymbols.Storage
-        NappletCapability.VALUE -> MaterialSymbols.Bolt
-        NappletCapability.RESOURCE -> MaterialSymbols.Language
-        NappletCapability.UPLOAD -> MaterialSymbols.Upload
-        NappletCapability.THEME -> MaterialSymbols.Image
-        NappletCapability.NOTIFY -> MaterialSymbols.Notifications
-        NappletCapability.INC -> MaterialSymbols.SwapHoriz
+/** Pure NIP-5D artifact checks shared by every launch surface. */
+object NappletArtifactPolicy {
+    /** Returns the runtime-computed artifact identity, or null when the manifest must not execute. */
+    fun verifiedAggregateHash(
+        paths: List<PathTag>,
+        declaredAggregateHash: HexKey?,
+    ): HexKey? {
+        val entry = paths.singleOrNull() ?: return null
+        if (entry.path != "/index.html" || !SHA256.matches(entry.hash)) return null
+        val computed = SiteAggregateHash.compute(paths)
+        if (declaredAggregateHash != null && !declaredAggregateHash.equals(computed, ignoreCase = true)) return null
+        return computed
     }
+
+    private val SHA256 = Regex("^[0-9a-fA-F]{64}$")
+}

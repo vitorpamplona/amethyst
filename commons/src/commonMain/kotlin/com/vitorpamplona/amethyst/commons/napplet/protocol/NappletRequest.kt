@@ -24,6 +24,11 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
+enum class NappletStorageScope {
+    SHARED,
+    INSTANCE,
+}
+
 /**
  * A capability request from a napplet, after it has crossed the postMessage + IPC edge
  * and been deserialized into a typed object. Each variant declares the [capability] the
@@ -66,14 +71,6 @@ sealed interface NappletRequest {
     /** `theme.get` — read the host's current theme colors. Cosmetic, read-only, never prompts. */
     data object ThemeGet : NappletRequest {
         override val capability get() = NappletCapability.THEME
-    }
-
-    /** `shell.supports(domain, protocol?)` — capability negotiation; always answerable, no consent. */
-    data class ShellSupports(
-        val domain: String,
-        val protocol: String? = null,
-    ) : NappletRequest {
-        override val capability get() = NappletCapability.SHELL
     }
 
     /**
@@ -198,6 +195,7 @@ sealed interface NappletRequest {
     /** Read a value from this napplet's sandboxed key-value store (`storage.getItem`). */
     data class StorageGet(
         val key: String,
+        val scope: NappletStorageScope = NappletStorageScope.SHARED,
     ) : NappletRequest {
         override val capability get() = NappletCapability.STORAGE
     }
@@ -206,6 +204,7 @@ sealed interface NappletRequest {
     data class StorageSet(
         val key: String,
         val value: String,
+        val scope: NappletStorageScope = NappletStorageScope.SHARED,
     ) : NappletRequest {
         override val capability get() = NappletCapability.STORAGE
     }
@@ -213,12 +212,15 @@ sealed interface NappletRequest {
     /** Remove a value from this napplet's sandboxed key-value store (`storage.removeItem`). */
     data class StorageRemove(
         val key: String,
+        val scope: NappletStorageScope = NappletStorageScope.SHARED,
     ) : NappletRequest {
         override val capability get() = NappletCapability.STORAGE
     }
 
     /** List the keys this napplet has stored (`storage.keys`). */
-    data object StorageKeys : NappletRequest {
+    data class StorageKeys(
+        val scope: NappletStorageScope = NappletStorageScope.SHARED,
+    ) : NappletRequest {
         override val capability get() = NappletCapability.STORAGE
     }
 
@@ -278,6 +280,18 @@ sealed interface NappletRequest {
     /** Fetch the bytes of an https/blossom/nostr/data resource (`resource.bytes`). */
     data class ResourceBytes(
         val url: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.RESOURCE
+    }
+
+    /** Describe the bounded schemes and limits of this shell's existing resource broker. */
+    data object ResourceInfo : NappletRequest {
+        override val capability get() = NappletCapability.RESOURCE
+    }
+
+    /** Fetch several resources in input order, returning a per-URL success/error record. */
+    data class ResourceBytesMany(
+        val urls: List<String>,
     ) : NappletRequest {
         override val capability get() = NappletCapability.RESOURCE
     }
