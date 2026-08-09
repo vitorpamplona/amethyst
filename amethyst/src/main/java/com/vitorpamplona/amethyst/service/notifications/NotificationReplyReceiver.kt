@@ -56,6 +56,22 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         intent: Intent,
     ) {
         val notificationId = intent.getIntExtra(NotificationUtils.KEY_NOTIFICATION_ID, 0)
+
+        // Whatever the action, the user is done with this notification, so record it before
+        // doing anything else. An enrichment window may still be open on the event (up to
+        // 25s from the first post), and it re-posts the notification every time metadata
+        // lands — without this the notification the user just dealt with comes back, and the
+        // enricher keeps a relay subscription and a wakelock alive for it until the window
+        // elapses. Replies mark it after the send succeeds instead, so a failure leaves the
+        // notification to enrich and retry.
+        val eventId = intent.getStringExtra(NotificationUtils.KEY_EVENT_ID)
+        if (intent.action != NotificationUtils.REPLY_ACTION &&
+            intent.action != NotificationUtils.PUBLIC_REPLY_ACTION &&
+            intent.action != NotificationUtils.MARMOT_REPLY_ACTION
+        ) {
+            eventId?.let { NotificationUtils.markDismissed(it) }
+        }
+
         val notificationManager =
             ContextCompat.getSystemService(context, NotificationManager::class.java)
                 as NotificationManager
@@ -86,7 +102,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
                 if (members.isEmpty()) return
 
-                runOnRelay(notificationManager, notificationId) {
+                runOnRelay(notificationManager, notificationId, eventId) {
                     sendReply(accountNpub, members, replyText)
                 }
             }
@@ -103,7 +119,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 val accountNpub = intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB) ?: return
                 val targetEventId = intent.getStringExtra(NotificationUtils.KEY_TARGET_EVENT_ID) ?: return
 
-                runOnRelay(notificationManager, notificationId) {
+                runOnRelay(notificationManager, notificationId, eventId) {
                     sendPublicReply(accountNpub, targetEventId, replyText)
                 }
             }
@@ -122,7 +138,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 val replyToInnerId = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_ID)
                 val replyToInnerAuthor = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_AUTHOR)
 
-                runOnRelay(notificationManager, notificationId) {
+                runOnRelay(notificationManager, notificationId, eventId) {
                     sendMarmotReply(accountNpub, nostrGroupId, replyToInnerId, replyToInnerAuthor, replyText)
                 }
             }
@@ -132,6 +148,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
     private fun runOnRelay(
         notificationManager: NotificationManager,
         notificationId: Int,
+        eventId: String?,
         block: suspend () -> Unit,
     ) {
         val pendingResult = goAsync()
@@ -146,6 +163,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
             try {
                 block()
+                eventId?.let { NotificationUtils.markDismissed(it) }
                 notificationManager.cancelAndPrune(notificationId)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

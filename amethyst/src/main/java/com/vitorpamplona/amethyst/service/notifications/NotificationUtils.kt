@@ -73,6 +73,13 @@ object NotificationUtils {
     const val DISMISS_ACTION = "com.vitorpamplona.amethyst.DISMISS_ACTION"
     const val KEY_REPLY_TEXT = "key_reply_text"
     const val KEY_NOTIFICATION_ID = "key_notification_id"
+
+    /**
+     * Hex id of the event this notification was posted for, carried on every action
+     * and on the delete intent so the receiver can mark it dismissed. Distinct from
+     * [KEY_TARGET_EVENT_ID], which is the note an inline reply is addressed to.
+     */
+    const val KEY_EVENT_ID = "key_event_id"
     const val KEY_ACCOUNT_NPUB = "key_account_npub"
     const val KEY_CHATROOM_MEMBERS = "key_chatroom_members"
     const val KEY_TARGET_EVENT_ID = "key_target_event_id"
@@ -91,16 +98,19 @@ object NotificationUtils {
      */
     private const val OWN_GROUP_PREFIX = "com.vitorpamplona.amethyst."
 
-    // Event ids the user has just read/dismissed in-app. The enrichment path
-    // re-posts a notification as metadata arrives; without this guard a
-    // notification the user already dismissed would be resurrected seconds later
-    // when its author's kind:0 lands. Keyed by the event id string (not the
-    // hashCode) so distinct events can't collide. Entries self-expire after a
-    // window comfortably longer than the 25s enrichment window.
+    // Event ids the user is done with. The enrichment path re-posts a notification
+    // as metadata arrives; without this guard a notification the user already got
+    // rid of would be resurrected seconds later when its author's kind:0 lands, and
+    // the enricher would go on holding a relay window and a wakelock open for it.
+    // Every way a user can be done with a notification has to record here — reading
+    // the event in-app, swiping the notification away, "mark as read", and replying
+    // inline — or that path leaks the resurrection. Keyed by the event id string
+    // (not the hashCode) so distinct events can't collide. Entries self-expire after
+    // a window comfortably longer than the 25s enrichment window.
     private const val DISMISS_GUARD_MS = 90_000L
     private val recentlyDismissed = ConcurrentHashMap<String, Long>()
 
-    private fun markDismissed(eventId: String) {
+    fun markDismissed(eventId: String) {
         val now = SystemClock.elapsedRealtime()
         recentlyDismissed[eventId] = now + DISMISS_GUARD_MS
         if (recentlyDismissed.size > 256) {
@@ -227,7 +237,7 @@ object NotificationUtils {
                 .setPriority(category.priority())
                 .setCategory(NotificationCompat.CATEGORY_SOCIAL)
                 .setGroup(groupKey)
-                .setDeleteIntent(dismissIntent(applicationContext, notId))
+                .setDeleteIntent(dismissIntent(applicationContext, notId, id))
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 .setWhen(time * 1000)
@@ -246,11 +256,11 @@ object NotificationUtils {
         }
 
         if (inlineReply != null) {
-            builder.addAction(publicReplyAction(applicationContext, notId, inlineReply))
+            builder.addAction(publicReplyAction(applicationContext, notId, id, inlineReply))
         }
 
         notify(notId, builder.build())
-        sendGroupSummary(category, groupKey, summaryId, applicationContext)
+        sendGroupSummary(category, groupKey, summaryId, time, applicationContext)
     }
 
     // ---------------------------------------------------------------------
@@ -345,21 +355,21 @@ object NotificationUtils {
                 .setPriority(category.priority())
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setGroup(groupKey)
-                .setDeleteIntent(dismissIntent(applicationContext, notId))
+                .setDeleteIntent(dismissIntent(applicationContext, notId, id))
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 .setWhen(time * 1000)
 
         when (replyAction) {
-            is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, replyAction))
-            is ReplyAction.Marmot -> builder.addAction(marmotReplyAction(applicationContext, notId, replyAction))
-            null -> publicInlineReply?.let { builder.addAction(publicReplyAction(applicationContext, notId, it)) }
+            is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, id, replyAction))
+            is ReplyAction.Marmot -> builder.addAction(marmotReplyAction(applicationContext, notId, id, replyAction))
+            null -> publicInlineReply?.let { builder.addAction(publicReplyAction(applicationContext, notId, id, it)) }
         }
 
-        if (addMarkRead) builder.addAction(markReadAction(applicationContext, notId))
+        if (addMarkRead) builder.addAction(markReadAction(applicationContext, notId, id))
 
         notify(notId, builder.build())
-        sendGroupSummary(category, groupKey, summaryId, applicationContext)
+        sendGroupSummary(category, groupKey, summaryId, time, applicationContext)
     }
 
     // ---------------------------------------------------------------------
@@ -397,11 +407,13 @@ object NotificationUtils {
     private fun dismissIntent(
         applicationContext: Context,
         notId: Int,
+        eventId: String,
     ): PendingIntent {
         val intent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 action = DISMISS_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
             }
         return PendingIntent.getBroadcast(
             applicationContext,
@@ -440,12 +452,14 @@ object NotificationUtils {
     private fun dmReplyAction(
         applicationContext: Context,
         notId: Int,
+        eventId: String,
         action: ReplyAction.Dm,
     ): NotificationCompat.Action {
         val intent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 this.action = REPLY_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
                 putExtra(KEY_ACCOUNT_NPUB, action.accountNpub)
                 putExtra(KEY_CHATROOM_MEMBERS, action.chatroomMembers)
             }
@@ -455,12 +469,14 @@ object NotificationUtils {
     private fun marmotReplyAction(
         applicationContext: Context,
         notId: Int,
+        eventId: String,
         action: ReplyAction.Marmot,
     ): NotificationCompat.Action {
         val intent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 this.action = MARMOT_REPLY_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
                 putExtra(KEY_ACCOUNT_NPUB, action.accountNpub)
                 putExtra(KEY_MARMOT_GROUP_ID, action.nostrGroupId)
                 action.replyToInnerEventId?.let { putExtra(KEY_MARMOT_REPLY_TO_INNER_ID, it) }
@@ -472,12 +488,14 @@ object NotificationUtils {
     private fun publicReplyAction(
         applicationContext: Context,
         notId: Int,
+        eventId: String,
         target: InlineReplyTarget,
     ): NotificationCompat.Action {
         val intent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 action = PUBLIC_REPLY_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
                 putExtra(KEY_ACCOUNT_NPUB, target.accountNpub)
                 putExtra(KEY_TARGET_EVENT_ID, target.targetEventId)
             }
@@ -487,11 +505,13 @@ object NotificationUtils {
     private fun markReadAction(
         applicationContext: Context,
         notId: Int,
+        eventId: String,
     ): NotificationCompat.Action {
         val markReadIntent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 action = MARK_READ_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
             }
         val markReadPendingIntent =
             PendingIntent.getBroadcast(
@@ -614,6 +634,7 @@ object NotificationUtils {
         category: NotificationCategory,
         groupKey: String,
         summaryId: Int,
+        time: Long,
         applicationContext: Context,
     ) {
         val summaryBuilder =
@@ -628,6 +649,11 @@ object NotificationUtils {
                 .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
+                // Pinned to the child's event time rather than left to default to "now".
+                // The summary is re-posted on every one of the enrichment path's re-renders,
+                // and a fresh timestamp each time would keep re-sorting the group in the
+                // shade while the user is looking at it.
+                .setWhen(time * 1000)
                 .setStyle(
                     NotificationCompat
                         .InboxStyle()
@@ -692,15 +718,25 @@ object NotificationUtils {
      */
     fun NotificationManager.cancelChildlessGroupSummaries(alreadyGone: Int? = null) {
         val active: Array<StatusBarNotification> = activeNotifications
+
+        // Collect the groups that still have a child in one pass, then cancel the
+        // summaries not in that set. Every child now ships with a summary, so this list
+        // is about twice as long as it used to be and the pairwise scan it replaces grew
+        // four-fold. Membership is decided by the summary flag rather than by comparing
+        // ids, which is also what makes it correct when a child's id happens to equal the
+        // summary's.
+        val groupsWithChildren = HashSet<String>(active.size)
+        for (child in active) {
+            if (child.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
+            if (child.id == alreadyGone) continue
+            child.notification.group?.let { groupsWithChildren.add(it) }
+        }
+
         for (summary in active) {
             if (summary.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0) continue
             val group = summary.notification.group ?: continue
             if (!group.startsWith(OWN_GROUP_PREFIX)) continue
-            val hasChildren =
-                active.any {
-                    it.id != summary.id && it.id != alreadyGone && it.notification.group == group
-                }
-            if (!hasChildren) cancel(summary.id)
+            if (group !in groupsWithChildren) cancel(summary.id)
         }
     }
 
