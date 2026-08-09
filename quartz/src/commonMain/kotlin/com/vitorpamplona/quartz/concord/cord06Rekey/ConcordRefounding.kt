@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.concord.cord06Rekey
 
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
@@ -167,18 +168,29 @@ object ConcordRefounding {
         priorControlKeys: ControlPlaneKeys,
         newControlKeys: ControlPlaneKeys,
     ): List<Event> {
-        // entity coordinate -> (head edition, its verified seal)
-        val heads = HashMap<String, Pair<ControlEdition, Event>>()
+        // entity coordinate -> every edition we can open, paired with its verified seal.
+        val byCoordinate = HashMap<String, MutableList<Pair<ControlEdition, Event>>>()
         for (wrap in priorWraps) {
             val opened = ConcordStreamEnvelope.openOrNull(wrap, priorControlKeys) ?: continue
             val edition = ControlEdition.fromRumor(opened.rumor) ?: continue
             val coord = edition.entityKind.wire + ":" + edition.entityIdHex
-            val current = heads[coord]
-            if (current == null || edition.version > current.first.version) {
-                heads[coord] = edition to opened.seal
-            }
+            byCoordinate.getOrPut(coord) { ArrayList() }.add(edition to opened.seal)
         }
-        return heads.values.map { (_, seal) -> ConcordStreamEnvelope.wrapSeal(seal, newControlKeys, createdAt = seal.createdAt) }
+
+        // The head is the CHAIN head, not the highest version. Picking by raw version made an honest
+        // rotator the delivery mechanism for a disconnected stray: an edition minted at an arbitrary
+        // version never joins the chain, but it won this comparison and was then re-wrapped into the
+        // new epoch as that entity's whole history — where a fresh joiner, holding no floor, anchors
+        // on it as their baseline. See B1 in `docs/concord-soft-ban-audit.md`. foldEntity walks from
+        // genesis and keeps the fresh-joiner fallback for a head whose own `prev` dangles into an
+        // epoch this rotator no longer holds, which is the ordinary shape after a prior compaction.
+        val out = ArrayList<Event>(byCoordinate.size)
+        for ((_, entries) in byCoordinate) {
+            val head = EditionFold.foldEntity(entries.map { it.first }) ?: continue
+            val seal = entries.firstOrNull { it.first.rumorId == head.rumorId }?.second ?: continue
+            out.add(ConcordStreamEnvelope.wrapSeal(seal, newControlKeys, createdAt = seal.createdAt))
+        }
+        return out
     }
 
     /**
