@@ -149,9 +149,27 @@ object EmbeddedTabHost {
         contentBounds = bounds
     }
 
+    // Tabs whose soft keyboard was up at the moment the user left them. A warm tab keeps its page focus while
+    // it sits off-screen, so coming back is a *resume*: the keyboard returns only for the tabs that had one,
+    // the way Android restores a window's IME state. A tab the user deliberately typed on and then dismissed
+    // the keyboard for comes back with the caret still in the field but the page unobstructed.
+    private val keyboardUpOnLeave = mutableSetOf<String>()
+
+    /** Records whether the soft keyboard was up as [id] stops being the active tab. */
+    fun noteKeyboardOnLeave(
+        id: String,
+        wasUp: Boolean,
+    ) {
+        if (wasUp) keyboardUpOnLeave.add(id) else keyboardUpOnLeave.remove(id)
+    }
+
+    /** Consumes the "restore the keyboard" mark for [id] (a restore happens at most once per leave). */
+    fun takeKeyboardRestore(id: String): Boolean = keyboardUpOnLeave.remove(id)
+
     fun evict(id: String) {
         val w = warm.firstOrNull { it.id == id } ?: return
         if (activeId == id) activeId = null
+        keyboardUpOnLeave.remove(id)
         warm.remove(w)
         w.controller.teardown()
     }
@@ -165,6 +183,7 @@ object EmbeddedTabHost {
 
     fun evictAll() {
         activeId = null
+        keyboardUpOnLeave.clear()
         val copy = warm.toList()
         warm.clear()
         copy.forEach { it.controller.teardown() }
@@ -177,6 +196,8 @@ object EmbeddedTabHost {
      * its screen re-acquires — the user just sees the current tab reload, not a blanked-out surface.
      */
     fun rebuildAll() {
+        // Every page is about to be rebuilt from scratch, so no field survives to restore a keyboard onto.
+        keyboardUpOnLeave.clear()
         val copy = warm.toList()
         warm.clear()
         copy.forEach { it.controller.teardown() }

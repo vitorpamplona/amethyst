@@ -378,6 +378,15 @@
       return { type:'ime.focus', inputType: inputType, enterKeyHint: (n.enterKeyHint || ''),
                multiline: multiline, text: valOf(n), selStart: sel[0], selEnd: sel[1], geom: fieldGeom(n) };
     }
+    // Same payload as `ime.focus`, but for a field that is ALREADY focused — the host uses it to (re-)take the
+    // keyboard without treating it as a fresh focus. `raise` marks the cases the user explicitly asked for the
+    // keyboard (a tap in the field); a resync reply leaves the decision to the host.
+    function refocusInfo(n, raise){
+      var info = focusInfo(n);
+      info.type = 'ime.refocus';
+      info.raise = !!raise;
+      return info;
+    }
     // Last selection we either applied (applyState) or already reported, so the asynchronous
     // selectionchange our own setSel triggers doesn't echo back to the host as a fresh edit.
     var lastSel = null;
@@ -464,7 +473,16 @@
       if (s[0] !== s[1] && !sameSel(s, lastSel)) reportState(); // report the word only if not already sent
     }, true);
     document.addEventListener('click', function(e){
-      if (!el || isCE(el) || e.target !== el) return;
+      if (!el) return;
+      // A tap inside the ALREADY-focused editable fires no `focusin`, so the host — whose only keyboard-raising
+      // signal used to be `ime.focus` — never learned that the user wants the keyboard back after dismissing it
+      // (or after a tab switch dropped it). Re-announce the field on every such tap: the host raises the
+      // keyboard and, if it isn't hosting this field anymore, re-seeds its mirror from this payload.
+      // Sent on the focusing tap too (which the host answers with a no-op, since it is already hosting the
+      // field): telling the two apart here would take a focusin-to-click timing guess, and a guess that comes
+      // in late swallows a real "give me the keyboard back" tap.
+      if (e.target === el || (el.contains && el.contains(e.target))) send(refocusInfo(el, true));
+      if (isCE(el) || e.target !== el) return;
       var sel = selOf(el);
       if (sel[0] !== sel[1]) {
         // Tap landed on a selection. Defer the collapse: if a dblclick follows (within the tap window) it
@@ -708,6 +726,9 @@
     document.addEventListener('scroll', onAnyScroll, true); // capture: any scroller, not just the document
 
     window.__nappletImeHandle = function(msg){
+      // The tab came back on screen. Focus never left the page (the surface just moved off-screen), so no
+      // `focusin` will fire — re-announce the still-focused field so the host can re-take the keyboard.
+      if (msg.type === 'ime.resync') { if (el) send(refocusInfo(el, false)); return; }
       if (msg.type === 'ime.set') applyState(msg);
       else if (msg.type === 'ime.action') enter(el);
       else if (msg.type === 'ime.pageextend') pageExtend(msg.edge, msg.x, msg.y);

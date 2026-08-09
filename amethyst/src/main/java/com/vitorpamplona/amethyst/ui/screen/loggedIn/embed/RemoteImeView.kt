@@ -152,9 +152,15 @@ class RemoteImeView(
 
     fun selectAllText(): Boolean = onTextContextMenuItem(android.R.id.selectAll)
 
-    /** A page field focused: configure the keyboard, seed the buffer, and raise the IME. */
-    @Suppress("DEPRECATION") // InputMethodManager.SHOW_IMPLICIT is deprecated; no equivalent flag on the newer API.
-    fun onPageFocus(focus: ImeEvent.Focus) {
+    /**
+     * A page field focused: configure the keyboard, seed the buffer, and — unless [raiseKeyboard] is false —
+     * raise the IME. A restored tab passes false: its field is focused again in this mirror (so a tap can put
+     * the keyboard straight back) without a keyboard the user had dismissed popping up over the page.
+     */
+    fun onPageFocus(
+        focus: ImeEvent.Focus,
+        raiseKeyboard: Boolean = true,
+    ) {
         configureFor(focus)
         // Focus the EditText BEFORE seeding text/selection. An EditText jumps its caret to the end when it
         // gains focus; if we seed first, that end-position then overrides the seed and gets shipped to the
@@ -164,7 +170,33 @@ class RemoteImeView(
         requestFocus()
         imm.restartInput(this)
         applyRemote(focus.text, focus.selStart, focus.selEnd)
-        // Post the show so it runs after focus/attachment has settled (showSoftInput can no-op otherwise).
+        if (raiseKeyboard) showKeyboard()
+    }
+
+    /**
+     * The page re-announced a field that is **already** focused there: the user tapped inside it, or the tab
+     * came back on screen and answered our resync.
+     *
+     * Page focus never moved, so when this view is still the field's mirror there is nothing to re-seed —
+     * restarting the input would drop a live composing region mid-word — and the only thing left to do is put
+     * the keyboard back if it was dismissed. When the mirror was released (a tab switch clears it, see
+     * [onPageBlur]) this is the ONLY way back: the page will never fire another focus event for a field it
+     * never blurred, so re-take it here from the re-announced state.
+     */
+    fun onPageReFocus(
+        focus: ImeEvent.Focus,
+        raiseKeyboard: Boolean,
+    ) {
+        if (hasFocus()) {
+            if (raiseKeyboard) showKeyboard()
+        } else {
+            onPageFocus(focus, raiseKeyboard)
+        }
+    }
+
+    /** Post the show so it runs after focus/attachment has settled (showSoftInput can no-op otherwise). */
+    @Suppress("DEPRECATION") // InputMethodManager.SHOW_IMPLICIT is deprecated; no equivalent flag on the newer API.
+    private fun showKeyboard() {
         post {
             if (hasFocus()) imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
         }

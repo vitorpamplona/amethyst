@@ -348,7 +348,16 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // the selection). All the show/hide state lives in one [SelectionUiState] so the rules — toolbar hides
         // while dragging or scrolling, handles hide while scrolling — are expressed in one place.
         val sel = remember { SelectionUiState() }
+        // Read at dispose time to record whether the keyboard was up as the user left this tab (see
+        // [EmbeddedTabHost.noteKeyboardOnLeave]). The dispose runs before anything hides the IME — our own
+        // onPageBlur below is what takes it down — so this still reads the pre-switch state.
+        val keyboardUp = rememberUpdatedState(imeBottomPx > 0)
         DisposableEffect(imeBridge) {
+            val boundId = activeId
+            // A warm tab keeps its page focus while parked, so returning to it fires no focus event: ask the
+            // page to re-announce whatever field is still focused. Restores the mirror (so a tap can raise the
+            // keyboard) and, when the user left mid-typing, brings the keyboard straight back.
+            var pendingRestore = boundId != null && EmbeddedTabHost.takeKeyboardRestore(boundId)
             imeView.bind(imeBridge)
             imeView.onRangeSelectionChanged = { sel.onFieldRangeToggle(it) }
             imeView.onEdited = { sel.onEdited() }
@@ -364,6 +373,15 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         sel.scrolling = false
                         sel.onFieldGeometry(event.geometry, event.text.isNotEmpty())
                     }
+                    is ImeEvent.ReFocus -> {
+                        // Raise the keyboard when the user asked for it (a tap in the field) or when this tab
+                        // was left with the keyboard up; either way re-take the field so typing works again.
+                        imeView.onPageReFocus(event.focus, event.userAsked || pendingRestore)
+                        pendingRestore = false
+                        // Only a tap re-arms the caret handle. A silent tab-return resync must not pop one
+                        // up on its own — native shows nothing until the user touches the field.
+                        if (event.userAsked) sel.onFieldGeometry(event.focus.geometry, event.focus.text.isNotEmpty())
+                    }
                     ImeEvent.Blur -> {
                         imeView.onPageBlur()
                         sel.onBlur()
@@ -377,11 +395,20 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                     is ImeEvent.CaretTap -> sel.onCaretTap(event.geometry)
                 }
             }
+            // Posted, not sent inline: the session's own `active` effect resumes a paused (parked) WebView in
+            // this same effect pass, and a message delivered to a still-paused page can be lost. One turn of
+            // the main looper later, the resume is already on its way over the same (FIFO) channel.
+            imeView.post { imeBridge?.requestImeResync() }
             onDispose {
                 imeBridge?.onImeEvent = null
                 imeView.onRangeSelectionChanged = null
                 imeView.onEdited = null
                 sel.reset()
+                // Remember whether the keyboard was up BEFORE onPageBlur takes it down, so returning to this
+                // tab resumes exactly the state it was left in. The page keeps its focus (and caret) either
+                // way: blurring it here would fire the page's own blur handlers — validation, autocomplete
+                // dismissal, submit-on-blur — for a switch the user never made inside the page.
+                if (boundId != null) EmbeddedTabHost.noteKeyboardOnLeave(boundId, keyboardUp.value)
                 imeView.onPageBlur()
                 imeView.bind(null)
             }

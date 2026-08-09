@@ -56,6 +56,54 @@ interface EmbeddedImeBridge {
     fun sendImeOp(json: String)
 }
 
+/**
+ * Asks the page to re-announce its focused field (as an [ImeEvent.ReFocus]) — sent when a tab becomes the
+ * active one again. A warm tab keeps the page's DOM focus while it sits off-screen, so returning to it fires
+ * no `focusin` and the host would otherwise never learn there is a field to put the keyboard back on.
+ */
+fun EmbeddedImeBridge.requestImeResync() = sendImeOp(JSONObject().put("type", "ime.resync").toString())
+
+/** Parses one page → host `ime.*` envelope into an [ImeEvent], or null for anything unrecognized. */
+fun parseImeEvent(payload: String): ImeEvent? {
+    val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
+    return when (o.optString("type")) {
+        "ime.focus" -> parseFocus(o)
+        "ime.refocus" ->
+            ImeEvent.ReFocus(
+                focus = parseFocus(o),
+                userAsked = o.optBoolean("raise", false),
+            )
+        "ime.blur" -> ImeEvent.Blur
+        "ime.state" ->
+            ImeEvent.State(
+                text = o.optString("text", ""),
+                selStart = o.optInt("selStart", 0),
+                selEnd = o.optInt("selEnd", 0),
+                geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+            )
+        "ime.pagesel" ->
+            ImeEvent.PageSelection(
+                active = o.optBoolean("active", false),
+                text = o.optString("text", ""),
+                geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+            )
+        "ime.scroll" -> ImeEvent.Scroll(active = o.optBoolean("active", false))
+        "ime.carettap" -> ImeEvent.CaretTap(geometry = parseSelectionGeometry(o.optJSONObject("geom")))
+        else -> null
+    }
+}
+
+private fun parseFocus(o: JSONObject) =
+    ImeEvent.Focus(
+        inputType = o.optString("inputType", "text"),
+        enterKeyHint = o.optString("enterKeyHint", ""),
+        multiline = o.optBoolean("multiline", false),
+        text = o.optString("text", ""),
+        selStart = o.optInt("selStart", 0),
+        selEnd = o.optInt("selEnd", 0),
+        geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+    )
+
 /** What the focused page field reports up to the host keyboard. */
 sealed interface ImeEvent {
     /** A field took focus; carries enough to configure the keyboard and seed the editing buffer. */
@@ -67,6 +115,17 @@ sealed interface ImeEvent {
         val selStart: Int,
         val selEnd: Int,
         val geometry: SelectionGeometry? = null,
+    ) : ImeEvent
+
+    /**
+     * A field that is **already** focused re-announced itself: the user tapped inside it ([userAsked]), or the
+     * tab was re-activated and answered the host's resync. Distinct from [Focus] because page focus never
+     * changed — the host must not restart the input on a field it is already hosting (that would kill a live
+     * composing region mid-word); it only re-takes the keyboard when it isn't hosting the field anymore.
+     */
+    data class ReFocus(
+        val focus: Focus,
+        val userAsked: Boolean,
     ) : ImeEvent
 
     /** The field lost focus — dismiss the keyboard. */

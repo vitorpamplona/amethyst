@@ -49,8 +49,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedMagnifierProb
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedSurfaceController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ImeEvent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.MagnifierFrame
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseSelectionGeometry
-import org.json.JSONObject
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.parseImeEvent
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -335,39 +334,6 @@ class EmbeddedWebAppController(
         putInt(NappletBrowserContract.KEY_MAG_BOX_H, boxHeightPx)
         putFloat(NappletBrowserContract.KEY_MAG_ZOOM, zoom)
         putLong(NappletBrowserContract.KEY_MAG_REQ_T, SystemClock.elapsedRealtimeNanos())
-    }
-
-    private fun parseImeEvent(payload: String): ImeEvent? {
-        val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
-        return when (o.optString("type")) {
-            "ime.focus" ->
-                ImeEvent.Focus(
-                    inputType = o.optString("inputType", "text"),
-                    enterKeyHint = o.optString("enterKeyHint", ""),
-                    multiline = o.optBoolean("multiline", false),
-                    text = o.optString("text", ""),
-                    selStart = o.optInt("selStart", 0),
-                    selEnd = o.optInt("selEnd", 0),
-                    geometry = parseSelectionGeometry(o.optJSONObject("geom")),
-                )
-            "ime.blur" -> ImeEvent.Blur
-            "ime.state" ->
-                ImeEvent.State(
-                    text = o.optString("text", ""),
-                    selStart = o.optInt("selStart", 0),
-                    selEnd = o.optInt("selEnd", 0),
-                    geometry = parseSelectionGeometry(o.optJSONObject("geom")),
-                )
-            "ime.pagesel" ->
-                ImeEvent.PageSelection(
-                    active = o.optBoolean("active", false),
-                    text = o.optString("text", ""),
-                    geometry = parseSelectionGeometry(o.optJSONObject("geom")),
-                )
-            "ime.scroll" -> ImeEvent.Scroll(active = o.optBoolean("active", false))
-            "ime.carettap" -> ImeEvent.CaretTap(geometry = parseSelectionGeometry(o.optJSONObject("geom")))
-            else -> null
-        }
     }
 
     private inline fun send(
