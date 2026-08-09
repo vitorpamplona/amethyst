@@ -3841,8 +3841,10 @@
     <string name="resource_usage_memory_chatrooms">Csevegőszoba-listák a memóriában</string>
     <string name="resource_usage_memory_device_class">Eszköz memóriájának osztálya</string>
     <string name="resource_usage_send_section">Megosztás a fejlesztőkkel</string>
-    <string name="resource_usage_send_explanation">Ha az Amethyst túl sok akkumulátort vagy adatot használna, elküldheti ezt a jelentést a fejlesztőknek egy titkosított közvetlen üzenetben (DM). Kizárólag a képernyőn látható számokat és az azok mögött álló technikai számlálókat tartalmazza \u2014 bejegyzéseket, névjegyeket vagy böngészési adatokat nem. Semmi sem kerül elküldésre addig, amíg az üzenetküldő képernyőn rá nem koppint a Küldés gombra.</string>
+    <string name="resource_usage_send_explanation">Ha úgy tűnik, hogy az Amethyst túlzottan meríti az akkumulátort vagy fogyasztja az adatkeretet, elküldheti ezt a jelentést a fejlesztőknek egy titkosított közvetlen üzenetben vagy lemásolhatja és megoszthatja saját maga. A jelentés kizárólag az ezen a képernyőn látható számokat és a mögöttük lévő technikai számlálókat tartalmazza – bejegyzéseket, névjegyeket, átjátszóneveket vagy böngészési adatokat nem. A jelentés csak akkor hagyja el ezt a képernyőt, ha Ön elküldi, lemásolja vagy megosztja azt.</string>
     <string name="resource_usage_send_button">Jelentés elküldése közvetlen üzenetben</string>
+    <string name="resource_usage_copy_button">Másolás</string>
+    <string name="resource_usage_share_button">Megosztás</string>
     <string name="resource_usage_alert_title">Magas erőforrás-használat észlelhető</string>
     <string name="resource_usage_alert_message">Az Amethyst a közelmúltban a vártnál többet fogyasztott: %1$s. Szeretne használati jelentést küldeni a fejlesztőknek egy titkosított közvetlen üzenetben? A küldés előtt megtekintheti a teljes jelentést.</string>
     <string name="resource_usage_reason_bg_data">%1$s mobiladat-forgalom a háttérben egyetlen nap alatt</string>
