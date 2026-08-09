@@ -52,3 +52,45 @@ live only under `tools/`.
   low now that the surface no longer resizes on IME show).
 - `MAINTHREAD BLOCKED` / `LONGTASK` = something is stalling the WebView thread.
 - `HEARTBEAT` lines changing while idle = spontaneous focus/selection drift.
+
+## `perf.html` — why does the embed feel slower than the full-screen browser?
+
+`index.html` profiles the IME relay. `perf.html` answers a different question:
+the embedded tab and the full-screen browser are the **same WebView in the same
+`:napplet` process** with byte-identical `WebSettings`, so when a site's JS feels
+slower in the embed, the cause is host-induced — and this page measures which
+host effect it is.
+
+Serve the directory (above) and open **the same URL in both hosts**, then compare
+the summary line at the bottom of the page:
+
+- **`vis=hidden`** — decisive. Chromium considers the embedded page hidden, so it
+  clamps timers to ~1Hz and suspends `requestAnimationFrame`. Everything the site
+  schedules lands late; it reads as "the JS got slow". Confirmed by
+  `timer50` (a 50ms interval firing at 500-1000ms) and `raf` (0 fps).
+- **`vis=visible` but `cpu` is 2-4× the full-screen number** — the process is
+  running on the little cores. The site's JS runs in the WebView *renderer*
+  process, whose scheduling class is inherited from its host: `:napplet` is
+  `top-app` when it fronts the full-screen activity, but only a bound service
+  (`BIND_AUTO_CREATE`, no `BIND_IMPORTANT`) when it serves the embed. Cross-check
+  off-device with:
+
+  ```bash
+  adb shell dumpsys activity processes | grep -E 'napplet|sandboxed'
+  adb shell "cat /proc/$(adb shell pidof com.vitorpamplona.amethyst:napplet)/cgroup"
+  ```
+
+  Expect `/top-app` with the full-screen browser open and `/foreground` (or lower)
+  with an embed tab open.
+- **`cpu` matches but `inputDelivery` is much higher** — the gap is input routing
+  into the embedded window, not compute. `inputDelivery` is the time between the
+  platform stamping the touch and JS receiving it.
+- **`layout` much higher in the embed** — layout/paint is the bottleneck (check
+  logcat for WebView software-rendering warnings; a non-hardware-accelerated
+  `SurfaceControlViewHost` window would put Chromium on the software path).
+- **`focus=false` in the embed is expected** and is not itself a throttle: the
+  host window owns the keyboard, which is the whole reason `RemoteImeView` exists.
+
+`longtasks` counts main-thread blocks over 50ms while the page was measuring —
+high counts in the embed with a matching `cpu` number point at something else in
+the process competing (e.g. parked warm tabs that are never paused).
