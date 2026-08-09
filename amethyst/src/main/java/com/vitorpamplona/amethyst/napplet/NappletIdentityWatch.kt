@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Streams `identity.changed` pushes to an applet that registered `napplet.identity.onChanged`. It
@@ -41,21 +42,24 @@ class NappletIdentityWatch(
     private val scope: CoroutineScope,
     private val pubKey: (boundPubKey: String) -> Flow<String>,
 ) {
-    private val jobs = mutableMapOf<String, Job>()
+    private val jobs = ConcurrentHashMap<String, Job>()
 
     fun start(
         watchId: String,
         boundPubKey: String,
         push: (String) -> Unit,
     ) {
-        if (jobs.containsKey(watchId)) return
-        jobs[watchId] =
-            scope.launch {
-                pubKey(boundPubKey)
-                    .distinctUntilChanged()
-                    .drop(1)
-                    .collect { push(NappletProtocolJson.encodeIdentityChanged(it)) }
-            }
+        jobs.computeIfAbsent(watchId) { id ->
+            scope
+                .launch {
+                    pubKey(boundPubKey)
+                        .distinctUntilChanged()
+                        .drop(1)
+                        .collect { push(NappletProtocolJson.encodeIdentityChanged(it)) }
+                }.also { job ->
+                    job.invokeOnCompletion { jobs.remove(id, job) }
+                }
+        }
     }
 
     fun stopAll() {

@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionL
 import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope
 import com.vitorpamplona.amethyst.commons.napplet.protocol.toSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -376,11 +377,11 @@ class NappletBroker(
 
     private fun storageCoordinate(
         identity: NappletIdentity,
-        scope: com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope,
+        scope: NappletStorageScope,
     ): String =
         when (scope) {
-            com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope.SHARED -> identity.storageCoordinate
-            com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope.INSTANCE -> identity.instanceStorageCoordinate
+            NappletStorageScope.SHARED -> identity.storageCoordinate
+            NappletStorageScope.INSTANCE -> identity.instanceStorageCoordinate
         }
 
     /**

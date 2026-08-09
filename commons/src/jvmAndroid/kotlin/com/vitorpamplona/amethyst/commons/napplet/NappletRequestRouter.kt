@@ -42,6 +42,7 @@ object NappletRequestRouter {
         /** Send this `.result` payload back, correlated to the request's id. */
         data class Reply(
             val payload: String,
+            val response: NappletResponse? = null,
         ) : Outcome
 
         /** Open a live relay subscription; the host streams `relay.event`/`relay.eose`/`relay.closed` by [subId]. */
@@ -114,7 +115,12 @@ object NappletRequestRouter {
 
         val request =
             runCatching { NappletProtocolJson.decodeRequest(payload) }.getOrNull()
-                ?: return Outcome.Ignore
+                ?: return if (runCatching { NappletProtocolJson.readId(payload) }.getOrNull() != null) {
+                    val failure = NappletResponse.Failed("Malformed or unsupported request.")
+                    Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, failure), failure)
+                } else {
+                    Outcome.Ignore
+                }
 
         val response = broker.handle(identity, request, declared)
 
@@ -131,6 +137,6 @@ object NappletRequestRouter {
             }
         }
 
-        return Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, response))
+        return Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, response), response)
     }
 }

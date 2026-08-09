@@ -126,6 +126,20 @@ class NappletRequestRouterTest {
         }
 
     @Test
+    fun keyedUnknownAndMalformedRequestsReplyWithFailure() =
+        runTest {
+            val unknown = route("""{"type":"totally.unknown","id":"r1"}""")
+            assertIs<NappletRequestRouter.Outcome.Reply>(unknown)
+            assertTrue(unknown.payload.contains("totally.unknown.result"))
+            assertTrue(unknown.payload.contains("Malformed or unsupported request."))
+
+            val malformed = route("""{"type":"relay.publish","id":"r2"}""")
+            assertIs<NappletRequestRouter.Outcome.Reply>(malformed)
+            assertTrue(malformed.payload.contains("relay.publish.result"))
+            assertTrue(malformed.payload.contains("Malformed or unsupported request."))
+        }
+
+    @Test
     fun queryRepliesWithItsResult() =
         runTest {
             val outcome = route("""{"type":"relay.query","filters":[{"kinds":[1]}]}""")

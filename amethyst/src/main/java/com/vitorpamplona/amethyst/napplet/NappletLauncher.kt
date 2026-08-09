@@ -24,7 +24,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
-import android.util.Log
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.napplet.NappletArtifactPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
@@ -39,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Opens a napplet/nsite in the sandboxed [NappletHostActivity] (the `:napplet` process). Only
@@ -56,7 +56,7 @@ object NappletLauncher {
     ) {
         val event = manifest as? Event
         if (event?.verify() != true || event.pubKey != authorPubKey) {
-            Log.w(TAG, "Refusing NIP-5D manifest that failed signature/author verification")
+            Log.w(TAG) { "Refusing NIP-5D manifest that failed signature/author verification" }
             return
         }
         buildLaunchParams(context, manifest, authorPubKey, identifier)?.let { openHost(context, it) }
@@ -80,7 +80,7 @@ object NappletLauncher {
         profile: HostProfile,
     ) {
         if (profile != HostProfile.WEBSITE) {
-            Log.w(TAG, "Refusing raw NIP-5D launch without a verified manifest")
+            Log.w(TAG) { "Refusing raw NIP-5D launch without a verified manifest" }
             return
         }
         val params =
@@ -219,7 +219,7 @@ object NappletLauncher {
     ): Bundle? {
         val event = manifest as? Event
         if (event?.verify() != true || event.pubKey != authorPubKey) {
-            Log.w(TAG, "Refusing embedded NIP-5D manifest that failed signature/author verification")
+            Log.w(TAG) { "Refusing embedded NIP-5D manifest that failed signature/author verification" }
             return null
         }
         return runCatching {

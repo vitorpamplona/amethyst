@@ -39,16 +39,21 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.CookieJar
 import okhttp3.Dns
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.InetAddress
 import java.net.URLDecoder
@@ -127,7 +132,7 @@ class NappletResourceFetcher(
                 )
             }.build()
 
-    private fun fetchHttps(
+    private suspend fun fetchHttps(
         url: String,
         client: OkHttpClient,
     ): NappletResourceResult {
@@ -141,7 +146,7 @@ class NappletResourceFetcher(
                             .url(current)
                             .get()
                             .build(),
-                    ).execute()
+                    ).await()
                     .use { response ->
                         if (response.isRedirect) {
                             if (hop >= MAX_REDIRECTS) return failure(ERROR_BLOCKED, "Redirect limit exceeded.")
@@ -227,7 +232,7 @@ class NappletResourceFetcher(
      * wrong server can never substitute the blob. Returns null for a malformed hash or if no server
      * serves it.
      */
-    private fun fetchBlossom(
+    private suspend fun fetchBlossom(
         url: String,
         client: OkHttpClient,
     ): NappletResourceResult {
@@ -256,6 +261,32 @@ class NappletResourceFetcher(
         if (sawHashMismatch) return failure(ERROR_DECODE_FAILED, "Blossom SHA-256 verification failed.")
         return failure(ERROR_NOT_FOUND, "No Blossom server returned the verified blob.")
     }
+
+    private suspend fun Call.await(): Response =
+        suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation { cancel() }
+            enqueue(
+                object : Callback {
+                    override fun onFailure(
+                        call: Call,
+                        e: IOException,
+                    ) {
+                        if (continuation.isActive) continuation.resumeWith(Result.failure(e))
+                    }
+
+                    override fun onResponse(
+                        call: Call,
+                        response: Response,
+                    ) {
+                        if (continuation.isActive) {
+                            continuation.resumeWith(Result.success(response))
+                        } else {
+                            response.close()
+                        }
+                    }
+                },
+            )
+        }
 
     /** Parses a `data:[<mediatype>][;base64],<data>` URL into bytes + content type. */
     private fun decodeDataUrl(url: String): NappletResourceResult {

@@ -61,6 +61,9 @@ object NappletProtocolJson {
     /** The `type` discriminant of a request envelope, used to build the matching `.result` type. */
     fun readType(envelopeJson: String): String? = json.parseToJsonElement(envelopeJson).jsonObject.str("type")
 
+    /** The request `id`, when the envelope expects a correlated reply. */
+    fun readId(envelopeJson: String): String? = json.parseToJsonElement(envelopeJson).jsonObject.str("id")
+
     /** The `subId` of a subscription request, used to key the `relay.event`/`relay.eose` pushes back to it. */
     fun readSubId(envelopeJson: String): String? = json.parseToJsonElement(envelopeJson).jsonObject.str("subId")
 

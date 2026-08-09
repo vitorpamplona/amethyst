@@ -320,7 +320,7 @@ class NappletBrokerService : Service() {
                         // NAP-IDENTITY has no watch/unwatch request. Once the consent-gated startup
                         // snapshot succeeds, the runtime owns identity.changed delivery for this
                         // trusted launch token until the broker service closes.
-                        if (requestType == "identity.getPublicKey" && outcome.payload.contains("\"ok\":true") && launchToken != null) {
+                        if (requestType == "identity.getPublicKey" && outcome.response is NappletResponse.PublicKey && launchToken != null) {
                             identityWatch.start(launchToken, session.accountPubKey) { push(replyTo, it) }
                         }
                     }
