@@ -57,9 +57,10 @@ interface EmbeddedImeBridge {
 }
 
 /**
- * Asks the page to re-announce its focused field (as an [ImeEvent.ReFocus]) — sent when a tab becomes the
- * active one again. A warm tab keeps the page's DOM focus while it sits off-screen, so returning to it fires
- * no `focusin` and the host would otherwise never learn there is a field to put the keyboard back on.
+ * Asks the page to re-announce its focused field (as an [ImeEvent.ReFocus]). A warm tab keeps the page's DOM
+ * focus while it sits off-screen, so no `focusin` ever fires for it again and this is the only way the host
+ * learns there is a field to put the keyboard back on. Sent when a tab becomes the active one again, and when
+ * an [ImeEvent.WantKeyboard] tap arrives for a field this host no longer mirrors.
  */
 fun EmbeddedImeBridge.requestImeResync() = sendImeOp(JSONObject().put("type", "ime.resync").toString())
 
@@ -68,11 +69,8 @@ fun parseImeEvent(payload: String): ImeEvent? {
     val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
     return when (o.optString("type")) {
         "ime.focus" -> parseFocus(o)
-        "ime.refocus" ->
-            ImeEvent.ReFocus(
-                focus = parseFocus(o),
-                userAsked = o.optBoolean("raise", false),
-            )
+        "ime.wantkb" -> ImeEvent.WantKeyboard
+        "ime.refocus" -> ImeEvent.ReFocus(parseFocus(o))
         "ime.blur" -> ImeEvent.Blur
         "ime.state" ->
             ImeEvent.State(
@@ -118,14 +116,25 @@ sealed interface ImeEvent {
     ) : ImeEvent
 
     /**
-     * A field that is **already** focused re-announced itself: the user tapped inside it ([userAsked]), or the
-     * tab was re-activated and answered the host's resync. Distinct from [Focus] because page focus never
-     * changed — the host must not restart the input on a field it is already hosting (that would kill a live
-     * composing region mid-word); it only re-takes the keyboard when it isn't hosting the field anymore.
+     * The user tapped inside a field that is **already** focused in the page: put the keyboard back up. No
+     * focus event follows a tap on a field that never blurred, so this is the only signal that the user wants
+     * the keyboard back after dismissing it — or after a tab switch released the host's mirror.
+     *
+     * Deliberately payload-free (it fires on every tap in a field): a host that no longer mirrors the field
+     * answers it with an [requestImeResync] and takes the state from the [ReFocus] that comes back.
+     */
+    data object WantKeyboard : ImeEvent
+
+    /**
+     * The page's answer to [requestImeResync]: the editing state of a field that is already focused there.
+     * Distinct from [Focus] because page focus never changed — the host must not restart the input on a field
+     * it is already mirroring (that would kill a live composing region mid-word).
+     *
+     * Carries no geometry: measuring a caret rect forces a synchronous layout in the page, and the host has no
+     * use for it here (the `ime.carettap` that rides along with a tap carries fresh geometry).
      */
     data class ReFocus(
         val focus: Focus,
-        val userAsked: Boolean,
     ) : ImeEvent
 
     /** The field lost focus — dismiss the keyboard. */

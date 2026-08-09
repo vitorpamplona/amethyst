@@ -378,14 +378,19 @@
       return { type:'ime.focus', inputType: inputType, enterKeyHint: (n.enterKeyHint || ''),
                multiline: multiline, text: valOf(n), selStart: sel[0], selEnd: sel[1], geom: fieldGeom(n) };
     }
-    // Same payload as `ime.focus`, but for a field that is ALREADY focused — the host uses it to (re-)take the
-    // keyboard without treating it as a fresh focus. `raise` marks the cases the user explicitly asked for the
-    // keyboard (a tap in the field); a resync reply leaves the decision to the host.
-    function refocusInfo(n, raise){
-      var info = focusInfo(n);
-      info.type = 'ime.refocus';
-      info.raise = !!raise;
-      return info;
+    // Like `ime.focus`, but for a field that is ALREADY focused: the answer to the host's `ime.resync`, which
+    // it asks for when it needs to (re-)take a field whose focus never moved in the page.
+    //
+    // Carries NO geometry, unlike focusInfo: fieldGeom's caret measurement mirrors the whole field into a
+    // hidden div and forces a synchronous layout (~3.5ms on a 40k-char textarea). The host only needs the
+    // editing state here; the `ime.carettap` that rides along with a tap carries fresh geometry.
+    function refocusInfo(n){
+      var t = (n.tagName || '').toUpperCase();
+      var sel = selOf(n);
+      return { type:'ime.refocus',
+               inputType: isCE(n) ? 'text' : (t === 'TEXTAREA' ? 'textarea' : (n.type || 'text').toLowerCase()),
+               enterKeyHint: (n.enterKeyHint || ''), multiline: isCE(n) || t === 'TEXTAREA',
+               text: valOf(n), selStart: sel[0], selEnd: sel[1] };
     }
     // Last selection we either applied (applyState) or already reported, so the asynchronous
     // selectionchange our own setSel triggers doesn't echo back to the host as a fresh edit.
@@ -476,12 +481,14 @@
       if (!el) return;
       // A tap inside the ALREADY-focused editable fires no `focusin`, so the host — whose only keyboard-raising
       // signal used to be `ime.focus` — never learned that the user wants the keyboard back after dismissing it
-      // (or after a tab switch dropped it). Re-announce the field on every such tap: the host raises the
-      // keyboard and, if it isn't hosting this field anymore, re-seeds its mirror from this payload.
-      // Sent on the focusing tap too (which the host answers with a no-op, since it is already hosting the
-      // field): telling the two apart here would take a focusin-to-click timing guess, and a guess that comes
-      // in late swallows a real "give me the keyboard back" tap.
-      if (e.target === el || (el.contains && el.contains(e.target))) send(refocusInfo(el, true));
+      // (or after a tab switch dropped it). Ring the doorbell on every such tap; the host puts the keyboard
+      // back, and asks for a resync first if it no longer mirrors this field.
+      //
+      // Deliberately payload-free: this fires on every tap in a field, including the tap that focused it (the
+      // host answers that one with a no-op — telling the two apart here would take a focusin-to-click timing
+      // guess, and a guess that lands late swallows a real "give me the keyboard back" tap). Attaching the
+      // editing state would put the field's whole text — 40KB for a long textarea — on the wire per tap.
+      if (e.target === el || (el.contains && el.contains(e.target))) send({ type:'ime.wantkb' });
       if (isCE(el) || e.target !== el) return;
       var sel = selOf(el);
       if (sel[0] !== sel[1]) {
@@ -726,9 +733,10 @@
     document.addEventListener('scroll', onAnyScroll, true); // capture: any scroller, not just the document
 
     window.__nappletImeHandle = function(msg){
-      // The tab came back on screen. Focus never left the page (the surface just moved off-screen), so no
-      // `focusin` will fire — re-announce the still-focused field so the host can re-take the keyboard.
-      if (msg.type === 'ime.resync') { if (el) send(refocusInfo(el, false)); return; }
+      // The host needs to (re-)take a field whose focus never left the page — the tab came back on screen, or
+      // a tap rang the doorbell above and the host has no mirror for it. No `focusin` will fire for a field
+      // that never blurred, so hand it the editing state here.
+      if (msg.type === 'ime.resync') { if (el) send(refocusInfo(el)); return; }
       if (msg.type === 'ime.set') applyState(msg);
       else if (msg.type === 'ime.action') enter(el);
       else if (msg.type === 'ime.pageextend') pageExtend(msg.edge, msg.x, msg.y);

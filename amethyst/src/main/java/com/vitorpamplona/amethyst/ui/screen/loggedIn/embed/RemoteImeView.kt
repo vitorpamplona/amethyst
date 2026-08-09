@@ -65,6 +65,13 @@ class RemoteImeView(
     // The last state we sent, so we never ship a no-op (avoids feedback churn with the page).
     private var lastSent: String? = null
 
+    // True while this view mirrors a live page field, i.e. between a page focus and the blur that releases it.
+    // Distinct from [hasFocus]: clearing focus on a View can hand it straight back (a lone focusable in the
+    // hierarchy re-takes it), and window focus comes and goes on its own. Only this flag says the buffer still
+    // belongs to the page's field — without it, a lingering focus would let a re-focus skip the re-seed and
+    // ship the PREVIOUS tab's text to the page on the first keystroke.
+    private var mirroring = false
+
     private val imm get() = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
 
     private val flush = Runnable { flushState() }
@@ -153,15 +160,16 @@ class RemoteImeView(
     fun selectAllText(): Boolean = onTextContextMenuItem(android.R.id.selectAll)
 
     /**
-     * A page field focused: configure the keyboard, seed the buffer, and — unless [raiseKeyboard] is false —
+     * A page field focused: configure the keyboard, seed the buffer, and — unless [withKeyboard] is false —
      * raise the IME. A restored tab passes false: its field is focused again in this mirror (so a tap can put
      * the keyboard straight back) without a keyboard the user had dismissed popping up over the page.
      */
     fun onPageFocus(
         focus: ImeEvent.Focus,
-        raiseKeyboard: Boolean = true,
+        withKeyboard: Boolean = true,
     ) {
         configureFor(focus)
+        mirroring = true
         // Focus the EditText BEFORE seeding text/selection. An EditText jumps its caret to the end when it
         // gains focus; if we seed first, that end-position then overrides the seed and gets shipped to the
         // page — so a tap mid-text lands the caret at the end of the field. Seeding AFTER focus makes the
@@ -170,7 +178,7 @@ class RemoteImeView(
         requestFocus()
         imm.restartInput(this)
         applyRemote(focus.text, focus.selStart, focus.selEnd)
-        if (raiseKeyboard) showKeyboard()
+        if (withKeyboard) raiseKeyboard()
     }
 
     /**
@@ -185,18 +193,26 @@ class RemoteImeView(
      */
     fun onPageReFocus(
         focus: ImeEvent.Focus,
-        raiseKeyboard: Boolean,
+        withKeyboard: Boolean,
     ) {
-        if (hasFocus()) {
-            if (raiseKeyboard) showKeyboard()
+        if (isMirroringPageField()) {
+            if (withKeyboard) raiseKeyboard()
         } else {
-            onPageFocus(focus, raiseKeyboard)
+            onPageFocus(focus, withKeyboard)
         }
     }
 
-    /** Post the show so it runs after focus/attachment has settled (showSoftInput can no-op otherwise). */
+    /** True while the keyboard this view holds belongs to a page field — see [mirroring]. */
+    fun isMirroringPageField() = mirroring && hasFocus()
+
+    /**
+     * Put the keyboard back on the field this view already mirrors — the user tapped it after dismissing the
+     * keyboard, which leaves the page's focus (and this mirror) untouched, so there is nothing to re-seed.
+     *
+     * Post the show so it runs after focus/attachment has settled (showSoftInput can no-op otherwise).
+     */
     @Suppress("DEPRECATION") // InputMethodManager.SHOW_IMPLICIT is deprecated; no equivalent flag on the newer API.
-    private fun showKeyboard() {
+    fun raiseKeyboard() {
         post {
             if (hasFocus()) imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
         }
@@ -239,6 +255,7 @@ class RemoteImeView(
 
     /** The page field blurred: drop the keyboard. */
     fun onPageBlur() {
+        mirroring = false
         removeCallbacks(reportRangeLost)
         if (hadRange) {
             hadRange = false

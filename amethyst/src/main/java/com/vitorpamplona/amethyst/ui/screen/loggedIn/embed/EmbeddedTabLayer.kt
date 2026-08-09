@@ -357,7 +357,9 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
             // A warm tab keeps its page focus while parked, so returning to it fires no focus event: ask the
             // page to re-announce whatever field is still focused. Restores the mirror (so a tap can raise the
             // keyboard) and, when the user left mid-typing, brings the keyboard straight back.
-            var pendingRestore = boundId != null && EmbeddedTabHost.takeKeyboardRestore(boundId)
+            // Consumed only when there is a bridge to ask (the mark is one-shot, so spending it on a bind that
+            // can't send the resync would drop the restore this tab was owed).
+            var pendingRestore = imeBridge != null && boundId != null && EmbeddedTabHost.takeKeyboardRestore(boundId)
             imeView.bind(imeBridge)
             imeView.onRangeSelectionChanged = { sel.onFieldRangeToggle(it) }
             imeView.onEdited = { sel.onEdited() }
@@ -373,14 +375,26 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         sel.scrolling = false
                         sel.onFieldGeometry(event.geometry, event.text.isNotEmpty())
                     }
+                    ImeEvent.WantKeyboard -> {
+                        // Still mirroring this field (the keyboard was merely dismissed) → just put it back.
+                        // Otherwise the mirror was released by a tab switch and holds another tab's buffer:
+                        // ask for the state first and raise once it lands.
+                        if (imeView.isMirroringPageField()) {
+                            imeView.raiseKeyboard()
+                        } else {
+                            pendingRestore = true
+                            imeBridge.requestImeResync()
+                        }
+                    }
                     is ImeEvent.ReFocus -> {
-                        // Raise the keyboard when the user asked for it (a tap in the field) or when this tab
-                        // was left with the keyboard up; either way re-take the field so typing works again.
-                        imeView.onPageReFocus(event.focus, event.userAsked || pendingRestore)
+                        // Raise only if something asked for it — a tap that rang the doorbell above, or a tab
+                        // left with the keyboard up. A plain tab return re-takes the field silently.
+                        imeView.onPageReFocus(event.focus, pendingRestore)
                         pendingRestore = false
-                        // Only a tap re-arms the caret handle. A silent tab-return resync must not pop one
-                        // up on its own — native shows nothing until the user touches the field.
-                        if (event.userAsked) sel.onFieldGeometry(event.focus.geometry, event.focus.text.isNotEmpty())
+                        // Re-arm "the field has text" so a tap can show the insertion handle again (a tab
+                        // switch resets it). Geometry stays null here, so this can't pop a handle up on its
+                        // own — native shows nothing until the user touches the field.
+                        sel.onFieldGeometry(null, event.focus.text.isNotEmpty())
                     }
                     ImeEvent.Blur -> {
                         imeView.onPageBlur()
@@ -408,7 +422,12 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 // tab resumes exactly the state it was left in. The page keeps its focus (and caret) either
                 // way: blurring it here would fire the page's own blur handlers — validation, autocomplete
                 // dismissal, submit-on-blur — for a switch the user never made inside the page.
-                if (boundId != null) EmbeddedTabHost.noteKeyboardOnLeave(boundId, keyboardUp.value)
+                //
+                // Only a keyboard THIS mirror holds counts: the tab's own chrome has host-side fields (the
+                // browser's address bar), and typing in one of those must not arm a restore for a page field.
+                if (boundId != null) {
+                    EmbeddedTabHost.noteKeyboardOnLeave(boundId, keyboardUp.value && imeView.isMirroringPageField())
+                }
                 imeView.onPageBlur()
                 imeView.bind(null)
             }
