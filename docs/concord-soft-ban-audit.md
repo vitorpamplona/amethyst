@@ -1,48 +1,205 @@
 # Concord: soft-ban and Control Plane audit
 
-**Scope:** what a removed member — or a moderator who turns — can still do to a Concord community,
-assuming a **malicious client** (no client-side rule binds them; only cryptography, the fold, and
-the relay do).
-**Date:** 2026-08-08. **Status:** findings only, nothing fixed yet.
+**Scope:** what a removed member — or a moderator who turns — can still do to a Concord community.
+**Date:** 2026-08-09. **Status:** findings only, nothing fixed yet.
 **Companion:** `docs/concord-banlist-rank-conformance.md` (the rank half of CORD-04 §4, already
 reported to Armada and fixed here).
 
 Each finding says how it was established. **Verified** means a test in this repo reproduces it;
-**Read** means it follows from the code but no test was written. Every "Verified" line names the
-test.
+**Read** means it follows from the code but no test was written. Every "Verified" line names the test.
+
+---
+
+## How to read this list
+
+Findings are split by **what the attacker needs**, because that decides who owns the fix and how
+urgent it is:
+
+- **[Part A — reachable from stock Amethyst](#part-a).** A banned user opens the shipping app and
+  taps a button, or our own client does it for them on a timer. These are straightforwardly *our
+  bugs*, they need no attacker sophistication at all, and every one of them is fixable in this repo
+  without touching the protocol or coordinating with anyone.
+- **[Part B — requires a malicious client](#part-b).** The attacker writes their own events, so no
+  client-side rule binds them. We cannot stop them from *authoring* anything; we can only refuse to
+  *honor* it. Fixes live in the fold, the store, or the spec.
+- **[Part C — interop and not-yet-shipped surfaces](#part-c).**
+
+The distinction is not academic. Part A is where the realistic attacker is: an irritated user who
+just got banned has the app already installed and is not going to write a Nostr client. Part B is
+where the *damage ceiling* is. Fix Part A first because it is cheap and it is what will actually
+happen; fix Part B because it is what ends communities.
+
+Two structural causes account for most of both halves:
+
+- **Authority is checked in several places that disagree.** `ConcordCommunityState.fold` gates
+  METADATA/CHANNEL/INVITE through the ban-aware `authority.hasPermission`. `AuthorityResolver`
+  gates ROLE/GRANT/BANLIST internally through `holdsManageRoles` / `bitsOf` /
+  `effectivePermissionsOf`, which are ban-blind. The **UI** gates through `effectivePermissions`,
+  also ban-blind. The **action layer** mostly does not gate at all. Same question, four answers.
+- **A ban removes standing, never keys.** `community_root`, channel keys, `control_root` if staff,
+  and live invite links all survive it. Only a CORD-06 Refounding rotates those — which is why
+  anything that makes Refounding expensive (B4) or reversible (A2) is worth more to an attacker
+  than it first looks.
 
 ---
 
 ## Summary
 
-| # | Finding | Severity | Needs a ban? | Recoverable? |
-|---|---------|----------|--------------|--------------|
-| [V1](#v1) | One edition at `version = Long.MAX_VALUE` pins an entity forever | **Critical** | No — any bit-holder | **No** |
-| [V2](#v2) | A banned staffer keeps Role/Grant/Banlist authority | **Critical** | Yes | Yes (Refounding) |
-| [V3](#v3) | A rogue rotator compacts the banlist away | High | Via V2 | Partly |
-| [V4](#v4) | The Refounding recipient set is attacker-inflatable | High | No | Yes |
-| [V5](#v5) | The ban is a per-pubkey display rule; the channel key is not revoked | High | Yes | Yes (Refounding) |
-| [V6](#v6) | Channel history is deletable on a naive third-party relay | High | Yes | **No** (history) |
-| [V7](#v7) | Banlist rank rule diverges from Armada | Medium | — | — |
-| [V8](#v8) | A soft ban revokes no read access and no live invite | Medium | Yes | Yes (Refounding) |
-| [V9](#v9) | The base-rekey plane is writable by every member | Low | Yes | Yes |
-| [V10](#v10) | Stranded recovery: either broken, or a removal bypass | **Critical** | Yes | — |
-| [V11](#v11) | Voice rooms are key-gated, not roster-gated | High | Yes | Yes (Refounding) |
-| [V12](#v12) | Typing indicators are not ban-filtered | Low | Yes | Yes |
+### <a name="part-a"></a>Part A — reachable from stock Amethyst (our bugs)
 
-The two structural causes worth naming up front, because most of the list collapses into them:
+| # | Finding | Severity | Was |
+|---|---------|----------|-----|
+| [A1](#a1) | Any member — banned included — mints a working invite in one tap | **Critical** | new |
+| [A2](#a2) | Stranded recovery runs on a timer and never checks the banlist | **Critical** | V10 |
+| [A3](#a3) | The action layer has no permission checks; the UI's are ban-blind | High | new |
+| [A4](#a4) | A banned member keeps broadcasting "typing", and we keep showing it | Low | V12 |
+| [A5](#a5) | A banned member's own client keeps reading and rendering everything | Medium | V8 |
 
-- **Authority is checked in two places that disagree.** `ConcordCommunityState.fold` gates
-  METADATA/CHANNEL/INVITE through `authority.hasPermission` (`!isBanned && …`), while ROLE, GRANT
-  and BANLIST are gated *inside* `AuthorityResolver.resolve` by `holdsManageRoles` / `bitsOf` /
-  `effectivePermissionsOf`, none of which consult the banlist. That is V2, and V3 follows from it.
-- **A ban removes standing, never keys.** Everything a member holds — `community_root`, channel
-  keys, `control_root` if staff, live invite links — survives it. Only a CORD-06 Refounding rotates
-  those, which is why V4 (making Refounding expensive) is worth more to an attacker than it looks.
+### <a name="part-b"></a>Part B — requires a malicious client
+
+| # | Finding | Severity | Needs a ban? | Recoverable? | Was |
+|---|---------|----------|--------------|--------------|-----|
+| [B1](#b1) | One edition at `version = Long.MAX_VALUE` pins an entity forever | **Critical** | No — any bit-holder | **No** | V1 |
+| [B2](#b2) | A banned staffer keeps Role/Grant/Banlist authority | **Critical** | Yes | Yes (Refounding) | V2 |
+| [B3](#b3) | A rogue rotator compacts the banlist away | High | Via B2 | Partly | V3 |
+| [B4](#b4) | The Refounding recipient set is attacker-inflatable | High | No | Yes | V4 |
+| [B5](#b5) | The ban is per-pubkey; the channel key is not revoked | High | Yes | Yes (Refounding) | V5 |
+| [B6](#b6) | Channel history is deletable on a naive third-party relay | High | Yes | **No** (history) | V6 |
+| [B7](#b7) | The base-rekey plane is writable by every member | Low | Yes | Yes | V9 |
+
+### <a name="part-c"></a>Part C — interop and not-yet-shipped
+
+| # | Finding | Severity | Was |
+|---|---------|----------|-----|
+| [C1](#c1) | Banlist rank rule diverges from Armada | Medium | V7 |
+| [C2](#c2) | CORD-07 voice rooms are key-gated, not roster-gated | Design | V11 |
 
 ---
 
-## <a name="v1"></a>V1 — One edition at `Long.MAX_VALUE` pins an entity forever
+# Part A — reachable from stock Amethyst
+
+No custom tooling. A banned user with the shipping app, or our own background sweep.
+
+## <a name="a1"></a>A1 — Any member, banned included, mints a working invite in one tap
+
+**Critical. The single most likely thing an irritated banned user actually does.**
+*Read:* `AccountConcordActions.mintConcordInvite`, `ConcordChannelListScreen` (the `PersonAdd`
+`IconButton`).
+
+`mintConcordInvite` checks exactly two things: that the account is writeable, and that we have the
+community in our joined list. **No `CREATE_INVITE` check. No banlist check.** And unlike the Edit
+and channel-management buttons beside it, the invite `IconButton` is rendered with no `canEdit`
+guard at all — it is always there, for everyone.
+
+So the flow is: get banned, stay in the app, tap the person-add icon, share the link. The minted
+bundle carries the community root we still hold, so anyone who opens it joins for real. Every
+invited account is a fresh unbanned npub that moderators then have to ban one at a time.
+
+Two aggravating details. The mint publishes a **fresh link signer per invite**, so it is a brand-new
+coordinate — revoking the links the banned member was given does not touch the ones they mint.
+And `CREATE_INVITE` is a real permission bit that the fold enforces on `INVITE_*` Control entities,
+but the actual invite mechanism is a standalone kind-33301 addressable event published *outside* the
+Control Plane, so that gate never applies to it. The permission is, in practice, unenforced.
+
+**Fix.** Gate `mintConcordInvite` on `hasPermission(me, CREATE_INVITE) || isOwner(me)`, and gate the
+button on the same. This is contained, uncontroversial, and closes the realistic attack. Do it first.
+
+## <a name="a2"></a>A2 — Stranded recovery runs on a timer and never checks the banlist
+
+**Critical, and it forks.** *Read:* `ConcordStrandedRecovery`,
+`AccountConcordActions.recoverStrandedConcordCommunities`, `AccountConcordActions.mintConcordInvite`.
+
+This is in Part A because **our own client performs it, unprompted**: the recovery sweep runs on the
+revision tick for every joined community holding an `inviteRef`, every 15 minutes. The banned user
+does nothing but leave the app installed.
+
+`ConcordStrandedRecovery.isStranded` / `mergeForward` take only `(entry, bundle)` — no banlist
+check, no check that we were legitimately re-keyed. The whole test is "the bundle at my stored
+`inviteRef` sits at a higher epoch than I do", and the unlock token lives in the link fragment an
+ex-member keeps forever. So whether a removed member walks back in depends *only* on whether
+anything re-mints at that coordinate:
+
+- **If nothing re-mints** — today, since Amethyst mints a fresh link signer per invite and the
+  Refounding neither re-mints nor revokes — stranded recovery never fires for anyone. It is dead
+  code, and the cure `drainConcordRekeys`' own KDoc points to for "a BAN-holder can evict anyone
+  (the owner included) by omission" does not exist. An owner evicted by a rogue admin has no way back.
+- **If anything re-mints at a stable coordinate** — which is what CORD-05's design describes, so
+  plausibly Armada in a cross-client community — every removed member auto-recovers the new root and
+  re-announces a Guestbook join, looking current again. **The only hard removal is silently undone.**
+
+Note also that `refoundConcordCommunity` never revokes the links the removed member created or
+joined through, though `ControlEntityKind.INVITE_REVOKED` exists and `classifyInvite` honors it.
+
+**Fix.** Decide the intended semantics first — this needs a spec answer. Then gate `mergeForward` on
+not being banned in the epoch we merge *from*, have the Refounding revoke the removed members'
+links, and either implement re-minting so legitimate recovery works, or drop the mechanism and give
+evicted owners another route.
+
+## <a name="a3"></a>A3 — The action layer has no permission checks; the UI's are ban-blind
+
+**High (defense in depth).** *Read:* `AccountConcordActions` (`banConcordMember`,
+`unbanConcordMember`, `editConcordMetadata`, `deleteConcordChannel`, `refoundConcordCommunity`),
+`ConcordMembersScreen`, `ConcordChannelListScreen`.
+
+Every moderation verb checks `isWriteable()` and the Control write key, and **nothing else** — no
+permission bit, no banlist. Authority lives entirely in the composable that draws the button. Two
+consequences:
+
+1. **The UI's own gates are ban-blind.** `iCanBan`, `canEdit` (metadata) and `canManageChannels` all
+   use `effectivePermissions`, which ignores the banlist. A banned admin still sees the Edit and
+   channel-management controls. Those particular editions are dropped by every client's fold
+   (METADATA/CHANNEL are `hasPermission`-gated), so the result is a **silently no-op control** —
+   which this codebase elsewhere explicitly calls out as worse than no control at all.
+2. **Ban/Remove survive only because of a second, unrelated gate.** `canBan` is
+   `viewerCanBan && canBanTarget`, and `canBanTarget` routes through `canActOn`, which *is*
+   ban-aware. Remove the second condition and a banned admin gets a working Ban button. That is a
+   thin margin for a Critical-severity outcome (B2).
+
+`refoundConcordCommunity` is the sharpest instance: its own guard is
+`isOwner || effectivePermissions(me).has(BAN)` — deliberately ban-blind — so a banned BAN-holder can
+launch a full community Refounding from the shipping app. Honest receivers refuse it
+(`drainConcordRekeys` checks the ban-aware `hasPermission`), so the blast radius today is noise plus
+self-stranding — but it is a race against banlist propagation, and a fresh joiner who has not folded
+the ban yet has no reason to refuse.
+
+**Fix.** Move the authority check into the action layer where it cannot be bypassed by a new caller
+(desktop, CLI, a future screen), and switch every `effectivePermissions` used as an authorization
+test to `hasPermission`. Keep `effectivePermissions` only where the question really is "what do
+their roles say", independent of standing.
+
+## <a name="a4"></a>A4 — A banned member keeps broadcasting "typing", and we keep showing it
+
+**Low, both halves ours.** *Read:* `AccountConcordActions.sendConcordTyping`,
+`ConcordCommunitySession.ingestTyping`.
+
+The send side checks `isWriteable()` and nothing else, so a banned member's stock app keeps emitting
+kind-23311 heartbeats. The receive side checks that the rumor is a typing heartbeat, is bound to the
+channel/epoch, and is not our own — and nothing else. So a banned member sits in the "… is typing"
+row indefinitely, in a channel where every message they send is hidden. Cheap to fix on both ends,
+and it directly contradicts what a ban promises the user.
+
+## <a name="a5"></a>A5 — A banned member's own client keeps reading and rendering everything
+
+**Medium, partly inherent.** *Read:* CORD-02/05, `ConcordCommunitySession`.
+
+Until a Refounding, a ban stops honest clients from *showing* the banned member's posts; it does not
+stop delivering the community's posts *to* them. Their stock app keeps subscribing, decrypting and
+rendering the whole community in real time. They also keep any invite links they hold (and can mint
+more — A1).
+
+The cryptography here is inherent to a soft ban, but the **product** side is ours: "Ban" and "Remove
+from community" are very different promises and the UI presents them as neighbours in one menu.
+Worth making the difference explicit at the point of choice, and worth defaulting destructive
+moderation to the Refounding path.
+
+---
+
+# Part B — requires a malicious client
+
+The attacker writes their own events, so nothing client-side binds them. We can only refuse to honor
+what they publish.
+
+## <a name="b1"></a>B1 — One edition at `Long.MAX_VALUE` pins an entity forever
 
 **Critical. Does not require a banned user, a sockpuppet, or the owner's absence. Unrecoverable.**
 
@@ -87,7 +244,7 @@ cross-epoch tolerance. Options, roughly in order of preference:
 
 The first is the smallest change and closes the unrecoverability; the third should happen regardless.
 
-## <a name="v2"></a>V2 — A banned staffer keeps Role, Grant and Banlist authority
+## <a name="b2"></a>B2 — A banned staffer keeps Role, Grant and Banlist authority
 
 **Critical.** *Verified:* `quartz/…/cord04Roles/BannedStaffEscalationTest.kt` (13 tests).
 
@@ -118,22 +275,22 @@ banned in pass A; then recompute the banlist under pass B's roster, keeping only
 authorized. Deterministic, terminates, no oscillation on mutual bans. **Consensus-affecting**: until
 Armada ships the same rule, we will drop editions they honor.
 
-## <a name="v3"></a>V3 — A rogue rotator compacts the banlist away
+## <a name="b3"></a>B3 — A rogue rotator compacts the banlist away
 
 **High.** *Verified:* `aRogueRotatorCompactsTheBanAwayForEveryClientWithoutAFloor`.
 
 A CORD-06 §3 compaction re-wraps one edition per entity and the *rotator* picks it, so a rotator can
 decline to carry the banlist forward. Every edition it serves is genuine, so no signature check sees
 the omission — `EntityFloor`'s own KDoc names this case ("clearing a banlist"). A banned member
-cannot rotate, but the V2 puppet can.
+cannot rotate, but the B2 puppet can.
 
 The result is not a clean unban but a **split community**: clients that already folded the ban
 refuse the rollback and still see it, fresh joiners have no floor and see no ban at all. Two
 populations permanently disagreeing about who is a member, with no event either side can call
-forged. Closing V2 removes the puppet and takes this with it; floors alone do not, since they only
+forged. Closing B2 removes the puppet and takes this with it; floors alone do not, since they only
 protect people who were already there.
 
-## <a name="v4"></a>V4 — The Refounding recipient set is attacker-inflatable
+## <a name="b4"></a>B4 — The Refounding recipient set is attacker-inflatable
 
 **High.** *Read:* `ConcordCommunitySession.allMembers()` / `emitChannelRumors`;
 `AccountConcordActions.refoundConcordCommunity` step 2; `ConcordRefounding.buildBaseRekeyWraps`.
@@ -152,7 +309,7 @@ This is the cheapest thing on the list to fix and the only one that is not conse
 the recipient set, prefer recent/attested members when over the cap, and surface what was dropped
 (a silent truncation strands real members). Worth doing first.
 
-## <a name="v5"></a>V5 — The ban is a per-pubkey display rule and the channel key is not revoked
+## <a name="b5"></a>B5 — The ban is a per-pubkey display rule and the channel key is not revoked
 
 **High.** *Read:* `Account.consumeConcordRumorGated` (`isBanned(rumor.pubKey)`), `Account.isAcceptable`.
 
@@ -160,12 +317,12 @@ Writing to a channel needs the channel key, which the ban does not take away; th
 whatever key the client feels like using. A malicious client therefore posts every message from a
 fresh npub and `isBanned` never matches — moderation is whack-a-mole against an infinite identity
 supply. Each message also costs every member two NIP-44 decrypts and two signature verifications
-*before* the banlist check runs, and each fresh author inflates V4.
+*before* the banlist check runs, and each fresh author inflates B4.
 
 There is no client-side answer; only a Refounding rotates the key out from under them. That is the
-correct design, which is why V4 matters so much.
+correct design, which is why B4 matters so much.
 
-## <a name="v6"></a>V6 — Channel history is deletable on a naive third-party relay
+## <a name="b6"></a>B6 — Channel history is deletable on a naive third-party relay
 
 **High, external.** *Verified (that we are safe):*
 `geode/…/ConcordPlaneKeyDeletionTest.kt` (3 tests).
@@ -187,30 +344,7 @@ A community publishes wherever its metadata points. Any relay that authorizes de
 `pubkey` still hands every ex-member the wipe button, and a Refounding protects only the future.
 Worth a note in the CORD-01 spec and a line in the relay-selection guidance.
 
-## <a name="v7"></a>V7 — Banlist rank rule diverges from Armada
-
-**Medium, known, deliberate.** See `docs/concord-banlist-rank-conformance.md`, already reported.
-
-We enforce §3's rank half on the Banlist and Armada does not, so the two clients can show different
-banlists. Shipped knowingly. Row 3 of that report ("a banned `BAN` holder unbans themselves") was
-left open as a fixpoint-ordering question — V2 is the general form of it, and the fix proposed there
-resolves both.
-
-## <a name="v8"></a>V8 — A soft ban revokes no read access and no live invite
-
-**Medium, inherent.** *Read:* CORD-02/05.
-
-Until a Refounding, a banned member decrypts everything published — the ban only stops honest
-clients from *showing* their posts, not from delivering the group's posts to them. They also keep
-any invite links they created while privileged; those still resolve to bundles carrying the current
-root. Publishing the root, or one live link, invites an unbanned crowd that each has to be banned
-individually (and see V5).
-
-Not a bug so much as the definition of a soft ban, but it belongs on the list because the UI should
-say so: "Ban" and "Remove from community" are very different promises and users will read the first
-as the second.
-
-## <a name="v9"></a>V9 — The base-rekey plane is writable by every member
+## <a name="b7"></a>B7 — The base-rekey plane is writable by every member
 
 **Low.** *Read:* `ConcordKeyDerivation.baseRekeyAddress`, `AccountConcordActions.drainConcordRekeys`.
 
@@ -219,63 +353,36 @@ valid wraps there. Authorization happens after the blobs are scanned, so a flood
 a locator scan per blob on every revision tick. Bounded work per wrap and no correctness impact;
 listed for completeness.
 
-## <a name="v10"></a>V10 — Stranded recovery: either broken, or a removal bypass
 
-**Critical, and it forks — one of the two halves is true and both are bad.**
-*Read:* `ConcordStrandedRecovery`, `AccountConcordActions.recoverStrandedConcordCommunities`,
-`AccountConcordActions.mintConcordInvite`.
+---
 
-`ConcordStrandedRecovery.isStranded` / `mergeForward` take only `(entry, bundle)`. There is **no
-banlist check and no check that we were legitimately re-keyed** — the entire test is "the bundle at
-my stored `inviteRef` sits at a higher epoch than I do". The unlock token lives in the link
-fragment, which an ex-member keeps forever. So whether a removed member walks back in with the new
-root depends *only* on whether the bundle at that coordinate ever advances an epoch.
+# Part C — interop and not-yet-shipped
 
-In Amethyst it never does: `mintConcordInvite` mints a **fresh link signer per mint**, so nothing
-re-publishes at an existing coordinate, and `refoundConcordCommunity` does not re-mint or revoke
-anything. Two consequences, and they are the fork:
+## <a name="c1"></a>C1 — Banlist rank rule diverges from Armada
 
-- **If nothing re-mints** — today's behaviour — then stranded recovery never fires *for anyone*.
-  That makes it dead code, and the cure `drainConcordRekeys`' own KDoc points to for "a BAN-holder
-  can evict anyone (the owner included) by omission" does not exist. An owner evicted by a rogue
-  admin has no way back.
-- **If anything re-mints at a stable coordinate** — which is what CORD-05's design describes ("the
-  community keeps publishing its bundle at that same addressable coordinate, re-minted at the
-  current epoch"), so plausibly Armada in a cross-client community — then every removed member who
-  joined through a still-live link auto-recovers the new root on the 15-minute sweep, and
-  re-announces a Guestbook join so they look current again. **Refounding, the only hard removal,
-  is silently undone.**
+**Medium, known, deliberate.** See `docs/concord-banlist-rank-conformance.md`, already reported.
 
-Note also that `refoundConcordCommunity` never revokes the invite links the removed member created
-or joined through, even though `ControlEntityKind.INVITE_REVOKED` exists and `classifyInvite`
-already honors it.
+We enforce §3's rank half on the Banlist and Armada does not, so the two clients can show different
+banlists. Shipped knowingly. Row 3 of that report ("a banned `BAN` holder unbans themselves") was
+left open as a fixpoint-ordering question — B2 is the general form of it, and the fix proposed there
+resolves both.
 
-**Fix direction.** Decide the intended semantics first — this needs a spec answer, not a patch.
-Then: gate `mergeForward` on not being banned in the epoch we are merging *from*, have the
-Refounding revoke the removed members' links, and either implement re-minting (so legitimate
-recovery works) or drop the mechanism and give evicted owners a different route.
+## <a name="c2"></a>C2 — Voice rooms are key-gated, not roster-gated
 
-## <a name="v11"></a>V11 — Voice rooms are key-gated, not roster-gated
+**Design-level; not currently reachable.** *Read:* `ConcordBrokerToken`, CORD-07 §2.
 
-**High.** *Read:* `ConcordBrokerToken`, CORD-07 §2.
+Downgraded from High on review: `ConcordBrokerToken` and `VoicePresence` are referenced nowhere
+outside `quartz`, so Amethyst ships no Concord voice path yet. This is a note for whoever wires
+one up, not a live hole.
 
 A member proves voice-room membership by signing a NIP-98 kind-27235 request with the channel's
 **derived voice signer key**, whose pubkey is the SFU room name. The broker is stateless and holds
 no community secret, so it cannot consult the Control Plane and has no idea a banlist exists. A
 banned member keeps that key until a Refounding, so they can join the voice room and stay in it.
 Nothing on the client side can evict them — kicking them from the UI does not kick them from the SFU.
+It would be the one place where a ban fails *audibly*, in real time, in front of everyone, so it is
+worth designing the roster check in before shipping rather than after.
 
-This is the one place where a ban fails *audibly*, in real time, in front of everyone. Worth ranking
-above its technical severity for that reason alone.
-
-## <a name="v12"></a>V12 — Typing indicators are not ban-filtered
-
-**Low.** *Read:* `ConcordCommunitySession.ingestTyping`.
-
-`ingestTyping` checks the rumor is a typing heartbeat, is bound to the channel/epoch, and is not our
-own — and nothing else. A banned member (or any fresh npub holding the channel key, see V5) shows
-in the "… is typing" row indefinitely. Cheap to fix and user-visible: the promise a ban makes is
-that the member disappears, and here they do not.
 
 ---
 
@@ -284,7 +391,7 @@ that the member disappears, and here they do not.
 This audit is bounded by what was opened. Checked and found sound: the wrap/seal envelope (no author
 impersonation — `rumor.pubKey == seal.pubKey` and `rumor.verifyId()`), Concord chat edits
 (`Note.latestConcordEdit` is author-gated, so a member cannot rewrite someone else's message), and
-self-unban (V2).
+self-unban (B2).
 
 Not looked at at all:
 
@@ -292,7 +399,7 @@ Not looked at at all:
   Note that no channel-scoped rekey *receive* path appears to exist: `drainConcordRekeys` handles
   `ROOT_SCOPE` only, and `entry.privateChannels` is carried forward but never populated by a
   delivery path. If that is right, the only removal Amethyst can perform is a full-community
-  Refounding — which is exactly what V4 makes expensive.
+  Refounding — which is exactly what B4 makes expensive.
 - **In-plane reactions and deletes** — the edit path is author-gated; the delete path was not read.
 - **Guestbook kicks** (kind 3309) — the builder documents a KICK-bit + rank rule; the receive side
   was not verified against it.
@@ -301,11 +408,23 @@ Not looked at at all:
 
 ## Suggested order
 
-1. **V4** — cheapest, not consensus-affecting, and it protects the remedy every other fix depends on.
-2. **V1** — worst blast radius and the only unrecoverable one; does not need an attacker to be
-   banned or privileged beyond a single ordinary bit.
-3. **V2** (+V3, +V7 row 3) — one two-pass change closes all three. Coordinate with Armada first;
-   this one splits consensus.
-4. **V6** — spec note + relay guidance; our own behaviour is already correct and now pinned.
-5. **V5 / V8** — UI honesty about what a ban does, and a "Remove from community" affordance that
-   Refounds rather than bans.
+**Part A first.** It is the whole of the realistic threat — a banned user with the app already
+installed — and none of it needs coordination with anyone.
+
+1. **A1** — one guard on `mintConcordInvite` plus one on its button. Smallest fix on the list and it
+   closes the attack a banned user will actually reach for.
+2. **A3** — move authority into the action layer and replace `effectivePermissions` with
+   `hasPermission` everywhere it is used as an authorization test. This is also the cheapest partial
+   mitigation for B2: it shrinks what a banned staffer can do *without* writing their own client.
+3. **A2** — needs the semantics decided before any code. Raise it with the spec.
+4. **A4 / A5** — small, user-visible, and they make the product honest about what a ban is.
+
+**Then Part B**, hardest first because the ceiling is highest:
+
+5. **B4** — cheap, not consensus-affecting, and it protects the remedy every other fix depends on.
+6. **B1** — worst blast radius, the only unrecoverable one, and the bar is a single ordinary
+   permission bit.
+7. **B2 (+B3, +C1's open row)** — one two-pass change closes all three. Coordinate with Armada
+   first; this one splits consensus.
+8. **B6** — spec note plus relay-selection guidance; our own behaviour is already correct and pinned.
+9. **B5 / B7** — accept, or bound.
