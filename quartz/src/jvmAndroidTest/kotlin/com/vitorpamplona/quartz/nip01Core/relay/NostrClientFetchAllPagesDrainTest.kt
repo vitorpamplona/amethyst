@@ -75,16 +75,23 @@ class NostrClientFetchAllPagesDrainTest {
 
     private val relay = RelayUrlNormalizer.normalize("wss://drain.example.com")
 
-    private fun event(createdAt: Long) =
-        Event(
-            id = createdAt.toString(16).padStart(64, '0'),
-            pubKey = "f".repeat(64),
-            createdAt = createdAt,
-            kind = 1,
-            tags = emptyArray(),
-            content = "e$createdAt",
-            sig = "0".repeat(128),
-        )
+    /**
+     * [nonce] distinguishes two events sharing one `created_at`, which the id would
+     * otherwise collapse into the same event — and a boundary second holding more
+     * than one is the whole subject of the dense-second test below.
+     */
+    private fun event(
+        createdAt: Long,
+        nonce: String = "",
+    ) = Event(
+        id = (createdAt.toString(16) + nonce).padStart(64, '0'),
+        pubKey = "f".repeat(64),
+        createdAt = createdAt,
+        kind = 1,
+        tags = emptyArray(),
+        content = "e$createdAt$nonce",
+        sig = "0".repeat(128),
+    )
 
     @Test
     fun anEmptyPageConfirmedByEoseDrains() =
@@ -226,6 +233,50 @@ class NostrClientFetchAllPagesDrainTest {
         }
 
     // ---- termination: the walk must END, whatever the relay does -------------
+
+    @Test
+    fun aBoundarySecondDenserThanAPageIsStillSteppedPast() =
+        runBlocking {
+            // The step-past path itself, which had no test and which the
+            // ignored-cursor guard now sits in front of. The two look identical
+            // from `delivered == 0` and must NOT be treated alike: a dense second
+            // returns events AT the boundary, so `aboveBoundary` stays 0 while
+            // `received` is 1, the guard holds its fire, and the walk steps past
+            // exactly as before. Only a relay answering ABOVE the boundary — which
+            // is not paging at all — trips it.
+            val client = ScriptedClient()
+            val feeder =
+                launch {
+                    client.awaitPage(1)
+                    client.listener!!.onEvent(event(2000), false, relay, null)
+                    client.listener!!.onEvent(event(1000, "a"), false, relay, null)
+                    client.listener!!.onEose(relay, null)
+
+                    // Page two re-asks second 1000 inclusively. The relay's page cap
+                    // hands back the same head of that second — event "b" living
+                    // there too can never be reached. Nothing new: stuck.
+                    client.awaitPage(2)
+                    client.listener!!.onEvent(event(1000, "a"), false, relay, null)
+                    client.listener!!.onEose(relay, null)
+
+                    // So the walk steps strictly past to 999 and finds the corpus
+                    // ends there.
+                    client.awaitPage(3)
+                    client.listener!!.onEose(relay, null)
+                }
+
+            val result =
+                client.fetchAllPages(
+                    relay = relay,
+                    filters = listOf(Filter(kinds = listOf(1))),
+                    idleTimeoutMs = 2_000,
+                ) { }
+            feeder.join()
+
+            assertEquals(2, result.downloaded, "the duplicate is dropped, the dense second's tail is the documented loss")
+            assertEquals(3, client.subscribeCount, "it stepped past the stuck second instead of stopping on it")
+            assertEquals(PagedFetchResult.End.DRAINED, result.end, "and reached a genuinely empty, EOSEd page below it")
+        }
 
     @Test
     fun aRelayThatIgnoresTheCursorEndsTheWalkInsteadOfSteppingForever() =
