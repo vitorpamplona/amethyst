@@ -150,8 +150,62 @@ object EditionFold {
         floorVersion: Long,
     ): ControlEdition? =
         editions
-            .filter { it.version >= floorVersion }
+            .filter { it.version >= floorVersion && it.version - floorVersion <= MAX_COMPACTION_VERSION_JUMP }
             .minWithOrNull(compareByDescending<ControlEdition> { it.version }.thenBy { it.rumorId })
+
+    /**
+     * How far above the floor the compaction arm will follow an edition in one step.
+     *
+     * The arm trades contiguity for cross-epoch tolerance, which made VERSION the only contest an
+     * edition had to win — so a single authorized edition at `version = Long.MAX_VALUE` used to
+     * become an entity's permanent head: it won the arm, `authorizedHeads` raised the floor to
+     * `Long.MAX_VALUE`, and from there no honest edition could ever exceed the floor again. Even a
+     * Refounding that dropped the poison did not help, because nothing was then offered at or above
+     * the floor and the fold fell back to [EntityFloor.known] — the poison itself. See B1 in
+     * `docs/concord-soft-ban-audit.md`.
+     *
+     * A compacted head is legitimately ahead of the floor by however many editions the entity gained
+     * while we were away — a chain's worth, not 2^63. This bound is deliberately far above any real
+     * community (a channel renamed a thousand times a day for three years stays under it) and far
+     * below the point where the version space can be exhausted. Anything beyond it is not a
+     * compaction we missed; it is someone reaching for the ceiling, and it is treated as a gap.
+     */
+    const val MAX_COMPACTION_VERSION_JUMP = 1_000_000L
+
+    /**
+     * The floor-anchored chain head among [editions], or null when nothing connects to [floor].
+     *
+     * The same anchor-then-walk the main path uses, factored out so the compaction arm can try it
+     * first: the anchor is the floor's own edition (same version AND hash) or its immediate
+     * successor citing that hash, then the walk climbs while each `version + 1` cites the current
+     * head. Reports no gap — a null here means "fall back", not "refuse".
+     */
+    private fun chainHead(
+        editions: List<ControlEdition>,
+        floor: EntityFloor,
+    ): ControlEdition? {
+        val byVersion = HashMap<Long, MutableList<ControlEdition>>()
+        for (e in editions) byVersion.getOrPut(e.version) { ArrayList() }.add(e)
+
+        val lowest = byVersion.keys.filter { it >= floor.version }.minOrNull() ?: return null
+        val winner = byVersion[lowest]?.minByOrNull { it.rumorId } ?: return null
+        var head =
+            when (lowest) {
+                floor.version -> winner.takeIf { it.hashHex == floor.hashHex }
+                floor.version + 1 -> winner.takeIf { it.prevHash != null && it.prevHash.toHexKey() == floor.hashHex }
+                else -> null
+            } ?: return null
+
+        while (true) {
+            val next =
+                byVersion[head.version + 1]
+                    ?.filter { it.prevHash != null && it.prevHash.toHexKey() == head.hashHex }
+                    ?.minByOrNull { it.rumorId }
+                    ?: break
+            head = next
+        }
+        return head
+    }
 
     /**
      * Groups mixed [editions] by entity id and folds each to its head, honoring the
@@ -210,10 +264,16 @@ object EditionFold {
         // to the compacted head. Presence of the entity in the snapshot selects the ARM;
         // version selects the HEAD, over every edition we hold and not just the subset.
         if (floor != null && snapshot != null && editions.any { it.rumorId in snapshot }) {
+            // Chain first, bootstrap only as the fallback. The arm exists for the case where the
+            // offered head genuinely cannot be connected — but when it CAN be, the connected head is
+            // strictly better evidence than "highest number wins", and preferring it denies a stray
+            // high-version edition its free win in every ordinary fold. The bootstrap keeps the
+            // cross-epoch case working, now bounded by MAX_COMPACTION_VERSION_JUMP.
+            chainHead(editions, floor)?.let { return it }
             return bootstrapHead(editions, floor.version)
                 ?: run {
-                    // Nothing at or above the floor was served: the head we already accepted
-                    // vanished from the offered set — withheld, so fail closed.
+                    // Nothing admissible at or above the floor was served: the head we already
+                    // accepted vanished from the offered set — withheld, so fail closed.
                     onGap(editions[0].entityIdHex, floor.version, editions.maxOf { it.version })
                     floor.known
                 }

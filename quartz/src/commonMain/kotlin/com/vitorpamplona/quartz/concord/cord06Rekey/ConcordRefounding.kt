@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord06Rekey
 
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
@@ -123,11 +124,12 @@ object ConcordRefounding {
         recipientsXOnly: List<HexKey>,
         staffXOnly: Set<HexKey>,
         createdAt: Long,
+        ownerPubKey: HexKey,
     ): RefoundingBuild {
         val newEpoch = rootEpoch + 1
         val newControlKeys = ControlPlaneKeys.forStaff(newRoot, communityId, newEpoch, newControlRoot)
 
-        val controlWraps = compactControlPlane(priorControlWraps, priorControlKeys, newControlKeys)
+        val controlWraps = compactControlPlane(priorControlWraps, priorControlKeys, newControlKeys, ownerPubKey)
 
         val baseRekeyKey = ConcordKeyDerivation.baseRekeyAddress(priorRoot, communityId, newEpoch)
         val prevCommit = ConcordKeyDerivation.epochKeyCommitment(rootEpoch, priorRoot).toHexKey()
@@ -166,19 +168,41 @@ object ConcordRefounding {
         priorWraps: List<Event>,
         priorControlKeys: ControlPlaneKeys,
         newControlKeys: ControlPlaneKeys,
+        ownerPubKey: HexKey,
     ): List<Event> {
-        // entity coordinate -> (head edition, its verified seal)
-        val heads = HashMap<String, Pair<ControlEdition, Event>>()
+        // entity coordinate -> every edition we can open, paired with its verified seal.
+        val byCoordinate = HashMap<String, MutableList<Pair<ControlEdition, Event>>>()
         for (wrap in priorWraps) {
             val opened = ConcordStreamEnvelope.openOrNull(wrap, priorControlKeys) ?: continue
             val edition = ControlEdition.fromRumor(opened.rumor) ?: continue
             val coord = edition.entityKind.wire + ":" + edition.entityIdHex
-            val current = heads[coord]
-            if (current == null || edition.version > current.first.version) {
-                heads[coord] = edition to opened.seal
-            }
+            byCoordinate.getOrPut(coord) { ArrayList() }.add(edition to opened.seal)
         }
-        return heads.values.map { (_, seal) -> ConcordStreamEnvelope.wrapSeal(seal, newControlKeys, createdAt = seal.createdAt) }
+
+        // The head to carry forward is the one every READER honors — the authority-gated head — not
+        // the highest version and not the bare structural chain head.
+        //
+        // Raw highest version made an honest rotator the delivery mechanism for a disconnected stray:
+        // an edition minted at an arbitrary version never joins the chain, but it won that comparison
+        // and was re-wrapped into the new epoch as the entity's whole history (B1 in
+        // `docs/concord-soft-ban-audit.md`). The bare chain walk is *worse*, and this is the trap:
+        // with no floor it anchors at the lowest-version edition carrying no `prev`, and after a prior
+        // compaction the real head's `prev` dangles by design — so a forged `version = 1, prev = null`
+        // decoy outranks a genuine v50→v52 chain and, because nothing here checks signatures, becomes
+        // the entity's entire carried-forward state. A forged empty banlist would erase every ban.
+        //
+        // Gating on the owner-rooted roster is the only selection that cannot be gamed by an
+        // unprivileged author, and it is exactly what ConcordCommunityState.fold would seat, so the
+        // compacted epoch starts where the previous one left off.
+        val editions = byCoordinate.values.flatten()
+        val honored = ConcordCommunityState.authorizedHeads(editions.map { it.first }, ownerPubKey)
+        val out = ArrayList<Event>(honored.size)
+        for ((_, floor) in honored) {
+            val head = floor.known ?: continue
+            val seal = editions.firstOrNull { it.first.rumorId == head.rumorId }?.second ?: continue
+            out.add(ConcordStreamEnvelope.wrapSeal(seal, newControlKeys, createdAt = seal.createdAt))
+        }
+        return out
     }
 
     /**

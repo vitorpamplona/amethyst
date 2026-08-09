@@ -46,12 +46,24 @@ object ConcordStrandedRecovery {
      * True when [bundle], resolved at [entry]'s stored invite link, proves we were
      * left behind: it must describe the same community and sit at a strictly higher
      * epoch. Same or lower is a no-op (we are current, or the bundle is stale).
+     *
+     * [bannedAtCurrentEpoch] is the caller's answer to "does the community, as I fold
+     * it right now, have me on its banlist?" — and a `true` refuses the recovery
+     * outright. It is a required argument rather than a caller-side `if` because
+     * getting it wrong turns this mechanism inside out: recovery exists so a member
+     * *wrongly* omitted from a rotation can catch up, but the test it performs (a
+     * higher epoch at a link whose unlock token an ex-member keeps forever) cannot
+     * tell that member apart from one the community deliberately removed. Without
+     * this, a Refounding — the only hard removal Concord has — is undone by our own
+     * background sweep a few minutes later.
      */
     fun isStranded(
         entry: ConcordCommunityListEntry,
         bundle: CommunityInvite,
+        bannedAtCurrentEpoch: Boolean,
     ): Boolean =
-        entry.inviteRef != null &&
+        !bannedAtCurrentEpoch &&
+            entry.inviteRef != null &&
             bundle.communityId.equals(entry.id, ignoreCase = true) &&
             bundle.rootEpoch > entry.rootEpoch
 
@@ -73,8 +85,9 @@ object ConcordStrandedRecovery {
     fun mergeForward(
         entry: ConcordCommunityListEntry,
         bundle: CommunityInvite,
+        bannedAtCurrentEpoch: Boolean,
     ): ConcordCommunityListEntry? {
-        if (!isStranded(entry, bundle)) return null
+        if (!isStranded(entry, bundle, bannedAtCurrentEpoch)) return null
 
         // Bank the epoch we are leaving with its control_pk, so its Control Plane
         // stays re-subscribable for the anti-rollback floor (a split epoch's address

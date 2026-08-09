@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEven
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
@@ -75,6 +76,15 @@ private const val CONCORD_ADMIN_ROLE = "Admin"
  * relay-fetch loop.
  */
 private const val RECOVERY_CHECK_INTERVAL_MS = 15 * 60 * 1000L
+
+/**
+ * How many recipients one Refounding will re-key. See `AccountConcordActions.boundRecipients`.
+ *
+ * 120 blobs ride in each kind-3303 chunk, so this is ~42 published events and ~5k NIP-44
+ * encryptions at the ceiling — heavy but survivable on a phone, and far above any real community.
+ * Raising it raises the cost of the attack it exists to bound, not the safety.
+ */
+private const val MAX_REFOUNDING_RECIPIENTS = 5_000
 
 /**
  * Concord (encrypted communities) orchestration for an [Account]: join/create/
@@ -171,6 +181,21 @@ class AccountConcordActions(
         val entry =
             account.concordChannelList.liveCommunities.value
                 .firstOrNull { it.id == communityId } ?: return null
+        // CREATE_INVITE, and not while banned. This used to check only that we held the community,
+        // which made minting the one moderation-free action in the app: a member the owner had just
+        // banned could tap the invite button and hand out a working link to the community they were
+        // removed from, and every account they invited arrived as a fresh un-banned npub.
+        //
+        // Note the bit is not otherwise enforced anywhere. The fold gates the INVITE_* Control
+        // entities on CREATE_INVITE, but a link's bundle is a standalone kind-33301 published
+        // OUTSIDE the Control Plane, so no fold ever sees it. This check is the only one there is.
+        // The owner is proven by the community id (CORD-02), so they are read off the entry and can
+        // mint before the session exists — the session is built asynchronously off the joined list,
+        // and requiring it here would have made the owner's own invite button fail on a cold start.
+        // Everyone else needs the folded roster, so no session means no invite.
+        val session = account.concordSessions.sessionFor(communityId)
+        val amOwner = entry.owner.equals(account.signer.pubKey, ignoreCase = true)
+        if (!amOwner && (session == null || !isAuthorizedFor(session, ConcordPermissions.CREATE_INVITE))) return null
         val invite =
             ConcordActions.inviteFor(
                 communityIdHex = entry.id,
@@ -430,7 +455,17 @@ class AccountConcordActions(
         channelIdHex: String,
     ) {
         if (!account.isWriteable()) return
-        val entry = account.concordSessions.sessionFor(communityId)?.entry ?: return
+        val session = account.concordSessions.sessionFor(communityId) ?: return
+        // A ban hides every message we send, so continuing to announce that we are typing them is
+        // both noise and a contradiction of what the ban told the room. Filtered on the receive side
+        // too (ConcordCommunitySession.ingestTyping) — a malicious client would keep sending.
+        if (session.state.value
+                ?.authority
+                ?.isBanned(account.signer.pubKey) == true
+        ) {
+            return
+        }
+        val entry = session.entry
         val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
         val wrap = ConcordActions.buildChannelTyping(account.signer, channelKey, channelIdHex, entry.rootEpoch, TimeUtils.now())
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
@@ -487,6 +522,49 @@ class AccountConcordActions(
         return cp
     }
 
+    /**
+     * Whether this account may take the action guarded by [bit] in [session] — and, when [target] is
+     * given, take it *against that member* (CORD-04 §3's rank rule, "equal cannot act on equal").
+     *
+     * Every moderation verb below funnels through this. It used to live only in the composables that
+     * drew the buttons, which failed three ways: the screens tested `effectivePermissions`, which
+     * ignores the banlist, so a banned staffer still saw the controls; a verb reached from anywhere
+     * else (desktop, `amy`, a new screen) inherited no check at all; and holding `control_root` —
+     * a spam gate, never authority (CORD-02 §5) — was the only thing actually being enforced.
+     *
+     * Fails **closed**, with one deliberate exception: the owner is read from [ConcordCommunityListEntry]
+     * rather than from the fold, because the community id proves them (CORD-02) and they must stay able
+     * to moderate before their Control Plane has finished folding — or through a fold a rogue has
+     * damaged. Everyone else needs a resolved roster, so an unfolded community grants nobody else
+     * anything.
+     */
+    private fun isAuthorizedFor(
+        session: ConcordCommunitySession,
+        bit: Int,
+        target: HexKey? = null,
+    ): Boolean {
+        val me = account.signer.pubKey
+        if (session.entry.owner.equals(me, ignoreCase = true)) return true
+        val authority = session.state.value?.authority ?: return false
+        // hasPermission, never effectivePermissions: the latter reads the roles alone and would let a
+        // banned staffer keep acting for as long as they hold the key.
+        val allowed = if (target == null) authority.hasPermission(me, bit) else authority.canActOn(me, target, bit)
+        if (!allowed) {
+            Log.w("Concord") { "Refusing a Concord action in ${session.entry.id}: not authorized for bit $bit${target?.let { " on $it" } ?: ""} (CORD-04 §3)" }
+        }
+        return allowed
+    }
+
+    /** [controlKeysForWrite] gated by [isAuthorizedFor] — the standing check and the key check together. */
+    private fun controlKeysForAction(
+        session: ConcordCommunitySession,
+        bit: Int,
+        target: HexKey? = null,
+    ): ControlPlaneKeys? {
+        if (!isAuthorizedFor(session, bit, target)) return null
+        return controlKeysForWrite(session)
+    }
+
     /** Grant [member] exactly [roleIds] (empty list revokes their roles). */
     suspend fun grantConcordRole(
         communityId: String,
@@ -495,7 +573,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = controlKeysForWrite(session) ?: return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES, member) ?: return false
         // A Grant that first makes its member staff must deliver the control_root in the same
         // edition (CORD-04 §3) — grantWithStaffDelivery attaches the pairwise wrap when the
         // roles carry a Control-writing bit and we hold the secret to hand over.
@@ -567,7 +645,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = controlKeysForWrite(session) ?: return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES, member) ?: return false
 
         val existing =
             session.state.value
@@ -609,7 +687,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = controlKeysForWrite(session) ?: return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_ROLES, member) ?: return false
         val grantWrap = ConcordModeration.grant(account.signer, cp, communityId.hexToByteArray(), member, emptyList(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, grantWrap)
         return true
@@ -657,7 +735,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = controlKeysForWrite(session) ?: return false
+        val cp = controlKeysForAction(session, ConcordPermissions.BAN, member) ?: return false
         val wrap = ConcordModeration.ban(account.signer, cp, communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
@@ -670,7 +748,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = controlKeysForWrite(session) ?: return false
+        val cp = controlKeysForAction(session, ConcordPermissions.BAN, member) ?: return false
         val wrap = ConcordModeration.unban(account.signer, cp, communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
         return true
@@ -701,10 +779,22 @@ class AccountConcordActions(
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         val state = session.state.value ?: return false
         val authority = state.authority
-        val iCanBan = authority.isOwner(account.signer.pubKey) || authority.effectivePermissions(account.signer.pubKey).has(ConcordPermissions.BAN)
+        // hasPermission, not effectivePermissions: a Refounding is the hardest action in the protocol
+        // and this guard used to ignore the banlist, so a banned BAN-holder could launch one from the
+        // shipping app. Honest receivers refuse such a rotation (drainConcordRekeys checks the same
+        // ban-aware predicate), but that is a race against banlist propagation, not a check.
+        val iCanBan = authority.isOwner(account.signer.pubKey) || authority.hasPermission(account.signer.pubKey, ConcordPermissions.BAN)
         if (!iCanBan) return false
         val removedLower = removed.mapTo(HashSet()) { it.lowercase() }
         if (removedLower.isEmpty() || removedLower.any { authority.isOwner(it) }) return false
+        // Removal is the hardest form of a ban, so it takes the same rank rule (CORD-04 §3): an admin
+        // cannot Refound a peer admin out of the community any more than they could ban one. The owner
+        // short-circuits, as everywhere else, because canActOn starts at hasPermission.
+        if (!authority.isOwner(account.signer.pubKey) &&
+            removedLower.any { !authority.canActOn(account.signer.pubKey, it, ConcordPermissions.BAN) }
+        ) {
+            return false
+        }
         // A Refounding writes the current plane (the pre-rotation bans) and the new one (the
         // compaction), so on a split epoch it takes the current control_root (CORD-02 §2). A
         // rank-qualified refounder whose secret hasn't arrived yet must wait for re-delivery.
@@ -735,7 +825,7 @@ class AccountConcordActions(
                 .apply {
                     removeAll(removedLower)
                     removeAll(authority.bannedMembers())
-                }.toList()
+                }.let { candidates -> boundRecipients(candidates, authority) }
 
         // 3. Build the refounding: new root, compacted Control Plane, per-recipient rekey blobs.
         val entry = session.entry
@@ -762,6 +852,7 @@ class AccountConcordActions(
                 recipientsXOnly = recipients,
                 staffXOnly = staff,
                 createdAt = TimeUtils.now(),
+                ownerPubKey = entry.owner,
             )
 
         // 4. Publish the compacted Control Plane (the new epoch's state) then the rekey blobs
@@ -776,6 +867,49 @@ class AccountConcordActions(
         //    re-folds the compacted Control Plane (with the ban), dropping the removed members.
         adoptConcordRoot(entry, newRoot, build.newEpoch, build.newControlKeys.address.hexToByteArray(), newControlRoot)
         return true
+    }
+
+    /**
+     * Caps the Refounding recipient set, keeping the members whose standing we can actually vouch
+     * for when there are too many.
+     *
+     * `allMembers()` is the Guestbook ∪ `observedAuthors` ∪ the roster, and the first two are
+     * unbounded and attacker-writable: a Guestbook Join is self-signed by any key at all, and every
+     * author we decrypt is folded in by design (CORD-02 §5, "observably present"). So each throwaway
+     * npub someone posts from, or simply announces, becomes one more mandatory blob in the next
+     * Refounding — meaning the attack inflates the cost of its own remedy, and the remedy is the only
+     * hard removal Concord has. See B4 in `docs/concord-soft-ban-audit.md`.
+     *
+     * The roster and the owner are kept unconditionally: they are owner-rooted, so they cannot be
+     * padded from outside. The remainder fills the budget, and anything dropped is **logged rather
+     * than silently truncated** — a dropped member is stranded on the dead epoch and their only way
+     * back is a recovery path that needs to know it happened.
+     */
+    private fun boundRecipients(
+        candidates: Set<HexKey>,
+        authority: AuthorityResolver,
+    ): List<HexKey> {
+        if (candidates.size <= MAX_REFOUNDING_RECIPIENTS) return candidates.toList()
+
+        // The roster goes in whole even if it alone exceeds the budget: it is owner-rooted, so it
+        // cannot be padded from outside, and dropping an admin to make room for a stranger inverts
+        // the point of the cap.
+        val vouched = authority.roleHolders() + authority.staffMembers()
+        val kept = LinkedHashSet<HexKey>()
+        candidates.filterTo(kept) { it in vouched }
+        for (candidate in candidates) {
+            if (kept.size >= MAX_REFOUNDING_RECIPIENTS) break
+            kept.add(candidate)
+        }
+        val dropped = candidates.size - kept.size
+        if (dropped > 0) {
+            Log.w("Concord") {
+                "Refounding recipient set trimmed to ${kept.size} of ${candidates.size} " +
+                    "(budget $MAX_REFOUNDING_RECIPIENTS, roster kept whole): $dropped member(s) will be " +
+                    "stranded on the prior epoch"
+            }
+        }
+        return kept.toList()
     }
 
     // Rotations we've already adopted ("communityId:epoch"), so a base-rekey wrap still buffered
@@ -986,7 +1120,29 @@ class AccountConcordActions(
             // Only a live bundle recovers: an expired/revoked link is not a rotation we missed.
             val bundle = (ConcordActions.classifyInvite(wraps, parsed.fragment.token) as? InviteBundleStatus.Live)?.invite ?: continue
 
-            val merged = ConcordActions.recoverStranded(entry, bundle) ?: continue
+            // A removed member holds the link's unlock token forever, so without this the sweep
+            // walks them straight back into the epoch they were rotated out of — see A2 in
+            // docs/concord-soft-ban-audit.md. Read off the epoch we are LEAVING, which is the last
+            // one whose Control Plane we can still fold.
+            //
+            // Fails CLOSED. `?.isBanned(..) == true` reads "not banned" for a session that does not
+            // exist yet or whose first fold has not landed, and this sweep runs on the revision tick
+            // — so a banned member's own client would have hit that window on cold start and
+            // recovered itself, which is precisely the bypass this gate exists to stop. No verdict
+            // means no recovery; the next sweep retries once the roster is known.
+            val authority =
+                account.concordSessions
+                    .sessionFor(entry.id)
+                    ?.state
+                    ?.value
+                    ?.authority
+            if (authority == null) {
+                Log.i("Concord") { "Stranded-recovery check deferred for ${entry.id}: control plane not folded yet" }
+                lastConcordRecoveryCheck.remove(entry.id)
+                continue
+            }
+            val bannedHere = authority.isBanned(account.signer.pubKey)
+            val merged = ConcordActions.recoverStranded(entry, bundle, bannedHere) ?: continue
             if (!adoptedConcordRotations.add("${entry.id}:${merged.rootEpoch}")) continue
             Log.i("Concord", "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}")
             account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(merged))
@@ -1009,7 +1165,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = controlKeysForWrite(session) ?: return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_METADATA) ?: return false
         val metadata = MetadataEntity(name = name, icon = icon, banner = banner, description = description, relays = relays)
         val wrap = ConcordModeration.editMetadata(account.signer, cp, communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
         publishConcordWrap(session.entry, wrap)
@@ -1027,7 +1183,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = controlKeysForWrite(session) ?: return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_CHANNELS) ?: return false
         val channelId = RandomInstance.bytes(32)
         val channel = ChannelEntity(name = name.trim())
         val wrap = ConcordModeration.defineChannel(account.signer, cp, channelId, channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
@@ -1043,7 +1199,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = controlKeysForWrite(session) ?: return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_CHANNELS) ?: return false
         // Carry the standing definition forward and change only the name. A ChannelEntity built from
         // scratch defaults `private` and `voice` to false, so renaming a private channel used to
         // publish an edition declaring it PUBLIC — and a voice channel became a text channel.
@@ -1066,7 +1222,7 @@ class AccountConcordActions(
     ): Boolean {
         val session = account.concordSessions.sessionFor(communityId) ?: return false
         if (!account.isWriteable()) return false
-        val cp = controlKeysForWrite(session) ?: return false
+        val cp = controlKeysForAction(session, ConcordPermissions.MANAGE_CHANNELS) ?: return false
         // Same as rename: preserve the standing flags so a tombstone does not also silently
         // reclassify the channel it retires.
         val standing =

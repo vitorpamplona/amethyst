@@ -454,7 +454,8 @@ object ConcordActions {
     fun recoverStranded(
         entry: ConcordCommunityListEntry,
         bundle: CommunityInvite,
-    ): ConcordCommunityListEntry? = ConcordStrandedRecovery.mergeForward(entry, bundle)
+        bannedAtCurrentEpoch: Boolean,
+    ): ConcordCommunityListEntry? = ConcordStrandedRecovery.mergeForward(entry, bundle, bannedAtCurrentEpoch)
 
     /** Decrypts + validates a fetched bundle event with the link token; null if invalid. */
     fun openBundle(
@@ -544,6 +545,7 @@ object ConcordActions {
         recipientsXOnly: List<HexKey>,
         staffXOnly: Set<HexKey>,
         createdAt: Long,
+        ownerPubKey: HexKey,
     ): RefoundingBuild =
         ConcordRefounding.build(
             rotatorSigner = rotatorSigner,
@@ -557,6 +559,7 @@ object ConcordActions {
             recipientsXOnly = recipientsXOnly,
             staffXOnly = staffXOnly,
             createdAt = createdAt,
+            ownerPubKey = ownerPubKey,
         )
 
     /**

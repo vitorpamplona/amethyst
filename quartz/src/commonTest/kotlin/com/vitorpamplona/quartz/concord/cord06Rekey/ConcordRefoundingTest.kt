@@ -74,6 +74,7 @@ class ConcordRefoundingTest {
                     recipientsXOnly = listOf(alice.pubKey, bob.pubKey),
                     staffXOnly = setOf(owner.pubKey),
                     createdAt = now,
+                    ownerPubKey = owner.pubKey,
                 )
 
             assertEquals(community.rootEpoch + 1, build.newEpoch)
@@ -113,6 +114,7 @@ class ConcordRefoundingTest {
                     recipientsXOnly = listOf(alice.pubKey),
                     staffXOnly = setOf(owner.pubKey),
                     createdAt = now,
+                    ownerPubKey = owner.pubKey,
                 )
 
             val newControl = build.newControlKeys
@@ -184,6 +186,7 @@ class ConcordRefoundingTest {
                     recipientsXOnly = listOf(alice.pubKey),
                     staffXOnly = setOf(owner.pubKey),
                     createdAt = now,
+                    ownerPubKey = owner.pubKey,
                 )
 
             val newControl = build.newControlKeys
@@ -223,11 +226,84 @@ class ConcordRefoundingTest {
                     recipientsXOnly = listOf(alice.pubKey),
                     staffXOnly = setOf(owner.pubKey),
                     createdAt = now,
+                    ownerPubKey = owner.pubKey,
                 )
             val baseRekeyKey = ConcordKeyDerivation.baseRekeyAddress(community.communityRoot, community.communityId, build.newEpoch)
 
             // Alice claims a different prior root: prevcommit mismatch ⇒ rotation rejected.
             val wrongRoot = ByteArray(32) { 0x11 }
             assertNull(ConcordRefounding.findNewRoot(build.rekeyWraps, baseRekeyKey, alice, community.communityId, wrongRoot, community.rootEpoch))
+        }
+
+    @Test
+    fun compactionRefusesAForgedGenesisAndCarriesTheAuthorizedHead() =
+        runTest {
+            // A compaction re-wraps ONE edition per entity and nothing downstream re-checks the
+            // choice, so how that edition is picked is a security decision, not a detail.
+            //
+            // Raw highest-version lets a stray at an arbitrary version through. But the bare
+            // structural chain walk is worse: with no floor it anchors at the lowest-version edition
+            // carrying no `prev`, and after a PRIOR compaction the real head's `prev` dangles into a
+            // trimmed epoch by design — so a forged `version = 1, prev = null` decoy outranks a
+            // genuine v50→v52 chain, and becomes the entity's entire carried-forward state. A forged
+            // empty banlist would erase every ban that way. Only the owner-rooted gate is safe.
+            val community = ConcordCommunityFactory.create(owner, "Test", now)
+            val communityId = community.communityId
+            val control = community.controlPlane
+
+            // The metadata entity, already compacted once: its head chains from an epoch we no longer hold.
+            val danglingPrev = ByteArray(32) { 0x7F }
+            val realHead =
+                ConcordStreamEnvelope.wrap(
+                    ControlEditionBuilder.rumor(
+                        owner.pubKey,
+                        ControlEntityKind.METADATA,
+                        communityId,
+                        50,
+                        danglingPrev,
+                        ConcordJson.instance.encodeToString(MetadataEntity.serializer(), MetadataEntity(name = "Real")),
+                        now,
+                        null,
+                    ),
+                    control,
+                    owner,
+                    encrypted = false,
+                    createdAt = now,
+                )
+
+            // carol holds nothing at all and mints a genesis-shaped decoy at version 1.
+            val forged =
+                ConcordStreamEnvelope.wrap(
+                    ControlEditionBuilder.rumor(
+                        carol.pubKey,
+                        ControlEntityKind.METADATA,
+                        communityId,
+                        1,
+                        null,
+                        ConcordJson.instance.encodeToString(MetadataEntity.serializer(), MetadataEntity(name = "PWNED")),
+                        now,
+                        null,
+                    ),
+                    control,
+                    carol,
+                    encrypted = false,
+                    createdAt = now,
+                )
+
+            val newEpoch = community.rootEpoch + 1
+            val newControl =
+                com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
+                    .forStaff(newRoot, communityId, newEpoch, newControlRoot)
+            val compacted = ConcordRefounding.compactControlPlane(listOf(realHead, forged), control, newControl, owner.pubKey)
+
+            val carried =
+                compacted
+                    .mapNotNull { ConcordStreamEnvelope.openOrNull(it, newControl) }
+                    .mapNotNull { ControlEdition.fromRumor(it.rumor) }
+                    .filter { it.entityKind == ControlEntityKind.METADATA }
+
+            assertEquals(1, carried.size, "one metadata edition carried forward")
+            assertEquals(50, carried.single().version, "the owner's real head, not the forged genesis")
+            assertEquals("Real", ConcordJson.decodeOrNull<MetadataEntity>(carried.single().content)?.name)
         }
 }
