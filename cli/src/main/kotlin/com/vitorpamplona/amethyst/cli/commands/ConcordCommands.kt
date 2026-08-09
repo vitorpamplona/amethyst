@@ -63,6 +63,8 @@ object ConcordCommands {
         |          [--epoch N] [--root HEX]             --epoch/--root read a prior epoch's plane
         |  concord invite COMMUNITY [--base URL]       mint + publish a shareable invite link
         |  concord join URL                            redeem an invite link and save the community
+        |  concord rekey [COMMUNITY]                   follow a Refounding we were re-keyed for:
+        |                                               open our blob and adopt the new epoch
         |  concord recover [COMMUNITY]                 re-resolve the joined-through invite link and
         |                                               follow a Refounding we were left out of
         |                                               (CORD-06); refuses if that epoch banned us
@@ -71,6 +73,9 @@ object ConcordCommands {
         |  concord grant COMMUNITY USER ROLE-ID        grant a role to a member
         |  concord ban COMMUNITY USER                  ban a member
         |  concord unban COMMUNITY USER                unban a member
+        |  concord refound COMMUNITY --remove U[,U]    CORD-06 Refounding: rotate the root (and the
+        |                                               control_root) so removed members lose every
+        |                                               key — the hard removal a ban cannot give
         """.trimMargin()
 
     suspend fun dispatch(
@@ -80,7 +85,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|send|read|invite|join|recover|roles|role|grant|ban|unban>",
+            "concord <create|list|import|channels|send|read|invite|join|recover|rekey|roles|role|grant|ban|unban|refound>",
             help = USAGE,
             routes =
                 mapOf(
@@ -93,11 +98,13 @@ object ConcordCommands {
                     "invite" to { rest -> invite(dataDir, rest) },
                     "join" to { rest -> join(dataDir, rest) },
                     "recover" to { rest -> recover(dataDir, rest) },
+                    "rekey" to { rest -> rekey(dataDir, rest) },
                     "roles" to { rest -> ConcordModCommands.roles(dataDir, rest) },
                     "role" to { rest -> ConcordModCommands.defineRole(dataDir, rest) },
                     "grant" to { rest -> ConcordModCommands.grant(dataDir, rest) },
                     "ban" to { rest -> ConcordModCommands.ban(dataDir, rest) },
                     "unban" to { rest -> ConcordModCommands.unban(dataDir, rest) },
+                    "refound" to { rest -> ConcordModCommands.refound(dataDir, rest) },
                 ),
         )
 
@@ -480,6 +487,68 @@ object ConcordCommands {
                         "from_epoch" to sc.rootEpoch,
                         "root_epoch" to merged.rootEpoch,
                     )
+            }
+            Output.emit(mapOf("communities" to results))
+            return 0
+        }
+    }
+
+    /**
+     * `concord rekey [COMMUNITY]` — follow a Refounding we WERE re-keyed for (CORD-06).
+     *
+     * The normal counterpart to [recover]: a retained member gets a per-recipient blob on the next
+     * epoch's base-rekey plane, and opening it yields the new root. Amethyst drains this on its
+     * revision tick; amy has no tick, so it is a verb. Without it a Refounding launched from the CLI
+     * strands every other CLI member even though their blob is sitting on the relay.
+     *
+     * The rotator is authorized against the roster of the epoch being **left** — `hasPermission`,
+     * never `effectivePermissions`, so a banned BAN-holder cannot rotate us (CORD-06). Fails closed:
+     * a plane that will not fold yields no verdict and the community is skipped.
+     */
+    private suspend fun rekey(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positionalOrNull(0)
+        args.rejectUnknown()
+        val store = ConcordStore(dataDir.concordFile)
+        val targets = if (handle != null) listOf(store.find(handle) ?: return notFound(handle)) else store.load()
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val results = mutableListOf<Map<String, Any?>>()
+            for (sc in targets) {
+                val relays = relaysFor(ctx, sc)
+                val baseRekey = ConcordActions.nextBaseRekeyPlane(sc.root.hexToByteArray(), sc.communityId.hexToByteArray(), sc.rootEpoch)
+                ctx.registerConcordStreamKeys(relays, listOf(baseRekey.secretKey))
+                val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(baseRekey.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
+                val received =
+                    ConcordActions.openBaseRekey(wraps, baseRekey, ctx.signer, sc.communityId, sc.root.hexToByteArray(), sc.rootEpoch)
+                if (received == null) {
+                    results += mapOf("community_id" to sc.communityId, "name" to sc.name, "rekeyed" to false, "reason" to "no_blob_for_us", "root_epoch" to sc.rootEpoch)
+                    continue
+                }
+                if (received.newEpoch <= sc.rootEpoch) {
+                    results += mapOf("community_id" to sc.communityId, "name" to sc.name, "rekeyed" to false, "reason" to "already_current", "root_epoch" to sc.rootEpoch)
+                    continue
+                }
+                // Authorize the rotator against the epoch we are LEAVING — the last plane we can fold.
+                val cp = controlPlaneKeysFor(sc)
+                ctx.registerConcordStreamKeys(relays, listOfNotNull(cp.signer?.secretKey))
+                val controlWraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.address)) }, pendingOnAuthRequired = true).map { it.second }
+                val editions = ConcordActions.controlEditions(controlWraps, cp)
+                if (editions.isEmpty()) {
+                    results += mapOf("community_id" to sc.communityId, "name" to sc.name, "rekeyed" to false, "reason" to "control_plane_not_folded")
+                    continue
+                }
+                if (!ConcordReceive.isAuthorizedRotator(AuthorityResolver.resolve(editions, sc.owner), received.rotator)) {
+                    results += mapOf("community_id" to sc.communityId, "name" to sc.name, "rekeyed" to false, "reason" to "unauthorized_rotator", "rotator" to received.rotator)
+                    continue
+                }
+                val adopted = ConcordReceive.withAdoptedRoot(entryFor(sc), received.newRoot, received.newEpoch, received.newControlPk, received.newControlRoot)
+                store.upsert(storedFrom(sc, adopted))
+                results += mapOf("community_id" to sc.communityId, "name" to sc.name, "rekeyed" to true, "from_epoch" to sc.rootEpoch, "root_epoch" to received.newEpoch, "rotator" to received.rotator)
             }
             Output.emit(mapOf("communities" to results))
             return 0

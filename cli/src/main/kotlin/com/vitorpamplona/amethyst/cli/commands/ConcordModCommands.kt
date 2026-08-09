@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
+import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
@@ -204,6 +205,176 @@ object ConcordModCommands {
         operator fun component1() = keys
 
         operator fun component2() = editions
+    }
+
+    /**
+     * `concord refound COMMUNITY --remove USER[,USER…]` — a CORD-06 Refounding: the hard removal.
+     *
+     * A ban only strips standing; the removed member keeps every key they ever held, so the room is
+     * only truly closed to them by rotating the `community_root` (and, since CORD-02 §2, a fresh
+     * `control_root` beside it, so a demoted staffer's retained secret dies with the epoch). The
+     * compacted Control Plane is re-sealed at the new epoch and each retained member gets a rekey
+     * blob; nobody else can follow.
+     *
+     * Authority mirrors Amethyst exactly: `hasPermission`, never `effectivePermissions`, so a banned
+     * BAN-holder cannot launch one; the owner is never a valid target; and removal takes the same
+     * rank rule as a ban (CORD-04 §3) — an admin cannot Refound a peer admin out.
+     *
+     * **The recipient set is a floor, not a census.** It is the roster ∪ Guestbook ∪ the authors of
+     * every channel message we can decrypt ∪ ourselves, minus the removed and already-banned — the
+     * same union Amethyst builds, because a member who only ever posted holds no role and leaves no
+     * Guestbook motion, and omitting them silently expels them. A member with no trace at all still
+     * cannot be re-keyed; `concord recover` is how they get back.
+     */
+    suspend fun refound(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        val removeArg = args.flag("remove") ?: return Output.error("bad_args", "refound <community> --remove USER[,USER…]").let { 2 }
+        args.rejectUnknown()
+        val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val removed =
+                removeArg
+                    .split(',')
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .map { ctx.requireUserHex(it).lowercase() }
+                    .toSet()
+            if (removed.isEmpty()) return Output.error("bad_args", "--remove needs at least one user")
+
+            val loaded = load(ctx, sc, dataDir)
+            val (cp, editions) = loaded
+            val state = ConcordCommunityState.fold(editions, sc.owner)
+            val authority = state.authority
+            val me = ctx.signer.pubKey
+
+            if (!ConcordReceive.isAuthorizedRotator(authority, me)) {
+                return Output.error("forbidden", "this account cannot refound: a Refounding takes BAN (or ownership), and a banned holder is refused (CORD-06)")
+            }
+            if (removed.any { authority.isOwner(it) }) {
+                return Output.error("forbidden", "the owner is never a valid removal target (CORD-04 §3)")
+            }
+            // An admin cannot Refound a peer admin out any more than they could ban one.
+            if (!authority.isOwner(me) && removed.any { !authority.canActOn(me, it, ConcordPermissions.BAN) }) {
+                return Output.error("forbidden", "you do not outrank every member you are removing (CORD-04 §3, equal cannot act on equal)")
+            }
+            // A Refounding writes the current plane (the pre-rotation bans) and the new one, so on a
+            // split epoch it takes the current control_root (CORD-02 §2).
+            writeGuard(cp)?.let { return it }
+
+            val relays = ConcordCommands.relaysFor(ctx, sc)
+
+            // 1. Ban the removed on the CURRENT plane, so the compacted snapshot — and therefore the
+            //    new epoch — carries the ban. Each edition chains onto the updated banlist head.
+            var chain = editions
+            for (target in removed) {
+                val banWrap = ConcordModeration.ban(ctx.signer, cp, sc.communityId.hexToByteArray(), target, chain, TimeUtils.now(), owner = sc.owner)
+                ctx.publish(banWrap, relays)
+                chain = chain + (ConcordActions.controlEditions(listOf(banWrap), cp))
+            }
+
+            // 2. Everyone we are keeping. See the note above on why this reaches past the roster.
+            val recipients =
+                (rosterOf(authority) + guestbookMembersOf(ctx, sc) + channelAuthorsOf(ctx, sc, state) + me)
+                    .mapTo(HashSet()) { it.lowercase() }
+                    .apply {
+                        removeAll(removed)
+                        removeAll(authority.bannedMembers().map { it.lowercase() }.toSet())
+                    }.toList()
+
+            // 3. Build: new root + fresh control_root, compacted plane, per-recipient blobs (staff
+            //    get the 136-byte form carrying the secret, everyone else the 104-byte pubkey one).
+            val newRoot = RandomInstance.bytes(32)
+            val newControlRoot = RandomInstance.bytes(32)
+            val controlWraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.address)) }, pendingOnAuthRequired = true).map { it.second }
+            val build =
+                ConcordActions.buildRefounding(
+                    rotatorSigner = ctx.signer,
+                    communityId = sc.communityId,
+                    priorRoot = sc.root.hexToByteArray(),
+                    newRoot = newRoot,
+                    newControlRoot = newControlRoot,
+                    rootEpoch = sc.rootEpoch,
+                    priorControlWraps = controlWraps,
+                    priorControlKeys = cp,
+                    recipientsXOnly = recipients,
+                    staffXOnly = authority.staffMembers(),
+                    createdAt = TimeUtils.now(),
+                    ownerPubKey = sc.owner,
+                )
+
+            // 4. The compacted plane (the new epoch's state) then the blobs (the key that opens it).
+            build.controlWraps.forEach { ctx.publish(it, relays) }
+            build.rekeyWraps.forEach { ctx.publish(it, relays) }
+
+            // 5. Adopt the new epoch ourselves — the same pure rewrite Amethyst uses, banking the
+            //    epoch we are leaving for the anti-rollback floor.
+            val adopted =
+                ConcordReceive.withAdoptedRoot(
+                    ConcordCommands.entryFor(loaded.community),
+                    newRoot,
+                    build.newEpoch,
+                    build.newControlKeys.address.hexToByteArray(),
+                    newControlRoot,
+                )
+            ConcordStore(dataDir.concordFile).upsert(ConcordCommands.storedFrom(loaded.community, adopted))
+
+            Output.emit(
+                mapOf(
+                    "community_id" to sc.communityId,
+                    "removed" to removed.toList(),
+                    "from_epoch" to sc.rootEpoch,
+                    "root_epoch" to build.newEpoch,
+                    "recipients" to recipients.size,
+                    "control_wraps" to build.controlWraps.size,
+                    "rekey_wraps" to build.rekeyWraps.size,
+                ),
+            )
+            return 0
+        }
+    }
+
+    /** Owner + everyone holding a role — owner-rooted, so it cannot be padded from outside. */
+    private fun rosterOf(authority: com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver): Set<String> = (authority.roleHolders() + authority.staffMembers()).mapTo(HashSet()) { it.lowercase() }
+
+    /** Live Guestbook membership at this epoch (joins minus later leaves, CORD-02 §5). */
+    private suspend fun guestbookMembersOf(
+        ctx: Context,
+        sc: StoredCommunity,
+    ): Set<String> =
+        runCatching {
+            val gb = ConcordActions.guestbookPlane(sc.root.hexToByteArray(), sc.communityId.hexToByteArray(), sc.rootEpoch)
+            val relays = ConcordCommands.relaysFor(ctx, sc)
+            ctx.registerConcordStreamKeys(relays, listOf(gb.secretKey))
+            val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(gb.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
+            ConcordActions.guestbookMembers(wraps, gb).mapTo(HashSet()) { it.lowercase() }
+        }.getOrDefault(emptySet())
+
+    /**
+     * Authors of every channel message we can decrypt. Most members never send a Guestbook motion,
+     * so without this a Refounding silently expels everyone who had only ever posted.
+     */
+    private suspend fun channelAuthorsOf(
+        ctx: Context,
+        sc: StoredCommunity,
+        state: ConcordCommunityState,
+    ): Set<String> {
+        val out = HashSet<String>()
+        val relays = ConcordCommands.relaysFor(ctx, sc)
+        for ((channelIdHex, _) in state.channels) {
+            runCatching {
+                val key = ConcordActions.publicChannel(sc.root.hexToByteArray(), channelIdHex.hexToByteArray(), sc.rootEpoch)
+                ctx.registerConcordStreamKeys(relays, listOf(key.secretKey))
+                val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(key.publicKeyHex)) }, pendingOnAuthRequired = true).map { it.second }
+                ConcordActions.channelMessages(wraps, key, channelIdHex, sc.rootEpoch).mapTo(out) { it.author.lowercase() }
+            }
+        }
+        return out
     }
 
     /** Drain the control plane and return its keys + current editions to chain onto. */
