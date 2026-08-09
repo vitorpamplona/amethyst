@@ -528,12 +528,13 @@ Two things to take from it.
 adds a per-entity version index on the compaction arm, but an entity carries a handful of editions,
 and the floored fold measures the same as the unfloored one.
 
-**B2 costs a second fold, but only when it can change the answer.** `resolve` skips pass B when
+**B2 costs a further fold, but only when it can change the answer.** `resolve` skips pass B when
 nobody is banned *or* when nobody banned ever authored a Control edition — the overwhelmingly common
 shape, since bans land on plain members who hold no role and write nothing. Those rows show no
 regression. When a banned member *did* author editions — a banned staffer, exactly the case B2 exists
-for — the fold costs ~2–3× more. That is the price of the fix and it is paid only by communities
-under the attack.
+for — the fold costs ~2–3× more, and one more pass again in the rare case where a banned member had
+themselves authored a ban. That is the price of the fix and it is paid only by communities under the
+attack.
 
 **Worth knowing, unrelated to this work:** Amethyst re-folds the whole buffer from scratch on every
 Control Plane change, and `resolve` runs once per held epoch inside `controlFloorsLocked` plus once

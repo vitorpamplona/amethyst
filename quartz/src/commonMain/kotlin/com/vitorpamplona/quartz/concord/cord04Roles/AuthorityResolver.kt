@@ -136,6 +136,14 @@ data class AuthorityResolver private constructor(
         const val OWNER_RANK = 0L
 
         /**
+         * How many times [resolve] will re-fold chasing a stable banlist. Real communities settle on
+         * the first or second — the mask only moves when a banned member authored a *ban*, and it
+         * stops moving as soon as those are gone. The cap is a termination backstop for an
+         * adversarial edition set, not a tuning knob.
+         */
+        private const val MAX_BAN_RESOLUTION_PASSES = 4
+
+        /**
          * The owner-rooted authority state of a community, with the banlist honored **against the
          * Control Plane itself** (CORD-04 §4: a reader "drops every event from a banned npub —
          * message, reaction, edit, or authority action").
@@ -170,13 +178,34 @@ data class AuthorityResolver private constructor(
             ownerPubKey: String,
         ): AuthorityResolver {
             val passA = resolveOnce(editions, ownerPubKey, bannedAuthors = emptySet())
-            // Pass B costs a whole second fold, so skip it unless it could change something. Nobody
+            // A further pass costs a whole fold, so skip it unless it could change something. Nobody
             // banned, or nobody banned who ever wrote to the Control Plane — the overwhelmingly common
             // shape, since most bans land on plain members who hold no role and author no editions —
-            // and pass B is provably identical to pass A. This is also what Armada's fold checks.
+            // and the next pass is provably identical to this one. Armada's fold checks the same.
             if (passA.banned.isEmpty()) return passA
             if (editions.none { it.author.lowercase() in passA.banned }) return passA
-            return resolveOnce(editions, ownerPubKey, bannedAuthors = passA.banned)
+
+            // Iterate to a fixpoint where the mask a pass was resolved UNDER equals the banlist that
+            // pass produced. Stopping at two passes leaves those two disagreeing, and the disagreement
+            // is not cosmetic: a moderator whose only ban came from an admin the owner banned
+            // concurrently is released by pass 2 — correctly — but pass 2 dropped her editions too,
+            // because she was on pass 1's list. The fold then reports her as a moderator in good
+            // standing whose promotions have silently vanished, and it does so deterministically, so
+            // she never gets them back.
+            //
+            // The mask cannot simply be assumed to shrink: masking an author can strip a THIRD
+            // member's role, dropping their rank to "roleless", which lets a junior BAN holder who
+            // could not previously reach them ban them after all. So this is bounded rather than
+            // proven monotone, and it keeps the last pass it computed if it somehow does not settle —
+            // still strictly better than the two-pass answer, and it always terminates.
+            var mask = passA.banned
+            var result = passA
+            repeat(MAX_BAN_RESOLUTION_PASSES) {
+                result = resolveOnce(editions, ownerPubKey, bannedAuthors = mask)
+                if (result.banned == mask) return result
+                mask = result.banned
+            }
+            return result
         }
 
         /**

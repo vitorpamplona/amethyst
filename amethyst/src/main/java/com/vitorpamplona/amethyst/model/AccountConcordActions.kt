@@ -189,8 +189,13 @@ class AccountConcordActions(
         // Note the bit is not otherwise enforced anywhere. The fold gates the INVITE_* Control
         // entities on CREATE_INVITE, but a link's bundle is a standalone kind-33301 published
         // OUTSIDE the Control Plane, so no fold ever sees it. This check is the only one there is.
-        val session = account.concordSessions.sessionFor(communityId) ?: return null
-        if (!isAuthorizedFor(session, ConcordPermissions.CREATE_INVITE)) return null
+        // The owner is proven by the community id (CORD-02), so they are read off the entry and can
+        // mint before the session exists — the session is built asynchronously off the joined list,
+        // and requiring it here would have made the owner's own invite button fail on a cold start.
+        // Everyone else needs the folded roster, so no session means no invite.
+        val session = account.concordSessions.sessionFor(communityId)
+        val amOwner = entry.owner.equals(account.signer.pubKey, ignoreCase = true)
+        if (!amOwner && (session == null || !isAuthorizedFor(session, ConcordPermissions.CREATE_INVITE))) return null
         val invite =
             ConcordActions.inviteFor(
                 communityIdHex = entry.id,
@@ -885,16 +890,23 @@ class AccountConcordActions(
     ): List<HexKey> {
         if (candidates.size <= MAX_REFOUNDING_RECIPIENTS) return candidates.toList()
 
+        // The roster goes in whole even if it alone exceeds the budget: it is owner-rooted, so it
+        // cannot be padded from outside, and dropping an admin to make room for a stranger inverts
+        // the point of the cap.
         val vouched = authority.roleHolders() + authority.staffMembers()
-        val kept = LinkedHashSet<HexKey>(MAX_REFOUNDING_RECIPIENTS)
+        val kept = LinkedHashSet<HexKey>()
         candidates.filterTo(kept) { it in vouched }
         for (candidate in candidates) {
             if (kept.size >= MAX_REFOUNDING_RECIPIENTS) break
             kept.add(candidate)
         }
-        Log.w("Concord") {
-            "Refounding recipient set capped at $MAX_REFOUNDING_RECIPIENTS of ${candidates.size}: " +
-                "${candidates.size - kept.size} member(s) will be stranded on the prior epoch"
+        val dropped = candidates.size - kept.size
+        if (dropped > 0) {
+            Log.w("Concord") {
+                "Refounding recipient set trimmed to ${kept.size} of ${candidates.size} " +
+                    "(budget $MAX_REFOUNDING_RECIPIENTS, roster kept whole): $dropped member(s) will be " +
+                    "stranded on the prior epoch"
+            }
         }
         return kept.toList()
     }

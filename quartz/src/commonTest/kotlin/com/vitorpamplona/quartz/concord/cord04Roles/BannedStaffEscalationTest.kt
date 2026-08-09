@@ -362,4 +362,36 @@ class BannedStaffEscalationTest {
         assertEquals(5, r.rank(bob), "bob is untouched")
         assertEquals(5, r.rank(carol), "and the owner's grant of carol stands")
     }
+
+    @Test
+    fun aMemberReleasedByTheSecondPassKeepsTheEditionsTheyAuthored() {
+        // The mask a pass resolves UNDER has to equal the banlist that pass produces, or the fold
+        // reports a state that contradicts itself. Concretely: the rogue admin bans a moderator while
+        // the owner concurrently bans the rogue. The moderator is correctly released — the only ban on
+        // her came from someone who turned out to be banned — but a fold that stops after two passes
+        // has already dropped her editions, because she was on the FIRST pass's list. She then reads
+        // as a moderator in good standing whose promotions silently vanished, deterministically and
+        // forever. resolve() iterates until the two agree.
+        val juniorRole = "23".repeat(32)
+        val seniorRole = "24".repeat(32)
+        val editions =
+            community() +
+                // the baseline Mod role carries no MANAGE_ROLES, so give bob one that can grant
+                role(seniorRole, """{"name":"Senior","position":5,"permissions":"95"}""") +
+                grant(bobGrantEntity, bob, listOf(seniorRole), author = owner, version = 1, prev = bobGrantV0.hash) +
+                role(juniorRole, """{"name":"Junior","position":9,"permissions":"8"}""") +
+                // bob promotes carol himself, while in good standing
+                grant("39".repeat(32), carol, listOf(juniorRole), author = bob) +
+                // the rogue admin bans bob...
+                banlist(alice, 0, null, bob) +
+                // ...while the owner concurrently bans the rogue, never naming bob
+                ownerBansAlice
+
+        val r = AuthorityResolver.resolve(editions, owner)
+
+        assertTrue(r.isBanned(alice), "the owner's ban of the rogue stands")
+        assertFalse(r.isBanned(bob), "and the rogue's ban of the moderator falls with them")
+        assertEquals(5, r.rank(bob), "the released moderator keeps their own role")
+        assertEquals(9, r.rank(carol), "and the promotion they authored survives with them")
+    }
 }
