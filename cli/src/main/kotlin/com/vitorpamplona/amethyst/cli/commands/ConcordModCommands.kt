@@ -322,7 +322,44 @@ object ConcordModCommands {
                     build.newControlKeys.address.hexToByteArray(),
                     newControlRoot,
                 )
-            ConcordStore(dataDir.concordFile).upsert(ConcordCommands.storedFrom(loaded.community, adopted))
+            val stored = ConcordCommands.storedFrom(loaded.community, adopted)
+            ConcordStore(dataDir.concordFile).upsert(stored)
+
+            // 6. Refresh every link we minted, at its OWN coordinate, so it now resolves to the new
+            //    epoch. This is the liveness half of stranded recovery (A2): a member this Refounding
+            //    left out has no rekey blob and no message to miss, so re-resolving their link is the
+            //    only way back — and it only works if the bundle moves with the community instead of
+            //    being orphaned at a dead epoch. Minting a fresh link would not help them; the link
+            //    they hold is the one that must move.
+            //
+            //    Safe for every link because recovery is ban-gated at the epoch being left, and step 1
+            //    banned everyone being removed — so a removed member's own `recover` is refused even
+            //    though their link now resolves.
+            val refreshedInvite =
+                ConcordActions.inviteFor(
+                    stored.communityId,
+                    stored.owner,
+                    stored.ownerSalt,
+                    stored.root,
+                    stored.rootEpoch,
+                    stored.name,
+                    stored.relays,
+                    stored.controlPk.ifBlank { null },
+                )
+            var refreshed = 0
+            for (link in stored.mintedInvites) {
+                runCatching {
+                    val event =
+                        ConcordActions.remintBundleAt(
+                            linkSignerPrivKey = link.linkSignerPrivKey.hexToByteArray(),
+                            token = link.token.hexToByteArray(),
+                            invite = refreshedInvite,
+                            createdAt = TimeUtils.now(),
+                        )
+                    ctx.publish(event, relays)
+                    refreshed++
+                }
+            }
 
             Output.emit(
                 mapOf(
@@ -333,6 +370,7 @@ object ConcordModCommands {
                     "recipients" to recipients.size,
                     "control_wraps" to build.controlWraps.size,
                     "rekey_wraps" to build.rekeyWraps.size,
+                    "invites_refreshed" to refreshed,
                 ),
             )
             return 0

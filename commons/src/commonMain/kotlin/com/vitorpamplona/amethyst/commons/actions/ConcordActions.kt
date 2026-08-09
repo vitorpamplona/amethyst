@@ -436,6 +436,29 @@ object ConcordActions {
         relays: List<String>? = null,
     ): MintedInviteLink = ConcordInviteBundle.mintLink(base, invite, createdAt, relays)
 
+    /**
+     * Re-publishes a bundle at an **existing** link's coordinate, carrying [invite] refreshed for the
+     * current epoch (CORD-05 §1). The kind-33301 bundle is addressable and authored by the link
+     * signer, so re-signing with the same [linkSignerPrivKey] and re-encrypting under the same
+     * [token] replaces what is there — every holder of that link keeps working, now pointing at the
+     * new root.
+     *
+     * This is what makes stranded recovery live: a member a Refounding left out has no rekey blob and
+     * no message to miss, and re-resolving their link is the only way back — which requires the
+     * community to re-mint at the *same* coordinate rather than issuing a fresh link. Minting a new
+     * link leaves the old one pointing at a dead epoch forever.
+     *
+     * Safe to call for every live link because recovery is ban-gated at the epoch being left
+     * (CORD-06, A2): a member the Refounding removed was banned on the way out, so their own
+     * `recover` is refused even though their link now resolves.
+     */
+    fun remintBundleAt(
+        linkSignerPrivKey: ByteArray,
+        token: ByteArray,
+        invite: CommunityInvite,
+        createdAt: Long,
+    ): Event = ConcordInviteBundle.build(linkSignerPrivKey, token, invite, createdAt)
+
     /** Parses a shareable invite URL into its pointer + private fragment. */
     fun parseInviteLink(url: String): ParsedInviteLink? = ConcordInviteLink.parseUrl(url)
 

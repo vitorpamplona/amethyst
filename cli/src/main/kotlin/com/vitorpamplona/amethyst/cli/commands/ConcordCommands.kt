@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.cli.stores.StoredHeldRoot
+import com.vitorpamplona.amethyst.cli.stores.StoredMintedInvite
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -264,6 +265,20 @@ object ConcordCommands {
             val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), sc.relays)
             val ack = ctx.publish(minted.bundleEvent, relaysFor(ctx, sc))
             RawEventSupport.publishGuard(ack, minted.bundleEvent.id)?.let { return it }
+
+            // Keep the link signer + token so a later Refounding can refresh THIS coordinate rather
+            // than orphaning the link at a dead epoch — the liveness half of stranded recovery (A2).
+            ConcordStore(dataDir.concordFile).upsert(
+                sc.copy(
+                    mintedInvites =
+                        sc.mintedInvites +
+                            StoredMintedInvite(
+                                linkSignerPrivKey = minted.linkSignerPrivKey.toHexKey(),
+                                token = minted.token.toHexKey(),
+                                createdAt = TimeUtils.now(),
+                            ),
+                ),
+            )
 
             Output.emit(
                 mapOf(
