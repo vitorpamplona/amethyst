@@ -51,7 +51,7 @@ object ConcordModCommands {
         val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return ConcordCommands.notFound(handle)
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val (_, editions) = load(ctx, sc)
+            val (_, editions) = load(ctx, sc, dataDir)
             val state = ConcordCommunityState.fold(editions, sc.owner)
             Output.emit(
                 mapOf(
@@ -92,7 +92,7 @@ object ConcordModCommands {
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val (cp, editions) = load(ctx, sc)
+            val (cp, editions) = load(ctx, sc, dataDir)
             writeGuard(cp)?.let { return it }
             val roleId = RandomInstance.bytes(32)
             val role = RoleEntity(name = name, position = position, permissions = ConcordPermissions.of(*permBits.toIntArray()).toWire())
@@ -119,7 +119,8 @@ object ConcordModCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val member = ctx.requireUserHex(userRef)
-            val (cp, editions) = load(ctx, sc)
+            val loaded = load(ctx, sc, dataDir)
+            val (cp, editions) = loaded
             writeGuard(cp)?.let { return it }
             // A Grant that first makes its member staff must carry the write secret in the same
             // edition (CORD-04 §3); ConcordModeration wraps it pairwise when the granted roles
@@ -134,7 +135,10 @@ object ConcordModCommands {
                     current = editions,
                     createdAt = TimeUtils.now(),
                     owner = sc.owner,
-                    controlRoot = sc.controlRoot.ifBlank { null }?.hexToByteArray(),
+                    controlRoot =
+                        loaded.community.controlRoot
+                            .ifBlank { null }
+                            ?.hexToByteArray(),
                     epoch = sc.rootEpoch,
                 )
             val ack = ctx.publish(wrap, ConcordCommands.relaysFor(ctx, sc))
@@ -170,7 +174,7 @@ object ConcordModCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val member = ctx.requireUserHex(userRef)
-            val (cp, editions) = load(ctx, sc)
+            val (cp, editions) = load(ctx, sc, dataDir)
             writeGuard(cp)?.let { return it }
             val cid = sc.communityId.hexToByteArray()
             val wrap =
@@ -186,11 +190,28 @@ object ConcordModCommands {
         }
     }
 
+    /**
+     * The drained Control Plane: the community as stored *after* any adoption, its keys, and the
+     * editions to chain onto. [community] matters because adopting a delivered `control_root`
+     * rewrites the stored record — a caller that kept the pre-load copy would then fail to pass the
+     * secret on in its own Grant (CORD-04 §3).
+     */
+    private class LoadedControl(
+        val community: StoredCommunity,
+        val keys: ControlPlaneKeys,
+        val editions: List<ControlEdition>,
+    ) {
+        operator fun component1() = keys
+
+        operator fun component2() = editions
+    }
+
     /** Drain the control plane and return its keys + current editions to chain onto. */
     private suspend fun load(
         ctx: Context,
         sc: StoredCommunity,
-    ): Pair<ControlPlaneKeys, List<ControlEdition>> {
+        dataDir: DataDir? = null,
+    ): LoadedControl {
         val cp = ConcordCommands.controlPlaneKeysFor(sc)
         val relays = ConcordCommands.relaysFor(ctx, sc)
         // Concord relays serve the plane's kind-1059 only to a connection AUTHed as the stream
@@ -198,7 +219,18 @@ object ConcordModCommands {
         // that secret is staff-only (CORD-02 §2), and a member simply has nothing to register.
         ctx.registerConcordStreamKeys(relays, listOfNotNull(cp.signer?.secretKey))
         val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.address)) }, pendingOnAuthRequired = true).map { it.second }
-        return cp to ConcordActions.controlEditions(wraps, cp)
+        val editions = ConcordActions.controlEditions(wraps, cp)
+
+        // A promotion to staff delivers the Control Plane write key inside the Grant itself
+        // (CORD-04 §3), so the fold that seats the role is also when the key arrives. Amethyst
+        // drains this on its revision tick; amy has no tick, so the fold a command already does is
+        // the moment to adopt — otherwise a CLI-promoted staffer holds a rank it can never write
+        // under. Same shared, fail-closed check both clients use.
+        if (dataDir != null && !cp.canWrite) {
+            val adopted = ConcordCommands.adoptDeliveredControlRoot(ctx, dataDir, sc, editions)
+            if (adopted != null) return LoadedControl(adopted.first, adopted.second, ConcordActions.controlEditions(wraps, adopted.second))
+        }
+        return LoadedControl(sc, cp, editions)
     }
 
     /**

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
+import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
@@ -35,17 +36,12 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
-import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
-import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
-import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
-import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
-import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -932,35 +928,11 @@ class AccountConcordActions(
         newControlRoot: ByteArray? = null,
     ) {
         if (!adoptedConcordRotations.add("${entry.id}:$newEpoch")) return
-        // The epoch we're leaving is banked with the address it was folded at, so its Control
-        // Plane stays subscribable for the anti-rollback floor (a split epoch's address can
-        // never be re-derived, only remembered — CORD-02 §2).
-        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root, entry.controlPk, entry.controlRoot)).distinctBy { it.epoch }
-        val next =
-            ConcordCommunityListEntry(
-                id = entry.id,
-                owner = entry.owner,
-                ownerSalt = entry.ownerSalt,
-                root = newRoot.toHexKey(),
-                rootEpoch = newEpoch,
-                // A rotation that delivered no control material is a legacy, pre-split one
-                // (CORD-06 §3): the new epoch keeps folding at the legacy address, and the
-                // stale prior-epoch values must NOT be carried into it.
-                controlPk = newControlPk?.toHexKey(),
-                controlRoot = newControlRoot?.toHexKey(),
-                heldRoots = held,
-                privateChannels = entry.privateChannels,
-                relays = entry.relays,
-                name = entry.name,
-                addedAt = entry.addedAt,
-                // The invite_ref anchor must survive a rotation, or the *next* Refounding we're left
-                // out of would be unrecoverable.
-                inviteRef = entry.inviteRef,
-                excludedAtEpoch = entry.excludedAtEpoch,
-                // Unknown keys another client wrote (Armada's list is `[k: string]: unknown`)
-                // must survive our rotation write, or we delete their data on every rekey.
-                residue = entry.residue,
-            )
+        // The rewrite itself — banking the leaving epoch's address for the anti-rollback floor,
+        // dropping stale control material on a legacy rotation, preserving invite_ref and residue —
+        // is shared with `amy` in [ConcordReceive.withAdoptedRoot]. Only the persist + publish and
+        // the Guestbook re-announce below are Android's.
+        val next = ConcordReceive.withAdoptedRoot(entry, newRoot, newEpoch, newControlPk, newControlRoot)
         account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(next))
         announceConcordGuestbookJoin(next, inviteCreator = null, inviteLabel = null)
     }
@@ -1030,39 +1002,16 @@ class AccountConcordActions(
      */
     internal suspend fun drainConcordStaffGrants() {
         if (!account.isWriteable()) return
-        val me = account.signer.pubKey.lowercase()
         for (session in account.concordSessions.sessions()) {
             val entry = session.entry
-            // Already staff at this epoch, or a legacy community with no split to join.
-            val heldControlPk = entry.controlPk
-            if (entry.controlRoot != null || heldControlPk == null) continue
             val state = session.state.value ?: continue
-            // Only a Grant our fold honors can deliver: an unauthorized edition hands us nothing.
-            if (!state.authority.isStaff(me)) continue
-
-            val myGrantCoordinate =
-                ConcordKeyDerivation
-                    .grantCoordinate(entry.id.hexToByteArray(), me.hexToByteArray())
-                    .toHexKey()
-            val delivered =
-                session
-                    .controlEditions()
-                    .filter { it.entityKind == ControlEntityKind.GRANT && it.entityIdHex == myGrantCoordinate }
-                    // Newest first: a re-issued Grant (a lost key, a head superseded before we
-                    // fetched it) carries the fresher wrap.
-                    .sortedByDescending { it.version }
-                    .firstNotNullOfOrNull { edition ->
-                        val wrap = ConcordJson.decodeOrNull<GrantEntity>(edition.content)?.controlWrap ?: return@firstNotNullOfOrNull null
-                        val opened = ControlRootWrap.openOrNull(wrap, account.signer, edition.author) ?: return@firstNotNullOfOrNull null
-                        if (opened.epoch != entry.rootEpoch) return@firstNotNullOfOrNull null
-                        // Fails closed: a secret that doesn't derive to the pk we hold is dropped,
-                        // never adopted — we will not split ourselves off from the plane's readers.
-                        if (!ControlRootWrap.derivesTo(opened.controlRoot, entry.id.hexToByteArray(), entry.rootEpoch, heldControlPk)) return@firstNotNullOfOrNull null
-                        opened.controlRoot
-                    } ?: continue
+            // The whole decision — are we staff, does a Grant carry a wrap, does it open, name our
+            // epoch, and derive to the control_pk we hold — is shared with `amy` in
+            // [ConcordReceive.deliveredControlRoot]. Only the persist + publish below is Android's.
+            val delivered = ConcordReceive.deliveredControlRoot(entry, session.controlEditions(), state.authority, account.signer) ?: continue
 
             account.sendMyPublicAndPrivateOutbox(
-                account.concordChannelList.follow(entry.withControlRoot(delivered.toHexKey())),
+                account.concordChannelList.follow(entry.withControlRoot(delivered)),
             )
         }
     }

@@ -28,7 +28,12 @@ import com.vitorpamplona.amethyst.cli.stores.ConcordStore
 import com.vitorpamplona.amethyst.cli.stores.StoredCommunity
 import com.vitorpamplona.amethyst.cli.stores.StoredHeldRoot
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
+import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -315,6 +320,43 @@ object ConcordCommands {
             controlPk = sc.controlPk.ifBlank { null },
             controlRoot = sc.controlRoot.ifBlank { null },
         )
+
+    /**
+     * Adopts the `control_root` a staff-making Grant delivered to us (CORD-04 §3), persisting it to
+     * the local store and returning the now-writable keys — or null when nothing was delivered.
+     *
+     * The decision itself is [ConcordReceive.deliveredControlRoot], shared with Amethyst: it fails
+     * closed unless our own fold seats us as staff, the wrap opens under the granter↔member pairwise
+     * key, it names this epoch, and the secret derives to exactly the `control_pk` we already hold.
+     *
+     * Local-only on purpose: Amethyst republishes the kind-13302 list on adoption so a user's other
+     * devices follow, and doing that here would need amy to rebuild and sign the whole list. A CLI
+     * adoption therefore unblocks *this* account's writes; other devices adopt from their own fold.
+     */
+    suspend fun adoptDeliveredControlRoot(
+        ctx: Context,
+        dataDir: DataDir,
+        sc: StoredCommunity,
+        editions: List<ControlEdition>,
+    ): Pair<StoredCommunity, ControlPlaneKeys>? {
+        val entry =
+            ConcordCommunityListEntry(
+                id = sc.communityId,
+                owner = sc.owner,
+                ownerSalt = sc.ownerSalt,
+                root = sc.root,
+                rootEpoch = sc.rootEpoch,
+                controlPk = sc.controlPk.ifBlank { null },
+                controlRoot = sc.controlRoot.ifBlank { null },
+                relays = sc.relays,
+                name = sc.name,
+            )
+        val authority = AuthorityResolver.resolve(editions, sc.owner)
+        val delivered = ConcordReceive.deliveredControlRoot(entry, editions, authority, ctx.signer) ?: return null
+        val updated = sc.copy(controlRoot = delivered)
+        ConcordStore(dataDir.concordFile).upsert(updated)
+        return updated to controlPlaneKeysFor(updated)
+    }
 
     fun notFound(handle: String): Int {
         Output.error("not_found", "no joined community matching '$handle' — run `amy concord list`")
