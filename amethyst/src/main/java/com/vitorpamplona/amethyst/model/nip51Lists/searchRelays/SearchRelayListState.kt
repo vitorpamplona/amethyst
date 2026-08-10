@@ -62,6 +62,19 @@ class SearchRelayListState(
 
     suspend fun normalizeSearchRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.relays(it) } ?: emptySet()
 
+    /**
+     * The account's search relays, **never empty** — [normalizeSearchRelayListWithBackup]
+     * substitutes [DefaultSearchRelayList] both when there is no kind:10007 and when the
+     * one we have decodes to zero relays. Callers assembling NIP-50 REQs read this and can
+     * rely on getting a usable set; use [flowNoDefaults] instead to show or diff what the
+     * user actually configured.
+     *
+     * Seeded with [DefaultSearchRelayList] rather than `emptySet()`: `flowOn(IO)` means the
+     * first real emission can never be synchronous with `stateIn`, so an `emptySet()` seed
+     * left a window where `.value` contradicted the "never empty" contract above and search
+     * silently queried nothing. That window is unbounded for a NIP-46 signer whose list has
+     * private entries, since the first emission waits on a remote decrypt.
+     */
     val flow =
         getSearchRelayListFlow()
             .map { normalizeSearchRelayListWithBackup(it.note) }
@@ -70,7 +83,7 @@ class SearchRelayListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                emptySet(),
+                DefaultSearchRelayList,
             )
 
     val flowNoDefaults =

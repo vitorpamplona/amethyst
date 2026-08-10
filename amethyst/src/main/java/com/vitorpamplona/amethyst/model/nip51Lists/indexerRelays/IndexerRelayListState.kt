@@ -62,6 +62,17 @@ class IndexerRelayListState(
 
     suspend fun normalizeIndexerRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = indexListEvent(note)?.let { decryptionCache.relays(it) } ?: emptySet()
 
+    /**
+     * The account's indexer relays, **never empty** — [normalizeIndexerRelayListWithBackup]
+     * substitutes [DefaultIndexerRelayList] both when there is no kind:10086 and when the
+     * one we have decodes to zero relays. Callers assembling metadata / relay-list REQs read
+     * this and can rely on getting a usable set; use [flowNoDefaults] instead to show or diff
+     * what the user actually configured.
+     *
+     * Seeded with [DefaultIndexerRelayList] rather than `emptySet()`, for the same reason as
+     * the search list: `flowOn(IO)` makes the first real emission asynchronous, so an
+     * `emptySet()` seed left a window where `.value` contradicted the contract above.
+     */
     val flow =
         getIndexerRelayListFlow()
             .map { normalizeIndexerRelayListWithBackup(it.note) }
@@ -70,7 +81,7 @@ class IndexerRelayListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                emptySet(),
+                DefaultIndexerRelayList,
             )
 
     val flowNoDefaults =
