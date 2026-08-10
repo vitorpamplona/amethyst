@@ -33,7 +33,9 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
+import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -272,26 +274,37 @@ object ConcordModCommands {
             // 1. Ban the removed on the CURRENT plane, so the compacted snapshot — and therefore the
             //    new epoch — carries the ban. Each edition chains onto the updated banlist head.
             var chain = editions
+            val banWraps = mutableListOf<Event>()
             for (target in removed) {
                 val banWrap = ConcordModeration.ban(ctx.signer, cp, sc.communityId.hexToByteArray(), target, chain, TimeUtils.now(), owner = sc.owner)
-                ctx.publish(banWrap, relays)
+                val ack = ctx.publish(banWrap, relays)
+                if (ack.values.none { it.accepted }) {
+                    return Output.error("ban_not_published", "the pre-rotation ban for $target was not accepted by any relay; refusing to refound with a banlist that would not survive")
+                }
+                banWraps += banWrap
                 chain = chain + (ConcordActions.controlEditions(listOf(banWrap), cp))
             }
 
             // 2. Everyone we are keeping. See the note above on why this reaches past the roster.
-            val recipients =
+            val candidates =
                 (rosterOf(authority) + guestbookMembersOf(ctx, sc) + channelAuthorsOf(ctx, sc, state) + me)
                     .mapTo(HashSet()) { it.lowercase() }
                     .apply {
                         removeAll(removed)
                         removeAll(authority.bannedMembers().map { it.lowercase() }.toSet())
-                    }.toList()
+                    }
+            val recipients = boundRecipients(candidates, authority)
 
             // 3. Build: new root + fresh control_root, compacted plane, per-recipient blobs (staff
             //    get the 136-byte form carrying the secret, everyone else the 104-byte pubkey one).
             val newRoot = RandomInstance.bytes(32)
             val newControlRoot = RandomInstance.bytes(32)
-            val controlWraps = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.address)) }, pendingOnAuthRequired = true).map { it.second }
+            // Compact from what we KNOW the plane holds: the wraps we drained plus the bans we just
+            // published. Re-draining alone would race the relay's indexing, and a relay that has not
+            // yet echoed the ban back (or that ACKed and stored nothing) would produce a new epoch
+            // whose roster never banned the member we are removing.
+            val drained = ctx.drain(relays.associateWith { listOf(ConcordActions.planeFilter(cp.address)) }, pendingOnAuthRequired = true).map { it.second }
+            val controlWraps = (drained + banWraps).distinctBy { it.id }
             val build =
                 ConcordActions.buildRefounding(
                     rotatorSigner = ctx.signer,
@@ -335,33 +348,30 @@ object ConcordModCommands {
             //    Safe for every link because recovery is ban-gated at the epoch being left, and step 1
             //    banned everyone being removed — so a removed member's own `recover` is refused even
             //    though their link now resolves.
-            val refreshedInvite =
-                ConcordActions.inviteFor(
-                    stored.communityId,
-                    stored.owner,
-                    stored.ownerSalt,
-                    stored.root,
-                    stored.rootEpoch,
-                    stored.name,
-                    stored.relays,
-                    stored.controlPk.ifBlank { null },
-                )
             val now = TimeUtils.now()
             var refreshed = 0
-            for (link in ConcordCommands.readInviteList(ctx, relays).entries) {
+            val list = ConcordCommands.readInviteList(ctx)
+            val tombstoned = list?.tombstones?.mapTo(HashSet()) { it.token } ?: emptySet<String>()
+            for (link in list?.entries.orEmpty()) {
                 if (link.communityId != stored.communityId) continue
-                // An elapsed link can no longer be joined, so re-posting it would only resurrect a
-                // dead URL at a live epoch (CORD-05).
-                if (link.isExpired(now)) continue
+                // An elapsed or retired link can no longer be joined, so re-posting it would only
+                // resurrect a dead URL at a live epoch (CORD-05).
+                if (link.isExpired(now) || link.token in tombstoned) continue
                 runCatching {
-                    val event =
-                        ConcordActions.remintBundleAt(
-                            linkSignerPrivKey = link.signerSk.hexToByteArray(),
-                            token = link.token.hexToByteArray(),
-                            invite = refreshedInvite,
-                            createdAt = now,
+                    val token = link.token.hexToByteArray()
+                    // Refresh from the link's CURRENT bundle so its own fields — expiry, channel
+                    // grants, icon, label — survive the rotation, and so a coordinate whose newest
+                    // event is a revocation tombstone is left revoked instead of being re-opened.
+                    val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.bundleFilter(link.signerPubKeyHex())) }).map { it.second }
+                    val live = ConcordActions.classifyInvite(wraps, token) as? InviteBundleStatus.Live ?: return@runCatching
+                    val moved =
+                        live.invite.copy(
+                            communityRoot = stored.root,
+                            rootEpoch = stored.rootEpoch,
+                            controlPk = stored.controlPk.ifBlank { null },
+                            relays = stored.relays,
                         )
-                    ctx.publish(event, relays)
+                    ctx.publish(ConcordActions.remintBundleAt(link.signerSk.hexToByteArray(), token, moved, now), relays)
                     refreshed++
                 }
             }
@@ -380,6 +390,40 @@ object ConcordModCommands {
             )
             return 0
         }
+    }
+
+    /**
+     * How many recipients one Refounding will re-key, mirroring Amethyst's own cap.
+     *
+     * Two thirds of the recipient union — Guestbook joins and observed channel authors — are
+     * attacker-writable: any key can announce a join or post once. Without a bound, padding those
+     * sets inflates the cost of the only hard removal Concord has until rotating becomes
+     * impractical, so the attack raises the price of its own remedy (B4 in the soft-ban audit).
+     */
+    private const val MAX_REFOUNDING_RECIPIENTS = 5_000
+
+    /**
+     * Caps [candidates], keeping the members whose standing is owner-rooted and therefore cannot be
+     * padded from outside. Anything dropped is reported rather than silently truncated — a dropped
+     * member is stranded on the dead epoch and their only way back is `concord recover`.
+     */
+    private fun boundRecipients(
+        candidates: Set<String>,
+        authority: com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver,
+    ): List<String> {
+        if (candidates.size <= MAX_REFOUNDING_RECIPIENTS) return candidates.toList()
+        val vouched = (authority.roleHolders() + authority.staffMembers()).mapTo(HashSet()) { it.lowercase() }
+        val kept = LinkedHashSet<String>()
+        candidates.filterTo(kept) { it in vouched }
+        for (candidate in candidates) {
+            if (kept.size >= MAX_REFOUNDING_RECIPIENTS) break
+            kept.add(candidate)
+        }
+        val dropped = candidates.size - kept.size
+        if (dropped > 0) {
+            System.err.println("[concord] refounding recipient set trimmed to ${kept.size} of ${candidates.size}: $dropped member(s) will be stranded on the prior epoch")
+        }
+        return kept.toList()
     }
 
     /** Owner + everyone holding a role — owner-rooted, so it cannot be padded from outside. */

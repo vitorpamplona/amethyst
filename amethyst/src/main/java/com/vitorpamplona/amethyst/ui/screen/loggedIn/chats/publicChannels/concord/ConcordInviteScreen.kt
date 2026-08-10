@@ -124,6 +124,8 @@ fun ConcordInviteScreen(
                         RedeemState.Failed(R.string.concord_invite_failed_incompatible, canRetry = false)
                     is ConcordInviteResult.Revoked ->
                         RedeemState.Failed(R.string.concord_invite_failed_revoked, canRetry = false)
+                    is ConcordInviteResult.Banned ->
+                        RedeemState.Failed(R.string.concord_invite_failed_banned, canRetry = false)
                     is ConcordInviteResult.Expired ->
                         RedeemState.Failed(R.string.concord_invite_failed_expired, canRetry = false)
                     is ConcordInviteResult.NotReachable ->

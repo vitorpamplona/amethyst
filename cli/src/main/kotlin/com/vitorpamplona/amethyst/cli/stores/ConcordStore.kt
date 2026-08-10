@@ -61,6 +61,12 @@ data class StoredHeldRoot(
     val root: String = "",
     /** That epoch's Control Plane address; blank for a legacy, pre-split epoch (CORD-02 §5). */
     val controlPk: String = "",
+    /**
+     * That epoch's staff write key, banked only if we held it. A relay that gates the prior epoch's
+     * Control Plane on NIP-42 AUTH as the stream key will not serve those wraps without it — and
+     * those wraps are what rebuild the anti-rollback floor.
+     */
+    val controlRoot: String = "",
 )
 
 /**

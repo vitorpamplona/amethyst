@@ -230,7 +230,7 @@ object ConcordCommands {
                             controlRoot = e.controlRoot ?: priorSameEpoch?.controlRoot ?: "",
                             generalChannelId = prior?.generalChannelId ?: "",
                             relays = e.relays,
-                            heldRoots = e.heldRoots.map { StoredHeldRoot(it.epoch, it.key, it.controlPk ?: "") },
+                            heldRoots = e.heldRoots.map { StoredHeldRoot(it.epoch, it.key, it.controlPk ?: "", it.controlRoot ?: "") },
                             // Survives every merge: losing the anchor makes the NEXT exclusion
                             // unrecoverable, so a list entry without one must not clear ours.
                             inviteRef = e.inviteRef ?: prior?.inviteRef ?: "",
@@ -266,16 +266,13 @@ object ConcordCommands {
             // (CORD-05 §1); omitted for a legacy community, which has none to carry.
             val invite = ConcordActions.inviteFor(sc.communityId, sc.owner, sc.ownerSalt, sc.root, sc.rootEpoch, sc.name, sc.relays, sc.controlPk.ifBlank { null })
             val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), sc.relays)
-            val ack = ctx.publish(minted.bundleEvent, relaysFor(ctx, sc))
-            RawEventSupport.publishGuard(ack, minted.bundleEvent.id)?.let { return it }
-
-            // Record the link in the CORD-05 Invite List (kind 13303) so any of this creator's
-            // clients — Amethyst, Armada — can later refresh THIS coordinate instead of orphaning
-            // the link at a dead epoch. That list is the liveness half of stranded recovery (A2).
-            publishInviteList(
-                ctx,
-                extraRelays = relaysFor(ctx, sc),
-                patch =
+            // Record the link BEFORE publishing the bundle (CORD-05, kind 13303): a link whose
+            // `signer_sk` was never stored can never be refreshed, so the next Refounding orphans
+            // it and every holder is stranded. Better to mint nothing than to hand out a link that
+            // is already doomed.
+            val recorded =
+                publishInviteList(
+                    ctx,
                     ConcordInviteListDocument(
                         entries =
                             listOf(
@@ -288,7 +285,16 @@ object ConcordCommands {
                                 ),
                             ),
                     ),
-            )
+                )
+            if (!recorded) {
+                return Output.error(
+                    "invite_unrecordable",
+                    "could not record the link signer in your invite list (kind 13303), so this link could never be refreshed after a Refounding — not minting it",
+                )
+            }
+
+            val ack = ctx.publish(minted.bundleEvent, relaysFor(ctx, sc))
+            RawEventSupport.publishGuard(ack, minted.bundleEvent.id)?.let { return it }
 
             Output.emit(
                 mapOf(
@@ -317,6 +323,34 @@ object ConcordCommands {
             val bundle =
                 wraps.firstNotNullOfOrNull { ConcordActions.openBundle(it, parsed.fragment.token) }
                     ?: return Output.error("not_found", "no valid bundle for this link").let { 1 }
+
+            // Refuse a link that readmits us after we were removed. A Refounding re-mints every
+            // outstanding link onto the new root (CORD-05), and an ex-member keeps the URL and its
+            // unlock token forever — so without this check the rotation that was supposed to expel
+            // them hands them the new keys instead. `recover` has always been ban-gated; `join` is
+            // the other door into the same room.
+            //
+            // Fails CLOSED on an unreadable plane: no verdict, no join. The banlist is only knowable
+            // after the bundle yields the root, which is why the check lives here rather than before.
+            val joinKeys =
+                ConcordActions.controlPlaneKeys(
+                    communityRoot = bundle.communityRoot.hexToByteArray(),
+                    communityId = bundle.communityId.hexToByteArray(),
+                    rootEpoch = bundle.rootEpoch,
+                    controlPk = bundle.controlPk,
+                )
+            val joinRelays = normalize(bundle.relays).ifEmpty { relays }
+            val joinEditions =
+                ConcordActions.controlEditions(
+                    ctx.drain(joinRelays.associateWith { listOf(ConcordActions.planeFilter(joinKeys.address)) }, pendingOnAuthRequired = true).map { it.second },
+                    joinKeys,
+                )
+            if (joinEditions.isEmpty()) {
+                return Output.error("control_plane_unreadable", "could not fold this community's Control Plane, so whether it has banned you is unknown — refusing to join")
+            }
+            if (AuthorityResolver.resolve(joinEditions, bundle.owner).isBanned(ctx.signer.pubKey)) {
+                return Output.error("banned", "this community has banned this account; the link works but the roster does not admit you (CORD-04)")
+            }
 
             ConcordStore(dataDir.concordFile).upsert(
                 StoredCommunity(
@@ -401,7 +435,7 @@ object ConcordCommands {
             rootEpoch = sc.rootEpoch,
             controlPk = sc.controlPk.ifBlank { null },
             controlRoot = sc.controlRoot.ifBlank { null },
-            heldRoots = sc.heldRoots.map { HeldRoot(it.epoch, it.root, it.controlPk.ifBlank { null }) },
+            heldRoots = sc.heldRoots.map { HeldRoot(it.epoch, it.root, it.controlPk.ifBlank { null }, it.controlRoot.ifBlank { null }) },
             relays = sc.relays,
             name = sc.name,
             inviteRef = sc.inviteRef.ifBlank { null },
@@ -416,7 +450,7 @@ object ConcordCommands {
         rootEpoch = entry.rootEpoch,
         controlPk = entry.controlPk ?: "",
         controlRoot = entry.controlRoot ?: "",
-        heldRoots = entry.heldRoots.map { StoredHeldRoot(it.epoch, it.key, it.controlPk ?: "") },
+        heldRoots = entry.heldRoots.map { StoredHeldRoot(it.epoch, it.key, it.controlPk ?: "", it.controlRoot ?: "") },
         relays = entry.relays,
         name = entry.name.ifBlank { sc.name },
         inviteRef = entry.inviteRef ?: sc.inviteRef,
@@ -585,36 +619,39 @@ object ConcordCommands {
      * of every link they minted, so a rotation can refresh those links instead of orphaning them.
      * Empty when none was ever published.
      */
-    suspend fun readInviteList(
-        ctx: Context,
-        extraRelays: Set<NormalizedRelayUrl> = emptySet(),
-    ): ConcordInviteListDocument {
-        val relays = ctx.outboxRelays() + extraRelays
-        if (relays.isEmpty()) return ConcordInviteListDocument.EMPTY
+    suspend fun readInviteList(ctx: Context): ConcordInviteListDocument? {
+        val relays = ctx.outboxRelays()
+        if (relays.isEmpty()) return null
         val filter = Filter(kinds = listOf(ConcordInviteListEvent.KIND), authors = listOf(ctx.signer.pubKey))
         val newest =
             ctx
                 .drain(relays.associateWith { listOf(filter) })
                 .map { it.second }
                 .maxByOrNull { it.createdAt }
-        return (newest as? ConcordInviteListEvent)?.decrypt(ctx.signer) ?: ConcordInviteListDocument.EMPTY
+                ?: return ConcordInviteListDocument.EMPTY // nothing published yet — safe to start one
+        return (newest as? ConcordInviteListEvent)?.decrypt(ctx.signer)
     }
 
     /**
-     * Merges [patch] into the published list and republishes it. Read-merge-write rather than
-     * overwrite: the list is replaceable and per-creator, so two devices minting concurrently would
-     * otherwise delete each other's links (and their `signer_sk`, which is unrecoverable).
+     * Merges [patch] into the published list and republishes it, returning whether it landed.
+     *
+     * Read-merge-write, and **aborts rather than overwriting** when the read fails: kind 13303 is
+     * replaceable, so writing a patch-only document over a list we could not read deletes every
+     * other link's `signer_sk`. Those secrets cannot be regenerated, and losing one orphans its
+     * link at the next rotation, stranding everyone holding that URL.
+     *
+     * Account-scoped, like the coordinate itself — (13303, me, "") is one list for every community,
+     * so reading or writing it on a single community's relays would fork it.
      */
     suspend fun publishInviteList(
         ctx: Context,
         patch: ConcordInviteListDocument,
-        extraRelays: Set<NormalizedRelayUrl> = emptySet(),
-    ) {
-        val relays = ctx.outboxRelays() + extraRelays
-        if (relays.isEmpty()) return
-        val merged = ConcordInviteList.merge(readInviteList(ctx, extraRelays), patch)
-        val event = ConcordInviteListEvent.create(ctx.signer, merged, TimeUtils.now())
-        ctx.publish(event, relays)
+    ): Boolean {
+        val relays = ctx.outboxRelays()
+        if (relays.isEmpty()) return false
+        val base = readInviteList(ctx) ?: return false
+        val event = ConcordInviteListEvent.create(ctx.signer, ConcordInviteList.merge(base, patch), TimeUtils.now())
+        return ctx.publish(event, relays).values.any { it.accepted }
     }
 
     fun notFound(handle: String): Int {

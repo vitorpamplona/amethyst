@@ -21,6 +21,10 @@
 package com.vitorpamplona.quartz.concord.cord05Invites
 
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
@@ -58,6 +62,12 @@ class ConcordInviteListEntry(
 ) {
     /** True when this link can no longer be joined, so it must not be refreshed (CORD-05). */
     fun isExpired(nowSecs: Long): Boolean = expiresAt != null && expiresAt <= nowSecs
+
+    /**
+     * The link signer's pubkey — the addressable coordinate the bundle lives at, derived from the
+     * secret we kept. Refreshing or retiring a link means writing at exactly this author.
+     */
+    fun signerPubKeyHex(): HexKey = KeyPair(privKey = signerSk.hexToByteArray()).pubKey.toHexKey()
 }
 
 /** A retired link: the creator's record that [token] is gone, kept so a merge cannot resurrect it. */
@@ -150,11 +160,15 @@ object ConcordInviteList {
     private object WireDocumentSerializer : ExtrasPreserving<WireDocument>(WireDocument.serializer())
 
     /**
-     * Decodes the plaintext document. A malformed document yields [ConcordInviteListDocument.EMPTY]
-     * rather than throwing — but note the sharp edge this shape shares with the community list: one
-     * unparseable entry aborts the whole array, so every field defaults instead of being required.
+     * Decodes the plaintext document, or **null** when it cannot be parsed.
+     *
+     * Null rather than an empty document on purpose: this list is replaceable, so a caller that
+     * treats "I could not read it" as "it is empty" and republishes destroys every `signer_sk` it
+     * did not manage to read — secrets that cannot be regenerated, orphaning every outstanding
+     * invite at a dead epoch. Callers MUST distinguish the two (see [ConcordInviteList.merge]'s
+     * callers). Each field still defaults, so one odd entry does not abort the whole array.
      */
-    fun decode(json: String): ConcordInviteListDocument =
+    fun decodeOrNull(json: String): ConcordInviteListDocument? =
         try {
             val doc = ConcordJson.instance.decodeFromString(WireDocumentSerializer, json)
             ConcordInviteListDocument(
@@ -166,7 +180,7 @@ object ConcordInviteList {
                 residue = doc.extras,
             )
         } catch (_: Exception) {
-            ConcordInviteListDocument.EMPTY
+            null
         }
 
     fun encode(doc: ConcordInviteListDocument): String =

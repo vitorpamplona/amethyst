@@ -52,15 +52,19 @@ class ConcordInviteListEvent(
     sig: HexKey,
 ) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     /**
-     * Decrypts the whole document with [signer] — entries, tombstones and the document residue.
-     * Use this (never a partial read) whenever the result will be re-encoded, or another client's
-     * unknown keys are dropped on the next publish.
+     * Decrypts the whole document with [signer] — entries, tombstones and the document residue — or
+     * **null** if it cannot be decrypted or parsed.
+     *
+     * Null, never empty: a caller that reads a decrypt failure as "no links yet" and republishes
+     * wipes every `signer_sk` on this replaceable coordinate. A bunker signer that momentarily
+     * refuses is enough to trigger it. Use this (never a partial read) whenever the result will be
+     * re-encoded, or another client's unknown keys are dropped on the next publish.
      */
-    suspend fun decrypt(signer: NostrSigner): ConcordInviteListDocument =
+    suspend fun decrypt(signer: NostrSigner): ConcordInviteListDocument? =
         try {
-            ConcordInviteList.decode(signer.nip44Decrypt(content, signer.pubKey))
+            ConcordInviteList.decodeOrNull(signer.nip44Decrypt(content, signer.pubKey))
         } catch (_: Exception) {
-            ConcordInviteListDocument.EMPTY
+            null
         }
 
     companion object {

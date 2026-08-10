@@ -46,7 +46,7 @@ class ConcordInviteListTest {
 
     @Test
     fun readsTheSpecDocumentIntoTypedEntries() {
-        val doc = ConcordInviteList.decode(specJson)
+        val doc = ConcordInviteList.decodeOrNull(specJson)!!
 
         assertEquals(1, doc.entries.size)
         val e = doc.entries.first()
@@ -65,7 +65,7 @@ class ConcordInviteListTest {
 
     @Test
     fun emitsTheSnakeCaseKeysAnotherClientReads() {
-        val json = ConcordInviteList.encode(ConcordInviteList.decode(specJson))
+        val json = ConcordInviteList.encode(ConcordInviteList.decodeOrNull(specJson)!!)
         // Field names are the interop contract — a camelCase slip silently orphans every link.
         for (key in listOf("\"token\"", "\"signer_sk\"", "\"community_id\"", "\"url\"", "\"created_at\"", "\"expires_at\"", "\"entries\"", "\"tombstones\"")) {
             assertTrue(json.contains(key), "missing wire key $key")
@@ -84,7 +84,7 @@ class ConcordInviteListTest {
               "doc_level_unknown": 7 }
             """.trimIndent()
 
-        val round = ConcordInviteList.encode(ConcordInviteList.decode(withExtras))
+        val round = ConcordInviteList.encode(ConcordInviteList.decodeOrNull(withExtras)!!)
 
         assertTrue(round.contains("future_field"), "entry-level unknown key dropped")
         assertTrue(round.contains("doc_level_unknown"), "document-level unknown key dropped")
@@ -116,9 +116,36 @@ class ConcordInviteListTest {
     }
 
     @Test
-    fun aMalformedDocumentYieldsEmptyRatherThanThrowing() {
-        assertEquals(0, ConcordInviteList.decode("not json").entries.size)
-        assertEquals(0, ConcordInviteList.decode("{\"entries\":\"wrong type\"}").entries.size)
+    fun aMalformedDocumentYieldsNullSoCallersCannotOverwriteWithIt() {
+        // Null, not empty: a caller that republishes an "empty" list over this replaceable
+        // coordinate destroys every signer_sk it failed to read.
+        assertEquals(null, ConcordInviteList.decodeOrNull("not json"))
+        assertEquals(null, ConcordInviteList.decodeOrNull("{\"entries\":\"wrong type\"}"))
+    }
+
+    @Test
+    fun anUnreadableListIsDistinguishableFromAnEmptyOne() {
+        // The whole point of the null: a caller must be able to tell "I could not read it" from
+        // "there is nothing in it". Publishing a merge onto the latter is fine; onto the former it
+        // destroys every signer_sk on this replaceable coordinate.
+        assertEquals(null, ConcordInviteList.decodeOrNull("<not json>"))
+
+        val empty = ConcordInviteList.decodeOrNull("""{"entries":[],"tombstones":[]}""")
+        assertEquals(0, empty!!.entries.size, "a genuinely empty list decodes, it does not fail")
+
+        // And a merge onto an empty base keeps the patch, so starting a first list still works.
+        val patch = ConcordInviteListDocument(entries = listOf(ConcordInviteListEntry("t", "sk", "c", "u")))
+        assertEquals(listOf("t"), ConcordInviteList.merge(empty, patch).entries.map { it.token })
+    }
+
+    @Test
+    fun theSignerPubKeyIsTheCoordinateTheBundleLivesAt() {
+        // Refreshing or revoking a link means writing at exactly this author, so it must derive from
+        // the secret we kept rather than being stored (and drifting) separately.
+        val sk = "11".repeat(32)
+        val entry = ConcordInviteListEntry("t", sk, "c", "u")
+        assertEquals(64, entry.signerPubKeyHex().length)
+        assertEquals(entry.signerPubKeyHex(), ConcordInviteListEntry("t2", sk, "c", "u2").signerPubKeyHex())
     }
 
     @Test
