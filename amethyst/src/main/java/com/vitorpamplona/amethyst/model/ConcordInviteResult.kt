@@ -55,6 +55,15 @@ sealed interface ConcordInviteResult {
     data object Expired : ConcordInviteResult
 
     /**
+     * The link opens, but this community's roster has banned us (CORD-04).
+     *
+     * A Refounding re-mints every outstanding link onto the new root, and a removed member keeps the
+     * URL and its unlock token forever — so honouring the link alone would hand the new keys to the
+     * very account the rotation expelled.
+     */
+    data object Banned : ConcordInviteResult
+
+    /**
      * The bundle event was found but could not be opened with the link's token —
      * typically because it was minted by a newer/incompatible Concord client whose
      * bundle format this app can't read yet. Retrying can't help.

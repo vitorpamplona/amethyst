@@ -201,6 +201,16 @@ object ConcordActions {
     /** The public invite bundle for a link signer. */
     fun bundleFilter(linkSignerPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordInviteBundleEvent.KIND), authors = listOf(linkSignerPubKeyHex))
 
+    /**
+     * The bundles of several links at once — one REQ over every link signer instead of a round trip
+     * per link, which is what a Refounding needs when it re-mints a creator's whole set.
+     *
+     * Partition the result by `pubKey` before classifying: [ConcordInviteBundle.classify] resolves a
+     * single coordinate, so handing it a pooled set would let one link's revocation tombstone decide
+     * another link's status purely by being newer.
+     */
+    fun bundlesFilter(linkSignerPubKeyHexes: List<HexKey>): Filter = Filter(kinds = listOf(ConcordInviteBundleEvent.KIND), authors = linkSignerPubKeyHexes)
+
     /** Pending direct invites addressed to the given member (indexed by k=3313). */
     fun directInvitesFilter(memberPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordStreamEnvelope.KIND_WRAP), tags = mapOf("p" to listOf(memberPubKeyHex), "k" to listOf(ConcordDirectInvite.KIND.toString())))
 
@@ -435,6 +445,44 @@ object ConcordActions {
         createdAt: Long,
         relays: List<String>? = null,
     ): MintedInviteLink = ConcordInviteBundle.mintLink(base, invite, createdAt, relays)
+
+    /**
+     * Re-publishes a bundle at an **existing** link's coordinate, carrying [invite] refreshed for the
+     * current epoch (CORD-05 §1). The kind-33301 bundle is addressable and authored by the link
+     * signer, so re-signing with the same [linkSignerPrivKey] and re-encrypting under the same
+     * [token] replaces what is there — every holder of that link keeps working, now pointing at the
+     * new root.
+     *
+     * This is what makes stranded recovery live: a member a Refounding left out has no rekey blob and
+     * no message to miss, and re-resolving their link is the only way back — which requires the
+     * community to re-mint at the *same* coordinate rather than issuing a fresh link. Minting a new
+     * link leaves the old one pointing at a dead epoch forever.
+     *
+     * Safe to call for every live link because recovery is ban-gated at the epoch being left
+     * (CORD-06, A2): a member the Refounding removed was banned on the way out, so their own
+     * `recover` is refused even though their link now resolves.
+     */
+    fun remintBundleAt(
+        linkSignerPrivKey: ByteArray,
+        token: ByteArray,
+        invite: CommunityInvite,
+        createdAt: Long,
+    ): Event = ConcordInviteBundle.build(linkSignerPrivKey, token, invite, createdAt)
+
+    /**
+     * Retires an existing link by publishing a `vsk=9` revocation tombstone at its coordinate
+     * (CORD-05 §2). Once this lands, every client resolving that URL gets
+     * [com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus.Revoked] instead of keys.
+     *
+     * Publish this *before* recording the tombstone in the kind-13303 Invite List — the list entry
+     * carries the only copy of the `signer_sk` this call needs, and the list merge drops a
+     * tombstoned token's entry for good. Recording first and failing to publish would leave the link
+     * live on the wire with no way left to retire it.
+     */
+    fun revokeBundleAt(
+        linkSignerPrivKey: ByteArray,
+        createdAt: Long,
+    ): Event = ConcordInviteBundle.buildRevocation(linkSignerPrivKey, createdAt)
 
     /** Parses a shareable invite URL into its pointer + private fragment. */
     fun parseInviteLink(url: String): ParsedInviteLink? = ConcordInviteLink.parseUrl(url)

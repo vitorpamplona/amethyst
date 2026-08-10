@@ -294,6 +294,17 @@ fun ConcordChannelListScreen(
                         SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        // Deliberately not gated on CREATE_INVITE, unlike minting: the links listed
+                        // there are this account's own, authored by link-signer keys only we hold.
+                        // Gating on the bit would mean a demoted admin could no longer retire the
+                        // links they had already handed out — exactly when that matters most.
+                        DropdownMenuItem(
+                            text = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_links_action)) },
+                            onClick = {
+                                menuOpen = false
+                                nav.nav(Route.ConcordInviteLinks(communityId))
+                            },
+                        )
                         DropdownMenuItem(
                             text = {
                                 Text(

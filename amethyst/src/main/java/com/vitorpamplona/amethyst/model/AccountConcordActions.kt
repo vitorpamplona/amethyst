@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
+import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordCommunitySession
@@ -35,17 +36,17 @@ import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityResolver
 import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
-import com.vitorpamplona.quartz.concord.cord04Roles.ConcordJson
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
-import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
-import com.vitorpamplona.quartz.concord.cord04Roles.ControlRootWrap
-import com.vitorpamplona.quartz.concord.cord04Roles.GrantEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteList
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
-import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
@@ -53,8 +54,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.anyRelayServed
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -64,6 +68,9 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import java.util.concurrent.ConcurrentHashMap
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
@@ -168,6 +175,138 @@ class AccountConcordActions(
         return community.communityIdHex
     }
 
+    // ---- CORD-05 Invite List (kind 13303) -------------------------------------
+
+    /**
+     * This account's Invite List (kind 13303): the creator's private, self-encrypted record of every
+     * link they minted (`token` + `signer_sk` per entry).
+     *
+     * Returns **null** when the list could not be read — no relay answered, or the signer refused
+     * the decrypt — and an empty document only when the account genuinely has no list yet. Callers
+     * must not conflate the two: republishing an "empty" list over this replaceable coordinate
+     * destroys every `signer_sk` it failed to read, and those secrets cannot be regenerated.
+     *
+     * Read on the account's OUTBOX relays, never a community's: the coordinate is
+     * (13303, me, "") — one list for the whole account — so scoping it per community would fork it
+     * into divergent versions that the newest-wins rule then silently collapses.
+     *
+     * Fetched rather than read from [LocalCache] because nothing subscribes to 13303: it is
+     * bookkeeping the user never sees, needed only at mint and at rotation.
+     */
+    private suspend fun readConcordInviteList(): ConcordInviteListDocument? {
+        val relays = account.outboxRelays.flow.value
+        if (relays.isEmpty()) return null
+        val filter = Filter(kinds = listOf(ConcordInviteListEvent.KIND), authors = listOf(account.signer.pubKey))
+        // Terminal reasons, not just events: `fetchAll` returns an empty list both when a relay
+        // served us and had nothing AND when nothing answered at all (cannot-connect, CLOSED, idle
+        // timeout). Treating the second as "no list yet" is precisely how a read-merge-write wipes
+        // the signer_sk of every link it failed to read, so the two must be told apart.
+        val reasons = mutableMapOf<NormalizedRelayUrl, String>()
+        val events =
+            account.client.fetchAllWithHooks(
+                filters = relays.associateWith { listOf(filter) },
+                doneOut = reasons,
+            ) { _, _ -> true }
+
+        val newest =
+            events
+                .mapNotNull { it.second as? ConcordInviteListEvent }
+                // Filter by kind BEFORE picking the newest: taking the newest of anything and then
+                // casting means one stray event at this coordinate reads as "unreadable" forever.
+                .maxByOrNull { it.createdAt }
+                ?: return if (reasons.anyRelayServed()) {
+                    ConcordInviteListDocument.EMPTY // a relay answered and had nothing — safe to start one
+                } else {
+                    null // nobody answered; we know nothing about what is published
+                }
+        return newest.decrypt(account.signer)
+    }
+
+    /**
+     * Merges [patch] into the published Invite List and republishes it, returning whether it landed.
+     *
+     * Read-merge-write, and **aborts rather than overwriting** when the read fails: the list is
+     * replaceable, so publishing a patch-only document over an unread list deletes every other
+     * link's `signer_sk` — unrecoverable, and it strands every holder of those links at the next
+     * rotation. A momentarily unreachable relay or a bunker signer that declines one decrypt is
+     * enough to trigger that, which is exactly how the kind-13302 community list was once emptied.
+     */
+    private suspend fun publishConcordInviteList(patch: ConcordInviteListDocument): Boolean {
+        val publishTo = account.outboxRelays.flow.value
+        if (publishTo.isEmpty()) return false
+        val base =
+            readConcordInviteList() ?: run {
+                Log.w("Concord") { "Refusing to write the invite list: could not read the current one (would drop other links' signer_sk)" }
+                return false
+            }
+        // publishAndConfirm, never publish: `INostrClient.publish` returns Unit — it queues the event
+        // and never reports acceptance — so a `runCatching { publish(); true }` is true whenever
+        // local signing worked, and every caller's "did the record land?" gate becomes decorative.
+        return runCatching {
+            account.client.publishAndConfirm(ConcordInviteListEvent.create(account.signer, ConcordInviteList.merge(base, patch), TimeUtils.now()), publishTo)
+        }.onFailure { Log.w("Concord", "invite list publish failed", it) }.getOrDefault(false)
+    }
+
+    /**
+     * Re-posts every live link this account minted for [entry]'s community at its own coordinate,
+     * carrying [entry]'s epoch (CORD-05). The kind-33301 bundle is addressable and authored by the
+     * link signer, so this moves the link behind the same URL instead of orphaning it at a dead
+     * epoch — which is the whole premise stranded recovery rests on.
+     *
+     * [entry] MUST be the post-rotation entry, passed in rather than re-read: the joined-list flow
+     * decrypts asynchronously, so reading it straight after adopting a new root yields the OLD
+     * epoch and would re-mint every link onto the epoch we just left.
+     *
+     * Each link is refreshed from its own CURRENT bundle, not rebuilt from scratch, so per-link
+     * fields the bundle carries — expiry, channel grants, icon, label — survive the rotation. A
+     * coordinate whose newest event is a revocation tombstone is left alone: re-posting a live
+     * bundle over it would silently un-revoke the link.
+     */
+    private suspend fun refreshConcordInviteLinks(entry: ConcordCommunityListEntry): Int {
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
+        if (relays.isEmpty()) return 0
+        val list = readConcordInviteList() ?: return 0
+        val tombstoned = list.tombstones.mapTo(HashSet()) { it.token }
+        val now = TimeUtils.now()
+
+        // An elapsed or retired link can no longer be joined; re-posting it would only resurrect a
+        // dead URL at a live epoch.
+        val links = list.entries.filter { it.communityId == entry.id && !it.isExpired(now) && it.token !in tombstoned }
+        if (links.isEmpty()) return 0
+
+        // One REQ for every link's bundle rather than a round trip each. This runs inside the
+        // user-visible Refounding, and a serial fetch per link makes a removal take time linear in
+        // how many links the creator ever minted, each able to wait out its own idle timeout.
+        val byAuthor = links.associateBy { it.signerPubKeyHex().lowercase() }
+        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(ConcordActions.bundlesFilter(byAuthor.keys.toList())) })
+        val wrapsByAuthor = wraps.groupBy { it.pubKey.lowercase() }
+
+        return coroutineScope {
+            byAuthor
+                .map { (author, link) ->
+                    async {
+                        runCatching {
+                            val token = link.token.hexToByteArray()
+                            // Classify per coordinate, never over the pooled set: one link's newer
+                            // revocation tombstone must not decide another link's status.
+                            val current = ConcordActions.classifyInvite(wrapsByAuthor[author].orEmpty(), token) as? InviteBundleStatus.Live ?: return@runCatching false
+                            val moved =
+                                current.invite.copy(
+                                    communityRoot = entry.root,
+                                    rootEpoch = entry.rootEpoch,
+                                    controlPk = entry.controlPk,
+                                    relays = entry.relays,
+                                )
+                            // Confirmed: a link counted as moved but never stored is a link its
+                            // holders can no longer redeem, reported as a success.
+                            account.client.publishAndConfirm(ConcordActions.remintBundleAt(link.signerSk.hexToByteArray(), token, moved, now), relays)
+                        }.onFailure { Log.w("Concord", "invite refresh failed for ${entry.id}", it) }.getOrDefault(false)
+                    }
+                }.awaitAll()
+                .count { it }
+        }
+    }
+
     /**
      * Mint a shareable invite link for a joined community and publish its
      * kind-33301 public bundle to the community relays. Returns the `…/invite/…`
@@ -212,8 +351,101 @@ class AccountConcordActions(
         val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), entry.relays)
 
         val publishTo = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
+        // Record the link BEFORE handing the URL out (CORD-05, kind 13303). A link whose `signer_sk`
+        // was never stored can never be refreshed, so the next Refounding orphans it and everyone
+        // holding it is stranded — with nothing to have warned them. Failing the mint is the honest
+        // outcome; a stored entry for a link nobody received is harmless by comparison.
+        if (!publishConcordInviteList(
+                ConcordInviteListDocument(
+                    entries =
+                        listOf(
+                            ConcordInviteListEntry(
+                                token = minted.token.toHexKey(),
+                                signerSk = minted.linkSignerPrivKey.toHexKey(),
+                                communityId = entry.id,
+                                url = minted.url,
+                                createdAt = TimeUtils.now(),
+                            ),
+                        ),
+                ),
+            )
+        ) {
+            Log.w("Concord") { "Invite not minted for ${entry.id}: its link signer could not be recorded, so the link could never be refreshed" }
+            return null
+        }
+
         if (publishTo.isNotEmpty()) account.client.publish(minted.bundleEvent, publishTo)
         return minted.url
+    }
+
+    /**
+     * Every link this account minted for [communityId] that is still live, newest first — the
+     * backing list for the invite-links screen.
+     *
+     * Null means the list could not be read (no relay answered, or the signer refused the decrypt),
+     * which the UI must show as an error rather than as "you have no links": telling a creator their
+     * leaked link doesn't exist is worse than telling them we couldn't check.
+     *
+     * Retired tokens are filtered out here rather than rendered as dead rows — [ConcordInviteList]
+     * already drops a tombstoned entry on merge, so a tombstoned entry only appears in the window
+     * between our revoke and the next merge.
+     */
+    suspend fun listConcordInviteLinks(communityId: String): List<ConcordInviteListEntry>? {
+        val list = readConcordInviteList() ?: return null
+        val tombstoned = list.tombstones.mapTo(HashSet()) { it.token }
+        return list.entries
+            .filter { it.communityId == communityId && it.token !in tombstoned }
+            .sortedByDescending { it.createdAt }
+    }
+
+    /**
+     * Retires the link [token] (CORD-05 §2): publishes a `vsk=9` tombstone at its coordinate, then
+     * records the retirement in the kind-13303 list. Returns false if the link could not be retired.
+     *
+     * No community permission is checked, deliberately. The coordinate is authored by the link
+     * signer, whose secret only the creator holds, so revoking is an act on your own key rather than
+     * on the community — and gating it on CREATE_INVITE would mean a demoted admin could no longer
+     * retire the links they had already handed out, which is precisely when they most need to.
+     *
+     * The wire tombstone goes first and the list second. That is the inverse of minting and it is
+     * deliberate: the entry holds the only copy of the `signer_sk` this needs, and a merge drops a
+     * tombstoned token's entry terminally, so recording first and then failing to publish would
+     * leave the link live with its signer gone and no way left to retire it. A failed list write is
+     * recoverable — the link is already dead on the wire, and the refresh path re-mints only a
+     * coordinate that still resolves Live.
+     */
+    suspend fun revokeConcordInvite(
+        communityId: String,
+        token: String,
+    ): Boolean {
+        if (!account.isWriteable()) return false
+        val entry =
+            account.concordChannelList.liveCommunities.value
+                .firstOrNull { it.id == communityId } ?: return false
+        val link =
+            readConcordInviteList()?.entries?.firstOrNull { it.token == token && it.communityId == communityId }
+                ?: run {
+                    Log.w("Concord") { "Cannot revoke $token: it is not in this account's invite list, so its link signer is unknown" }
+                    return false
+                }
+
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
+        if (relays.isEmpty()) return false
+        // Confirmed, not fire-and-forget. A `publish` that returns Unit would report success for a
+        // tombstone no relay stored — and the list write below would then drop this entry on merge,
+        // destroying the only `signer_sk` that could ever retire the link while the link stays live.
+        val published =
+            runCatching {
+                account.client.publishAndConfirm(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), TimeUtils.now()), relays)
+            }.onFailure { Log.w("Concord", "invite revocation failed for $communityId", it) }.getOrDefault(false)
+        if (!published) return false
+
+        if (!publishConcordInviteList(ConcordInviteListDocument(tombstones = listOf(ConcordInviteListTombstone(token = token, communityId = communityId))))) {
+            // The link is already dead on the wire, so this is bookkeeping we can retry rather than a
+            // failed revocation. Reported as success for exactly that reason.
+            Log.w("Concord") { "Revoked $token on the wire but could not tombstone it in the invite list; a later revoke will record it" }
+        }
+        return true
     }
 
     /** Drop a joined Concord community from the private kind-13302 list by its id. */
@@ -276,6 +508,42 @@ class AccountConcordActions(
                 .any { it.id == bundle.communityId }
         ) {
             return ConcordInviteResult.Joined(bundle.communityId)
+        }
+
+        // Refuse a link that readmits us after we were removed. A Refounding re-mints every
+        // outstanding link onto the new root (CORD-05), and an ex-member keeps the URL and its
+        // unlock token forever — so without this the rotation meant to expel them hands them the new
+        // keys instead. `recoverStrandedConcordCommunities` has always been ban-gated; this is the
+        // other door into the same room.
+        //
+        // Fails CLOSED on an unreadable plane: the banlist is only knowable once the bundle yields
+        // the root, and no verdict means no join. Two things make that safe to insist on rather than
+        // a way to brick valid invites:
+        //
+        //  - the plane is fetched over the SAME relays that just served the bundle, not the relay
+        //    list inside the bundle alone, which can be stale (a moved relay, a link minted before a
+        //    relay change) and would otherwise refuse a community we can plainly reach;
+        //  - it is PAGED, because a single REQ is truncated at the relay's per-filter cap. A missing
+        //    older ban edition fails the gate open — it re-admits the very account it exists to
+        //    refuse — so the one direction we must not economise on is completeness.
+        val joinKeys =
+            ConcordActions.controlPlaneKeys(
+                communityRoot = bundle.communityRoot.hexToByteArray(),
+                communityId = bundle.communityId.hexToByteArray(),
+                rootEpoch = bundle.rootEpoch,
+                controlPk = bundle.controlPk,
+            )
+        // Union, not `ifEmpty`: the relays that served the bundle are known-good for this community,
+        // and the bundle's own list is the one that goes stale.
+        val joinRelays = bundle.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) } + relays
+        val planeWraps = mutableListOf<Event>()
+        account.client.fetchAllPagesFromPool(
+            filters = joinRelays.associateWith { listOf(ConcordActions.planeFilter(joinKeys.address)) },
+        ) { event, _ -> planeWraps.add(event) }
+        val joinEditions = ConcordActions.controlEditions(planeWraps, joinKeys)
+        if (joinEditions.isEmpty()) return ConcordInviteResult.NotReachable
+        if (AuthorityResolver.resolve(joinEditions, bundle.owner).isBanned(account.signer.pubKey)) {
+            return ConcordInviteResult.Banned
         }
 
         val entry =
@@ -865,7 +1133,14 @@ class AccountConcordActions(
 
         // 5. Adopt the new epoch ourselves. This rebuilds our session under the new root and
         //    re-folds the compacted Control Plane (with the ban), dropping the removed members.
-        adoptConcordRoot(entry, newRoot, build.newEpoch, build.newControlKeys.address.hexToByteArray(), newControlRoot)
+        val adopted = adoptConcordRoot(entry, newRoot, build.newEpoch, build.newControlKeys.address.hexToByteArray(), newControlRoot)
+
+        // 6. Move every link we minted to the new epoch. Without this the Refounding orphans them,
+        //    and a member it left out — no rekey blob, no message to miss — has no way back at all.
+        //    Uses the entry adoption just wrote: `liveCommunities` decrypts asynchronously, so
+        //    reading it here would hand us the epoch we just left and re-mint every link onto it.
+        val moved = adopted?.let { refreshConcordInviteLinks(it) } ?: 0
+        Log.i("Concord") { "Refounding ${entry.id}: refreshed $moved invite link(s) to epoch ${build.newEpoch}" }
         return true
     }
 
@@ -930,39 +1205,16 @@ class AccountConcordActions(
         newEpoch: Long,
         newControlPk: ByteArray? = null,
         newControlRoot: ByteArray? = null,
-    ) {
-        if (!adoptedConcordRotations.add("${entry.id}:$newEpoch")) return
-        // The epoch we're leaving is banked with the address it was folded at, so its Control
-        // Plane stays subscribable for the anti-rollback floor (a split epoch's address can
-        // never be re-derived, only remembered — CORD-02 §2).
-        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root, entry.controlPk, entry.controlRoot)).distinctBy { it.epoch }
-        val next =
-            ConcordCommunityListEntry(
-                id = entry.id,
-                owner = entry.owner,
-                ownerSalt = entry.ownerSalt,
-                root = newRoot.toHexKey(),
-                rootEpoch = newEpoch,
-                // A rotation that delivered no control material is a legacy, pre-split one
-                // (CORD-06 §3): the new epoch keeps folding at the legacy address, and the
-                // stale prior-epoch values must NOT be carried into it.
-                controlPk = newControlPk?.toHexKey(),
-                controlRoot = newControlRoot?.toHexKey(),
-                heldRoots = held,
-                privateChannels = entry.privateChannels,
-                relays = entry.relays,
-                name = entry.name,
-                addedAt = entry.addedAt,
-                // The invite_ref anchor must survive a rotation, or the *next* Refounding we're left
-                // out of would be unrecoverable.
-                inviteRef = entry.inviteRef,
-                excludedAtEpoch = entry.excludedAtEpoch,
-                // Unknown keys another client wrote (Armada's list is `[k: string]: unknown`)
-                // must survive our rotation write, or we delete their data on every rekey.
-                residue = entry.residue,
-            )
+    ): ConcordCommunityListEntry? {
+        if (!adoptedConcordRotations.add("${entry.id}:$newEpoch")) return null
+        // The rewrite itself — banking the leaving epoch's address for the anti-rollback floor,
+        // dropping stale control material on a legacy rotation, preserving invite_ref and residue —
+        // is shared with `amy` in [ConcordReceive.withAdoptedRoot]. Only the persist + publish and
+        // the Guestbook re-announce below are Android's.
+        val next = ConcordReceive.withAdoptedRoot(entry, newRoot, newEpoch, newControlPk, newControlRoot)
         account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(next))
         announceConcordGuestbookJoin(next, inviteCreator = null, inviteLabel = null)
+        return next
     }
 
     /**
@@ -1008,7 +1260,17 @@ class AccountConcordActions(
             // who has themselves been banned could still rotate the whole community.
             val authorized = authority.isOwner(received.rotator) || authority.hasPermission(received.rotator, ConcordPermissions.BAN)
             if (!authorized) continue
-            adoptConcordRoot(entry, received.newRoot, received.newEpoch, received.newControlPk, received.newControlRoot)
+            val adopted = adoptConcordRoot(entry, received.newRoot, received.newEpoch, received.newControlPk, received.newControlRoot)
+
+            // Move our own links onto the epoch we just adopted. Rotating is not the only way to end
+            // up on a new epoch — being re-keyed is the common one — and a link creator who is merely
+            // re-keyed would otherwise leave every link they handed out pointing at the dead root,
+            // which is exactly the orphaning this branch exists to stop. Stranded recovery reads the
+            // bundle's epoch, so a link nobody re-mints is a member nobody can recover.
+            adopted?.let { next ->
+                val moved = refreshConcordInviteLinks(next)
+                if (moved > 0) Log.i("Concord") { "Rekey ${next.id}: refreshed $moved invite link(s) to epoch ${received.newEpoch}" }
+            }
         }
     }
 
@@ -1030,39 +1292,16 @@ class AccountConcordActions(
      */
     internal suspend fun drainConcordStaffGrants() {
         if (!account.isWriteable()) return
-        val me = account.signer.pubKey.lowercase()
         for (session in account.concordSessions.sessions()) {
             val entry = session.entry
-            // Already staff at this epoch, or a legacy community with no split to join.
-            val heldControlPk = entry.controlPk
-            if (entry.controlRoot != null || heldControlPk == null) continue
             val state = session.state.value ?: continue
-            // Only a Grant our fold honors can deliver: an unauthorized edition hands us nothing.
-            if (!state.authority.isStaff(me)) continue
-
-            val myGrantCoordinate =
-                ConcordKeyDerivation
-                    .grantCoordinate(entry.id.hexToByteArray(), me.hexToByteArray())
-                    .toHexKey()
-            val delivered =
-                session
-                    .controlEditions()
-                    .filter { it.entityKind == ControlEntityKind.GRANT && it.entityIdHex == myGrantCoordinate }
-                    // Newest first: a re-issued Grant (a lost key, a head superseded before we
-                    // fetched it) carries the fresher wrap.
-                    .sortedByDescending { it.version }
-                    .firstNotNullOfOrNull { edition ->
-                        val wrap = ConcordJson.decodeOrNull<GrantEntity>(edition.content)?.controlWrap ?: return@firstNotNullOfOrNull null
-                        val opened = ControlRootWrap.openOrNull(wrap, account.signer, edition.author) ?: return@firstNotNullOfOrNull null
-                        if (opened.epoch != entry.rootEpoch) return@firstNotNullOfOrNull null
-                        // Fails closed: a secret that doesn't derive to the pk we hold is dropped,
-                        // never adopted — we will not split ourselves off from the plane's readers.
-                        if (!ControlRootWrap.derivesTo(opened.controlRoot, entry.id.hexToByteArray(), entry.rootEpoch, heldControlPk)) return@firstNotNullOfOrNull null
-                        opened.controlRoot
-                    } ?: continue
+            // The whole decision — are we staff, does a Grant carry a wrap, does it open, name our
+            // epoch, and derive to the control_pk we hold — is shared with `amy` in
+            // [ConcordReceive.deliveredControlRoot]. Only the persist + publish below is Android's.
+            val delivered = ConcordReceive.deliveredControlRoot(entry, session.controlEditions(), state.authority, account.signer) ?: continue
 
             account.sendMyPublicAndPrivateOutbox(
-                account.concordChannelList.follow(entry.withControlRoot(delivered.toHexKey())),
+                account.concordChannelList.follow(entry.withControlRoot(delivered)),
             )
         }
     }
