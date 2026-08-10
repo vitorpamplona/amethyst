@@ -63,14 +63,26 @@ class SearchRelayListState(
     suspend fun normalizeSearchRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.relays(it) } ?: emptySet()
 
     /**
+     * Same resolution as [normalizeSearchRelayListWithBackup] but non-suspending, for use as the
+     * [flow] seed. Reads the event's public tags plus any *already decrypted* private tags; it
+     * never asks the signer, so it cannot block or hit a NIP-46 round trip.
+     *
+     * At login `searchListNote.event` is usually still null and this resolves through
+     * `settings.backupSearchRelayList`, restored from LocalPreferences — so an account with public
+     * search relays gets its own relays immediately instead of the defaults. Accounts whose relays
+     * are exclusively private fall back to [DefaultSearchRelayList] until the first decrypt lands.
+     */
+    fun normalizeSearchRelayListPrecached(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.cachedRelays(it) }?.ifEmpty { null } ?: DefaultSearchRelayList
+
+    /**
      * The account's search relays, **never empty** — [normalizeSearchRelayListWithBackup]
      * substitutes [DefaultSearchRelayList] both when there is no kind:10007 and when the
      * one we have decodes to zero relays. Callers assembling NIP-50 REQs read this and can
      * rely on getting a usable set; use [flowNoDefaults] instead to show or diff what the
      * user actually configured.
      *
-     * Seeded with [DefaultSearchRelayList] rather than `emptySet()`: `flowOn(IO)` means the
-     * first real emission can never be synchronous with `stateIn`, so an `emptySet()` seed
+     * Seeded via [normalizeSearchRelayListPrecached] rather than `emptySet()`: `flowOn(IO)` means
+     * the first real emission can never be synchronous with `stateIn`, so an `emptySet()` seed
      * left a window where `.value` contradicted the "never empty" contract above and search
      * silently queried nothing. That window is unbounded for a NIP-46 signer whose list has
      * private entries, since the first emission waits on a remote decrypt.
@@ -83,7 +95,7 @@ class SearchRelayListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                DefaultSearchRelayList,
+                normalizeSearchRelayListPrecached(searchListNote),
             )
 
     val flowNoDefaults =
