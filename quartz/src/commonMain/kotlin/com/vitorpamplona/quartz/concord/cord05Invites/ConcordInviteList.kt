@@ -30,9 +30,11 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.elementNames
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonTransformingSerializer
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 private val NoExtras: JsonObject = JsonObject(emptyMap())
@@ -77,11 +79,19 @@ class ConcordInviteListTombstone(
     val residue: JsonObject = NoExtras,
 )
 
-/** The decoded kind-13303 document: live [entries], [tombstones], and document-level [residue]. */
+/**
+ * The decoded kind-13303 document: live [entries], [tombstones], and document-level [residue].
+ *
+ * [opaqueEntries] holds entries that did not type-check — a wrong-typed field from another client or
+ * a newer schema. They are carried verbatim rather than dropped (re-encoding without them would
+ * delete somebody's `signer_sk`) and rather than failing the whole read (which would refuse every
+ * future mint and revoke for this account until someone else repaired the list).
+ */
 class ConcordInviteListDocument(
     val entries: List<ConcordInviteListEntry> = emptyList(),
     val tombstones: List<ConcordInviteListTombstone> = emptyList(),
     val residue: JsonObject = NoExtras,
+    val opaqueEntries: List<JsonObject> = emptyList(),
 ) {
     companion object {
         val EMPTY = ConcordInviteListDocument()
@@ -160,41 +170,80 @@ object ConcordInviteList {
     private object WireDocumentSerializer : ExtrasPreserving<WireDocument>(WireDocument.serializer())
 
     /**
-     * Decodes the plaintext document, or **null** when it cannot be parsed.
+     * Decodes the plaintext document, or **null** when the document itself cannot be read.
      *
      * Null rather than an empty document on purpose: this list is replaceable, so a caller that
      * treats "I could not read it" as "it is empty" and republishes destroys every `signer_sk` it
      * did not manage to read — secrets that cannot be regenerated, orphaning every outstanding
      * invite at a dead epoch. Callers MUST distinguish the two (see [ConcordInviteList.merge]'s
-     * callers). Each field still defaults, so one odd entry does not abort the whole array.
+     * callers).
+     *
+     * Null is reserved for a *document-level* failure — not JSON, or `entries`/`tombstones` present
+     * but not arrays. A single entry that does not type-check is kept verbatim in
+     * [ConcordInviteListDocument.opaqueEntries] instead: failing the whole read for one odd row
+     * would refuse every future mint and revoke for the account, permanently, since a replaceable
+     * coordinate never ages out — turning the old silent data loss into a permanent write lock.
      */
     fun decodeOrNull(json: String): ConcordInviteListDocument? =
         try {
-            val doc = ConcordJson.instance.decodeFromString(WireDocumentSerializer, json)
-            ConcordInviteListDocument(
-                entries =
-                    doc.entries.map {
+            val root = ConcordJson.instance.parseToJsonElement(json).jsonObject
+            val opaque = mutableListOf<JsonObject>()
+
+            val entries =
+                (root["entries"]?.jsonArray ?: JsonArray(emptyList())).mapNotNull { element ->
+                    val obj = element.jsonObject
+                    try {
+                        val it = ConcordJson.instance.decodeFromJsonElement(WireEntrySerializer, obj)
                         ConcordInviteListEntry(it.token, it.signerSk, it.communityId, it.url, it.label, it.createdAt, it.expiresAt, it.extras)
-                    },
-                tombstones = doc.tombstones.map { ConcordInviteListTombstone(it.token, it.communityId, it.extras) },
-                residue = doc.extras,
+                    } catch (_: Exception) {
+                        opaque.add(obj)
+                        null
+                    }
+                }
+
+            val tombstones =
+                (root["tombstones"]?.jsonArray ?: JsonArray(emptyList())).mapNotNull { element ->
+                    try {
+                        val it = ConcordJson.instance.decodeFromJsonElement(WireTombstoneSerializer, element.jsonObject)
+                        ConcordInviteListTombstone(it.token, it.communityId, it.extras)
+                    } catch (_: Exception) {
+                        // A tombstone we cannot read must not silently un-retire its link, but we
+                        // have no token to key it by, so it can only ride along as document residue.
+                        null
+                    }
+                }
+
+            ConcordInviteListDocument(
+                entries = entries,
+                tombstones = tombstones,
+                residue = JsonObject(root - "entries" - "tombstones"),
+                opaqueEntries = opaque,
             )
         } catch (_: Exception) {
             null
         }
 
-    fun encode(doc: ConcordInviteListDocument): String =
-        ConcordJson.instance.encodeToString(
-            WireDocumentSerializer,
-            WireDocument(
-                entries =
-                    doc.entries.map {
-                        WireEntry(it.token, it.signerSk, it.communityId, it.url, it.label, it.createdAt, it.expiresAt, it.residue)
-                    },
-                tombstones = doc.tombstones.map { WireTombstone(it.token, it.communityId, it.residue) },
-                extras = doc.residue,
-            ),
-        )
+    fun encode(doc: ConcordInviteListDocument): String {
+        val wire =
+            ConcordJson.instance
+                .encodeToJsonElement(
+                    WireDocumentSerializer,
+                    WireDocument(
+                        entries =
+                            doc.entries.map {
+                                WireEntry(it.token, it.signerSk, it.communityId, it.url, it.label, it.createdAt, it.expiresAt, it.residue)
+                            },
+                        tombstones = doc.tombstones.map { WireTombstone(it.token, it.communityId, it.residue) },
+                        extras = doc.residue,
+                    ),
+                ).jsonObject
+
+        // Entries we could not type ride back out untouched. Dropping them here is the data loss
+        // this whole class exists to prevent — they are somebody's link signer too.
+        if (doc.opaqueEntries.isEmpty()) return ConcordJson.instance.encodeToString(JsonObject.serializer(), wire)
+        val entries = JsonArray((wire["entries"]?.jsonArray ?: JsonArray(emptyList())) + doc.opaqueEntries)
+        return ConcordJson.instance.encodeToString(JsonObject.serializer(), JsonObject(wire + ("entries" to entries)))
+    }
 
     /**
      * Merges [patch] onto [base], keyed by `token` — the spec's own merge key. A token present in
@@ -218,6 +267,9 @@ object ConcordInviteList {
             entries = entries.values.toList(),
             tombstones = tombstones.values.toList(),
             residue = JsonObject(base.residue + patch.residue),
+            // Untyped entries survive the merge for the same reason they survive a decode: we cannot
+            // read them, so we are in no position to decide they are disposable.
+            opaqueEntries = (base.opaqueEntries + patch.opaqueEntries).distinct(),
         )
     }
 }

@@ -54,8 +54,11 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.anyRelayServed
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -65,6 +68,9 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import java.util.concurrent.ConcurrentHashMap
 
 /** Name of the default Concord community Admin role minted by "Make admin". */
@@ -191,12 +197,29 @@ class AccountConcordActions(
         val relays = account.outboxRelays.flow.value
         if (relays.isEmpty()) return null
         val filter = Filter(kinds = listOf(ConcordInviteListEvent.KIND), authors = listOf(account.signer.pubKey))
+        // Terminal reasons, not just events: `fetchAll` returns an empty list both when a relay
+        // served us and had nothing AND when nothing answered at all (cannot-connect, CLOSED, idle
+        // timeout). Treating the second as "no list yet" is precisely how a read-merge-write wipes
+        // the signer_sk of every link it failed to read, so the two must be told apart.
+        val reasons = mutableMapOf<NormalizedRelayUrl, String>()
+        val events =
+            account.client.fetchAllWithHooks(
+                filters = relays.associateWith { listOf(filter) },
+                doneOut = reasons,
+            ) { _, _ -> true }
+
         val newest =
-            account.client
-                .fetchAll(filters = relays.associateWith { listOf(filter) })
+            events
+                .mapNotNull { it.second as? ConcordInviteListEvent }
+                // Filter by kind BEFORE picking the newest: taking the newest of anything and then
+                // casting means one stray event at this coordinate reads as "unreadable" forever.
                 .maxByOrNull { it.createdAt }
-                ?: return ConcordInviteListDocument.EMPTY // nothing published yet — safe to start one
-        return (newest as? ConcordInviteListEvent)?.decrypt(account.signer)
+                ?: return if (reasons.anyRelayServed()) {
+                    ConcordInviteListDocument.EMPTY // a relay answered and had nothing — safe to start one
+                } else {
+                    null // nobody answered; we know nothing about what is published
+                }
+        return newest.decrypt(account.signer)
     }
 
     /**
@@ -216,9 +239,11 @@ class AccountConcordActions(
                 Log.w("Concord") { "Refusing to write the invite list: could not read the current one (would drop other links' signer_sk)" }
                 return false
             }
+        // publishAndConfirm, never publish: `INostrClient.publish` returns Unit — it queues the event
+        // and never reports acceptance — so a `runCatching { publish(); true }` is true whenever
+        // local signing worked, and every caller's "did the record land?" gate becomes decorative.
         return runCatching {
-            account.client.publish(ConcordInviteListEvent.create(account.signer, ConcordInviteList.merge(base, patch), TimeUtils.now()), publishTo)
-            true
+            account.client.publishAndConfirm(ConcordInviteListEvent.create(account.signer, ConcordInviteList.merge(base, patch), TimeUtils.now()), publishTo)
         }.onFailure { Log.w("Concord", "invite list publish failed", it) }.getOrDefault(false)
     }
 
@@ -243,30 +268,43 @@ class AccountConcordActions(
         val list = readConcordInviteList() ?: return 0
         val tombstoned = list.tombstones.mapTo(HashSet()) { it.token }
         val now = TimeUtils.now()
-        var count = 0
-        for (link in list.entries) {
-            if (link.communityId != entry.id) continue
-            // An elapsed or retired link can no longer be joined; re-posting it would only resurrect
-            // a dead URL at a live epoch.
-            if (link.isExpired(now) || link.token in tombstoned) continue
-            runCatching {
-                val token = link.token.hexToByteArray()
-                val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(ConcordActions.bundleFilter(link.signerPubKeyHex())) })
-                // Honour a revocation published at this coordinate, and carry the live bundle's own
-                // fields forward — only the epoch's key material changes.
-                val current = ConcordActions.classifyInvite(wraps, token) as? InviteBundleStatus.Live ?: return@runCatching
-                val moved =
-                    current.invite.copy(
-                        communityRoot = entry.root,
-                        rootEpoch = entry.rootEpoch,
-                        controlPk = entry.controlPk,
-                        relays = entry.relays,
-                    )
-                account.client.publish(ConcordActions.remintBundleAt(link.signerSk.hexToByteArray(), token, moved, now), relays)
-                count++
-            }.onFailure { Log.w("Concord", "invite refresh failed for ${entry.id}", it) }
+
+        // An elapsed or retired link can no longer be joined; re-posting it would only resurrect a
+        // dead URL at a live epoch.
+        val links = list.entries.filter { it.communityId == entry.id && !it.isExpired(now) && it.token !in tombstoned }
+        if (links.isEmpty()) return 0
+
+        // One REQ for every link's bundle rather than a round trip each. This runs inside the
+        // user-visible Refounding, and a serial fetch per link makes a removal take time linear in
+        // how many links the creator ever minted, each able to wait out its own idle timeout.
+        val byAuthor = links.associateBy { it.signerPubKeyHex().lowercase() }
+        val wraps = account.client.fetchAll(filters = relays.associateWith { listOf(ConcordActions.bundlesFilter(byAuthor.keys.toList())) })
+        val wrapsByAuthor = wraps.groupBy { it.pubKey.lowercase() }
+
+        return coroutineScope {
+            byAuthor
+                .map { (author, link) ->
+                    async {
+                        runCatching {
+                            val token = link.token.hexToByteArray()
+                            // Classify per coordinate, never over the pooled set: one link's newer
+                            // revocation tombstone must not decide another link's status.
+                            val current = ConcordActions.classifyInvite(wrapsByAuthor[author].orEmpty(), token) as? InviteBundleStatus.Live ?: return@runCatching false
+                            val moved =
+                                current.invite.copy(
+                                    communityRoot = entry.root,
+                                    rootEpoch = entry.rootEpoch,
+                                    controlPk = entry.controlPk,
+                                    relays = entry.relays,
+                                )
+                            // Confirmed: a link counted as moved but never stored is a link its
+                            // holders can no longer redeem, reported as a success.
+                            account.client.publishAndConfirm(ConcordActions.remintBundleAt(link.signerSk.hexToByteArray(), token, moved, now), relays)
+                        }.onFailure { Log.w("Concord", "invite refresh failed for ${entry.id}", it) }.getOrDefault(false)
+                    }
+                }.awaitAll()
+                .count { it }
         }
-        return count
     }
 
     /**
@@ -393,10 +431,12 @@ class AccountConcordActions(
 
         val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
         if (relays.isEmpty()) return false
+        // Confirmed, not fire-and-forget. A `publish` that returns Unit would report success for a
+        // tombstone no relay stored — and the list write below would then drop this entry on merge,
+        // destroying the only `signer_sk` that could ever retire the link while the link stays live.
         val published =
             runCatching {
-                account.client.publish(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), TimeUtils.now()), relays)
-                true
+                account.client.publishAndConfirm(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), TimeUtils.now()), relays)
             }.onFailure { Log.w("Concord", "invite revocation failed for $communityId", it) }.getOrDefault(false)
         if (!published) return false
 
@@ -477,7 +517,15 @@ class AccountConcordActions(
         // other door into the same room.
         //
         // Fails CLOSED on an unreadable plane: the banlist is only knowable once the bundle yields
-        // the root, and no verdict means no join.
+        // the root, and no verdict means no join. Two things make that safe to insist on rather than
+        // a way to brick valid invites:
+        //
+        //  - the plane is fetched over the SAME relays that just served the bundle, not the relay
+        //    list inside the bundle alone, which can be stale (a moved relay, a link minted before a
+        //    relay change) and would otherwise refuse a community we can plainly reach;
+        //  - it is PAGED, because a single REQ is truncated at the relay's per-filter cap. A missing
+        //    older ban edition fails the gate open — it re-admits the very account it exists to
+        //    refuse — so the one direction we must not economise on is completeness.
         val joinKeys =
             ConcordActions.controlPlaneKeys(
                 communityRoot = bundle.communityRoot.hexToByteArray(),
@@ -485,12 +533,14 @@ class AccountConcordActions(
                 rootEpoch = bundle.rootEpoch,
                 controlPk = bundle.controlPk,
             )
-        val joinRelays = bundle.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { relays }
-        val joinEditions =
-            ConcordActions.controlEditions(
-                account.client.fetchAll(filters = joinRelays.associateWith { listOf(ConcordActions.planeFilter(joinKeys.address)) }),
-                joinKeys,
-            )
+        // Union, not `ifEmpty`: the relays that served the bundle are known-good for this community,
+        // and the bundle's own list is the one that goes stale.
+        val joinRelays = bundle.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) } + relays
+        val planeWraps = mutableListOf<Event>()
+        account.client.fetchAllPagesFromPool(
+            filters = joinRelays.associateWith { listOf(ConcordActions.planeFilter(joinKeys.address)) },
+        ) { event, _ -> planeWraps.add(event) }
+        val joinEditions = ConcordActions.controlEditions(planeWraps, joinKeys)
         if (joinEditions.isEmpty()) return ConcordInviteResult.NotReachable
         if (AuthorityResolver.resolve(joinEditions, bundle.owner).isBanned(account.signer.pubKey)) {
             return ConcordInviteResult.Banned
@@ -1210,7 +1260,17 @@ class AccountConcordActions(
             // who has themselves been banned could still rotate the whole community.
             val authorized = authority.isOwner(received.rotator) || authority.hasPermission(received.rotator, ConcordPermissions.BAN)
             if (!authorized) continue
-            adoptConcordRoot(entry, received.newRoot, received.newEpoch, received.newControlPk, received.newControlRoot)
+            val adopted = adoptConcordRoot(entry, received.newRoot, received.newEpoch, received.newControlPk, received.newControlRoot)
+
+            // Move our own links onto the epoch we just adopted. Rotating is not the only way to end
+            // up on a new epoch — being re-keyed is the common one — and a link creator who is merely
+            // re-keyed would otherwise leave every link they handed out pointing at the dead root,
+            // which is exactly the orphaning this branch exists to stop. Stranded recovery reads the
+            // bundle's epoch, so a link nobody re-mints is a member nobody can recover.
+            adopted?.let { next ->
+                val moved = refreshConcordInviteLinks(next)
+                if (moved > 0) Log.i("Concord") { "Rekey ${next.id}: refreshed $moved invite link(s) to epoch ${received.newEpoch}" }
+            }
         }
     }
 

@@ -201,6 +201,16 @@ object ConcordActions {
     /** The public invite bundle for a link signer. */
     fun bundleFilter(linkSignerPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordInviteBundleEvent.KIND), authors = listOf(linkSignerPubKeyHex))
 
+    /**
+     * The bundles of several links at once — one REQ over every link signer instead of a round trip
+     * per link, which is what a Refounding needs when it re-mints a creator's whole set.
+     *
+     * Partition the result by `pubKey` before classifying: [ConcordInviteBundle.classify] resolves a
+     * single coordinate, so handing it a pooled set would let one link's revocation tombstone decide
+     * another link's status purely by being newer.
+     */
+    fun bundlesFilter(linkSignerPubKeyHexes: List<HexKey>): Filter = Filter(kinds = listOf(ConcordInviteBundleEvent.KIND), authors = linkSignerPubKeyHexes)
+
     /** Pending direct invites addressed to the given member (indexed by k=3313). */
     fun directInvitesFilter(memberPubKeyHex: HexKey): Filter = Filter(kinds = listOf(ConcordStreamEnvelope.KIND_WRAP), tags = mapOf("p" to listOf(memberPubKeyHex), "k" to listOf(ConcordDirectInvite.KIND.toString())))
 

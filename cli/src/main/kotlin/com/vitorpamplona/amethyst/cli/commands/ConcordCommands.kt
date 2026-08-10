@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.anyRelayServed
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -724,13 +725,19 @@ object ConcordCommands {
         val relays = ctx.outboxRelays()
         if (relays.isEmpty()) return null
         val filter = Filter(kinds = listOf(ConcordInviteListEvent.KIND), authors = listOf(ctx.signer.pubKey))
+        // Terminal reasons, not just events: a drain returns nothing both when a relay served us and
+        // had nothing AND when nobody answered. Reading the second as "no list yet" is how the
+        // read-merge-write below wipes the signer_sk of every link it failed to read.
+        val reasons = mutableMapOf<NormalizedRelayUrl, String>()
         val newest =
             ctx
-                .drain(relays.associateWith { listOf(filter) })
-                .map { it.second }
+                .drain(relays.associateWith { listOf(filter) }, doneOut = reasons)
+                // Filter by kind BEFORE picking the newest — a stray event at this coordinate would
+                // otherwise make the list read as unreadable and refuse every later write.
+                .mapNotNull { it.second as? ConcordInviteListEvent }
                 .maxByOrNull { it.createdAt }
-                ?: return ConcordInviteListDocument.EMPTY // nothing published yet — safe to start one
-        return (newest as? ConcordInviteListEvent)?.decrypt(ctx.signer)
+                ?: return if (reasons.anyRelayServed()) ConcordInviteListDocument.EMPTY else null
+        return newest.decrypt(ctx.signer)
     }
 
     /**

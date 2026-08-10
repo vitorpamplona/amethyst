@@ -124,6 +124,43 @@ class ConcordInviteListTest {
     }
 
     @Test
+    fun oneUnreadableEntryDoesNotFailTheWholeDocumentOrGetDropped() {
+        // One structurally incompatible entry — a newer schema turning a scalar into an object, the
+        // realistic version, since the lenient parser already coerces plain scalar mismatches — used
+        // to null the whole document. Because null now means "refuse to write", that turned a single
+        // odd row into a permanent lock on mint and revoke for the account: a replaceable coordinate
+        // never ages out, so nothing would ever clear it.
+        val mixed =
+            """
+            { "entries": [
+                { "token": "aa", "signer_sk": "bb", "community_id": "cc", "url": "u1" },
+                { "token": {"v": "dd"}, "signer_sk": "dd", "community_id": "cc", "url": "u2", "mark": "keepme" }
+              ],
+              "tombstones": [] }
+            """.trimIndent()
+
+        val doc = ConcordInviteList.decodeOrNull(mixed)
+        assertEquals(listOf("aa"), doc!!.entries.map { it.token }, "the readable entry still decodes")
+        assertEquals(1, doc.opaqueEntries.size, "the unreadable entry is kept, not discarded")
+
+        // And it survives a re-encode: dropping it would delete somebody's signer_sk, which is the
+        // exact data loss this class exists to prevent.
+        assertTrue(ConcordInviteList.encode(doc).contains("keepme"), "unreadable entry lost on re-encode")
+    }
+
+    @Test
+    fun aMergeCarriesUnreadableEntriesThrough() {
+        val base = ConcordInviteList.decodeOrNull("""{"entries":[{"token":{"v":7},"mark":"opaque"}],"tombstones":[]}""")!!
+        val patch = ConcordInviteListDocument(entries = listOf(ConcordInviteListEntry("t", "sk", "c", "u")))
+
+        val merged = ConcordInviteList.merge(base, patch)
+
+        assertEquals(listOf("t"), merged.entries.map { it.token })
+        // We cannot read it, so we are in no position to decide it is disposable.
+        assertTrue(ConcordInviteList.encode(merged).contains("opaque"), "merge dropped an unreadable entry")
+    }
+
+    @Test
     fun anUnreadableListIsDistinguishableFromAnEmptyOne() {
         // The whole point of the null: a caller must be able to tell "I could not read it" from
         // "there is nothing in it". Publishing a merge onto the latter is fine; onto the former it
