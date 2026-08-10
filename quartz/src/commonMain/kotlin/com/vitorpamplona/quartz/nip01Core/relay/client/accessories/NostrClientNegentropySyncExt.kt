@@ -77,6 +77,18 @@ class NegentropySyncResult(
     val downloaded: Int,
     val windows: Int,
     val peerCap: Long? = null,
+    /**
+     * Ids the reconcile named that `wantId` declined, so no `REQ` was ever
+     * issued for them. Always `0` when no predicate was passed.
+     *
+     * Reported apart from [downloaded] and from [needCount] on purpose:
+     * [needCount] stays the honest protocol diff (what the relay has that the
+     * local set lacks) whether or not the caller chose to fetch it, and a
+     * skipped id was never a download. Folding either way would leave a caller
+     * unable to tell "my predicate is doing nothing" from "my predicate is
+     * eating everything" — and both are silent.
+     */
+    val skipped: Int = 0,
 )
 
 /**
@@ -151,6 +163,26 @@ class NegentropySyncResult(
  *   `limitation.max_subscriptions`; e.g. strfry defaults to 20) and exceeding the
  *   cap can wedge the connection, not just fail the extra REQ — size the two knobs
  *   to fit the target relay.
+ * @param wantId            optional gate consulted for every id the reconcile names,
+ *   BEFORE the `REQ` that would download it. Return `false` and the id is dropped
+ *   from the fetch queue and counted in [NegentropySyncResult.skipped]; the
+ *   reconcile itself is untouched, so [NegentropySyncResult.needCount] still
+ *   reports the true diff. Called from the reconciler coroutines (possibly
+ *   several at once when `reconcileConcurrency > 1`), so it must be cheap and
+ *   thread-safe — a membership test, not a query.
+ *
+ *   The case this exists for: a caller whose store will refuse an id no matter
+ *   how often it arrives. A mirror that keeps only the newest version of a
+ *   replaceable event is offered every relay's older copy on every sync, and
+ *   without a hook here the only place to decline is after the body is already
+ *   on the wire. `onEvent` is too late to save the bytes.
+ *
+ *   **It does not cover a window handed to [onUnreconcilableWindow].** That
+ *   window is drained by the caller over `REQ`, and a `REQ` names no ids before
+ *   it streams bodies, so declined events in such a window arrive anyway and are
+ *   not counted in [NegentropySyncResult.skipped]. Rare — it takes a single
+ *   second denser than the relay's cap — but a caller treating the gate as an
+ *   absolute bound on what it can receive would be wrong.
  * @param onProgress        optional `(needSoFar, downloaded)` ticks as work proceeds.
  * @param onEvent           called once per distinct event, serially, from the single
  *   delivery consumer coroutine (not the relay reader thread) — so it never overlaps
@@ -170,10 +202,12 @@ suspend fun INostrClient.negentropySync(
     localIndex: NegentropyLocalIndex? = null,
     targetWindow: Int = 0,
     onUnreconcilableWindow: (suspend (Filter) -> Unit)? = null,
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: suspend (Event) -> Unit,
 ): NegentropySyncResult {
     val need = AtomicInt(0)
+    val skipped = AtomicInt(0)
     val windows = AtomicInt(0)
     var downloaded = 0
     var peerCap: Long? = null
@@ -213,6 +247,8 @@ suspend fun INostrClient.negentropySync(
                             // single consumer loop below so the user callback is never
                             // invoked from two coroutines at once.
                             onNeed = { need.addAndFetch(it) },
+                            onSkipped = { skipped.addAndFetch(it) },
+                            wantId = wantId,
                             deliver = { events.send(it) },
                         )
                     } finally {
@@ -241,6 +277,7 @@ suspend fun INostrClient.negentropySync(
         downloaded = downloaded,
         windows = windows.load(),
         peerCap = peerCap,
+        skipped = skipped.load(),
     )
 }
 
@@ -257,6 +294,7 @@ suspend fun INostrClient.negentropySync(
     localIndex: NegentropyLocalIndex? = null,
     targetWindow: Int = 0,
     onUnreconcilableWindow: (suspend (Filter) -> Unit)? = null,
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: suspend (Event) -> Unit,
 ): NegentropySyncResult =
@@ -273,6 +311,7 @@ suspend fun INostrClient.negentropySync(
         localIndex = localIndex,
         targetWindow = targetWindow,
         onUnreconcilableWindow = onUnreconcilableWindow,
+        wantId = wantId,
         onProgress = onProgress,
         onEvent = onEvent,
     )
@@ -342,6 +381,14 @@ suspend fun INostrClient.negentropySyncOrFetch(
     localEntries: List<IdAndTime> = emptyList(),
     localIndex: NegentropyLocalIndex? = null,
     targetWindow: Int = 0,
+    /**
+     * Passed straight to [negentropySync]. Note it does NOT apply to the paged
+     * fallback: a `REQ` names no ids before it streams bodies, so there is
+     * nothing to gate there. A caller relying on this to bound its downloads
+     * should read [NegentropyOrFetchResult.pagedFallback] and expect the
+     * suppressed ids to arrive after all when a window pages.
+     */
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: suspend (Event) -> Unit,
 ): NegentropyOrFetchResult {
@@ -397,6 +444,7 @@ suspend fun INostrClient.negentropySyncOrFetch(
                         if (accept(event)) onProgress?.invoke(delivered, delivered)
                     }
                 },
+                wantId = wantId,
                 onProgress = onProgress,
             ) { accept(it) }
         NegentropyOrFetchResult(
@@ -440,6 +488,7 @@ suspend fun INostrClient.negentropySyncOrFetch(
     localEntries: List<IdAndTime> = emptyList(),
     localIndex: NegentropyLocalIndex? = null,
     targetWindow: Int = 0,
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: suspend (Event) -> Unit,
 ): NegentropyOrFetchResult =
@@ -455,9 +504,52 @@ suspend fun INostrClient.negentropySyncOrFetch(
         localEntries = localEntries,
         localIndex = localIndex,
         targetWindow = targetWindow,
+        wantId = wantId,
         onProgress = onProgress,
         onEvent = onEvent,
     )
+
+/**
+ * Decides which of the ids a reconcile named are actually worth a `REQ`.
+ *
+ * Small and separate because it is the only place in the download path where
+ * an id can still be declined for free, and because the three things it does
+ * are each easy to get wrong in a lambda nobody can call from a test: apply
+ * the predicate, count what was dropped, and refuse to emit an empty batch.
+ *
+ * [keep] runs on the reconciler coroutines, so with `reconcileConcurrency > 1`
+ * it is called concurrently — hence the counting goes through [onSkipped],
+ * which the caller makes atomic, rather than a field here.
+ *
+ * **It is applied to a whole reconcile round's ids, before they are chunked
+ * into fetch batches.** Gating after the chunking instead would keep the batch
+ * COUNT and shrink every one of them: at the density this exists for (a mirror
+ * declining most of what it is offered) a `fetchBatch` of 500 would become a
+ * hundred `REQ`s of five ids apiece, each with its own EOSE round trip —
+ * turning a bandwidth saving into a latency regression.
+ */
+internal class NeedGate(
+    private val wantId: ((HexKey) -> Boolean)?,
+    private val onSkipped: (Int) -> Unit,
+) {
+    /**
+     * The subset of [batch] to download. Empty when everything was declined —
+     * deliberately NOT null: the caller's chunk loop already does nothing with
+     * an empty list, and a nullable return here invites
+     * `gate?.keep(ids) ?: ids`, which reads as "no gate, keep everything" and
+     * silently means "everything was declined, so send everything". That exact
+     * elvis collapsed the fully-declining case into a full download once.
+     *
+     * With no predicate this returns [batch] itself — the unfiltered sync is
+     * the common case and must not pay a copy for a feature it is not using.
+     */
+    fun keep(batch: List<HexKey>): List<HexKey> {
+        val wanted = if (wantId == null) batch else batch.filter(wantId)
+        val dropped = batch.size - wanted.size
+        if (dropped > 0) onSkipped(dropped)
+        return wanted
+    }
+}
 
 /**
  * The whole-sync pipeline: a single pool of [maxConcurrentReqs] download workers
@@ -494,6 +586,8 @@ private suspend fun INostrClient.syncPipeline(
     targetWindow: Int,
     onWindow: () -> Unit,
     onNeed: (Int) -> Unit,
+    onSkipped: (Int) -> Unit,
+    wantId: ((HexKey) -> Boolean)?,
     onPeerCap: ((Long) -> Unit)?,
     onUnreconcilableWindow: (suspend (Filter) -> Unit)?,
     deliver: suspend (Event) -> Unit,
@@ -526,6 +620,9 @@ private suspend fun INostrClient.syncPipeline(
         onHave = {},
         onPeerCap = onPeerCap,
         onUnreconcilableWindow = onUnreconcilableWindow,
+        // The gate is applied inside the reconcile, before these batches are
+        // cut — see NeedGate — so by here every id is one we want.
+        gate = NeedGate(wantId, onSkipped),
         sendNeedBatch = { batch -> idBatches.send(batch) },
         sendHaveBatch = null,
     )
@@ -583,6 +680,9 @@ internal suspend fun reconcileWindows(
     // that hit the window, so a slow drain holds that reconciler — with
     // reconcileConcurrency = 1 the rest of the sweep waits for it.
     onUnreconcilableWindow: (suspend (Filter) -> Unit)? = null,
+    // Applied to each round's need ids before they are chunked. Null for the
+    // callers that hand the ids straight to their own consumer.
+    gate: NeedGate? = null,
     sendNeedBatch: suspend (List<HexKey>) -> Unit,
     sendHaveBatch: (suspend (List<HexKey>) -> Unit)?,
 ) = coroutineScope {
@@ -703,6 +803,7 @@ internal suspend fun reconcileWindows(
                             fetchBatch = batchSize,
                             onNeed = onNeed,
                             onHave = onHave,
+                            gate = gate,
                             sendNeedBatch = sendNeedBatch,
                             sendHaveBatch = sendHaveBatch,
                         )
@@ -1032,6 +1133,7 @@ private suspend fun INostrClient.reconcileStreaming(
     fetchBatch: Int,
     onNeed: (Int) -> Unit,
     onHave: (Int) -> Unit,
+    gate: NeedGate? = null,
     sendNeedBatch: suspend (List<HexKey>) -> Unit,
     sendHaveBatch: (suspend (List<HexKey>) -> Unit)?,
 ): ReconcileOutcome {
@@ -1170,13 +1272,19 @@ private suspend fun INostrClient.reconcileStreaming(
                     val result = session.processMessage(frame.payload)
                     val needIds = result.needIds
                     if (needIds.isNotEmpty()) {
+                        // Counted before the gate: this is the protocol diff, and
+                        // it is true whether or not the caller wants to fetch it.
                         onNeed(needIds.size)
+                        // Gated before the chunking, so a selective predicate
+                        // yields FEWER full batches rather than the same number
+                        // of nearly-empty ones — see NeedGate.
+                        val wanted = if (gate == null) needIds else gate.keep(needIds)
                         var i = 0
-                        while (i < needIds.size) {
-                            val end = min(i + fetchBatch, needIds.size)
+                        while (i < wanted.size) {
+                            val end = min(i + fetchBatch, wanted.size)
                             // Copy each batch so the frame's full id list can be freed
                             // as soon as it is chunked; suspends under back-pressure.
-                            sendNeedBatch(ArrayList(needIds.subList(i, end)))
+                            sendNeedBatch(ArrayList(wanted.subList(i, end)))
                             i = end
                         }
                     }
