@@ -361,6 +361,123 @@ class NostrClientNegentropySyncTest : RelayClientTest() {
         }
 
     /**
+     * `wantId` declines ids BEFORE the download REQ, so the events never cross
+     * the wire — the point of putting the hook here rather than at `onEvent`.
+     *
+     * The assertion that matters is the one on the recorded `REQ` filters: a
+     * gate that merely dropped events after delivery would satisfy every other
+     * check in this test while saving nothing.
+     */
+    @Test
+    fun wantIdSkipsIdsBeforeTheyAreEverRequested() =
+        runBlocking {
+            // Every id the relay was actually asked for, straight off the wire.
+            val requested = java.util.Collections.synchronizedList(mutableListOf<String>())
+            val recording =
+                object : PassThroughPolicy() {
+                    override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> {
+                        cmd.filters.forEach { f -> f.ids?.let { requested.addAll(it) } }
+                        return PolicyResult.Accepted(cmd)
+                    }
+                }
+
+            val hub = InProcessRelays(defaultPolicy = { recording })
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client = NostrClient(hub, scope)
+            try {
+                val url = RelayUrlNormalizer.normalize("ws://127.0.0.1:7791/")
+                val events = (1..20).map { SyntheticEvents.fakeEvent(idSeed = it, kind = 1) }
+                hub.getOrCreate(url).preload(events)
+
+                // Decline the first ten by id.
+                val unwanted = events.take(10).map { it.id }.toSet()
+
+                val got = mutableListOf<Event>()
+                val result =
+                    withTimeout(30_000) {
+                        client.negentropySync(
+                            relay = url,
+                            filter = Filter(kinds = listOf(1)),
+                            idleTimeoutMs = 10_000L,
+                            wantId = { it !in unwanted },
+                        ) { got.add(it) }
+                    }
+
+                assertEquals(10, got.size, "only the wanted half is delivered")
+                assertTrue(got.none { it.id in unwanted }, "no declined event was delivered")
+                assertEquals(10, result.downloaded)
+                assertEquals(10, result.skipped, "the declined ids are reported apart from the download count")
+                assertEquals(
+                    20,
+                    result.needCount,
+                    "needCount stays the honest protocol diff — the relay really did have all 20 that we lacked",
+                )
+
+                // The whole point: the declined ids were never asked for.
+                assertTrue(
+                    requested.none { it in unwanted },
+                    "a declined id must never reach a REQ; requested = ${requested.filter { it in unwanted }}",
+                )
+                // Every wanted id WAS asked for — so the gate declined the right
+                // half rather than simply starving the download. Asserted as a
+                // subset rather than a count because negentropySync also opens a
+                // keep-alive subscription carrying a sentinel id.
+                assertTrue(
+                    requested.containsAll(events.drop(10).map { it.id }),
+                    "every wanted id should still have been requested",
+                )
+            } finally {
+                client.disconnect()
+                scope.cancel()
+                hub.close()
+            }
+        }
+
+    /** With no `wantId` nothing changes: every id is fetched and `skipped` is 0. */
+    @Test
+    fun withoutWantIdEveryIdIsStillRequested() =
+        runBlocking {
+            defaultRelay.preload(SyntheticEvents.batch(12, kind = 1))
+
+            val got = mutableListOf<Event>()
+            val result =
+                withTimeout(20_000) {
+                    client.negentropySync(
+                        relay = defaultRelayUrl,
+                        filter = Filter(kinds = listOf(1)),
+                    ) { got.add(it) }
+                }
+
+            assertEquals(12, got.size)
+            assertEquals(0, result.skipped, "no predicate means nothing is ever skipped")
+        }
+
+    /**
+     * A gate that declines everything must finish cleanly rather than hang: the
+     * empty batches are dropped instead of being queued as REQs for no ids.
+     */
+    @Test
+    fun wantIdDecliningEverythingDownloadsNothingAndStillCompletes() =
+        runBlocking {
+            defaultRelay.preload(SyntheticEvents.batch(15, kind = 1))
+
+            val got = mutableListOf<Event>()
+            val result =
+                withTimeout(20_000) {
+                    client.negentropySync(
+                        relay = defaultRelayUrl,
+                        filter = Filter(kinds = listOf(1)),
+                        wantId = { false },
+                    ) { got.add(it) }
+                }
+
+            assertTrue(got.isEmpty(), "nothing was wanted, so nothing is delivered")
+            assertEquals(0, result.downloaded)
+            assertEquals(15, result.skipped)
+            assertEquals(15, result.needCount, "the reconcile still saw the full diff")
+        }
+
+    /**
      * On a relay that reconciles fine, [negentropySyncOrFetch] uses negentropy and
      * does not page.
      */
