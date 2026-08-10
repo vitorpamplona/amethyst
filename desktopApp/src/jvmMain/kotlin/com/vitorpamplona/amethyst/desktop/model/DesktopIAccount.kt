@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListSt
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesSensitiveContentSettings
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
@@ -64,6 +65,7 @@ import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapCache
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
@@ -92,10 +94,41 @@ class DesktopIAccount(
     private val scope: CoroutineScope,
     private val accountRelays: DesktopAccountRelays? = null,
     val dmInboxResolver: DmInboxRelayResolver? = null,
-) : IAccount {
+) : IAccount,
+    UserFinderAccount {
     override val signer: NostrSigner = NostrSignerWithClientTag(accountState.signer, CLIENT_TAG_NAME)
 
     override val pubKey: String = accountState.pubKeyHex
+
+    // UserFinderAccount — Desktop's relay-hint view for the shared per-user
+    // metadata subscription layer. Desktop has no separate indexer/search relay
+    // lists nor a NIP-85 trust provider, so it routes discovery through its
+    // connected relays + NIP-65 outbox and degrades trust/reports to null/empty
+    // (contact-card ranking + report loading are best-effort here — see
+    // UserFinderAccount).
+    override val userFinderPubkeyHex: HexKey get() = pubKey
+
+    override fun indexRelays(): Set<NormalizedRelayUrl> = relayManager.connectedRelays.value
+
+    override fun outboxHomeRelays(): Set<NormalizedRelayUrl> = nip65RelayList.allFlowNoDefaults.value + relayManager.connectedRelays.value
+
+    override fun searchRelays(): Set<NormalizedRelayUrl> = relayManager.connectedRelays.value
+
+    // Desktop has no merged follow/mine/search relay-list subsystem; route
+    // missing-event discovery through the connected relays (same degrade path
+    // as the other hints above).
+    override fun followPlusAllMineWithSearchRelays(): Set<NormalizedRelayUrl> = relayManager.connectedRelays.value
+
+    override fun commonRelays(): Set<NormalizedRelayUrl> = relayManager.connectedRelays.value
+
+    override fun cardHomeRelays(): Set<NormalizedRelayUrl> = nip65RelayList.allFlowNoDefaults.value
+
+    override fun trustProvider(): ServiceProviderTag? = null
+
+    // Desktop has no NIP-85 rank/follower providers wired (same as trustProvider).
+    override fun followerCountProvider(): ServiceProviderTag? = null
+
+    override fun declaredFollowsByOutboxRelay(): Map<NormalizedRelayUrl, Set<HexKey>> = emptyMap()
 
     // ----- State Classes (pin important notes via strong refs for GC retention) -----
 
