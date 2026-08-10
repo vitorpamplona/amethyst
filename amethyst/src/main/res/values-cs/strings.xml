@@ -3977,6 +3977,8 @@
     <string name="resource_usage_send_section">Sdílet s vývojáři</string>
     <string name="resource_usage_send_explanation">Pokud se zdá, že Amethyst spotřebovává baterii nebo data, můžete tento report odeslat vývojářům v šifrované DM. Obsahuje pouze čísla na této obrazovce a technická počítadla za nimi — žádné příspěvky, kontakty ani podrobnosti o prohlížení. Nic se neodešle, dokud v obrazovce zprávy neklepnete na Odeslat.</string>
     <string name="resource_usage_send_button">Odeslat report přes DM</string>
+    <string name="resource_usage_copy_button">Kopírovat</string>
+    <string name="resource_usage_share_button">Sdílet</string>
     <string name="resource_usage_alert_title">Zjištěno vysoké využití prostředků</string>
     <string name="resource_usage_alert_message">Amethyst nedávno spotřeboval více, než se očekávalo: %1$s. Chcete vývojářům odeslat report o využití v šifrované DM? Před odesláním čehokoli uvidíte celý report.</string>
     <string name="resource_usage_reason_bg_data">%1$s mobilních dat na pozadí za jeden den</string>

@@ -3839,6 +3839,8 @@
     <string name="resource_usage_send_section">Dela med utvecklarna</string>
     <string name="resource_usage_send_explanation">Om Amethyst verkar dra batteri eller data kan du skicka den här rapporten till utvecklarna i ett krypterat DM. Den innehåller bara siffrorna på den här skärmen och de tekniska räknarna bakom dem — inga inlägg, kontakter eller surfdetaljer. Ingenting skickas förrän du trycker på Skicka i meddelandeskärmen.</string>
     <string name="resource_usage_send_button">Skicka rapport via DM</string>
+    <string name="resource_usage_copy_button">Kopiera</string>
+    <string name="resource_usage_share_button">Dela</string>
     <string name="resource_usage_alert_title">Hög resursanvändning upptäckt</string>
     <string name="resource_usage_alert_message">Amethyst förbrukade mer än väntat nyligen: %1$s. Vill du skicka en användningsrapport till utvecklarna i ett krypterat DM? Du får se hela rapporten innan något skickas.</string>
     <string name="resource_usage_reason_bg_data">%1$s mobildata i bakgrunden på en dag</string>

@@ -1949,6 +1949,7 @@
     </plurals>
     <string name="relay_purpose_browsing">Stöbern</string>
     <string name="relay_purpose_media">Medien</string>
+    <string name="relay_purpose_tags">Hashtags</string>
     <string name="relay_purpose_topics">Themen</string>
     <string name="relay_purpose_thread">Unterhaltung</string>
     <string name="relay_purpose_search">Suche</string>
@@ -1979,8 +1980,10 @@
     <string name="relay_explain_geohash_chats">Standortbasierte Räume für die Gebiete, denen du folgst, abgefragt bei den Relays, die sie führen.</string>
     <string name="relay_explain_live_chat">Chat und Zap-Ziele, die an Live-Streams hängen, die du geöffnet hast oder denen du folgst.</string>
     <string name="relay_purpose_dm_inbox">DM-Posteingang</string>
+    <string name="relay_purpose_your_wallet">Wallet</string>
     <string name="relay_purpose_nutzap_inbox">Nutzap-Posteingang</string>
     <string name="relay_purpose_mint_directory">Mint-Verzeichnis</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
     <string name="relay_purpose_community_chats">Community-Chats</string>
     <string name="relay_purpose_community_feeds">Community-Feeds</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
@@ -2017,6 +2020,7 @@
         <item quantity="one">%1$d Filter ist noch nicht zugeordnet</item>
         <item quantity="other">%1$d Filter sind noch nicht zugeordnet</item>
     </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
     <string name="active_subs_unattributed">Keinem Konto zugeordnet</string>
     <string name="active_subs_no_entity">Alle</string>
     <string name="active_subs_scope_global">Jeder</string>
@@ -2226,13 +2230,17 @@
     <string name="settings_section_home_tabs">Sichtbare Tabs</string>
     <string name="settings_section_home_content_types">Inhalte im Feed</string>
     <string name="home_content_type_text_notes">Textnotizen</string>
+    <string name="home_content_type_reposts">Reposts</string>
     <string name="home_content_type_comments">Kommentare &amp; Antworten</string>
     <string name="home_content_type_pictures">Bilder</string>
+    <string name="home_content_type_videos">Videos</string>
     <string name="home_content_type_shorts">Kurzvideos</string>
     <string name="home_content_type_articles">Artikel</string>
     <string name="home_content_type_wiki">Wiki-Seiten</string>
+    <string name="home_content_type_highlights">Highlights</string>
     <string name="home_content_type_polls">Umfragen</string>
     <string name="home_content_type_classifieds">Kleinanzeigen</string>
+    <string name="home_content_type_torrents">Torrents</string>
     <string name="home_content_type_voice">Sprachnachrichten</string>
     <string name="home_content_type_live_activities">Live-Aktivitäten</string>
     <string name="home_content_type_ephemeral_chat">Ephemere Chats</string>
@@ -2242,6 +2250,7 @@
     <string name="home_content_type_attestations">Attestierungen</string>
     <string name="home_content_type_nips">NIP-Entwürfe</string>
     <string name="home_content_type_music">Musik &amp; Audio</string>
+    <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_fundraisers">Spendenaktionen</string>
     <string name="settings_section_reminders">Erinnerungen</string>
     <string name="wallet_connect">Wallet Verbindung</string>
@@ -3597,6 +3606,7 @@
     <string name="git_repo_settings_topics">Themen (durch Komma getrennt)</string>
     <string name="git_repo_settings_save">Speichern</string>
     <string name="git_repositories">Git Repositories</string>
+    <string name="highlights">Highlights</string>
     <string name="git_repositories_search_open">Repositories filtern</string>
     <string name="git_repositories_search_close">Filter schließen</string>
     <string name="git_repositories_search_placeholder">Nach Name, Thema, Host, Betreuer filtern…</string>
@@ -3831,6 +3841,8 @@
     <string name="resource_usage_send_section">Mit den Entwicklern teilen</string>
     <string name="resource_usage_send_explanation">Wenn Amethyst Akku oder Daten zu verbrauchen scheint, kannst du diesen Bericht in einer verschlüsselten DM an die Entwickler senden. Er enthält nur die Zahlen auf diesem Bildschirm und die technischen Zähler dahinter — keine Beiträge, Kontakte oder Browserdetails. Es wird nichts gesendet, bis du im Nachrichtenbildschirm auf Senden tippst.</string>
     <string name="resource_usage_send_button">Bericht per DM senden</string>
+    <string name="resource_usage_copy_button">Kopieren</string>
+    <string name="resource_usage_share_button">Teilen</string>
     <string name="resource_usage_alert_title">Hohe Ressourcennutzung erkannt</string>
     <string name="resource_usage_alert_message">Amethyst hat in letzter Zeit mehr als erwartet verbraucht: %1$s. Möchtest du einen Nutzungsbericht in einer verschlüsselten DM an die Entwickler senden? Du siehst den vollständigen Bericht, bevor etwas gesendet wird.</string>
     <string name="resource_usage_reason_bg_data">%1$s mobile Daten im Hintergrund an einem Tag</string>
@@ -4636,6 +4648,7 @@
     <string name="new_conversation_location_pro_2">Bitchat-kompatibel; erreicht Nutzer in der Nähe auf denselben Relays.</string>
     <string name="new_conversation_location_con_1">Öffentlich und flüchtig — kein Verlauf, jeder in der Zelle kann es lesen.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_job_board_title">Backlog</string>
     <string name="buzz_workflow_runs_title">Workflow-Läufe</string>
     <string name="buzz_agent_work_title">Agentenarbeit</string>
     <string name="buzz_workflow_new_run">Neuer Lauf</string>
@@ -4646,6 +4659,7 @@
     <string name="buzz_workflow_gate_needs_you">Benötigt deine Genehmigung</string>
     <string name="buzz_workflow_gate_awaiting">Wartet auf Genehmigung</string>
     <string name="buzz_workflow_no_description">(keine Beschreibung)</string>
+    <string name="buzz_workflow_id_prefix">Workflow: %1$s</string>
     <string name="buzz_workflow_by">von</string>
     <string name="buzz_workflow_waiting_on">wartet auf</string>
     <string name="buzz_workflow_readonly_approver">Du bist der Genehmigende, aber diese Anmeldung kann keine Entscheidung signieren.</string>
@@ -4681,11 +4695,13 @@
     <string name="buzz_workflow_no_defs_hint">Noch keine Workflows. Öffne das Menü oben und wähle „Neue Definition…“, um einen zu erstellen, und löse ihn dann aus.</string>
     <string name="buzz_workflow_task_label">Was soll er tun?</string>
     <string name="buzz_workflow_trigger_run">Lauf auslösen</string>
+    <string name="buzz_workflow_picker_label">Workflow</string>
     <string name="buzz_workflow_picker_empty">Noch keine Workflows definiert</string>
     <string name="buzz_workflow_picker_choose">Workflow auswählen</string>
     <string name="buzz_workflow_new_definition">Neue Definition…</string>
     <string name="buzz_workflow_def_title">Neue Workflow-Definition</string>
     <string name="buzz_workflow_def_desc">Benennt ihn für den Kanal und veröffentlicht sein YAML-Rezept (kind-30620). Ein echtes Buzz-Relay führt das YAML aus. Selbst gehostet führt der Runner seinen konfigurierten Befehl aus — hier benennt und katalogisiert die Definition den Lauf nur.</string>
+    <string name="buzz_workflow_def_name">Name</string>
     <string name="buzz_workflow_def_name_hint">build-und-test</string>
     <string name="buzz_workflow_def_yaml">YAML-Rezept</string>
     <string name="buzz_workflow_def_publish_failed">Die Definition konnte nicht veröffentlicht werden — prüfe, ob du in diesem Workspace posten kannst.</string>
