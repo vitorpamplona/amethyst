@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryStat
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.service.BundledUpdate
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 
@@ -46,8 +48,9 @@ class AddressableAuthorRelayLoaderSubAssembler(
     val userFinder: UserFinderFilterAssembler,
 ) : IEoseManager {
     // Private monitor: @Synchronized locks on `this`, which leaves the instance's monitor
-    // reachable to anything holding a reference to this assembler.
-    private val lock = Any()
+    // reachable to anything holding a reference to this assembler. KmpLock (not `synchronized`)
+    // because this file lives in commonMain and must compile for the iOS targets too.
+    private val lock = KmpLock()
 
     // Only ever touched while holding [lock]. See commit() and destroy().
     private var activeSubscriptions: Set<UserFinderQueryState> = emptySet()
@@ -92,7 +95,7 @@ class AddressableAuthorRelayLoaderSubAssembler(
      * never call back into this class. Revisit if that changes.
      */
     private fun commit(needed: Set<UserFinderQueryState>) {
-        synchronized(lock) {
+        lock.withLock {
             if (destroyed) return
 
             userFinder.subscribe((needed - activeSubscriptions).toList())
@@ -103,7 +106,7 @@ class AddressableAuthorRelayLoaderSubAssembler(
     }
 
     override fun destroy() {
-        synchronized(lock) {
+        lock.withLock {
             destroyed = true
             bundler.cancel()
             userFinder.unsubscribe(activeSubscriptions.toList())

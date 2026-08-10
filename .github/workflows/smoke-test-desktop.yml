@@ -92,13 +92,29 @@ jobs:
           chmod +x scripts/relax-deb-libicu.sh
           scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
 
+      # Mirrors the same step in create-release.yml so this job exercises the
+      # exact .deb release ships. libskiko-linux-arm64.so has libEGL.so.1 in
+      # DT_NEEDED and jpackage does not scan lib/app/ for Depends, so without
+      # this the arm64 app dies at startup with
+      #   UnsatisfiedLinkError: libEGL.so.1: cannot open shared object file
+      # See scripts/add-deb-libegl-dep.sh for the full rationale.
+      - name: Add libegl1 dep to arm64 .deb
+        run: |
+          set -euo pipefail
+          chmod +x scripts/add-deb-libegl-dep.sh
+          scripts/add-deb-libegl-dep.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
       - name: Install .deb
         run: |
+          # Installed via apt (not `dpkg -i`) so the .deb's declared Depends are
+          # actually resolved — that is what pulls in libegl1 on the arm64
+          # runner, which does not ship it preinstalled.
+          #
           # jpackage's post-install script runs xdg-desktop-menu which fails
           # on CI runners ("No writable system menu directory"). The files are
           # extracted successfully; only the menu registration fails. Allow the
-          # dpkg error, then verify the binary was actually installed.
-          sudo dpkg -i desktopApp/build/compose/binaries/main-release/deb/*.deb || true
+          # install error, then verify the binary was actually installed.
+          sudo apt-get install -y ./desktopApp/build/compose/binaries/main-release/deb/*.deb || true
           echo "Installed files:"
           dpkg -L amethyst | head -30
           # Fail if the binary wasn't actually extracted
