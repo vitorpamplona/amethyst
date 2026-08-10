@@ -40,6 +40,10 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
 import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteList
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
@@ -164,6 +168,83 @@ class AccountConcordActions(
         return community.communityIdHex
     }
 
+    // ---- CORD-05 Invite List (kind 13303) -------------------------------------
+
+    /**
+     * This account's Invite List: the creator's private, self-encrypted record of every link they
+     * minted (`token` + `signer_sk` per entry). Empty when none was ever published.
+     *
+     * Fetched rather than read from [LocalCache] because nothing subscribes to 13303 — it is
+     * bookkeeping the user never sees, needed only at mint and at rotation.
+     */
+    private suspend fun readConcordInviteList(relays: Set<NormalizedRelayUrl>): ConcordInviteListDocument {
+        if (relays.isEmpty()) return ConcordInviteListDocument.EMPTY
+        val filter = Filter(kinds = listOf(ConcordInviteListEvent.KIND), authors = listOf(account.signer.pubKey))
+        val newest =
+            account.client
+                .fetchAll(filters = relays.associateWith { listOf(filter) })
+                .maxByOrNull { it.createdAt }
+        return (newest as? ConcordInviteListEvent)?.decrypt(account.signer) ?: ConcordInviteListDocument.EMPTY
+    }
+
+    /**
+     * Merges [patch] into the published Invite List and republishes it. Read-merge-write, never
+     * overwrite: the list is replaceable and per-creator, so two of the user's devices minting
+     * concurrently would otherwise delete each other's `signer_sk` — and that secret is
+     * unrecoverable, orphaning the link at whatever epoch it was last refreshed to.
+     */
+    private suspend fun publishConcordInviteList(
+        patch: ConcordInviteListDocument,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        val publishTo = relays.ifEmpty { account.outboxRelays.flow.value }
+        if (publishTo.isEmpty()) return
+        val merged = ConcordInviteList.merge(readConcordInviteList(publishTo), patch)
+        account.client.publish(ConcordInviteListEvent.create(account.signer, merged, TimeUtils.now()), publishTo)
+    }
+
+    /**
+     * Re-posts every live link this account minted for [entry]'s community at its own coordinate,
+     * carrying the CURRENT epoch (CORD-05). The kind-33301 bundle is addressable and authored by the
+     * link signer, so this moves the link behind the same URL instead of orphaning it at a dead
+     * epoch — which is the whole premise stranded recovery rests on.
+     *
+     * Safe to call for every live link: recovery is ban-gated at the epoch being left, and a
+     * Refounding bans the members it removes on the way out, so a removed member's own recovery is
+     * refused even though their link now resolves.
+     */
+    private suspend fun refreshConcordInviteLinks(entry: ConcordCommunityListEntry): Int {
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
+        if (relays.isEmpty()) return 0
+        val now = TimeUtils.now()
+        val refreshed =
+            ConcordActions.inviteFor(
+                communityIdHex = entry.id,
+                ownerPubKey = entry.owner,
+                ownerSaltHex = entry.ownerSalt,
+                communityRootHex = entry.root,
+                rootEpoch = entry.rootEpoch,
+                name = entry.name,
+                relays = entry.relays,
+                controlPk = entry.controlPk,
+            )
+        var count = 0
+        for (link in readConcordInviteList(relays).entries) {
+            if (link.communityId != entry.id) continue
+            // An elapsed link can no longer be joined, so re-posting it would only resurrect a dead
+            // URL at a live epoch.
+            if (link.isExpired(now)) continue
+            runCatching {
+                account.client.publish(
+                    ConcordActions.remintBundleAt(link.signerSk.hexToByteArray(), link.token.hexToByteArray(), refreshed, now),
+                    relays,
+                )
+                count++
+            }.onFailure { Log.w("Concord", "invite refresh failed for ${entry.id}", it) }
+        }
+        return count
+    }
+
     /**
      * Mint a shareable invite link for a joined community and publish its
      * kind-33301 public bundle to the community relays. Returns the `…/invite/…`
@@ -209,6 +290,24 @@ class AccountConcordActions(
 
         val publishTo = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
         if (publishTo.isNotEmpty()) account.client.publish(minted.bundleEvent, publishTo)
+
+        // Record the link so a later Refounding can refresh THIS coordinate rather than orphaning it
+        // (CORD-05, kind 13303). Shared with amy and Armada, so any of the creator's clients can.
+        publishConcordInviteList(
+            ConcordInviteListDocument(
+                entries =
+                    listOf(
+                        ConcordInviteListEntry(
+                            token = minted.token.toHexKey(),
+                            signerSk = minted.linkSignerPrivKey.toHexKey(),
+                            communityId = entry.id,
+                            url = minted.url,
+                            createdAt = TimeUtils.now(),
+                        ),
+                    ),
+            ),
+            publishTo,
+        )
         return minted.url
     }
 
@@ -862,6 +961,14 @@ class AccountConcordActions(
         // 5. Adopt the new epoch ourselves. This rebuilds our session under the new root and
         //    re-folds the compacted Control Plane (with the ban), dropping the removed members.
         adoptConcordRoot(entry, newRoot, build.newEpoch, build.newControlKeys.address.hexToByteArray(), newControlRoot)
+
+        // 6. Move every link we minted to the new epoch. Without this the Refounding orphans them,
+        //    and a member it left out — no rekey blob, no message to miss — has no way back at all.
+        val moved =
+            account.concordChannelList.liveCommunities.value
+                .firstOrNull { it.id == communityId }
+                ?.let { refreshConcordInviteLinks(it) } ?: 0
+        Log.i("Concord") { "Refounding ${entry.id}: refreshed $moved invite link(s) to epoch ${build.newEpoch}" }
         return true
     }
 

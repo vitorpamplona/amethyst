@@ -61,7 +61,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
 
-// A cap, not a fixed size: QrCodeDrawer's own quiet zone (QR_MARGIN_PX in QrCodeDrawer.kt) is a
+// A cap, not a fixed size: QrCodeDrawer's own quiet zone (QR_QUIET_ZONE_MODULES in QrCodeDrawer.kt) is a
 // fixed pixel count subtracted from raw size.width, so its share of the tile grows as density
 // falls. Hard-sizing this call to a small dp value starved long-form naddr payloads of scannable
 // resolution on low-density screens. Deriving the size from the available column width keeps
