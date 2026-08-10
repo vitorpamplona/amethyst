@@ -114,6 +114,9 @@ class DesktopIAccount(
 
     override fun searchRelays(): Set<NormalizedRelayUrl> = relayManager.connectedRelays.value
 
+    // Desktop has no separate NIP-51 search relay list; degrade to connected relays.
+    override fun searchOnlyRelays(): Set<NormalizedRelayUrl> = relayManager.connectedRelays.value
+
     // Desktop has no merged follow/mine/search relay-list subsystem; route
     // missing-event discovery through the connected relays (same degrade path
     // as the other hints above).

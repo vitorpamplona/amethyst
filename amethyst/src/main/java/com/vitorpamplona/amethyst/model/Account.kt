@@ -32,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
-import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
@@ -382,7 +381,11 @@ class Account(
 
     override fun outboxHomeRelays(): Set<NormalizedRelayUrl> = nip65RelayList.allFlowNoDefaults.value + privateStorageRelayList.flow.value + localRelayList.flow.value
 
-    override fun searchRelays(): Set<NormalizedRelayUrl> = (trustedRelayList.flow.value + searchRelayList.flow.value.ifEmpty { DefaultSearchRelayList }).toSet()
+    // searchRelayList.flow already applies the DefaultSearchRelayList fallback internally
+    // (SearchRelayListState.normalizeSearchRelayListWithBackup), so no ifEmpty needed here.
+    override fun searchRelays(): Set<NormalizedRelayUrl> = (trustedRelayList.flow.value + searchRelayList.flow.value).toSet()
+
+    override fun searchOnlyRelays(): Set<NormalizedRelayUrl> = searchRelayList.flow.value
 
     override fun followPlusAllMineWithSearchRelays(): Set<NormalizedRelayUrl> = followPlusAllMineWithSearch.flow.value
 

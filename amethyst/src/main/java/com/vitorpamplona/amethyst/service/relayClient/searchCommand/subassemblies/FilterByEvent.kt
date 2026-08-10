@@ -45,9 +45,9 @@ fun filterByEvent(
 
             // loads threading that is event-based
             note.replyTo?.forEach { parentNote ->
-                if (parentNote !is AddressableNote && note.event == null) {
-                    potentialRelaysToFindEvent(LocalCache, note).ifEmpty { default }.forEach { relayUrl ->
-                        add(relayUrl, note.idHex)
+                if (parentNote !is AddressableNote && parentNote.event == null) {
+                    potentialRelaysToFindEvent(LocalCache, parentNote).ifEmpty { default }.forEach { relayUrl ->
+                        add(relayUrl, parentNote.idHex)
                     }
                 }
             }

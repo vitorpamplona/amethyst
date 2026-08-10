@@ -56,8 +56,17 @@ interface UserFinderAccount {
     /** Home/write relays used for outbox discovery (nip65 + private storage + local). */
     fun outboxHomeRelays(): Set<NormalizedRelayUrl>
 
-    /** Search relays (trusted + search), with the default fallback applied. */
+    /** Search relays (trusted + own search list), for the user-finder's search-tier fallback. */
     fun searchRelays(): Set<NormalizedRelayUrl>
+
+    /**
+     * Just this account's own NIP-51 search relay list — WITHOUT the trusted-relay
+     * union that [searchRelays] adds. This is the narrow set the per-note event
+     * finder fans "missing event" REQs to, matching the pre-extraction
+     * `account.searchRelayList` read (reusing [searchRelays] there would have
+     * unintentionally widened the fan-out to trusted relays).
+     */
+    fun searchOnlyRelays(): Set<NormalizedRelayUrl>
 
     /**
      * Follow + all-mine + search relays, used by the per-note event-finder to

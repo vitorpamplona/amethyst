@@ -115,7 +115,7 @@ fun filterMissingEvents(
                         add(relayUrl, key.note.idHex)
                     }
 
-                    key.account.searchRelays().forEach { relayUrl ->
+                    key.account.searchOnlyRelays().forEach { relayUrl ->
                         add(relayUrl, key.note.idHex)
                     }
                 }
