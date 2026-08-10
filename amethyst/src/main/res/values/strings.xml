@@ -322,6 +322,17 @@
     <string name="concord_invite_failed_incompatible">This invite link can\'t be opened. It may be outdated or already replaced by a newer one, or created with a newer version of the app. Ask for a fresh invite link.</string>
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
     <string name="concord_invite_failed_banned">This community has removed you. The link still works, but its member list does not admit you.</string>
+    <string name="concord_invite_links_title">Invite links</string>
+    <string name="concord_invite_links_action">Invite links…</string>
+    <string name="concord_invite_links_created">Created %1$s</string>
+    <string name="concord_invite_links_empty">You haven\'t created any invite links for this community yet. Links other admins created are managed on their own devices.</string>
+    <string name="concord_invite_links_unreadable">Your invite links couldn\'t be loaded, so none can be revoked right now. Check your connection and try again.</string>
+    <string name="concord_invite_revoke_action">Revoke link</string>
+    <string name="concord_invite_revoke_title">Revoke this link?</string>
+    <string name="concord_invite_revoke_explainer">Anyone still holding this link will no longer be able to join. People who already joined with it stay in the community. This can\'t be undone.</string>
+    <string name="concord_invite_revoke_confirm">Revoke</string>
+    <string name="concord_invite_revoked_ok">Invite link revoked.</string>
+    <string name="concord_invite_revoked_failed">The link couldn\'t be revoked. Check your connection and try again.</string>
     <string name="concord_invite_failed_expired">This invite link has expired and can no longer be used. Ask for a fresh link.</string>
     <string name="concord_invite_preview_unknown_name">Community name is only revealed after you join</string>
     <string name="concord_invite_preview_explainer">Joining connects to this invite\'s relays, publishes a join announcement signed by your account, and adds the community to your list. Nothing is sent until you tap Join.</string>

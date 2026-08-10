@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteList
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
@@ -337,6 +338,74 @@ class AccountConcordActions(
 
         if (publishTo.isNotEmpty()) account.client.publish(minted.bundleEvent, publishTo)
         return minted.url
+    }
+
+    /**
+     * Every link this account minted for [communityId] that is still live, newest first — the
+     * backing list for the invite-links screen.
+     *
+     * Null means the list could not be read (no relay answered, or the signer refused the decrypt),
+     * which the UI must show as an error rather than as "you have no links": telling a creator their
+     * leaked link doesn't exist is worse than telling them we couldn't check.
+     *
+     * Retired tokens are filtered out here rather than rendered as dead rows — [ConcordInviteList]
+     * already drops a tombstoned entry on merge, so a tombstoned entry only appears in the window
+     * between our revoke and the next merge.
+     */
+    suspend fun listConcordInviteLinks(communityId: String): List<ConcordInviteListEntry>? {
+        val list = readConcordInviteList() ?: return null
+        val tombstoned = list.tombstones.mapTo(HashSet()) { it.token }
+        return list.entries
+            .filter { it.communityId == communityId && it.token !in tombstoned }
+            .sortedByDescending { it.createdAt }
+    }
+
+    /**
+     * Retires the link [token] (CORD-05 §2): publishes a `vsk=9` tombstone at its coordinate, then
+     * records the retirement in the kind-13303 list. Returns false if the link could not be retired.
+     *
+     * No community permission is checked, deliberately. The coordinate is authored by the link
+     * signer, whose secret only the creator holds, so revoking is an act on your own key rather than
+     * on the community — and gating it on CREATE_INVITE would mean a demoted admin could no longer
+     * retire the links they had already handed out, which is precisely when they most need to.
+     *
+     * The wire tombstone goes first and the list second. That is the inverse of minting and it is
+     * deliberate: the entry holds the only copy of the `signer_sk` this needs, and a merge drops a
+     * tombstoned token's entry terminally, so recording first and then failing to publish would
+     * leave the link live with its signer gone and no way left to retire it. A failed list write is
+     * recoverable — the link is already dead on the wire, and the refresh path re-mints only a
+     * coordinate that still resolves Live.
+     */
+    suspend fun revokeConcordInvite(
+        communityId: String,
+        token: String,
+    ): Boolean {
+        if (!account.isWriteable()) return false
+        val entry =
+            account.concordChannelList.liveCommunities.value
+                .firstOrNull { it.id == communityId } ?: return false
+        val link =
+            readConcordInviteList()?.entries?.firstOrNull { it.token == token && it.communityId == communityId }
+                ?: run {
+                    Log.w("Concord") { "Cannot revoke $token: it is not in this account's invite list, so its link signer is unknown" }
+                    return false
+                }
+
+        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { account.outboxRelays.flow.value }
+        if (relays.isEmpty()) return false
+        val published =
+            runCatching {
+                account.client.publish(ConcordActions.revokeBundleAt(link.signerSk.hexToByteArray(), TimeUtils.now()), relays)
+                true
+            }.onFailure { Log.w("Concord", "invite revocation failed for $communityId", it) }.getOrDefault(false)
+        if (!published) return false
+
+        if (!publishConcordInviteList(ConcordInviteListDocument(tombstones = listOf(ConcordInviteListTombstone(token = token, communityId = communityId))))) {
+            // The link is already dead on the wire, so this is bookkeeping we can retry rather than a
+            // failed revocation. Reported as success for exactly that reason.
+            Log.w("Concord") { "Revoked $token on the wire but could not tombstone it in the invite list; a later revoke will record it" }
+        }
+        return true
     }
 
     /** Drop a joined Concord community from the private kind-13302 list by its id. */
