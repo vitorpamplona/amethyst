@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
+import com.vitorpamplona.amethyst.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -487,6 +488,11 @@ class NotificationFeedFilter(
         }
 
         val noteEvent = it.event
+
+        // Muted public chats contribute nothing to Notifications. This feed is recomputed
+        // live from LocalCache rather than being an append-only store, so unmuting brings
+        // these entries back on its own — no replay needed.
+        if (isMutedPublicChatMessage(noteEvent, account.settings.mutedPublicChats.value)) return false
 
         // Buzz DM: a group chat message in a `t=dm` channel whose 39000 participants include me. A Buzz
         // relay carries DM messages as either kind-9 (NIP-29 chat) or kind-40002 (stream message v2), and

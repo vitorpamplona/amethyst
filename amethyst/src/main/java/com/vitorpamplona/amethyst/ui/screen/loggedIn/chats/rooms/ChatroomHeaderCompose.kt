@@ -298,10 +298,22 @@ private fun ChannelRoomCompose(
         rowHasUnreadFlow(lastMessage, accountViewModel.account) ?: MutableStateFlow(false)
     }.collectAsStateWithLifecycle(false)
 
+    var menuOpen by remember { mutableStateOf(false) }
+    // Kept as a State (no `by`) so `.value` is read only inside the title and menu-text
+    // slots, confining mute-toggle invalidations to those scopes.
+    val mutedChats = accountViewModel.mutedPublicChatsFlow().collectAsStateWithLifecycle()
+
     ChannelName(
         channelIdHex = channel.idHex,
         channelPicture = channelPicture,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, MaterialSymbols.Public, R.string.public_chat, modifier) },
+        channelTitle = { modifier ->
+            ChannelTitleWithLabelInfo(
+                channelName,
+                if (channel.idHex in mutedChats.value) MaterialSymbols.NotificationsOff else MaterialSymbols.Public,
+                R.string.public_chat,
+                modifier,
+            )
+        },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
         hasNewMessages = hasNewMessages,
@@ -312,7 +324,31 @@ private fun ChannelRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(routeFor(channel)) },
+        onLongClick = { menuOpen = true },
     )
+
+    DropdownMenu(
+        expanded = menuOpen,
+        onDismissRequest = { menuOpen = false },
+    ) {
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringRes(
+                        if (channel.idHex in mutedChats.value) {
+                            R.string.unmute_notifications
+                        } else {
+                            R.string.mute_notifications
+                        },
+                    ),
+                )
+            },
+            onClick = {
+                accountViewModel.toggleMutedPublicChat(channel.idHex)
+                menuOpen = false
+            },
+        )
+    }
 }
 
 @Composable
