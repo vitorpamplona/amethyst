@@ -1525,9 +1525,11 @@ class AccountSettings(
 
             // Null means an older client rewrote the blob without this key — leave the
             // local set alone rather than treating "absent" as "unmute everything".
-            newSyncedSettings.chats.mutedPublicChats?.let { remote ->
-                mutedPublicChats.tryEmit(remote.toSet())
-            }
+            // The decision lives in mergeMutedPublicChats so it is unit-testable; this
+            // class cannot be constructed in a JVM test.
+            mutedPublicChats.tryEmit(
+                mergeMutedPublicChats(mutedPublicChats.value, newSyncedSettings.chats.mutedPublicChats),
+            )
 
             saveAccountSettings()
         }

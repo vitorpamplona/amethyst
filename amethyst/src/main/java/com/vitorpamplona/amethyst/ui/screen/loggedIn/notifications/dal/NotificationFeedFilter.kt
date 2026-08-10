@@ -489,9 +489,12 @@ class NotificationFeedFilter(
 
         val noteEvent = it.event
 
-        // Muted public chats contribute nothing to Notifications. This feed is recomputed
-        // live from LocalCache rather than being an append-only store, so unmuting brings
-        // these entries back on its own — no replay needed.
+        // Muted public chats contribute nothing to Notifications.
+        //
+        // NOTE: this filter is one-way. NotificationFeedFilter is an AdditiveFeedFilter, so
+        // applyFilter only ever runs over newly-arriving items — nothing re-scans LocalCache
+        // when the mute set changes. Entries suppressed while muted therefore do NOT come
+        // back on unmute until the tab is refreshed. Device-confirmed; see the design doc.
         if (isMutedPublicChatMessage(noteEvent, account.settings.mutedPublicChats.value)) return false
 
         // Buzz DM: a group chat message in a `t=dm` channel whose 39000 participants include me. A Buzz
@@ -557,7 +560,12 @@ class NotificationFeedFilter(
             noteEvent is RepostEvent || noteEvent is GenericRepostEvent
         ) {
             val target = it.replyTo?.lastOrNull()
-            if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) {
+            if (target != null &&
+                (
+                    account.isThreadMuted(account.resolveThreadRoot(target)) ||
+                        isMutedPublicChatMessage(target.event, account.settings.mutedPublicChats.value)
+                )
+            ) {
                 return false
             }
         }

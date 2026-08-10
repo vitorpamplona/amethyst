@@ -72,4 +72,37 @@ class MutedPublicChatsSyncTest {
             JsonMapper.toJson(AccountChatPreferencesInternal(emptyList(), otherOrder)),
         )
     }
+
+    // ---
+    // The merge decision itself, not just the decode.
+    //
+    // The decode tests above prove `null` and `[]` arrive distinguishable. These prove the
+    // merge ACTS on that distinction. Without them, collapsing the guard to
+    // `remote ?: emptyList()` — exactly the mistake the nullable default exists to prevent —
+    // leaves every other test in this file green.
+    // ---
+
+    @Test
+    fun absentKeyLeavesTheLocalMuteSetAlone() {
+        // An older client rewrote the blob and dropped the field. The local set must survive:
+        // AppSpecificState replays the cached backup on every launch, so a wipe here would
+        // repeat on every start.
+        assertEquals(setOf(channelA), mergeMutedPublicChats(setOf(channelA), null))
+    }
+
+    @Test
+    fun absentKeyOnAnEmptyLocalSetStaysEmpty() {
+        assertEquals(emptySet<String>(), mergeMutedPublicChats(emptySet(), null))
+    }
+
+    @Test
+    fun explicitEmptyListClearsTheLocalMuteSet() {
+        // A client that knows the field saying "unmute everything" must be obeyed.
+        assertEquals(emptySet<String>(), mergeMutedPublicChats(setOf(channelA), emptyList()))
+    }
+
+    @Test
+    fun remoteListReplacesTheLocalMuteSet() {
+        assertEquals(setOf(channelB), mergeMutedPublicChats(setOf(channelA), listOf(channelB)))
+    }
 }

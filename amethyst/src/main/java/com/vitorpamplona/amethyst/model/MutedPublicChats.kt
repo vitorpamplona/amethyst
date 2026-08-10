@@ -62,3 +62,20 @@ fun isMutedPublicChatMessage(
     val channelId = publicChatChannelIdOf(event) ?: return false
     return channelId in mutedChannels
 }
+
+/**
+ * The inbound-sync decision for the mute set, kept separate from [AccountSettings] so it can be
+ * tested: [AccountSettings] builds a default `AccountSyncedSettingsInternal`, whose language
+ * preferences call `Resources.getSystem()`, so it cannot be constructed in a JVM unit test.
+ *
+ * [remote] is `null` when an older client rewrote the NIP-78 blob without the key. The local set
+ * must survive that — and because `AppSpecificState` replays the cached backup event on every app
+ * start, treating absent as empty would re-clear the user's mutes on every single launch.
+ *
+ * An explicitly empty list is different: it is a real "unmute everything" from a client that knows
+ * the field, and is adopted.
+ */
+fun mergeMutedPublicChats(
+    local: Set<HexKey>,
+    remote: List<HexKey>?,
+): Set<HexKey> = remote?.toSet() ?: local

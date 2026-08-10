@@ -219,11 +219,20 @@ class EventNotificationConsumer(
         // Don't push-notify events this account authored.
         if (event.pubKey == account.signer.pubKey) return
 
-        // Drop reactions/zaps/reposts whose target note lives on a muted thread
-        // (matches the in-app feed, which mutes all four).
+        // Drop reactions/zaps/reposts whose target note lives on a muted thread, or in a
+        // public chat the user has silenced (matches the in-app feed, which mutes all four).
+        // Without the second check, muting a channel still let a like on your own message
+        // there notify you — the row's glyph promises silence, so it has to mean it.
         if (event is ReactionEvent || event is LnZapEvent || event is RepostEvent || event is GenericRepostEvent) {
             val target = LocalCache.getNoteIfExists(event)?.replyTo?.lastOrNull()
-            if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) return
+            if (target != null &&
+                (
+                    account.isThreadMuted(account.resolveThreadRoot(target)) ||
+                        isMutedPublicChatMessage(target.event, account.settings.mutedPublicChats.value)
+                )
+            ) {
+                return
+            }
         }
 
         when (event) {
