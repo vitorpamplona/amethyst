@@ -1632,8 +1632,6 @@ class AccountSettings(
     // muted public chats
     // ---
 
-    fun isPublicChatMuted(channelId: String) = mutedPublicChats.value.contains(channelId)
-
     fun toggleMutedPublicChat(channelId: String) {
         mutedPublicChats.update {
             if (channelId in it) it - channelId else it + channelId

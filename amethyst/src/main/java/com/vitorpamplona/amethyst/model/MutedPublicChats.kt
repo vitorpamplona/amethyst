@@ -22,18 +22,36 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 /**
- * The channel a mute decision applies to, or null when [event] is not a public-chat
- * message.
+ * The NIP-28 channel an event belongs to, or null when [event] is not one of the three
+ * public-chat event types a channel row's newest event can be.
+ *
+ * This is THE definition of "which event identifies a public-chat room" — the row dispatch
+ * (ChatroomHeaderCompose), the last-read route (ChatroomRowUnread.rowLastReadRoute), the
+ * feed's row de-duplication (ChatroomListKnownFeedFilter) and the mute predicate below all
+ * call it. It used to be copied into each of those by hand, and the copies drifted: one of
+ * them matched only [ChannelMessageEvent], so a channel whose latest activity was a topic
+ * edit silently lost its unread dot. Keep it a single function.
  *
  * Deliberately NOT `threadRootIdOrSelf()`. That returns the same channel id here — a
  * NIP-28 message's NIP-10 root marker IS its channel — but it means something else
  * (the NIP-51 "muted thread" key, which HIDES content). Keeping the two apart is what
  * stops "mute notifications" and "mute thread" from bleeding into each other.
+ *
+ * Matched on concrete types rather than the IsInPublicChatChannel interface, which the
+ * channel-admin events ChannelHideMessageEvent/ChannelMuteUserEvent also implement: those
+ * must fall through to null rather than be treated as room activity.
  */
-fun mutedChannelIdOf(event: Event?): HexKey? = (event as? ChannelMessageEvent)?.channelId()
+fun publicChatChannelIdOf(event: Event?): HexKey? =
+    when (event) {
+        is ChannelMessageEvent, is ChannelMetadataEvent -> event.channelId()
+        is ChannelCreateEvent -> event.id
+        else -> null
+    }
 
 /** True when [event] is a public-chat message in a channel the user has silenced. */
 fun isMutedPublicChatMessage(
@@ -41,6 +59,6 @@ fun isMutedPublicChatMessage(
     mutedChannels: Set<HexKey>,
 ): Boolean {
     if (mutedChannels.isEmpty()) return false
-    val channelId = mutedChannelIdOf(event) ?: return false
+    val channelId = publicChatChannelIdOf(event) ?: return false
     return channelId in mutedChannels
 }

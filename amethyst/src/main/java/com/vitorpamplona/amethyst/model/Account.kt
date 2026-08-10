@@ -1043,8 +1043,6 @@ class Account(
         sendNewAppSpecificData()
     }
 
-    fun isPublicChatMuted(channelId: String): Boolean = settings.isPublicChatMuted(channelId)
-
     suspend fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,

@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.publicChatChannelIdOf
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.isConcordTimelineMessage
@@ -45,8 +46,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
@@ -632,15 +631,9 @@ class ChatroomListKnownFeedFilter(
 
     // Maps a note that represents a public chat row to its channel id. The
     // representative note for a channel may be the channel's create event
-    // (id == channelId), a metadata update, or a message — match all three so
+    // (id == channelId), a metadata update, or a message — all three resolve so
     // an arriving ChannelMessageEvent replaces an existing placeholder
     // metadata/create note for the same channel instead of duplicating it
     // (which would yield the same LazyColumn key twice).
-    private fun publicChannelIdOf(note: Note): String? =
-        when (val event = note.event) {
-            is ChannelMessageEvent -> event.channelId()
-            is ChannelMetadataEvent -> event.channelId()
-            is ChannelCreateEvent -> event.id
-            else -> null
-        }
+    private fun publicChannelIdOf(note: Note): String? = publicChatChannelIdOf(note.event)
 }

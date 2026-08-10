@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -56,20 +59,20 @@ class MutedPublicChatsTest {
 
     @Test
     fun topLevelMessageResolvesToItsChannel() {
-        assertEquals(channelId, mutedChannelIdOf(topLevel()))
+        assertEquals(channelId, publicChatChannelIdOf(topLevel()))
     }
 
     @Test
     fun replyResolvesToTheChannelNotItsParent() {
         // Every message in a NIP-28 channel shares one root, so mute is per-channel.
-        assertEquals(channelId, mutedChannelIdOf(reply()))
+        assertEquals(channelId, publicChatChannelIdOf(reply()))
     }
 
     @Test
     fun nonPublicChatEventHasNoChannel() {
         val dm = ChatMessageEvent("3".repeat(64), author, 1L, arrayOf(arrayOf("p", author)), "hi", sig)
-        assertNull(mutedChannelIdOf(dm))
-        assertNull(mutedChannelIdOf(null))
+        assertNull(publicChatChannelIdOf(dm))
+        assertNull(publicChatChannelIdOf(null))
     }
 
     @Test
@@ -93,5 +96,50 @@ class MutedPublicChatsTest {
         val dm = ChatMessageEvent("3".repeat(64), author, 1L, arrayOf(arrayOf("p", author)), "hi", sig)
         assertFalse(isMutedPublicChatMessage(dm, setOf(channelId)))
         assertFalse(isMutedPublicChatMessage(null, setOf(channelId)))
+    }
+
+    // --- Regression coverage: a channel row's newest event is not always a ChannelMessageEvent.
+    // ChannelMetadataEvent (kind 41, e.g. a topic/picture edit) and ChannelCreateEvent (kind 40,
+    // the channel's own creation event) are the other two event types a public-chat row can
+    // dispatch to ChannelRoomCompose — see ChatroomHeaderCompose's `when`. Both
+    // ChatroomRowUnread.rowLastReadRoute and ChatroomListKnownFeedFilter resolve the id
+    // through publicChatChannelIdOf, so this test covers all three sites at once.
+
+    private fun channelMetadata(tags: Array<Array<String>>) = ChannelMetadataEvent("7".repeat(64), author, 1778593701L, tags, "{}", sig)
+
+    @Test
+    fun metadataEventResolvesToItsChannel() {
+        val metadata = channelMetadata(arrayOf(arrayOf("e", channelId, relay, "root")))
+        assertEquals(channelId, publicChatChannelIdOf(metadata))
+    }
+
+    @Test
+    fun createEventResolvesToItsOwnId() {
+        val createId = "8".repeat(64)
+        val create = ChannelCreateEvent(createId, author, 1778593701L, arrayOf(), "{}", sig)
+        assertEquals(createId, publicChatChannelIdOf(create))
+    }
+
+    @Test
+    fun metadataEventInMutedChannelIsMuted() {
+        val metadata = channelMetadata(arrayOf(arrayOf("e", channelId, relay, "root")))
+        assertTrue(isMutedPublicChatMessage(metadata, setOf(channelId)))
+    }
+
+    @Test
+    fun channelAdminEventIsNotRecognisedAsChannelActivity() {
+        // ChannelMuteUserEvent (and ChannelHideMessageEvent) are channel-admin actions, not
+        // activity that should resolve to a channel id — they must keep falling through.
+        val muteUser = ChannelMuteUserEvent("9".repeat(64), author, 1778593701L, arrayOf(arrayOf("e", channelId, relay, "root")), "", sig)
+        assertNull(publicChatChannelIdOf(muteUser))
+        assertFalse(isMutedPublicChatMessage(muteUser, setOf(channelId)))
+    }
+
+    @Test
+    fun channelMessageWithNoTagsHasNoChannel() {
+        // Right type, but channelId() is null because there is no e-tag at all.
+        val untagged = channelMessage(arrayOf())
+        assertNull(publicChatChannelIdOf(untagged))
+        assertFalse(isMutedPublicChatMessage(untagged, setOf(channelId)))
     }
 }
