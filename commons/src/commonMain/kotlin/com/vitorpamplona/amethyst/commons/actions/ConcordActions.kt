@@ -459,6 +459,21 @@ object ConcordActions {
         createdAt: Long,
     ): Event = ConcordInviteBundle.build(linkSignerPrivKey, token, invite, createdAt)
 
+    /**
+     * Retires an existing link by publishing a `vsk=9` revocation tombstone at its coordinate
+     * (CORD-05 §2). Once this lands, every client resolving that URL gets
+     * [com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus.Revoked] instead of keys.
+     *
+     * Publish this *before* recording the tombstone in the kind-13303 Invite List — the list entry
+     * carries the only copy of the `signer_sk` this call needs, and the list merge drops a
+     * tombstoned token's entry for good. Recording first and failing to publish would leave the link
+     * live on the wire with no way left to retire it.
+     */
+    fun revokeBundleAt(
+        linkSignerPrivKey: ByteArray,
+        createdAt: Long,
+    ): Event = ConcordInviteBundle.buildRevocation(linkSignerPrivKey, createdAt)
+
     /** Parses a shareable invite URL into its pointer + private fragment. */
     fun parseInviteLink(url: String): ParsedInviteLink? = ConcordInviteLink.parseUrl(url)
 

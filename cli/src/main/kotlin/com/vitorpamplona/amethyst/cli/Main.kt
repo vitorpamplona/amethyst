@@ -869,6 +869,7 @@ private fun printUsage() {
         |  concord send COMMUNITY CHANNEL TEXT        post a message (CHANNEL = general|name|id)
         |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages
         |  concord invite COMMUNITY [--base URL]      mint + publish a shareable invite link
+        |  concord revoke COMMUNITY TOKEN|URL         retire a link you minted (vsk=9 tombstone)
         |  concord join URL                           redeem an invite link and save the community
         |
         |Local event store (shared, under `<data-dir>/shared/`):

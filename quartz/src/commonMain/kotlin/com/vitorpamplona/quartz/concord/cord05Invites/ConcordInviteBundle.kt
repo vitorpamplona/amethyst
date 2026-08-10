@@ -109,6 +109,22 @@ object ConcordInviteBundle {
         return signer.sign(ConcordInviteBundleEvent.build(content, createdAt))
     }
 
+    /**
+     * Builds the kind-33301 revocation tombstone that retires the link owned by [linkSignerPrivKey]
+     * (CORD-05 §2). It re-posts the link's own coordinate with empty content and `vsk=9`, so the
+     * newest event there is a grave rather than keys and [classify] resolves the link
+     * [InviteBundleStatus.Revoked] for everyone who resolves it afterwards.
+     *
+     * Only the creator can do this: the coordinate is addressable and authored by the link signer,
+     * so retiring a link requires the `link_signer` secret — which lives in the creator's kind-13303
+     * Invite List and nowhere else. Losing that secret makes a link permanently un-revokable, which
+     * is why the list is written before a link is ever handed out.
+     */
+    fun buildRevocation(
+        linkSignerPrivKey: ByteArray,
+        createdAt: Long,
+    ): Event = NostrSignerSync(KeyPair(privKey = linkSignerPrivKey)).sign(ConcordInviteBundleEvent.buildRevocation(createdAt))
+
     /** Decrypts a kind-33301 bundle [event] with the link [token], or null if it isn't a valid bundle. */
     fun parse(
         event: Event,

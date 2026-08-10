@@ -67,7 +67,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | NIP-65 outbox model queries | ✅ | `OutboxCommand` — `amy outbox USER [--refresh]`, cache-first. |
 | CLINK offers + debits (`amy offer` / `amy debit`) | ✅ | `OfferCommands` + `DebitCommands` — pointer decode, NIP-05 discover, kind:21001/21002 round-trips, `offer pay --with NDEBIT` end-to-end settlement. `--timeout` is SECONDS. |
 | Geochat (Bitchat geohash, ephemeral kind:20000) | ✅ | `GeochatCommands` — listen/send/keys with per-geohash throwaway identity + geo-nearest relay routing; doubles as the Bitchat interop harness. |
-| Concord Channels (encrypted communities) | ✅ | `ConcordCommands` — 13 sub-verbs (create/list/import/channels/send/read/invite/join/roles/role/grant/ban/unban) over shared `commons` `ConcordActions`; secrets in `concord.json`. |
+| Concord Channels (encrypted communities) | ✅ | `ConcordCommands` — 17 sub-verbs (create/list/import/channels/send/read/invite/revoke/join/recover/rekey/roles/role/grant/ban/unban/refound) over shared `commons` `ConcordActions`; secrets in `concord.json`. |
 | NIP-5A nsites + NIP-5D napplets | ✅ | `NsiteCommands` + `NappletCommands` — fetch/publish/serve/list with sha256 + aggregate-hash verification and `requires` capability reporting. |
 | Podcasting 2.0 / podstr (`amy podcast20`) | ✅ | `Podcast20Commands` — kind:30078 metadata, 30054 episodes, 30055 trailers, list. |
 | Follows-of-follows (`amy fof get/list/sync`) | ✅ | `FofCommand` — single-hop social proof from the local store (`wot` kept as deprecation alias). |

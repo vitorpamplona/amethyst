@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteList
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListDocument
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEntry
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListTombstone
 import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
 import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -66,6 +67,9 @@ object ConcordCommands {
         |  concord read COMMUNITY CHANNEL [--limit N]  read a channel's messages (default 50);
         |          [--epoch N] [--root HEX]             --epoch/--root read a prior epoch's plane
         |  concord invite COMMUNITY [--base URL]       mint + publish a shareable invite link
+        |  concord revoke COMMUNITY TOKEN|URL          retire a link you minted: publishes a vsk=9
+        |                                               tombstone at its coordinate, then tombstones
+        |                                               it in your invite list so it stays retired
         |  concord join URL                            redeem an invite link and save the community
         |  concord rekey [COMMUNITY]                   follow a Refounding we were re-keyed for:
         |                                               open our blob and adopt the new epoch
@@ -89,7 +93,7 @@ object ConcordCommands {
         route(
             "concord",
             tail,
-            "concord <create|list|import|channels|send|read|invite|join|recover|rekey|roles|role|grant|ban|unban|refound>",
+            "concord <create|list|import|channels|send|read|invite|revoke|join|recover|rekey|roles|role|grant|ban|unban|refound>",
             help = USAGE,
             routes =
                 mapOf(
@@ -100,6 +104,7 @@ object ConcordCommands {
                     "send" to { rest -> ConcordChannelCommands.send(dataDir, rest) },
                     "read" to { rest -> ConcordChannelCommands.read(dataDir, rest) },
                     "invite" to { rest -> invite(dataDir, rest) },
+                    "revoke" to { rest -> revoke(dataDir, rest) },
                     "join" to { rest -> join(dataDir, rest) },
                     "recover" to { rest -> recover(dataDir, rest) },
                     "rekey" to { rest -> rekey(dataDir, rest) },
@@ -307,6 +312,92 @@ object ConcordCommands {
         }
     }
 
+    /**
+     * `amy concord revoke <community> <token|url>` — retires one link this account minted.
+     *
+     * Two records have to agree for a link to be gone, and they fail differently, so the order is
+     * deliberate. The wire tombstone (`vsk=9` at the link's own coordinate) is what actually stops
+     * a join, and publishing it needs the `signer_sk` that only the kind-13303 Invite List holds.
+     * The list tombstone is bookkeeping: it stops a later Refounding from re-minting the link.
+     *
+     * So the wire goes first and the list second. The reverse order would delete the entry — a
+     * merge drops a tombstoned token's entry terminally — and if the publish then failed, the link
+     * would stay live with its `signer_sk` gone and no way left to retire it. A failed list write
+     * is recoverable by comparison: the link is already dead on the wire, and the refresh path
+     * re-mints only a coordinate that still resolves Live, so it will not resurrect this one.
+     */
+    private suspend fun revoke(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val handle = args.positional(0, "community")
+        val link = args.positional(1, "token|url")
+        args.rejectUnknown()
+
+        // Accept either the shareable URL (what a creator actually has to hand) or the bare token.
+        val token =
+            ConcordActions
+                .parseInviteLink(link)
+                ?.fragment
+                ?.token
+                ?.toHexKey() ?: link.lowercase()
+        if (!TOKEN_HEX.matches(token)) {
+            return Output.error("bad_args", "expected an invite URL or a 32-hex-character link token, got '$link'").let { 2 }
+        }
+
+        val sc = ConcordStore(dataDir.concordFile).find(handle) ?: return notFound(handle)
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+
+            val list =
+                readInviteList(ctx)
+                    ?: return Output.error("invite_list_unreadable", "could not read your invite list (kind 13303), so the link signer needed to revoke is unknown — refusing to guess")
+
+            val entry = list.entries.firstOrNull { it.token == token }
+            if (entry == null) {
+                return if (list.tombstones.any { it.token == token }) {
+                    Output.error("already_revoked", "this link was already revoked; its signer_sk is gone from the list, so there is nothing left to re-publish")
+                } else {
+                    Output.error("not_found", "no link with token $token in your invite list — only the account that minted a link can revoke it")
+                }
+            }
+            if (entry.communityId != sc.communityId) {
+                return Output.error("wrong_community", "that link belongs to community ${entry.communityId}, not '$handle' (${sc.communityId})")
+            }
+
+            val tombstone = ConcordActions.revokeBundleAt(entry.signerSk.hexToByteArray(), TimeUtils.now())
+            val ack = ctx.publish(tombstone, relaysFor(ctx, sc))
+            RawEventSupport.publishGuard(ack, tombstone.id)?.let { return it }
+
+            val recorded =
+                publishInviteList(
+                    ctx,
+                    ConcordInviteListDocument(tombstones = listOf(ConcordInviteListTombstone(token = token, communityId = sc.communityId))),
+                )
+            if (!recorded) {
+                System.err.println(
+                    "[concord] the link is revoked on the wire but the tombstone could not be recorded in your invite list (kind 13303); re-run this command once your outbox relays are reachable",
+                )
+            }
+
+            Output.emit(
+                mapOf(
+                    "revoked" to true,
+                    "token" to token,
+                    "community_id" to sc.communityId,
+                    "link_signer" to entry.signerPubKeyHex(),
+                    "tombstone_event_id" to tombstone.id,
+                    "tombstoned_in_list" to recorded,
+                ) + RawEventSupport.ackFields(ack),
+            )
+            return 0
+        }
+    }
+
+    /** A link token is 16 bytes on the wire, so 32 hex characters once stored in the list. */
+    private val TOKEN_HEX = Regex("^[0-9a-f]{32}$")
+
     private suspend fun join(
         dataDir: DataDir,
         rest: Array<String>,
@@ -320,9 +411,19 @@ object ConcordCommands {
             ctx.prepare()
             val relays = (normalize(parsed.fragment.relays) + ctx.bootstrapRelays())
             val wraps = ctx.drain(relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }).map { it.second }
+            // Resolve the coordinate per CORD-05 §2 rather than opening whatever happens to decrypt:
+            // the newest event wins, so a vsk=9 tombstone retires the link even when a stale but
+            // still-openable copy is also present. Opening the first wrap that decrypts would let a
+            // relay that kept the old version hand out a link its creator revoked — and it cannot
+            // tell the user which of "revoked", "expired" or "gone" they are looking at.
             val bundle =
-                wraps.firstNotNullOfOrNull { ConcordActions.openBundle(it, parsed.fragment.token) }
-                    ?: return Output.error("not_found", "no valid bundle for this link").let { 1 }
+                when (val status = ConcordActions.classifyInvite(wraps, parsed.fragment.token)) {
+                    is InviteBundleStatus.Live -> status.invite
+                    is InviteBundleStatus.Expired -> return Output.error("expired", "this invite link has expired and can no longer be joined")
+                    InviteBundleStatus.Revoked -> return Output.error("revoked", "this invite link was revoked by its creator")
+                    InviteBundleStatus.Unreadable -> return Output.error("incompatible", "something is published at this link's coordinate, but it is not a bundle this client can open")
+                    InviteBundleStatus.Absent -> return Output.error("not_found", "no bundle for this link on any of its relays")
+                }
 
             // Refuse a link that readmits us after we were removed. A Refounding re-mints every
             // outstanding link onto the new root (CORD-05), and an ex-member keeps the URL and its
