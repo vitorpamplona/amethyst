@@ -94,6 +94,32 @@ class MetadataFilterAssembler(
 
 Assemblers stay pure — no state, no I/O. They're the composition seam: `FeedMetadataCoordinator` takes a list of visible notes and assembles a single metadata filter covering every referenced pubkey.
 
+## Per-visible loading — the canonical entry points (`observeUser*` / `observeNote*`)
+
+Prefer these over hand-rolled "load metadata for this list" calls. They are the shared,
+KMP way to load data **only for what's on screen** — a composable subscribes while it is in
+composition and unsubscribes ~30s after it leaves (or the app backgrounds). Both live in
+`commons/relayClient/`:
+
+- **Per user** (`relayClient/user/`): `observeUserInfo/Picture/Banner/AboutMe/Name(user)`
+  each open a composition-scoped `UserFinderFilterAssemblerSubscription(user)` **and** return
+  reactive `State`. Metadata (kind 0 + relay lists) loads for on-screen users only, coalesced
+  into one batched REQ per relay for the whole visible set.
+- **Per note** (`relayClient/event/`): `EventFinderFilterAssemblerSubscription(note)` loads a
+  note's interactions (reactions / zaps / reposts / replies) while it is composed. Android's
+  `observeNote*` display observers layer on top of the same subscription.
+
+Both read front-end-provided CompositionLocals — `LocalUserFinder` / `LocalUserFinderAccount`
+(reused by the event finder) / `LocalEventFinder` — provided once near the composition root
+(Android `AppModules`, Desktop `Main.kt` via its subscriptions coordinator). The account seam
+is the narrow `UserFinderAccount` (snapshot relay-hint getters), NOT the fat `IAccount`.
+`error()` defaults mean these must never be reached from a composition without a relay client
+(e.g. the Android `:napplet` sandbox).
+
+The load-once, viewport-batch path (`FeedMetadataCoordinator.loadMetadataForNotes` /
+`loadMetadataBatched`) is superseded for foreground loading; `MetadataPreloader` remains only
+as an optional off-screen background warmer.
+
 ## Preloaders
 
 `MetadataPreloader` is the "I need metadata for 200 pubkeys, but don't melt my CPU or the relay" path. It uses `MetadataRateLimiter` (token bucket) to throttle bulk fetches and group them into relay-friendly chunks.

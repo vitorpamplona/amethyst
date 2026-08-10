@@ -424,6 +424,10 @@ val verifyKmpPurity by tasks.registering {
                 "Thread.sleep" to "use kotlinx.coroutines.delay or platform-specific actual",
                 "java.util.UUID" to "use kotlin.uuid.Uuid",
                 "kotlin.jvm.Synchronized" to "use a KMP lock primitive",
+                // The bare call, not just the annotation: `synchronized(lock) {}` resolves
+                // from kotlin-stdlib-jvm with no import, so it compiles on Android/JVM and
+                // only fails at the iOS compile step. Catch it here instead.
+                "synchronized(" to "`synchronized` is JVM-only — use a KMP lock primitive",
                 "kotlin.jvm.Volatile" to "use kotlin.concurrent.Volatile",
             )
         val offenders =

@@ -23,13 +23,13 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follow
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
+import com.vitorpamplona.amethyst.commons.relayClient.user.pickRelaysToLoadUsers
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.utils.mapOfSet
 
 fun pickRelaysToLoadUsers(
     users: Set<User>,
@@ -68,6 +68,7 @@ fun pickRelaysToLoadUsers(
 
     return pickRelaysToLoadUsers(
         users,
+        LocalCache.relayHints,
         indexRelays - cannotConnectRelays,
         homeRelays - cannotConnectRelays,
         searchRelays - cannotConnectRelays,
@@ -77,121 +78,3 @@ fun pickRelaysToLoadUsers(
         hasTried,
     )
 }
-
-fun pickRelaysToLoadUsers(
-    users: Set<User>,
-    indexRelays: Set<NormalizedRelayUrl>,
-    homeRelays: Set<NormalizedRelayUrl>,
-    searchRelays: Set<NormalizedRelayUrl>,
-    connected: Set<NormalizedRelayUrl>,
-    commonRelays: Set<NormalizedRelayUrl>,
-    cannotConnectRelays: Set<NormalizedRelayUrl>,
-    hasTried: EOSEAccountFast<User>,
-): Map<NormalizedRelayUrl, Set<HexKey>> =
-    mapOfSet {
-        users.forEachIndexed { _, key ->
-            val tried = (hasTried.since(key)?.keys ?: emptySet()) + cannotConnectRelays
-
-            val outbox = key.authorRelayList()?.writeRelaysNorm()
-
-            if (!outbox.isNullOrEmpty()) {
-                // If there is a home, get from it.
-
-                // if it tried all outbox relays, stop.
-                // the UserWatch will take over from here.
-                val leftToTry = (outbox - tried)
-                leftToTry.forEach {
-                    add(it, key.pubkeyHex)
-                }
-            } else {
-                // if not, tries hints first.
-                val hints = key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex)
-
-                val leftToTryOnHints = hints - tried
-
-                leftToTryOnHints.forEach {
-                    add(it, key.pubkeyHex)
-                }
-
-                // if there are only a few hints, broadens the search
-                if (leftToTryOnHints.size < 3) {
-                    // This creates a pre-deterministic order of the array such that
-                    // if this function is called twice, it returns the same arrays
-                    // which gets ignored by the relay client if we send it twice
-                    val indexRelaysLeftToTry =
-                        (indexRelays - tried).sortedBy { relay ->
-                            key.pubkeyHex.hashCode() xor relay.url.hashCode()
-                        }
-                    // This creates a pre-deterministic order of the array such that
-                    // if this function is called twice, it returns the same arrays
-                    // which gets ignored by the relay client if we send it twice
-                    val homeRelaysLeftToTry =
-                        (homeRelays - tried).sortedBy { relay ->
-                            key.pubkeyHex.hashCode() xor relay.url.hashCode()
-                        }
-
-                    // picks one at random to avoid overloading these relays
-                    if (users.size > 300) {
-                        if (indexRelaysLeftToTry.size >= 2) {
-                            add(indexRelaysLeftToTry[0], key.pubkeyHex)
-                            add(indexRelaysLeftToTry[1], key.pubkeyHex)
-                        } else if (indexRelaysLeftToTry.size == 1) {
-                            add(indexRelaysLeftToTry.first(), key.pubkeyHex)
-                        }
-
-                        homeRelaysLeftToTry.forEach {
-                            add(it, key.pubkeyHex)
-                        }
-                    } else {
-                        indexRelaysLeftToTry.forEach {
-                            add(it, key.pubkeyHex)
-                        }
-
-                        homeRelaysLeftToTry.forEach {
-                            add(it, key.pubkeyHex)
-                        }
-                    }
-
-                    if (indexRelaysLeftToTry.size < 2) {
-                        val searchRelaysLeftToTry = searchRelays - tried
-
-                        searchRelaysLeftToTry.forEach {
-                            add(it, key.pubkeyHex)
-                        }
-
-                        val connectedRelaysLeftToTry =
-                            (connected - tried)
-                                .sortedBy { relay ->
-                                    key.pubkeyHex.hashCode() xor relay.url.hashCode()
-                                }.take(100)
-
-                        // picks one at random to avoid overloading these relays
-                        if (users.size > 300) {
-                            connectedRelaysLeftToTry.take(20).forEach {
-                                add(it, key.pubkeyHex)
-                            }
-                        } else {
-                            connectedRelaysLeftToTry.forEach {
-                                add(it, key.pubkeyHex)
-                            }
-                        }
-
-                        if (searchRelaysLeftToTry.size < 2) {
-                            // This creates a pre-deterministic order of the array such that
-                            // if this function is called twice, it returns the same arrays
-                            // which gets ignored by the relay client if we send it twice
-                            val allRelaysLeftToTry =
-                                (commonRelays - tried)
-                                    .sortedBy { relay ->
-                                        key.pubkeyHex.hashCode() xor relay.url.hashCode()
-                                    }.take(100)
-
-                            allRelaysLeftToTry.forEach {
-                                add(it, key.pubkeyHex)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }

@@ -18,24 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
+package com.vitorpamplona.amethyst.commons.relayClient.user.watchers
 
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.toHexSet
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
-import com.vitorpamplona.amethyst.service.relays.MutableTime
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
+import com.vitorpamplona.amethyst.commons.relays.MutableTime
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
+import com.vitorpamplona.quartz.utils.mapOfSet
 
-class UserReportsSubAssembler(
+class UserCardsSubAssembler(
     client: INostrClient,
-    val cache: LocalCache,
+    val cache: ICacheProvider,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : SingleSubEoseManager<UserFinderQueryState>(client, allKeys) {
     override fun newEose(
@@ -44,9 +47,12 @@ class UserReportsSubAssembler(
         filters: List<Filter>?,
     ) {
         filters?.forEach { filter ->
-            filter.tags?.get("p")?.forEach {
+            // kind:30382 addresses the target user in the d-tag (the key the
+            // filter builder uses). Reading any other tag leaves the per-user
+            // EOSEs unset and forces full re-downloads with since = null.
+            filter.tags?.get(DTag.TAG_NAME)?.forEach {
                 val targetUser = cache.getUserIfExists(it)
-                targetUser?.reportsOrNull()?.latestEOSEs?.newEose(relay, time)
+                targetUser?.cardsOrNull()?.latestEOSEs?.newEose(relay, time)
             }
         }
         super.newEose(relay, time, filters)
@@ -58,45 +64,58 @@ class UserReportsSubAssembler(
     ): List<RelayBasedFilter>? {
         if (keys.isEmpty()) return null
 
-        val accounts = keys.mapTo(mutableSetOf()) { it.account }
-
-        // Ignore reports for people that we are following.
         val lastUsersOnFilter = keys.mapTo(mutableSetOf()) { it.user }
 
         if (lastUsersOnFilter.isEmpty()) return null
 
-        // One pass per account, never a union. "Whose follows wrote this report" is the whole point of
-        // the filter, so merging every logged-in account's follow list into one per-relay map both made
-        // the result unattributable and asked one account's follows of another account's outbox relays.
-        return accounts.flatMap { account -> filtersFor(account, lastUsersOnFilter) }.ifEmpty { null }
-    }
+        val accounts = keys.mapTo(mutableSetOf()) { it.account }
 
-    private fun filtersFor(
-        account: Account,
-        lastUsersOnFilter: Set<User>,
-    ): List<RelayBasedFilter> {
-        val accountPubKey = account.userProfile().pubkeyHex
+        // Attributed only when one account is asking: the trusted-author sets below are pooled across
+        // accounts, so with several active none of them owns a given filter.
+        val soleAccountPubKey =
+            accounts
+                .mapTo(mutableSetOf()) { it.userFinderPubkeyHex }
+                .singleOrNull()
 
-        return account.declaredFollowsPerOutboxRelay.value
+        val trustedAccounts: Map<NormalizedRelayUrl, Set<HexKey>> =
+            mapOfSet {
+                accounts.forEach { account ->
+                    account.cardHomeRelays().forEach {
+                        add(it, account.userFinderPubkeyHex)
+                    }
+                }
+                accounts.map { it.trustProvider() }.forEach { provider ->
+                    if (provider != null) {
+                        add(provider.relayUrl, provider.pubkey)
+                    }
+                }
+                accounts.map { it.followerCountProvider() }.forEach { provider ->
+                    if (provider != null) {
+                        add(provider.relayUrl, provider.pubkey)
+                    }
+                }
+            }
+
+        return trustedAccounts
             .flatMap { (relay, trustedUsersInThisRelay) ->
-                // this relay + accounts are where we could find reports.
+                // this relay + accounts are where we could find cards.
                 // we might have already loaded them, so let's separate new targets that were checked before from the others
                 val groups = groupByRelayPresence(lastUsersOnFilter, relay)
                 val trustedAccounts = trustedUsersInThisRelay.sorted()
                 listOfNotNull(
-                    filterReportsToKeysFromTrusted(
+                    filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
+                        accountPubKey = soleAccountPubKey,
                         targets = groups.usersWithoutEose.toHexSet(),
                         trustedAccounts = trustedAccounts,
                         relay = relay,
                         since = null,
-                        accountPubKey = accountPubKey,
                     ),
-                    filterReportsToKeysFromTrusted(
+                    filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
+                        accountPubKey = soleAccountPubKey,
                         targets = groups.usersWithEose.toHexSet(),
                         trustedAccounts = trustedAccounts,
                         relay = relay,
                         since = findMinimumEOSEsForUsers(groups.usersWithEose, relay),
-                        accountPubKey = accountPubKey,
                     ),
                 )
             }
@@ -117,7 +136,7 @@ class UserReportsSubAssembler(
             targetUsers.groupBy { user ->
                 relay in
                     user
-                        .reports()
+                        .cards()
                         .latestEOSEs.relayList.keys
             }
 
@@ -134,7 +153,7 @@ class UserReportsSubAssembler(
         var min: MutableTime? = null
 
         users.forEach {
-            val eose = it.reports().latestEOSEs.since()[relay]
+            val eose = it.cards().latestEOSEs.since()[relay]
             if (min != null && eose != null) {
                 min.updateIfOlder(eose.time)
             } else if (eose != null) {

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.filterMissingEvents
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.potentialRelaysToFindEvent
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -38,16 +38,16 @@ fun filterByEvent(
     val list =
         mapOfSet {
             if (note !is AddressableNote && note.event == null) {
-                potentialRelaysToFindEvent(note).ifEmpty { default }.forEach { relayUrl ->
+                potentialRelaysToFindEvent(LocalCache, note).ifEmpty { default }.forEach { relayUrl ->
                     add(relayUrl, note.idHex)
                 }
             }
 
             // loads threading that is event-based
             note.replyTo?.forEach { parentNote ->
-                if (parentNote !is AddressableNote && note.event == null) {
-                    potentialRelaysToFindEvent(note).ifEmpty { default }.forEach { relayUrl ->
-                        add(relayUrl, note.idHex)
+                if (parentNote !is AddressableNote && parentNote.event == null) {
+                    potentialRelaysToFindEvent(LocalCache, parentNote).ifEmpty { default }.forEach { relayUrl ->
+                        add(relayUrl, parentNote.idHex)
                     }
                 }
             }

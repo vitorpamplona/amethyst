@@ -18,30 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
+package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user
 
-import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.filterMissingAddressables
-import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.potentialRelaysToFindAddress
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
-import com.vitorpamplona.quartz.utils.mapOfSet
+/**
+ * Back-compat aliases: the per-user metadata finder moved to commons
+ * (`com.vitorpamplona.amethyst.commons.relayClient.user`). Existing Android call
+ * sites that reference these by their old names resolve here.
+ */
+typealias UserFinderFilterAssembler = com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
 
-fun filterByAddress(
-    address: NAddress,
-    default: Set<NormalizedRelayUrl>,
-): List<RelayBasedFilter> {
-    val note = LocalCache.getOrCreateAddressableNote(address.address())
-
-    val list =
-        mapOfSet {
-            if (note.event == null) {
-                potentialRelaysToFindAddress(LocalCache, note).ifEmpty { default }.forEach { relayUrl ->
-                    add(relayUrl, note.address)
-                }
-            }
-        }
-
-    return filterMissingAddressables(list)
-}
+typealias UserFinderQueryState = com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState

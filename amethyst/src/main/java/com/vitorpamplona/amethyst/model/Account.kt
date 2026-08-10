@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
@@ -59,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCa
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -286,6 +289,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
@@ -354,7 +358,8 @@ class Account(
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
     nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
-) : IAccount {
+) : IAccount,
+    UserFinderAccount {
     private var userProfileCache: User? = null
 
     override fun userProfile(): User = userProfileCache ?: cache.getOrCreateUser(signer.pubKey).also { userProfileCache = it }
@@ -365,6 +370,34 @@ class Account(
     override val hiddenWordsCase: List<DualCase> get() = hiddenUsers.flow.value.hiddenWordsCase
     override val hiddenUsersHashCodes: Set<Int> get() = hiddenUsers.flow.value.hiddenUsersHashCodes
     override val spammersHashCodes: Set<Int> get() = hiddenUsers.flow.value.spammersHashCodes
+
+    // UserFinderAccount — narrow, read-only relay-hint view used by the shared
+    // per-user metadata + per-note event finders (moved to commons). Snapshot
+    // getters read `.value` fresh on every filter rebuild. userFinderPubkeyHex
+    // doubles as the attribution pubkey for ExplainedFilter.accountPubKeys.
+    override val userFinderPubkeyHex: HexKey get() = userProfile().pubkeyHex
+
+    override fun indexRelays(): Set<NormalizedRelayUrl> = indexerRelayList.flow.value.ifEmpty { DefaultIndexerRelayList }
+
+    override fun outboxHomeRelays(): Set<NormalizedRelayUrl> = nip65RelayList.allFlowNoDefaults.value + privateStorageRelayList.flow.value + localRelayList.flow.value
+
+    // searchRelayList.flow already applies the DefaultSearchRelayList fallback internally
+    // (SearchRelayListState.normalizeSearchRelayListWithBackup), so no ifEmpty needed here.
+    override fun searchRelays(): Set<NormalizedRelayUrl> = (trustedRelayList.flow.value + searchRelayList.flow.value).toSet()
+
+    override fun searchOnlyRelays(): Set<NormalizedRelayUrl> = searchRelayList.flow.value
+
+    override fun followPlusAllMineWithSearchRelays(): Set<NormalizedRelayUrl> = followPlusAllMineWithSearch.flow.value
+
+    override fun commonRelays(): Set<NormalizedRelayUrl> = followSharedOutboxesOrProxy.flow.value.ifEmpty { Constants.eventFinderRelays }
+
+    override fun cardHomeRelays(): Set<NormalizedRelayUrl> = homeRelays.flow.value
+
+    override fun trustProvider(): ServiceProviderTag? = trustProviderList.liveUserRankProvider.value
+
+    override fun followerCountProvider(): ServiceProviderTag? = trustProviderList.liveUserFollowerCount.value
+
+    override fun declaredFollowsByOutboxRelay(): Map<NormalizedRelayUrl, Set<HexKey>> = declaredFollowsPerOutboxRelay.value
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 

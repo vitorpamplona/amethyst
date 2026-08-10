@@ -18,31 +18,29 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
+package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-class NWCPaymentWatcherSubAssembler(
+/**
+ * Amethyst variant of [SingleSubNoEoseCacheEoseManager] that restores single-account
+ * attribution for [AccountScopedQuery] keys.
+ *
+ * The commons base is account-agnostic (attribution defaults to null) so it can live in
+ * commonMain. Query states that carry an [Account] (home feed, channels, notifications, …)
+ * subclass this so their single-account REQs still show up attributed in "Active Relay
+ * Subscriptions".
+ *
+ * Keyed on [AccountScopedQuery] rather than a concrete query-state type: the home feed uses
+ * HomeQueryState, notifications use AccountQueryState, and checking one concrete class filed the
+ * other under "not attributed" despite both being built from a single account's data.
+ */
+abstract class AccountScopedSingleSubNoEoseCacheEoseManager<T>(
     client: INostrClient,
-    allKeys: () -> Set<NWCPaymentQueryState>,
-) : SingleSubNoEoseCacheEoseManager<NWCPaymentQueryState>(client, allKeys) {
-    override fun updateFilter(keys: List<NWCPaymentQueryState>): List<RelayBasedFilter>? {
-        if (keys.isEmpty()) return null
-
-        return keys.groupBy { it.relay }.map { relayGroup ->
-            val replyingToPayments = relayGroup.value.mapTo(mutableSetOf()) { it.replyingToHex }
-            val aboutUsers = relayGroup.value.mapTo(mutableSetOf()) { it.toUserHex }
-
-            if (replyingToPayments.isEmpty()) return null
-
-            RelayBasedFilter(
-                relay = relayGroup.key,
-                filter = filterNWCPaymentsFromRequests(replyingToPayments, aboutUsers),
-            )
-        }
-    }
-
-    override fun distinct(key: NWCPaymentQueryState) = key.replyingToHex
+    allKeys: () -> Set<T>,
+    invalidateAfterEose: Boolean = false,
+) : SingleSubNoEoseCacheEoseManager<T>(client, allKeys, invalidateAfterEose) {
+    override fun accountPubKeyOf(key: Any?): String? = (key as? AccountScopedQuery)?.account?.userProfile()?.pubkeyHex
 }

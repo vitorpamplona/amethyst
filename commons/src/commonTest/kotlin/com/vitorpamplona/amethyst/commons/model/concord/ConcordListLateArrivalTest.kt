@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +80,8 @@ class ConcordListLateArrivalTest {
         private val notes = HashMap<String, AddressableNote>()
 
         override fun getAnyChannel(note: Note): Channel? = null
+
+        override val relayHints = HintIndexer()
 
         override fun getUserIfExists(pubkey: HexKey): User? = null
 
