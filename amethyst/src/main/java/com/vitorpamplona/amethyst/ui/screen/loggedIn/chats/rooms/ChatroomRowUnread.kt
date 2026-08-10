@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.mutedChannelIdOf
 import com.vitorpamplona.amethyst.model.unreadPrivateChatRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
@@ -38,6 +39,7 @@ import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 /**
@@ -51,7 +53,12 @@ import kotlinx.coroutines.flow.map
  * silently skipped: their row could show a dot while the envelope stayed clean.
  *
  * Returns null when the row cannot be unread at all (no event, my own newest message in a DM, everyone
- * hidden), so callers can skip it rather than subscribe to a flow that is always false.
+ * hidden), so callers can skip it rather than subscribe to a flow that is always false. A muted public
+ * chat is deliberately NOT one of these cases: mute is a runtime-toggleable setting, not a structural
+ * fact about the row, so it is folded into the emitted `Flow<Boolean>` (via [mutedChannelIdOf] combined
+ * with the mute set) instead of being resolved as a one-shot snapshot at construction time. Early-return
+ * on a snapshot of the mute set would freeze the dot's mute state as of whenever the flow was built —
+ * do not "simplify" this back into an early return.
  *
  * The two collapsed rows are why this returns a `Flow<Boolean>` rather than a `(route, createdAt)`
  * pair: their dot is a fan-in over every child channel, not one timestamp against one marker, and
@@ -67,7 +74,17 @@ fun rowHasUnreadFlow(
 
     val route = rowLastReadRoute(row, account) ?: return null
     val createdAt = row.createdAt() ?: return null
-    return account.settings.getLastReadFlow(route).map { lastReadAt -> createdAt > lastReadAt }
+
+    val unread = account.settings.getLastReadFlow(route).map { lastReadAt -> createdAt > lastReadAt }
+
+    // Public chats can be silenced at runtime, so the mute set has to be part of the
+    // emitted signal rather than a snapshot taken when this flow was built — otherwise
+    // toggling mute would not move the dot until something else re-keyed the caller.
+    val mutedChannelId = mutedChannelIdOf(row.event) ?: return unread
+
+    return combine(unread, account.settings.mutedPublicChats) { hasUnread, muted ->
+        hasUnread && mutedChannelId !in muted
+    }
 }
 
 /**

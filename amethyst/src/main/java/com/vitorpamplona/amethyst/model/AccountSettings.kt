@@ -330,6 +330,14 @@ class AccountSettings(
      * still lists you, and Leave (kind 9022) is the separate action that actually removes you.
      */
     val dismissedChannelInvites: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    /**
+     * NIP-28 channel ids the user has silenced. Local device state ON PURPOSE, even
+     * though it also syncs via NIP-78: the push dispatcher must answer "is this muted?"
+     * during a cold start, before (or without) the settings blob having been decrypted —
+     * for a NIP-55 account that decrypt is an Amber IPC round-trip that may never
+     * complete in the background. See AppSpecificState.kt:70-75.
+     */
+    val mutedPublicChats: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
@@ -1515,6 +1523,12 @@ class AccountSettings(
             backupAppSpecificData = appSettings
             syncedSettings.updateFrom(newSyncedSettings)
 
+            // Null means an older client rewrote the blob without this key — leave the
+            // local set alone rather than treating "absent" as "unmute everything".
+            newSyncedSettings.chats.mutedPublicChats?.let { remote ->
+                mutedPublicChats.tryEmit(remote.toSet())
+            }
+
             saveAccountSettings()
         }
     }
@@ -1610,6 +1624,19 @@ class AccountSettings(
     fun toggleChatroomPin(room: ChatroomKey) {
         syncedSettings.chats.pinnedChatrooms.update {
             if (room in it) it - room else it + room
+        }
+        saveAccountSettings()
+    }
+
+    // ---
+    // muted public chats
+    // ---
+
+    fun isPublicChatMuted(channelId: String) = mutedPublicChats.value.contains(channelId)
+
+    fun toggleMutedPublicChat(channelId: String) {
+        mutedPublicChats.update {
+            if (channelId in it) it - channelId else it + channelId
         }
         saveAccountSettings()
     }

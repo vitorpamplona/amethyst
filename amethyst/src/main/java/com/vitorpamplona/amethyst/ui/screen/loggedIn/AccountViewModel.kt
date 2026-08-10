@@ -2036,6 +2036,13 @@ class AccountViewModel(
             account.toggleChatroomPin(room)
         }
 
+    fun mutedPublicChatsFlow(): StateFlow<Set<String>> = account.settings.mutedPublicChats
+
+    fun toggleMutedPublicChat(channelId: String) =
+        launchSigner {
+            account.toggleMutedPublicChat(channelId)
+        }
+
     fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,

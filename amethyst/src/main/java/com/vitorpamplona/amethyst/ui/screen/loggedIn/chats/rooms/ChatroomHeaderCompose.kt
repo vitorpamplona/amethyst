@@ -119,6 +119,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -292,7 +293,10 @@ private fun ChannelRoomCompose(
             noteEvent?.content?.take(200)
         }
 
-    val lastReadTime by accountViewModel.account.loadLastReadFlow("Channel/${channel.idHex}").collectAsStateWithLifecycle()
+    // One predicate for the row dot and the bottom-bar badge — see rowHasUnreadFlow.
+    val hasNewMessages by remember(lastMessage, channel.idHex) {
+        rowHasUnreadFlow(lastMessage, accountViewModel.account) ?: MutableStateFlow(false)
+    }.collectAsStateWithLifecycle(false)
 
     ChannelName(
         channelIdHex = channel.idHex,
@@ -300,7 +304,7 @@ private fun ChannelRoomCompose(
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, MaterialSymbols.Public, R.string.public_chat, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
-        hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
+        hasNewMessages = hasNewMessages,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =

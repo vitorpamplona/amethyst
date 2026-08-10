@@ -1034,6 +1034,17 @@ class Account(
         sendNewAppSpecificData()
     }
 
+    /**
+     * Local state first, then publish. The local write is what every suppression point
+     * reads, so it must not wait on the signer — publishing is best-effort sync.
+     */
+    suspend fun toggleMutedPublicChat(channelId: String) {
+        settings.toggleMutedPublicChat(channelId)
+        sendNewAppSpecificData()
+    }
+
+    fun isPublicChatMuted(channelId: String): Boolean = settings.isPublicChatMuted(channelId)
+
     suspend fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,
