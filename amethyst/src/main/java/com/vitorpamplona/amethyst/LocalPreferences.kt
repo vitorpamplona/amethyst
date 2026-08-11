@@ -217,6 +217,12 @@ private object PrefKeys {
     const val VIEWED_POLL_RESULT_NOTE_IDS = "viewed_poll_result_note_ids"
     const val PENDING_ATTESTATIONS = "pending_attestations"
 
+    // Per-account one-shot flag: false only for freshly-GENERATED accounts that
+    // haven't yet backed up their secret key. Absent (defaults to true) for every
+    // account logged in via an existing nsec/bunker/external signer — those already
+    // hold their key elsewhere and must not be nudged.
+    const val HAS_BACKED_UP_KEYS = "has_backed_up_keys"
+
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
     const val LATEST_PAYMENT_TARGETS = "latestPaymentTargets"
@@ -688,6 +694,36 @@ object LocalPreferences {
                 null
             }
         }
+    }
+
+    // Reactive, per-account cache of the "has backed up keys" flag so the home-screen
+    // nudge updates the instant the user backs up or dismisses it, without a full
+    // account reload. Keyed by npub. Seeded lazily from encrypted storage.
+    private val hasBackedUpKeysFlows: MutableMap<String, MutableStateFlow<Boolean>> = mutableMapOf()
+    private val hasBackedUpKeysMutex = Mutex()
+
+    private suspend fun hasBackedUpKeysFlow(npub: String): MutableStateFlow<Boolean> =
+        hasBackedUpKeysMutex.withLock {
+            hasBackedUpKeysFlows.getOrPut(npub) {
+                val stored =
+                    withContext(Dispatchers.IO) {
+                        encryptedPreferences(npub).getBoolean(PrefKeys.HAS_BACKED_UP_KEYS, true)
+                    }
+                MutableStateFlow(stored)
+            }
+        }
+
+    /** Reactive flag: true (default) unless a freshly-generated account still needs to back up its key. */
+    suspend fun hasBackedUpKeys(npub: String): MutableStateFlow<Boolean> = hasBackedUpKeysFlow(npub)
+
+    suspend fun setHasBackedUpKeys(
+        value: Boolean,
+        npub: String,
+    ) {
+        withContext(Dispatchers.IO) {
+            encryptedPreferences(npub).edit { putBoolean(PrefKeys.HAS_BACKED_UP_KEYS, value) }
+        }
+        hasBackedUpKeysFlow(npub).value = value
     }
 
     val mutex = Mutex()

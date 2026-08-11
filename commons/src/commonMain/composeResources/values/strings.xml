@@ -18,10 +18,35 @@
 
     <!-- New Key Warning -->
     <string name="new_key_warning_title">IMPORTANT: Save your keys!</string>
-    <string name="new_key_warning_message">Your secret key (nsec) is the ONLY way to access your account. If you lose it, your account is gone forever. Save it somewhere safe!</string>
+    <string name="new_key_warning_message">Your secret key (nsec) is like a password that can NEVER be reset or recovered. It is the ONLY way to access your account, and anyone who has it controls your account forever. If you lose it, your account is gone for good. Never share it — store it in a password manager.</string>
     <string name="new_key_public_label">Public Key (shareable):</string>
     <string name="new_key_secret_label">Secret Key (NEVER share this!):</string>
     <string name="new_key_continue_button">I've saved my keys, continue</string>
+    <string name="new_key_saved_checkbox">I have saved my keys somewhere safe</string>
+    <string name="new_key_copy_encrypted_button">Copy encrypted (recommended)</string>
+    <string name="new_key_encrypt_password_label">Password for encrypted backup</string>
+
+    <!-- Key Backup (Desktop settings) -->
+    <string name="backup_keys_title">Backup Keys</string>
+    <string name="backup_keys_public_label">Public key (npub)</string>
+    <string name="backup_keys_public_help">Your public key is safe to share. Give it to people so they can find and follow you.</string>
+    <string name="backup_keys_show_qr">Show QR</string>
+    <string name="backup_keys_hide_qr">Hide QR</string>
+    <string name="backup_keys_secret_label">Secret key (nsec)</string>
+    <string name="backup_keys_secret_warning">Your secret key is like a password that can NEVER be reset or recovered. Anyone who has it controls your account forever. Never share it; store it in a password manager.</string>
+    <string name="backup_keys_secret_hidden">Secret key is hidden</string>
+    <string name="backup_keys_reveal">Reveal secret key</string>
+    <string name="backup_keys_hide">Hide secret key</string>
+    <string name="backup_keys_copy_plain">Copy secret key</string>
+    <string name="backup_keys_copy_plain_warning">Copies the plaintext nsec. Only paste it into a trusted password manager.</string>
+    <string name="backup_keys_copy_encrypted">Copy encrypted (recommended)</string>
+    <string name="backup_keys_encrypt_password_label">Password for encrypted backup</string>
+    <string name="backup_keys_encrypt_failed">Could not encrypt the key. Please try again.</string>
+    <string name="backup_keys_external_signer">This account uses an external signer — no secret key is stored here.</string>
+    <string name="backup_keys_copied">Copied!</string>
+    <string name="backup_keys_copy">Copy</string>
+    <string name="backup_keys_unlock_title">Reveal secret key</string>
+    <string name="backup_keys_unlock_subtitle">Enter your privacy-lock password to reveal your secret key.</string>
 
     <!-- Common Actions -->
     <string name="action_copy">Copy</string>

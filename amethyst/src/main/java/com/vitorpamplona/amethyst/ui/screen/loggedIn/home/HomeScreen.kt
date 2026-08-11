@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterA
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderEphemeralBubble
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderGeohashBubble
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.live.RenderLiveActivityBubble
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.BackupKeysNudge
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -290,14 +291,22 @@ private fun HomePages(
                 )
             }
 
-            HomeAlgoFeedStatusBanner(
-                accountViewModel = accountViewModel,
-                nav = nav,
+            Column(
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = paddingValues.calculateTopPadding()),
-            )
+            ) {
+                BackupKeysNudge(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+
+                HomeAlgoFeedStatusBanner(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
 }

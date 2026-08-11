@@ -27,4 +27,4 @@ package com.vitorpamplona.amethyst.commons.privacylock
  * together, but each scope keeps its own [PrivacyLockState] so that unlock,
  * idle-timer, and leave-route transitions apply independently per route.
  */
-enum class LockScope { Messages, Wallet }
+enum class LockScope { Messages, Wallet, KeyBackup }

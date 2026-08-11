@@ -532,6 +532,12 @@
         \n\nIf you lose your password, you will not be able to recover your key.
     </string>
 
+    <string name="backup_keys_nudge_title">Back up your keys</string>
+    <string name="backup_keys_nudge_body">Your secret key is the only way to access this account. If you lose it, it can never be recovered. Save it somewhere safe now.</string>
+    <string name="backup_keys_nudge_backup_now">Back up now</string>
+    <string name="backup_keys_nudge_already_saved">I saved them</string>
+    <string name="backup_keys_nudge_dismiss">Dismiss</string>
+
     <string name="failed_to_encrypt_key">Failed to encrypt your private key</string>
     <string name="secret_key_copied_to_clipboard">Secret key (nsec) copied to clipboard</string>
     <string name="copy_my_secret_key">Copy my secret key</string>

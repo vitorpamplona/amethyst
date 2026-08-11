@@ -52,8 +52,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StatusAmber
 import com.vitorpamplona.amethyst.commons.ui.theme.StatusGreen
 import com.vitorpamplona.amethyst.commons.ui.theme.StatusRed
 import com.vitorpamplona.amethyst.desktop.account.AccountState
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
+import com.vitorpamplona.amethyst.desktop.util.copyToClipboard
 
 /**
  * Developer settings section - shows sensitive keys for debugging.
@@ -244,18 +243,5 @@ private fun KeyRow(
                 copiedRecently = false
             }
         }
-    }
-}
-
-/**
- * Copy text to system clipboard using AWT Toolkit.
- */
-private fun copyToClipboard(text: String) {
-    try {
-        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-        val selection = StringSelection(text)
-        clipboard.setContents(selection, selection)
-    } catch (e: Exception) {
-        e.printStackTrace()
     }
 }

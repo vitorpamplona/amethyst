@@ -134,6 +134,7 @@ import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneState
 import com.vitorpamplona.amethyst.desktop.ui.deck.Workspace
 import com.vitorpamplona.amethyst.desktop.ui.deck.WorkspaceManager
 import com.vitorpamplona.amethyst.desktop.ui.deck.param
+import com.vitorpamplona.amethyst.desktop.ui.keyBackup.BackupKeysCard
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
@@ -2351,6 +2352,10 @@ fun ProfileScreen(
             pubKeyHex = account.pubKeyHex,
             isReadOnly = account.isReadOnly,
         )
+
+        Spacer(Modifier.height(16.dp))
+
+        BackupKeysCard(account = account)
 
         Spacer(Modifier.height(24.dp))
 

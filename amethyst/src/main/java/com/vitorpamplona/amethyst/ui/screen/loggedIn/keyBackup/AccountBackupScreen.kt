@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Context
 import android.content.ContextWrapper
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
@@ -50,6 +52,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -84,6 +88,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -104,7 +109,11 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/** Best-effort delay before the plaintext nsec is wiped from the clipboard. */
+private const val CLIPBOARD_CLEAR_DELAY_MS = 60_000L
 
 @Composable
 fun AccountBackupScreen(
@@ -131,6 +140,18 @@ private fun AccountBackupScreenContent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Redact the secret key from screenshots and the app switcher while this
+    // screen is on-screen. Cleared on dispose so the flag never leaks to other
+    // screens. This is the only FLAG_SECURE usage in the app — scoped on purpose.
+    val context = LocalContext.current
+    DisposableEffect(context) {
+        val window = context.getFragmentActivity()?.window
+        window?.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopBarWithBackButton(
@@ -368,14 +389,23 @@ private fun copyNSec(
     clipboardManager: Clipboard,
 ) {
     account.settings.keyPair.privKey?.let {
+        val nsec = it.toNsec()
         scope.launch {
-            clipboardManager.setText(it.toNsec())
+            clipboardManager.setText(nsec)
             Toast
                 .makeText(
                     context,
                     stringRes(context, R.string.secret_key_copied_to_clipboard),
                     Toast.LENGTH_SHORT,
                 ).show()
+
+            // Best-effort auto-clear: after a delay, wipe the clipboard only if it
+            // still holds this exact nsec (don't clobber anything copied since).
+            // On Android 13+ the OS also shows its own sensitive-content UI.
+            delay(CLIPBOARD_CLEAR_DELAY_MS)
+            if (clipboardManager.getText() == nsec) {
+                clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("", "")))
+            }
         }
     }
 }
