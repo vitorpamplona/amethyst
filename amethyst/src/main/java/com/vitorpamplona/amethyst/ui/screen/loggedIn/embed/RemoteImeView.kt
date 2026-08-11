@@ -297,13 +297,23 @@ class RemoteImeView(
     fun onPageBlur() {
         mirroring = false
         keyboardWanted = false
-        fieldReadOnly = false
+        // [fieldReadOnly] deliberately NOT cleared here: it describes the buffer this mirror still holds,
+        // and that buffer outlives the blur. Clearing it let a flush scheduled by this very method (see
+        // below) ship a readonly field's text after the flag had been reset. The next [onPageFocus] sets it
+        // for whatever field takes over, which is the only point the buffer's identity actually changes.
         removeCallbacks(reportRangeLost)
         if (hadRange) {
             hadRange = false
             onRangeSelectionChanged?.invoke(false)
         }
+        // clearFocus() moves the caret, which fires onSelectionChanged → schedule(). That flush would be
+        // delivered asynchronously, landing after the page has already moved focus — and the shim applies
+        // whatever arrives to the field focused THEN, not the one it was computed from. Nothing this mirror
+        // holds belongs to the page once the field has blurred, so suppress the echo and drop the queue.
+        applyingRemote = true
         clearFocus()
+        applyingRemote = false
+        removeCallbacks(flush)
         imm.hideSoftInputFromWindow(windowToken, 0)
     }
 
@@ -361,7 +371,17 @@ class RemoteImeView(
         val composingEnd = if (editable != null) BaseInputConnection.getComposingSpanEnd(editable) else -1
         return JSONObject()
             .put("type", "ime.set")
-            .put("text", editable?.toString() ?: "")
+            // A readonly field's text must never travel back to the page. TYPE_NULL keeps the *user* from
+            // typing into the mirror, but the mirror still flushes on selection changes — a long-press
+            // select-all, then Chrome's collapse-to-endpoint, both emit one — and that flush is delivered
+            // asynchronously, so the page applies it to whatever field is focused by the time it lands.
+            // Tapping an editable field right after copying from a readonly one therefore wrote the
+            // readonly text into it, with an `input` event no browser would fire.
+            //
+            // Omitting the key (rather than sending the current text) makes the shim treat the message as
+            // selection-only — `var next = (msg.text != null) ? String(msg.text) : prev` — so the
+            // host-drawn handles and Copy keep working off a synced selection while nothing can be written.
+            .apply { if (!fieldReadOnly) put("text", editable?.toString() ?: "") }
             .put("selStart", selectionStart)
             .put("selEnd", selectionEnd)
             .put("composingStart", composingStart)
