@@ -103,7 +103,7 @@ class ObservableEventStore(
         // order. Already-expired ephemerals are dropped (matching
         // [insert]). Accepted events are emitted on [_changes] only
         // after the inner batch returns, so a commit failure that
-        // converts everything to Rejected suppresses the emits.
+        // converts everything to Failed suppresses the emits.
         if (events.isEmpty()) return emptyList()
 
         val outcomes = arrayOfNulls<IEventStore.InsertOutcome>(events.size)
@@ -114,7 +114,7 @@ class ObservableEventStore(
             if (event.kind.isEphemeral()) {
                 outcomes[i] =
                     if (event.isExpired()) {
-                        IEventStore.InsertOutcome.Rejected("blocked: Cannot insert an expired event")
+                        IEventStore.InsertOutcome.Rejected(RejectionReason.EXPIRED)
                     } else {
                         IEventStore.InsertOutcome.Accepted
                     }

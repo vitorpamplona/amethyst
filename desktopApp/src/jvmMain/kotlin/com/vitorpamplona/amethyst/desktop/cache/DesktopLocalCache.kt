@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
@@ -90,6 +91,9 @@ class DesktopLocalCache : ICacheProvider {
     val notes = LargeSoftCache<HexKey, Note>()
     val addressableNotes = LargeSoftCache<String, AddressableNote>()
     private val deletedEvents = ConcurrentHashMap.newKeySet<HexKey>()
+
+    /** NIP-hints index accumulated from consumed events (event/address/pubkey → relay). */
+    override val relayHints = HintIndexer()
 
     val eventStream = DesktopCacheEventStream()
 
@@ -909,9 +913,9 @@ class DesktopLocalCache : ICacheProvider {
             Note(hexKey)
         }
 
-    override fun getOrCreateAddressableNote(key: Address): AddressableNote =
-        addressableNotes.getOrCreate(key.toValue()) {
-            AddressableNote(key)
+    override fun getOrCreateAddressableNote(address: Address): AddressableNote =
+        addressableNotes.getOrCreate(address.toValue()) {
+            AddressableNote(address)
         }
 
     // ----- Channel operations -----

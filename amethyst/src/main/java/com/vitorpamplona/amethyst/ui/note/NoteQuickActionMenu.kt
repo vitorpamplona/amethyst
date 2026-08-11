@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.textNoteModifications
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
@@ -299,20 +300,31 @@ fun CardBody(
         )
     }
 
+    // "Copy Text" copies the version on screen: an edited post renders its newest modification
+    // by default (EditState.updateModifications), and the 3-dot menu already copies that one.
+    // Reading `edits` is a hard-referenced in-memory fold, so no cache scan here.
+    val noteVersionToCopy = remember(note) { note.textNoteModifications().lastOrNull() ?: note }
+
+    // When the rendered note was translated, tapping Copy Text opens a chooser
+    // (Copy Original / Copy Translated) on top of this popup; the popup stays up
+    // until the flow resolves so the chooser survives in composition.
+    val copyNoteText =
+        copyNoteTextAction(
+            accountViewModel = accountViewModel,
+            onCopied = {
+                showToast(R.string.copied_note_text_to_clipboard)
+                onDismiss()
+            },
+            onDismiss = onDismiss,
+        )
+
     Column(modifier = Modifier.width(IntrinsicSize.Min)) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             NoteQuickActionItem(
                 icon = MaterialSymbols.ContentCopy,
                 label = stringRes(R.string.quick_action_copy_text),
             ) {
-                accountViewModel.decrypt(note) {
-                    scope.launch {
-                        clipboardManager.setText(it)
-                        showToast(R.string.copied_note_text_to_clipboard)
-                    }
-                }
-
-                onDismiss()
+                copyNoteText(note, noteVersionToCopy)
             }
             VerticalDivider(color = primaryLight)
             NoteQuickActionItem(

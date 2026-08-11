@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.model.concord
 
+import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
-import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.concord.envelope.OpenedStreamEvent
@@ -39,13 +39,31 @@ enum class ConcordPlaneKind {
     CHANNEL,
 }
 
-/** A known Concord plane: its kind, community, optional channel, and the key to open its wraps. */
+/**
+ * A known Concord plane: its kind, community, optional channel, and what it takes
+ * to open its wraps — the stream [address] they must be authored by, and the
+ * [readConversationKey] their content decrypts under.
+ *
+ * The two are separate fields rather than one [GroupKey] because a split Control
+ * Plane separates them (CORD-01, Write-Restricted Streams): the address is the
+ * staff-held signer's pubkey, while the read key derives from the `community_root`
+ * every member holds. On a channel plane and a legacy Control Plane they are the
+ * two halves of the same key.
+ */
 class ConcordPlane(
     val kind: ConcordPlaneKind,
     val communityId: HexKey,
     val channelId: ConcordChannelId?,
-    val key: GroupKey,
-)
+    val address: HexKey,
+    val readConversationKey: ByteArray,
+) {
+    constructor(
+        kind: ConcordPlaneKind,
+        communityId: HexKey,
+        channelId: ConcordChannelId?,
+        key: GroupKey,
+    ) : this(kind, communityId, channelId, key.publicKeyHex, key.conversationKey)
+}
 
 /** The routed result of opening an inbound wrap that belonged to a known plane. */
 class RoutedRumor(
@@ -72,12 +90,18 @@ class ConcordPlaneRegistry {
     private val lock = KmpLock()
     private val planes = HashMap<HexKey, ConcordPlane>()
 
-    /** Registers every joined community's Control Plane address. Idempotent. */
+    /**
+     * Registers every joined community's Control Plane address. Idempotent.
+     *
+     * On a split epoch the address is the entry's held `control_pk` and the wraps
+     * still decrypt under the `community_root`-derived read key (CORD-02 §5); on a
+     * legacy entry (no `control_pk`) both come from the old single derivation.
+     */
     fun registerControlPlanes(entries: List<ConcordCommunityListEntry>) =
         lock.withLock {
             for (e in entries) {
-                val cp = ConcordKeyDerivation.controlPlaneKey(e.root.hexToByteArray(), e.id.hexToByteArray(), e.rootEpoch)
-                planes[cp.publicKeyHex] = ConcordPlane(ConcordPlaneKind.CONTROL, e.id, null, cp)
+                val cp = ConcordActions.controlPlaneKeysFor(e)
+                planes[cp.address] = ConcordPlane(ConcordPlaneKind.CONTROL, e.id, null, cp.address, cp.readKey.conversationKey)
             }
         }
 
@@ -106,7 +130,7 @@ class ConcordPlaneRegistry {
      */
     fun route(wrap: Event): RoutedRumor? {
         val plane = planeFor(wrap.pubKey) ?: return null
-        val opened = ConcordStreamEnvelope.openOrNull(wrap, plane.key) ?: return null
+        val opened = ConcordStreamEnvelope.openOrNull(wrap, plane.address, plane.readConversationKey) ?: return null
         return RoutedRumor(plane, opened)
     }
 

@@ -170,6 +170,15 @@ class AccountNavigationPreferencesInternal(
     // favorite apps, and individual joined chats/groups). Defaulted so blobs
     // written before this field existed decode to the app's current defaults.
     var bottomBarItems: List<BottomBarEntry> = DefaultBottomBarEntries,
+    // The drawer (side menu) rows the user switched off, as NavBarItem *names*.
+    // Empty by default, which is what makes a newly shipped destination visible
+    // to everyone without a migration — see DrawerItemVisibility.
+    //
+    // Stored as strings rather than the enum on purpose: an id written by a
+    // newer client would fail the enum decoder and take the whole synced-settings
+    // blob down with it, so unknown names are dropped on read instead (the same
+    // approach AccountPoWPreferencesInternal.enabledCategories takes).
+    var hiddenDrawerItems: List<String> = emptyList(),
 )
 
 @Serializable

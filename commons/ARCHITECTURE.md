@@ -101,7 +101,7 @@ they are shared across the GUI apps. Treat as GUI-shared, not strictly headless.
 ### Relay client
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `relayClient`  | no  | Compose-scoped subscription managers, filter assemblers, EOSE managers, preloaders. (Despite a `composeSubscriptionManagers` subpackage name, this is subscription-lifecycle logic, not UI.) |
+| `relayClient`  | no  | Compose-scoped subscription managers, filter assemblers, EOSE managers, preloaders. (Despite a `composeSubscriptionManagers` subpackage name, this is subscription-lifecycle logic, not UI.) The canonical **per-visible loading** entry points live here: `relayClient/user/` (`observeUser*` — kind-0 metadata) and `relayClient/event/` (`EventFinderFilterAssemblerSubscription`/`observeNote*` — reactions/zaps/reposts). See the `relay-client` skill. |
 | `relays`       | no  | Low-level EOSE/relay-timing bookkeeping (`EOSECache`, `EOSERelayList`). |
 
 ### Platform abstractions (`expect`/`actual`)

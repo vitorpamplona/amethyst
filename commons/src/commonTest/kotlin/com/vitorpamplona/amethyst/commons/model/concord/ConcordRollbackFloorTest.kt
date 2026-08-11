@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordRefounding
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -73,8 +74,11 @@ class ConcordRollbackFloorTest {
             // silently dropped. Every wrap it publishes is a genuine, owner-signed edition.
             val newRoot = ByteArray(32) { 0x33 }
             val newEpoch = community.rootEpoch + 1
-            val newControl = ConcordActions.controlPlane(newRoot, community.communityId, newEpoch)
-            val rolledBack = ConcordRefounding.compactControlPlane(community.genesisWraps, community.controlPlane, newControl)
+            // The rotator mints a fresh control_root beside the new root (CORD-02 §2), so the
+            // new epoch's plane is split and addressed by the derived signer, not the root.
+            val newControlRoot = ByteArray(32) { 0x44 }
+            val newControl = ControlPlaneKeys.forStaff(newRoot, community.communityId, newEpoch, newControlRoot)
+            val rolledBack = ConcordRefounding.compactControlPlane(community.genesisWraps, community.controlPlane, newControl, community.ownerPubKey)
 
             val entry =
                 ConcordCommunityListEntry(
@@ -83,7 +87,11 @@ class ConcordRollbackFloorTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = newRoot.toHexKey(),
                     rootEpoch = newEpoch,
-                    heldRoots = listOf(HeldRoot(community.rootEpoch, community.communityRoot.toHexKey())),
+                    controlPk = newControl.address,
+                    controlRoot = newControlRoot.toHexKey(),
+                    // The prior epoch is banked with the address it was folded at: a split epoch's
+                    // Control Plane can never be re-derived, only remembered (CORD-02 §2).
+                    heldRoots = listOf(HeldRoot(community.rootEpoch, community.communityRoot.toHexKey(), community.controlPkHex, community.controlRoot.toHexKey())),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
@@ -92,11 +100,11 @@ class ConcordRollbackFloorTest {
             // The prior epoch's Control Plane is subscribed and AUTHed for — that is where the floor
             // comes from, and without it the client has no memory to check the rotator against.
             assertTrue(
-                session.historicalControlPlaneAddresses().contains(community.controlPlane.publicKeyHex),
+                session.historicalControlPlaneAddresses().contains(community.controlPlane.address),
                 "prior-epoch control plane not subscribed",
             )
             assertTrue(
-                session.streamKeys().any { it.publicKeyHex == community.controlPlane.publicKeyHex },
+                session.streamKeys().any { it.publicKeyHex == community.controlPlane.address },
                 "prior-epoch control plane not AUTHed",
             )
 
@@ -132,9 +140,12 @@ class ConcordRollbackFloorTest {
 
             val newRoot = ByteArray(32) { 0x33 }
             val newEpoch = community.rootEpoch + 1
-            val newControl = ConcordActions.controlPlane(newRoot, community.communityId, newEpoch)
+            // The rotator mints a fresh control_root beside the new root (CORD-02 §2), so the
+            // new epoch's plane is split and addressed by the derived signer, not the root.
+            val newControlRoot = ByteArray(32) { 0x44 }
+            val newControl = ControlPlaneKeys.forStaff(newRoot, community.communityId, newEpoch, newControlRoot)
             // Honest: compacted from the FULL prior plane, so each entity's head (metadata v1) survives.
-            val honest = ConcordRefounding.compactControlPlane(epoch0Wraps, community.controlPlane, newControl)
+            val honest = ConcordRefounding.compactControlPlane(epoch0Wraps, community.controlPlane, newControl, community.ownerPubKey)
 
             val entry =
                 ConcordCommunityListEntry(
@@ -143,7 +154,11 @@ class ConcordRollbackFloorTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = newRoot.toHexKey(),
                     rootEpoch = newEpoch,
-                    heldRoots = listOf(HeldRoot(community.rootEpoch, community.communityRoot.toHexKey())),
+                    controlPk = newControl.address,
+                    controlRoot = newControlRoot.toHexKey(),
+                    // The prior epoch is banked with the address it was folded at: a split epoch's
+                    // Control Plane can never be re-derived, only remembered (CORD-02 §2).
+                    heldRoots = listOf(HeldRoot(community.rootEpoch, community.communityRoot.toHexKey(), community.controlPkHex, community.controlRoot.toHexKey())),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
@@ -167,8 +182,11 @@ class ConcordRollbackFloorTest {
             val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
             val newRoot = ByteArray(32) { 0x33 }
             val newEpoch = community.rootEpoch + 1
-            val newControl = ConcordActions.controlPlane(newRoot, community.communityId, newEpoch)
-            val compacted = ConcordRefounding.compactControlPlane(community.genesisWraps, community.controlPlane, newControl)
+            // The rotator mints a fresh control_root beside the new root (CORD-02 §2), so the
+            // new epoch's plane is split and addressed by the derived signer, not the root.
+            val newControlRoot = ByteArray(32) { 0x44 }
+            val newControl = ControlPlaneKeys.forStaff(newRoot, community.communityId, newEpoch, newControlRoot)
+            val compacted = ConcordRefounding.compactControlPlane(community.genesisWraps, community.controlPlane, newControl, community.ownerPubKey)
 
             val entry =
                 ConcordCommunityListEntry(
@@ -177,6 +195,7 @@ class ConcordRollbackFloorTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = newRoot.toHexKey(),
                     rootEpoch = newEpoch,
+                    controlPk = newControl.address,
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )

@@ -65,6 +65,24 @@ class RemoteImeView(
     // The last state we sent, so we never ship a no-op (avoids feedback churn with the page).
     private var lastSent: String? = null
 
+    // True while this view mirrors a live page field, i.e. between a page focus and the blur that releases it.
+    // Distinct from [hasFocus]: clearing focus on a View can hand it straight back (a lone focusable in the
+    // hierarchy re-takes it), and window focus comes and goes on its own. Only this flag says the buffer still
+    // belongs to the page's field — without it, a lingering focus would let a re-focus skip the re-seed and
+    // ship the PREVIOUS tab's text to the page on the first keystroke.
+    private var mirroring = false
+
+    // Whether the keyboard is *meant* to be up for the field we mirror — our own intent, not the window's
+    // current state. Deliberately not derived from the IME insets or [hasFocus]: by the time a tab switch
+    // tears this view down, `WindowInsets.imeAnimationTarget` has already snapped to 0 and the view has
+    // already lost focus, so anything sampled then reports "no keyboard" for a tab the user left mid-typing.
+    // Set when we raise the keyboard, cleared when the user dismisses it or the page field blurs.
+    private var keyboardWanted = false
+
+    // The mirrored field is `readonly`. Kept here rather than checked at each call site so every raise path —
+    // a fresh focus, the tap doorbell, and a tab restore — is covered by the one guard in [raiseKeyboard].
+    private var fieldReadOnly = false
+
     private val imm get() = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
 
     private val flush = Runnable { flushState() }
@@ -146,16 +164,27 @@ class RemoteImeView(
 
     fun copySelection(): Boolean = onTextContextMenuItem(android.R.id.copy)
 
-    fun cutSelection(): Boolean = onTextContextMenuItem(android.R.id.cut)
+    // Cut and paste mutate the field, so they are refused on a readonly one: the page would reject the edit
+    // and the mirror would drift out of sync with it. The toolbar already hides them there — this is the
+    // backstop, kept next to the ops themselves so a future call site can't reintroduce the divergence.
+    fun cutSelection(): Boolean = !fieldReadOnly && onTextContextMenuItem(android.R.id.cut)
 
-    fun pasteClipboard(): Boolean = onTextContextMenuItem(android.R.id.paste)
+    fun pasteClipboard(): Boolean = !fieldReadOnly && onTextContextMenuItem(android.R.id.paste)
 
     fun selectAllText(): Boolean = onTextContextMenuItem(android.R.id.selectAll)
 
-    /** A page field focused: configure the keyboard, seed the buffer, and raise the IME. */
-    @Suppress("DEPRECATION") // InputMethodManager.SHOW_IMPLICIT is deprecated; no equivalent flag on the newer API.
-    fun onPageFocus(focus: ImeEvent.Focus) {
+    /**
+     * A page field focused: configure the keyboard, seed the buffer, and — unless [withKeyboard] is false —
+     * raise the IME. A restored tab passes false: its field is focused again in this mirror (so a tap can put
+     * the keyboard straight back) without a keyboard the user had dismissed popping up over the page.
+     */
+    fun onPageFocus(
+        focus: ImeEvent.Focus,
+        withKeyboard: Boolean = true,
+    ) {
         configureFor(focus)
+        mirroring = true
+        fieldReadOnly = focus.readOnly
         // Focus the EditText BEFORE seeding text/selection. An EditText jumps its caret to the end when it
         // gains focus; if we seed first, that end-position then overrides the seed and gets shipped to the
         // page — so a tap mid-text lands the caret at the end of the field. Seeding AFTER focus makes the
@@ -164,10 +193,69 @@ class RemoteImeView(
         requestFocus()
         imm.restartInput(this)
         applyRemote(focus.text, focus.selStart, focus.selEnd)
-        // Post the show so it runs after focus/attachment has settled (showSoftInput can no-op otherwise).
+        if (withKeyboard) raiseKeyboard()
+    }
+
+    /**
+     * The page re-announced a field that is **already** focused there: the user tapped inside it, or the tab
+     * came back on screen and answered our resync.
+     *
+     * Page focus never moved, so when this view is still the field's mirror there is nothing to re-seed —
+     * restarting the input would drop a live composing region mid-word — and the only thing left to do is put
+     * the keyboard back if it was dismissed. When the mirror was released (a tab switch clears it, see
+     * [onPageBlur]) this is the ONLY way back: the page will never fire another focus event for a field it
+     * never blurred, so re-take it here from the re-announced state.
+     */
+    fun onPageReFocus(
+        focus: ImeEvent.Focus,
+        withKeyboard: Boolean,
+    ) {
+        if (isMirroringPageField()) {
+            if (withKeyboard) raiseKeyboard()
+        } else {
+            onPageFocus(focus, withKeyboard)
+        }
+    }
+
+    /** True while the keyboard this view holds belongs to a page field — see [mirroring]. */
+    fun isMirroringPageField() = mirroring && hasFocus()
+
+    /**
+     * Whether this tab should come back with its keyboard up: we mirror a page field and the keyboard was
+     * meant to be showing when we were asked. Safe to call while the view is being torn down, which is the
+     * whole point — see [keyboardWanted].
+     */
+    fun wantsKeyboardForPageField() = mirroring && keyboardWanted
+
+    /**
+     * Put the keyboard back on the field this view already mirrors — the user tapped it after dismissing the
+     * keyboard, which leaves the page's focus (and this mirror) untouched, so there is nothing to re-seed.
+     *
+     * Post the show so it runs after focus/attachment has settled (showSoftInput can no-op otherwise).
+     */
+    @Suppress("DEPRECATION") // InputMethodManager.SHOW_IMPLICIT is deprecated; no equivalent flag on the newer API.
+    fun raiseKeyboard() {
+        // A readonly field takes focus and can be selected/copied, but nothing can be typed into it — native
+        // Chrome shows no keyboard for one, so neither do we.
+        if (fieldReadOnly) return
+        keyboardWanted = true
         post {
             if (hasFocus()) imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
         }
+    }
+
+    /**
+     * The user put the keyboard away (BACK, or the IME's own hide affordance) while still on this field: a
+     * deliberate "I'm done typing", so returning to this tab must NOT pop the keyboard back up.
+     *
+     * Called by the layer when the IME insets collapse while this view still mirrors the page field. That
+     * condition is what separates a dismissal from a tab switch — on a switch the view has already lost focus
+     * by the time the insets collapse, so [isMirroringPageField] is false and this never fires. (Note there is
+     * no usable key hook for this: Android 13+ routes the IME's back-dismiss through OnBackInvokedCallback, so
+     * `onKeyPreIme` is never called.)
+     */
+    fun noteKeyboardDismissed() {
+        keyboardWanted = false
     }
 
     // When the current selection first became a range, and how many of its collapse-abandonments we've
@@ -207,12 +295,25 @@ class RemoteImeView(
 
     /** The page field blurred: drop the keyboard. */
     fun onPageBlur() {
+        mirroring = false
+        keyboardWanted = false
+        // [fieldReadOnly] deliberately NOT cleared here: it describes the buffer this mirror still holds,
+        // and that buffer outlives the blur. Clearing it let a flush scheduled by this very method (see
+        // below) ship a readonly field's text after the flag had been reset. The next [onPageFocus] sets it
+        // for whatever field takes over, which is the only point the buffer's identity actually changes.
         removeCallbacks(reportRangeLost)
         if (hadRange) {
             hadRange = false
             onRangeSelectionChanged?.invoke(false)
         }
+        // clearFocus() moves the caret, which fires onSelectionChanged → schedule(). That flush would be
+        // delivered asynchronously, landing after the page has already moved focus — and the shim applies
+        // whatever arrives to the field focused THEN, not the one it was computed from. Nothing this mirror
+        // holds belongs to the page once the field has blurred, so suppress the echo and drop the queue.
+        applyingRemote = true
         clearFocus()
+        applyingRemote = false
+        removeCallbacks(flush)
         imm.hideSoftInputFromWindow(windowToken, 0)
     }
 
@@ -270,7 +371,17 @@ class RemoteImeView(
         val composingEnd = if (editable != null) BaseInputConnection.getComposingSpanEnd(editable) else -1
         return JSONObject()
             .put("type", "ime.set")
-            .put("text", editable?.toString() ?: "")
+            // A readonly field's text must never travel back to the page. TYPE_NULL keeps the *user* from
+            // typing into the mirror, but the mirror still flushes on selection changes — a long-press
+            // select-all, then Chrome's collapse-to-endpoint, both emit one — and that flush is delivered
+            // asynchronously, so the page applies it to whatever field is focused by the time it lands.
+            // Tapping an editable field right after copying from a readonly one therefore wrote the
+            // readonly text into it, with an `input` event no browser would fire.
+            //
+            // Omitting the key (rather than sending the current text) makes the shim treat the message as
+            // selection-only — `var next = (msg.text != null) ? String(msg.text) : prev` — so the
+            // host-drawn handles and Copy keep working off a synced selection while nothing can be written.
+            .apply { if (!fieldReadOnly) put("text", editable?.toString() ?: "") }
             .put("selStart", selectionStart)
             .put("selEnd", selectionEnd)
             .put("composingStart", composingStart)
@@ -288,15 +399,26 @@ class RemoteImeView(
 
     private fun configureFor(focus: ImeEvent.Focus) {
         inputType =
-            when (focus.inputType) {
-                "password" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
-                "email" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
-                "url" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
-                "number" -> InputType.TYPE_CLASS_NUMBER
-                "tel" -> InputType.TYPE_CLASS_PHONE
-                else ->
-                    InputType.TYPE_CLASS_TEXT or
-                        (if (focus.multiline) InputType.TYPE_TEXT_FLAG_MULTI_LINE else InputType.TYPE_TEXT_VARIATION_NORMAL)
+            // A readonly field's mirror must not be typeable AT ALL, not merely keyboard-less. `readonly`
+            // stops the *user* editing the field, not scripts — the shim writes through the native value
+            // setter, so anything that reaches this Editable is applied to the page and fires an `input`
+            // event no native browser would. Refusing cut/paste at the call sites doesn't cover a hardware
+            // keyboard (common on tablets/DeX), whose Ctrl+V goes straight to `onTextContextMenuItem`.
+            // TYPE_NULL makes `onCheckIsTextEditor()` false, so there is no InputConnection to type through
+            // — while selection and Copy, the half native does offer here, keep working.
+            if (focus.readOnly) {
+                InputType.TYPE_NULL
+            } else {
+                when (focus.inputType) {
+                    "password" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+                    "email" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
+                    "url" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+                    "number" -> InputType.TYPE_CLASS_NUMBER
+                    "tel" -> InputType.TYPE_CLASS_PHONE
+                    else ->
+                        InputType.TYPE_CLASS_TEXT or
+                            (if (focus.multiline) InputType.TYPE_TEXT_FLAG_MULTI_LINE else InputType.TYPE_TEXT_VARIATION_NORMAL)
+                }
             }
         imeOptions = editorActionFor(focus) or EditorInfo.IME_FLAG_NO_FULLSCREEN or EditorInfo.IME_FLAG_NO_EXTRACT_UI
     }

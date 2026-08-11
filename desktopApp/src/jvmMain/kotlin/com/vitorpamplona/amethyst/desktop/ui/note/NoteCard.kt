@@ -56,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
@@ -63,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ReplyContext
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
+import com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache
 import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
@@ -112,6 +115,25 @@ fun NoteCard(
     replyContext: ReplyContext? = null,
     onNavigateToThread: ((String) -> Unit)? = null,
 ) {
+    // Load the author's metadata (kind 0) only while this card is composed —
+    // i.e. on/near screen. This one call covers every screen that renders
+    // through NoteCard (profile, thread, bookmarks, search); the shared commons
+    // finder coalesces all visible authors into batched REQs.
+    val noteCardCache = LocalDesktopCache.current
+    val noteCardAuthor = remember(note.pubKeyHex, noteCardCache) { noteCardCache?.getOrCreateUser(note.pubKeyHex) }
+    if (noteCardAuthor != null) {
+        UserFinderFilterAssemblerSubscription(noteCardAuthor)
+    }
+
+    // Load this note's interactions (reactions / zaps / reposts / replies) only
+    // while the card is composed — covers every NoteCard surface (profile, thread,
+    // bookmarks, search, quoted embeds). Guarded on cache presence so previews
+    // (no LocalDesktopCache → no LocalEventFinder) don't hit the provider default.
+    val noteCardNote = remember(note.id, noteCardCache) { noteCardCache?.getNoteIfExists(note.id) }
+    if (noteCardNote != null) {
+        EventFinderFilterAssemblerSubscription(noteCardNote)
+    }
+
     val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
     val imageUrls =
         remember(urls) {

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -41,6 +42,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * - Platform-agnostic model layer
  */
 interface ICacheProvider {
+    /**
+     * NIP-hints index (event/address/pubkey → relay) accumulated from consumed
+     * events. Used by the shared user/event finder assemblers to discover which
+     * relays are likely to hold a given user's metadata or a missing event.
+     */
+    val relayHints: HintIndexer
+
     /**
      * Gets a channel by Note reference.
      * Used for resolving relay hints for channel messages.
@@ -93,7 +101,7 @@ interface ICacheProvider {
      * @param address The note's ID in address format
      * @return The AddressableNote (existing or newly created)
      */
-    fun getOrCreateAddressableNote(key: Address): AddressableNote
+    fun getOrCreateAddressableNote(address: Address): AddressableNote
 
     /**
      * Gets the event stream for cache updates.
@@ -133,6 +141,16 @@ interface ICacheProvider {
      * @return The User (existing or newly created)
      */
     fun getOrCreateUser(pubkey: HexKey): User?
+
+    /**
+     * Gets or creates a User by public key hex, swallowing any failure.
+     * Used by the event-finder relay-hint scan, which touches many potentially
+     * malformed pubkeys and must never throw mid-scan.
+     *
+     * @param key The user's public key in hex format
+     * @return The User (existing or newly created), or null on failure
+     */
+    fun checkGetOrCreateUser(key: HexKey): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
     fun justConsumeMyOwnEvent(event: Event): Boolean
 }

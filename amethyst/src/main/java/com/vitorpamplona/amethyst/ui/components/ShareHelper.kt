@@ -25,6 +25,8 @@ import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.richtext.mimeTypeMap
+import com.vitorpamplona.amethyst.commons.richtext.normalizeMimeType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,6 +39,7 @@ object ShareHelper {
     private const val DEFAULT_IMAGE_EXTENSION = "jpg"
     private const val DEFAULT_VIDEO_EXTENSION = "mp4"
     private const val SHARED_FILE_PREFIX = "shared_media"
+    private const val GENERIC_BINARY_MIME_TYPE = "application/octet-stream"
 
     data class SharableFile(
         val uri: Uri,
@@ -64,6 +67,25 @@ object ShareHelper {
     private val MP4_BRAND_MP41 = "mp41".toByteArray()
     private val MP4_BRAND_MP42 = "mp42".toByteArray()
     private val MOV_BRAND_QT = "qt  ".toByteArray()
+
+    /**
+     * Picks the MIME type to put on an `ACTION_SEND` intent.
+     *
+     * `Intent.type` has to be a real `type/subtype` — an `IntentFilter` matches the two halves
+     * separately, so a slash-less value matches nothing and the chooser opens empty. The declared
+     * type is author-supplied and may be unusable (see [normalizeMimeType]), so it is treated as a
+     * hint; [fileExtension] is the safer signal because [getMediaExtension] sniffs it from the
+     * file's magic numbers rather than trusting the event.
+     */
+    internal fun resolveShareMimeType(
+        declaredMimeType: String?,
+        fileExtension: String,
+    ): String =
+        normalizeMimeType(declaredMimeType)
+            ?: mimeTypeMap[fileExtension.lowercase()]
+            // Unreachable today: getMediaExtension only ever returns keys of mimeTypeMap. Kept so
+            // the return type stays a well-formed MIME if that ever stops holding.
+            ?: GENERIC_BINARY_MIME_TYPE
 
     suspend fun getSharableUriFromUrl(
         context: Context,

@@ -45,7 +45,7 @@ fun RelayConnectionManager.subscribeMetadataFor(
     val filter = Filter(kinds = listOf(MetadataEvent.KIND), authors = pubkeys)
     val listener =
         object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,

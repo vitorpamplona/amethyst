@@ -96,7 +96,7 @@ class Nip77NegentropyTest {
                         compression: Boolean,
                     ) {}
 
-                    override fun onMessage(text: String) {
+                    override suspend fun onMessage(text: String) {
                         incoming.trySend(text)
                     }
 

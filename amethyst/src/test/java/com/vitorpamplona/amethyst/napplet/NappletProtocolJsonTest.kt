@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -71,11 +72,6 @@ class NappletProtocolJsonTest {
     @Test
     fun decodesGetPublicKey() {
         assertEquals(NappletRequest.GetPublicKey, NappletProtocolJson.decodeRequest("""{"type":"identity.getPublicKey","id":"1"}"""))
-    }
-
-    @Test
-    fun decodesShellSupports() {
-        assertEquals(NappletRequest.ShellSupports("relay"), NappletProtocolJson.decodeRequest("""{"type":"shell.supports","id":"1","domain":"relay"}"""))
     }
 
     @Test
@@ -165,13 +161,22 @@ class NappletProtocolJsonTest {
         assertEquals(NappletRequest.StorageGet("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.get","key":"k"}"""))
         assertEquals(NappletRequest.StorageSet("k", "v"), NappletProtocolJson.decodeRequest("""{"type":"storage.set","key":"k","value":"v"}"""))
         assertEquals(NappletRequest.StorageRemove("k"), NappletProtocolJson.decodeRequest("""{"type":"storage.remove","key":"k"}"""))
-        assertEquals(NappletRequest.StorageKeys, NappletProtocolJson.decodeRequest("""{"type":"storage.keys"}"""))
+        assertEquals(NappletRequest.StorageKeys(), NappletProtocolJson.decodeRequest("""{"type":"storage.keys"}"""))
+        assertEquals(
+            NappletRequest.StorageGet("k", NappletStorageScope.INSTANCE),
+            NappletProtocolJson.decodeRequest("""{"type":"storage.get","key":"k","scope":"instance"}"""),
+        )
     }
 
     @Test
     fun decodesValueResourceUpload() {
         assertEquals(NappletRequest.PayInvoice("lnbc1"), NappletProtocolJson.decodeRequest("""{"type":"value.payInvoice","invoice":"lnbc1"}"""))
+        assertEquals(NappletRequest.ResourceInfo, NappletProtocolJson.decodeRequest("""{"type":"resource.info"}"""))
         assertEquals(NappletRequest.ResourceBytes("https://x"), NappletProtocolJson.decodeRequest("""{"type":"resource.bytes","url":"https://x"}"""))
+        assertEquals(
+            NappletRequest.ResourceBytesMany(listOf("https://x", "data:text/plain,hi")),
+            NappletProtocolJson.decodeRequest("""{"type":"resource.bytesMany","urls":["https://x","data:text/plain,hi"]}"""),
+        )
         // "SGk=" is base64 for "Hi"; shell.html inlines the request Blob as request.dataBase64.
         val up = NappletProtocolJson.decodeRequest("""{"type":"upload.upload","request":{"dataBase64":"SGk=","mimeType":"text/plain","filename":"a.txt"}}""") as NappletRequest.UploadBlob
         assertEquals("text/plain", up.contentType)
@@ -184,6 +189,7 @@ class NappletProtocolJsonTest {
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"inc.emit","id":"1"}"""))
         // keys.signEvent is not a real domain method (keys = keyboard actions, not signing).
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"keys.signEvent","id":"1"}"""))
+        assertNull(NappletProtocolJson.decodeRequest("""{"type":"identity.futureMethod","id":"1"}"""))
         assertNull(NappletProtocolJson.decodeRequest("""{"foo":"bar"}"""))
     }
 
@@ -211,7 +217,9 @@ class NappletProtocolJsonTest {
         assertEquals("s1", ev["subId"]?.jsonPrimitive?.content)
         assertEquals(
             "a".repeat(64),
-            ev["event"]
+            ev["result"]
+                ?.jsonObject
+                ?.get("event")
                 ?.jsonObject
                 ?.get("id")
                 ?.jsonPrimitive
@@ -234,13 +242,6 @@ class NappletProtocolJsonTest {
     }
 
     @Test
-    fun encodesSupported() {
-        val o = json.parseToJsonElement(NappletProtocolJson.encodeResponse("shell.supports", NappletResponse.Supported(true))).jsonObject
-        assertEquals("shell.supports.result", o["type"]?.jsonPrimitive?.content)
-        assertTrue(o["supported"]!!.jsonPrimitive.boolean)
-    }
-
-    @Test
     fun encodesPublishedEventAndEvents() {
         // relay.publish resolves to the signed event (matching upstream NostrEvent return).
         val published = json.parseToJsonElement(NappletProtocolJson.encodeResponse("relay.publish", NappletResponse.Published(sampleEvent(), listOf("wss://r")))).jsonObject
@@ -257,6 +258,18 @@ class NappletProtocolJsonTest {
 
         val events = json.parseToJsonElement(NappletProtocolJson.encodeResponse("relay.query", NappletResponse.Events(listOf(sampleEvent())))).jsonObject
         assertEquals(1, events["events"]?.jsonArray?.size)
+        assertEquals(
+            "a".repeat(64),
+            events["events"]
+                ?.jsonArray
+                ?.first()
+                ?.jsonObject
+                ?.get("event")
+                ?.jsonObject
+                ?.get("id")
+                ?.jsonPrimitive
+                ?.content,
+        )
     }
 
     @Test
@@ -267,6 +280,71 @@ class NappletProtocolJsonTest {
         // storage.keys returns its array under `keys`, per @napplet/nap.
         val keys = json.parseToJsonElement(NappletProtocolJson.encodeResponse("storage.keys", NappletResponse.Strings(listOf("a", "b")))).jsonObject
         assertEquals(2, keys["keys"]?.jsonArray?.size)
+    }
+
+    @Test
+    fun encodesResourceInfoBulkItemsAndTypedErrors() {
+        val info =
+            json
+                .parseToJsonElement(
+                    NappletProtocolJson.encodeResponse(
+                        "resource.info",
+                        NappletResponse.ResourceInfo(listOf("https"), 10L * 1024L * 1024L, 16),
+                    ),
+                ).jsonObject
+        assertEquals(
+            "https",
+            info["info"]
+                ?.jsonObject
+                ?.get("schemes")
+                ?.jsonArray
+                ?.first()
+                ?.jsonObject
+                ?.get("scheme")
+                ?.jsonPrimitive
+                ?.content,
+        )
+
+        val items =
+            json
+                .parseToJsonElement(
+                    NappletProtocolJson.encodeResponse(
+                        "resource.bytesMany",
+                        NappletResponse.ResourceItems(
+                            listOf(
+                                NappletResponse.ResourceItem("https://x", NappletResponse.Bytes("Hi".encodeToByteArray(), "text/plain")),
+                                NappletResponse.ResourceItem("https://y", error = "not-found"),
+                            ),
+                        ),
+                    ),
+                ).jsonObject["items"]
+                ?.jsonArray
+        assertEquals(
+            "SGk=",
+            items
+                ?.first()
+                ?.jsonObject
+                ?.get("bytes")
+                ?.jsonPrimitive
+                ?.content,
+        )
+        assertEquals(
+            "not-found",
+            items
+                ?.get(1)
+                ?.jsonObject
+                ?.get("error")
+                ?.jsonPrimitive
+                ?.content,
+        )
+
+        val failure =
+            json
+                .parseToJsonElement(
+                    NappletProtocolJson.encodeResponse("resource.bytes", NappletResponse.ResourceFailure("blocked-by-policy", "private target")),
+                ).jsonObject
+        assertEquals("resource.bytes.error", failure["type"]?.jsonPrimitive?.content)
+        assertEquals("blocked-by-policy", failure["error"]?.jsonPrimitive?.content)
     }
 
     @Test

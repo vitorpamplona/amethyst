@@ -78,6 +78,13 @@ class ConcordSessionRegistry(
                 if (existing == null || existing.entry.root != entry.root || existing.entry.rootEpoch != entry.rootEpoch) {
                     sessions[id] = ConcordCommunitySession(entry, myPubKey, onRumor)
                     created += id
+                } else {
+                    // Same epoch, but the Control Plane write key may have just arrived — a
+                    // staff-making Grant delivers it inside the fold itself (CORD-04 §3), long
+                    // after this session was built. Adopt it in place: rebuilding would drop the
+                    // buffered wraps and fold the community empty, and the plane's address is
+                    // invariant under adoption anyway (CORD-02 §5).
+                    existing.adoptControlMaterial(entry)
                 }
             }
             created

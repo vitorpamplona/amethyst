@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
+import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
@@ -433,7 +434,7 @@ class SQLiteEventStore(
     }
 
     suspend fun insertEvent(event: Event) {
-        if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
+        if (event.isExpired()) throw SQLiteException(RejectionReason.EXPIRED)
         if (event.kind.isEphemeral()) return
 
         pool.useWriter { db ->
@@ -463,8 +464,9 @@ class SQLiteEventStore(
      *    stream still surfaces them; persistence is intentionally a
      *    no-op per NIP-01.
      *
-     * Outer-commit failure throws; the caller treats every entry as
-     * `Rejected` (this is what the IEventStore contract documents).
+     * Outer-commit failure throws; per the IEventStore contract a
+     * throw means "nothing in this batch was written", and the
+     * IngestQueue converts it to per-event `Failed`.
      */
     suspend fun batchInsertEvents(events: List<Event>): List<IEventStore.InsertOutcome> {
         if (events.isEmpty()) return emptyList()
@@ -489,7 +491,7 @@ class SQLiteEventStore(
         delta: LiveIndexDelta?,
     ): IEventStore.InsertOutcome {
         if (event.isExpired()) {
-            return IEventStore.InsertOutcome.Rejected("blocked: Cannot insert an expired event")
+            return IEventStore.InsertOutcome.Rejected(RejectionReason.EXPIRED)
         }
         if (event.kind.isEphemeral()) return IEventStore.InsertOutcome.Accepted
 
@@ -509,7 +511,31 @@ class SQLiteEventStore(
             // ROLLBACK shouldn't mask the original cause.
             runCatching { db.execSQL("ROLLBACK TRANSACTION TO SAVEPOINT $sp") }
             runCatching { db.execSQL("RELEASE SAVEPOINT $sp") }
-            IEventStore.InsertOutcome.Rejected(e.message ?: e::class.simpleName ?: "insert failed")
+            classifyRowError(e)
+        }
+    }
+
+    /**
+     * Which side failed decides whether the caller may drop the event.
+     * Policy refusals are recognizable — every schema trigger RAISEs with
+     * a `blocked:` prefix, the immutability guards say "not allowed", and
+     * a duplicate id is a constraint violation. Anything else (disk full,
+     * I/O error, schema drift) is the store failing to write an acceptable
+     * event: `Failed`, so a rising count is loud instead of blending into
+     * the duplicate tally.
+     */
+    private fun classifyRowError(e: Throwable): IEventStore.InsertOutcome {
+        val message = e.message ?: e::class.simpleName ?: RejectionReason.INSERT_FAILED
+        val refusal =
+            message.contains("blocked:") ||
+                message.contains("duplicate:") ||
+                message.contains(RejectionReason.PREFIX_REPLACED) ||
+                message.contains("not allowed") ||
+                message.contains("constraint", ignoreCase = true)
+        return if (refusal) {
+            IEventStore.InsertOutcome.Rejected(message)
+        } else {
+            IEventStore.InsertOutcome.Failed(message)
         }
     }
 
@@ -518,7 +544,7 @@ class SQLiteEventStore(
         private val delta: LiveIndexDelta?,
     ) : IEventStore.ITransaction {
         override fun insert(event: Event) {
-            if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
+            if (event.isExpired()) throw SQLiteException(RejectionReason.EXPIRED)
             if (event.kind.isEphemeral()) return
 
             innerInsertEvent(event, db, delta)

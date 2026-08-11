@@ -30,7 +30,7 @@ interface WebSocketListener {
         compression: Boolean,
     )
 
-    fun onMessage(text: String)
+    suspend fun onMessage(text: String)
 
     fun onClosed(
         code: Int,

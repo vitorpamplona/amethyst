@@ -582,4 +582,37 @@ class AuthorityResolverTest {
         assertFalse(r.isBanned(alice), "the part it does not outrank is dropped")
         assertTrue(r.isBanned(carol), "the part it does outrank still lands")
     }
+
+    @Test
+    fun staffIsTheOwnerPlusEveryControlWritingBitHolder() {
+        // Staff (CORD-04 §3) is the set that holds the control_root (CORD-02 §2): the owner
+        // always, plus every non-banned holder of a Control-writing bit. This set decides who
+        // receives the 136-byte staff blob at a Refounding (CORD-06 §1).
+        val pinRole = "33".repeat(32)
+        // PIN_MESSAGES alone (bit 11 = 2048) writes Control editions, so it is a staff bit.
+        val pinJson = """{"name":"Curator","position":6,"permissions":"2048"}"""
+        val r =
+            AuthorityResolver.resolve(
+                listOf(
+                    role(adminRole, adminJson), // MANAGE_ROLES|KICK|BAN → staff via MANAGE_ROLES/BAN
+                    role(modRole, modJson), // KICK only → Guestbook writer, NOT staff
+                    role(pinRole, pinJson),
+                    grant("31".repeat(32), alice, listOf(adminRole), granter = owner),
+                    grant("32".repeat(32), bob, listOf(modRole), granter = owner),
+                    grant("33".repeat(32), carol, listOf(adminRole), granter = owner),
+                    grant("34".repeat(32), dave, listOf(pinRole), granter = owner),
+                    banlist(carol), // a banned admin loses staff standing with everything else
+                ),
+                owner,
+            )
+
+        assertTrue(r.isStaff(owner), "the owner is always staff")
+        assertTrue(r.isStaff(alice), "a Control-writing bit makes staff")
+        assertTrue(r.isStaff(dave), "PIN_MESSAGES lands as Control editions, so it is a staff bit")
+        assertFalse(r.isStaff(bob), "KICK writes to the Guestbook, never the Control Plane")
+        assertFalse(r.isStaff(carol), "a banned member is not staff")
+        assertFalse(r.isStaff("e5".repeat(32)), "a roleless member is not staff")
+
+        assertEquals(setOf(owner, alice, dave), r.staffMembers())
+    }
 }

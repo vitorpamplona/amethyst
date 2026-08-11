@@ -79,14 +79,14 @@ suspend fun INostrClient.fetchAllPagesFromPool(
             launch {
                 try {
                     onRelayStart?.invoke(relay)
-                    val total =
+                    val result =
                         fetchAllPages(
                             relay = relay,
                             filters = filtersForRelay,
                             idleTimeoutMs = idleTimeoutMs,
                             onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
                         ) { event -> onEvent(event, relay) }
-                    onRelayComplete?.invoke(relay, total)
+                    onRelayComplete?.invoke(relay, result.downloaded)
                 } finally {
                     semaphore.release()
                 }

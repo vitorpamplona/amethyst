@@ -1,13 +1,10 @@
 <!doctype html>
 <!--
   Trusted napplet shell page (served on the shell origin https://napplet.local at /__shell__).
-  It hosts the untrusted applet in a sandboxed iframe pointed at the applet's OWN per-applet origin
-  (a distinct napplet.local subdomain, injected as __APP_ORIGIN__) and relays capability messages
-  between the applet (window.postMessage) and the native bridge (__nappletBridge), which is
-  origin-restricted to this shell page only. The applet is cross-origin to the shell, so it can never
-  reach the bridge or read the shell DOM. The iframe carries allow-same-origin so the applet has real,
-  isolated storage on its own origin — which is safe precisely because that origin is never the
-  shell's: the applet is same-origin only with itself.
+  It hosts untrusted content and relays capability messages between the child (window.postMessage)
+  and the origin-restricted native bridge (__nappletBridge). For NIP-5D the child receives verified,
+  prelude-injected bytes through srcdoc and has only sandbox="allow-scripts" (opaque origin). NIP-5A
+  websites retain Amethyst's separate-origin website posture and are navigated normally.
 -->
 <html>
   <head>
@@ -19,7 +16,7 @@
     </style>
   </head>
   <body>
-    <iframe id="app" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer"></iframe>
+    <iframe id="app" sandbox="__APP_SANDBOX__" referrerpolicy="no-referrer"></iframe>
     <script>
       (function () {
         var iframe = document.getElementById('app');
@@ -70,11 +67,22 @@
                 delete msg.bytes;
               } catch (_) {}
             }
+            if (msg && msg.type === 'resource.bytesMany.result' && Array.isArray(msg.items)) {
+              msg.items.forEach(function (item) {
+                if (!item || !item.ok || typeof item.bytes !== 'string') return;
+                try {
+                  var bin = atob(item.bytes), u = new Uint8Array(bin.length);
+                  for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+                  item.blob = new Blob([u], { type: item.mime || '' });
+                  delete item.bytes;
+                } catch (_) {}
+              });
+            }
             iframe.contentWindow.postMessage(msg, '*');
           };
         }
 
-        iframe.src = '__APP_ORIGIN__/';
+        __APP_BOOTSTRAP__
       })();
     </script>
   </body>

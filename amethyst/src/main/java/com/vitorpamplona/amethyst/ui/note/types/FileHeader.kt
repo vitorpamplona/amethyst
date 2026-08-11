@@ -24,10 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.FileAttachmentCard
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -43,50 +46,103 @@ fun FileHeaderDisplay(
 ) {
     val event = (note.event as? FileHeaderEvent) ?: return
     val fullUrl = event.url() ?: return
+    val mimeType = remember(note) { event.mimeType() }
+    val content = remember(note) { event.toMediaContent(note, fullUrl, mimeType) }
 
-    val content: BaseMediaContent =
-        remember(note) {
-            val blurHash = event.blurhash()
-            val thumbHash = event.thumbhash()
-            val hash = event.hash()
-            val dimensions = event.dimensions()
-            val description = event.content.ifEmpty { null } ?: event.alt()
-            val isImage = event.mimeType()?.startsWith("image/") == true || RichTextParser.isImageUrl(fullUrl)
-            val uri = note.toNostrUri()
-            val mimeType = event.mimeType()
-
-            if (isImage) {
-                MediaUrlImage(
-                    url = fullUrl,
-                    description = description,
-                    hash = hash,
-                    blurhash = blurHash,
-                    dim = dimensions,
-                    uri = uri,
-                    mimeType = mimeType,
-                    thumbhash = thumbHash,
-                )
-            } else {
-                MediaUrlVideo(
-                    url = fullUrl,
-                    description = description,
-                    hash = hash,
-                    blurhash = blurHash,
-                    dim = dimensions,
-                    uri = uri,
-                    authorName = note.author?.toBestDisplayName(),
-                    mimeType = mimeType,
-                    thumbhash = thumbHash,
-                )
-            }
-        }
-
+    // The sensitivity gate wraps both branches: a content warning is about the file, not about
+    // which viewer happens to render it, so an NSFW-tagged archive stays behind the same gate.
     SensitivityWarning(note = note, accountViewModel = accountViewModel) {
-        ZoomableContentView(
-            content = content,
-            roundedCorner = roundedCorner,
-            contentScale = contentScale,
-            accountViewModel = accountViewModel,
-        )
+        if (content == null) {
+            FileHeaderAttachmentCard(event, fullUrl, mimeType)
+        } else {
+            ZoomableContentView(
+                content = content,
+                roundedCorner = roundedCorner,
+                contentScale = contentScale,
+                accountViewModel = accountViewModel,
+            )
+        }
     }
 }
+
+/**
+ * Builds the viewer for a kind-1063 header, or **null** when no viewer can show the blob.
+ *
+ * Kind 1063 is a *generic* file container — its `m` tag can name any type, so unlike a NIP-71
+ * video event the kind itself asserts nothing about how to render the payload. A null here means
+ * the file belongs in [FileHeaderAttachmentCard] rather than being pushed into the video player.
+ */
+internal fun FileHeaderEvent.toMediaContent(
+    note: Note,
+    url: String,
+    mimeType: String?,
+): BaseMediaContent? {
+    val blurHash = blurhash()
+    val thumbHash = thumbhash()
+    val hash = hash()
+    val dimensions = dimensions()
+    val description = fileDescription()
+    val uri = note.toNostrUri()
+
+    return when (RichTextParser.classifyMedia(url, mimeType)) {
+        MediaContentKind.IMAGE ->
+            MediaUrlImage(
+                url = url,
+                description = description,
+                hash = hash,
+                blurhash = blurHash,
+                dim = dimensions,
+                uri = uri,
+                mimeType = mimeType,
+                thumbhash = thumbHash,
+            )
+
+        MediaContentKind.VIDEO ->
+            MediaUrlVideo(
+                url = url,
+                description = description,
+                hash = hash,
+                blurhash = blurHash,
+                dim = dimensions,
+                uri = uri,
+                authorName = note.author?.toBestDisplayName(),
+                mimeType = mimeType,
+                thumbhash = thumbHash,
+            )
+
+        MediaContentKind.PDF ->
+            MediaUrlPdf(
+                url = url,
+                description = description,
+                hash = hash,
+                blurhash = blurHash,
+                dim = dimensions,
+                uri = uri,
+                mimeType = mimeType,
+                thumbhash = thumbHash,
+            )
+
+        null -> null
+    }
+}
+
+/** The link card a kind-1063 header falls back to when [toMediaContent] returns null. */
+@Composable
+internal fun FileHeaderAttachmentCard(
+    event: FileHeaderEvent,
+    url: String,
+    mimeType: String?,
+) {
+    val description = remember(event) { event.fileDescription() }
+    val sizeInBytes = remember(event) { event.size()?.toLong() }
+
+    FileAttachmentCard(
+        url = url,
+        description = description,
+        mimeType = mimeType,
+        sizeInBytes = sizeInBytes,
+    )
+}
+
+/** The human-facing name of the file: NIP-94 `content` when present, else the `alt` tag. */
+private fun FileHeaderEvent.fileDescription(): String? = content.ifEmpty { null } ?: alt()

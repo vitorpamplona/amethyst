@@ -38,7 +38,9 @@ import java.util.concurrent.atomic.AtomicLong
  * hands off the accumulated value atomically, whereas remove+sum on a
  * LongAdder can strand a racing increment on an orphaned cell. Entries stay
  * in the map after a drain — the key space is small and fixed (dims x areas),
- * so this costs a few hundred boxed zeros at most.
+ * so this costs a few hundred boxed zeros at most. The churn counters roughly
+ * tripled it, but every one of them is still compile-time bounded: no counter
+ * is keyed on a relay url, a host, or any other runtime string.
  *
  * Counters added from inside a pre-flush hook (the CPU sampler, the segment
  * integrators closing an open segment) never re-arm the debounce: they are
@@ -74,8 +76,16 @@ class ResourceUsageAccountant(
         amount: Long,
     ) {
         if (amount <= 0) return
-        live.computeIfAbsent(key) { AtomicLong() }.addAndGet(amount)
+        // Plain get first: computeIfAbsent locks the bin head when the key is present
+        // but not the head node, and the churn counters roughly tripled the key count
+        // (so collisions) on a path that runs per relay frame.
+        (live[key] ?: live.computeIfAbsent(key) { AtomicLong() }).addAndGet(amount)
         if (inHookRun.get() == true) return
+        // Plain read before the CAS: in steady state a flush is always already armed,
+        // and the churn counters made this 5-8 calls per relay frame — every one of
+        // which would otherwise be a read-modify-write on the same shared cache line
+        // from every relay's socket thread, only to fail.
+        if (flushScheduled.get()) return
         if (flushScheduled.compareAndSet(false, true)) {
             scope.launch {
                 delay(flushDebounceMs)

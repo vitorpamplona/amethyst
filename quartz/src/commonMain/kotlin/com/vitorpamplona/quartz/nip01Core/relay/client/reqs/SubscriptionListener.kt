@@ -30,7 +30,7 @@ interface SubscriptionListener {
         forFilters: List<Filter>?,
     ) {}
 
-    fun onEvent(
+    suspend fun onEvent(
         event: Event,
         isLive: Boolean,
         relay: NormalizedRelayUrl,

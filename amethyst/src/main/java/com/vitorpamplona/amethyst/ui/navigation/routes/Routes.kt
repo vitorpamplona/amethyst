@@ -457,6 +457,8 @@ sealed class Route {
 
     @Serializable object BottomBarSettings : Route()
 
+    @Serializable object DrawerSettings : Route()
+
     @Serializable object HomeTabsSettings : Route()
 
     @Serializable object ProfileUiSettings : Route()
@@ -829,6 +831,10 @@ sealed class Route {
     ) : Route()
 
     @Serializable data class ConcordEdit(
+        val communityId: String,
+    ) : Route()
+
+    @Serializable data class ConcordInviteLinks(
         val communityId: String,
     ) : Route()
 

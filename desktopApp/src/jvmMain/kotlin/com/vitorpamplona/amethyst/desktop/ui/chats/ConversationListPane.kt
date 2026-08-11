@@ -66,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
@@ -320,9 +321,12 @@ private fun ConversationCard(
         val firstUser = item.users.firstOrNull()
         Box {
             if (firstUser != null) {
+                // Load + observe the conversation's primary user only while this
+                // row is composed (i.e. on screen in the list).
+                val firstUserPicture by observeUserPicture(firstUser)
                 UserAvatar(
                     userHex = firstUser.pubkeyHex,
-                    pictureUrl = firstUser.profilePicture(),
+                    pictureUrl = firstUserPicture,
                     size = 40.dp,
                 )
             } else if (item.isGroup) {

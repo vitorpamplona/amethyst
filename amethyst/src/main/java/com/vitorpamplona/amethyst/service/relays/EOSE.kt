@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 typealias EOSERelayList = com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 typealias SincePerRelayMap = com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 typealias MutableTime = com.vitorpamplona.amethyst.commons.relays.MutableTime
+typealias EOSEAccountFast<T> = com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast<T>
 
 open class EOSEByKey<U : Any>(
     cacheSize: Int = 200,
@@ -112,61 +113,4 @@ open class EOSEAccountKey<U : Any>(
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) = addOrUpdate(user, listCode, relayUrl, time)
-}
-
-class EOSEAccountFast<T : Any>(
-    cacheSize: Int = 20,
-) {
-    private val users: LruCache<T, EOSERelayList> = LruCache(cacheSize)
-    private val lock = Any()
-
-    fun addOrUpdate(
-        user: T,
-        relayUrl: NormalizedRelayUrl,
-        time: Long,
-    ) {
-        synchronized(lock) {
-            val relayList = users[user]
-            if (relayList == null) {
-                val newList = EOSERelayList()
-                users.put(user, newList)
-
-                newList.addOrUpdate(relayUrl, time)
-            } else {
-                relayList.addOrUpdate(relayUrl, time)
-            }
-        }
-    }
-
-    fun removeEveryoneBut(list: Set<T>) {
-        synchronized(lock) {
-            users.snapshot().forEach {
-                if (it.key !in list) {
-                    users.remove(it.key)
-                }
-            }
-        }
-    }
-
-    fun removeDataFor(user: T) {
-        synchronized(lock) {
-            users.remove(user)
-        }
-    }
-
-    fun since(key: T): SincePerRelayMap? =
-        synchronized(lock) {
-            users[key]?.relayList?.toMutableMap()
-        }
-
-    fun sinceRelaySet(key: T): Set<NormalizedRelayUrl>? =
-        synchronized(lock) {
-            users[key]?.relayList?.keys?.toSet()
-        }
-
-    fun newEose(
-        user: T,
-        relayUrl: NormalizedRelayUrl,
-        time: Long,
-    ) = addOrUpdate(user, relayUrl, time)
 }

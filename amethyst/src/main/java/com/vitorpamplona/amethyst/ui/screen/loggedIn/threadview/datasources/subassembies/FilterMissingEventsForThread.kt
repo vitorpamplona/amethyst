@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies
 
 import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.filterMissingAddressables
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.filterMissingEvents
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.potentialRelaysToFindAddress
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.potentialRelaysToFindEvent
 import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingAddressables
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindAddress
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindEvent
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.mapOfSet
@@ -37,14 +38,14 @@ fun filterMissingEventsForThread(
     val missingEvents =
         mapOfSet {
             if (threadInfo.root.event == null && threadInfo.root !is AddressableNote) {
-                potentialRelaysToFindEvent(threadInfo.root).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                potentialRelaysToFindEvent(LocalCache, threadInfo.root).ifEmpty { defaultRelays }.forEach { relayUrl ->
                     add(relayUrl, threadInfo.root.idHex)
                 }
             }
 
             threadInfo.allNotes.forEach {
                 if (it !is AddressableNote && it.event == null) {
-                    potentialRelaysToFindEvent(it).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                    potentialRelaysToFindEvent(LocalCache, it).ifEmpty { defaultRelays }.forEach { relayUrl ->
                         add(relayUrl, it.idHex)
                     }
                 }
@@ -59,14 +60,14 @@ fun filterMissingEventsForThread(
                 // note's aTag idHex into the hex-keyed event-hint index, which throws
                 // on the non-hex string and kills the whole filter build — leaving a
                 // thread opened on an uncached naddr permanently unfetched.
-                potentialRelaysToFindAddress(rootNote).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                potentialRelaysToFindAddress(LocalCache, rootNote).ifEmpty { defaultRelays }.forEach { relayUrl ->
                     add(relayUrl, rootNote.address)
                 }
             }
 
             threadInfo.allNotes.forEach {
                 if (it is AddressableNote && it.event == null) {
-                    potentialRelaysToFindAddress(it).ifEmpty { defaultRelays }.forEach { relayUrl ->
+                    potentialRelaysToFindAddress(LocalCache, it).ifEmpty { defaultRelays }.forEach { relayUrl ->
                         add(relayUrl, it.address)
                     }
                 }

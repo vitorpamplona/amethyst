@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Streams `identity.changed` pushes to an applet that registered `napplet.identity.onChanged`. It
@@ -34,31 +35,35 @@ import kotlinx.coroutines.launch
  * value is dropped — the applet already has it via `getPublicKey`), encodes and pushes the new key
  * (or `""` when no account is signed in) to the caller-supplied sink.
  *
- * One watch at a time per host binding; [start] replaces any prior one. Reached only after the
- * router confirmed the applet declared the IDENTITY capability.
+ * Watches are keyed by the trusted launch token so concurrent surfaces cannot replace each other's
+ * streams. A watch starts only after that surface successfully obtains its public-key snapshot.
  */
 class NappletIdentityWatch(
     private val scope: CoroutineScope,
     private val pubKey: (boundPubKey: String) -> Flow<String>,
 ) {
-    private var job: Job? = null
+    private val jobs = ConcurrentHashMap<String, Job>()
 
     fun start(
+        watchId: String,
         boundPubKey: String,
         push: (String) -> Unit,
     ) {
-        stop()
-        job =
-            scope.launch {
-                pubKey(boundPubKey)
-                    .distinctUntilChanged()
-                    .drop(1)
-                    .collect { push(NappletProtocolJson.encodeIdentityChanged(it)) }
-            }
+        jobs.computeIfAbsent(watchId) { id ->
+            scope
+                .launch {
+                    pubKey(boundPubKey)
+                        .distinctUntilChanged()
+                        .drop(1)
+                        .collect { push(NappletProtocolJson.encodeIdentityChanged(it)) }
+                }.also { job ->
+                    job.invokeOnCompletion { jobs.remove(id, job) }
+                }
+        }
     }
 
-    fun stop() {
-        job?.cancel()
-        job = null
+    fun stopAll() {
+        jobs.values.forEach { it.cancel() }
+        jobs.clear()
     }
 }

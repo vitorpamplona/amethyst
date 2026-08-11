@@ -100,7 +100,7 @@ class RelayAuthenticatorReauthOnClosedTest {
                 .filterIsInstance<AuthCmd>()
                 .last()
                 .event
-        listener.onIncomingMessage(relay, "", OkMessage.accepted(newest.id))
+        kotlinx.coroutines.runBlocking { listener.onIncomingMessage(relay, "", OkMessage.accepted(newest.id)) }
     }
 
     @Test

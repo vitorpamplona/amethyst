@@ -91,11 +91,11 @@ class NegentropyRejectionFallbackTest {
                         when {
                             // The keep-alive REQ and any paging REQ: answer EOSE so the
                             // subscription settles (paging then completes with 0 events).
-                            msg.startsWith("[\"REQ\"") -> subIdOf(msg)?.let { out.onMessage("[\"EOSE\",\"$it\"]") }
+                            msg.startsWith("[\"REQ\"") -> subIdOf(msg)?.let { kotlinx.coroutines.runBlocking { out.onMessage("[\"EOSE\",\"$it\"]") } }
                             // The negentropy handshake: the relay refuses.
                             msg.startsWith("[\"NEG-OPEN\"") -> {
                                 negOpens.incrementAndGet()
-                                subIdOf(msg)?.let { out.onMessage(replyToNegOpen(it)) }
+                                subIdOf(msg)?.let { kotlinx.coroutines.runBlocking { out.onMessage(replyToNegOpen(it)) } }
                             }
                             else -> Unit
                         }
@@ -140,25 +140,28 @@ class NegentropyRejectionFallbackTest {
     }
 
     @Test
-    fun strfryNegentropyDisabledFallsBackToPaging() {
-        negOpenRejectedBy { "[\"NOTICE\",\"ERROR: bad msg: negentropy disabled\"]" }
-    }
+    fun strfryNegentropyDisabledFallsBackToPaging() =
+        kotlinx.coroutines.test.runTest {
+            negOpenRejectedBy { "[\"NOTICE\",\"ERROR: bad msg: negentropy disabled\"]" }
+        }
 
     @Test
-    fun purplePagesUnknownEnvelopeFallsBackToPaging() {
-        negOpenRejectedBy { "[\"NOTICE\",\"failed to parse envelope: unknown envelope label\"]" }
-    }
+    fun purplePagesUnknownEnvelopeFallsBackToPaging() =
+        kotlinx.coroutines.test.runTest {
+            negOpenRejectedBy { "[\"NOTICE\",\"failed to parse envelope: unknown envelope label\"]" }
+        }
 
     @Test
-    fun rateLimitNegErrPagesWithoutSplitStorm() {
-        // A NEG-ERR that does NOT shrink with the window ("too many requests") must not
-        // be mistaken for a set-too-large overflow: doing so would binary-split the
-        // created_at range forever. Assert we page after exactly ONE NEG-OPEN.
-        val relay = negOpenRejectedBy { subId -> "[\"NEG-ERR\",\"$subId\",\"rate-limited: too many requests\"]" }
-        assertEquals(
-            2,
-            relay.negOpens.get(),
-            "one NEG-OPEN per phase (sync + syncOrFetch), i.e. no window-split storm; got ${relay.negOpens.get()}",
-        )
-    }
+    fun rateLimitNegErrPagesWithoutSplitStorm() =
+        kotlinx.coroutines.test.runTest {
+            // A NEG-ERR that does NOT shrink with the window ("too many requests") must not
+            // be mistaken for a set-too-large overflow: doing so would binary-split the
+            // created_at range forever. Assert we page after exactly ONE NEG-OPEN.
+            val relay = negOpenRejectedBy { subId -> "[\"NEG-ERR\",\"$subId\",\"rate-limited: too many requests\"]" }
+            assertEquals(
+                2,
+                relay.negOpens.get(),
+                "one NEG-OPEN per phase (sync + syncOrFetch), i.e. no window-split storm; got ${relay.negOpens.get()}",
+            )
+        }
 }

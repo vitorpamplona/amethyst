@@ -182,12 +182,32 @@ object ConcordKeyDerivation {
 
     // ---- Plane keys (CORD-02) -------------------------------------------------
 
-    /** The Control Plane address for a community at [epoch] (holders of the root only). */
+    /**
+     * The Control Plane *read* key for a community at [epoch] (CORD-02 §5): its
+     * `conversationKey` encrypts the wraps, so every `community_root` holder can read.
+     *
+     * On a pre-split (legacy) epoch this derivation alone was the plane — its pk the
+     * address and wrap signer, its sk held by every member. That use is retained for
+     * reading legacy epochs (CORD-06 §3); a split epoch's address comes from
+     * [controlSignerKey] instead.
+     */
     fun controlPlaneKey(
         communityRoot: ByteArray,
         communityId: ByteArray,
         epoch: Long,
     ): GroupKey = groupKey(ConcordLabels.CONTROL, communityRoot, communityId, epoch)
+
+    /**
+     * The Control Plane *signer* for a community at [epoch] (CORD-02 §5): its pk is
+     * the plane's address (`control_pk`) and its sk — derivable only from the
+     * staff-held `control_root` — signs the wraps. Possession is a spam gate, never
+     * authority: every edition is still judged by its sealed actor's Roster rank.
+     */
+    fun controlSignerKey(
+        controlRoot: ByteArray,
+        communityId: ByteArray,
+        epoch: Long,
+    ): GroupKey = groupKey(ConcordLabels.CONTROL_SIGNER, controlRoot, communityId, epoch)
 
     /** The Guestbook Plane address for a community at [epoch]. */
     fun guestbookPlaneKey(

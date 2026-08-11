@@ -61,6 +61,17 @@ expect class ConcurrentMap<K : Any, V : Any>() {
         remap: (old: V, new: V) -> V,
     ): V
 
+    /**
+     * Removes [key] and returns the value it held, or null when absent.
+     *
+     * CAUTION: if the removed value owns a lock that callers acquire, removal
+     * breaks mutual exclusion — a thread holding the old value's lock and a
+     * thread that re-created the entry are no longer excluding each other. Keep
+     * such locks in a structure whose identity is stable (see
+     * `quartz/plans/2026-08-03-poolrequests-lock-contention.md`).
+     */
+    fun remove(key: K): V?
+
     fun size(): Int
 
     /** A point-in-time copy of the entries — safe to iterate without holding a lock. */

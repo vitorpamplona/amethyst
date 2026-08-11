@@ -38,10 +38,12 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  *
  * The rotator publishes a kind-3303 rumor whose content is a JSON array of
  * [RekeyBlob]s, one per remaining member. Each blob's `locator` is the recipient's
- * pseudonym (public-input HKDF), and its `wrapped` field is the 72-byte
- * [RekeyPayload] (base64 → NIP-44 under the rotator↔recipient pairwise key). A
- * recipient computes their own locator, finds the matching blob, and decrypts the
- * new key; a member with no matching blob across all chunks of a complete rotation
+ * pseudonym (public-input HKDF), and its `wrapped` field is the fixed-width
+ * [RekeyPayload] (base64 → NIP-44 under the rotator↔recipient pairwise key) —
+ * 72 bytes for a channel rotation, 104/136 for a base rotation's member/staff
+ * forms carrying the next epoch's Control Plane keys (CORD-02 §2). A recipient
+ * computes their own locator, finds the matching blob, and decrypts the new
+ * key(s); a member with no matching blob across all chunks of a complete rotation
  * has been removed.
  *
  * Pinned to the Concord v2 reference client for interop.
@@ -57,7 +59,9 @@ object ConcordRekey {
     val ROOT_SCOPE: ByteArray = ByteArray(32)
 
     /**
-     * Builds a rekey blob delivering [newKey] to one recipient.
+     * Builds a rekey blob delivering [newKey] to one recipient. On a base rotation
+     * pass [newControlPk] (every member) and, for a staff recipient, also
+     * [newControlRoot] (CORD-06 §1) — the widths select the 104/136-byte forms.
      *
      * @param rotatorPrivKey the rotator's private key (their real identity)
      * @param rotatorXOnly   the rotator's x-only pubkey
@@ -71,9 +75,11 @@ object ConcordRekey {
         scopeId: ByteArray,
         newEpoch: Long,
         newKey: ByteArray,
+        newControlPk: ByteArray? = null,
+        newControlRoot: ByteArray? = null,
     ): RekeyBlob {
         val locator = ConcordKeyDerivation.recipientLocator(rotatorXOnly, recipientXOnly, scopeId, newEpoch).toHexKey()
-        val payloadB64 = Base64.Default.encode(RekeyPayload(scopeId, newEpoch, newKey).encode())
+        val payloadB64 = Base64.Default.encode(RekeyPayload(scopeId, newEpoch, newKey, newControlPk, newControlRoot).encode())
         val convKey = Nip44.v2.getConversationKey(rotatorPrivKey, recipientXOnly)
         val wrapped = Nip44.v2.encrypt(payloadB64, convKey).encodePayload()
         return RekeyBlob(locator, wrapped)
@@ -125,37 +131,53 @@ object ConcordRekey {
         scopeId: ByteArray,
         newEpoch: Long,
         newKey: ByteArray,
+        newControlPk: ByteArray? = null,
+        newControlRoot: ByteArray? = null,
     ): RekeyBlob {
         val rotatorXOnly = rotatorSigner.pubKey.hexToByteArray()
         val locator = ConcordKeyDerivation.recipientLocator(rotatorXOnly, recipientXOnly, scopeId, newEpoch).toHexKey()
-        val payloadB64 = Base64.Default.encode(RekeyPayload(scopeId, newEpoch, newKey).encode())
+        val payloadB64 = Base64.Default.encode(RekeyPayload(scopeId, newEpoch, newKey, newControlPk, newControlRoot).encode())
         val wrapped = rotatorSigner.nip44Encrypt(payloadB64, recipientXOnly.toHexKey())
         return RekeyBlob(locator, wrapped)
     }
 
     /**
-     * Finds the recipient's rotated key like [findNewKey], but decrypts the blob via
-     * [recipientSigner] (bunker-compatible) rather than a raw private key.
+     * Finds the recipient's whole decrypted [RekeyPayload] (scope and epoch already
+     * verified against the expectation) via [recipientSigner], or null if no blob
+     * matches or it fails to open/verify. Base rotations need the full payload —
+     * the delivered `new_control_pk` / `new_control_root` ride beside the key.
      */
     @OptIn(ExperimentalEncodingApi::class)
-    suspend fun findNewKeyWithSigner(
+    suspend fun findPayloadWithSigner(
         blobs: List<RekeyBlob>,
         recipientSigner: NostrSigner,
         rotatorXOnly: ByteArray,
         scopeId: ByteArray,
         newEpoch: Long,
-    ): ByteArray? {
+    ): RekeyPayload? {
         val recipientXOnly = recipientSigner.pubKey.hexToByteArray()
         val myLocator = ConcordKeyDerivation.recipientLocator(rotatorXOnly, recipientXOnly, scopeId, newEpoch).toHexKey()
         val blob = blobs.firstOrNull { it.locator == myLocator } ?: return null
         return try {
             val payload = RekeyPayload.decode(Base64.Default.decode(recipientSigner.nip44Decrypt(blob.wrapped, rotatorXOnly.toHexKey()))) ?: return null
             if (!payload.scopeId.contentEquals(scopeId) || payload.epoch != newEpoch) return null
-            payload.newKey
+            payload
         } catch (_: Exception) {
             null
         }
     }
+
+    /**
+     * Finds the recipient's rotated key like [findNewKey], but decrypts the blob via
+     * [recipientSigner] (bunker-compatible) rather than a raw private key.
+     */
+    suspend fun findNewKeyWithSigner(
+        blobs: List<RekeyBlob>,
+        recipientSigner: NostrSigner,
+        rotatorXOnly: ByteArray,
+        scopeId: ByteArray,
+        newEpoch: Long,
+    ): ByteArray? = findPayloadWithSigner(blobs, recipientSigner, rotatorXOnly, scopeId, newEpoch)?.newKey
 
     /**
      * Finds the recipient's rotated key across the [blobs] of one or more chunks,

@@ -107,14 +107,8 @@ class BuzzRelayImportViewModel : ViewModel() {
         val newlyJoined = BuzzWorkspaces.join(normalized)
         viewModelScope.launch { account.relayAuthLedger.setDecision(normalized.url, RelayAuthDecision.ALLOW) }
 
-        // NIP-42 sends its AUTH challenge once, on connect. If the socket was already open before this
-        // join (the common case — the relay is in the user's lists and connected at startup), that
-        // challenge was spent while the relay was still NOT first-party, so the connection is
-        // unauthenticated and the persistent group-roster (39002) subscription is refused. Joining
-        // makes the relay first-party (see AuthCoordinator.isFirstParty); force a reconnect so the
-        // relay re-challenges and the connection authenticates — unlocking the roster (Join gate) and
-        // every other `#p=me`-gated read on the shared socket.
-        if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
+        // Unlocks the persistent group-roster (39002) subscription — see [reconnectPoolAfterJoin].
+        if (newlyJoined) reconnectPoolAfterJoin(account.client)
 
         // Track "already added" against the live kind-10009 list, scoped to this relay, so the rows
         // follow every add/remove — from here, from the channel's top bar, or from another device.

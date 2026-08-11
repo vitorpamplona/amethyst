@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
@@ -1586,6 +1587,29 @@ class AccountViewModel(
     }
 
     /**
+     * [decrypt] that always answers: [onReady] gets null when the content can't be read — a
+     * read-only account holding no key, a DM this account isn't part of, or a signer that
+     * refused/timed out. [decrypt] stays silent in those cases, which strands callers that must
+     * finish either way (a menu that only closes once the copy resolves, say).
+     */
+    fun decryptOrNull(
+        note: Note,
+        onReady: (String?) -> Unit,
+    ) = launchSigner {
+        val decrypted =
+            try {
+                account.decryptContent(note)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // launchSigner still gets the exception to toast/log the signer failure.
+                onReady(null)
+                throw e
+            }
+        onReady(decrypted)
+    }
+
+    /**
      * Runs an action that has both a tracked and a direct broadcast variant,
      * picking the path the user selected via the "Tracked broadcasts" setting.
      */
@@ -1986,6 +2010,15 @@ class AccountViewModel(
 
     fun bottomBarItemsFlow(): StateFlow<List<BottomBarEntry>> = account.settings.syncedSettings.navigation.bottomBarItems
 
+    fun hiddenDrawerItemsFlow(): StateFlow<Set<NavBarItem>> = account.settings.syncedSettings.navigation.hiddenDrawerItems
+
+    /** Same ordering contract as [changeBottomBarItems]: apply on the caller's thread, publish off it. */
+    fun changeHiddenDrawerItems(items: Set<NavBarItem>) {
+        if (account.applyHiddenDrawerItems(items)) {
+            launchSigner { account.sendNewAppSpecificData() }
+        }
+    }
+
     fun changeBottomBarItems(items: List<BottomBarEntry>) {
         // Apply to the reactive flow synchronously on the caller (UI) thread so rapid edits stay
         // ordered — launchSigner dispatches on a multi-threaded pool, so wrapping the emit too would
@@ -2096,7 +2129,7 @@ class AccountViewModel(
 
     fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
-    override fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
+    override fun getOrCreateUser(pubkey: HexKey): User = LocalCache.getOrCreateUser(pubkey)
 
     fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 

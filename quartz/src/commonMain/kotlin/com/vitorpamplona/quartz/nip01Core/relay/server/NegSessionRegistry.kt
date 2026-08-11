@@ -104,7 +104,13 @@ class NegSessionRegistry(
         // `null` = matching set exceeds the cap (strfry-parity error).
         val sealedStorage = store.sealedNegentropyStorage(filters, maxEntries = settings.maxSyncEvents)
         if (sealedStorage == null) {
-            send(NegErrMessage(cmd.subId, "blocked: too many query results"))
+            // The cap rides along with the refusal. A client cannot discover
+            // this number any other way — NIP-11 has no field for it — so
+            // without it the only route to a window we WILL answer is guessing,
+            // halving, one refused NEG-OPEN at a time. Every one of those costs
+            // us the snapshot scan that produced this rejection, which makes
+            // stating it cheaper for the relay than staying quiet.
+            send(NegErrMessage(cmd.subId, "blocked: too many query results", settings.maxSyncEvents.toLong()))
             return
         }
 

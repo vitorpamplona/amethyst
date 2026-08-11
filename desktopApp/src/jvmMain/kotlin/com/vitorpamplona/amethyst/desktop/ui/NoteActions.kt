@@ -858,7 +858,7 @@ private suspend fun fetchMetadataForUsers(
             relays = relays,
             listener =
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -1666,7 +1666,7 @@ private suspend fun fetchUserLightningAddress(
             relays = relays,
             listener =
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,

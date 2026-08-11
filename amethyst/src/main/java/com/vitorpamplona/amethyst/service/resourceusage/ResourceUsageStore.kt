@@ -34,13 +34,31 @@ import java.io.File
  * Jackson + Mutex + write-to-tmp-then-rename + version envelope.
  *
  * Day keys are UTC epoch-days (stringified for JSON). Buckets older than
- * [keepDays] are pruned on every merge, so the file stays small (a few KB).
+ * [keepDays] are pruned on every merge, so the file stays small (a few KB, on a
+ * key space the churn counters tripled but left compile-time bounded). The whole
+ * file is re-serialized on every flush (debounced to ~30s while traffic flows),
+ * so that size is paid on each write, not just at rest.
  * Also carries the high-consumption alert state (last prompt time, opt-out)
  * so the whole feature has exactly one file.
  */
 class ResourceUsageStore(
     private val storageFile: File,
-    private val keepDays: Long = 30,
+    /**
+     * Retention, in days.
+     *
+     * Seven because that is the widest window anything reads: the summary tables and
+     * the trend chart both span `today - 6 .. today`, the alert evaluator looks at
+     * two days, and the report's raw dump is byte-bounded well below a week. At 30 —
+     * the previous value — twenty-three days were rewritten on every flush and read
+     * by nothing.
+     *
+     * That is not free: [persist] rewrites the whole file on every merge, and the
+     * relay-churn counters took a day's bucket from ~57 keys to ~241. Retention is
+     * therefore a write-amplification setting as much as a history setting — cutting
+     * it to a week is what keeps those counters at ~18% over the previous file size
+     * rather than ~5x.
+     */
+    private val keepDays: Long = 7,
 ) {
     data class UsageFile(
         val version: Int = 1,

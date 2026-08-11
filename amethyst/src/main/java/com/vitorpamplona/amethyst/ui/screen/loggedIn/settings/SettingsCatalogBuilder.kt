@@ -72,6 +72,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.reactions_settings, MaterialSymbols.ThumbUp, R.string.reactions_settings_search_keywords, Route.ReactionsSettings),
                     symEntry(R.string.messages_settings, MaterialSymbols.Mail, R.string.messages_settings_search_keywords, Route.MessagesSettings),
                     symEntry(R.string.bottom_bar_settings, MaterialSymbols.Dashboard, R.string.bottom_bar_search_keywords, Route.BottomBarSettings),
+                    symEntry(R.string.drawer_settings, MaterialSymbols.AutoMirrored.ViewList, R.string.drawer_search_keywords, Route.DrawerSettings),
                     symEntry(R.string.video_player_settings, MaterialSymbols.VideoSettings, R.string.video_player_search_keywords, Route.VideoPlayerSettings),
                     symEntry(R.string.audio_visualizer_settings, MaterialSymbols.MusicNote, R.string.audio_visualizer_search_keywords, Route.AudioVisualizerSettings),
                     symEntry(R.string.favorite_dvms_title, MaterialSymbols.AutoAwesome, R.string.favorite_dvms_search_keywords, Route.EditFavoriteAlgoFeeds),
