@@ -395,7 +395,7 @@ class CachePruner(
 
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {
-                cache.getUserIfExists(it.pubkey)?.reportsOrNull()?.let { reports ->
+                cache.getUserIfExists(it.pubKey)?.reportsOrNull()?.let { reports ->
                     reports.removeReport(note)
                     reports.removeReportNamingUser(note)
                 }
