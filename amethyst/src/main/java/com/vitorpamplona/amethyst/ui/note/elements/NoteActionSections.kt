@@ -144,7 +144,7 @@ fun noteActionSections(
         buildList {
             add(
                 NoteAction(MaterialSymbols.ContentCopy, stringRes(R.string.copy_text)) {
-                    copyNoteText(noteVersionToCopy)
+                    copyNoteText(note, noteVersionToCopy)
                 },
             )
             add(

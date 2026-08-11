@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.cachedTranslation
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.note.types.displayedNoteText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
@@ -55,18 +56,26 @@ data class CopyTextChoice(
  * rendered, which is what populated that cache — so a hit means the user is looking at a
  * translation and gets a chooser (Copy Original / Copy Translated); a miss copies directly.
  *
- * Returns the click handler for the menu entry, taking the note whose text to copy (callers
- * pass the latest version of a versioned post). [onCopied] runs after the text lands on the
- * clipboard, [onDismiss] when the chooser is cancelled without copying; callers must keep
- * their menu in composition until one of the two runs, because the chooser dialog is emitted
- * from this composable.
+ * What gets copied — and what the cache is keyed on — is [displayedNoteText], the same string
+ * the viewer rendered, not the raw event content: a NIP-14 subject is part of what the user is
+ * reading and of what was translated.
+ *
+ * Returns the click handler for the menu entry, taking the note the menu belongs to and the
+ * version of it the screen is showing (the same note unless the post was edited — the body
+ * comes from the version, the subject from the note itself, exactly as the viewer composes
+ * them). [onCopied] runs after the text lands on the
+ * clipboard, [onDismiss] when the chooser is cancelled without copying **or** when the note
+ * can't be decrypted at all (a read-only account, a refused signer) so the menu still closes
+ * instead of hanging on a copy that will never happen. Callers must keep their menu in
+ * composition until one of the two runs, because the chooser dialog is emitted from this
+ * composable.
  */
 @Composable
 fun copyNoteTextAction(
     accountViewModel: AccountViewModel,
     onCopied: () -> Unit,
     onDismiss: () -> Unit,
-): (Note) -> Unit {
+): (note: Note, versionShown: Note) -> Unit {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val choice = remember { mutableStateOf<CopyTextChoice?>(null) }
@@ -95,13 +104,18 @@ fun copyNoteTextAction(
         )
     }
 
-    return { note ->
-        accountViewModel.decrypt(note) { original ->
-            val translated = cachedTranslation(original, accountViewModel)
-            if (translated == null) {
-                copy(original)
+    return { note, versionShown ->
+        accountViewModel.decryptOrNull(versionShown) { decrypted ->
+            if (decrypted == null) {
+                onDismiss()
             } else {
-                choice.value = CopyTextChoice(original, translated)
+                val original = displayedNoteText(note, decrypted)
+                val translated = cachedTranslation(original, accountViewModel)
+                if (translated == null) {
+                    copy(original)
+                } else {
+                    choice.value = CopyTextChoice(original, translated)
+                }
             }
         }
     }

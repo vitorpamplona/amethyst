@@ -1586,6 +1586,29 @@ class AccountViewModel(
     }
 
     /**
+     * [decrypt] that always answers: [onReady] gets null when the content can't be read — a
+     * read-only account holding no key, a DM this account isn't part of, or a signer that
+     * refused/timed out. [decrypt] stays silent in those cases, which strands callers that must
+     * finish either way (a menu that only closes once the copy resolves, say).
+     */
+    fun decryptOrNull(
+        note: Note,
+        onReady: (String?) -> Unit,
+    ) = launchSigner {
+        val decrypted =
+            try {
+                account.decryptContent(note)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // launchSigner still gets the exception to toast/log the signer failure.
+                onReady(null)
+                throw e
+            }
+        onReady(decrypted)
+    }
+
+    /**
      * Runs an action that has both a tracked and a direct broadcast variant,
      * picking the path the user selected via the "Tracked broadcasts" setting.
      */

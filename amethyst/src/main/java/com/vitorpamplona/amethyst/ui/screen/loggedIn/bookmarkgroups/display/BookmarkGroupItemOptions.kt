@@ -201,7 +201,7 @@ fun BookmarkGroupItemOptionsMenu(
         M3ActionSection {
             M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_text)) {
                 val lastNoteVersion = (editState?.value as? GenericLoadable.Loaded)?.loaded?.modificationToShow?.value ?: note
-                copyNoteText(lastNoteVersion)
+                copyNoteText(note, lastNoteVersion)
             }
             M3ActionRow(icon = MaterialSymbols.ContentCopy, text = stringRes(R.string.copy_user_pubkey)) {
                 note.author?.let {
