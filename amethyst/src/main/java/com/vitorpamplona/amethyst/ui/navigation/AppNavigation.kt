@@ -50,6 +50,9 @@ import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
+import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
+import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
+import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccount
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
@@ -138,6 +141,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCreateScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordHomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteLinksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
@@ -341,6 +345,15 @@ fun AppNavigation(
     CompositionLocalProvider(
         LocalScreenLayout provides screenLayout,
         LocalTabReselectCoordinator provides tabReselectCoordinator,
+        // Provide the shared finder CompositionLocals so any commons composable that
+        // uses the no-arg observeUser*/EventFinderFilterAssemblerSubscription(note)
+        // overloads works when rendered on Android (they error() if unprovided). Android's
+        // own UI uses the AccountViewModel overloads and doesn't strictly need these, but
+        // providing them removes the runtime trap for shared composables reaching the
+        // logged-in tree. (The :napplet process never renders these composables.)
+        LocalUserFinder provides accountViewModel.dataSources().userFinder,
+        LocalUserFinderAccount provides accountViewModel.account,
+        LocalEventFinder provides accountViewModel.dataSources().eventFinder,
     ) {
         AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
             Box(Modifier.fillMaxSize()) {
@@ -741,6 +754,14 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.ConcordMembers> {
             ConcordMembersScreen(
+                communityId = it.communityId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordInviteLinks> {
+            ConcordInviteLinksScreen(
                 communityId = it.communityId,
                 accountViewModel = accountViewModel,
                 nav = nav,

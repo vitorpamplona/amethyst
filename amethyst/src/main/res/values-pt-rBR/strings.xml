@@ -1941,8 +1941,13 @@
     </plurals>
     <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d relé</item>
+        <item quantity="other">%1$s \u00b7 %2$d relés</item>
+    </plurals>
     <string name="relay_purpose_browsing">Navegação</string>
     <string name="relay_purpose_media">Mídia</string>
+    <string name="relay_purpose_tags">Hashtags</string>
     <string name="relay_purpose_topics">Tópicos</string>
     <string name="relay_purpose_thread">Conversa</string>
     <string name="relay_purpose_search">Pesquisa</string>
@@ -1976,6 +1981,7 @@
     <string name="relay_purpose_your_wallet">Carteira</string>
     <string name="relay_purpose_nutzap_inbox">Caixa de entrada de nutzaps</string>
     <string name="relay_purpose_mint_directory">Diretório de mints</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
     <string name="relay_purpose_community_chats">Chats de comunidades</string>
     <string name="relay_purpose_community_feeds">Feeds de comunidades</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
@@ -2004,10 +2010,15 @@
         <item quantity="one">%1$d filtro</item>
         <item quantity="other">%1$d filtros</item>
     </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d Relé</item>
+        <item quantity="other">%1$d Relés</item>
+    </plurals>
     <plurals name="active_subs_untagged">
         <item quantity="one">%1$d filtro ainda não foi atribuído</item>
         <item quantity="other">%1$d filtros ainda não foram atribuídos</item>
     </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
     <string name="active_subs_unattributed">Não atribuído a nenhuma conta</string>
     <string name="active_subs_no_entity">Tudo</string>
     <string name="active_subs_scope_global">Todos</string>
@@ -2227,6 +2238,7 @@
     <string name="home_content_type_highlights">Destaques</string>
     <string name="home_content_type_polls">Enquetes</string>
     <string name="home_content_type_classifieds">Classificados</string>
+    <string name="home_content_type_torrents">Torrents</string>
     <string name="home_content_type_voice">Mensagens de voz</string>
     <string name="home_content_type_live_activities">Atividades ao vivo</string>
     <string name="home_content_type_ephemeral_chat">Chats efêmeros</string>
@@ -2236,6 +2248,7 @@
     <string name="home_content_type_attestations">Atestações</string>
     <string name="home_content_type_nips">Rascunhos de NIP</string>
     <string name="home_content_type_music">Música e áudio</string>
+    <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_fundraisers">Arrecadações</string>
     <string name="settings_section_reminders">Lembretes</string>
     <string name="wallet_connect">Conectar Carteira</string>
@@ -3826,6 +3839,8 @@
     <string name="resource_usage_send_section">Compartilhar com os desenvolvedores</string>
     <string name="resource_usage_send_explanation">Se o Amethyst parece consumir bateria ou dados, você pode enviar este relatório aos desenvolvedores em uma DM criptografada. Ele contém apenas os números desta tela e os contadores técnicos por trás deles — sem publicações, contatos ou detalhes de navegação. Nada é enviado até você tocar em Enviar na tela de mensagem.</string>
     <string name="resource_usage_send_button">Enviar relatório por DM</string>
+    <string name="resource_usage_copy_button">Copiar</string>
+    <string name="resource_usage_share_button">Compartilhar</string>
     <string name="resource_usage_alert_title">Alto uso de recursos detectado</string>
     <string name="resource_usage_alert_message">O Amethyst consumiu mais do que o esperado recentemente: %1$s. Deseja enviar um relatório de uso aos desenvolvedores em uma DM criptografada? Você verá o relatório completo antes de qualquer envio.</string>
     <string name="resource_usage_reason_bg_data">%1$s de dados de celular em segundo plano em um dia</string>
@@ -4631,6 +4646,7 @@
     <string name="new_conversation_location_pro_2">Compatível com Bitchat; alcança usuários próximos nos mesmos relays.</string>
     <string name="new_conversation_location_con_1">Público e efêmero — sem histórico, qualquer um na célula pode ler.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_job_board_title">Backlog</string>
     <string name="buzz_workflow_runs_title">Execuções de fluxo de trabalho</string>
     <string name="buzz_agent_work_title">Trabalho do agente</string>
     <string name="buzz_workflow_new_run">Nova execução</string>

@@ -109,6 +109,7 @@ class ControlRootRotationTest {
                     recipientsXOnly = listOf(owner.pubKey, moderator.pubKey, member.pubKey),
                     staffXOnly = setOf(owner.pubKey, moderator.pubKey),
                     createdAt = now,
+                    ownerPubKey = owner.pubKey,
                 )
 
             val baseRekey = ConcordKeyDerivation.baseRekeyAddress(community.communityRoot, community.communityId, build.newEpoch)
@@ -149,6 +150,7 @@ class ControlRootRotationTest {
                     recipientsXOnly = listOf(owner.pubKey, member.pubKey),
                     staffXOnly = setOf(owner.pubKey),
                     createdAt = now,
+                    ownerPubKey = owner.pubKey,
                 )
 
             // The rotator's own view writes; a member's view of the same epoch only reads.

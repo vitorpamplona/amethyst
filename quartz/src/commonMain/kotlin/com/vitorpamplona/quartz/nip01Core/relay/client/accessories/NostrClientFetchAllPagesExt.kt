@@ -134,6 +134,28 @@ data class PagedFetchResult(
  * cap, so a larger value is clamped to the same page). Stepping past at least keeps
  * the download progressing to older events instead of stalling forever.
  *
+ * **Two guards keep that step from becoming a walk that never ends**, both learned
+ * from a relay in production rather than from reasoning:
+ *
+ *  - **The cursor floors at zero.** `created_at` is an unsigned timestamp, so nothing
+ *    can exist below epoch 0: a cursor that would step under it has reached the bottom
+ *    of the time axis and the walk is [PagedFetchResult.End.DRAINED]. `until = 0`
+ *    itself is still asked — it is a legal query, and the boundary re-fetch for events
+ *    stamped at the epoch — it is only going *below* it that ends the walk. This also
+ *    keeps a negative `until` off the wire, which relays disagree violently about:
+ *    measured across five, one CLOSEs the subscription with a parse error, three
+ *    answer a `NOTICE` and then never EOSE, and one drops the bound and serves its
+ *    NEWEST events.
+ *  - **A relay that ignores the cursor is [PagedFetchResult.End.UNPAGEABLE].** If a
+ *    page delivered nothing and every event it received was NEWER than the `until` it
+ *    asked for, the relay is not paging at all, and stepping one second lower just
+ *    asks the same unanswered question again. That is exactly how the first guard's
+ *    relay behaves — it treats `until <= 0` as no `until` — and without this the walk
+ *    ran ~5.5 pages a second, 500 events fetched and discarded on each, EOSE on every
+ *    one, for as long as the process lived. UNPAGEABLE is deliberate and conservative:
+ *    it proves nothing about what the relay holds, so no coverage claim can be built
+ *    on a page the relay never really answered.
+ *
  * A `search` ([Filter.search]) filter is the exception: NIP-50 results are ranked by
  * relevance, not `created_at`, so paging one by a `until` cursor is meaningless — it
  * would silently turn a top-N search into a time-walk, and never terminate against a
@@ -259,6 +281,14 @@ suspend fun INostrClient.fetchAllPages(
         val boundary = until
         var received = 0
         var delivered = 0
+
+        /**
+         * Events that came back NEWER than the `until` this page asked for — which an
+         * honest relay never sends. Counted because it is the only way to tell a relay
+         * that ignored the cursor apart from a boundary second too dense to page: both
+         * deliver nothing, and only one of them can be fixed by stepping past.
+         */
+        var aboveBoundary = 0
         var pageMinTs = Long.MAX_VALUE
         val idsAtPageMin = HashSet<HexKey>()
 
@@ -289,6 +319,9 @@ suspend fun INostrClient.fetchAllPages(
                         // early) or an unsafely published `idsAtPageMin`.
                         try {
                             received++
+                            // Before the dedup return, so it is counted for every event
+                            // the page received, not just the ones that reach the match.
+                            if (boundary != null && event.createdAt > boundary) aboveBoundary++
                             // Drop a boundary-second event we already delivered on an
                             // earlier page (the inclusive re-fetch returns it again).
                             if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
@@ -414,6 +447,35 @@ suspend fun INostrClient.fetchAllPages(
             // are resolved by stepping strictly past it. `boundary` is null only on
             // the first page, which has no dedup and so can't be all-duplicate.
             val step = boundary ?: break // first page, all-duplicate: impossible, and `end` stays UNPAGEABLE
+
+            // The relay is not honouring `until`: every event it sent was NEWER than
+            // the cursor this page asked for. Stepping past cannot help — the next
+            // page repeats the same ask one second lower and gets the same answer,
+            // forever. Measured on a live relay (purplepag.es, which treats
+            // `until <= 0` as no `until` and answers with its newest page): ~5.5
+            // pages a second, 500 events fetched and discarded on each, `until`
+            // marching one second further negative every time, an EOSE on every
+            // single page, for as long as the process ran. This is the ONE reading
+            // that ends it, and it is safely conservative — UNPAGEABLE proves
+            // nothing about what the relay holds, so no coverage claim is built on
+            // a page the relay never actually answered.
+            if (aboveBoundary == received) {
+                end = PagedFetchResult.End.UNPAGEABLE
+                break
+            }
+
+            // Below the boundary there is nothing left to ask for: `created_at` is an
+            // unsigned timestamp, so no event can exist under epoch 0 and a cursor
+            // stepping past it has reached the bottom of the time axis. Ending here
+            // rather than sending `until = -1` also keeps a value off the wire that
+            // relays disagree violently about — measured across five: one CLOSEs the
+            // subscription with a parse error, three answer a NOTICE and then never
+            // EOSE (so every page burns a whole idle timeout), one drops the bound
+            // and serves its newest events.
+            if (step <= 0L) {
+                end = PagedFetchResult.End.DRAINED
+                break
+            }
             until = step - 1
             seenAtBoundary = HashSet()
             continue
@@ -432,6 +494,17 @@ suspend fun INostrClient.fetchAllPages(
         // termination both rely on `until` never increasing. Honest relays only
         // return events at-or-below `until`, so this is a no-op for them.
         val nextUntil = if (boundary != null) minOf(pageMinTs, boundary) else pageMinTs
+
+        // The same floor as the step above, on the other way the cursor moves. It is
+        // reachable here too, and not only through a bug: `pageMinTs` is an event's
+        // own `created_at`, so one relay serving a negative timestamp is enough to
+        // put the cursor under zero. Clamping to 0 instead of stopping would not
+        // help — such an event never equals the boundary, so it dodges the dedup and
+        // comes back on every page, pinning the walk there for good.
+        if (nextUntil < 0L) {
+            end = PagedFetchResult.End.DRAINED
+            break
+        }
         if (boundary != null && nextUntil == boundary) {
             seenAtBoundary.addAll(idsAtPageMin)
         } else {

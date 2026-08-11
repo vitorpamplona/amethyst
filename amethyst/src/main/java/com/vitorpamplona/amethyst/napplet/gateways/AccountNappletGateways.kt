@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentSummary
 import com.vitorpamplona.amethyst.napplet.NappletNotificationStore
+import com.vitorpamplona.amethyst.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.napplet.buildConnectInfo
 import com.vitorpamplona.amethyst.napplet.buildSignerConsentInfo
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -265,7 +266,8 @@ class AccountNappletGateways(
                 .distinctBy { it.id }
                 .sortedByDescending { it.createdAt }
         val limit = filters.mapNotNull { it.limit }.maxOrNull()
-        return limit?.let { merged.take(it) } ?: merged
+        val limited = limit?.let { merged.take(it) } ?: merged
+        return limited.mapNotNull { NappletRelayCleartext.forDelivery(it, account.signer) }
     }
 
     /**

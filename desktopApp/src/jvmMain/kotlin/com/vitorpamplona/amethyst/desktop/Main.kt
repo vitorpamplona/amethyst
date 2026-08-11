@@ -81,8 +81,11 @@ import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSetti
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationReadState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationSettings
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalBanner
+import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
+import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
+import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccount
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
@@ -1470,6 +1473,9 @@ private fun AppInner(
                                 LocalNamecoinService provides namecoinService,
                                 LocalSpamExemptKeys provides spamExemptKeys,
                                 com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount provides iAccount,
+                                LocalUserFinder provides subscriptionsCoordinator.userFinder,
+                                LocalUserFinderAccount provides iAccount,
+                                LocalEventFinder provides subscriptionsCoordinator.eventFinder,
                             ) {
                                 val pendingAuthApprovals by authCoordinator.pendingApprovals.collectAsState()
                                 Column(modifier = Modifier.fillMaxSize()) {
@@ -2114,6 +2120,9 @@ fun MainContent(
         LocalRelayCategories provides relayCategories,
         LocalBlossomServers provides iAccount.blossomServerList.flow,
         com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount provides iAccount,
+        LocalUserFinder provides subscriptionsCoordinator.userFinder,
+        LocalUserFinderAccount provides iAccount,
+        LocalEventFinder provides subscriptionsCoordinator.eventFinder,
         com.vitorpamplona.amethyst.desktop.ui.LocalSnackbarHost provides snackbarHostState,
         com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,

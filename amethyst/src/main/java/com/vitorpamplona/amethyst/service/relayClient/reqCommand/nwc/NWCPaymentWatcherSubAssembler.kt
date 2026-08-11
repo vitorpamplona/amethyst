@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubNoEoseCacheEoseManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 

@@ -349,19 +349,12 @@ fun SearchScreen(
             }
     }
 
-    // Load author metadata for incoming note results. NIP-50 search relays
-    // typically don't return kind-0 metadata alongside notes, and the
-    // subscription explicitly drops MetadataEvents anyway — so display name
-    // and avatar arrive only after we explicitly fetch them from index
-    // relays via the coordinator.
-    LaunchedEffect(noteResults, subscriptionsCoordinator) {
-        val coordinator = subscriptionsCoordinator ?: return@LaunchedEffect
-        if (noteResults.isEmpty()) return@LaunchedEffect
-        val authors = noteResults.map { it.pubKey }.distinct()
-        if (authors.isNotEmpty()) {
-            coordinator.loadMetadataBatched(authors)
-        }
-    }
+    // Note-result author metadata (kind 0) is no longer batch-fetched here.
+    // Each result renders through NoteCard, which opens its own composition-scoped
+    // UserFinderFilterAssembler subscription — so the author's metadata is fetched
+    // from index/outbox relays per on-screen result and torn down when scrolled off.
+    // (NIP-50 search relays don't return kind-0 and the subscription drops
+    // MetadataEvents; the per-row finder covers that gap.)
 
     // Fetch interactions (incl. kind-1018 poll responses) for poll results so their
     // tallies populate — NIP-50 search returns the polls but not their responses.

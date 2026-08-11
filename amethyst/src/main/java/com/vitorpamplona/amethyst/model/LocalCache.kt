@@ -479,7 +479,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     @Volatile
     var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
-    val relayHints = HintIndexer()
+    override val relayHints = HintIndexer()
 
     /**
      * Cashu mint URL directory, populated passively as
@@ -679,7 +679,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
 
-    fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
+    override fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
     fun load(keys: List<String>): List<User> = keys.mapNotNull(::checkGetOrCreateUser)
 

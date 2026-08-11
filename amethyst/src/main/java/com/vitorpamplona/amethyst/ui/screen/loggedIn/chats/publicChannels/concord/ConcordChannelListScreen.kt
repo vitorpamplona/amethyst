@@ -170,10 +170,14 @@ fun ConcordChannelListScreen(
     // Rank alone isn't enough on a split epoch: publishing any Control edition also takes the
     // control_root (CORD-02 §2), which a freshly promoted staffer may not hold yet (CORD-04 §3),
     // so the affordance waits for the key too.
+    // hasPermission, never effectivePermissions: the latter reads the roles alone, so a banned
+    // moderator kept seeing every control here. The editions they authored were dropped by everyone's
+    // fold, which made these buttons silently no-op — worse than absent, and the same trap this file
+    // already avoids for the Roles… menu.
     val canManageChannels =
         state?.authority?.let {
             it.isOwner(account.signer.pubKey) ||
-                it.effectivePermissions(account.signer.pubKey).has(ConcordPermissions.MANAGE_CHANNELS)
+                it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_CHANNELS)
         } == true &&
             session?.controlPlaneKeys()?.canWrite == true
 
@@ -242,9 +246,18 @@ fun ConcordChannelListScreen(
                     val canEdit =
                         state?.authority?.let {
                             it.isOwner(account.signer.pubKey) ||
-                                it.effectivePermissions(account.signer.pubKey).has(ConcordPermissions.MANAGE_METADATA)
+                                it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_METADATA)
                         } == true &&
                             session?.controlPlaneKeys()?.canWrite == true
+
+                    // Minting an invite hands out a working key to the community, so it takes
+                    // CREATE_INVITE like any other privileged action. This button used to be the one
+                    // control on the screen with no gate at all.
+                    val canInvite =
+                        state?.authority?.let {
+                            it.isOwner(account.signer.pubKey) ||
+                                it.hasPermission(account.signer.pubKey, ConcordPermissions.CREATE_INVITE)
+                        } == true
 
                     IconButton(onClick = { nav.nav(Route.ConcordMembers(communityId)) }) {
                         SymbolIcon(symbol = MaterialSymbols.Group, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_members_title))
@@ -254,22 +267,24 @@ fun ConcordChannelListScreen(
                             SymbolIcon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_edit_title))
                         }
                     }
-                    IconButton(
-                        enabled = !minting,
-                        onClick = {
-                            minting = true
-                            scope.launch {
-                                try {
-                                    inviteLink = account.concord.mintConcordInvite(communityId)
-                                } finally {
-                                    // Always clear the flag — a thrown mint would otherwise leave the
-                                    // button disabled until the screen is recreated.
-                                    minting = false
+                    if (canInvite) {
+                        IconButton(
+                            enabled = !minting,
+                            onClick = {
+                                minting = true
+                                scope.launch {
+                                    try {
+                                        inviteLink = account.concord.mintConcordInvite(communityId)
+                                    } finally {
+                                        // Always clear the flag — a thrown mint would otherwise leave the
+                                        // button disabled until the screen is recreated.
+                                        minting = false
+                                    }
                                 }
-                            }
-                        },
-                    ) {
-                        SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_action))
+                            },
+                        ) {
+                            SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_action))
+                        }
                     }
 
                     // Overflow, mirroring the NIP-29 relay-group top bar: destructive membership
@@ -279,6 +294,17 @@ fun ConcordChannelListScreen(
                         SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        // Deliberately not gated on CREATE_INVITE, unlike minting: the links listed
+                        // there are this account's own, authored by link-signer keys only we hold.
+                        // Gating on the bit would mean a demoted admin could no longer retire the
+                        // links they had already handed out — exactly when that matters most.
+                        DropdownMenuItem(
+                            text = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_invite_links_action)) },
+                            onClick = {
+                                menuOpen = false
+                                nav.nav(Route.ConcordInviteLinks(communityId))
+                            },
+                        )
                         DropdownMenuItem(
                             text = {
                                 Text(

@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 
 internal fun NappletCapability.symbol(): MaterialSymbol =
     when (this) {
-        NappletCapability.SHELL -> MaterialSymbols.Tune
         NappletCapability.IDENTITY -> MaterialSymbols.AccountCircle
         NappletCapability.KEYS -> MaterialSymbols.Key
         NappletCapability.RELAY -> MaterialSymbols.Public

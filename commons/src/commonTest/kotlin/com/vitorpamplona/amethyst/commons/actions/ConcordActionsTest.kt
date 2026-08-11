@@ -123,6 +123,7 @@ class ConcordActionsTest {
                     // Only the owner is staff, so only the owner's blob carries the secret.
                     staffXOnly = setOf(owner.pubKey),
                     createdAt = 5L,
+                    ownerPubKey = owner.pubKey,
                 )
 
             val baseRekey = ConcordActions.nextBaseRekeyPlane(community.communityRoot, community.communityId, community.rootEpoch)

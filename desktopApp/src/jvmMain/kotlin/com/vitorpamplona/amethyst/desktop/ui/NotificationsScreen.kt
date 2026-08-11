@@ -67,6 +67,8 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationK
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationReadState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationSettings
 import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSeconds
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture
 import com.vitorpamplona.amethyst.commons.state.EventCollectionState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -654,10 +656,11 @@ private fun AggregateCard(
                     horizontalArrangement = Arrangement.spacedBy((-4).dp),
                 ) {
                     reactorPubKeys.take(5).forEach { pk ->
-                        val user = remember(pk, metadataVersion) { localCache.getUserIfExists(pk) }
+                        val user = remember(pk, localCache) { localCache.getOrCreateUser(pk) }
+                        val picture by observeUserPicture(user)
                         UserAvatar(
                             userHex = pk,
-                            pictureUrl = user?.profilePicture(),
+                            pictureUrl = picture,
                             size = 20.dp,
                             modifier = Modifier.clickable { onNavigateToProfile(pk) },
                         )
@@ -694,15 +697,17 @@ private fun AggregateCard(
                                 .clickable { onNavigateToProfile(pk) }
                                 .padding(vertical = 3.dp),
                     ) {
-                        val user = remember(pk, metadataVersion) { localCache.getUserIfExists(pk) }
+                        val user = remember(pk, localCache) { localCache.getOrCreateUser(pk) }
+                        val picture by observeUserPicture(user)
+                        val name by observeUserName(user)
                         UserAvatar(
                             userHex = pk,
-                            pictureUrl = user?.profilePicture(),
+                            pictureUrl = picture,
                             size = 22.dp,
                         )
                         Spacer(Modifier.size(6.dp))
                         Text(
-                            user?.toBestDisplayName() ?: pk.take(12),
+                            name,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -821,14 +826,17 @@ fun NotificationCard(
     // actual zap sender lives in the nested zap request. effectiveAuthorPubKey
     // returns the right one per kind.
     val pk = notification.effectiveAuthorPubKey
-    val user = remember(pk, metadataVersion, localCache) { localCache?.getUserIfExists(pk) }
+    // Load + observe the actor's metadata only while this card is composed.
+    // localCache is only null in previews/defaults; guard the observers so we
+    // never touch LocalUserFinder off the provider tree.
+    val user = remember(pk, localCache) { localCache?.getOrCreateUser(pk) }
+    val observedName = user?.let { observeUserName(it).value }
+    val observedPicture = user?.let { observeUserPicture(it).value }
     val displayName =
-        remember(user, metadataVersion, pk) {
-            user?.toBestDisplayName()
-                ?: pk.hexToByteArrayOrNull()?.toNpub()?.take(12)
-                ?: pk.take(12)
-        }
-    val pictureUrl = remember(user, metadataVersion) { user?.profilePicture() }
+        observedName
+            ?: pk.hexToByteArrayOrNull()?.toNpub()?.take(12)
+            ?: pk.take(12)
+    val pictureUrl = observedPicture
 
     val unread by remember(notification.timestamp, lastReadAt) {
         derivedStateOf { notification.timestamp > lastReadAt }

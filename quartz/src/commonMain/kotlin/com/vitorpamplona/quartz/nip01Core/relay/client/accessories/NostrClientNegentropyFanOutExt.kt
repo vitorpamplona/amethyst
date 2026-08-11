@@ -84,6 +84,13 @@ suspend fun negentropySyncFanOut(
     fetchBatch: Int = 250,
     idleTimeoutMs: Long = 120_000L,
     reconcileConcurrency: Int = 2,
+    /**
+     * Same contract as [negentropySync]'s: consulted for every id the reconcile
+     * names, before the `REQ` that would fetch it. Declined ids are counted in
+     * [NegentropyFanOutResult.skipped]. Called from several reconciler
+     * coroutines at once, so it must be cheap and thread-safe.
+     */
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
     onEvent: suspend (Event) -> Unit,
 ): NegentropyFanOutResult {
@@ -91,6 +98,7 @@ suspend fun negentropySyncFanOut(
 
     val need = AtomicInt(0)
     val have = AtomicInt(0)
+    val skipped = AtomicInt(0)
     val windows = AtomicInt(0)
     val used = AtomicInt(0)
     var downloaded = 0
@@ -155,6 +163,7 @@ suspend fun negentropySyncFanOut(
                                 need.addAndFetch(it)
                             },
                             onHave = { have.addAndFetch(it) },
+                            gate = NeedGate(wantId) { skipped.addAndFetch(it) },
                             sendNeedBatch = { batch -> idBatches.send(batch) },
                             sendHaveBatch = if (localEntries.isEmpty() && localIndex == null) null else { _ -> },
                         )
@@ -192,6 +201,7 @@ suspend fun negentropySyncFanOut(
         downloaded = downloaded,
         windows = windows.load(),
         connections = used.load(),
+        skipped = skipped.load(),
     )
 }
 

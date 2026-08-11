@@ -95,6 +95,10 @@ import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
@@ -268,6 +272,20 @@ private fun FeedNoteCardBody(
     myPubKeyHex: String? = null,
     onFollow: ((String) -> Unit)? = null,
 ) {
+    // Load this note author's metadata (kind 0 + relay lists) only while this
+    // card is composed — i.e. on or near screen. The shared commons finder
+    // coalesces every visible author into batched REQs, giving per-row,
+    // visibility-scoped metadata loading that matches Android's model.
+    val cardAuthor = note.author
+    if (cardAuthor != null) {
+        UserFinderFilterAssemblerSubscription(cardAuthor)
+    }
+
+    // Load this note's interactions (reactions / zaps / reposts / replies) only
+    // while the card is composed — the per-note counterpart to the author
+    // subscription above, coalesced into batched REQs by the shared event finder.
+    EventFinderFilterAssemblerSubscription(note)
+
     if (event is PollEvent) {
         DesktopPollCard(
             note = note,
@@ -751,17 +769,19 @@ fun FeedScreen(
         }
     }
 
-    // Viewport-aware metadata loading: only fetch for visible notes + buffer
-    // Uses snapshotFlow to avoid per-frame recomposition from scroll observation
+    // Fast first-paint warm-up: one batched kind-0 REQ straight to the index
+    // relays for the first visible authors. The per-row UserFinder subscriptions
+    // (in FeedNoteCardBody) are the source of truth — they do NIP-65 outbox
+    // routing and tear down off-screen — but their two-hop discovery is slower to
+    // first paint, so this immediate batch fills names/avatars instantly. Also
+    // prefetches reactions + referenced (repost/quote) notes for the initial set.
     LaunchedEffect(feedState, subscriptionsCoordinator) {
         if (subscriptionsCoordinator == null || feedState !is FeedState.Loaded) return@LaunchedEffect
-        val loadedFeed = feedState as FeedState.Loaded
 
-        // Initial load: batch metadata for first visible notes immediately
         val initialNotes = viewModel.feedState.visibleNotes().take(30)
         if (initialNotes.isNotEmpty()) {
             val authors = initialNotes.mapNotNull { it.author?.pubkeyHex }.distinct()
-            subscriptionsCoordinator.loadMetadataBatched(authors)
+            if (authors.isNotEmpty()) subscriptionsCoordinator.loadMetadataBatched(authors)
             subscriptionsCoordinator.loadMetadataForNotes(initialNotes)
         }
     }
@@ -988,7 +1008,11 @@ fun FeedScreen(
                     val loadedState by state.feed.collectAsState()
                     val lazyListState = homeFeedLazyListState
 
-                    // Viewport-aware scroll observation: fetch metadata for newly visible notes
+                    // Fast-path warm-up on scroll: batch a kind-0 REQ to index
+                    // relays for authors entering the viewport (+10 buffer), so
+                    // names/avatars paint immediately. Complementary to the per-row
+                    // FeedNoteCardBody subscriptions, which remain the source of
+                    // truth (outbox routing + off-screen teardown).
                     LaunchedEffect(lazyListState, loadedState) {
                         if (subscriptionsCoordinator == null) return@LaunchedEffect
                         val feedList = loadedState.list
@@ -999,7 +1023,7 @@ fun FeedScreen(
                             if (info.visibleItemsInfo.isEmpty()) return@snapshotFlow -1 to -1
                             info.visibleItemsInfo.first().index to info.visibleItemsInfo.last().index
                         }.distinctUntilChanged()
-                            .debounce(500)
+                            .debounce(300)
                             .collect { (first, last) ->
                                 if (first < 0) return@collect
                                 val from = (first - 10).coerceAtLeast(0)
@@ -1974,15 +1998,9 @@ private fun ExpandedNoteContent(
     // Get reply notes from cache — recompute when replies change
     val replyNotes = remember(repliesState) { note.replies.sortedByDescending { it.createdAt() } }
 
-    // Load metadata for reply authors
-    LaunchedEffect(replyNotes, subscriptionsCoordinator) {
-        if (subscriptionsCoordinator != null && replyNotes.isNotEmpty()) {
-            val authors = replyNotes.mapNotNull { it.event?.pubKey }.distinct()
-            if (authors.isNotEmpty()) {
-                subscriptionsCoordinator.loadMetadataBatched(authors)
-            }
-        }
-    }
+    // Reply-author metadata (kind 0) is loaded per-row: each CommentItem below
+    // opens its own composition-scoped observeUser* subscription, so metadata
+    // loads for on-screen replies only and tears down when the thread closes.
 
     Column(modifier = Modifier.padding(top = 8.dp)) {
         // Comments card
@@ -2022,24 +2040,30 @@ private fun ExpandedNoteContent(
                 replyNotes.take(5).forEachIndexed { index, replyNote ->
                     val replyEvent = replyNote.event
                     val flowSet = remember(replyNote) { replyNote.flow() }
-                    val metadataState by flowSet.metadata.stateFlow.collectAsState()
                     val reactionsState by flowSet.reactions.stateFlow.collectAsState()
                     val zapsState by flowSet.zaps.stateFlow.collectAsState()
 
                     DisposableEffect(replyNote) { onDispose { replyNote.clearFlow() } }
 
-                    val author =
-                        remember(replyEvent?.pubKey, metadataState) {
-                            replyEvent?.pubKey?.let { localCache.getUserIfExists(it) }
-                        }
+                    // Load this reply's own interactions (reactions/zaps) only
+                    // while the comment row is composed.
+                    EventFinderFilterAssemblerSubscription(replyNote)
+
+                    // Load + observe this reply author's metadata only while the
+                    // comment row is composed; observeUser* both subscribes and
+                    // drives recomposition when kind-0 arrives.
+                    val replyAuthorPubKey = replyEvent?.pubKey
+                    val author = remember(replyAuthorPubKey, localCache) { replyAuthorPubKey?.let { localCache.getOrCreateUser(it) } }
+                    val authorName = author?.let { observeUserName(it).value }
+                    val authorPicture = author?.let { observeUserPicture(it).value }
                     val reactionCount = remember(reactionsState) { replyNote.countReactions() }
                     val zapAmount = remember(zapsState) { replyNote.zapsAmount }
 
                     CommentItem(
-                        authorName = author?.toBestDisplayName() ?: replyEvent?.pubKey?.take(8) ?: "",
+                        authorName = authorName ?: replyAuthorPubKey?.take(8) ?: "",
                         authorHandle = author?.pubkeyNpub()?.take(16)?.let { "@$it..." } ?: "",
-                        authorAvatarUrl = author?.profilePicture(),
-                        authorPubKeyHex = replyEvent?.pubKey ?: "",
+                        authorAvatarUrl = authorPicture,
+                        authorPubKeyHex = replyAuthorPubKey ?: "",
                         content = replyEvent?.content ?: "",
                         timeAgo = (replyEvent?.createdAt ?: 0L).toTimeAgo(),
                         reactionCount = reactionCount,

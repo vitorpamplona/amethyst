@@ -52,7 +52,7 @@ class InviteChannel(
  * into a kind-33301 bundle (link invites) or a NIP-59 giftwrap (direct invites).
  */
 @Serializable
-class CommunityInvite(
+data class CommunityInvite(
     @SerialName("community_id") val communityId: String,
     val owner: String,
     @SerialName("owner_salt") val ownerSalt: String,

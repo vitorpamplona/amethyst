@@ -373,6 +373,16 @@ class NotificationRelayService : Service() {
         if (fresh.isNotEmpty()) lastBreakdown = fresh
         val breakdown = fresh.ifEmpty { lastBreakdown }.takeIf { it.isNotEmpty() }
 
+        // Deliberately left ungrouped. This notification is ongoing and IMPORTANCE_LOW, so it
+        // sits in the shade's Silent section next to the low-importance content kinds
+        // (reactions, reposts) — and Android 16 sweeps everything ungrouped in a section into
+        // one aggregate bundle whose summary inherits FLAG_ONGOING_EVENT from any child that
+        // has it, making the whole bundle un-swipeable. Giving this one a group of its own
+        // would not help: a group with a summary but no children, or a child with no summary,
+        // is force-grouped just the same. What keeps content notifications out of that bundle
+        // is that they always post their own group summary (see NotificationUtils), which
+        // leaves this the only ungrouped silent notification we post — one is below the
+        // threshold, so no bundle is formed and nothing gets stapled to it.
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.always_on_notif_title))

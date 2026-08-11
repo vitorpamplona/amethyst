@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -172,6 +173,8 @@ class ThreadAssemblerTest {
         private val notesById: Map<HexKey, Note>,
     ) : ICacheProvider {
         override fun getAnyChannel(note: Note): Channel? = null
+
+        override val relayHints = HintIndexer()
 
         override fun getUserIfExists(pubkey: HexKey): User? = null
 

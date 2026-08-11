@@ -582,12 +582,15 @@ class Context(
         diagnoseSlow: Boolean = false,
         deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
         pendingOnAuthRequired: Boolean = false,
+        /** Per-relay terminal reason, so a caller can tell an empty answer from no answer. */
+        doneOut: MutableMap<NormalizedRelayUrl, String>? = null,
     ): List<Pair<NormalizedRelayUrl, Event>> =
         client.fetchAllWithHooks(
             filters = filters,
             idleTimeoutMs = idleTimeoutMs,
             pendingOnAuthRequired = pendingOnAuthRequired,
             deadOut = deadOut,
+            doneOut = doneOut,
             onTimeout =
                 if (diagnoseSlow) {
                     { stalled, doneReasons, collected -> logSlowDrain(idleTimeoutMs, stalled, doneReasons, collected) }

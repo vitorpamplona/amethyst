@@ -133,7 +133,10 @@ fun ConcordMembersScreen(
         }
 
     val iAmOwner = state?.authority?.isOwner(myPubKey) == true
-    val iCanBan = state?.let { it.authority.isOwner(myPubKey) || it.authority.effectivePermissions(myPubKey).has(ConcordPermissions.BAN) } == true
+    // hasPermission, never effectivePermissions: a banned BAN-holder used to keep the whole Ban /
+    // Remove menu. It only stayed harmless because `canBanTarget` below routes through canActOn,
+    // which IS ban-aware — a thin margin for the escalation in docs/concord-soft-ban-audit.md.
+    val iCanBan = state?.let { it.authority.isOwner(myPubKey) || it.authority.hasPermission(myPubKey, ConcordPermissions.BAN) } == true
     val iCanManageRoles = state?.authority?.hasPermission(myPubKey, ConcordPermissions.MANAGE_ROLES) == true
 
     // The roles this viewer may actually hand out. The fold drops a grant whose granter does
