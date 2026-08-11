@@ -46,6 +46,8 @@
     <string name="violence">Violence</string>
     <string name="unknown_author">Unknown Author</string>
     <string name="copy_text">Copy Text</string>
+    <string name="copy_text_original">Copy Original</string>
+    <string name="copy_text_translated">Copy Translated</string>
     <string name="copy_user_pubkey">Copy Author ID</string>
     <string name="copy_note_id">Copy Note ID</string>
     <string name="copy_raw_json">Copy raw JSON</string>
