@@ -164,9 +164,12 @@ class RemoteImeView(
 
     fun copySelection(): Boolean = onTextContextMenuItem(android.R.id.copy)
 
-    fun cutSelection(): Boolean = onTextContextMenuItem(android.R.id.cut)
+    // Cut and paste mutate the field, so they are refused on a readonly one: the page would reject the edit
+    // and the mirror would drift out of sync with it. The toolbar already hides them there — this is the
+    // backstop, kept next to the ops themselves so a future call site can't reintroduce the divergence.
+    fun cutSelection(): Boolean = !fieldReadOnly && onTextContextMenuItem(android.R.id.cut)
 
-    fun pasteClipboard(): Boolean = onTextContextMenuItem(android.R.id.paste)
+    fun pasteClipboard(): Boolean = !fieldReadOnly && onTextContextMenuItem(android.R.id.paste)
 
     fun selectAllText(): Boolean = onTextContextMenuItem(android.R.id.selectAll)
 

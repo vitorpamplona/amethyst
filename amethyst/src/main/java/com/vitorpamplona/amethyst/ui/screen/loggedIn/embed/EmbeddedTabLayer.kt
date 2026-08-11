@@ -377,6 +377,7 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         // Cancel any in-flight scroll-hide from the page phase: otherwise the field's own
                         // selection-reveal scrolls keep it armed and the new field handles/toolbar never appear.
                         sel.scrolling = false
+                        sel.onFieldReadOnly(event.readOnly)
                         sel.onFieldGeometry(event.geometry, event.text.isNotEmpty())
                     }
                     ImeEvent.WantKeyboard -> {
@@ -398,6 +399,7 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         // Re-arm "the field has text" so a tap can show the insertion handle again (a tab
                         // switch resets it). Geometry stays null here, so this can't pop a handle up on its
                         // own — native shows nothing until the user touches the field.
+                        sel.onFieldReadOnly(event.focus.readOnly)
                         sel.onFieldGeometry(null, event.focus.text.isNotEmpty())
                     }
                     ImeEvent.Blur -> {
@@ -529,19 +531,29 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // In-field (<input>/<textarea>) range selection: cut/copy/paste/select-all routed to the hidden
         // EditText, plus draggable start/end handles (drag → `ime.fieldextend`). The toolbar hides while a
         // handle is dragged or the page scrolls; the handles hide only while scrolling.
+        // A readonly field offers only the non-destructive half: its text can be selected and copied, but Cut
+        // and Paste would silently do nothing (the page rejects the edit), so native never offers them there.
         val fieldItems =
-            listOf(
-                "Cut" to {
-                    imeView.cutSelection()
-                    Unit
+            listOfNotNull(
+                if (sel.fieldReadOnly) {
+                    null
+                } else {
+                    "Cut" to {
+                        imeView.cutSelection()
+                        Unit
+                    }
                 },
                 "Copy" to {
                     imeView.copySelection()
                     Unit
                 },
-                "Paste" to {
-                    imeView.pasteClipboard()
-                    Unit
+                if (sel.fieldReadOnly) {
+                    null
+                } else {
+                    "Paste" to {
+                        imeView.pasteClipboard()
+                        Unit
+                    }
                 },
                 "Select all" to {
                     imeView.selectAllText()
