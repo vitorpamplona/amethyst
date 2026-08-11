@@ -68,8 +68,15 @@ class PollResponsesCache : UserDependencies {
             val tally: PersistentMap<String, PersistentSet<User>>,
             /** Voters whose response cast at least one valid option code. */
             val countedVoters: PersistentSet<User>,
-            /** Responses stamped outside the poll's window, excluded from [votes]. */
+            /** Responses stamped after the poll closed, excluded from [votes]. */
             val lateVotes: Int,
+            /**
+             * Responses stamped before the poll was published, excluded from [votes]. Counted apart
+             * from [lateVotes] because the two read completely differently to a reader: one is a
+             * vote that missed the deadline, the other is a backdated event on a poll that may
+             * still be open, and saying "arrived after the poll closed" about it is simply false.
+             */
+            val backdatedVotes: Int,
         ) {
             constructor() : this(
                 persistentSetOf(),
@@ -77,6 +84,7 @@ class PollResponsesCache : UserDependencies {
                 persistentMapOf(),
                 persistentMapOf(),
                 persistentSetOf(),
+                0,
                 0,
             )
 
@@ -155,18 +163,22 @@ class PollResponsesCache : UserDependencies {
                 val withNote = allResponses.add(note)
                 val event =
                     note.event as? PollResponseEvent
-                        ?: return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes)
+                        ?: return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes, backdatedVotes)
 
-                if (policy != null && !policy.isInWindow(event.createdAt)) {
-                    return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes + 1)
+                if (policy != null && policy.isAfterWindow(event.createdAt)) {
+                    return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes + 1, backdatedVotes)
                 }
 
-                val author = note.author ?: return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes)
+                if (policy != null && policy.isBeforeWindow(event.createdAt)) {
+                    return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes, backdatedVotes + 1)
+                }
+
+                val author = note.author ?: return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes, backdatedVotes)
 
                 // Latest-per-author, ties keeping the one already held — same rule as latestByAuthor.
                 val current = votes[author]
                 if (current != null && current.createdAt >= event.createdAt) {
-                    return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes)
+                    return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes, backdatedVotes)
                 }
 
                 // A re-vote has to retract the old one first, or the voter lingers in the options
@@ -187,7 +199,7 @@ class PollResponsesCache : UserDependencies {
                     }
                 }
 
-                return ResponseTally(withNote, policy, votes.put(author, event), newTally, newVoters, lateVotes)
+                return ResponseTally(withNote, policy, votes.put(author, event), newTally, newVoters, lateVotes, backdatedVotes)
             }
 
             /**
@@ -199,7 +211,7 @@ class PollResponsesCache : UserDependencies {
                 responses: PersistentSet<Note> = allResponses,
                 newPolicy: PollTallyPolicy? = policy,
             ): ResponseTally {
-                var rebuilt = ResponseTally(persistentSetOf(), newPolicy, persistentMapOf(), persistentMapOf(), persistentSetOf(), 0)
+                var rebuilt = ResponseTally(persistentSetOf(), newPolicy, persistentMapOf(), persistentMapOf(), persistentSetOf(), 0, 0)
                 responses.forEach { rebuilt = rebuilt.add(it) }
                 return rebuilt
             }

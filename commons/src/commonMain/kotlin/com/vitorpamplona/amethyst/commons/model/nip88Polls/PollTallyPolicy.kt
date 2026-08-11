@@ -48,7 +48,13 @@ data class PollTallyPolicy(
      * timeframes" — so a response stamped after the deadline is not a late vote that wins, it is
      * not a vote at all.
      */
-    fun isInWindow(createdAt: Long): Boolean = createdAt >= this.createdAt && (endsAt == null || createdAt <= endsAt)
+    fun isInWindow(createdAt: Long): Boolean = !isBeforeWindow(createdAt) && !isAfterWindow(createdAt)
+
+    /** Stamped before the question existed — a backdated vote, not a late one. */
+    fun isBeforeWindow(createdAt: Long): Boolean = createdAt < this.createdAt
+
+    /** Stamped after the deadline. */
+    fun isAfterWindow(createdAt: Long): Boolean = endsAt != null && createdAt > endsAt
 
     /**
      * The option codes a response actually casts.

@@ -215,6 +215,11 @@ fun InnerRenderPoll(
  * Rendered only from [RenderResults], i.e. only once the card is already showing the tally. Putting
  * it beside the voting controls would hand every reader a one-tap bypass of the vote-first gate,
  * and — since opening the screen counts as opting in — permanently so.
+ *
+ * Shown at zero votes too. A card with no votes is exactly when a reader doubts the number, and the
+ * page is the only place that can answer them: it says whether it is still loading, and what the
+ * relays claim exists against what we hold. Hiding the link there left the page's own "no votes
+ * yet" state unreachable through the only door into it.
  */
 @Composable
 private fun PollResultsLink(
@@ -223,7 +228,6 @@ private fun PollResultsLink(
 ) {
     val tally by note.pollState().responses.collectAsStateWithLifecycle()
     val voters = tally.totalVoters()
-    if (voters <= 0) return
 
     Text(
         text = pluralStringResource(R.plurals.poll_results_vote_count_link, voters, voters),

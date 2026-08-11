@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserLine
+import com.vitorpamplona.amethyst.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
@@ -257,11 +258,19 @@ private fun PollHeader(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         note.author?.let { author ->
+            // Same shape as every other note header in the app: name on the left, and the time plus
+            // the options menu pinned to the right edge rather than trailing the name.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 UserPicture(author, Size25dp, accountViewModel = accountViewModel, nav = nav)
                 Spacer(Modifier.width(8.dp))
-                UsernameDisplay(author, accountViewModel = accountViewModel)
+                Box(Modifier.weight(1f)) {
+                    UsernameDisplay(author, accountViewModel = accountViewModel)
+                }
                 TimeAgo(note.createdAt() ?: 0L, TimeAgoStyle.Dotted)
+                Spacer(Modifier.width(6.dp))
+                // The app's own note menu — share, copy, report, bookmark — rather than a
+                // poll-specific subset that would drift from every other note header.
+                MoreOptionsButton(note, accountViewModel = accountViewModel, nav = nav)
             }
         }
 
@@ -277,8 +286,6 @@ private fun PollHeader(
             PollStatusChip(state.endsAt)
             PollTypeChip(state)
         }
-
-        TotalsLine(state)
     }
 }
 
@@ -332,15 +339,19 @@ private fun PollStatusChip(endsAt: Long?) {
 private fun PollTypeChip(state: PollResultsUiState) {
     val gray = MaterialTheme.colorScheme.grayText
     Chip(gray) {
+        val type =
+            stringRes(
+                if (state.type == PollType.MULTI_CHOICE) {
+                    R.string.poll_multiple_choice
+                } else {
+                    R.string.poll_single_choice
+                },
+            )
+
         Text(
-            text =
-                stringRes(
-                    if (state.type == PollType.MULTI_CHOICE) {
-                        R.string.poll_multiple_choice
-                    } else {
-                        R.string.poll_single_choice
-                    },
-                ),
+            // Selections only differ from voters when people can tick more than one box, and this
+            // chip is what explains why the bars below may sum past 100% — so it carries the count.
+            text = if (state.totalSelections != state.totalVoters) type + " " + stringRes(R.string.poll_results_selections, state.totalSelections) else type,
             style = MaterialTheme.typography.labelMedium,
             color = gray,
         )
@@ -361,34 +372,6 @@ private fun Chip(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         content()
-    }
-}
-
-@Composable
-private fun TotalsLine(state: PollResultsUiState) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        Text(
-            text = state.totalVoters.toString(),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            text = pluralStringResource(R.plurals.poll_results_voters, state.totalVoters),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.placeholderText,
-            modifier = Modifier.padding(bottom = 3.dp),
-        )
-
-        // Only worth saying when the two numbers can differ — i.e. multiple choice.
-        if (state.totalSelections != state.totalVoters) {
-            Text(
-                text = stringRes(R.string.poll_results_selections, state.totalSelections),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
-                modifier = Modifier.padding(bottom = 3.dp),
-            )
-        }
     }
 }
 
@@ -549,8 +532,10 @@ private fun OptionFilterRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        // Carries the poll's total the way each option chip carries its own, so the count lives in
+        // the same row as the numbers it totals instead of in a headline above them.
         FilterChip(
-            label = stringRes(R.string.poll_results_all_options),
+            label = "${stringRes(R.string.poll_results_all_options)} · ${state.totalVoters}",
             isSelected = selected == null,
             onClick = { onSelect(null) },
         )
@@ -638,6 +623,7 @@ private fun ResultsFooter(state: PollResultsUiState) {
         remember(state) {
             buildList {
                 if (state.lateVotes > 0) add(R.plurals.poll_results_late_votes to state.lateVotes)
+                if (state.backdatedVotes > 0) add(R.plurals.poll_results_backdated_votes to state.backdatedVotes)
                 if (state.ignoredVotes > 0) add(R.plurals.poll_results_ignored_votes to state.ignoredVotes)
                 if (state.hiddenVoters > 0) add(R.plurals.poll_results_hidden_voters to state.hiddenVoters)
             }

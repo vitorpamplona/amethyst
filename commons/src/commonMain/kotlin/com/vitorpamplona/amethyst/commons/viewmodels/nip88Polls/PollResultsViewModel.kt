@@ -79,6 +79,8 @@ class PollResultsUiState(
     val totalSelections: Int = 0,
     val ignoredVotes: Int = 0,
     val lateVotes: Int = 0,
+    /** Responses stamped before the poll existed. Distinct from [lateVotes] — see the tally. */
+    val backdatedVotes: Int = 0,
     val hiddenVoters: Int = 0,
     val myVote: List<String> = emptyList(),
     val type: PollType = PollType.SINGLE_CHOICE,
@@ -259,6 +261,7 @@ class PollResultsViewModel(
             totalSelections = tally.totalSelections(),
             ignoredVotes = tally.ignoredVotes,
             lateVotes = tally.lateVotes,
+            backdatedVotes = tally.backdatedVotes,
             hiddenVoters = hidden,
             myVote = myPicks,
             type = event?.pollType() ?: PollType.SINGLE_CHOICE,

@@ -255,7 +255,24 @@ class PollResponsesCacheTest {
         val tally = cache.responses.value
         assertEquals(1, tally.totalVoters())
         assertEquals("yes", tally.winning())
-        assertEquals(2, tally.lateVotes)
+        // Counted apart: one missed the deadline, the other predates the question. Reporting both
+        // as "arrived after the poll closed" is false for the second — and on an open poll it is
+        // self-contradictory, since nothing has closed yet.
+        assertEquals(1, tally.lateVotes)
+        assertEquals(1, tally.backdatedVotes)
+    }
+
+    @Test
+    fun anOpenPollNeverReportsLateVotes() {
+        val cache = PollResponsesCache()
+        cache.updatePolicy(policy(PollType.SINGLE_CHOICE, createdAt = 100, endsAt = null))
+
+        cache.addResponse(responseNote("1".repeat(64), "b".repeat(64), option = "yes", createdAt = 50))
+
+        val tally = cache.responses.value
+        assertEquals(0, tally.totalVoters())
+        assertEquals(0, tally.lateVotes)
+        assertEquals(1, tally.backdatedVotes)
     }
 
     @Test

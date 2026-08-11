@@ -4284,6 +4284,10 @@
         <item quantity="one">%1$d vote arrived after the poll closed and is excluded.</item>
         <item quantity="other">%1$d votes arrived after the poll closed and are excluded.</item>
     </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d vote is dated before the poll was published and is excluded.</item>
+        <item quantity="other">%1$d votes are dated before the poll was published and are excluded.</item>
+    </plurals>
     <plurals name="poll_results_ignored_votes">
         <item quantity="one">%1$d response did not pick a valid option and is excluded.</item>
         <item quantity="other">%1$d responses did not pick a valid option and are excluded.</item>
