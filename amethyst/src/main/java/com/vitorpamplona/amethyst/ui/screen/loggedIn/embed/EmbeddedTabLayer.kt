@@ -348,7 +348,22 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // the selection). All the show/hide state lives in one [SelectionUiState] so the rules — toolbar hides
         // while dragging or scrolling, handles hide while scrolling — are expressed in one place.
         val sel = remember { SelectionUiState() }
+        // The keyboard collapsing while this view still mirrors the page field means the user put it away on a
+        // field they are still on (BACK, or the IME's own hide button) — record it so returning to this tab
+        // doesn't pop the keyboard back over the page. A tab switch also collapses the insets but does NOT
+        // look like this: measured on device, the switch takes focus off the view in the same frame, so
+        // isMirroringPageField() is already false there and the mark this tab was owed survives.
+        LaunchedEffect(activeId, imeBottomPx) {
+            if (imeBottomPx == 0 && imeView.isMirroringPageField()) imeView.noteKeyboardDismissed()
+        }
         DisposableEffect(imeBridge) {
+            val boundId = activeId
+            // A warm tab keeps its page focus while parked, so returning to it fires no focus event: ask the
+            // page to re-announce whatever field is still focused. Restores the mirror (so a tap can raise the
+            // keyboard) and, when the user left mid-typing, brings the keyboard straight back.
+            // Consumed only when there is a bridge to ask (the mark is one-shot, so spending it on a bind that
+            // can't send the resync would drop the restore this tab was owed).
+            var pendingRestore = imeBridge != null && boundId != null && EmbeddedTabHost.takeKeyboardRestore(boundId)
             imeView.bind(imeBridge)
             imeView.onRangeSelectionChanged = { sel.onFieldRangeToggle(it) }
             imeView.onEdited = { sel.onEdited() }
@@ -362,7 +377,30 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         // Cancel any in-flight scroll-hide from the page phase: otherwise the field's own
                         // selection-reveal scrolls keep it armed and the new field handles/toolbar never appear.
                         sel.scrolling = false
+                        sel.onFieldReadOnly(event.readOnly)
                         sel.onFieldGeometry(event.geometry, event.text.isNotEmpty())
+                    }
+                    ImeEvent.WantKeyboard -> {
+                        // Still mirroring this field (the keyboard was merely dismissed) → just put it back.
+                        // Otherwise the mirror was released by a tab switch and holds another tab's buffer:
+                        // ask for the state first and raise once it lands.
+                        if (imeView.isMirroringPageField()) {
+                            imeView.raiseKeyboard()
+                        } else {
+                            pendingRestore = true
+                            imeBridge.requestImeResync()
+                        }
+                    }
+                    is ImeEvent.ReFocus -> {
+                        // Raise only if something asked for it — a tap that rang the doorbell above, or a tab
+                        // left with the keyboard up. A plain tab return re-takes the field silently.
+                        imeView.onPageReFocus(event.focus, pendingRestore)
+                        pendingRestore = false
+                        // Re-arm "the field has text" so a tap can show the insertion handle again (a tab
+                        // switch resets it). Geometry stays null here, so this can't pop a handle up on its
+                        // own — native shows nothing until the user touches the field.
+                        sel.onFieldReadOnly(event.focus.readOnly)
+                        sel.onFieldGeometry(null, event.focus.text.isNotEmpty())
                     }
                     ImeEvent.Blur -> {
                         imeView.onPageBlur()
@@ -377,11 +415,29 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                     is ImeEvent.CaretTap -> sel.onCaretTap(event.geometry)
                 }
             }
+            // Posted, not sent inline: the session's own `active` effect resumes a paused (parked) WebView in
+            // this same effect pass, and a message delivered to a still-paused page can be lost. One turn of
+            // the main looper later, the resume is already on its way over the same (FIFO) channel.
+            imeView.post { imeBridge?.requestImeResync() }
             onDispose {
                 imeBridge?.onImeEvent = null
                 imeView.onRangeSelectionChanged = null
                 imeView.onEdited = null
                 sel.reset()
+                // Remember whether the keyboard was up BEFORE onPageBlur takes it down, so returning to this
+                // tab resumes exactly the state it was left in. The page keeps its focus (and caret) either
+                // way: blurring it here would fire the page's own blur handlers — validation, autocomplete
+                // dismissal, submit-on-blur — for a switch the user never made inside the page.
+                //
+                // Ask the mirror what it *intends* rather than sampling the window: by the time this dispose
+                // runs, the nav transition has already snapped `WindowInsets.imeAnimationTarget` to 0 and
+                // taken focus off the view, so both would report "no keyboard" for every tab the user left
+                // mid-typing — which is exactly the case this restore exists for. [wantsKeyboardForPageField]
+                // also answers the other half: only a keyboard THIS mirror holds counts, so typing in the
+                // browser's own address bar never arms a restore for a page field.
+                if (boundId != null) {
+                    EmbeddedTabHost.noteKeyboardOnLeave(boundId, imeView.wantsKeyboardForPageField())
+                }
                 imeView.onPageBlur()
                 imeView.bind(null)
             }
@@ -475,25 +531,41 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // In-field (<input>/<textarea>) range selection: cut/copy/paste/select-all routed to the hidden
         // EditText, plus draggable start/end handles (drag → `ime.fieldextend`). The toolbar hides while a
         // handle is dragged or the page scrolls; the handles hide only while scrolling.
+        // A readonly field offers only the non-destructive half: its text can be selected and copied, but Cut
+        // and Paste would silently do nothing (the page rejects the edit), so native never offers them there.
+        // Remembered, not rebuilt per composition: this layer recomposes on every IME inset change, bounds
+        // report and console line, while the toolbar it feeds is shown only during a selection. A fresh list
+        // of fresh lambdas each time would allocate for nothing and, having a new identity every pass, stop
+        // the overlay below from ever skipping.
         val fieldItems =
-            listOf(
-                "Cut" to {
-                    imeView.cutSelection()
-                    Unit
-                },
-                "Copy" to {
-                    imeView.copySelection()
-                    Unit
-                },
-                "Paste" to {
-                    imeView.pasteClipboard()
-                    Unit
-                },
-                "Select all" to {
-                    imeView.selectAllText()
-                    Unit
-                },
-            )
+            remember(sel.fieldReadOnly, imeView) {
+                listOfNotNull(
+                    if (sel.fieldReadOnly) {
+                        null
+                    } else {
+                        "Cut" to {
+                            imeView.cutSelection()
+                            Unit
+                        }
+                    },
+                    "Copy" to {
+                        imeView.copySelection()
+                        Unit
+                    },
+                    if (sel.fieldReadOnly) {
+                        null
+                    } else {
+                        "Paste" to {
+                            imeView.pasteClipboard()
+                            Unit
+                        }
+                    },
+                    "Select all" to {
+                        imeView.selectAllText()
+                        Unit
+                    },
+                )
+            }
         val fieldHandles = sel.fieldHandles
         if (haveBounds && fieldHandles != null) {
             RangeSelectionOverlay(

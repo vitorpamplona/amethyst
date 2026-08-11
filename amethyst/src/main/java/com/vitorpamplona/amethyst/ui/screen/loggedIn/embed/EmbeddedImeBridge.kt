@@ -56,6 +56,53 @@ interface EmbeddedImeBridge {
     fun sendImeOp(json: String)
 }
 
+/**
+ * Asks the page to re-announce its focused field (as an [ImeEvent.ReFocus]). A warm tab keeps the page's DOM
+ * focus while it sits off-screen, so no `focusin` ever fires for it again and this is the only way the host
+ * learns there is a field to put the keyboard back on. Sent when a tab becomes the active one again, and when
+ * an [ImeEvent.WantKeyboard] tap arrives for a field this host no longer mirrors.
+ */
+fun EmbeddedImeBridge.requestImeResync() = sendImeOp(JSONObject().put("type", "ime.resync").toString())
+
+/** Parses one page → host `ime.*` envelope into an [ImeEvent], or null for anything unrecognized. */
+fun parseImeEvent(payload: String): ImeEvent? {
+    val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
+    return when (o.optString("type")) {
+        "ime.focus" -> parseFocus(o)
+        "ime.wantkb" -> ImeEvent.WantKeyboard
+        "ime.refocus" -> ImeEvent.ReFocus(parseFocus(o))
+        "ime.blur" -> ImeEvent.Blur
+        "ime.state" ->
+            ImeEvent.State(
+                text = o.optString("text", ""),
+                selStart = o.optInt("selStart", 0),
+                selEnd = o.optInt("selEnd", 0),
+                geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+            )
+        "ime.pagesel" ->
+            ImeEvent.PageSelection(
+                active = o.optBoolean("active", false),
+                text = o.optString("text", ""),
+                geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+            )
+        "ime.scroll" -> ImeEvent.Scroll(active = o.optBoolean("active", false))
+        "ime.carettap" -> ImeEvent.CaretTap(geometry = parseSelectionGeometry(o.optJSONObject("geom")))
+        else -> null
+    }
+}
+
+private fun parseFocus(o: JSONObject) =
+    ImeEvent.Focus(
+        inputType = o.optString("inputType", "text"),
+        enterKeyHint = o.optString("enterKeyHint", ""),
+        multiline = o.optBoolean("multiline", false),
+        readOnly = o.optBoolean("readOnly", false),
+        text = o.optString("text", ""),
+        selStart = o.optInt("selStart", 0),
+        selEnd = o.optInt("selEnd", 0),
+        geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+    )
+
 /** What the focused page field reports up to the host keyboard. */
 sealed interface ImeEvent {
     /** A field took focus; carries enough to configure the keyboard and seed the editing buffer. */
@@ -63,10 +110,38 @@ sealed interface ImeEvent {
         val inputType: String,
         val enterKeyHint: String,
         val multiline: Boolean,
+        /**
+         * The field is `readonly`: focusable and selectable, but not typeable. Native Chrome focuses such a
+         * field without raising the keyboard, so the host must not either — otherwise the user gets a keyboard
+         * whose keystrokes the page discards.
+         */
+        val readOnly: Boolean = false,
         val text: String,
         val selStart: Int,
         val selEnd: Int,
         val geometry: SelectionGeometry? = null,
+    ) : ImeEvent
+
+    /**
+     * The user tapped inside a field that is **already** focused in the page: put the keyboard back up. No
+     * focus event follows a tap on a field that never blurred, so this is the only signal that the user wants
+     * the keyboard back after dismissing it — or after a tab switch released the host's mirror.
+     *
+     * Deliberately payload-free (it fires on every tap in a field): a host that no longer mirrors the field
+     * answers it with an [requestImeResync] and takes the state from the [ReFocus] that comes back.
+     */
+    data object WantKeyboard : ImeEvent
+
+    /**
+     * The page's answer to [requestImeResync]: the editing state of a field that is already focused there.
+     * Distinct from [Focus] because page focus never changed — the host must not restart the input on a field
+     * it is already mirroring (that would kill a live composing region mid-word).
+     *
+     * Carries no geometry: measuring a caret rect forces a synchronous layout in the page, and the host has no
+     * use for it here (the `ime.carettap` that rides along with a tap carries fresh geometry).
+     */
+    data class ReFocus(
+        val focus: Focus,
     ) : ImeEvent
 
     /** The field lost focus — dismiss the keyboard. */
