@@ -121,7 +121,28 @@ class Nav(
             }
             // Mark this entry as a tab root: hides the back arrow in canPop
             // and skips the horizontal slide in composableFromEnd.
-            controller.getBackStackEntry(route).savedStateHandle[BOTTOM_NAV_ROOT_KEY] = true
+            // saveState/restoreState are keyed by DESTINATION, and every pinned tab of one kind shares a
+            // single destination — all web apps are `Route.WebApp/{url}`, all pinned chats their own one
+            // pattern. So the restore above can hand back a *sibling* tab's saved entry: with two web apps
+            // pinned, tapping the second one landed on the first one's URL, and the lookup below then threw
+            // `No destination with route …WebApp/<url> is on the NavController's back stack`.
+            //
+            // When the entry we asked for isn't there, take the tab fresh (no restoreState, and no
+            // launchSingleTop — the top is the sibling we do not want to reuse). Its saved scroll/ViewModel
+            // state is not recoverable in that case, but the user lands on the tab they tapped. Tabs whose
+            // destination nothing else shares still restore normally, which is what this is here for.
+            val entry =
+                runCatching { controller.getBackStackEntry(route) }.getOrNull()
+                    ?: run {
+                        controller.navigate(route) {
+                            popUpTo(Route.Home) {
+                                inclusive = false
+                                saveState = true
+                            }
+                        }
+                        runCatching { controller.getBackStackEntry(route) }.getOrNull()
+                    }
+            entry?.savedStateHandle?.set(BOTTOM_NAV_ROOT_KEY, true)
         }
     }
 
