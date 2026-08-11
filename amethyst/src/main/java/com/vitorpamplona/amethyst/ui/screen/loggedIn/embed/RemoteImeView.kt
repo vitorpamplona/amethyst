@@ -72,6 +72,17 @@ class RemoteImeView(
     // ship the PREVIOUS tab's text to the page on the first keystroke.
     private var mirroring = false
 
+    // Whether the keyboard is *meant* to be up for the field we mirror — our own intent, not the window's
+    // current state. Deliberately not derived from the IME insets or [hasFocus]: by the time a tab switch
+    // tears this view down, `WindowInsets.imeAnimationTarget` has already snapped to 0 and the view has
+    // already lost focus, so anything sampled then reports "no keyboard" for a tab the user left mid-typing.
+    // Set when we raise the keyboard, cleared when the user dismisses it or the page field blurs.
+    private var keyboardWanted = false
+
+    // The mirrored field is `readonly`. Kept here rather than checked at each call site so every raise path —
+    // a fresh focus, the tap doorbell, and a tab restore — is covered by the one guard in [raiseKeyboard].
+    private var fieldReadOnly = false
+
     private val imm get() = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
 
     private val flush = Runnable { flushState() }
@@ -170,6 +181,7 @@ class RemoteImeView(
     ) {
         configureFor(focus)
         mirroring = true
+        fieldReadOnly = focus.readOnly
         // Focus the EditText BEFORE seeding text/selection. An EditText jumps its caret to the end when it
         // gains focus; if we seed first, that end-position then overrides the seed and gets shipped to the
         // page — so a tap mid-text lands the caret at the end of the field. Seeding AFTER focus makes the
@@ -206,6 +218,13 @@ class RemoteImeView(
     fun isMirroringPageField() = mirroring && hasFocus()
 
     /**
+     * Whether this tab should come back with its keyboard up: we mirror a page field and the keyboard was
+     * meant to be showing when we were asked. Safe to call while the view is being torn down, which is the
+     * whole point — see [keyboardWanted].
+     */
+    fun wantsKeyboardForPageField() = mirroring && keyboardWanted
+
+    /**
      * Put the keyboard back on the field this view already mirrors — the user tapped it after dismissing the
      * keyboard, which leaves the page's focus (and this mirror) untouched, so there is nothing to re-seed.
      *
@@ -213,9 +232,27 @@ class RemoteImeView(
      */
     @Suppress("DEPRECATION") // InputMethodManager.SHOW_IMPLICIT is deprecated; no equivalent flag on the newer API.
     fun raiseKeyboard() {
+        // A readonly field takes focus and can be selected/copied, but nothing can be typed into it — native
+        // Chrome shows no keyboard for one, so neither do we.
+        if (fieldReadOnly) return
+        keyboardWanted = true
         post {
             if (hasFocus()) imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
         }
+    }
+
+    /**
+     * The user put the keyboard away (BACK, or the IME's own hide affordance) while still on this field: a
+     * deliberate "I'm done typing", so returning to this tab must NOT pop the keyboard back up.
+     *
+     * Called by the layer when the IME insets collapse while this view still mirrors the page field. That
+     * condition is what separates a dismissal from a tab switch — on a switch the view has already lost focus
+     * by the time the insets collapse, so [isMirroringPageField] is false and this never fires. (Note there is
+     * no usable key hook for this: Android 13+ routes the IME's back-dismiss through OnBackInvokedCallback, so
+     * `onKeyPreIme` is never called.)
+     */
+    fun noteKeyboardDismissed() {
+        keyboardWanted = false
     }
 
     // When the current selection first became a range, and how many of its collapse-abandonments we've
@@ -256,6 +293,8 @@ class RemoteImeView(
     /** The page field blurred: drop the keyboard. */
     fun onPageBlur() {
         mirroring = false
+        keyboardWanted = false
+        fieldReadOnly = false
         removeCallbacks(reportRangeLost)
         if (hadRange) {
             hadRange = false

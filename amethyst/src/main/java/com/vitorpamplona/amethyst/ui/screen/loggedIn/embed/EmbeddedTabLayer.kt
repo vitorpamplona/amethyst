@@ -348,10 +348,14 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // the selection). All the show/hide state lives in one [SelectionUiState] so the rules — toolbar hides
         // while dragging or scrolling, handles hide while scrolling — are expressed in one place.
         val sel = remember { SelectionUiState() }
-        // Read at dispose time to record whether the keyboard was up as the user left this tab (see
-        // [EmbeddedTabHost.noteKeyboardOnLeave]). The dispose runs before anything hides the IME — our own
-        // onPageBlur below is what takes it down — so this still reads the pre-switch state.
-        val keyboardUp = rememberUpdatedState(imeBottomPx > 0)
+        // The keyboard collapsing while this view still mirrors the page field means the user put it away on a
+        // field they are still on (BACK, or the IME's own hide button) — record it so returning to this tab
+        // doesn't pop the keyboard back over the page. A tab switch also collapses the insets but does NOT
+        // look like this: measured on device, the switch takes focus off the view in the same frame, so
+        // isMirroringPageField() is already false there and the mark this tab was owed survives.
+        LaunchedEffect(activeId, imeBottomPx) {
+            if (imeBottomPx == 0 && imeView.isMirroringPageField()) imeView.noteKeyboardDismissed()
+        }
         DisposableEffect(imeBridge) {
             val boundId = activeId
             // A warm tab keeps its page focus while parked, so returning to it fires no focus event: ask the
@@ -423,10 +427,14 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                 // way: blurring it here would fire the page's own blur handlers — validation, autocomplete
                 // dismissal, submit-on-blur — for a switch the user never made inside the page.
                 //
-                // Only a keyboard THIS mirror holds counts: the tab's own chrome has host-side fields (the
-                // browser's address bar), and typing in one of those must not arm a restore for a page field.
+                // Ask the mirror what it *intends* rather than sampling the window: by the time this dispose
+                // runs, the nav transition has already snapped `WindowInsets.imeAnimationTarget` to 0 and
+                // taken focus off the view, so both would report "no keyboard" for every tab the user left
+                // mid-typing — which is exactly the case this restore exists for. [wantsKeyboardForPageField]
+                // also answers the other half: only a keyboard THIS mirror holds counts, so typing in the
+                // browser's own address bar never arms a restore for a page field.
                 if (boundId != null) {
-                    EmbeddedTabHost.noteKeyboardOnLeave(boundId, keyboardUp.value && imeView.isMirroringPageField())
+                    EmbeddedTabHost.noteKeyboardOnLeave(boundId, imeView.wantsKeyboardForPageField())
                 }
                 imeView.onPageBlur()
                 imeView.bind(null)

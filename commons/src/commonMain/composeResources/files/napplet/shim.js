@@ -376,7 +376,8 @@
       var inputType = isCE(n) ? 'text' : (t === 'TEXTAREA' ? 'textarea' : (n.type || 'text').toLowerCase());
       var sel = selOf(n);
       return { type:'ime.focus', inputType: inputType, enterKeyHint: (n.enterKeyHint || ''),
-               multiline: multiline, text: valOf(n), selStart: sel[0], selEnd: sel[1], geom: fieldGeom(n) };
+               multiline: multiline, readOnly: !!n.readOnly, text: valOf(n), selStart: sel[0],
+               selEnd: sel[1], geom: fieldGeom(n) };
     }
     // Like `ime.focus`, but for a field that is ALREADY focused: the answer to the host's `ime.resync`, which
     // it asks for when it needs to (re-)take a field whose focus never moved in the page.
@@ -390,7 +391,7 @@
       return { type:'ime.refocus',
                inputType: isCE(n) ? 'text' : (t === 'TEXTAREA' ? 'textarea' : (n.type || 'text').toLowerCase()),
                enterKeyHint: (n.enterKeyHint || ''), multiline: isCE(n) || t === 'TEXTAREA',
-               text: valOf(n), selStart: sel[0], selEnd: sel[1] };
+               readOnly: !!n.readOnly, text: valOf(n), selStart: sel[0], selEnd: sel[1] };
     }
     // Last selection we either applied (applyState) or already reported, so the asynchronous
     // selectionchange our own setSel triggers doesn't echo back to the host as a fresh edit.

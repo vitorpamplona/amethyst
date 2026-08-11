@@ -96,6 +96,7 @@ private fun parseFocus(o: JSONObject) =
         inputType = o.optString("inputType", "text"),
         enterKeyHint = o.optString("enterKeyHint", ""),
         multiline = o.optBoolean("multiline", false),
+        readOnly = o.optBoolean("readOnly", false),
         text = o.optString("text", ""),
         selStart = o.optInt("selStart", 0),
         selEnd = o.optInt("selEnd", 0),
@@ -109,6 +110,12 @@ sealed interface ImeEvent {
         val inputType: String,
         val enterKeyHint: String,
         val multiline: Boolean,
+        /**
+         * The field is `readonly`: focusable and selectable, but not typeable. Native Chrome focuses such a
+         * field without raising the keyboard, so the host must not either — otherwise the user gets a keyboard
+         * whose keystrokes the page discards.
+         */
+        val readOnly: Boolean = false,
         val text: String,
         val selStart: Int,
         val selEnd: Int,
