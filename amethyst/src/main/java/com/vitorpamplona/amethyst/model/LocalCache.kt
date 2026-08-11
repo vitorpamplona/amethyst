@@ -1864,7 +1864,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         val new = consumeRegularEvent(event, relay, wasVerified)
 
         if (new) {
-            val authorsReported = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.pubkey) }
+            val authorsReported = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.pubKey) }
             val eventsReported =
                 event.reportedPost().mapNotNull { checkGetOrCreateNote(it.eventId) } +
                     event.reportedAddresses().map { getOrCreateAddressableNote(it.address) }
@@ -1885,7 +1885,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 // report can `p`-tag an incidentally-mentioned third party with no type of its own,
                 // and there is no threshold here to absorb that noise the way
                 // `receivedReportsByAuthor`'s hide path does.
-                val explicitlyTyped = event.reportedAuthorsWithOwnType().mapTo(mutableSetOf()) { it.pubkey }
+                val explicitlyTyped = event.reportedAuthorsWithOwnType().mapTo(mutableSetOf()) { it.pubKey }
                 authorsReported.forEach { author ->
                     if (author.pubkeyHex in explicitlyTyped) author.reports().addReportNamingUser(note)
                 }

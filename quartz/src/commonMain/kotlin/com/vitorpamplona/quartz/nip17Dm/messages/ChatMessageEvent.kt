@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -41,9 +42,14 @@ class ChatMessageEvent(
     content: String,
     sig: HexKey,
 ) : BaseDMGroupEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider,
     SearchableEvent {
     // content is the decrypted (plaintext) direct-message body.
     override fun indexableContent() = content
+
+    override fun eventHints() = tags.mapNotNull(ETag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ETag::parseId)
 
     fun replyTo() = tags.mapNotNull(ETag::parseId)
 

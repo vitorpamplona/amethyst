@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip56Reports.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
@@ -30,9 +32,10 @@ import com.vitorpamplona.quartz.utils.ensure
 @Immutable
 class ReportedAddressTag(
     val address: Address,
+    val relay: NormalizedRelayUrl? = null,
     override val type: ReportType? = null,
 ) : BaseReportTag {
-    fun toTagArray() = assemble(address, type)
+    fun toTagArray() = assemble(address, relay, type)
 
     companion object {
         const val TAG_NAME = "a"
@@ -49,21 +52,48 @@ class ReportedAddressTag(
 
             ensure(address != null) { return null }
 
-            val type =
-                if (tag.size == 2) {
-                    defaultReportType
-                } else if (tag.size == 3) {
-                    ReportType.parseOrNull(tag[2], tag) ?: defaultReportType
-                } else {
-                    ReportType.parseOrNull(tag[3], tag) ?: defaultReportType
-                }
+            return ReportedAddressTag(
+                address,
+                ReportTagLayout.relayHint(tag),
+                ReportTagLayout.reportType(tag, defaultReportType),
+            )
+        }
 
-            return ReportedAddressTag(address, type)
+        fun parseAddressId(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return Address.parse(tag[1])?.toValue()
+        }
+
+        fun parseAsHint(tag: Array<String>): AddressHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+
+            val address = Address.parse(tag[1])
+            ensure(address != null) { return null }
+
+            val hint = ReportTagLayout.relayHint(tag)
+            ensure(hint != null) { return null }
+
+            return AddressHint(address.toValue(), hint)
+        }
+
+        /** See [ReportedAuthorTag.assemble] for why the layout is conditional. */
+        fun assemble(
+            address: Address,
+            relay: NormalizedRelayUrl?,
+            type: ReportType?,
+        ) = if (relay != null) {
+            arrayOfNotNull(TAG_NAME, address.toValue(), relay.url, type?.code)
+        } else {
+            arrayOfNotNull(TAG_NAME, address.toValue(), type?.code)
         }
 
         fun assemble(
             address: Address,
             type: ReportType? = null,
-        ) = arrayOfNotNull(TAG_NAME, address.toValue(), type?.code)
+        ) = assemble(address, null, type)
     }
 }

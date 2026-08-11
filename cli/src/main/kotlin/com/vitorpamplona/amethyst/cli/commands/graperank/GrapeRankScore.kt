@@ -303,7 +303,7 @@ object GrapeRankScore {
                 dropped++
                 continue
             }
-            builder.addReports(r.pubKey, r.reportedAuthor().map { it.pubkey })
+            builder.addReports(r.pubKey, r.reportedAuthor().map { it.pubKey })
         }
         if (dropped > 0) System.err.println("[graperank] dropped $dropped retracted reports (NIP-09 deletions)")
         return dropped

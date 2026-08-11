@@ -26,6 +26,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip56Reports.tags.DefaultReportTag
 import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAddressTag
@@ -42,7 +45,22 @@ class ReportEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider {
+    override fun pubKeyHints() = tags.mapNotNull(ReportedAuthorTag::parseAsHint)
+
+    override fun linkedPubKeys() = tags.mapNotNull(ReportedAuthorTag::parseKey)
+
+    override fun eventHints() = tags.mapNotNull(ReportedEventTag::parseAsHint)
+
+    override fun linkedEventIds() = tags.mapNotNull(ReportedEventTag::parseId)
+
+    override fun addressHints() = tags.mapNotNull(ReportedAddressTag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ReportedAddressTag::parseAddressId)
+
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     private var defaultType: ReportType? = null

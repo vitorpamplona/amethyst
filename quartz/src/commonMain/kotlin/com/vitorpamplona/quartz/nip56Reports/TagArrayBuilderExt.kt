@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip56Reports
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip56Reports.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAddressTag
 import com.vitorpamplona.quartz.nip56Reports.tags.ReportedAuthorTag
@@ -32,17 +33,20 @@ import com.vitorpamplona.quartz.nip56Reports.tags.ServerTag
 fun TagArrayBuilder<ReportEvent>.event(
     eventId: HexKey,
     reportType: ReportType,
-) = addUnique(ReportedEventTag.assemble(eventId, reportType))
+    relay: NormalizedRelayUrl? = null,
+) = addUnique(ReportedEventTag.assemble(eventId, relay, reportType))
 
 fun TagArrayBuilder<ReportEvent>.address(
     address: Address,
     reportType: ReportType,
-) = addUnique(ReportedAddressTag.assemble(address, reportType))
+    relay: NormalizedRelayUrl? = null,
+) = addUnique(ReportedAddressTag.assemble(address, relay, reportType))
 
 fun TagArrayBuilder<ReportEvent>.user(
     pubkey: HexKey,
     reportType: ReportType,
-) = addUnique(ReportedAuthorTag.assemble(pubkey, reportType))
+    relay: NormalizedRelayUrl? = null,
+) = addUnique(ReportedAuthorTag.assemble(pubkey, relay, reportType))
 
 fun TagArrayBuilder<ReportEvent>.hash(
     x: String,
