@@ -379,15 +379,26 @@ class RemoteImeView(
 
     private fun configureFor(focus: ImeEvent.Focus) {
         inputType =
-            when (focus.inputType) {
-                "password" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
-                "email" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
-                "url" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
-                "number" -> InputType.TYPE_CLASS_NUMBER
-                "tel" -> InputType.TYPE_CLASS_PHONE
-                else ->
-                    InputType.TYPE_CLASS_TEXT or
-                        (if (focus.multiline) InputType.TYPE_TEXT_FLAG_MULTI_LINE else InputType.TYPE_TEXT_VARIATION_NORMAL)
+            // A readonly field's mirror must not be typeable AT ALL, not merely keyboard-less. `readonly`
+            // stops the *user* editing the field, not scripts — the shim writes through the native value
+            // setter, so anything that reaches this Editable is applied to the page and fires an `input`
+            // event no native browser would. Refusing cut/paste at the call sites doesn't cover a hardware
+            // keyboard (common on tablets/DeX), whose Ctrl+V goes straight to `onTextContextMenuItem`.
+            // TYPE_NULL makes `onCheckIsTextEditor()` false, so there is no InputConnection to type through
+            // — while selection and Copy, the half native does offer here, keep working.
+            if (focus.readOnly) {
+                InputType.TYPE_NULL
+            } else {
+                when (focus.inputType) {
+                    "password" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+                    "email" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
+                    "url" -> InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+                    "number" -> InputType.TYPE_CLASS_NUMBER
+                    "tel" -> InputType.TYPE_CLASS_PHONE
+                    else ->
+                        InputType.TYPE_CLASS_TEXT or
+                            (if (focus.multiline) InputType.TYPE_TEXT_FLAG_MULTI_LINE else InputType.TYPE_TEXT_VARIATION_NORMAL)
+                }
             }
         imeOptions = editorActionFor(focus) or EditorInfo.IME_FLAG_NO_FULLSCREEN or EditorInfo.IME_FLAG_NO_EXTRACT_UI
     }

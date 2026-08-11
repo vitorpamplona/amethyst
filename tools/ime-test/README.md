@@ -53,6 +53,33 @@ live only under `tools/`.
 - `MAINTHREAD BLOCKED` / `LONGTASK` = something is stalling the WebView thread.
 - `HEARTBEAT` lines changing while idle = spontaneous focus/selection drift.
 
+## `shim-events.mjs` — automated regression test for the IME protocol
+
+`index.html` and `perf.html` are manual probes; this one is a real test. It loads
+the shipped shim (`commons/.../napplet/shim.js`) into headless Chromium with the
+embedded-surface flags set, drives genuine focus/tap/blur gestures, and asserts
+the `ime.*` envelopes it emits — the doorbell fires on a tap in an
+already-focused field, the doorbell stays payload-free, a host `ime.resync` is
+answered with the field state and no geometry, `readonly` survives the round
+trip, and a tap inside a `contenteditable` counts.
+
+```bash
+cd tools/ime-test
+npm i playwright-core          # once; the browser itself is already on the box
+node shim-events.mjs           # exits 0 on success, 1 with a per-case report
+node shim-events.mjs /path/to/other/shim.js   # diff a candidate against it
+```
+
+Set `CHROMIUM_PATH` if your Chromium lives somewhere other than
+`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
+
+**Why this and not a JVM unit test.** The host-side parser
+(`parseImeEvent`) runs on Android's `org.json`, which the unit tests stub out
+(`unitTests.isReturnDefaultValues = true` in `amethyst/build.gradle.kts`, and
+there is no Robolectric); a Kotlin test would "pass" without parsing anything.
+The half worth protecting is the page↔host contract, and that only exists in a
+browser.
+
 ## `perf.html` — why does the embed feel slower than the full-screen browser?
 
 `index.html` profiles the IME relay. `perf.html` answers a different question:

@@ -533,33 +533,39 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
         // handle is dragged or the page scrolls; the handles hide only while scrolling.
         // A readonly field offers only the non-destructive half: its text can be selected and copied, but Cut
         // and Paste would silently do nothing (the page rejects the edit), so native never offers them there.
+        // Remembered, not rebuilt per composition: this layer recomposes on every IME inset change, bounds
+        // report and console line, while the toolbar it feeds is shown only during a selection. A fresh list
+        // of fresh lambdas each time would allocate for nothing and, having a new identity every pass, stop
+        // the overlay below from ever skipping.
         val fieldItems =
-            listOfNotNull(
-                if (sel.fieldReadOnly) {
-                    null
-                } else {
-                    "Cut" to {
-                        imeView.cutSelection()
+            remember(sel.fieldReadOnly, imeView) {
+                listOfNotNull(
+                    if (sel.fieldReadOnly) {
+                        null
+                    } else {
+                        "Cut" to {
+                            imeView.cutSelection()
+                            Unit
+                        }
+                    },
+                    "Copy" to {
+                        imeView.copySelection()
                         Unit
-                    }
-                },
-                "Copy" to {
-                    imeView.copySelection()
-                    Unit
-                },
-                if (sel.fieldReadOnly) {
-                    null
-                } else {
-                    "Paste" to {
-                        imeView.pasteClipboard()
+                    },
+                    if (sel.fieldReadOnly) {
+                        null
+                    } else {
+                        "Paste" to {
+                            imeView.pasteClipboard()
+                            Unit
+                        }
+                    },
+                    "Select all" to {
+                        imeView.selectAllText()
                         Unit
-                    }
-                },
-                "Select all" to {
-                    imeView.selectAllText()
-                    Unit
-                },
-            )
+                    },
+                )
+            }
         val fieldHandles = sel.fieldHandles
         if (haveBounds && fieldHandles != null) {
             RangeSelectionOverlay(
