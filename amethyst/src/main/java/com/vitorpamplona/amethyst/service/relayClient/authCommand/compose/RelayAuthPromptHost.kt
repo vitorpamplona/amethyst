@@ -399,10 +399,15 @@ private fun reasonFor(
         AuthPurposeKind.POST_VENUE -> stringRes(R.string.relay_auth_why_post_venue, who ?: "")
         AuthPurposeKind.READ_VENUE -> stringRes(R.string.relay_auth_why_read_venue, who ?: "")
         AuthPurposeKind.MY_INBOX -> stringRes(R.string.relay_auth_why_my_inbox)
-        // Name the conversation by who is in it when we could resolve the notes; "this conversation"
-        // only survives as the fallback for a thread whose notes aren't in the cache yet.
+        // Name the conversation by who is in it — but only when that name is a real one. Splicing the
+        // unloaded placeholder in gives "your conversation with someone you haven't loaded yet", which
+        // is longer than the vague version and no more informative, so it falls back instead.
         AuthPurposeKind.THREAD ->
-            if (who.isNullOrBlank()) stringRes(R.string.relay_auth_why_thread) else stringRes(R.string.relay_auth_why_thread_with, who)
+            if (who.isNullOrBlank() || who.startsWith(stringRes(R.string.relay_auth_someone_unloaded))) {
+                stringRes(R.string.relay_auth_why_thread)
+            } else {
+                stringRes(R.string.relay_auth_why_thread_with, who)
+            }
         // No attributable purpose. If it is the user's own relay we can at least say that much,
         // which is the only way MY_OWN_RELAY is ever reachable — the deriver is account-agnostic
         // (one shared socket, many accounts) so it cannot know whose relay this is.
