@@ -23,48 +23,89 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
+// The single-relay shorthands. Each carries [pendingOnAuthRequired] so the choice can be
+// made without dropping to the map form (and from there to fetchAllWithHooks) — which is
+// what a caller who wanted the correct behaviour on an auth-gated relay used to have to do.
+
 suspend fun INostrClient.fetchAll(
     relay: String,
     filter: Filter,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)), idleTimeoutMs)
+    pendingOnAuthRequired: Boolean = hasAuthResponder(),
+) = fetchAll(
+    subscriptionId = newSubId(),
+    filters = mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)),
+    idleTimeoutMs = idleTimeoutMs,
+    pendingOnAuthRequired = pendingOnAuthRequired,
+)
 
 suspend fun INostrClient.fetchAll(
     relay: String,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to filters), idleTimeoutMs)
+    pendingOnAuthRequired: Boolean = hasAuthResponder(),
+) = fetchAll(
+    subscriptionId = newSubId(),
+    filters = mapOf(RelayUrlNormalizer.normalize(relay) to filters),
+    idleTimeoutMs = idleTimeoutMs,
+    pendingOnAuthRequired = pendingOnAuthRequired,
+)
 
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: String,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(subscriptionId, mapOf(RelayUrlNormalizer.normalize(relay) to filters), idleTimeoutMs)
+    pendingOnAuthRequired: Boolean = hasAuthResponder(),
+) = fetchAll(
+    subscriptionId = subscriptionId,
+    filters = mapOf(RelayUrlNormalizer.normalize(relay) to filters),
+    idleTimeoutMs = idleTimeoutMs,
+    pendingOnAuthRequired = pendingOnAuthRequired,
+)
 
 suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filter: Filter,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(relay to listOf(filter)), idleTimeoutMs)
+    pendingOnAuthRequired: Boolean = hasAuthResponder(),
+) = fetchAll(
+    subscriptionId = newSubId(),
+    filters = mapOf(relay to listOf(filter)),
+    idleTimeoutMs = idleTimeoutMs,
+    pendingOnAuthRequired = pendingOnAuthRequired,
+)
 
 suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(relay to filters), idleTimeoutMs)
+    pendingOnAuthRequired: Boolean = hasAuthResponder(),
+) = fetchAll(
+    subscriptionId = newSubId(),
+    filters = mapOf(relay to filters),
+    idleTimeoutMs = idleTimeoutMs,
+    pendingOnAuthRequired = pendingOnAuthRequired,
+)
 
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(subscriptionId, mapOf(relay to filters), idleTimeoutMs)
+    pendingOnAuthRequired: Boolean = hasAuthResponder(),
+) = fetchAll(
+    subscriptionId = subscriptionId,
+    filters = mapOf(relay to filters),
+    idleTimeoutMs = idleTimeoutMs,
+    pendingOnAuthRequired = pendingOnAuthRequired,
+)
 
 /**
  * Subscribe [filters], collect every (deduped) event, and return once every
@@ -81,12 +122,17 @@ suspend fun INostrClient.fetchAll(
  * Thin projection over [fetchAllWithHooks] — one shared loop implementation,
  * with dedup done in the (single-threaded) hook so no shared collection is
  * ever touched from socket callback threads.
+ *
+ * @param pendingOnAuthRequired see [fetchAllWithHooks]. Defaults to whether this
+ *   client has a NIP-42 responder attached, so a relay that gates reads behind AUTH
+ *   is read for what it holds instead of as an empty one.
  */
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     idleTimeoutMs: Long = 30_000L,
     maxTotalMs: Long = idleTimeoutMs * 10,
+    pendingOnAuthRequired: Boolean = hasAuthResponder(),
 ): List<Event> {
     val seenIds = mutableSetOf<HexKey>()
     return fetchAllWithHooks(
@@ -94,6 +140,7 @@ suspend fun INostrClient.fetchAll(
         idleTimeoutMs = idleTimeoutMs,
         subscriptionId = subscriptionId,
         maxTotalMs = maxTotalMs,
+        pendingOnAuthRequired = pendingOnAuthRequired,
     ) { _, event -> seenIds.add(event.id) }
         .map { it.second }
         .sortedWith(DefaultFeedOrderEvent)

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -93,6 +94,34 @@ interface INostrClient : AutoCloseable {
     fun addConnectionListener(listener: RelayConnectionListener)
 
     fun removeConnectionListener(listener: RelayConnectionListener)
+
+    /**
+     * The NIP-42 responders attached to this client — the things that will actually
+     * answer a relay's AUTH challenge (in practice a
+     * [com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator],
+     * which registers itself from its own constructor).
+     *
+     * Read by the fetch accessories: a relay refusing a REQ with `auth-required:` is
+     * worth waiting on only if something is going to answer it, and this is the only
+     * place that fact is knowable from a bare client. Empty means "nobody is
+     * answering AUTH here", and the accessories then treat the refusal as terminal —
+     * the pre-existing behaviour.
+     *
+     * A [Set], not a single slot, because one client can carry more than one
+     * responder (an account signer plus a derived stream-key signer, say) and a
+     * last-one-wins field would silently hide whichever registered first.
+     *
+     * Defaults to empty so a client that keeps no registry — a test double, a
+     * narrowing wrapper — needs no change. A delegating wrapper
+     * (`INostrClient by delegate`) forwards this automatically.
+     */
+    fun authResponders(): Set<IAuthStatus> = emptySet()
+
+    /** Registers a NIP-42 responder. Default: no-op, for clients that keep no registry. */
+    fun addAuthResponder(responder: IAuthStatus) { }
+
+    /** Unregisters a NIP-42 responder. Default: no-op. */
+    fun removeAuthResponder(responder: IAuthStatus) { }
 
     /**
      * Returns the [IRelayClient] for [url], creating and registering it in the

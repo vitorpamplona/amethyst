@@ -54,15 +54,55 @@ knowing:
 The write side is its own case: `publishAndConfirm`'s `timeoutInSeconds` is a fixed
 window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
 
+## NIP-42: an auth-gated relay is not an empty relay
+
+A relay that gates reads answers your `REQ` with `CLOSED auth-required:` — *before*
+it will ever send an event. Treat that as terminal and the fetch returns empty while
+the NIP-42 responder on the same client is still signing the challenge on the same
+socket — the events then arrive at a caller that returned milliseconds ago. Measured
+against a relay that really gates reads, `fetchAll` gave up in 18 ms and reported
+nothing for a relay holding five matching events.
+
+Every read accessory therefore takes **`pendingOnAuthRequired`**, defaulting to
+`hasAuthResponder()` — *whether this client has a NIP-42 responder attached at all*,
+not a constant. That is the fact the answer turns on: waiting is right when something
+will answer the challenge and dead time when nothing will. Attach a
+`RelayAuthenticator` (it registers itself) and auth-gated relays start reading for
+what they hold; attach none and nothing changes.
+
+**The wait is bounded by the AUTH, not by the idle window.** `awaitAuthOutcome`
+resolves in two stages: a short `authGraceMs` for a responder to *pick the challenge
+up*, then a settle wait for it to finish — generous, because a NIP-55 or NIP-46 signer
+is holding a prompt in front of a human and cutting that off would fail an AUTH the
+user is approving, but bounded by the caller's own `idleTimeoutMs`. That yields the
+guarantee that makes the derived default safe: **an auth-gated relay costs at most what
+a silent relay already cost.** A challenge nobody picks up ends in the grace; one the
+relay rejects ends on the `OK false`; only a prompt nobody ever answers reaches the
+window, and it can never reach the `maxTotalMs` multiple of it.
+
+**An unsatisfied wall is visible, and it is not a dead relay.** It gets its own
+terminal reason (`auth-refused:<msg>` — read it with `doneOut.authRefusedRelays()`),
+its own `PagedFetchResult.End.AUTH_REQUIRED`, and its own
+`DrainFailure.AUTH_REQUIRED`, which reports `dropFromRouting = false`: the relay
+answered, and serves the same query to a connection carrying an identity it accepts.
+Test `dropFromRouting` rather than comparing to `DEAD`, so a reader written today
+survives the enum growing. An absent `doneOut` entry still means only one thing —
+nobody told us — and never "auth-gated".
+
+**AUTH is per-connection, so do not write a retry loop.** Once a socket has
+authenticated, later `REQ`s on it are simply served (`aSecondFetchOnAnAuthenticated…`
+pins this). The accessories already wait for the first challenge to resolve, so
+"retry after `hasFinishedAuthentication`" is work with nothing left to do.
+
 ## One-shot reads (subscribe → collect → return)
 
 | Function | File | Use when |
 | --- | --- | --- |
-| `fetchAll(relay, filter, idleTimeoutMs)` | `NostrClientFetchAllExt` | Get every event matching a filter in one REQ, deduped by id, until EOSE or a full idle window of silence. **No verify, no store** — just the events. |
-| `fetchFirst(relay, filter, idleTimeoutMs)` | `NostrClientFetchFirstExt` | Get the first matching event and stop (returns `null` on none/timeout). |
-| `fetchAllPages(relay, filters, idleTimeoutMs)` | `NostrClientFetchAllPagesExt` | Fully retrieve a result set larger than the relay's per-REQ cap (strfry `limit`, ~500) by walking a `created_at` cursor. Bound it with the filter's `limit`. |
+| `fetchAll(relay, filter, idleTimeoutMs)` | `NostrClientFetchAllExt` | Get every event matching a filter in one REQ, deduped by id, until EOSE or a full idle window of silence. **No verify, no store** — just the events. Takes `pendingOnAuthRequired` (see NIP-42 above). |
+| `fetchFirst(relay, filter, idleTimeoutMs)` | `NostrClientFetchFirstExt` | Get the first matching event and stop (returns `null` on none/timeout — or on an auth wall it could not get over; see NIP-42 above). |
+| `fetchAllPages(relay, filters, idleTimeoutMs)` | `NostrClientFetchAllPagesExt` | Fully retrieve a result set larger than the relay's per-REQ cap (strfry `limit`, ~500) by walking a `created_at` cursor. Bound it with the filter's `limit`. Reports **why** the walk stopped via `PagedFetchResult.End` — only `DRAINED` proves absence. |
 | `fetchAllPagesFromPool(filters, ...)` | `NostrClientFetchAllPagesPoolExt` | Same paging, across several relays at once. No cross-relay dedup — the `WithHooks` variant below dedups. |
-| `fetchAllWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAll` with a suspending per-`(relay, event)` accept hook (verify+store as events arrive), per-relay terminal-reason tracking, optional dead-relay collection (`deadOut` + `classifyDrainFailure`), keep-pending-on-`auth-required` CLOSED (NIP-42 re-fire), and a timeout diagnostic hook. |
+| `fetchAllWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAll` with a suspending per-`(relay, event)` accept hook (verify+store as events arrive), per-relay terminal-reason tracking, optional dead-relay collection (`deadOut` + `classifyDrainFailure`), keep-pending-on-`auth-required` CLOSED bounded by the AUTH's own outcome (NIP-42, above), and a timeout diagnostic hook. |
 | `fetchAllPagesFromPoolWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAllPagesFromPool` with the same suspending accept hook, run single-threaded in one consumer; deduped across relays by `SeenIds` before the hook. |
 
 ## Streaming (`Flow`)
@@ -84,7 +124,7 @@ window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
 
 | Function | File | Use when |
 | --- | --- | --- |
-| `count(relay, filter, idleTimeoutMs)` | `NostrClientCountExt` | NIP-45 `COUNT` against one relay (`null` on timeout / no support). |
+| `count(relay, filter, idleTimeoutMs)` | `NostrClientCountExt` | NIP-45 `COUNT` against one relay (`null` on timeout / no support / an auth wall it could not get over). A COUNT is NIP-42-gated exactly like a REQ. |
 | `countMerged(relays, filter, ...)` | `NostrClientCountExt` | Merged count across relays. |
 
 ## Negentropy (NIP-77)

@@ -25,7 +25,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
+@OptIn(ExperimentalAtomicApi::class)
 class RelayAuthStatus {
     // Keeps track of auth responses to update the relay with all filters
     // after the authentication happen.
@@ -53,11 +56,36 @@ class RelayAuthStatus {
     @Volatile
     private var lastChallenge: String? = null
 
+    // Sign attempts currently with the responder for this connection. Bumped BEFORE the
+    // signing coroutine is launched and dropped in its finally, so the window is closed on
+    // every exit — success, empty result, decline, throw, or cancellation.
+    //
+    // Deliberately separate from [authResponseWatcher]: that tracks AUTH events already SENT
+    // (and drives [hasFinishedAllAuths], which the re-auth coalescing depends on), whereas
+    // this covers the gap before one exists. Nothing is on the wire yet, so folding the two
+    // would change the coalescing rule; keeping them apart leaves every existing decision
+    // byte-identical and only adds the ability to see the gap.
+    private val signingInFlight = AtomicInt(0)
+
+    // AUTHs accepted on this connection — see [RelayAuthSnapshot.successCount].
+    private val successCount = AtomicInt(0)
+
     fun rememberChallenge(challenge: String) {
         lastChallenge = challenge
     }
 
     fun lastChallenge(): String? = lastChallenge
+
+    /** A sign attempt is about to start. Pair with [signingFinished] in a `finally`. */
+    fun signingStarted() {
+        signingInFlight.addAndFetch(1)
+    }
+
+    fun signingFinished() {
+        signingInFlight.addAndFetch(-1)
+    }
+
+    fun isSigning(): Boolean = signingInFlight.load() > 0
 
     enum class AuthEventReceiptStatus {
         AUTHENTICATING,
@@ -94,6 +122,9 @@ class RelayAuthStatus {
             if (success) {
                 authResponseWatcher.put(eventId, AuthEventReceiptStatus.AUTHENTICATED)
                 lastAuthSuccessAt = TimeUtils.now()
+                // Bumped for EVERY accepted AUTH, not only the first: a connection can
+                // authenticate several identities, and each success re-syncs the filters.
+                successCount.addAndFetch(1)
             } else {
                 authResponseWatcher.put(eventId, AuthEventReceiptStatus.NOT_AUTHENTICATED)
             }
@@ -111,9 +142,16 @@ class RelayAuthStatus {
      * state. The phase is derived from the response watcher:
      *
      * - any AUTHENTICATING entry → [RelayAuthSnapshot.Phase.AUTHENTICATING]
+     * - else a sign attempt in flight → [RelayAuthSnapshot.Phase.SIGNING]
      * - else any AUTHENTICATED entry → [RelayAuthSnapshot.Phase.AUTHENTICATED]
      * - else any NOT_AUTHENTICATED entry → [RelayAuthSnapshot.Phase.AUTH_FAILED]
      * - else (no tracked challenges) → [RelayAuthSnapshot.Phase.IDLE]
+     *
+     * SIGNING is checked below AUTHENTICATING (an AUTH already on the wire is the
+     * more advanced fact) but above the settled verdicts, because a re-auth being
+     * signed for newly-available identities is live work, and reporting the
+     * previous round's AUTHENTICATED/AUTH_FAILED over it would tell a waiting
+     * caller the question is settled while it is still being answered.
      *
      * The watcher LRU caps at 10 entries; a long-running connection that has
      * already AUTHed will still report AUTHENTICATED even after older entries
@@ -123,11 +161,12 @@ class RelayAuthStatus {
         val entries = authResponseWatcher.snapshot()
         val phase =
             when {
-                entries.isEmpty() -> RelayAuthSnapshot.Phase.IDLE
                 entries.values.any { it == AuthEventReceiptStatus.AUTHENTICATING } -> RelayAuthSnapshot.Phase.AUTHENTICATING
+                isSigning() -> RelayAuthSnapshot.Phase.SIGNING
+                entries.isEmpty() -> RelayAuthSnapshot.Phase.IDLE
                 entries.values.any { it == AuthEventReceiptStatus.AUTHENTICATED } -> RelayAuthSnapshot.Phase.AUTHENTICATED
                 else -> RelayAuthSnapshot.Phase.AUTH_FAILED
             }
-        return RelayAuthSnapshot(phase, lastAuthSuccessAt)
+        return RelayAuthSnapshot(phase, lastAuthSuccessAt, successCount.load())
     }
 }

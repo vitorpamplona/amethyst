@@ -23,8 +23,14 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.AuthOutcome
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.DEFAULT_AUTH_GRACE_MS
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMark
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.awaitAuthOutcome
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -43,8 +49,11 @@ private enum class PageSignal {
     /** The relay finished serving its stored events for this REQ. */
     EOSE,
 
-    /** The relay ended the subscription itself — auth required, rate limited, policy. */
+    /** The relay ended the subscription itself — rate limited, policy, unsupported. */
     CLOSED,
+
+    /** The relay ended the subscription with `auth-required:` — see [PagedFetchResult.End.AUTH_REQUIRED]. */
+    AUTH_REQUIRED,
 
     /** Never got to ask. */
     CANNOT_CONNECT,
@@ -84,8 +93,24 @@ data class PagedFetchResult(
          */
         IDLE,
 
-        /** The relay ended the subscription — auth required, rate limited, policy. */
+        /** The relay ended the subscription — rate limited, policy, unsupported filter. */
         CLOSED,
+
+        /**
+         * The relay refused the page with `auth-required:` and the NIP-42 challenge did
+         * not satisfy it — no responder attached, one that declined, or an AUTH the relay
+         * rejected.
+         *
+         * Split out of [CLOSED] because the three refusals CLOSED used to cover want
+         * three different things from the caller: a rate limit wants a slower retry, a
+         * policy refusal wants none, and this one wants a signer the relay accepts.
+         * Lumped together, a walk that stopped at an auth wall was indistinguishable from
+         * one the relay simply would not serve — and the wall is the only one of the three
+         * the caller can actually take down.
+         *
+         * Proves nothing about what the relay holds, so no coverage claim may rest on it.
+         */
+        AUTH_REQUIRED,
 
         /** Never got to ask. */
         CANNOT_CONNECT,
@@ -194,10 +219,32 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
+    /**
+     * Whether an `auth-required:` page refusal is waited out rather than ending the walk.
+     * Defaults to whether this client has a NIP-42 responder attached — see
+     * [fetchAllWithHooks] for why the default is derived rather than constant.
+     *
+     * Waiting is what makes the page recoverable: the AUTH's `OK` drives
+     * [INostrClient.syncFilters], which re-sends this very REQ (same subscription id, same
+     * filters — an `auth-required:` refusal is deliberately not recorded as structural, so
+     * the pool keeps them), and the page then answers normally. The walk is retried at most
+     * ONCE for auth across its whole length, so a relay that alternates refusal and
+     * acceptance cannot spin it.
+     *
+     * Regardless of this flag the refusal is reported as [PagedFetchResult.End.AUTH_REQUIRED]
+     * rather than [PagedFetchResult.End.CLOSED]; the flag only decides whether we wait first.
+     */
+    pendingOnAuthRequired: Boolean = hasAuthResponder(),
+    /** Stage-one grace handed to [awaitAuthOutcome]. */
+    authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult {
     var until: Long? = null
     var totalEvents = 0
+    // At most one auth retry per walk. The AUTH is per-connection, so one success covers
+    // every later page; a second refusal after it means the relay wants an identity we do
+    // not have, and re-waiting on each page would multiply the grace by the page count.
+    var authRetried = false
     // Overwritten by whichever break ends the loop. UNPAGEABLE is the honest
     // default: the two breaks that leave it alone are both "the cursor cannot
     // advance", and it is the reading that licenses the least.
@@ -271,6 +318,9 @@ suspend fun INostrClient.fetchAllPages(
         if (until != null) onNewPage?.invoke(until)
 
         val doneChannel = Channel<PageSignal>(Channel.CONFLATED)
+
+        // Read before this page's REQ goes out — see [awaitAuthOutcome]'s `since`.
+        val authMark = if (pendingOnAuthRequired) authSuccessMark(relay) else 0
 
         // Idle watchdog for this page: every arriving event bumps it, so the page's
         // timeout measures silence since the relay's most recent message (the same
@@ -381,7 +431,11 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(PageSignal.CLOSED)
+                        if (MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED) {
+                            doneChannel.trySend(PageSignal.AUTH_REQUIRED)
+                        } else {
+                            doneChannel.trySend(PageSignal.CLOSED)
+                        }
                     }
 
                     override fun onCannotConnect(
@@ -399,6 +453,20 @@ suspend fun INostrClient.fetchAllPages(
             // giving up only after [idleTimeoutMs] of silence — the wait resets on every
             // arriving event, so an actively streaming page is never cut mid-delivery.
             pageEnd = doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
+
+            // The relay wants NIP-42 before it answers this page. Deliberately do NOT
+            // unsubscribe yet: the AUTH's OK re-sends this same subscription id, and the
+            // page we are standing in is the one that gets answered. Tearing it down first
+            // would leave the post-auth REQ with nothing to refill.
+            if (pageEnd == PageSignal.AUTH_REQUIRED && pendingOnAuthRequired && !authRetried) {
+                authRetried = true
+                if (awaitAuthOutcome(relay, authMark, authGraceMs, idleTimeoutMs) == AuthOutcome.AUTHENTICATED) {
+                    // Silence so far was the AUTH round-trip, not the relay stalling, so the
+                    // idle window starts over for the re-served page.
+                    clock.bump()
+                    pageEnd = doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
+                }
+            }
 
             unsubscribe(subId)
             doneChannel.close()
@@ -428,6 +496,7 @@ suspend fun INostrClient.fetchAllPages(
                 }
             end =
                 when {
+                    pageEnd == PageSignal.AUTH_REQUIRED -> PagedFetchResult.End.AUTH_REQUIRED
                     pageEnd == PageSignal.CLOSED -> PagedFetchResult.End.CLOSED
                     pageEnd == PageSignal.CANNOT_CONNECT -> PagedFetchResult.End.CANNOT_CONNECT
                     pageEnd == null -> PagedFetchResult.End.IDLE
@@ -521,12 +590,16 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
+    pendingOnAuthRequired: Boolean = hasAuthResponder(),
+    authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult =
     fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,
         idleTimeoutMs = idleTimeoutMs,
+        pendingOnAuthRequired = pendingOnAuthRequired,
+        authGraceMs = authGraceMs,
         onNewPage = onNewPage,
         onEvent = onEvent,
     )

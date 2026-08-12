@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DrainFailureTest {
     // Non-failure and non-"cannot" terminals are never dead signals.
@@ -82,5 +85,39 @@ class DrainFailureTest {
     fun midStreamResetIsDead() {
         assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Connection reset (SocketException)"))
         assertEquals(DrainFailure.DEAD, classifyDrainFailure("cannot:Broken pipe (SocketException)"))
+    }
+
+    // An unsatisfied NIP-42 wall is recorded — the caller deserves to know WHY it got
+    // nothing — but it is not DEAD and must never be dropped from routing: the relay
+    // answered, and serves the same query to a connection it accepts.
+    @Test
+    fun anAuthWallIsRecordedButNotDead() {
+        val verdict = classifyDrainFailure("auth-refused:auth-required: this relay requires authentication")
+        assertEquals(DrainFailure.AUTH_REQUIRED, verdict)
+        assertFalse(verdict!!.dropFromRouting, "an auth wall is fixed by a signer, not by dropping the relay")
+        assertTrue(DrainFailure.DEAD.dropFromRouting)
+    }
+
+    // A relay-side `closed:` carrying the same words is NOT the auth verdict: that reason
+    // is only ever written once the challenge has actually been resolved against us.
+    @Test
+    fun aPlainClosedIsNotTheAuthVerdict() {
+        assertNull(classifyDrainFailure("closed:auth-required: please authenticate"))
+    }
+
+    // The reason strings and the readers that consume them agree.
+    @Test
+    fun authRefusedRelaysReadsTheReasonMap() {
+        val gated = NormalizedRelayUrl("wss://gated.example/")
+        val served = NormalizedRelayUrl("wss://open.example/")
+        val reasons =
+            mapOf(
+                gated to "$DONE_REASON_AUTH_REFUSED:auth-required: nope",
+                served to DONE_REASON_EOSE,
+            )
+
+        assertEquals(setOf(gated), reasons.authRefusedRelays())
+        assertTrue(reasons.anyRelayServed(), "one relay did serve us; the auth wall does not erase that")
+        assertEquals(emptySet(), mapOf(served to DONE_REASON_EOSE).authRefusedRelays())
     }
 }
