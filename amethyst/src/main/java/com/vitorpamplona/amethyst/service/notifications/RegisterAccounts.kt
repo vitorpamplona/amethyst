@@ -37,6 +37,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.coroutines.executeAsync
+import java.io.IOException
 
 class RegisterAccounts(
     private val accounts: List<AccountInfo>,
@@ -132,7 +133,16 @@ class RegisterAccounts(
         val client = client(url)
 
         client.newCall(request).executeAsync().use { response ->
-            Log.i(tag) { "Server registration ${response.isSuccessful}" }
+            // Must throw on failure: retryIfException only re-attempts when the block
+            // raises, and PushNotificationUtils only caches the token/account list
+            // after a clean return. Returning normally on an error response would
+            // mark this device as registered while push is silently dead until the
+            // token or the account list changes.
+            if (!response.isSuccessful) {
+                val reason = response.peekBody(MAX_ERROR_BODY_BYTES).string().ifBlank { response.message }
+                throw PushRegistrationException("Push registration failed at $url: HTTP ${response.code} $reason")
+            }
+            Log.i(tag) { "Server registration succeeded (HTTP ${response.code})" }
         }
     }
 
@@ -143,4 +153,14 @@ class RegisterAccounts(
             }
         }
     }
+
+    companion object {
+        /** Caps how much of an error response is buffered into the exception message. */
+        const val MAX_ERROR_BODY_BYTES = 512L
+    }
 }
+
+/** The push server rejected the registration. Retried by the caller's retry loop. */
+class PushRegistrationException(
+    message: String,
+) : IOException(message)
