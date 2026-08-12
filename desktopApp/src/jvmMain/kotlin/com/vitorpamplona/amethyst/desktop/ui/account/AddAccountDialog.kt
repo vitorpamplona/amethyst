@@ -90,16 +90,11 @@ fun AddAccountDialog(
                         Result.success(Unit)
                     },
                     onGenerateNew = {
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                accountManager.ensureCurrentAccountInStorage()
-                            }
-                            accountManager.generateNewAccount()
-                            withContext(Dispatchers.IO) {
-                                accountManager.saveCurrentAccount()
-                            }
-                            onAccountAdded()
-                        }
+                        // Hand off to the first-run onboarding screen (hoisted above the
+                        // account-state switch in Main). It builds the key, walks the user
+                        // through backup, then activates + persists on finish.
+                        accountManager.beginNewAccountOnboarding()
+                        onDismiss()
                     },
                     onLoginBunker = { bunkerUri ->
                         accountManager.ensureCurrentAccountInStorage()

@@ -25,6 +25,17 @@
     <string name="new_key_saved_checkbox">I have saved my keys somewhere safe</string>
     <string name="new_key_copy_encrypted_button">Copy encrypted (recommended)</string>
     <string name="new_key_encrypt_password_label">Password for encrypted backup</string>
+    <string name="new_key_step_indicator">Step %1$d of %2$d</string>
+    <string name="new_key_next">Next</string>
+    <string name="new_key_back">Back</string>
+    <string name="new_key_cancel">Cancel</string>
+    <string name="new_key_step_intro_title">Save your keys before you continue</string>
+    <string name="new_key_step_intro_npub">Your public key (npub) is your shareable address. Give it out freely so people can find and follow you.</string>
+    <string name="new_key_step_intro_nsec">Your secret key (nsec) is a password that can NEVER be reset. This is the only time it is shown — save it now, or you will lose access to this account forever.</string>
+    <string name="new_key_keys_title">Your keys</string>
+    <string name="new_key_confirm_title">One last thing</string>
+    <string name="new_key_confirm_recap">Store your secret key in a password manager. If you lose it, no one can recover it for you.</string>
+    <string name="new_key_readonly_info">This is a read-only account. No secret key was generated, so there is nothing to back up.</string>
 
     <!-- Key Backup (Desktop settings) -->
     <string name="backup_keys_title">Backup Keys</string>

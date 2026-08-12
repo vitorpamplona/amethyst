@@ -121,6 +121,7 @@ import com.vitorpamplona.amethyst.desktop.ui.LocalBlossomServers
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
+import com.vitorpamplona.amethyst.desktop.ui.auth.NewKeyOnboardingScreen
 import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopDmRoute
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawer
@@ -1337,299 +1338,321 @@ private fun AppInner(
                     LocalNotificationSettings provides notifSettings,
                     LocalNotificationReadState provides notifReadState,
                 ) {
-                    when (accountState) {
-                        is AccountState.Loading -> {
-                            // Branded loading screen while accounts load from storage
-                            val loadingIcon = com.vitorpamplona.amethyst.desktop.platform.IconResources.rawBitmapPainter
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    androidx.compose.material3.CircularProgressIndicator(
-                                        modifier = Modifier.size(32.dp),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        strokeWidth = 3.dp,
-                                    )
-                                    Spacer(Modifier.height(16.dp))
-                                    Text(
-                                        "Amethyst",
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        color = MaterialTheme.colorScheme.onBackground,
-                                    )
-                                    Spacer(Modifier.height(24.dp))
-                                    androidx.compose.material3.Icon(
-                                        painter = loadingIcon,
-                                        contentDescription = "Amethyst",
-                                        modifier = Modifier.size(96.dp),
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
+                    val pendingNewAccount by accountManager.pendingNewAccount.collectAsState()
+                    val pendingNew = pendingNewAccount
+                    if (pendingNew != null) {
+                        // First-run "save your keys" onboarding for a freshly generated
+                        // account. Rendered above the account-state switch so it survives
+                        // until the user finishes (which activates + persists the account).
+                        NewKeyOnboardingScreen(
+                            npub = pendingNew.npub,
+                            nsec = pendingNew.nsec,
+                            onFinish = {
+                                scope.launch(Dispatchers.IO) {
+                                    accountManager.ensureCurrentAccountInStorage()
+                                    accountManager.finishNewAccountOnboarding()
+                                    accountManager.saveCurrentAccount()
+                                    accountManager.ensureCurrentAccountInStorage()
+                                    accountManager.refreshAccountList()
                                 }
-                            }
-                        }
-
-                        is AccountState.LoggedOut -> {
-                            LoginScreen(
-                                accountManager = accountManager,
-                                onLoginSuccess = {
-                                    // Start heartbeat if bunker account
-                                    val current = accountManager.currentAccount()
-                                    if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
-                                        accountManager.startHeartbeat(scope)
-                                    }
-                                    // Save account (privkey to keychain + metadata to disk)
-                                    // then ensure multi-account storage is up to date.
-                                    // Uses App-level scope so it survives LoginScreen leaving composition.
-                                    scope.launch(Dispatchers.IO) {
-                                        accountManager.saveCurrentAccount()
-                                        accountManager.ensureCurrentAccountInStorage()
-                                        accountManager.refreshAccountList()
-                                    }
-                                },
-                            )
-                        }
-
-                        is AccountState.ConnectingRelays -> {
-                            val relays by relayManager.relayStatuses.collectAsState()
-                            ConnectingRelaysScreen(
-                                subtitle = "Restoring remote signer session",
-                                relayStatuses = relays,
-                            )
-                        }
-
-                        is AccountState.LoggedIn -> {
-                            val account = accountState as AccountState.LoggedIn
-                            val nwcConnection by accountManager.nwcConnection.collectAsState()
-
-                            // Account state holders (relay lists, blossom servers, DMs, WoT).
-                            // Hoisted above MainContent so the top-level compose dialog can also
-                            // read the account's blossom server list from iAccount directly.
-                            val dmSendTracker = remember(relayManager) { DmSendTracker(relayManager.client) }
-                            // Created before iAccount so NIP-65 backup can be loaded.
-                            val accountRelays =
-                                remember(account, relayManager, scope) {
-                                    DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
-                                }
-                            // Cold-boot AUTH race fix: when the account's own kind:10050 DM-inbox
-                            // set loads (often AFTER an inbox relay has already challenged for
-                            // AUTH), retroactively auto-approve any pending tier-2 prompt for a
-                            // relay that is actually tier-1, instead of leaving a spurious banner.
-                            LaunchedEffect(authCoordinator, accountRelays) {
-                                accountRelays.dmRelayList.collect { dmInbox ->
-                                    authCoordinator.onSelfApprovedRelaysChanged(dmInbox)
-                                }
-                            }
-                            val iAccount =
-                                remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
-                                    DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
-                                }
-                            // When iAccount is replaced (account switch), close the previous
-                            // WoTService so its writer coroutine + ops Channel don't leak.
-                            DisposableEffect(iAccount) {
-                                onDispose { iAccount.wotService.close() }
-                            }
-
-                            // Lazy-load Namecoin services. The Core RPC HTTP
-                            // client is sourced from the Tor-aware DesktopHttpClient
-                            // singleton so .onion RPC URLs route through the
-                            // user's Tor settings without extra plumbing.
-                            val namecoinPreferences = remember { DesktopNamecoinPreferences() }
-                            val namecoinService =
-                                remember {
-                                    DesktopNamecoinNameService(
-                                        preferencesProvider = { namecoinPreferences.current },
-                                        pinnedCertsProvider = { namecoinPreferences.loadPinnedCerts() },
-                                        coreRpcHttpClientProvider = { _ ->
-                                            com.vitorpamplona.amethyst.desktop.network
-                                                .DesktopHttpClient
-                                                .currentClient()
-                                        },
-                                    )
-                                }
-
-                            // NWC loaded during startup in loadSavedAccount flow
-
-                            val currentTorStatus = torManager.status.collectAsState().value
-                            val followedUsers by localCache.followedUsers.collectAsState()
-                            val spamExemptKeys =
-                                remember(followedUsers, account.pubKeyHex) {
-                                    followedUsers + account.pubKeyHex
-                                }
-                            androidx.compose.runtime.CompositionLocalProvider(
-                                com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState provides
-                                    com.vitorpamplona.amethyst.desktop.ui.tor.TorState(
-                                        status = currentTorStatus,
-                                        settings = torSettings,
-                                        onSettingsChanged = { newSettings ->
-                                            torSettings = newSettings
-                                            com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
-                                                .save(newSettings)
-                                            torTypeFlow.value = newSettings.torType
-                                            externalPortFlow.value = newSettings.externalSocksPort
-                                            // Rebuild app to apply Tor changes
-                                            onRestartApp()
-                                        },
-                                    ),
-                                LocalNamecoinPreferences provides namecoinPreferences,
-                                LocalNamecoinService provides namecoinService,
-                                LocalSpamExemptKeys provides spamExemptKeys,
-                                com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount provides iAccount,
-                                LocalUserFinder provides subscriptionsCoordinator.userFinder,
-                                LocalUserFinderAccount provides iAccount,
-                                LocalEventFinder provides subscriptionsCoordinator.eventFinder,
-                            ) {
-                                val pendingAuthApprovals by authCoordinator.pendingApprovals.collectAsState()
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    // On macOS the window uses `apple.awt.fullWindowContent`
-                                    // (see [applyNativeWindowChrome]), so the traffic-light
-                                    // buttons sit over the top-left corner of content. Clear
-                                    // that zone so the banner text/icon aren't occluded.
-                                    val bannerModifier =
-                                        if (PlatformInfo.isMacOS) {
-                                            Modifier.padding(start = 80.dp, top = 8.dp, end = 8.dp, bottom = 4.dp)
-                                        } else {
-                                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        }
-                                    AuthApprovalBanner(
-                                        pending = pendingAuthApprovals.values.toList(),
-                                        onResolve = { url, scope -> authCoordinator.resolve(url, scope) },
-                                        modifier = bannerModifier,
-                                    )
-                                    Box(modifier = Modifier.weight(1f)) {
-                                        // Force a Compose subtree teardown when the active
-                                        // account changes. Without this, the currently-open
-                                        // column keeps its account-A `remember { ... }`
-                                        // state (LazyListState scroll position, expanded
-                                        // rows, filter-tab selection, in-flight metadata
-                                        // observers, per-column view-models) even though the
-                                        // outer `iAccount` / `accountRelays` swap correctly.
-                                        // Users saw account A's notifications / profile /
-                                        // messages page rendered under account B's identity
-                                        // until they navigated away and back. `key(pubKeyHex)`
-                                        // is the idiomatic Compose way to reset an entire
-                                        // subtree on identity change while keeping the outer
-                                        // deck layout / workspace state (declared above) alive.
-                                        androidx.compose.runtime.key(account.pubKeyHex) {
-                                            MainContent(
-                                                layoutMode = layoutMode,
-                                                deckState = deckState,
-                                                workspaceManager = workspaceManager,
-                                                singlePaneState = singlePaneState,
-                                                pinnedNavBarState = pinnedNavBarState,
-                                                relayManager = relayManager,
-                                                localCache = localCache,
-                                                accountManager = accountManager,
-                                                account = account,
-                                                iAccount = iAccount,
-                                                accountRelays = accountRelays,
-                                                dmSendTracker = dmSendTracker,
-                                                nwcConnection = nwcConnection,
-                                                subscriptionsCoordinator = subscriptionsCoordinator,
-                                                indexRelaysStore = indexRelaysStore,
-                                                nip11Fetcher = nip11Fetcher,
-                                                dmInboxResolver = dmInboxResolver,
-                                                appScope = scope,
-                                                torStatus = currentTorStatus,
-                                                onShowComposeDialog = onShowComposeDialog,
-                                                onShowReplyDialog = onShowReplyDialog,
-                                                onEditInComposer = onEditInComposer,
-                                                onShowAppDrawer = onShowAppDrawer,
-                                                onOpenFeedsDrawer = {
-                                                    appDrawerInitialTab =
-                                                        com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
-                                                    onShowAppDrawer()
-                                                },
-                                                onShowImportFollowListDialog = onShowImportFollowListDialog,
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Import Follow List dialog (triggered from File menu /
-                                // Cmd+Shift+I). Rendered inside this CompositionLocalProvider
-                                // so LocalNamecoinService is available for .bit / d/ / id/
-                                // identifier resolution.
-                                if (showImportFollowListDialog) {
-                                    ImportFollowListDialog(
-                                        onDismiss = onDismissImportFollowListDialog,
-                                        relayManager = relayManager,
-                                        account = account,
-                                        localCache = localCache,
-                                    )
-                                }
-                            }
-
-                            // Compose dialog. Hosted outside MainContent's provider,
-                            // so provide the account's blossom list here too.
-                            if (showComposeDialog) {
-                                CompositionLocalProvider(
-                                    LocalBlossomServers provides iAccount.blossomServerList.flow,
+                            },
+                            onCancel = { accountManager.cancelNewAccountOnboarding() },
+                        )
+                    } else {
+                        when (accountState) {
+                            is AccountState.Loading -> {
+                                // Branded loading screen while accounts load from storage
+                                val loadingIcon = com.vitorpamplona.amethyst.desktop.platform.IconResources.rawBitmapPainter
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    ComposeNoteDialog(
-                                        onDismiss = onDismissComposeDialog,
-                                        relayManager = relayManager,
-                                        account = account,
-                                        localCache = localCache,
-                                        replyTo = replyToNote,
-                                        draftDTag = composeEditDraftTag,
-                                        draftInitialContent = composeEditContent,
-                                        initialScheduledForSec = composeEditScheduledForSec,
-                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            modifier = Modifier.size(32.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            strokeWidth = 3.dp,
+                                        )
+                                        Spacer(Modifier.height(16.dp))
+                                        Text(
+                                            "Amethyst",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            color = MaterialTheme.colorScheme.onBackground,
+                                        )
+                                        Spacer(Modifier.height(24.dp))
+                                        androidx.compose.material3.Icon(
+                                            painter = loadingIcon,
+                                            contentDescription = "Amethyst",
+                                            modifier = Modifier.size(96.dp),
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
                                 }
                             }
 
-                            // App Drawer overlay
-                            if (showAppDrawer) {
-                                val openColumns by deckState.columns.collectAsState()
-                                AppDrawer(
-                                    initialTab = appDrawerInitialTab,
-                                    openColumnTypes =
-                                        if (layoutMode == LayoutMode.DECK) {
-                                            openColumns.map { it.type.typeKey() }.toSet()
-                                        } else {
-                                            emptySet()
-                                        },
-                                    pinnedNavBarState = pinnedNavBarState,
-                                    workspaceManager = workspaceManager,
-                                    onSwitchWorkspace = { ws ->
-                                        // Switch layout mode to match workspace
-                                        onLayoutModeChange(ws.layoutMode)
-                                        // Load columns or single pane screen
-                                        when (ws.layoutMode) {
-                                            LayoutMode.DECK -> {
-                                                deckState.loadFromWorkspace(ws.columns)
-                                            }
-
-                                            LayoutMode.SINGLE_PANE -> {
-                                                // Load nav bar from workspace + navigate to first screen
-                                                pinnedNavBarState.loadFromWorkspace()
-                                                val firstKey =
-                                                    ws.singlePaneScreens.firstOrNull() ?: "home"
-                                                val type = DeckState.parseColumnTypeFromKey(firstKey)
-                                                if (type != null) singlePaneState.navigate(type)
-                                            }
+                            is AccountState.LoggedOut -> {
+                                LoginScreen(
+                                    accountManager = accountManager,
+                                    onLoginSuccess = {
+                                        // Start heartbeat if bunker account
+                                        val current = accountManager.currentAccount()
+                                        if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
+                                            accountManager.startHeartbeat(scope)
                                         }
-                                    },
-                                    onSelectScreen = { type ->
-                                        when (layoutMode) {
-                                            LayoutMode.DECK -> {
-                                                if (deckState.hasColumnOfType(type)) {
-                                                    deckState.focusExistingColumn(type)
-                                                } else {
-                                                    deckState.addColumn(type)
-                                                }
-                                            }
-
-                                            LayoutMode.SINGLE_PANE -> {
-                                                singlePaneState.navigate(type)
-                                            }
+                                        // Save account (privkey to keychain + metadata to disk)
+                                        // then ensure multi-account storage is up to date.
+                                        // Uses App-level scope so it survives LoginScreen leaving composition.
+                                        scope.launch(Dispatchers.IO) {
+                                            accountManager.saveCurrentAccount()
+                                            accountManager.ensureCurrentAccountInStorage()
+                                            accountManager.refreshAccountList()
                                         }
-                                    },
-                                    onDismiss = {
-                                        appDrawerInitialTab = null
-                                        onDismissAppDrawer()
                                     },
                                 )
+                            }
+
+                            is AccountState.ConnectingRelays -> {
+                                val relays by relayManager.relayStatuses.collectAsState()
+                                ConnectingRelaysScreen(
+                                    subtitle = "Restoring remote signer session",
+                                    relayStatuses = relays,
+                                )
+                            }
+
+                            is AccountState.LoggedIn -> {
+                                val account = accountState as AccountState.LoggedIn
+                                val nwcConnection by accountManager.nwcConnection.collectAsState()
+
+                                // Account state holders (relay lists, blossom servers, DMs, WoT).
+                                // Hoisted above MainContent so the top-level compose dialog can also
+                                // read the account's blossom server list from iAccount directly.
+                                val dmSendTracker = remember(relayManager) { DmSendTracker(relayManager.client) }
+                                // Created before iAccount so NIP-65 backup can be loaded.
+                                val accountRelays =
+                                    remember(account, relayManager, scope) {
+                                        DesktopAccountRelays(account.pubKeyHex, relayManager, scope)
+                                    }
+                                // Cold-boot AUTH race fix: when the account's own kind:10050 DM-inbox
+                                // set loads (often AFTER an inbox relay has already challenged for
+                                // AUTH), retroactively auto-approve any pending tier-2 prompt for a
+                                // relay that is actually tier-1, instead of leaving a spurious banner.
+                                LaunchedEffect(authCoordinator, accountRelays) {
+                                    accountRelays.dmRelayList.collect { dmInbox ->
+                                        authCoordinator.onSelfApprovedRelaysChanged(dmInbox)
+                                    }
+                                }
+                                val iAccount =
+                                    remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
+                                        DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
+                                    }
+                                // When iAccount is replaced (account switch), close the previous
+                                // WoTService so its writer coroutine + ops Channel don't leak.
+                                DisposableEffect(iAccount) {
+                                    onDispose { iAccount.wotService.close() }
+                                }
+
+                                // Lazy-load Namecoin services. The Core RPC HTTP
+                                // client is sourced from the Tor-aware DesktopHttpClient
+                                // singleton so .onion RPC URLs route through the
+                                // user's Tor settings without extra plumbing.
+                                val namecoinPreferences = remember { DesktopNamecoinPreferences() }
+                                val namecoinService =
+                                    remember {
+                                        DesktopNamecoinNameService(
+                                            preferencesProvider = { namecoinPreferences.current },
+                                            pinnedCertsProvider = { namecoinPreferences.loadPinnedCerts() },
+                                            coreRpcHttpClientProvider = { _ ->
+                                                com.vitorpamplona.amethyst.desktop.network
+                                                    .DesktopHttpClient
+                                                    .currentClient()
+                                            },
+                                        )
+                                    }
+
+                                // NWC loaded during startup in loadSavedAccount flow
+
+                                val currentTorStatus = torManager.status.collectAsState().value
+                                val followedUsers by localCache.followedUsers.collectAsState()
+                                val spamExemptKeys =
+                                    remember(followedUsers, account.pubKeyHex) {
+                                        followedUsers + account.pubKeyHex
+                                    }
+                                androidx.compose.runtime.CompositionLocalProvider(
+                                    com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState provides
+                                        com.vitorpamplona.amethyst.desktop.ui.tor.TorState(
+                                            status = currentTorStatus,
+                                            settings = torSettings,
+                                            onSettingsChanged = { newSettings ->
+                                                torSettings = newSettings
+                                                com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                                                    .save(newSettings)
+                                                torTypeFlow.value = newSettings.torType
+                                                externalPortFlow.value = newSettings.externalSocksPort
+                                                // Rebuild app to apply Tor changes
+                                                onRestartApp()
+                                            },
+                                        ),
+                                    LocalNamecoinPreferences provides namecoinPreferences,
+                                    LocalNamecoinService provides namecoinService,
+                                    LocalSpamExemptKeys provides spamExemptKeys,
+                                    com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount provides iAccount,
+                                    LocalUserFinder provides subscriptionsCoordinator.userFinder,
+                                    LocalUserFinderAccount provides iAccount,
+                                    LocalEventFinder provides subscriptionsCoordinator.eventFinder,
+                                ) {
+                                    val pendingAuthApprovals by authCoordinator.pendingApprovals.collectAsState()
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        // On macOS the window uses `apple.awt.fullWindowContent`
+                                        // (see [applyNativeWindowChrome]), so the traffic-light
+                                        // buttons sit over the top-left corner of content. Clear
+                                        // that zone so the banner text/icon aren't occluded.
+                                        val bannerModifier =
+                                            if (PlatformInfo.isMacOS) {
+                                                Modifier.padding(start = 80.dp, top = 8.dp, end = 8.dp, bottom = 4.dp)
+                                            } else {
+                                                Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            }
+                                        AuthApprovalBanner(
+                                            pending = pendingAuthApprovals.values.toList(),
+                                            onResolve = { url, scope -> authCoordinator.resolve(url, scope) },
+                                            modifier = bannerModifier,
+                                        )
+                                        Box(modifier = Modifier.weight(1f)) {
+                                            // Force a Compose subtree teardown when the active
+                                            // account changes. Without this, the currently-open
+                                            // column keeps its account-A `remember { ... }`
+                                            // state (LazyListState scroll position, expanded
+                                            // rows, filter-tab selection, in-flight metadata
+                                            // observers, per-column view-models) even though the
+                                            // outer `iAccount` / `accountRelays` swap correctly.
+                                            // Users saw account A's notifications / profile /
+                                            // messages page rendered under account B's identity
+                                            // until they navigated away and back. `key(pubKeyHex)`
+                                            // is the idiomatic Compose way to reset an entire
+                                            // subtree on identity change while keeping the outer
+                                            // deck layout / workspace state (declared above) alive.
+                                            androidx.compose.runtime.key(account.pubKeyHex) {
+                                                MainContent(
+                                                    layoutMode = layoutMode,
+                                                    deckState = deckState,
+                                                    workspaceManager = workspaceManager,
+                                                    singlePaneState = singlePaneState,
+                                                    pinnedNavBarState = pinnedNavBarState,
+                                                    relayManager = relayManager,
+                                                    localCache = localCache,
+                                                    accountManager = accountManager,
+                                                    account = account,
+                                                    iAccount = iAccount,
+                                                    accountRelays = accountRelays,
+                                                    dmSendTracker = dmSendTracker,
+                                                    nwcConnection = nwcConnection,
+                                                    subscriptionsCoordinator = subscriptionsCoordinator,
+                                                    indexRelaysStore = indexRelaysStore,
+                                                    nip11Fetcher = nip11Fetcher,
+                                                    dmInboxResolver = dmInboxResolver,
+                                                    appScope = scope,
+                                                    torStatus = currentTorStatus,
+                                                    onShowComposeDialog = onShowComposeDialog,
+                                                    onShowReplyDialog = onShowReplyDialog,
+                                                    onEditInComposer = onEditInComposer,
+                                                    onShowAppDrawer = onShowAppDrawer,
+                                                    onOpenFeedsDrawer = {
+                                                        appDrawerInitialTab =
+                                                            com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
+                                                        onShowAppDrawer()
+                                                    },
+                                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Import Follow List dialog (triggered from File menu /
+                                    // Cmd+Shift+I). Rendered inside this CompositionLocalProvider
+                                    // so LocalNamecoinService is available for .bit / d/ / id/
+                                    // identifier resolution.
+                                    if (showImportFollowListDialog) {
+                                        ImportFollowListDialog(
+                                            onDismiss = onDismissImportFollowListDialog,
+                                            relayManager = relayManager,
+                                            account = account,
+                                            localCache = localCache,
+                                        )
+                                    }
+                                }
+
+                                // Compose dialog. Hosted outside MainContent's provider,
+                                // so provide the account's blossom list here too.
+                                if (showComposeDialog) {
+                                    CompositionLocalProvider(
+                                        LocalBlossomServers provides iAccount.blossomServerList.flow,
+                                    ) {
+                                        ComposeNoteDialog(
+                                            onDismiss = onDismissComposeDialog,
+                                            relayManager = relayManager,
+                                            account = account,
+                                            localCache = localCache,
+                                            replyTo = replyToNote,
+                                            draftDTag = composeEditDraftTag,
+                                            draftInitialContent = composeEditContent,
+                                            initialScheduledForSec = composeEditScheduledForSec,
+                                        )
+                                    }
+                                }
+
+                                // App Drawer overlay
+                                if (showAppDrawer) {
+                                    val openColumns by deckState.columns.collectAsState()
+                                    AppDrawer(
+                                        initialTab = appDrawerInitialTab,
+                                        openColumnTypes =
+                                            if (layoutMode == LayoutMode.DECK) {
+                                                openColumns.map { it.type.typeKey() }.toSet()
+                                            } else {
+                                                emptySet()
+                                            },
+                                        pinnedNavBarState = pinnedNavBarState,
+                                        workspaceManager = workspaceManager,
+                                        onSwitchWorkspace = { ws ->
+                                            // Switch layout mode to match workspace
+                                            onLayoutModeChange(ws.layoutMode)
+                                            // Load columns or single pane screen
+                                            when (ws.layoutMode) {
+                                                LayoutMode.DECK -> {
+                                                    deckState.loadFromWorkspace(ws.columns)
+                                                }
+
+                                                LayoutMode.SINGLE_PANE -> {
+                                                    // Load nav bar from workspace + navigate to first screen
+                                                    pinnedNavBarState.loadFromWorkspace()
+                                                    val firstKey =
+                                                        ws.singlePaneScreens.firstOrNull() ?: "home"
+                                                    val type = DeckState.parseColumnTypeFromKey(firstKey)
+                                                    if (type != null) singlePaneState.navigate(type)
+                                                }
+                                            }
+                                        },
+                                        onSelectScreen = { type ->
+                                            when (layoutMode) {
+                                                LayoutMode.DECK -> {
+                                                    if (deckState.hasColumnOfType(type)) {
+                                                        deckState.focusExistingColumn(type)
+                                                    } else {
+                                                        deckState.addColumn(type)
+                                                    }
+                                                }
+
+                                                LayoutMode.SINGLE_PANE -> {
+                                                    singlePaneState.navigate(type)
+                                                }
+                                            }
+                                        },
+                                        onDismiss = {
+                                            appDrawerInitialTab = null
+                                            onDismissAppDrawer()
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -2353,10 +2376,6 @@ fun ProfileScreen(
             isReadOnly = account.isReadOnly,
         )
 
-        Spacer(Modifier.height(16.dp))
-
-        BackupKeysCard(account = account)
-
         Spacer(Modifier.height(24.dp))
 
         OutlinedButton(
@@ -2421,6 +2440,11 @@ fun RelaySettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
+
+            // Account Keys / Backup Section
+            BackupKeysCard(account = account)
+
+            Spacer(Modifier.height(24.dp))
 
             // Wallet Connect Section
             Text(

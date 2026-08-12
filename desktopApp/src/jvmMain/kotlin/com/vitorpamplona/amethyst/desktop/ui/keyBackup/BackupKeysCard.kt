@@ -31,10 +31,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -90,7 +90,10 @@ import com.vitorpamplona.amethyst.desktop.util.copyToClipboard
 import com.vitorpamplona.amethyst.desktop.util.copyToClipboardThenClear
 import com.vitorpamplona.quartz.nip19Bech32.decodePrivateKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -348,6 +351,8 @@ private fun EncryptedCopy(nsec: String) {
     var showChars by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
+    var working by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     OutlinedTextField(
         value = password,
@@ -367,37 +372,44 @@ private fun EncryptedCopy(nsec: String) {
         visualTransformation =
             if (showChars) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
-            Icon(
-                symbol = if (showChars) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp),
-            )
+            IconButton(onClick = { showChars = !showChars }) {
+                Icon(
+                    symbol = if (showChars) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
+                    contentDescription = null,
+                )
+            }
         },
         modifier = Modifier.fillMaxWidth(),
     )
 
     Spacer(Modifier.height(8.dp))
 
+    // Same treatment as the plain Copy button. Encryption (scrypt) runs off the
+    // UI thread so the button stays responsive and reliably flips to "Copied!".
     Button(
         onClick = {
-            val hex = decodePrivateKeyAsHexOrNull(nsec)
-            val encrypted =
-                hex?.let { runCatching { Nip49().encrypt(it, password) }.getOrNull() }
-            if (encrypted != null) {
-                copyToClipboard(encrypted)
-                copied = true
-            } else {
-                error = true
+            error = false
+            working = true
+            scope.launch {
+                val encrypted =
+                    withContext(Dispatchers.Default) {
+                        decodePrivateKeyAsHexOrNull(nsec)?.let {
+                            runCatching { Nip49().encrypt(it, password) }.getOrNull()
+                        }
+                    }
+                working = false
+                if (encrypted != null) {
+                    copyToClipboard(encrypted)
+                    copied = true
+                } else {
+                    error = true
+                }
             }
         },
-        enabled = password.isNotBlank(),
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-            ),
+        enabled = password.isNotBlank() && !working,
     ) {
         Icon(
-            symbol = MaterialSymbols.Key,
+            symbol = MaterialSymbols.ContentCopy,
             contentDescription = null,
             modifier = Modifier.padding(end = 4.dp),
         )
