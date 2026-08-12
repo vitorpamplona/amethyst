@@ -24,11 +24,14 @@ import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomMirrorUnsupportedException
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -45,6 +48,15 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BlossomClientTest {
+    /**
+     * BlossomClient calls Call.executeAsync(), which drives [Call.enqueue] — not [Call.execute].
+     * Bridge the execute() stub set up above onto the async path so the response setup still applies.
+     */
+    private fun Call.answerAsyncFromExecuteStub() {
+        every { cancel() } just Runs
+        every { enqueue(any()) } answers { firstArg<Callback>().onResponse(this@answerAsyncFromExecuteStub, execute()) }
+    }
+
     private fun mockOkHttp(
         responseCode: Int,
         body: String = "",
@@ -65,6 +77,7 @@ class BlossomClientTest {
                 .headers(headers)
                 .body(body.toResponseBody())
                 .build()
+        mockCall.answerAsyncFromExecuteStub()
 
         return mockClient
     }
@@ -76,6 +89,7 @@ class BlossomClientTest {
             val request = firstArg<Request>()
             val call = mockk<Call>()
             every { call.execute() } returns handler(request)
+            call.answerAsyncFromExecuteStub()
             call
         }
         return mockClient
@@ -326,6 +340,7 @@ class BlossomClientTest {
                     .message("OK")
                     .body("""{"url":"https://example.com/hash"}""".toResponseBody())
                     .build()
+            mockCall.answerAsyncFromExecuteStub()
 
             val client = BlossomClient(mockClient)
             val file = File.createTempFile("test_", ".png")
@@ -366,6 +381,7 @@ class BlossomClientTest {
                     .message("OK")
                     .body("""{"url":"https://example.com/hash"}""".toResponseBody())
                     .build()
+            mockCall.answerAsyncFromExecuteStub()
 
             val client = BlossomClient(mockClient)
             val file = File.createTempFile("test_", ".png")
