@@ -109,6 +109,26 @@ class ConcordSessionRegistry(
         }
 
     /**
+     * The joined community whose planes [planeAddress] belongs to, or null when no session claims it.
+     *
+     * The NIP-42 auth path reads this to recognize an outbound plane wrap for what it is. A wrap is
+     * signed by the plane's stream key and `p`-tagged to a throwaway pubkey, so on tag shape alone it
+     * is indistinguishable from a NIP-17 gift wrap — a post into a community would otherwise be
+     * explained to the user as a direct message to a stranger nobody can name.
+     */
+    fun communityIdForPlane(planeAddress: HexKey): HexKey? =
+        lock.withLock {
+            sessions.entries
+                .firstOrNull { (_, session) ->
+                    planeAddress == session.controlPlaneAddress ||
+                        planeAddress == session.guestbookAddress ||
+                        planeAddress == session.nextBaseRekeyAddress ||
+                        planeAddress in session.historicalControlPlaneAddresses() ||
+                        planeAddress in session.channelAddresses()
+                }?.key
+        }
+
+    /**
      * Routes an inbound stream [wrap] to whichever session recognizes it, returning that session's
      * [ConcordIngestOutcome] (or [ConcordIngestOutcome.NOT_MINE] if none claim it). A wrap belongs to
      * at most one plane, so the first accepting session wins.

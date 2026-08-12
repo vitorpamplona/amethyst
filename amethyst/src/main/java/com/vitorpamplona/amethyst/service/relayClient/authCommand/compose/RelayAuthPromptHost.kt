@@ -82,7 +82,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /** Avatars shown in the facepile before the "+N" overflow badge. */
 private const val FACEPILE_MAX = 5
@@ -177,7 +179,7 @@ private fun RelayAuthPromptDialog(
     val who =
         when (primary?.kind) {
             AuthPurposeKind.POST_VENUE, AuthPurposeKind.READ_VENUE ->
-                primary.venues.firstOrNull()?.let { rememberVenueLabel(it, primary.kind, accountViewModel) }
+                primary.venues.firstOrNull()?.let { rememberVenueLabel(it, primary.kind, prompt.relayUrl, accountViewModel) }
             else -> counterpartyLabel(faces, accountViewModel)
         }
 
@@ -478,33 +480,40 @@ private fun rememberCounterpartyName(
 }
 
 /**
- * A display name for a venue id — a public chat channel (64-hex event id), a NIP-53 live activity,
- * or a NIP-72 community.
+ * A display name for a venue id — a public chat channel (64-hex event id), a NIP-53 live activity, a
+ * NIP-72 community, a NIP-29 relay group, or a Concord community.
  *
  * Only a [AuthPurposeKind.POST_VENUE] id is *known* to be a channel (it is the root of a channel
  * message we are sending). A READ id may have come from the tag-shape fallback, where a bare `#e`
  * list is as likely to be note ids on a thread as channel roots — so we only ever *look up* an
  * existing channel there. Get-or-creating on read is what used to mint phantom public chats in
  * [LocalCache] for ordinary notes, complete with a metadata subscription for a room that never was.
+ *
+ * The two joined-room shapes are checked first, because both are id shapes the rules above would
+ * otherwise mislabel: a NIP-29 group id is only meaningful together with its host relay ([relayUrl],
+ * which is the relay doing the asking), and a Concord community id is a bare 64-hex string that
+ * resolves to no [Channel] at all — its name lives on the account's own joined-communities list.
  */
 @Composable
 private fun rememberVenueLabel(
     venueId: String,
     kind: AuthPurposeKind,
+    relayUrl: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
 ): String {
     val channel: Channel? =
-        remember(venueId, kind) {
-            when {
-                venueId.length == 64 ->
-                    if (kind == AuthPurposeKind.POST_VENUE) {
-                        accountViewModel.checkGetOrCreatePublicChatChannel(venueId)
-                    } else {
-                        LocalCache.getPublicChatChannelIfExists(venueId)
-                    }
-                venueId.startsWith("30311:") -> Address.parse(venueId)?.let { accountViewModel.checkGetOrCreateLiveActivityChannel(it) }
-                else -> null
-            }
+        remember(venueId, kind, relayUrl) {
+            LocalCache.getRelayGroupChannelIfExists(GroupId(venueId, relayUrl))
+                ?: when {
+                    venueId.length == 64 ->
+                        if (kind == AuthPurposeKind.POST_VENUE) {
+                            accountViewModel.checkGetOrCreatePublicChatChannel(venueId)
+                        } else {
+                            LocalCache.getPublicChatChannelIfExists(venueId)
+                        }
+                    venueId.startsWith("30311:") -> Address.parse(venueId)?.let { accountViewModel.checkGetOrCreateLiveActivityChannel(it) }
+                    else -> null
+                }
         }
 
     if (channel != null) {
@@ -513,6 +522,15 @@ private fun rememberVenueLabel(
         val name = (state?.channel ?: channel).toBestDisplayName()
         if (name.isNotBlank()) return name
     }
+
+    val concordName =
+        remember(venueId) {
+            accountViewModel.account.concordChannelList.liveCommunities.value
+                .firstOrNull { it.id == venueId }
+                ?.name
+                ?.takeIf { it.isNotBlank() }
+        }
+    if (concordName != null) return concordName
 
     // Community: the d-identifier is the name in NIP-72. Also the fallback for an unresolved channel.
     return venueId.substringAfterLast(':').ifEmpty { venueId.take(8) }

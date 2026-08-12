@@ -229,6 +229,76 @@ class RelayAuthPurposeDeriverTest {
         assertEquals(setOf(alice), purposes[0].counterparties)
     }
 
+    // ---- rooms whose traffic doesn't look like a room -----------------------------------------
+
+    @Test
+    fun postingIntoARelayGroupIsAVenuePostAndNotANotification() {
+        // A NIP-29 chat message is `#h`-scoped; the mention it carries would otherwise make this read
+        // as "delivering a notification to alice" instead of "posting into the group".
+        val groupId = "abcd1234"
+        val ev =
+            Event(
+                id = "00".repeat(32),
+                pubKey = "11".repeat(32),
+                createdAt = 1_700_000_000L,
+                kind = 9,
+                tags = arrayOf(arrayOf("h", groupId), arrayOf("p", alice)),
+                content = "hi",
+                sig = "22".repeat(64),
+            )
+
+        val purposes = RelayAuthPurposeDeriver.derive(listOf(ev), emptyMap())
+
+        assertEquals(listOf(AuthPurposeKind.POST_VENUE), purposes.map { it.kind })
+        assertEquals(setOf(groupId), purposes[0].venues)
+    }
+
+    @Test
+    fun postingIntoAConcordChannelIsAVenuePostAndNotADmToItsThrowawayPTag() {
+        // A Concord plane wrap is kind 1059 signed by the plane's stream key and `p`-tagged to a fresh
+        // random pubkey. On tag shape alone it is a gift wrap, so the prompt used to offer to "send a
+        // message" to a key that belongs to nobody and will never be seen again.
+        val planeAddress = "9".repeat(64)
+        val communityId = "c".repeat(64)
+        val throwaway = "e".repeat(64)
+        val wrap =
+            Event(
+                id = "00".repeat(32),
+                pubKey = planeAddress,
+                createdAt = 1_700_000_000L,
+                kind = GiftWrapEvent.KIND,
+                tags = arrayOf(arrayOf("p", throwaway)),
+                content = "",
+                sig = "22".repeat(64),
+            )
+
+        val purposes =
+            RelayAuthPurposeDeriver.derive(
+                pendingEvents = listOf(wrap),
+                activeFilters = emptyMap(),
+                venueForPlaneAuthor = { if (it == planeAddress) communityId else null },
+            )
+
+        assertEquals(listOf(AuthPurposeKind.POST_VENUE), purposes.map { it.kind })
+        assertEquals(setOf(communityId), purposes[0].venues)
+        assertEquals(emptySet<String>(), purposes[0].counterparties)
+    }
+
+    @Test
+    fun aGiftWrapFromAnUnknownAuthorIsStillADm() {
+        // The plane lookup must not swallow real NIP-17 traffic: an author we don't recognize as a
+        // plane keeps the gift-wrap reading.
+        val purposes =
+            RelayAuthPurposeDeriver.derive(
+                pendingEvents = listOf(event(GiftWrapEvent.KIND, listOf(alice))),
+                activeFilters = emptyMap(),
+                venueForPlaneAuthor = { null },
+            )
+
+        assertEquals(listOf(AuthPurposeKind.SEND_DM), purposes.map { it.kind })
+        assertEquals(setOf(alice), purposes[0].counterparties)
+    }
+
     @Test
     fun readingMyInboxAndSendingADmAreBothReported() {
         val purposes =

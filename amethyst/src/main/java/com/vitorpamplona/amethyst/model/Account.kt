@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -147,6 +148,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthVenues
 import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDeliveryTracker
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
@@ -427,8 +429,40 @@ class Account(
             isTrustedVenue = { venueId ->
                 venueId in publicChatList.flowSet.value ||
                     venueId in communityList.flowSet.value ||
+                    isJoinedRoomId(venueId) ||
                     Address.parse(venueId)?.pubKeyHex?.let { it in allFollows.flow.value.authors } == true
             },
+            isVenueHostRelay = { relayUrl -> relayUrl.normalizeRelayUrlOrNull()?.let { it in venueHostRelays() } ?: false },
+        )
+
+    /**
+     * Relays that exist here because a room was joined on them: the host of every NIP-29 relay group
+     * on the kind-10009 list, the relays of every joined Concord community, and every joined Buzz
+     * workspace.
+     *
+     * All are venues in the [RelayAuthCustomToggles.myRelaysAndVenues] sense but none shows up in a
+     * NIP-65/DM/search list, so nothing else in the auth path can see them: a NIP-29 group's content
+     * is `#h`-scoped and never names the user, and a Concord plane is addressed to a derived stream
+     * key rather than to anyone's pubkey.
+     */
+    fun venueHostRelays(): Set<NormalizedRelayUrl> =
+        RelayAuthVenues.hostRelays(
+            joinedGroups = relayGroupList.liveRelayGroupIds.value,
+            joinedCommunities = concordChannelList.liveCommunities.value,
+            joinedWorkspaces = BuzzWorkspaces.flow.value,
+        )
+
+    /**
+     * True when [venueId] is a room this account joined that the venue *lists* above don't cover: a
+     * NIP-29 group id (from the kind-10009 list) or a Concord community id (from the kind-13302 list).
+     * Those are the ids the subscription assemblers declare on their filters, so this is what turns a
+     * `READ_VENUE`/`POST_VENUE` on a joined group or community into a trusted venue.
+     */
+    private fun isJoinedRoomId(venueId: String): Boolean =
+        RelayAuthVenues.isJoinedRoom(
+            venueId = venueId,
+            joinedGroups = relayGroupList.liveRelayGroupIds.value,
+            joinedCommunities = concordChannelList.liveCommunities.value,
         )
 
     // Per-account relay NOTIFY (payment-prompt) cache. NotifyCoordinator attributes each incoming

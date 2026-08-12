@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -48,9 +49,17 @@ private val VENUE_KINDS = setOf(CommunityDefinitionEvent.KIND, LiveActivitiesEve
  *
  * Sends (from the outbox) are read from the events themselves:
  *
+ * - a pending Concord plane wrap (recognized by [venueForPlaneAuthor], since the wrap is *signed* by
+ *   the plane's stream key) => [AuthPurposeKind.POST_VENUE] for that community;
+ * - a pending `h`-tagged event => [AuthPurposeKind.POST_VENUE] for that NIP-29 relay group;
  * - a pending gift wrap (kind 1059) => sending a DM to its `p` recipient ([AuthPurposeKind.SEND_DM]);
  * - a pending channel/community/live post => [AuthPurposeKind.POST_VENUE] for that venue;
  * - any other pending event with `p` tags => delivering it to those users' inboxes ([AuthPurposeKind.NOTIFY_INBOX]).
+ *
+ * The two room rules come first because both would otherwise be read as something else entirely: a
+ * Concord wrap is kind 1059 `p`-tagged to a *throwaway* pubkey, so the gift-wrap rule would explain a
+ * community post as a DM to a stranger nobody can name, and a NIP-29 chat message mentioning someone
+ * would be explained as a notification rather than as a message into the group.
  *
  * Reads prefer the purpose the subscription **declared**. Assemblers build every filter as an
  * [ExplainedFilter] carrying a [SubPurpose][com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose]
@@ -66,9 +75,14 @@ private val VENUE_KINDS = setOf(CommunityDefinitionEvent.KIND, LiveActivitiesEve
  *   is prompted about instead of silently failing.
  */
 object RelayAuthPurposeDeriver {
+    /**
+     * @param venueForPlaneAuthor maps the pubkey that *signed* a pending event to the room it streams
+     *   for — today, a Concord plane address to its community id. Returns null for anything else.
+     */
     fun derive(
         pendingEvents: List<Event>,
         activeFilters: Map<String, List<Filter>>,
+        venueForPlaneAuthor: (HexKey) -> String? = { null },
     ): List<AuthPurpose> {
         val dmRecipients = mutableSetOf<HexKey>()
         val notifyRecipients = mutableSetOf<HexKey>()
@@ -78,7 +92,11 @@ object RelayAuthPurposeDeriver {
         pendingEvents.forEach { event ->
             val pubkeys = event.tags.mapNotNull(PTag::parseKey)
             val venues = event.tags.mapNotNull(ATag::parseAddress).filter { it.kind in VENUE_KINDS }
+            val planeVenue = venueForPlaneAuthor(event.pubKey)
+            val groupId = event.tags.firstNotNullOfOrNull(GroupIdTag::parse)
             when {
+                planeVenue != null -> postVenues.add(planeVenue)
+                groupId != null -> postVenues.add(groupId)
                 event.kind == GiftWrapEvent.KIND -> dmRecipients.addAll(pubkeys)
                 event.kind == ChannelMessageEvent.KIND -> event.tags.channelRootId()?.let(postVenues::add)
                 venues.isNotEmpty() -> venues.forEach { postVenues.add(it.toValue()) }
