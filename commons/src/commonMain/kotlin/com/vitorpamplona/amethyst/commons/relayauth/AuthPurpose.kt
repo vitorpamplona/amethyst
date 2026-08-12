@@ -44,6 +44,20 @@ enum class AuthPurposeKind {
     /** Reading a venue's content (public chat / community) from this relay. */
     READ_VENUE,
 
+    /**
+     * Reading what other people addressed to *us* — notifications, nutzaps, incoming DMs. These
+     * subscriptions are `#p` = me with no `authors`, so they match no tag-shape rule; they are only
+     * recognizable from the SubPurpose the subscription declared.
+     */
+    MY_INBOX,
+
+    /**
+     * Reading a conversation the user has open — the thread itself, or the reactions/zaps/reposts on
+     * its notes. Fetched by `#e` against note ids, which is indistinguishable by shape from reading a
+     * NIP-28 channel, so this too is only recognizable from the declared SubPurpose.
+     */
+    THREAD,
+
     /** The relay is in the user's own relay list. */
     MY_OWN_RELAY,
 
@@ -61,6 +75,13 @@ data class AuthPurpose(
     val kind: AuthPurposeKind,
     val counterparties: Set<String> = emptySet(),
     val venues: Set<String> = emptySet(),
+    /**
+     * Event ids of the conversation being read, for [AuthPurposeKind.THREAD]. Kept separate from
+     * [venues] because a thread is not a room: these are note ids, and the only use for them is to
+     * resolve *whose* conversation it is at render time, so the prompt can say "your conversation
+     * with Alice" instead of "this conversation" about something the user may not have on screen.
+     */
+    val notes: Set<String> = emptySet(),
 )
 
 /** The relay plus every live reason we currently have to auth with it. */

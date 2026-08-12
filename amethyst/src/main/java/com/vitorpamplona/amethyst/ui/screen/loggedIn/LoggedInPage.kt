@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.notifications.PushNotificationUtils
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthPromptHost
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssemblerSubscription
@@ -87,9 +86,6 @@ fun LoggedInPage(
 
     // Adds this account to the authentication procedures for relays.
     RelayAuthSubscription(accountViewModel)
-
-    // Shows the "log in to this relay?" dialog when a NIP-42 challenge needs the user to decide.
-    RelayAuthPromptHost(accountViewModel)
 
     // Loads account information + DMs and Notifications from Relays.
     AccountFilterAssemblerSubscription(accountViewModel)

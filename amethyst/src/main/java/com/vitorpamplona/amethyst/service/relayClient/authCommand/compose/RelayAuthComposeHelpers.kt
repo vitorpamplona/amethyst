@@ -50,14 +50,23 @@ internal fun LoadRelayAuthUser(
     content(user)
 }
 
-/** The string explaining a single [AuthPurposeKind] ("To send DMs to", "To download posts from", …). */
-internal fun relayAuthReasonRes(kind: AuthPurposeKind): Int =
+/**
+ * A short chip label naming what a relay was doing for us under one [AuthPurposeKind] — "your inbox",
+ * "a conversation", "people you read".
+ *
+ * Deliberately *not* the `relay_auth_why_*` sentences the prompt uses. Those are addressed to someone
+ * deciding right now ("It won't serve … to readers it can't identify"); these caption a past login in
+ * the settings log, where a full sentence per row would be the wall of text this screen just lost.
+ */
+internal fun relayAuthPurposeLabelRes(kind: AuthPurposeKind): Int =
     when (kind) {
-        AuthPurposeKind.SEND_DM -> R.string.relay_auth_reason_send_dm
-        AuthPurposeKind.NOTIFY_INBOX -> R.string.relay_auth_reason_notify_inbox
-        AuthPurposeKind.READ_OUTBOX -> R.string.relay_auth_reason_read_outbox
-        AuthPurposeKind.POST_VENUE -> R.string.relay_auth_reason_post_venue
-        AuthPurposeKind.READ_VENUE -> R.string.relay_auth_reason_read_venue
-        AuthPurposeKind.MY_OWN_RELAY -> R.string.relay_auth_reason_my_own_relay
-        AuthPurposeKind.OTHER -> R.string.relay_auth_reason_other
+        AuthPurposeKind.SEND_DM -> R.string.relay_auth_purpose_send_dm
+        AuthPurposeKind.NOTIFY_INBOX -> R.string.relay_auth_purpose_notify_inbox
+        AuthPurposeKind.READ_OUTBOX -> R.string.relay_auth_purpose_read_outbox
+        AuthPurposeKind.POST_VENUE -> R.string.relay_auth_purpose_post_venue
+        AuthPurposeKind.READ_VENUE -> R.string.relay_auth_purpose_read_venue
+        AuthPurposeKind.MY_INBOX -> R.string.relay_auth_purpose_my_inbox
+        AuthPurposeKind.THREAD -> R.string.relay_auth_purpose_thread
+        AuthPurposeKind.MY_OWN_RELAY -> R.string.relay_auth_purpose_my_own_relay
+        AuthPurposeKind.OTHER -> R.string.relay_auth_purpose_other
     }

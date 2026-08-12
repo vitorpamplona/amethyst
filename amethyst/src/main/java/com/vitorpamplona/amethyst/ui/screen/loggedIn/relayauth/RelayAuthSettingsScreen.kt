@@ -21,12 +21,13 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relayauth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,15 +35,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
@@ -72,17 +76,14 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.LoadRelayAuthUser
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.relayAuthPurposeLabelRes
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.PolicyCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsDivider
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.amethyst.ui.theme.RelayIconFilter
@@ -94,9 +95,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Avatars shown in a relay's facepile before the "+N" overflow badge. */
-private const val FACEPILE_MAX = 3
-
+/**
+ * Relay login settings, for ONE account — the decisions are stored per account, so the app bar names
+ * whose they are.
+ *
+ * The screen used to render a single list headed "Per-relay overrides" that was really the union of
+ * three different things: explicit overrides, the recorded grant rationale, and last-used timestamps.
+ * Most rows were not overrides at all. They are now three lists that each say what they hold:
+ *
+ * - **Exceptions** — explicit ALLOW/DENY only, so the header is true. `✕` removes the exception and
+ *   the relay drops back to the rules above, with an undo.
+ * - **Blocked by your block list** — kind-10006 relays. These outrank every control on this screen
+ *   and used to be invisible here.
+ * - **Recent logins** — the log, labelled by *what the relay was doing* rather than an unexplained
+ *   row of avatars.
+ */
 @Composable
 fun RelayAuthSettingsScreen(
     accountViewModel: AccountViewModel,
@@ -106,169 +119,211 @@ fun RelayAuthSettingsScreen(
     val store: RelayAuthPermissionStore = account.relayAuthPermissions
     val ledger = account.relayAuthLedger
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val globalPolicy by account.settings.defaultRelayAuthPolicy.collectAsState()
+    val blockedRelays by account.blockedRelayList.flow.collectAsState()
 
-    var perRelayOverrides by remember { mutableStateOf<Map<String, RelayAuthDecision>>(emptyMap()) }
+    var exceptions by remember { mutableStateOf<Map<String, RelayAuthDecision>>(emptyMap()) }
     var rationales by remember { mutableStateOf<Map<String, Map<AuthPurposeKind, Set<HexKey>>>>(emptyMap()) }
     var lastUsed by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var reloadKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(reloadKey) {
         withContext(Dispatchers.IO) {
-            perRelayOverrides = store.allDecisions()
+            exceptions = store.allDecisions()
             rationales = store.allRationales()
             lastUsed = store.allLastUsed()
         }
     }
 
-    Scaffold(
-        topBar = { TopBarWithBackButton(stringResource(R.string.relay_auth_settings_title), nav) },
-    ) { padding ->
-        // The union of relays we have an override for and relays we've recorded a reason for — so the
-        // "why we're logged in" info and the override control live together, one row each.
-        val relayUrls =
-            remember(perRelayOverrides, rationales, lastUsed) {
-                (perRelayOverrides.keys + rationales.keys + lastUsed.keys).toSortedSet().toList()
-            }
+    val exceptionUrls = remember(exceptions) { exceptions.keys.sorted() }
+    val blockedUrls = remember(blockedRelays) { blockedRelays.map { it.url }.sorted() }
+    // The log is everything we have a record of that is not already stated above as a rule.
+    val logUrls =
+        remember(exceptions, rationales, lastUsed, blockedUrls) {
+            ((rationales.keys + lastUsed.keys) - exceptions.keys - blockedUrls.toSet())
+                .sortedByDescending { lastUsed[it] ?: 0L }
+        }
 
-        // LazyColumn so only the visible per-relay rows compose (each builds a NIP-11 icon and
-        // avatars — real per-row work). Blocks 1 & 2 are small and fixed, so they share one item.
+    val removedLabel = stringResource(R.string.relay_auth_exception_removed_undo)
+    val undoLabel = stringResource(R.string.relay_auth_undo)
+
+    fun removeException(url: String) {
+        scope.launch {
+            val previous = exceptions[url]
+            // Clears the override only. The usage history is not this row's to delete — it has its
+            // own list now, which is what made the old combined "Forget" ambiguous.
+            ledger.clearDecision(url)
+            reloadKey++
+            val result =
+                snackbarHostState.showSnackbar(
+                    message = removedLabel.format(url.normalizeRelayUrlOrNull()?.displayUrl() ?: url),
+                    actionLabel = undoLabel,
+                    withDismissAction = true,
+                )
+            if (result == SnackbarResult.ActionPerformed && previous != null) {
+                ledger.setDecision(url, previous)
+                reloadKey++
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopBarWithBackButton(
+                caption = stringResource(R.string.relay_auth_settings_title),
+                nav = nav,
+                actions = { AccountChip(accountViewModel) },
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    // Block 1: when to authenticate (the mode).
+                    // The mode. One group, one question, one clause of explanation each — every
+                    // clause adds a fact its title does not already carry.
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         GroupHeader(stringResource(R.string.relay_auth_global_policy))
-                        RelayAuthPolicy.entries.forEach { policy ->
-                            val (titleRes, descRes, symbol) =
-                                when (policy) {
-                                    RelayAuthPolicy.ALWAYS ->
-                                        Triple(R.string.relay_auth_policy_always, R.string.relay_auth_policy_always_desc, MaterialSymbols.LockOpen)
-                                    RelayAuthPolicy.NEVER ->
-                                        Triple(R.string.relay_auth_policy_never, R.string.relay_auth_policy_never_desc, MaterialSymbols.Lock)
-                                    RelayAuthPolicy.CUSTOM ->
-                                        Triple(R.string.relay_auth_policy_custom, R.string.relay_auth_policy_custom_desc, MaterialSymbols.Tune)
-                                }
-                            PolicyCard(
-                                selected = globalPolicy == policy,
-                                symbol = symbol,
-                                label = stringResource(titleRes),
-                                description = stringResource(descRes),
-                                onClick = { account.settings.changeDefaultRelayAuthPolicy(policy) },
-                            )
+                        Column(
+                            Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                        ) {
+                            RelayAuthPolicy.entries.forEachIndexed { index, policy ->
+                                if (index > 0) SettingsDivider()
+                                val (titleRes, descRes) =
+                                    when (policy) {
+                                        RelayAuthPolicy.ALWAYS ->
+                                            R.string.relay_auth_policy_always to R.string.relay_auth_policy_always_desc
+                                        RelayAuthPolicy.NEVER ->
+                                            R.string.relay_auth_policy_never to R.string.relay_auth_policy_never_desc
+                                        RelayAuthPolicy.CUSTOM ->
+                                            R.string.relay_auth_policy_custom to R.string.relay_auth_policy_custom_desc
+                                    }
+                                PolicyRow(
+                                    selected = globalPolicy == policy,
+                                    title = stringResource(titleRes),
+                                    description = stringResource(descRes),
+                                    onClick = { account.settings.changeDefaultRelayAuthPolicy(policy) },
+                                )
+                            }
                         }
                     }
 
-                    // Block 2: what to log in to (the custom toggles), as settings switch tiles.
+                    // The exemptions. The group header carries the grammar, so each row is a short
+                    // completion of the sentence rather than a title plus a paragraph restating it.
                     if (globalPolicy == RelayAuthPolicy.CUSTOM) {
                         val myRelays by account.settings.relayAuthTrustMyRelaysAndVenues.collectAsState()
                         val readFollows by account.settings.relayAuthTrustReadFollows.collectAsState()
                         val messageFollows by account.settings.relayAuthTrustMessageFollows.collectAsState()
                         val messageStrangers by account.settings.relayAuthTrustMessageStrangers.collectAsState()
 
-                        SettingsSection(R.string.relay_auth_custom_section) {
-                            SettingsSwitchTile(
-                                icon = MaterialSymbols.Dns,
-                                title = R.string.relay_auth_toggle_my_relays,
-                                description = R.string.relay_auth_toggle_my_relays_desc,
-                                checked = myRelays,
-                                onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
-                            )
-                            SettingsDivider()
-                            SettingsSwitchTile(
-                                icon = MaterialSymbols.Download,
-                                title = R.string.relay_auth_toggle_read_follows,
-                                description = R.string.relay_auth_toggle_read_follows_desc,
-                                checked = readFollows,
-                                onCheckedChange = { account.settings.changeRelayAuthTrustReadFollows(it) },
-                            )
-                            SettingsDivider()
-                            SettingsSwitchTile(
-                                icon = MaterialSymbols.Mail,
-                                title = R.string.relay_auth_toggle_message_follows,
-                                description = R.string.relay_auth_toggle_message_follows_desc,
-                                checked = messageFollows,
-                                onCheckedChange = { account.settings.changeRelayAuthTrustMessageFollows(it) },
-                            )
-                            SettingsDivider()
-                            SettingsSwitchTile(
-                                icon = MaterialSymbols.Public,
-                                title = R.string.relay_auth_toggle_message_strangers,
-                                description = R.string.relay_auth_toggle_message_strangers_desc,
-                                checked = messageStrangers,
-                                onCheckedChange = { account.settings.changeRelayAuthTrustMessageStrangers(it) },
-                            )
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            GroupHeader(stringResource(R.string.relay_auth_auto_login_when))
+                            Column(
+                                Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                            ) {
+                                SettingsSwitchTile(
+                                    icon = MaterialSymbols.Dns,
+                                    title = R.string.relay_auth_auto_my_relays,
+                                    checked = myRelays,
+                                    onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
+                                )
+                                SettingsDivider()
+                                SettingsSwitchTile(
+                                    icon = MaterialSymbols.Download,
+                                    title = R.string.relay_auth_auto_read_follows,
+                                    checked = readFollows,
+                                    onCheckedChange = { account.settings.changeRelayAuthTrustReadFollows(it) },
+                                )
+                                SettingsDivider()
+                                SettingsSwitchTile(
+                                    icon = MaterialSymbols.Mail,
+                                    title = R.string.relay_auth_auto_message_follows,
+                                    checked = messageFollows,
+                                    onCheckedChange = { account.settings.changeRelayAuthTrustMessageFollows(it) },
+                                )
+                                SettingsDivider()
+                                SettingsSwitchTile(
+                                    icon = MaterialSymbols.Public,
+                                    title = R.string.relay_auth_auto_message_strangers,
+                                    checked = messageStrangers,
+                                    onCheckedChange = { account.settings.changeRelayAuthTrustMessageStrangers(it) },
+                                )
+                            }
                         }
                     }
 
-                    // Block 3 header — its rows are the lazy items below.
-                    GroupHeader(stringResource(R.string.relay_auth_per_relay_overrides))
+                    GroupHeader(stringResource(R.string.relay_auth_exceptions))
                 }
                 Spacer(Modifier.height(8.dp))
             }
 
-            if (relayUrls.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.relay_auth_no_overrides),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
+            if (exceptionUrls.isEmpty()) {
+                item { EmptyCard(stringResource(R.string.relay_auth_no_exceptions)) }
             } else {
-                // Each row is its own lazy item but shares one rounded-card background: the first/last
-                // clip the top/bottom corners so the contiguous rows read as a single settings card.
-                itemsIndexed(relayUrls, key = { _, url -> url }) { index, url ->
-                    Column(
-                        modifier =
-                            Modifier
-                                .clip(sectionCardShape(index, relayUrls.size))
-                                .background(MaterialTheme.colorScheme.surfaceContainerLow),
-                    ) {
-                        if (index > 0) SettingsDivider()
-                        RelayRow(
+                itemsIndexed(exceptionUrls, key = { _, url -> "exception:$url" }) { index, url ->
+                    GroupedRow(index, exceptionUrls.size) {
+                        ExceptionRow(
                             url = url,
-                            decision = perRelayOverrides[url],
-                            servedUsers =
-                                rationales[url]
-                                    ?.values
-                                    ?.flatten()
-                                    ?.distinct()
-                                    .orEmpty(),
-                            lastUsedSecs = lastUsed[url],
+                            decision = exceptions[url] ?: RelayAuthDecision.ALLOW,
                             accountViewModel = accountViewModel,
                             nav = nav,
-                            onToggle = {
+                            onDecision = { next ->
                                 scope.launch {
-                                    // null (allowed by policy) or ALLOW -> block; DENY -> allow.
-                                    val next =
-                                        if (perRelayOverrides[url] == RelayAuthDecision.DENY) {
-                                            RelayAuthDecision.ALLOW
-                                        } else {
-                                            RelayAuthDecision.DENY
-                                        }
                                     ledger.setDecision(url, next)
                                     reloadKey++
                                 }
                             },
-                            onForget = {
+                            onRemove = { removeException(url) },
+                        )
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(20.dp))
+                GroupHeader(stringResource(R.string.relay_auth_blocked_section))
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (blockedUrls.isEmpty()) {
+                item { EmptyCard(stringResource(R.string.relay_auth_no_blocked)) }
+            } else {
+                itemsIndexed(blockedUrls, key = { _, url -> "blocked:$url" }) { index, url ->
+                    GroupedRow(index, blockedUrls.size) {
+                        BlockedRow(url, accountViewModel, nav)
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(20.dp))
+                GroupHeader(stringResource(R.string.relay_auth_recent_section))
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (logUrls.isEmpty()) {
+                item { EmptyCard(stringResource(R.string.relay_auth_no_recent)) }
+            } else {
+                itemsIndexed(logUrls, key = { _, url -> "log:$url" }) { index, url ->
+                    GroupedRow(index, logUrls.size) {
+                        RecentLoginRow(
+                            url = url,
+                            purposes = rationales[url]?.keys.orEmpty(),
+                            lastUsedSecs = lastUsed[url],
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onPromote = { decision ->
                                 scope.launch {
-                                    // Single "forget" clears both the override and the recorded reason,
-                                    // so the relay drops off this list entirely.
-                                    ledger.clearDecision(url)
-                                    store.clearRationale(url)
+                                    ledger.setDecision(url, decision)
                                     reloadKey++
                                 }
                             },
@@ -282,7 +337,25 @@ fun RelayAuthSettingsScreen(
     }
 }
 
-/** Primary-colored section label, matching [SettingsSection]'s header used across settings. */
+/** Whose decisions these are. They are stored per account, so the screen has to say which. */
+@Composable
+private fun AccountChip(accountViewModel: AccountViewModel) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(100.dp),
+        modifier = Modifier.padding(end = 8.dp),
+    ) {
+        Text(
+            text = accountViewModel.account.userProfile().toBestDisplayName(),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Primary-colored section label, matching the header used across settings. */
 @Composable
 private fun GroupHeader(title: String) {
     Text(
@@ -294,8 +367,41 @@ private fun GroupHeader(title: String) {
     )
 }
 
-/** Corner shape for one row of a grouped settings card: round the outer corners of the first and
- *  last rows only, so contiguous rows read as a single rounded card. */
+@Composable
+private fun EmptyCard(text: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+/** One row of a grouped settings card: rounded outer corners on the first and last rows only. */
+@Composable
+private fun GroupedRow(
+    index: Int,
+    count: Int,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .clip(sectionCardShape(index, count))
+                .background(MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        if (index > 0) SettingsDivider()
+        content()
+    }
+}
+
 private fun sectionCardShape(
     index: Int,
     count: Int,
@@ -307,25 +413,216 @@ private fun sectionCardShape(
         else -> RectangleShape
     }
 
+/** A mode of the global policy: radio + title + one clause. */
+@Composable
+private fun PolicyRow(
+    selected: Boolean,
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Column(Modifier.weight(1f).padding(top = 10.dp)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 /**
- * One relay's row in the per-relay list: NIP-11 icon + shortened URL (tap the row to open the relay's
- * info screen), when it was last used, a facepile of the people it serves, an Allow/Deny chip, and a
- * Forget button. [decision] is null when the relay is allowed by policy rather than an explicit
- * override; the chip still reads "Allowed" and tapping it records an explicit block. Styled to match
- * the app's other relay lists (icon-led rows separated by dividers).
+ * A relay the user has explicitly ruled on. The segmented pair shows which way — unlike the old chip,
+ * which read "Allow" both for an explicit allow and for "allowed by whatever policy is set", so the
+ * user could not tell which relays would change if they switched modes. `✕` removes the exception.
  */
 @Composable
-private fun RelayRow(
+private fun ExceptionRow(
     url: String,
-    decision: RelayAuthDecision?,
-    servedUsers: List<HexKey>,
+    decision: RelayAuthDecision,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onDecision: (RelayAuthDecision) -> Unit,
+    onRemove: () -> Unit,
+) {
+    RelayRowFrame(
+        url = url,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        subtitle = {
+            Text(
+                text =
+                    stringResource(
+                        if (decision == RelayAuthDecision.ALLOW) R.string.relay_auth_exception_always else R.string.relay_auth_exception_never,
+                    ),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        },
+        trailing = {
+            DecisionSegments(decision, onDecision)
+            IconButton(onClick = onRemove) {
+                Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_remove_exception))
+            }
+        },
+    )
+}
+
+/** A relay on the kind-10006 block list: a hard DENY that outranks everything else on this screen. */
+@Composable
+private fun BlockedRow(
+    url: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    RelayRowFrame(
+        url = url,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        subtitle = {
+            Text(
+                text = stringResource(R.string.relay_auth_blocked_row_desc),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        },
+        trailing = {
+            Icon(
+                MaterialSymbols.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 12.dp),
+            )
+        },
+    )
+}
+
+/**
+ * A relay we have logged in to, and what it was doing. The purpose chips are the recorded rationale
+ * read out loud — "your inbox", "a conversation" — which is what the unlabelled facepile never said.
+ */
+@Composable
+private fun RecentLoginRow(
+    url: String,
+    purposes: Set<AuthPurposeKind>,
     lastUsedSecs: Long?,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onToggle: () -> Unit,
-    onForget: () -> Unit,
+    onPromote: (RelayAuthDecision) -> Unit,
 ) {
     val context = LocalContext.current
+    RelayRowFrame(
+        url = url,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        subtitle = {
+            if (purposes.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    purposes.take(3).forEach { PurposeChip(it) }
+                }
+            }
+            if (lastUsedSecs != null && lastUsedSecs > 0L) {
+                Text(
+                    text = stringResource(R.string.relay_auth_ago, timeAgo(lastUsedSecs, context, prefix = "")),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        },
+        // The only two useful actions on a log row: promote it into an exception, either way.
+        trailing = { DecisionSegments(current = null, onDecision = onPromote) },
+    )
+}
+
+@Composable
+private fun PurposeChip(kind: AuthPurposeKind) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(100.dp),
+    ) {
+        Text(
+            text = stringResource(relayAuthPurposeLabelRes(kind)),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * Always / Never as a pair. [current] is null on a log row, where neither is set yet — the model has
+ * three states (ALLOW, DENY, no override) and this control now shows all three honestly.
+ */
+@Composable
+private fun DecisionSegments(
+    current: RelayAuthDecision?,
+    onDecision: (RelayAuthDecision) -> Unit,
+) {
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(100.dp)),
+    ) {
+        Segment(
+            label = stringResource(R.string.relay_auth_segment_always),
+            selected = current == RelayAuthDecision.ALLOW,
+            selectedContainer = MaterialTheme.colorScheme.primary,
+            selectedContent = MaterialTheme.colorScheme.onPrimary,
+            onClick = { onDecision(RelayAuthDecision.ALLOW) },
+        )
+        Segment(
+            label = stringResource(R.string.relay_auth_segment_never),
+            selected = current == RelayAuthDecision.DENY,
+            selectedContainer = MaterialTheme.colorScheme.error,
+            selectedContent = MaterialTheme.colorScheme.onError,
+            onClick = { onDecision(RelayAuthDecision.DENY) },
+        )
+    }
+}
+
+@Composable
+private fun Segment(
+    label: String,
+    selected: Boolean,
+    selectedContainer: Color,
+    selectedContent: Color,
+    onClick: () -> Unit,
+) {
+    Surface(
+        color = if (selected) selectedContainer else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (selected) selectedContent else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            maxLines = 1,
+        )
+    }
+}
+
+/** Icon + shortened URL + caller-supplied subtitle and trailing controls. Tapping opens relay info. */
+@Composable
+private fun RelayRowFrame(
+    url: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    subtitle: @Composable ColumnScope.() -> Unit,
+    trailing: @Composable RowScope.() -> Unit,
+) {
     val relay = remember(url) { url.normalizeRelayUrlOrNull() }
 
     Row(
@@ -346,23 +643,9 @@ private fun RelayRow(
                 maxLines = 1,
                 overflow = TextOverflow.MiddleEllipsis,
             )
-            if (servedUsers.isNotEmpty()) {
-                Spacer(Modifier.height(4.dp))
-                UserFacepile(servedUsers, accountViewModel)
-            }
-            if (lastUsedSecs != null && lastUsedSecs > 0L) {
-                Text(
-                    text = stringResource(R.string.relay_auth_last_used, timeAgo(lastUsedSecs, context, prefix = "")),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
+            subtitle()
         }
-        DecisionChip(decision = decision, onToggle = onToggle)
-        IconButton(onClick = onForget) {
-            Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_forget))
-        }
+        trailing()
     }
 }
 
@@ -383,69 +666,4 @@ private fun RelayIcon(
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
     )
-}
-
-/** Allow/deny pill for a relay. Green when allowed (explicitly or by policy), red when blocked. */
-@Composable
-private fun DecisionChip(
-    decision: RelayAuthDecision?,
-    onToggle: () -> Unit,
-) {
-    val allowed = decision != RelayAuthDecision.DENY
-    SuggestionChip(
-        onClick = onToggle,
-        label = {
-            Text(
-                text = stringResource(if (allowed) R.string.relay_auth_decision_allow else R.string.relay_auth_decision_deny),
-                style = MaterialTheme.typography.labelSmall,
-            )
-        },
-        colors =
-            if (allowed) {
-                SuggestionChipDefaults.suggestionChipColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            } else {
-                SuggestionChipDefaults.suggestionChipColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    labelColor = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            },
-    )
-}
-
-/** Overlapping avatars for the people a relay serves — [FACEPILE_MAX] pictures then a "+N" badge. */
-@Composable
-private fun UserFacepile(
-    pubkeys: List<HexKey>,
-    accountViewModel: AccountViewModel,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
-            pubkeys.take(FACEPILE_MAX).forEach { pubkey ->
-                LoadRelayAuthUser(pubkey, accountViewModel) { user ->
-                    if (user != null) {
-                        ClickableUserPicture(
-                            baseUser = user,
-                            size = 28.dp,
-                            accountViewModel = accountViewModel,
-                            modifier = Modifier.border(2.dp, MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                        )
-                    }
-                }
-            }
-        }
-        val extra = pubkeys.size - FACEPILE_MAX
-        if (extra > 0) {
-            Text(
-                text = "+$extra",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
 }

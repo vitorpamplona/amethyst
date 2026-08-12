@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
+import com.vitorpamplona.amethyst.commons.relayauth.toAuthPurposeKind
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -44,9 +46,20 @@ private val VENUE_KINDS = setOf(CommunityDefinitionEvent.KIND, LiveActivitiesEve
  * events pending delivery and the active subscription filters (both from the [INostrClient]).
  * Pure so it can be unit-tested without the relay client.
  *
+ * Sends (from the outbox) are read from the events themselves:
+ *
  * - a pending gift wrap (kind 1059) => sending a DM to its `p` recipient ([AuthPurposeKind.SEND_DM]);
  * - a pending channel/community/live post => [AuthPurposeKind.POST_VENUE] for that venue;
- * - any other pending event with `p` tags => delivering it to those users' inboxes ([AuthPurposeKind.NOTIFY_INBOX]);
+ * - any other pending event with `p` tags => delivering it to those users' inboxes ([AuthPurposeKind.NOTIFY_INBOX]).
+ *
+ * Reads prefer the purpose the subscription **declared**. Assemblers build every filter as an
+ * [ExplainedFilter] carrying a [SubPurpose][com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose]
+ * and the entity ids it serves, so we simply read it (see `toAuthPurposeKind`). That is the only way
+ * to recognize the two states tag shape cannot express — reading your own inbox (`#p` = me, no
+ * `authors`) and reading a thread's engagement (`#e` against note ids, shape-identical to a NIP-28
+ * channel read). A filter that isn't an [ExplainedFilter], or whose purpose says nothing about
+ * identity, falls back to the tag-shape rules:
+ *
  * - a filter with `authors` => reading those authors' posts ([AuthPurposeKind.READ_OUTBOX]);
  * - a filter with `#e`/`#a` venue tags => reading a venue ([AuthPurposeKind.READ_VENUE]);
  * - anything else we're actively doing but can't attribute => [AuthPurposeKind.OTHER], so the relay
@@ -76,28 +89,50 @@ object RelayAuthPurposeDeriver {
 
         val readAuthors = mutableSetOf<HexKey>()
         val readVenues = mutableSetOf<String>()
+        val readThreadNotes = mutableSetOf<String>()
+        var readsMyInbox = false
+        var readsThread = false
         var unattributedRead = false
         activeFilters.values.forEach { filters ->
             filters.forEach { filter ->
-                var matched = false
-                filter.authors?.let {
-                    readAuthors.addAll(it)
-                    matched = true
-                }
-                filter.tags?.get("e")?.let {
-                    readVenues.addAll(it)
-                    matched = true
-                }
-                filter.tags
-                    ?.get("a")
-                    ?.mapNotNull { Address.parse(it) }
-                    ?.filter { it.kind in VENUE_KINDS }
-                    ?.takeIf { it.isNotEmpty() }
-                    ?.let {
-                        readVenues.addAll(it.map(Address::toValue))
-                        matched = true
+                val explained = filter as? ExplainedFilter
+                when (explained?.purpose?.toAuthPurposeKind()) {
+                    // Declared and self-contained: nobody else's identity is involved, so there is
+                    // nothing to collect — the flag alone drives the wording.
+                    AuthPurposeKind.MY_INBOX -> readsMyInbox = true
+                    // The notes are what makes the sentence nameable. The assembler either declares
+                    // them (entityIds) or, as ReactionsFilterAssembler does, only puts them in the
+                    // `e` tags — take whichever we get so the prompt can say whose conversation.
+                    AuthPurposeKind.THREAD -> {
+                        readsThread = true
+                        explained?.entityIds?.let(readThreadNotes::addAll)
+                        filter.tags?.get("e")?.let(readThreadNotes::addAll)
                     }
-                if (!matched) unattributedRead = true
+                    // Declared, but the *who*/*what* still comes from the filter. Prefer the entity
+                    // ids the assembler named over sniffing tags, and fall back when it named none.
+                    AuthPurposeKind.READ_VENUE -> {
+                        val declared = explained?.entityIds.orEmpty()
+                        if (declared.isNotEmpty()) readVenues.addAll(declared) else readVenues.addAll(filter.venueTags())
+                    }
+                    AuthPurposeKind.READ_OUTBOX -> {
+                        val declared = filter.authors.orEmpty()
+                        if (declared.isNotEmpty()) readAuthors.addAll(declared) else unattributedRead = true
+                    }
+                    // No declared purpose (a plain Filter, or one whose purpose says nothing about
+                    // identity): infer from tag shape exactly as before.
+                    else -> {
+                        var matched = false
+                        filter.authors?.let {
+                            readAuthors.addAll(it)
+                            matched = true
+                        }
+                        filter.venueTags().takeIf { it.isNotEmpty() }?.let {
+                            readVenues.addAll(it)
+                            matched = true
+                        }
+                        if (!matched) unattributedRead = true
+                    }
+                }
             }
         }
 
@@ -107,10 +142,27 @@ object RelayAuthPurposeDeriver {
             if (postVenues.isNotEmpty()) add(AuthPurpose(AuthPurposeKind.POST_VENUE, venues = postVenues))
             if (readAuthors.isNotEmpty()) add(AuthPurpose(AuthPurposeKind.READ_OUTBOX, readAuthors))
             if (readVenues.isNotEmpty()) add(AuthPurpose(AuthPurposeKind.READ_VENUE, venues = readVenues))
+            if (readsMyInbox) add(AuthPurpose(AuthPurposeKind.MY_INBOX))
+            if (readsThread) add(AuthPurpose(AuthPurposeKind.THREAD, notes = readThreadNotes))
             // Safety net: we're using this relay but couldn't say how — prompt rather than fail silently.
             if (isEmpty() && (unattributedWrite || unattributedRead)) add(AuthPurpose(AuthPurposeKind.OTHER))
         }
     }
+
+    /**
+     * Venue ids named by a filter's tags: every `#e` value, plus the `#a` addresses whose kind is a
+     * venue. Only meaningful for a filter we have *no* declared purpose for — an `#e` list is just as
+     * likely to be note ids on a thread as it is to be channel roots.
+     */
+    private fun Filter.venueTags(): Set<String> =
+        buildSet {
+            tags?.get("e")?.let(::addAll)
+            tags
+                ?.get("a")
+                ?.mapNotNull { Address.parse(it) }
+                ?.filter { it.kind in VENUE_KINDS }
+                ?.forEach { add(it.toValue()) }
+        }
 
     /** The venue a channel message posts into: the `e` tag marked "root", else the first `e` tag. */
     private fun Array<Array<String>>.channelRootId(): HexKey? = firstNotNullOfOrNull(MarkedETag::parseRoot)?.eventId ?: firstNotNullOfOrNull(ETag::parseId)

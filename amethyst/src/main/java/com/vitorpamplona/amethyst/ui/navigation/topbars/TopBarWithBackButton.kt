@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.topbars
 
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -33,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 fun TopBarWithBackButton(
     caption: String,
     nav: INav,
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
     ShorterTopAppBar(
         title = {
@@ -42,6 +44,7 @@ fun TopBarWithBackButton(
                 maxLines = 1,
             )
         },
+        actions = actions,
         navigationIcon = {
             // Suppress the back arrow when this is the bottom of the back stack
             // (i.e. the user landed here via the bottom nav, which clears the stack

@@ -88,23 +88,36 @@ class AuthCoordinator(
                 // "any account ALLOWs → sign with everyone (else a random key)" path, a bystander
                 // account never signs, and there is no random-key fallback.
                 val signed = mutableListOf<RelayAuthEvent>()
-                var askChoice: UserAuthChoice? = null
 
                 authWithAccounts.distinctValues().forEach forEachAccount@{ screen ->
                     val account = screen.account
                     if (!account.signer.isWriteable()) return@forEachAccount
-                    if (!isFirstParty(account, relayUrl)) return@forEachAccount
+
+                    // Not a gate any more, an input. Failing it only rules out the *automatic* grants
+                    // (see RelayAuthResolver): a relay this account has no first-party reason to be on
+                    // is never silently authenticated, but a challenge we can explain still becomes a
+                    // question. Returning early here instead made "decide per relay" mean "deny, and
+                    // don't mention it" for every purpose that names someone else — the exact case the
+                    // prompt was built to explain.
+                    val firstParty = isFirstParty(account, relayUrl)
 
                     val approve =
-                        when (account.relayAuthLedger.decide(context)) {
+                        when (account.relayAuthLedger.decide(context, firstParty)) {
                             RelayAuthVerdict.ALLOW -> true
                             RelayAuthVerdict.DENY -> false
                             RelayAuthVerdict.ASK -> {
-                                // Prompt at most once per challenge; reuse the answer for any other
-                                // account that also reaches ASK on this same relay. But never block the
-                                // derived stream-key AUTH behind that dialog: on a relay that hosts our
-                                // Concord planes we DISMISS the user-auth ASK (skip account auth) so the
-                                // stream AUTHs return immediately instead of waiting on a prompt.
+                                // Prompt PER ACCOUNT, not once per challenge. The dialog names whose
+                                // npub is about to be revealed, so answering it for @a must not also
+                                // reveal @b — an answer is only about the identity it was shown for.
+                                // The bus still collapses concurrent challenges for the same
+                                // (relay, account) pair, which is the case the shared prompt was for.
+                                // In practice this rarely means two dialogs: isFirstParty already
+                                // drops every account without its own reason to be on this relay.
+                                //
+                                // But never block the derived stream-key AUTH behind that dialog: on a
+                                // relay that hosts our Concord planes we DISMISS the user-auth ASK
+                                // (skip account auth) so the stream AUTHs return immediately instead of
+                                // waiting on a prompt.
                                 //
                                 // A non-[interactive] pass is an automatic re-auth off an `auth-required:`
                                 // CLOSED (e.g. a Concord channel-plane REQ refused because the connection
@@ -112,13 +125,16 @@ class AuthCoordinator(
                                 // must never raise a fresh dialog: DISMISS the account ASK and let only the
                                 // already-approved identities (ledger-ALLOW accounts + stream keys) re-send.
                                 val choice =
-                                    askChoice ?: (
-                                        if (streamAuths.isNotEmpty() || !interactive) {
-                                            UserAuthChoice.DISMISS
-                                        } else {
-                                            promptBus.requestDecision(relayUrl, context.purposes)
-                                        }
-                                    ).also { askChoice = it }
+                                    if (streamAuths.isNotEmpty() || !interactive) {
+                                        UserAuthChoice.DISMISS
+                                    } else {
+                                        promptBus.requestDecision(
+                                            relayUrl = relayUrl,
+                                            purposes = context.purposes,
+                                            askingAccount = account.pubKey,
+                                            isMyOwnRelay = account.relayAuthLedger.isInMyRelayList(relayUrl.url),
+                                        )
+                                    }
                                 when (choice) {
                                     UserAuthChoice.ALLOW_ONCE -> true
                                     UserAuthChoice.ALWAYS_ALLOW -> {
