@@ -1548,6 +1548,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="private_note_locked">Odpowiedzi na wpis prywatny zawsze pozostają prywatne</string>
     <string name="private_note_visible_to">Widoczny dla</string>
     <string name="private_note_no_receivers">Nie ma jeszcze odbiorców: ten wpis zobaczysz tylko Ty. Dodaj osoby, którym chcesz go udostępnić.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Dodaj</string>
     <string name="notify_remove_user">Usuń użytkownika z powiadomień</string>
     <string name="notify_mute_user">Powiadomienie. Kliknij, aby wyciszyć powiadomienie od tego użytkownika</string>

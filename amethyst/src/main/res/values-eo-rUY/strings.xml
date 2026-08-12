@@ -989,6 +989,7 @@
     <string name="private_note_locked">Respondoj al privata noto ĉiam restas privataj</string>
     <string name="private_note_visible_to">Videbla al</string>
     <string name="private_note_no_receivers">Ankoraŭ neniuj ricevantoj: nur vi povos vidi ĉi tiun noton. Aldonu personojn por kunhavigi ĝin.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Aldoni</string>
     <string name="notify_remove_user">Forigi uzanton el sciigoj</string>
     <string name="notify_search_and_add_user">Serĉi kaj aldoni uzanton por sciigi</string>

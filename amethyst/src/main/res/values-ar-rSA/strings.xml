@@ -1035,6 +1035,7 @@
     <string name="private_note_locked">الردود على الملاحظة الخاصة تبقى خاصة دائماً</string>
     <string name="private_note_visible_to">مرئي لـ</string>
     <string name="private_note_no_receivers">لا يوجد مستلمون بعد: ستكون الملاحظة مرئية لك فقط. أضف أشخاصاً لمشاركتها معهم.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">إضافة</string>
     <string name="notify_remove_user">إزالة المستخدم من الإشعارات</string>
     <string name="notify_search_and_add_user">البحث عن مستخدم وإضافته للإشعارات</string>

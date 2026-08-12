@@ -976,6 +976,7 @@
     <string name="private_note_locked">Vastaukset yksityiseen muistiinpanoon pysyvät aina yksityisinä</string>
     <string name="private_note_visible_to">Näkyvissä käyttäjälle</string>
     <string name="private_note_no_receivers">Ei vastaanottajia vielä: vain sinä voit nähdä tämän muistiinpanon. Lisää henkilöitä jakaaksesi sen.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Lisää</string>
     <string name="notify_remove_user">Poista käyttäjä ilmoituksista</string>
     <string name="notify_search_and_add_user">Etsi ja lisää ilmoitettava käyttäjä</string>

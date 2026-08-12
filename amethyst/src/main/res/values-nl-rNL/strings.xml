@@ -1450,6 +1450,7 @@
     <string name="private_note_locked">Reacties op een privénote blijven altijd privé</string>
     <string name="private_note_visible_to">Zichtbaar voor</string>
     <string name="private_note_no_receivers">Nog geen ontvangers: alleen jij kunt deze note zien. Voeg mensen toe om te delen.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Toevoegen</string>
     <string name="notify_remove_user">Gebruiker verwijderen uit meldingen</string>
     <string name="notify_mute_user">Meldingen aan. Tik om de melding voor deze gebruiker te dempen</string>

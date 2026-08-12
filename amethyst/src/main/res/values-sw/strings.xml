@@ -979,6 +979,7 @@
     <string name="private_note_locked">Majibu ya kumbuka ya faragha daima yanabaki faragha</string>
     <string name="private_note_visible_to">Inaonekana kwa</string>
     <string name="private_note_no_receivers">Bado hakuna wapokeaji: wewe peke yako utaweza kuona kumbuka hii. Ongeza watu ili kushiriki nao.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Ongeza</string>
     <string name="notify_remove_user">Ondoa mtumiaji kutoka arifa</string>
     <string name="notify_search_and_add_user">Tafuta na ongeza mtumiaji wa kutaarifu</string>

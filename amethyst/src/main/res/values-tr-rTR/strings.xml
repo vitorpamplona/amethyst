@@ -985,6 +985,7 @@
     <string name="private_note_locked">Özel bir nota verilen yanıtlar her zaman özel kalır</string>
     <string name="private_note_visible_to">Görebilecekler</string>
     <string name="private_note_no_receivers">Henüz alıcı yok: bu notu yalnızca siz görebilirsiniz. Paylaşmak için kişi ekleyin.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Ekle</string>
     <string name="notify_remove_user">Kullanıcıyı bildirimlerden kaldır</string>
     <string name="notify_search_and_add_user">Bildirim göndermek için kullanıcı ara ve ekle</string>

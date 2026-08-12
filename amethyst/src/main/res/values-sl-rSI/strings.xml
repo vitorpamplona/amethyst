@@ -1541,6 +1541,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="private_note_locked">Odgovori na zasebni zapis so vedno zasebni.</string>
     <string name="private_note_visible_to">Vidno za:</string>
     <string name="private_note_no_receivers">Ni še prejemnikov: ta zapis lahko vidiš samo ti. Dodaj ljudi, da ga deliš z njimi.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Dodaj</string>
     <string name="notify_remove_user">Odstrani uporabnika iz obvestil</string>
     <string name="notify_mute_user">Pošiljanje obvestil. Tapnite, da utišate obvestila za tega uporabnika</string>

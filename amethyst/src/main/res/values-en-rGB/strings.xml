@@ -50,6 +50,7 @@
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
+    <!-- Composer audience control (Notify / "Visible to") -->
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
     <!-- Reposts -->
     <!-- Media (picture &amp; video posts that mention you) -->

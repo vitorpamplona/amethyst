@@ -953,6 +953,7 @@
     <string name="private_note_locked">การตอบกลับโน้ตส่วนตัวจะเป็นส่วนตัวเสมอ</string>
     <string name="private_note_visible_to">มองเห็นได้โดย</string>
     <string name="private_note_no_receivers">ยังไม่มีผู้รับ: เฉพาะคุณเท่านั้นที่จะเห็นโน้ตนี้ เพิ่มผู้คนเพื่อแชร์</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">เพิ่ม</string>
     <string name="notify_remove_user">ลบผู้ใช้ออกจากการแจ้งเตือน</string>
     <string name="notify_search_and_add_user">ค้นหาและเพิ่มผู้ใช้เพื่อแจ้งเตือน</string>

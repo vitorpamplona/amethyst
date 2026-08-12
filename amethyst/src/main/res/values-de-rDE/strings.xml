@@ -1463,6 +1463,7 @@
     <string name="private_note_locked">Antworten auf eine private Notiz bleiben immer privat</string>
     <string name="private_note_visible_to">Sichtbar für</string>
     <string name="private_note_no_receivers">Noch keine Empfänger: Nur du kannst diese Notiz sehen. Füge Personen hinzu, um sie zu teilen.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Hinzufügen</string>
     <string name="notify_remove_user">Nutzer aus Benachrichtigungen entfernen</string>
     <string name="notify_mute_user">Benachrichtigungen aktiv. Tippen, um Benachrichtigungen für diesen Nutzer stummzuschalten</string>

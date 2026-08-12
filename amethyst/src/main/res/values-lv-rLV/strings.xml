@@ -994,6 +994,7 @@
     <string name="private_note_locked">Atbildes uz privātu piezīmi vienmēr paliek privātas</string>
     <string name="private_note_visible_to">Redzams</string>
     <string name="private_note_no_receivers">Nav saņēmēju: tikai jūs varēsiet redzēt šo piezīmi. Pievienojiet cilvēkus, lai dalītos ar to.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Pievienot</string>
     <string name="notify_remove_user">Noņemt lietotāju no paziņojumiem</string>
     <string name="notify_search_and_add_user">Meklēt un pievienot lietotāju paziņošanai</string>

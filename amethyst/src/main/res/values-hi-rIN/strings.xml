@@ -1475,6 +1475,7 @@
     <string name="private_note_locked">निजी टीका के उत्तर सर्वदा निजी रहते हैं</string>
     <string name="private_note_visible_to">को दृश्य</string>
     <string name="private_note_no_receivers">कोई प्राप्तकर्ता नहीं अब तक। केवल आप इस टीका को देख सकेंगे। लोगों को जोडें इसे बाँटने के लिए।</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">जोडें</string>
     <string name="notify_remove_user">प्रयोक्ता हटाएँ सूचनाओं से</string>
     <string name="notify_mute_user">सूचित किया जा रहा है। दबाएँ सूचना को मौन करने के लिए इस प्रयोक्ता के लिए</string>

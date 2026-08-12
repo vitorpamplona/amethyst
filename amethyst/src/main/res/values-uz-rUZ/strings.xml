@@ -986,6 +986,7 @@
     <string name="private_note_locked">Shaxsiy eslatmaga javoblar doimo shaxsiy qoladi</string>
     <string name="private_note_visible_to">Ko\'rinadi</string>
     <string name="private_note_no_receivers">Hozircha qabul qiluvchilar yo\'q: faqat siz bu eslatmani ko\'ra olasiz. Ulashish uchun odamlarni qo\'shing.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Qo\'shish</string>
     <string name="notify_remove_user">Foydalanuvchini bildirishnomalardan olib tashlash</string>
     <string name="notify_search_and_add_user">Xabardor qilish uchun foydalanuvchini qidirish va qo\'shish</string>

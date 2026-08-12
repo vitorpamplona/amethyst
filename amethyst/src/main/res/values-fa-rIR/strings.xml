@@ -990,6 +990,7 @@
     <string name="private_note_locked">پاسخ‌ها به یادداشت خصوصی همیشه خصوصی می‌مانند</string>
     <string name="private_note_visible_to">قابل مشاهده برای</string>
     <string name="private_note_no_receivers">هنوز دریافت‌کننده‌ای ندارد: فقط شما می‌توانید این یادداشت را ببینید. افراد را اضافه کنید تا با آن‌ها به اشتراک بگذارید.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">افزودن</string>
     <string name="notify_remove_user">حذف کاربر از اعلان‌ها</string>
     <string name="notify_search_and_add_user">جستجو و افزودن کاربر برای اطلاع‌رسانی</string>

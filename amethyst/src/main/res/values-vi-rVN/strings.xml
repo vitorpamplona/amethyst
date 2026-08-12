@@ -961,6 +961,7 @@
     <string name="private_note_locked">Các trả lời cho ghi chú riêng tư luôn luôn ở chế độ riêng tư</string>
     <string name="private_note_visible_to">Hiển thị với</string>
     <string name="private_note_no_receivers">Chưa có người nhận: chỉ bạn mới có thể xem ghi chú này. Thêm người để chia sẻ với họ.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Thêm</string>
     <string name="notify_remove_user">Xóa người dùng khỏi thông báo</string>
     <string name="notify_search_and_add_user">Tìm kiếm và thêm người dùng để thông báo</string>

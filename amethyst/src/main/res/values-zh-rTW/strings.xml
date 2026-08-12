@@ -974,6 +974,7 @@
     <string name="private_note_locked">回覆私密筆記將永遠保持私密</string>
     <string name="private_note_visible_to">可見對象</string>
     <string name="private_note_no_receivers">尚無接收者：只有您能看到此筆記。新增人員以分享給他們。</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">新增</string>
     <string name="notify_remove_user">從通知中移除使用者</string>
     <string name="notify_search_and_add_user">搜尋並新增要通知的使用者</string>

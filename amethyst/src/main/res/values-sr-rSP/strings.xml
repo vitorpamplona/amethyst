@@ -985,6 +985,7 @@
     <string name="private_note_locked">Odgovori na privatnu belešku uvek ostaju privatni</string>
     <string name="private_note_visible_to">Vidljivo za</string>
     <string name="private_note_no_receivers">Još nema primalaca: samo vi ćete moći da vidite ovu belešku. Dodajte osobe da biste je podelili.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Dodaj</string>
     <string name="notify_remove_user">Ukloni korisnika iz obaveštenja</string>
     <string name="notify_search_and_add_user">Pretraži i dodaj korisnika za obaveštavanje</string>

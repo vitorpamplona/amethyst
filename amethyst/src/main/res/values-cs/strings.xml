@@ -1533,6 +1533,7 @@
     <string name="private_note_locked">Odpovědi na soukromou poznámku zůstávají vždy soukromé</string>
     <string name="private_note_visible_to">Viditelné pro</string>
     <string name="private_note_no_receivers">Zatím žádní příjemci: tuto poznámku uvidíš jen ty. Přidej lidi, se kterými ji chceš sdílet.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Přidat</string>
     <string name="notify_remove_user">Odebrat uživatele z oznámení</string>
     <string name="notify_mute_user">Upozorňování zapnuto. Klepnutím ztlumíte upozornění pro tohoto uživatele</string>
