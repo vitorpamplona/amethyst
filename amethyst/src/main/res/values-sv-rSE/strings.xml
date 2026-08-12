@@ -1085,8 +1085,15 @@
     <string name="relay_auth_policy_never_desc">Ignorera autentiseringsutmaningar från alla reläer</string>
     <string name="relay_auth_policy_custom">Anpassad</string>
     <string name="relay_auth_policy_custom_desc">Välj exakt vilka reläer du vill logga in på. Du tillfrågas om allt du inte har tillåtit nedan.</string>
-    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
-    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
+    <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
+         keys are new rather than reused - a stale translation of the old standalone titles would
+         read as a non-sequitur under this header. -->
+    <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
+         exactly one "why" line varies, and it states the consequence of declining too, which is why
+         there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
+         labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- Settings: three lists that each hold what their header says. -->
+    <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="nip82_repository_label">Källa: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Ladda ner</string>
@@ -1454,6 +1461,7 @@
     <string name="private_note_locked">Svar på en privat anteckning förblir alltid privata</string>
     <string name="private_note_visible_to">Synlig för</string>
     <string name="private_note_no_receivers">Inga mottagare ännu: bara du kommer att kunna se den här anteckningen. Lägg till personer att dela den med.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Lägg till</string>
     <string name="notify_remove_user">Ta bort användare från aviseringar</string>
     <string name="notify_mute_user">Aviserar. Tryck för att tysta aviseringen för den här användaren</string>

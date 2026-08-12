@@ -54,6 +54,8 @@
     <string name="violence">Przemoc</string>
     <string name="unknown_author">Autor nieznany</string>
     <string name="copy_text">Skopiuj tekst</string>
+    <string name="copy_text_original">Kopiuj oryginał</string>
+    <string name="copy_text_translated">Skopiuj przetłumaczone</string>
     <string name="copy_user_pubkey">Kopiuj identyfikator autora</string>
     <string name="copy_note_id">Kopiuj identyfikator wpisu</string>
     <string name="copy_raw_json">Skopiuj surowy plik JSON</string>
@@ -319,6 +321,18 @@
     <string name="concord_invite_failed_invalid">Ten link do zaproszenia jest nieprawidłowy lub nie można go otworzyć przy użyciu tego konta.</string>
     <string name="concord_invite_failed_incompatible">Nie można otworzyć tego linku do zaproszenia. Być może jest on nieaktualny, został już zastąpiony nowszym lub został utworzony w nowszej wersji aplikacji. Poproś o nowy link do zaproszenia.</string>
     <string name="concord_invite_failed_revoked">Ten link do zaproszenia został unieważniony i nie można już z niego korzystać. Poproś o nowy.</string>
+    <string name="concord_invite_failed_banned">Ta społeczność cię usunęła. Link nadal działa, ale na liście członków nie figurujesz.</string>
+    <string name="concord_invite_links_title">Linki z zaproszeniem</string>
+    <string name="concord_invite_links_action">Linki z zaproszeniem</string>
+    <string name="concord_invite_links_created">Utworzono %1$s</string>
+    <string name="concord_invite_links_empty">Nie utworzyłeś jeszcze żadnych linków z zaproszeniami do tej społeczności. Linki innych administratorów są zarządzane na ich własnych urządzeniach.</string>
+    <string name="concord_invite_links_unreadable">Twoje linki z zaproszeniami nie mogły zostać załadowane, więc żadne z nich nie może być teraz odwołane. Sprawdź swoje połączenie i spróbuj ponownie.</string>
+    <string name="concord_invite_revoke_action">Unieważnij link</string>
+    <string name="concord_invite_revoke_title">Unieważnić ten link?</string>
+    <string name="concord_invite_revoke_explainer">Każdy nadal posiadający ten link nie będzie mógł już dołączyć. Osoby, które już się do niej dołączyły, pozostają w społeczności. Tego nie można cofnąć.</string>
+    <string name="concord_invite_revoke_confirm">Unieważnij</string>
+    <string name="concord_invite_revoked_ok">Link zaproszenia unieważniony.</string>
+    <string name="concord_invite_revoked_failed">Nie udało się unieważnić linku. Sprawdź połączenie i spróbuj ponownie.</string>
     <string name="concord_invite_failed_expired">Ten link do zaproszenia wygasł i nie może być już używany. Poproś o nowy link.</string>
     <string name="concord_invite_preview_unknown_name">Nazwa społeczności zostanie ujawniona dopiero po dołączeniu</string>
     <string name="concord_invite_preview_explainer">Dołączenie do transmiterów tego zaproszenia, publikuje ogłoszenie o dołączeniu podpisane przez twoje konto i dodaje społeczność do listy. Nic nie zostanie wysłane, dopóki nie klikniesz Dołącz.</string>
@@ -1148,8 +1162,15 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_auth_policy_never_desc">Ignoruj żądania uwierzytelnienia ze wszystkich transmiterów</string>
     <string name="relay_auth_policy_custom">Niestandardowa</string>
     <string name="relay_auth_policy_custom_desc">Wybierz dokładnie, do których transmiterów chcesz się zalogować. Zostaniesz zapytany o wszystko, na co nie wyraziłeś zgody poniżej.</string>
-    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
-    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
+    <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
+         keys are new rather than reused - a stale translation of the old standalone titles would
+         read as a non-sequitur under this header. -->
+    <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
+         exactly one "why" line varies, and it states the consequence of declining too, which is why
+         there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
+         labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- Settings: three lists that each hold what their header says. -->
+    <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="nip82_repository_label">Źródło: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Pobierz</string>
@@ -1527,6 +1548,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="private_note_locked">Odpowiedzi na wpis prywatny zawsze pozostają prywatne</string>
     <string name="private_note_visible_to">Widoczny dla</string>
     <string name="private_note_no_receivers">Nie ma jeszcze odbiorców: ten wpis zobaczysz tylko Ty. Dodaj osoby, którym chcesz go udostępnić.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Dodaj</string>
     <string name="notify_remove_user">Usuń użytkownika z powiadomień</string>
     <string name="notify_mute_user">Powiadomienie. Kliknij, aby wyciszyć powiadomienie od tego użytkownika</string>
@@ -4022,6 +4044,60 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="social_proof">Potwierdzenie socjalne</string>
     <string name="poll_submit">Wyślij</string>
     <string name="poll_view_results">Zobacz wyniki</string>
+    <string name="poll_results_title">Wyniki sondażu</string>
+    <string name="poll_results_loading">Wczytywanie sondażu…</string>
+    <string name="poll_results_open">Otwórz</string>
+    <string name="poll_results_closes_in">Zakończy się za %1$s</string>
+    <string name="poll_results_ended">Zakończono %1$s temu</string>
+    <string name="poll_results_all_options">Wszystkie opcje</string>
+    <string name="poll_results_your_pick">Twój głos</string>
+    <string name="poll_results_selections">· %1$d odpowiedzi</string>
+    <string name="poll_results_no_votes">Brak głosów</string>
+    <string name="poll_results_checking_completeness">Sprawdzanie liczby oddanych głosów…</string>
+    <string name="poll_results_partial">%1$d z %2$d odpowiedzi załadowanych z %3$d transmiterów.</string>
+    <string name="poll_results_partial_approx">%1$d z około %2$d odpowiedzi załadowanych z %3$d transmiterów.</string>
+    <plurals name="poll_results_voters">
+        <item quantity="one">głosujący</item>
+        <item quantity="few">głosujących</item>
+        <item quantity="many">głosujących</item>
+        <item quantity="other">głosujący</item>
+    </plurals>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d głos &lt;unk&gt;</item>
+        <item quantity="few">%1$d głosów &lt;unk&gt;</item>
+        <item quantity="many">%1$d głosów &lt;unk&gt;</item>
+        <item quantity="other">%1$d głosy &lt;unk&gt;</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d głosujący</item>
+        <item quantity="few">%1$d głosujących</item>
+        <item quantity="many">%1$d głosujących</item>
+        <item quantity="other">%1$d głosujący</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d głos wpłynął po zamknięciu głosowania i został wykluczony.</item>
+        <item quantity="few">%1$d głosów wpłynęło po zamknięciu głosowania i zostało wykluczonych.</item>
+        <item quantity="many">%1$d głosów wpłynęło po zamknięciu głosowania i zostało wykluczonych.</item>
+        <item quantity="other">%1$d głosy wpłynęły po zamknięciu głosowania i zostały wykluczone.</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d głos został oddany przed opublikowaniem ankiety i jest wykluczony.</item>
+        <item quantity="few">%1$d głosów zostało oddanych przed opublikowaniem ankiety i zostało wykluczonych.</item>
+        <item quantity="many">%1$d głosów zostało oddanych przed opublikowaniem ankiety i zostało wykluczonych.</item>
+        <item quantity="other">%1$d głosy zostały oddane przed opublikowaniem ankiety i zostały wykluczone.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d odpowiedź nie zawierała poprawnej opcji i została wykluczona.</item>
+        <item quantity="few">%1$d odpowiedzi nie zawierało prawidłowej opcji i zostało wykluczonych.</item>
+        <item quantity="many">%1$d odpowiedzi nie zawierało prawidłowej opcji i zostało wykluczonych.</item>
+        <item quantity="other">%1$d odpowiedzi nie zawierały prawidłowej opcji i zostały wykluczone.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d głosujący znajduje się na liście zablokowanych.</item>
+        <item quantity="few">%1$d głosujących znajduje się na liście zablokowanych.</item>
+        <item quantity="many">%1$d głosujących znajduje się na liście zablokowanych.</item>
+        <item quantity="other">%1$d głosujący znajdują się na liście zablokowanych.</item>
+    </plurals>
     <string name="restart">Zrestartuj</string>
     <string name="chess_accept">Akceptuj</string>
     <string name="chess_decline">Odrzuć</string>

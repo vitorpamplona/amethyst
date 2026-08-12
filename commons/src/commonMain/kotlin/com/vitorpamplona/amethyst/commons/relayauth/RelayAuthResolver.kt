@@ -24,8 +24,8 @@ package com.vitorpamplona.amethyst.commons.relayauth
  * The per-situation switches applied under [RelayAuthPolicy.CUSTOM]. Each independently authorizes
  * one category of relay; a situation with no matching toggle falls through to a prompt.
  *
- * @param myRelaysAndVenues your own relays, plus venues (public chats, communities, live streams)
- *   you've joined, subscribed to, or favorited.
+ * @param myRelaysAndVenues your own relays, plus venues (public chats, NIP-72 communities, live
+ *   streams, NIP-29 relay groups, Concord communities) you've joined, subscribed to, or favorited.
  * @param readFollows a relay serving the outbox of someone you follow (to download their posts).
  * @param messageFollows a relay serving the inbox of someone you follow (to send DMs, replies,
  *   notifications).
@@ -49,8 +49,10 @@ data class RelayAuthCustomToggles(
  * @param policy the top-level [RelayAuthPolicy].
  * @param toggles the [RelayAuthCustomToggles] applied when [policy] is [RelayAuthPolicy.CUSTOM].
  * @param isInMyRelayList the relay is in the user's own relay list.
- * @param servesTrustedVenue this relay hosts a venue (public chat, community, or live stream) the
- *   user has joined, subscribed to, or favorited.
+ * @param servesTrustedVenue this relay hosts a venue the user has joined, subscribed to, or
+ *   favorited — a public chat, a NIP-72 community, a live stream, a NIP-29 relay group, or a Concord
+ *   community. True either because a purpose names one of those venues or because the relay itself is
+ *   a joined room's host (a group/community relay serves nothing else).
  * @param servesFollowedReadCounterparty a followed user's outbox is served here (reading them).
  * @param servesFollowedWriteCounterparty a followed user's inbox is served here (messaging them).
  * @param servesStrangerWriteCounterparty a non-followed user's inbox is served here (messaging them).

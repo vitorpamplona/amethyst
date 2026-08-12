@@ -721,8 +721,15 @@
     <!-- Permissions management screen -->
     <!-- NIP-46 remote signer (bunker) -->
     <!-- Relay Authentication (NIP-42) settings -->
-    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
-    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
+    <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
+         keys are new rather than reused - a stale translation of the old standalone titles would
+         read as a non-sequitur under this header. -->
+    <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
+         exactly one "why" line varies, and it states the consequence of declining too, which is why
+         there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
+         labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- Settings: three lists that each hold what their header says. -->
+    <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="nip82_repository_label">출처: %1$s</string>
     <string name="nip82_download">다운로드</string>
     <string name="nip82_section_about">소개</string>
@@ -963,6 +970,7 @@
     <string name="private_note_locked">비공개 노트에 대한 답글은 항상 비공개로 유지됩니다</string>
     <string name="private_note_visible_to">볼 수 있는 사람</string>
     <string name="private_note_no_receivers">아직 수신자가 없습니다. 본인만 이 노트를 볼 수 있습니다. 공유할 사람을 추가하세요.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">추가</string>
     <string name="notify_remove_user">알림에서 사용자 제거</string>
     <string name="notify_search_and_add_user">알림을 보낼 사용자 검색 및 추가</string>

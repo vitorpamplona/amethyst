@@ -88,4 +88,14 @@ class RelayAuthFirstPartyTest {
         val groupRelay = NormalizedRelayUrl("wss://chat.wisp.talk/")
         assertFalse(RelayAuthFirstParty.hasReason(me, groupRelay, emptyList(), emptySet(), emptySet()))
     }
+
+    @Test
+    fun aRelayHostingAJoinedConcordCommunityIsFirstParty() {
+        // Concord is the harder case of the same rule: a plane wrap this account publishes is signed
+        // by the plane's *stream key*, so even its own outbound traffic carries someone else's pubkey
+        // and the pendingEvents rule can never fire. The joined-communities list is the only signal.
+        val concordRelay = NormalizedRelayUrl("wss://relay.dreamith.to/")
+        val planeWrap = event(other)
+        assertTrue(RelayAuthFirstParty.hasReason(me, concordRelay, listOf(planeWrap), emptySet(), setOf(concordRelay)))
+    }
 }

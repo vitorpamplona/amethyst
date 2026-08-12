@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.ui.note.creators.notify.IAudience
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
@@ -141,7 +142,8 @@ open class CommentPostViewModel :
     IMessageField,
     IZapField,
     IZapRaiser,
-    IExpiration {
+    IExpiration,
+    IAudience {
     val draftTag = DraftTagState()
 
     // Strong reference to the live cache note for the current draft tag (derived from the
@@ -190,16 +192,27 @@ open class CommentPostViewModel :
     // Members of the notifying list whose bell is off: they keep their chip
     // (so they are one tap away from being added back) but are dropped from
     // the extra notification p tags of the outgoing comment.
-    var mutedNotifies by mutableStateOf<Set<HexKey>>(emptySet())
+    override var mutedNotifies by mutableStateOf<Set<HexKey>>(emptySet())
 
-    fun toggleNotify(user: User) {
-        mutedNotifies =
-            if (user.pubkeyHex in mutedNotifies) {
-                mutedNotifies - user.pubkeyHex
-            } else {
-                mutedNotifies + user.pubkeyHex
-            }
-        draftTag.newVersion()
+    // IAudience maps onto `notifying`, which the draft loaders and the comment
+    // builder already read under that name.
+    override var audienceMembers: List<User>?
+        get() = notifying
+        set(value) {
+            notifying = value
+        }
+
+    override val audienceSearchText = TextFieldState()
+    override var wantsToManageAudience by mutableStateOf(false)
+    override var notifyProvenance by mutableStateOf<Map<HexKey, Set<String>>>(emptyMap())
+
+    override fun onAudienceChanged() = draftTag.newVersion()
+
+    fun onAudienceSearchTextChanged() {
+        if (audienceSearchText.selection.collapsed) {
+            userSuggestionsMainMessage = UserSuggestionAnchor.NOTIFY
+            userSuggestions?.processCurrentWord(audienceSearchText.text.toString())
+        }
     }
 
     // NIP-9B: latest community rules document for the community we're posting into.
@@ -330,6 +343,7 @@ open class CommentPostViewModel :
         this.replyingTo = post
         this.externalIdentity = (post.event as? CommentEvent)?.scope()
         mutedNotifies = emptySet()
+        notifyProvenance = emptyMap()
         (post.event as? LnZapEvent)?.let { zap ->
             notifying = listOfNotNull(zapSenderToNotify(zap))
         }
@@ -527,6 +541,7 @@ open class CommentPostViewModel :
         notifying = draftEvent.rootAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) } +
             draftEvent.replyAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) }
         mutedNotifies = emptySet()
+        notifyProvenance = emptyMap()
 
         // Replies to zaps notify the zap sender through a plain p tag (the receipt's
         // author keys above are the lightning provider). The sender chip always comes
@@ -871,6 +886,7 @@ open class CommentPostViewModel :
 
         notifying = null
         mutedNotifies = emptySet()
+        resetAudienceEditor()
 
         wantsInvoice = false
         wantsZapraiser = false
@@ -940,6 +956,9 @@ open class CommentPostViewModel :
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.clearText()
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.NOTIFY) {
+                addAllToAudience(listOf(item))
+                audienceSearchText.clearText()
             }
 
             userSuggestionsMainMessage = null

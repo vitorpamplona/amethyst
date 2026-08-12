@@ -731,8 +731,15 @@
     <!-- Permissions management screen -->
     <!-- NIP-46 remote signer (bunker) -->
     <!-- Relay Authentication (NIP-42) settings -->
-    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
-    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
+    <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
+         keys are new rather than reused - a stale translation of the old standalone titles would
+         read as a non-sequitur under this header. -->
+    <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
+         exactly one "why" line varies, and it states the consequence of declining too, which is why
+         there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
+         labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- Settings: three lists that each hold what their header says. -->
+    <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="nip82_repository_label">மூலம்: %1$s</string>
     <string name="nip82_download">பதிவிறக்கவும்</string>
     <string name="nip82_section_about">பற்றி</string>
@@ -975,6 +982,7 @@
     <string name="private_note_locked">தனிப்பட்ட குறிப்புக்கான பதில்கள் எப்போதும் தனிப்பட்டதாக இருக்கும்</string>
     <string name="private_note_visible_to">யாருக்கு தெரியும்</string>
     <string name="private_note_no_receivers">இன்னும் பெறுநர்கள் இல்லை: இந்த குறிப்பை நீங்கள் மட்டுமே காண முடியும். பகிர்வதற்கு மக்களை சேர்க்கவும்.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">சேர்</string>
     <string name="notify_remove_user">அறிவிப்புகளிலிருந்து பயனரை நீக்கு</string>
     <string name="notify_search_and_add_user">அறிவிக்க ஒரு பயனரை தேடி சேர்க்கவும்</string>

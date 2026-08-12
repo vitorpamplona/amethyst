@@ -1074,8 +1074,15 @@
     <string name="relay_auth_policy_never_desc">Auth-challenges van alle relays negeren</string>
     <string name="relay_auth_policy_custom">Aangepast</string>
     <string name="relay_auth_policy_custom_desc">Kies precies bij welke relays je je aanmeldt. Je wordt gevraagd over alles wat je hieronder niet hebt toegestaan.</string>
-    <!-- Action-aware titles: %1$s is the person (or "Alice and others"). -->
-    <!-- What happens if the user doesn\'t confirm, tied to what they were doing. %1$s is the person. -->
+    <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
+         keys are new rather than reused - a stale translation of the old standalone titles would
+         read as a non-sequitur under this header. -->
+    <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
+         exactly one "why" line varies, and it states the consequence of declining too, which is why
+         there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
+         labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- Settings: three lists that each hold what their header says. -->
+    <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="nip82_repository_label">Bron: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Downloaden</string>
@@ -1443,6 +1450,7 @@
     <string name="private_note_locked">Reacties op een privénote blijven altijd privé</string>
     <string name="private_note_visible_to">Zichtbaar voor</string>
     <string name="private_note_no_receivers">Nog geen ontvangers: alleen jij kunt deze note zien. Voeg mensen toe om te delen.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Toevoegen</string>
     <string name="notify_remove_user">Gebruiker verwijderen uit meldingen</string>
     <string name="notify_mute_user">Meldingen aan. Tik om de melding voor deze gebruiker te dempen</string>

@@ -76,6 +76,10 @@ class AuthCoordinator(
                                 RelayAuthPurposeDeriver.derive(
                                     pendingEvents = client.activeOutboxEvents(relayUrl),
                                     activeFilters = client.activeRequests(relayUrl),
+                                    // The context describes the shared socket, not one account, so a
+                                    // plane is looked up across every watched account — same as the
+                                    // stream-key AUTHs above.
+                                    venueForPlaneAuthor = ::concordCommunityForPlane,
                                 ),
                         )
                     }
@@ -166,6 +170,13 @@ class AuthCoordinator(
         )
 
     /**
+     * The joined Concord community whose plane [planeAddress] is, across every watched account, or
+     * null when the pubkey isn't a plane of ours. Feeds [RelayAuthPurposeDeriver] so a pending plane
+     * wrap reads as a post into that community rather than as a DM to the throwaway key it `p`-tags.
+     */
+    private fun concordCommunityForPlane(planeAddress: HexKey): HexKey? = authWithAccounts.distinct().firstNotNullOfOrNull { it.concordSessions.communityIdForPlane(planeAddress) }
+
+    /**
      * Signs one kind-22242 AUTH per Concord plane stream key hosted on [relayUrl], across every
      * watched account. Signed locally from the derived stream secret (a raw [KeyPair] via
      * [NostrSignerSync]) — never the account signer, and never surfacing the user's identity.
@@ -237,13 +248,12 @@ class AuthCoordinator(
                 relayUrl = relayUrl,
                 pendingEvents = client.activeOutboxEvents(relayUrl),
                 myRelays = account.trustedRelays.flow.value,
-                // A NIP-29 relay group the user explicitly joined (kind-10009) is a first-party reason
-                // to authenticate with its host relay: private/closed group content is `#h`-scoped and
-                // never names the user, so it fails the pubkey checks above — without this, a joined
-                // private group's messages are refused with `auth-required` and the group stays empty.
-                myGroupRelays =
-                    account.relayGroupList.liveRelayGroupIds.value
-                        .mapTo(mutableSetOf()) { it.relayUrl },
+                // A room the user explicitly joined — a NIP-29 relay group (kind-10009) or a Concord
+                // community (kind-13302) — makes its host relay first-party. Neither room's traffic
+                // names the user: NIP-29 content is `#h`-scoped and Concord planes ride derived stream
+                // keys, so both fail the pubkey checks above. Without this, a joined private group's
+                // messages are refused with `auth-required` and the room stays empty.
+                myVenueRelays = account.venueHostRelays(),
             )
 
     fun destroy() {
