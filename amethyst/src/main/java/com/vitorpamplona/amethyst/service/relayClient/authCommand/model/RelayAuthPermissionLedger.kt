@@ -43,7 +43,8 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
  * by a purpose (a NIP-28 chat, a NIP-72 community, a NIP-53 stream, a NIP-29 group id, a Concord
  * community id), while [isVenueHostRelay] recognizes the relay that *hosts* one — the only signal
  * available for a room whose traffic never names it in a way the deriver can see, or whose challenge
- * arrives before its subscription does.
+ * arrives before its subscription does. [isTrustedVenue] is asked about the (relay, venue) pair
+ * rather than the id alone because a NIP-29 group id means nothing without its host relay.
  */
 class RelayAuthPermissionLedger(
     val store: RelayAuthPermissionStore,
@@ -52,7 +53,7 @@ class RelayAuthPermissionLedger(
     val isInMyRelayList: (String) -> Boolean = { false },
     val isBlocked: (String) -> Boolean = { false },
     val isFollowed: (String) -> Boolean = { false },
-    val isTrustedVenue: (String) -> Boolean = { false },
+    val isTrustedVenue: (relayUrl: String, venueId: String) -> Boolean = { _, _ -> false },
     val isVenueHostRelay: (String) -> Boolean = { false },
 ) {
     /**
@@ -87,7 +88,7 @@ class RelayAuthPermissionLedger(
                     hostsMyVenue ||
                         ctx.purposes.any { p ->
                             (p.kind == AuthPurposeKind.POST_VENUE || p.kind == AuthPurposeKind.READ_VENUE) &&
-                                p.venues.any(isTrustedVenue)
+                                p.venues.any { isTrustedVenue(ctx.relayUrl, it) }
                         },
                 // Reading a followed author's outbox.
                 servesFollowedReadCounterparty =

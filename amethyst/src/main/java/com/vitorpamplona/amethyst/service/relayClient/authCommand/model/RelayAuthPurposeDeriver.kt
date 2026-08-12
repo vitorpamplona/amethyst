@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.toAuthPurposeKind
+import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -42,6 +45,18 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
  *  activities. Their `a` addresses are `kind:ownerPubkey:dTag`. */
 private val VENUE_KINDS = setOf(CommunityDefinitionEvent.KIND, LiveActivitiesEvent.KIND)
 
+/** The kinds a Concord plane wrap can be — the only ones worth asking `venueForPlaneAuthor` about. */
+private val STREAM_WRAP_KINDS = setOf(ConcordStreamEnvelope.KIND_WRAP, ConcordStreamEnvelope.KIND_WRAP_EPHEMERAL)
+
+/**
+ * Marmot (MLS) carries the group id in an `h` tag exactly like NIP-29 does, but an MLS group is not a
+ * room we can name: the id is an opaque MLS value with no metadata event and no channel object behind
+ * it. Reading it as a venue would put that id in front of the user as a room name — and, on a
+ * `POST_VENUE`, get-or-create a phantom public chat for it (the id is 64-hex). These keep their prior
+ * reading: no `p` tags, so they land on the unattributed safety net.
+ */
+private val MLS_GROUP_KINDS = setOf(GroupEvent.KIND, WelcomeEvent.KIND)
+
 /**
  * Infers *why* a relay wants NIP-42 auth from what Amethyst is currently doing with it — the
  * events pending delivery and the active subscription filters (both from the [INostrClient]).
@@ -51,7 +66,8 @@ private val VENUE_KINDS = setOf(CommunityDefinitionEvent.KIND, LiveActivitiesEve
  *
  * - a pending Concord plane wrap (recognized by [venueForPlaneAuthor], since the wrap is *signed* by
  *   the plane's stream key) => [AuthPurposeKind.POST_VENUE] for that community;
- * - a pending `h`-tagged event => [AuthPurposeKind.POST_VENUE] for that NIP-29 relay group;
+ * - a pending `h`-tagged event => [AuthPurposeKind.POST_VENUE] for that NIP-29 relay group (except
+ *   the [MLS_GROUP_KINDS], whose `h` names something unnameable);
  * - a pending gift wrap (kind 1059) => sending a DM to its `p` recipient ([AuthPurposeKind.SEND_DM]);
  * - a pending channel/community/live post => [AuthPurposeKind.POST_VENUE] for that venue;
  * - any other pending event with `p` tags => delivering it to those users' inboxes ([AuthPurposeKind.NOTIFY_INBOX]).
@@ -92,8 +108,9 @@ object RelayAuthPurposeDeriver {
         pendingEvents.forEach { event ->
             val pubkeys = event.tags.mapNotNull(PTag::parseKey)
             val venues = event.tags.mapNotNull(ATag::parseAddress).filter { it.kind in VENUE_KINDS }
-            val planeVenue = venueForPlaneAuthor(event.pubKey)
-            val groupId = event.tags.firstNotNullOfOrNull(GroupIdTag::parse)
+            // Only a stream wrap can belong to a plane, so only a wrap pays for the lookup.
+            val planeVenue = if (event.kind in STREAM_WRAP_KINDS) venueForPlaneAuthor(event.pubKey) else null
+            val groupId = if (event.kind in MLS_GROUP_KINDS) null else event.tags.firstNotNullOfOrNull(GroupIdTag::parse)
             when {
                 planeVenue != null -> postVenues.add(planeVenue)
                 groupId != null -> postVenues.add(groupId)

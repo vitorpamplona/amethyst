@@ -489,10 +489,12 @@ private fun rememberCounterpartyName(
  * existing channel there. Get-or-creating on read is what used to mint phantom public chats in
  * [LocalCache] for ordinary notes, complete with a metadata subscription for a room that never was.
  *
- * The two joined-room shapes are checked first, because both are id shapes the rules above would
- * otherwise mislabel: a NIP-29 group id is only meaningful together with its host relay ([relayUrl],
- * which is the relay doing the asking), and a Concord community id is a bare 64-hex string that
- * resolves to no [Channel] at all — its name lives on the account's own joined-communities list.
+ * Both joined-room shapes are resolved **before** any of that, because the rules above would not just
+ * mislabel them, they would act on them. A NIP-29 group id is only meaningful together with its host
+ * relay ([relayUrl], the relay doing the asking). A Concord community id is a bare 64-hex string, so
+ * the public-chat branch would take it: on a `POST_VENUE` — which is exactly what a pending plane wrap
+ * now derives — that get-or-create mints the phantom channel this function was rewritten to stop
+ * minting, and then names the room after its own nevent.
  */
 @Composable
 private fun rememberVenueLabel(
@@ -501,6 +503,12 @@ private fun rememberVenueLabel(
     relayUrl: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
 ): String {
+    // Resolved off LocalCache first and the active account's list second: a prompt is raised per
+    // account, so the account on screen is not necessarily the one being asked about — the cache is
+    // shared by all of them, the list is not.
+    val concordName = remember(venueId) { concordCommunityLabel(venueId, accountViewModel) }
+    if (concordName != null) return concordName
+
     val channel: Channel? =
         remember(venueId, kind, relayUrl) {
             LocalCache.getRelayGroupChannelIfExists(GroupId(venueId, relayUrl))
@@ -523,17 +531,32 @@ private fun rememberVenueLabel(
         if (name.isNotBlank()) return name
     }
 
-    val concordName =
-        remember(venueId) {
-            accountViewModel.account.concordChannelList.liveCommunities.value
-                .firstOrNull { it.id == venueId }
-                ?.name
-                ?.takeIf { it.isNotBlank() }
-        }
-    if (concordName != null) return concordName
-
     // Community: the d-identifier is the name in NIP-72. Also the fallback for an unresolved channel.
     return venueId.substringAfterLast(':').ifEmpty { venueId.take(8) }
+}
+
+/**
+ * The label for a Concord community id, or null when [venueId] is not a community we know of — which
+ * is what tells the caller to go on treating the id as a channel root.
+ *
+ * A community has no metadata event to look up: its name comes from the folded Control Plane, held on
+ * the `ConcordChannel`s in [LocalCache] (shared by every logged-in account, so this still resolves a
+ * prompt raised for a different one), and failing that from the active account's joined list. A
+ * community we can place but cannot name still returns a label, so the caller never falls through to
+ * the channel branches with an id it would get-or-create.
+ */
+private fun concordCommunityLabel(
+    venueId: String,
+    accountViewModel: AccountViewModel,
+): String? {
+    val folded = LocalCache.getAnyConcordChannelOfCommunity(venueId)
+    val joined =
+        accountViewModel.account.concordChannelList.liveCommunities.value
+            .firstOrNull { it.id == venueId }
+    if (folded == null && joined == null) return null
+    return folded?.communityName?.takeIf { it.isNotBlank() }
+        ?: joined?.name?.takeIf { it.isNotBlank() }
+        ?: venueId.take(8)
 }
 
 /**

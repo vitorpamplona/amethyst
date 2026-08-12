@@ -35,7 +35,6 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -426,22 +425,22 @@ class Account(
             isInMyRelayList = { relayUrl -> relayUrl.normalizeRelayUrlOrNull()?.let { it in trustedRelays.flow.value } ?: false },
             isBlocked = { relayUrl -> relayUrl.normalizeRelayUrlOrNull()?.let { it in blockedRelayList.flow.value } ?: false },
             isFollowed = { pubkey -> pubkey in allFollows.flow.value.authors },
-            isTrustedVenue = { venueId ->
+            isTrustedVenue = { relayUrl, venueId ->
                 venueId in publicChatList.flowSet.value ||
                     venueId in communityList.flowSet.value ||
-                    isJoinedRoomId(venueId) ||
+                    isJoinedRoomId(relayUrl, venueId) ||
                     Address.parse(venueId)?.pubKeyHex?.let { it in allFollows.flow.value.authors } == true
             },
             isVenueHostRelay = { relayUrl -> relayUrl.normalizeRelayUrlOrNull()?.let { it in venueHostRelays() } ?: false },
         )
 
     /**
-     * Relays that exist here because a room was joined on them: the host of every NIP-29 relay group
-     * on the kind-10009 list, the relays of every joined Concord community, and every joined Buzz
-     * workspace.
+     * Relays that exist here because *this account* joined a room on them: the host of every NIP-29
+     * relay group on its kind-10009 list, plus the relays of every Concord community on its
+     * kind-13302 list.
      *
-     * All are venues in the [RelayAuthCustomToggles.myRelaysAndVenues] sense but none shows up in a
-     * NIP-65/DM/search list, so nothing else in the auth path can see them: a NIP-29 group's content
+     * Both are venues in the [RelayAuthCustomToggles.myRelaysAndVenues] sense but neither shows up in
+     * a NIP-65/DM/search list, so nothing else in the auth path can see them: a NIP-29 group's content
      * is `#h`-scoped and never names the user, and a Concord plane is addressed to a derived stream
      * key rather than to anyone's pubkey.
      */
@@ -449,18 +448,22 @@ class Account(
         RelayAuthVenues.hostRelays(
             joinedGroups = relayGroupList.liveRelayGroupIds.value,
             joinedCommunities = concordChannelList.liveCommunities.value,
-            joinedWorkspaces = BuzzWorkspaces.flow.value,
         )
 
     /**
-     * True when [venueId] is a room this account joined that the venue *lists* above don't cover: a
-     * NIP-29 group id (from the kind-10009 list) or a Concord community id (from the kind-13302 list).
-     * Those are the ids the subscription assemblers declare on their filters, so this is what turns a
-     * `READ_VENUE`/`POST_VENUE` on a joined group or community into a trusted venue.
+     * True when [venueId], served by [relayUrl], is a room this account joined that the venue *lists*
+     * above don't cover: a NIP-29 group id (from the kind-10009 list) or a Concord community id (from
+     * the kind-13302 list). Those are the ids the subscription assemblers declare on their filters, so
+     * this is what turns a `READ_VENUE`/`POST_VENUE` on a joined group or community into a trusted
+     * venue.
      */
-    private fun isJoinedRoomId(venueId: String): Boolean =
+    private fun isJoinedRoomId(
+        relayUrl: String,
+        venueId: String,
+    ): Boolean =
         RelayAuthVenues.isJoinedRoom(
             venueId = venueId,
+            relayUrl = relayUrl.normalizeRelayUrlOrNull(),
             joinedGroups = relayGroupList.liveRelayGroupIds.value,
             joinedCommunities = concordChannelList.liveCommunities.value,
         )

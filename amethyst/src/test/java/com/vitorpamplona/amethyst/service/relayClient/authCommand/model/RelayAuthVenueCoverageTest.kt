@@ -63,7 +63,7 @@ class RelayAuthVenueCoverageTest {
             store = NoStore(),
             globalPolicy = { RelayAuthPolicy.CUSTOM },
             customToggles = { toggles },
-            isTrustedVenue = { it == joinedGroupId || it == joinedCommunityId },
+            isTrustedVenue = { _, venueId -> venueId == joinedGroupId || venueId == joinedCommunityId },
             isVenueHostRelay = { it == groupRelay || it == concordRelay },
         )
 

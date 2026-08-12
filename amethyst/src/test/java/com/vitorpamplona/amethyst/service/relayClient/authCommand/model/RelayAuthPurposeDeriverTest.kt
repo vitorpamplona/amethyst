@@ -254,6 +254,44 @@ class RelayAuthPurposeDeriverTest {
     }
 
     @Test
+    fun aMarmotGroupMessageIsNotTreatedAsARoomWeCanName() {
+        // MLS carries its group id in an `h` tag exactly like NIP-29, but the id is an opaque MLS
+        // value with no metadata event behind it — and it is 64-hex, so a POST_VENUE on it would have
+        // the label get-or-create a phantom public chat. Stays on the unattributed safety net.
+        val ev =
+            Event(
+                id = "00".repeat(32),
+                pubKey = "11".repeat(32),
+                createdAt = 1_700_000_000L,
+                kind = 445,
+                tags = arrayOf(arrayOf("h", "d".repeat(64))),
+                content = "",
+                sig = "22".repeat(64),
+            )
+
+        val purposes = RelayAuthPurposeDeriver.derive(listOf(ev), emptyMap())
+
+        assertEquals(listOf(AuthPurposeKind.OTHER), purposes.map { it.kind })
+    }
+
+    @Test
+    fun aPendingEventThatIsNotAWrapIsNeverAskedAboutPlanes() {
+        // The plane lookup walks every joined community on every pending event; only a stream wrap
+        // can belong to a plane, so only a wrap may pay for it.
+        var asked = 0
+        RelayAuthPurposeDeriver.derive(
+            pendingEvents = listOf(event(1, listOf(alice)), event(GiftWrapEvent.KIND, listOf(bob))),
+            activeFilters = emptyMap(),
+            venueForPlaneAuthor = {
+                asked++
+                null
+            },
+        )
+
+        assertEquals(1, asked)
+    }
+
+    @Test
     fun postingIntoAConcordChannelIsAVenuePostAndNotADmToItsThrowawayPTag() {
         // A Concord plane wrap is kind 1059 signed by the plane's stream key and `p`-tagged to a fresh
         // random pubkey. On tag shape alone it is a gift wrap, so the prompt used to offer to "send a

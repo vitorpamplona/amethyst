@@ -118,14 +118,7 @@ class ConcordSessionRegistry(
      */
     fun communityIdForPlane(planeAddress: HexKey): HexKey? =
         lock.withLock {
-            sessions.entries
-                .firstOrNull { (_, session) ->
-                    planeAddress == session.controlPlaneAddress ||
-                        planeAddress == session.guestbookAddress ||
-                        planeAddress == session.nextBaseRekeyAddress ||
-                        planeAddress in session.historicalControlPlaneAddresses() ||
-                        planeAddress in session.channelAddresses()
-                }?.key
+            sessions.entries.firstOrNull { (_, session) -> session.ownsPlane(planeAddress) }?.key
         }
 
     /**
