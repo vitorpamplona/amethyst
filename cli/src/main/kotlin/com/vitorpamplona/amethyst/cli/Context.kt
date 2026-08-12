@@ -74,6 +74,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.lang.management.ManagementFactory
 import java.util.concurrent.TimeUnit
 
@@ -304,7 +305,7 @@ class Context(
                         .url(relay.toHttp())
                         .header("Accept", "application/nostr+json")
                         .build()
-                okhttp.newCall(request).execute().use { resp ->
+                okhttp.newCall(request).executeAsync().use { resp ->
                     resp.body.string().let { Nip11RelayInformation.fromJson(it) }
                 }
             }.getOrNull()

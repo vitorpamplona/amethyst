@@ -62,6 +62,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -78,10 +80,16 @@ import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
+import java.io.IOException
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -505,6 +513,46 @@ private fun classifyAndProcess(input: String): SendState {
     return SendState.Idle
 }
 
+/**
+ * Max bytes read from an LNURL endpoint. LUD-06 payRequest and LUD-16 invoice documents are a few
+ * hundred bytes; the body is buffered in memory, so a hostile or broken server needs a hard ceiling.
+ */
+private const val MAX_LNURL_RESPONSE_BYTES = 64 * 1024L
+
+/**
+ * GETs [url] and parses its size-capped JSON body.
+ *
+ * Connect, body read and parse all happen on [Dispatchers.IO] and the response is always closed:
+ * callers run inside a `LaunchedEffect` that resumes on the composition dispatcher and can be
+ * cancelled at any suspension point, so neither the blocking read nor the close can be left to them.
+ *
+ * LUD-06 servers report failures as HTTP 200 + `{"status":"ERROR","reason":…}`, so the body is
+ * parsed first and the status code is only surfaced when the body isn't usable JSON — otherwise
+ * the caller's `reason`/`message` extraction would be skipped for servers that use 4xx instead.
+ */
+private suspend fun fetchLnurlJson(
+    httpClient: OkHttpClient,
+    mapper: ObjectMapper,
+    url: String,
+): JsonNode =
+    withContext(Dispatchers.IO) {
+        val request = Request.Builder().url(url).build()
+        httpClient.newCall(request).executeAsync().use { response ->
+            val source = response.body.source()
+            // request() buffers up to N bytes and stops, but readUtf8() on the SOURCE would drain
+            // the whole stream regardless of what was buffered — so read the BUFFER to cap for real.
+            source.request(MAX_LNURL_RESPONSE_BYTES + 1)
+            if (source.buffer.size > MAX_LNURL_RESPONSE_BYTES) {
+                throw IOException("LNURL response exceeds $MAX_LNURL_RESPONSE_BYTES bytes")
+            }
+            val body = source.buffer.readUtf8()
+            runCatching { mapper.readTree(body) }.getOrNull()
+                ?: throw IOException(
+                    if (response.isSuccessful) "malformed LNURL response" else "HTTP ${response.code}",
+                )
+        }
+    }
+
 @Composable
 private fun SendDialog(
     onDismiss: () -> Unit,
@@ -529,18 +577,7 @@ private fun SendDialog(
         val state = sendState
         if (state is SendState.Resolving) {
             try {
-                val httpClient = DesktopHttpClient.currentClient()
-                val request =
-                    okhttp3.Request
-                        .Builder()
-                        .url(state.url)
-                        .build()
-                val response =
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        httpClient.newCall(request).execute()
-                    }
-                val body = response.body.string()
-                val json = mapper.readTree(body)
+                val json = fetchLnurlJson(DesktopHttpClient.currentClient(), mapper, state.url)
                 val callback = json.get("callback")?.asText()?.ifBlank { null }
                 if (callback == null) {
                     val errorMsg = json.get("reason")?.asText() ?: json.get("message")?.asText() ?: "Invalid LNURL endpoint"
@@ -569,21 +606,10 @@ private fun SendDialog(
         val state = sendState
         if (state is SendState.FetchingInvoice) {
             try {
-                val httpClient = DesktopHttpClient.currentClient()
                 val urlBinder = if (state.callbackUrl.contains("?")) "&" else "?"
                 val encodedComment = java.net.URLEncoder.encode(state.comment, "utf-8")
                 val url = "${state.callbackUrl}${urlBinder}amount=${state.amountMilliSats}&comment=$encodedComment"
-                val request =
-                    okhttp3.Request
-                        .Builder()
-                        .url(url)
-                        .build()
-                val response =
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        httpClient.newCall(request).execute()
-                    }
-                val body = response.body.string()
-                val json = mapper.readTree(body)
+                val json = fetchLnurlJson(DesktopHttpClient.currentClient(), mapper, url)
                 val pr = json.get("pr")?.asText()?.ifBlank { null }
                 if (pr != null) {
                     sendState = SendState.ReadyToPay(pr)

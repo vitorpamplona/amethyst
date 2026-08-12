@@ -82,6 +82,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
@@ -141,7 +142,7 @@ private suspend fun resolveNip05Http(identifier: String): String? {
                     .readTimeout(10, TimeUnit.SECONDS)
                     .build()
             val request = Request.Builder().url(url).build()
-            val response = client.newCall(request).execute()
+            val response = client.newCall(request).executeAsync()
             response.use { resp ->
                 if (!resp.isSuccessful) return@withContext null
                 val body = resp.body.string()

@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -70,7 +71,7 @@ fun rememberConcordImageModel(
                     if (!cacheFile.exists()) {
                         val client = accountViewModel.httpClientBuilder.okHttpClientForImage(pointer.url)
                         val ciphertext =
-                            client.newCall(Request.Builder().url(pointer.url).build()).execute().use { resp ->
+                            client.newCall(Request.Builder().url(pointer.url).build()).executeAsync().use { resp ->
                                 if (!resp.isSuccessful) return@runCatching null
                                 resp.body.bytes()
                             }

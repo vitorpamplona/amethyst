@@ -31,6 +31,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import okhttp3.coroutines.executeAsync
 import java.io.EOFException
 import java.io.IOException
 import java.net.SocketException
@@ -167,7 +168,7 @@ class OkHttpNestsClient(
             val request = buildRequest()
             val response: Response =
                 try {
-                    httpClient(url).newCall(request).execute()
+                    httpClient(url).newCall(request).executeAsync()
                 } catch (e: SocketException) {
                     transportError = e
                     if (++transportAttempts >= MAX_TRANSPORT_RETRIES) throw NestsException("Failed to reach $url", e)

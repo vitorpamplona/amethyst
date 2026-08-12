@@ -57,6 +57,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.coroutines.executeAsync
 
 /**
  * `amy buzz …` — first-class access to the `block/buzz` workspace protocol, driving the
@@ -372,7 +373,7 @@ object BuzzCommands {
                         .url(url)
                         .get()
                         .build(),
-                ).execute()
+                ).executeAsync()
                 .use { it.code to it.body.string() }
         }
 
@@ -385,7 +386,7 @@ object BuzzCommands {
         withContext(Dispatchers.IO) {
             val builder = Request.Builder().url(url).post(body.toRequestBody(jsonMedia))
             if (auth != null) builder.header("Authorization", auth)
-            http.newCall(builder.build()).execute().use { it.code to it.body.string() }
+            http.newCall(builder.build()).executeAsync().use { it.code to it.body.string() }
         }
 
     /** `buzz post RELAY GID <text>` → publishes a kind-40002 stream message with an `h` tag. */

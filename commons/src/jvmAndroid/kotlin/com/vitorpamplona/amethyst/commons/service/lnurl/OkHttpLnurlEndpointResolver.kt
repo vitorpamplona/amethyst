@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -58,7 +59,7 @@ class OkHttpLnurlEndpointResolver(
             try {
                 val client = okHttpClient(url)
                 val request = Request.Builder().url(url).build()
-                client.newCall(request).execute().use { response ->
+                client.newCall(request).executeAsync().use { response ->
                     if (!response.isSuccessful) return@use null
                     val body = response.body.string()
                     val root = mapper.readTree(body) ?: return@use null

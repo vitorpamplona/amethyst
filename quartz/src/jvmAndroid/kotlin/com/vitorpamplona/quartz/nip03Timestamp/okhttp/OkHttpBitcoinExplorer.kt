@@ -58,7 +58,7 @@ class OkHttpBitcoinExplorer(
                 .get()
                 .build()
 
-        return client.newCall(request).execute().use {
+        return client.newCall(request).executeAsync().use {
             if (it.isSuccessful) {
                 Log.d("OkHttpBlockstreamExplorer") { "$baseAPI/block/$hash" }
 

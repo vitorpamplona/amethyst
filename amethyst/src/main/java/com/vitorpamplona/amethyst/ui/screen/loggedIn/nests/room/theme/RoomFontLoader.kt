@@ -29,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.io.File
 import java.security.MessageDigest
 
@@ -63,7 +64,7 @@ internal object RoomFontLoader {
             }.getOrNull()
         }
 
-    private fun ensureCached(
+    private suspend fun ensureCached(
         url: String,
         context: Context,
         clientFor: (String) -> OkHttpClient,
@@ -74,7 +75,7 @@ internal object RoomFontLoader {
 
         val client = clientFor(url)
         val request = Request.Builder().url(url).build()
-        client.newCall(request).execute().use { resp ->
+        client.newCall(request).executeAsync().use { resp ->
             if (!resp.isSuccessful) return null
             file.outputStream().use { out -> resp.body.byteStream().copyTo(out) }
         }
