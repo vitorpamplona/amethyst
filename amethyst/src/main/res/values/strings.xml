@@ -1569,7 +1569,6 @@
     <string name="audience_badge_already_added">Already added</string>
     <string name="audience_badge_muted">Muted</string>
     <string name="audience_badge_private_member">Private member</string>
-    <string name="audience_badge_no_inbox_relay">No inbox relay</string>
     <string name="audience_recipients_are_visible">Everyone on this note can see the full recipient list.</string>
     <plurals name="audience_summary_others">
         <item quantity="one">%1$s, %2$s and %3$d other</item>

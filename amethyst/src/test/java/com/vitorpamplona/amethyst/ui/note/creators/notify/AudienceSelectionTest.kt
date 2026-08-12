@@ -63,8 +63,7 @@ class AudienceSelectionTest {
         list: AudienceList,
         alreadyIn: Set<String> = emptySet(),
         hidden: Set<String> = emptySet(),
-        flagInbox: Boolean = false,
-    ) = AudienceSelection.buildMembers(list, alreadyIn, hidden, flagInbox)
+    ) = AudienceSelection.buildMembers(list, alreadyIn, hidden)
 
     @Test
     fun ordinaryMembersStartSelected() {
@@ -111,13 +110,15 @@ class AudienceSelectionTest {
     }
 
     @Test
-    fun missingInboxRelayIsOnlyFlaggedForPrivateNotes() {
-        val public = members(listOfPeople(public = listOf(alice)), flagInbox = false)
-        assertFalse(public.single().isMissingInboxRelay)
+    fun someoneInBothHalvesOfAListIsNotTreatedAsPrivate() {
+        // Carla is in the encrypted half but also publicly listed, so adding her
+        // discloses nothing new. Warning about her would be noise that trains the
+        // user to ignore the badge that matters.
+        val rows = members(listOfPeople(public = listOf(alice, carla), private = listOf(carla)))
+        val carlaRow = rows.first { it.pubkeyHex == carla.pubkeyHex }
 
-        // A user with no loaded relay list cannot be shown to have an inbox.
-        val private = members(listOfPeople(public = listOf(alice)), flagInbox = true)
-        assertTrue(private.single().isMissingInboxRelay)
+        assertFalse(carlaRow.isPrivateMember)
+        assertTrue(carla.pubkeyHex in AudienceSelection.defaultSelection(rows))
     }
 
     @Test
@@ -188,6 +189,43 @@ class AudienceSelectionTest {
         val removal = AudienceSelection.removeListFromProvenance(addition.provenance, "close-friends")
         assertEquals(setOf(bruno.pubkeyHex), removal.orphaned)
         assertFalse(alice.pubkeyHex in removal.orphaned)
+    }
+
+    @Test
+    fun aListThatUnMutesSomebodyClaimsThemToo() {
+        // Bruno is in pTags but muted, so he is not in the audience. The list
+        // un-mutes him, which genuinely changes the outcome — so undoing the list
+        // has to be able to take him back out again.
+        val addition =
+            AudienceSelection.addToAudience(
+                current = listOf(alice, bruno),
+                incoming = listOf(bruno),
+                provenance = emptyMap(),
+                fromListTag = "close-friends",
+                currentlyMuted = setOf(bruno.pubkeyHex),
+            )
+
+        assertTrue(addition.newcomers.isEmpty())
+        assertEquals(setOf(bruno.pubkeyHex), addition.unmutes)
+        assertEquals(setOf("close-friends"), addition.provenance[bruno.pubkeyHex])
+
+        val removal = AudienceSelection.removeListFromProvenance(addition.provenance, "close-friends")
+        assertEquals(setOf(bruno.pubkeyHex), removal.orphaned)
+    }
+
+    @Test
+    fun anUnmutedPersonAlreadyInTheAudienceIsNotClaimed() {
+        val addition =
+            AudienceSelection.addToAudience(
+                current = listOf(alice),
+                incoming = listOf(alice),
+                provenance = emptyMap(),
+                fromListTag = "close-friends",
+                currentlyMuted = emptySet(),
+            )
+
+        assertTrue(addition.unmutes.isEmpty())
+        assertTrue(addition.provenance.isEmpty())
     }
 
     @Test

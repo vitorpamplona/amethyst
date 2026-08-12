@@ -303,11 +303,13 @@ private fun NewPostScreenBody(
     val audience = remember(postViewModel.pTags) { postViewModel.pTags?.toImmutableList() ?: persistentListOf() }
     val mutedNotifies = remember(postViewModel.mutedNotifies) { postViewModel.mutedNotifies.toImmutableSet() }
     val groupChips =
-        remember(postViewModel.notifyProvenance, audience, audienceLists) {
+        remember(postViewModel.notifyProvenance, audience, mutedNotifies, audienceLists) {
             AudienceSelection
                 .activeGroupChips(
                     provenance = postViewModel.notifyProvenance,
-                    audience = audience.mapTo(mutableSetOf()) { it.pubkeyHex },
+                    // Muted people are in pTags but will not be p-tagged, so
+                    // counting them would have the chip over-report its batch.
+                    audience = audience.mapNotNullTo(mutableSetOf()) { it.pubkeyHex.takeIf { hex -> hex !in mutedNotifies } },
                     lists = audienceLists,
                 ).toImmutableList()
         }
@@ -833,10 +835,14 @@ private fun BottomRowActions(
                 isActive = postViewModel.wantsPrivateNote,
                 isLocked = postViewModel.privateNoteLocked,
             ) {
+                val nowPrivate = !postViewModel.wantsPrivateNote
                 postViewModel.togglePrivateNote()
                 // Sealing a note changes what Send is about to do, so the change
-                // is confirmed in the hand as well as on screen.
-                haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                // is confirmed in the hand as well as on screen — and in the
+                // direction it actually moved.
+                haptic.performHapticFeedback(
+                    if (nowPrivate) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                )
             }
         }
 

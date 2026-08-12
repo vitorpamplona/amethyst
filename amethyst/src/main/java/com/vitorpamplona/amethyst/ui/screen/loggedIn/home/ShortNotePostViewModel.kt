@@ -417,7 +417,14 @@ open class ShortNotePostViewModel :
         if (users.isEmpty()) return
 
         val current = pTags ?: emptyList()
-        val addition = AudienceSelection.addToAudience(current, users, notifyProvenance, fromListTag)
+        val addition =
+            AudienceSelection.addToAudience(
+                current = current,
+                incoming = users,
+                provenance = notifyProvenance,
+                fromListTag = fromListTag,
+                currentlyMuted = mutedNotifies,
+            )
 
         if (addition.newcomers.isNotEmpty()) {
             pTags = current + addition.newcomers
@@ -425,9 +432,8 @@ open class ShortNotePostViewModel :
 
         // Anyone re-added by a list gets their bell back: the list says they
         // are part of the audience, and a muted chip would silently drop them.
-        val addedIds = users.mapTo(mutableSetOf()) { it.pubkeyHex }
-        if (mutedNotifies.any { it in addedIds }) {
-            mutedNotifies = mutedNotifies - addedIds
+        if (mutedNotifies.any { it in addition.unmutes }) {
+            mutedNotifies = mutedNotifies - addition.unmutes
         }
 
         notifyProvenance = addition.provenance
@@ -833,9 +839,13 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
-                LocalCache.checkGetOrCreateUser(it[1])
-            }
+            draftEvent.tags
+                .filter { it.size > 1 && it[0] == "p" }
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+                // A built event can legitimately repeat a p tag (the voice-reply
+                // branch notifies the parent author on top of the notify list), so
+                // the audience it round-trips through a draft has to be deduped.
+                .distinct()
 
         draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
             val note = LocalCache.checkGetOrCreateNote(it[1])
@@ -939,9 +949,13 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
-                LocalCache.checkGetOrCreateUser(it[1])
-            }
+            draftEvent.tags
+                .filter { it.size > 1 && it[0] == "p" }
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+                // A built event can legitimately repeat a p tag (the voice-reply
+                // branch notifies the parent author on top of the notify list), so
+                // the audience it round-trips through a draft has to be deduped.
+                .distinct()
         mutedNotifies = emptySet()
         notifyProvenance = emptyMap()
 
@@ -1014,9 +1028,13 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
-                LocalCache.checkGetOrCreateUser(it[1])
-            }
+            draftEvent.tags
+                .filter { it.size > 1 && it[0] == "p" }
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+                // A built event can legitimately repeat a p tag (the voice-reply
+                // branch notifies the parent author on top of the notify list), so
+                // the audience it round-trips through a draft has to be deduped.
+                .distinct()
         mutedNotifies = emptySet()
         notifyProvenance = emptyMap()
 

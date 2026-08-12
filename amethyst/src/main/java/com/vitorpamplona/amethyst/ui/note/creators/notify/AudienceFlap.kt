@@ -406,7 +406,10 @@ private fun AudienceDetail(
                 }
             }
 
-            audience.forEach { user ->
+            // Deduped before keying: Compose throws on a duplicate key, and pTags
+            // can carry the same pubkey twice (a draft round-trips whatever p tags
+            // the event had). The Notifying row this replaces deduped via toSet().
+            audience.distinctBy { it.pubkeyHex }.forEach { user ->
                 key(user.pubkeyHex) {
                     AudienceMemberChip(
                         user = user,

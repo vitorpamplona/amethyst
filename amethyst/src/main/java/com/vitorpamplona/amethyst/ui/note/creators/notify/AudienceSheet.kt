@@ -314,14 +314,11 @@ private fun AudienceReview(
     val listMaxHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
 
     val members =
-        remember(list, alreadyInAudience, hidden, isPrivate) {
+        remember(list, alreadyInAudience, hidden) {
             AudienceSelection.buildMembers(
                 list = list,
                 alreadyInAudience = alreadyInAudience,
                 hiddenUsers = hidden.hiddenUsers + hidden.spammers,
-                // A public post is not fanned out per recipient, so an inbox
-                // relay is irrelevant there — flagging it would be noise.
-                flagMissingInboxRelay = isPrivate,
             )
         }
 
@@ -500,7 +497,6 @@ private fun AudienceMemberRow(
             member.isAlreadyInAudience -> MemberBadge(R.string.audience_badge_already_added, MaterialTheme.colorScheme.placeholderText)
             member.isHidden -> MemberBadge(R.string.audience_badge_muted, MaterialTheme.colorScheme.placeholderText)
             member.isPrivateMember -> MemberBadge(R.string.audience_badge_private_member, MaterialTheme.colorScheme.primary)
-            member.isMissingInboxRelay -> MemberBadge(R.string.audience_badge_no_inbox_relay, MaterialTheme.colorScheme.warningColor)
         }
     }
 }
@@ -537,7 +533,10 @@ fun rememberAudienceLists(accountViewModel: AccountViewModel): List<AudienceList
 
 private fun PeopleList.toAudienceList(kind: AudienceListKind) =
     AudienceList(
-        id = identifierTag,
+        // Qualified by kind: a people list and a follow pack are free to share a
+        // d tag, and provenance keys on this string — an unqualified id would let
+        // one list's chip carry the other's title and remove both batches at once.
+        id = kind.name + ":" + identifierTag,
         kind = kind,
         title = title,
         publicMembers = publicMembersList,

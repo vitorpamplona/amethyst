@@ -71,8 +71,6 @@ data class AudienceMember(
     val isPrivateMember: Boolean = false,
     /** Already in the composer's audience; shown for a truthful count, not re-added. */
     val isAlreadyInAudience: Boolean = false,
-    /** No NIP-17 DM inbox relay, so a gift wrap may not reach them. */
-    val isMissingInboxRelay: Boolean = false,
     /** Muted or marked as a spammer by this account. */
     val isHidden: Boolean = false,
 ) {
@@ -115,15 +113,19 @@ object AudienceSelection {
         list: AudienceList,
         alreadyInAudience: Set<HexKey>,
         hiddenUsers: Set<HexKey>,
-        flagMissingInboxRelay: Boolean,
     ): List<AudienceMember> {
+        val publicIds = list.publicMembers.mapTo(mutableSetOf()) { it.pubkeyHex }
         val privateIds = list.privateMembers.mapTo(mutableSetOf()) { it.pubkeyHex }
+
         return list.members().distinctBy { it.pubkeyHex }.map { user ->
             AudienceMember(
                 user = user,
-                isPrivateMember = user.pubkeyHex in privateIds,
+                // Only members that appear *solely* in the encrypted half are a
+                // disclosure risk. Someone listed in both halves is already
+                // public, so warning about them would be noise that trains the
+                // user to ignore the badge that matters.
+                isPrivateMember = user.pubkeyHex in privateIds && user.pubkeyHex !in publicIds,
                 isAlreadyInAudience = user.pubkeyHex in alreadyInAudience,
-                isMissingInboxRelay = flagMissingInboxRelay && user.dmInboxRelayList()?.relays()?.isNotEmpty() != true,
                 isHidden = user.pubkeyHex in hiddenUsers,
             )
         }
@@ -185,17 +187,36 @@ object AudienceSelection {
         incoming: Collection<User>,
         provenance: Map<HexKey, Set<String>>,
         fromListTag: String?,
+        currentlyMuted: Set<HexKey> = emptySet(),
     ): AudienceAddition {
-        val known = current.mapTo(mutableSetOf()) { it.pubkeyHex }
-        val newcomers = incoming.filter { known.add(it.pubkeyHex) }
+        // Snapshot before filtering: the dedup below adds to its own set, so
+        // testing membership against that set afterwards would report every
+        // incoming pubkey as already known.
+        val existing = current.mapTo(mutableSetOf()) { it.pubkeyHex }
 
-        if (fromListTag == null || newcomers.isEmpty()) return AudienceAddition(newcomers, provenance)
+        val appended = mutableSetOf<HexKey>()
+        val newcomers = incoming.filter { it.pubkeyHex !in existing && appended.add(it.pubkeyHex) }
+
+        // A muted person is in pTags but not in the audience, so a list that
+        // contains them genuinely changes the outcome by un-muting them. They
+        // count as introduced even though they are not new to pTags — otherwise
+        // undoing the list would leave them silently in a private note's
+        // audience after every one of their batch-mates had been removed.
+        val seen = mutableSetOf<HexKey>()
+        val introduced =
+            incoming.filter {
+                val alreadyInEffectiveAudience = it.pubkeyHex in existing && it.pubkeyHex !in currentlyMuted
+                !alreadyInEffectiveAudience && seen.add(it.pubkeyHex)
+            }
+        val unmutes = introduced.mapTo(mutableSetOf()) { it.pubkeyHex }
+
+        if (fromListTag == null || introduced.isEmpty()) return AudienceAddition(newcomers, provenance, unmutes)
 
         val next = provenance.toMutableMap()
-        newcomers.forEach { user ->
+        introduced.forEach { user ->
             next[user.pubkeyHex] = (next[user.pubkeyHex] ?: emptySet()) + fromListTag
         }
-        return AudienceAddition(newcomers, next)
+        return AudienceAddition(newcomers, next, unmutes)
     }
 
     /** Members that can be bulk-toggled by "select all" — the already-added rows are locked on. */
@@ -255,9 +276,11 @@ object AudienceSelection {
 
 @Immutable
 data class AudienceAddition(
-    /** People the add genuinely introduced — the rest were in the audience already. */
+    /** People not yet in `pTags` at all — these get appended. */
     val newcomers: List<User>,
     val provenance: Map<HexKey, Set<String>>,
+    /** People this add brings into the effective audience, so their bell comes back on. */
+    val unmutes: Set<HexKey> = emptySet(),
 )
 
 @Immutable
