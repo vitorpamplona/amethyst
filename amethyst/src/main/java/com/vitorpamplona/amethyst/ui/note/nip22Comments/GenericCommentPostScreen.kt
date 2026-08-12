@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -83,7 +84,10 @@ import com.vitorpamplona.amethyst.ui.note.creators.location.GeoHashPostSection
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.MessageField
-import com.vitorpamplona.amethyst.ui.note.creators.notify.Notifying
+import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceFlap
+import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceSelection
+import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceSheet
+import com.vitorpamplona.amethyst.ui.note.creators.notify.rememberAudienceLists
 import com.vitorpamplona.amethyst.ui.note.creators.pow.PowOverrideButton
 import com.vitorpamplona.amethyst.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.ui.note.creators.secretEmoji.AddSecretEmojiButton
@@ -232,8 +236,34 @@ private fun GenericCommentPostBody(
     nav: Nav,
 ) {
     val scrollState = rememberScrollState()
+    val audienceLists = rememberAudienceLists(accountViewModel)
 
     Column(Modifier.fillMaxSize()) {
+        // Hosted outside the scrolling content: the sheet is its own window, so
+        // it survives wherever the composer scrolls to.
+        if (postViewModel.wantsToManageAudience) {
+            AudienceSheet(
+                audience = postViewModel.notifying?.toImmutableList() ?: persistentListOf(),
+                mutedNotifies = postViewModel.mutedNotifies.toImmutableSet(),
+                isPrivate = false,
+                searchState = postViewModel.audienceSearchText,
+                onSearchChanged = postViewModel::onAudienceSearchTextChanged,
+                userSuggestions = postViewModel.userSuggestions,
+                accountViewModel = accountViewModel,
+                onAddUser = {
+                    postViewModel.addAllToAudience(listOf(it))
+                    postViewModel.audienceSearchText.clearText()
+                    postViewModel.userSuggestions?.reset()
+                },
+                onAddList = { list, users -> postViewModel.addAllToAudience(users, list.id) },
+                onDismiss = {
+                    postViewModel.wantsToManageAudience = false
+                    postViewModel.audienceSearchText.clearText()
+                    postViewModel.userSuggestions?.reset()
+                },
+            )
+        }
+
         Row(
             modifier =
                 Modifier
@@ -274,15 +304,33 @@ private fun GenericCommentPostBody(
                     }
                 }
 
-                Row {
-                    Notifying(
-                        baseMentions = postViewModel.notifying?.toImmutableList(),
-                        accountViewModel = accountViewModel,
-                        mutedNotifies = postViewModel.mutedNotifies.toImmutableSet(),
-                    ) {
-                        postViewModel.toggleNotify(it)
+                val audience = remember(postViewModel.notifying) { postViewModel.notifying?.toImmutableList() ?: persistentListOf() }
+                val mutedNotifies = remember(postViewModel.mutedNotifies) { postViewModel.mutedNotifies.toImmutableSet() }
+                val groupChips =
+                    remember(postViewModel.notifyProvenance, audience, mutedNotifies, audienceLists) {
+                        AudienceSelection
+                            .activeGroupChips(
+                                provenance = postViewModel.notifyProvenance,
+                                audience =
+                                    audience.mapNotNullTo(mutableSetOf()) {
+                                        it.pubkeyHex.takeIf { hex -> hex !in mutedNotifies }
+                                    },
+                                lists = audienceLists,
+                            ).toImmutableList()
                     }
-                }
+
+                AudienceFlap(
+                    audience = audience,
+                    // A comment is never gift-wrapped, so the flap stays in its
+                    // quiet notify form here.
+                    isPrivate = false,
+                    accountViewModel = accountViewModel,
+                    mutedNotifies = mutedNotifies,
+                    groupChips = groupChips,
+                    onManage = { postViewModel.wantsToManageAudience = true },
+                    onRemoveGroup = { postViewModel.removeListFromAudience(it) },
+                    onToggleNotify = { postViewModel.toggleNotify(it) },
+                )
 
                 Row(
                     modifier = Modifier.padding(vertical = Size10dp),

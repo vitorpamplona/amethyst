@@ -327,19 +327,19 @@ private fun NewPostScreenBody(
                 audience = audience,
                 mutedNotifies = mutedNotifies,
                 isPrivate = postViewModel.wantsPrivateNote,
-                searchState = postViewModel.notifyUserSearchText,
-                onSearchChanged = postViewModel::onNotifyUserSearchTextChanged,
+                searchState = postViewModel.audienceSearchText,
+                onSearchChanged = postViewModel::onAudienceSearchTextChanged,
                 userSuggestions = postViewModel.userSuggestions,
                 accountViewModel = accountViewModel,
                 onAddUser = {
-                    postViewModel.addAllToReplyList(listOf(it))
-                    postViewModel.notifyUserSearchText.clearText()
+                    postViewModel.addAllToAudience(listOf(it))
+                    postViewModel.audienceSearchText.clearText()
                     postViewModel.userSuggestions?.reset()
                 },
-                onAddList = { list, users -> postViewModel.addAllToReplyList(users, list.id) },
+                onAddList = { list, users -> postViewModel.addAllToAudience(users, list.id) },
                 onDismiss = {
                     postViewModel.wantsToManageAudience = false
-                    postViewModel.notifyUserSearchText.clearText()
+                    postViewModel.audienceSearchText.clearText()
                     postViewModel.userSuggestions?.reset()
                 },
             )
@@ -383,7 +383,7 @@ private fun NewPostScreenBody(
                     mutedNotifies = mutedNotifies,
                     groupChips = groupChips,
                     onManage = { postViewModel.wantsToManageAudience = true },
-                    onRemoveGroup = { postViewModel.removeListFromReplyList(it) },
+                    onRemoveGroup = { postViewModel.removeListFromAudience(it) },
                     onToggleNotify = { postViewModel.toggleNotify(it) },
                 )
 

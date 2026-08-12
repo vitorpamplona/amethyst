@@ -76,7 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
-import com.vitorpamplona.amethyst.ui.note.creators.notify.AudienceSelection
+import com.vitorpamplona.amethyst.ui.note.creators.notify.IAudience
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
@@ -191,7 +191,8 @@ open class ShortNotePostViewModel :
     IMessageField,
     IZapField,
     IZapRaiser,
-    IExpiration {
+    IExpiration,
+    IAudience {
     val draftTag = DraftTagState()
 
     // Strong reference to the live cache note for the current draft tag (derived from the
@@ -225,6 +226,16 @@ open class ShortNotePostViewModel :
 
     var pTags by mutableStateOf<List<User>?>(null)
     var eTags by mutableStateOf<List<Note>?>(null)
+
+    // IAudience maps onto pTags rather than replacing it: the field is read all
+    // over createTemplate and the draft loaders under that name.
+    override var audienceMembers: List<User>?
+        get() = pTags
+        set(value) {
+            pTags = value
+        }
+
+    override fun onAudienceChanged() = draftTag.newVersion()
 
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
@@ -357,20 +368,13 @@ open class ShortNotePostViewModel :
     // Notify / Visible-to editor: lets the user p-tag people who aren't
     // cited in the message. For private notes the Notify list IS the
     // audience, so this is how receivers are picked.
-    val notifyUserSearchText = TextFieldState()
+    override val audienceSearchText = TextFieldState()
+    override var wantsToManageAudience by mutableStateOf(false)
+    override var notifyProvenance by mutableStateOf<Map<HexKey, Set<String>>>(emptyMap())
 
-    // The audience sheet: search, people lists and follow packs all live
-    // behind this one flag.
-    var wantsToManageAudience by mutableStateOf(false)
-
-    // Display-only record of which list each pubkey arrived from, so a bulk
-    // add can be undone as a unit (the group chip's ✕). Never read when
-    // building the event — the p tags always come from [activeNotifies].
-    var notifyProvenance by mutableStateOf<Map<HexKey, Set<String>>>(emptyMap())
-
-    fun onNotifyUserSearchTextChanged() {
-        if (notifyUserSearchText.selection.collapsed) {
-            val lastWord = notifyUserSearchText.text.toString()
+    fun onAudienceSearchTextChanged() {
+        if (audienceSearchText.selection.collapsed) {
+            val lastWord = audienceSearchText.text.toString()
             userSuggestionsMainMessage = UserSuggestionAnchor.NOTIFY
             userSuggestions?.processCurrentWord(lastWord)
         }
@@ -379,82 +383,7 @@ open class ShortNotePostViewModel :
     // Members of pTags whose bell is off: they keep their chip in the Notify
     // list (so they are one tap away from being added back) but are dropped
     // from the outgoing event's p tags.
-    var mutedNotifies by mutableStateOf<Set<HexKey>>(emptySet())
-
-    fun toggleNotify(user: User) {
-        mutedNotifies =
-            if (user.pubkeyHex in mutedNotifies) {
-                mutedNotifies - user.pubkeyHex
-            } else {
-                mutedNotifies + user.pubkeyHex
-            }
-        draftTag.newVersion()
-    }
-
-    // The users that will actually be p-tagged: the chip list minus the muted ones.
-    fun activeNotifies(): List<User>? = pTags?.filter { it.pubkeyHex !in mutedNotifies }
-
-    fun addToReplyList(user: User) {
-        if (pTags?.contains(user) != true) {
-            pTags = (pTags ?: emptyList()).plus(user)
-        }
-        mutedNotifies = mutedNotifies - user.pubkeyHex
-    }
-
-    /**
-     * Bulk sibling of [addToReplyList], used when a whole people list or follow
-     * pack is added at once. Deliberately one state write per field: calling
-     * [addToReplyList] N times would recompose the audience row N times and
-     * bump the draft version N times, saving N drafts for one user gesture.
-     *
-     * [fromListTag] records provenance so the group chip can undo exactly this
-     * batch later; pass null for people picked one at a time.
-     */
-    fun addAllToReplyList(
-        users: Collection<User>,
-        fromListTag: String? = null,
-    ) {
-        if (users.isEmpty()) return
-
-        val current = pTags ?: emptyList()
-        val addition =
-            AudienceSelection.addToAudience(
-                current = current,
-                incoming = users,
-                provenance = notifyProvenance,
-                fromListTag = fromListTag,
-                currentlyMuted = mutedNotifies,
-            )
-
-        if (addition.newcomers.isNotEmpty()) {
-            pTags = current + addition.newcomers
-        }
-
-        // Anyone re-added by a list gets their bell back: the list says they
-        // are part of the audience, and a muted chip would silently drop them.
-        if (mutedNotifies.any { it in addition.unmutes }) {
-            mutedNotifies = mutedNotifies - addition.unmutes
-        }
-
-        notifyProvenance = addition.provenance
-
-        draftTag.newVersion()
-    }
-
-    /**
-     * Removes a whole bulk add. People who also arrived from another list, or
-     * who were added by hand, stay — only the ones this list alone brought in
-     * are dropped.
-     */
-    fun removeListFromReplyList(listId: String) {
-        val removal = AudienceSelection.removeListFromProvenance(notifyProvenance, listId)
-        notifyProvenance = removal.provenance
-        if (removal.orphaned.isNotEmpty()) {
-            pTags = pTags?.filterNot { it.pubkeyHex in removal.orphaned }?.ifEmpty { null }
-            mutedNotifies = mutedNotifies - removal.orphaned
-        }
-        draftTag.newVersion()
-    }
+    override var mutedNotifies by mutableStateOf<Set<HexKey>>(emptySet())
 
     // A single ephemeral signer reused for the whole compose session so that media
     // uploads (Blossom/NIP-96 auth events) and the final anonymous post are all signed
@@ -1292,7 +1221,7 @@ open class ShortNotePostViewModel :
                         notify(replyingTo.toPTag())
                     }
                 }
-                activeNotifies()?.let { userList ->
+                activeAudience()?.let { userList ->
                     val tags =
                         userList.map {
                             val tag = it.toPTag()
@@ -1312,7 +1241,7 @@ open class ShortNotePostViewModel :
         val tagger =
             NewMessageTagger(
                 message.text.toString().trim(),
-                activeNotifies(),
+                activeAudience(),
                 eTags,
                 accountViewModel,
             )
@@ -1666,8 +1595,7 @@ open class ShortNotePostViewModel :
         powOverride = null
         wantsPrivateNote = false
         privateNoteLocked = false
-        wantsToManageAudience = false
-        notifyUserSearchText.clearText()
+        resetAudienceEditor()
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.clearText()
@@ -1729,8 +1657,8 @@ open class ShortNotePostViewModel :
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.clearText()
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.NOTIFY) {
-                addToReplyList(item)
-                notifyUserSearchText.clearText()
+                addAllToAudience(listOf(item))
+                audienceSearchText.clearText()
             }
 
             userSuggestionsMainMessage = null

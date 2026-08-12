@@ -90,8 +90,8 @@ import kotlinx.collections.immutable.persistentSetOf
  * The composer's audience control: who is p-tagged, and — when the note is
  * private — who can decrypt it at all.
  *
- * Replaces the old flat [Notifying] row for the short-note composer. Two things
- * differ:
+ * Replaces the old flat `Notifying` row in every composer that had one. Two
+ * things differ:
  *
  * 1. It is a **container**, tinted when the note is sealed, so the audience
  *    reads as the flap of the envelope the message sits in rather than as loose
@@ -101,7 +101,9 @@ import kotlinx.collections.immutable.persistentSetOf
  *    the row is expanded, so a bulk add from a people list can no longer push
  *    the message field off screen.
  *
- * [Notifying] stays as it was for the comment composer, which has not opted in.
+ * Used by the short-note composer (new post, reply, quote, fork, draft, group
+ * thread, poll) and by the NIP-22 comment composer behind the url, geohash,
+ * hashtag and generic-comment screens.
  */
 @Composable
 fun AudienceFlap(
@@ -397,8 +399,9 @@ private fun AudienceDetail(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // See Notifying: the chips' 48dp minimum touch target would otherwise
-        // dominate the gap between wrapped rows.
+        // The chips render through a selectable Surface that enforces a 48dp
+        // minimum touch target, which would otherwise dominate the gap between
+        // wrapped rows and swamp verticalArrangement.
         CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
             groupChips.forEach { group ->
                 key(group.listId) {
@@ -408,7 +411,7 @@ private fun AudienceDetail(
 
             // Deduped before keying: Compose throws on a duplicate key, and pTags
             // can carry the same pubkey twice (a draft round-trips whatever p tags
-            // the event had). The Notifying row this replaces deduped via toSet().
+            // the event had). The flat row this replaces deduped via toSet().
             audience.distinctBy { it.pubkeyHex }.forEach { user ->
                 key(user.pubkeyHex) {
                     AudienceMemberChip(
