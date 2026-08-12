@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -51,7 +52,7 @@ object EncryptedMediaService {
 
         return withContext(Dispatchers.IO) {
             val request = Request.Builder().url(url).build()
-            val response = httpClient.newCall(request).execute()
+            val response = httpClient.newCall(request).executeAsync()
             val encryptedBytes =
                 response.use {
                     if (!it.isSuccessful) throw RuntimeException("Download failed: ${it.code}")

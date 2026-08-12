@@ -30,6 +30,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -67,7 +68,7 @@ class Nip11Fetcher {
         }
     }
 
-    private fun fetchFromNetwork(url: NormalizedRelayUrl): Nip11RelayInformation? {
+    private suspend fun fetchFromNetwork(url: NormalizedRelayUrl): Nip11RelayInformation? {
         // FAIL-CLOSED: use currentClient() not getHttpClient()
         val client = DesktopHttpClient.currentClient()
         val httpUrl = url.toHttp()
@@ -78,7 +79,7 @@ class Nip11Fetcher {
                 .header("Accept", "application/nostr+json")
                 .build()
         return try {
-            client.newCall(request).execute().use { response ->
+            client.newCall(request).executeAsync().use { response ->
                 if (response.isSuccessful) {
                     val source = response.body.source()
                     source.request(MAX_RESPONSE_BYTES) // buffer up to limit

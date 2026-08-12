@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 
 /**
  * Fetches and parses the live georelays CSV so the [GeoRelayDirectory] can route
@@ -44,7 +45,7 @@ class GeoRelayCsvLoader(
                     .url(url)
                     .get()
                     .build()
-            okHttpClient(url).newCall(request).execute().use { response ->
+            okHttpClient(url).newCall(request).executeAsync().use { response ->
                 if (response.isSuccessful) {
                     GeoRelayDirectory.parseCsv(response.body.string())
                 } else {

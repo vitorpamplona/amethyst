@@ -36,6 +36,7 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import okhttp3.coroutines.executeAsync
 import okio.BufferedSink
 import okio.source
 import java.io.File
@@ -149,7 +150,7 @@ open class BlossomClient(
                         paymentProof?.headers()?.forEach { (name, value) -> addHeader(name, value) }
                     }.put(body)
                     .build()
-            okHttpClient.newCall(request).execute().use { response ->
+            okHttpClient.newCall(request).executeAsync().use { response ->
                 if (response.code in MIRROR_UNSUPPORTED_CODES) {
                     throw BlossomMirrorUnsupportedException(serverBaseUrl, response.code)
                 }
@@ -208,7 +209,7 @@ open class BlossomClient(
                     .apply { authHeader?.let { addHeader("Authorization", it) } }
                     .get()
                     .build()
-            okHttpClient.newCall(request).execute().use { response ->
+            okHttpClient.newCall(request).executeAsync().use { response ->
                 check402(response, serverBaseUrl)
                 if (!response.isSuccessful) {
                     val reason = response.headers[BlossomServerUrl.REASON_HEADER] ?: response.code.toString()
@@ -237,7 +238,7 @@ open class BlossomClient(
                     .apply { authHeader?.let { addHeader("Authorization", it) } }
                     .delete()
                     .build()
-            okHttpClient.newCall(request).execute().use { it.isSuccessful }
+            okHttpClient.newCall(request).executeAsync().use { it.isSuccessful }
         }
 
     /**
@@ -256,7 +257,7 @@ open class BlossomClient(
                     .head()
                     .build()
             try {
-                okHttpClient.newCall(request).execute().use { it.isSuccessful }
+                okHttpClient.newCall(request).executeAsync().use { it.isSuccessful }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -289,7 +290,7 @@ open class BlossomClient(
                     .addHeader(BlossomServerUrl.X_CONTENT_TYPE_HEADER, contentType)
                     .apply { authHeader?.let { addHeader("Authorization", it) } }
                     .build()
-            okHttpClient.newCall(request).execute().use { response ->
+            okHttpClient.newCall(request).executeAsync().use { response ->
                 BlossomPreflightResult(
                     accepted = response.isSuccessful,
                     status = response.code,
@@ -313,7 +314,7 @@ open class BlossomClient(
                     .url(BlossomServerUrl.report(serverBaseUrl))
                     .put(reportEventJson.toRequestBody("application/json".toMediaType()))
                     .build()
-            okHttpClient.newCall(request).execute().use { it.isSuccessful }
+            okHttpClient.newCall(request).executeAsync().use { it.isSuccessful }
         }
 
     /**
@@ -335,7 +336,7 @@ open class BlossomClient(
                     .url(url)
                     .get()
                     .build()
-            okHttpClient.newCall(request).execute().use { response ->
+            okHttpClient.newCall(request).executeAsync().use { response ->
                 if (response.isSuccessful) response.body.bytes() else null
             }
         }
@@ -368,7 +369,7 @@ open class BlossomClient(
                     .apply { authHeader?.let { addHeader("Authorization", it) } }
                     .put(body)
                     .build()
-            okHttpClient.newCall(request).execute().use { parseDescriptor(it, serverBaseUrl) }
+            okHttpClient.newCall(request).executeAsync().use { parseDescriptor(it, serverBaseUrl) }
         }
 
     private fun parseDescriptor(

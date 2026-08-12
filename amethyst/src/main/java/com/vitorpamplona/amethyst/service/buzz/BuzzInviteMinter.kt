@@ -30,6 +30,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.coroutines.executeAsync
 
 /**
  * Mints a `block/buzz` workspace invite link by POSTing to the relay's **Buzz-specific**
@@ -86,7 +87,7 @@ object BuzzInviteMinter {
                     .post(bodyBytes.toRequestBody("application/json".toMediaType()))
                     .build()
 
-            okHttpClient(url).newCall(request).execute().use { response ->
+            okHttpClient(url).newCall(request).executeAsync().use { response ->
                 val payload = response.body.string()
                 val tree = runCatching { json.readTree(payload) }.getOrNull()
 

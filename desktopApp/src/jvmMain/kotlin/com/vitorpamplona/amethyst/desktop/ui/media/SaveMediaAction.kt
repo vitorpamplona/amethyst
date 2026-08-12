@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -59,7 +60,7 @@ object SaveMediaAction {
         return withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder().url(url).build()
-                val response = httpClient.newCall(request).execute()
+                val response = httpClient.newCall(request).executeAsync()
                 response.use { resp ->
                     if (!resp.isSuccessful) return@withContext null
                     val total = resp.body.contentLength()

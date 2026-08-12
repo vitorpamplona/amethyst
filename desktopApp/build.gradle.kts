@@ -47,6 +47,7 @@ dependencies {
 
     // Networking
     implementation(libs.okhttp)
+    implementation(libs.okhttpCoroutines)
 
     // JSON
     implementation(libs.jackson.module.kotlin)

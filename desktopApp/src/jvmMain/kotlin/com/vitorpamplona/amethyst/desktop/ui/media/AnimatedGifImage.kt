@@ -41,6 +41,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
@@ -131,10 +132,10 @@ fun AnimatedGifImage(
     }
 }
 
-private fun decodeGifFrames(url: String): GifFrames? =
+private suspend fun decodeGifFrames(url: String): GifFrames? =
     try {
         val request = Request.Builder().url(url).build()
-        val response = gifHttpClient.newCall(request).execute()
+        val response = gifHttpClient.newCall(request).executeAsync()
         val bytes = response.body.bytes()
 
         val skData = Data.makeFromBytes(bytes)

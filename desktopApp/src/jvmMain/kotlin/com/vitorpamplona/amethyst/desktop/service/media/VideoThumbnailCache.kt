@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import org.jcodec.api.FrameGrab
 import org.jcodec.common.io.NIOUtils
 import org.jcodec.common.model.ColorSpace
@@ -122,7 +123,7 @@ object VideoThumbnailCache {
         }
     }
 
-    private fun extractFirstFrame(url: String): ImageBitmap? {
+    private suspend fun extractFirstFrame(url: String): ImageBitmap? {
         // For HLS we skip straight to ffmpeg — JCodec can't read m3u8.
         val isHls = url.contains(".m3u8", ignoreCase = true) || url.contains("/hls/", ignoreCase = true)
 
@@ -163,7 +164,7 @@ object VideoThumbnailCache {
      *
      * Cleans up zero-byte cache files on failure so a transient empty response isn't sticky.
      */
-    private fun downloadFirstChunk(url: String): Download? {
+    private suspend fun downloadFirstChunk(url: String): Download? {
         val hash = sha1Hex(url)
         val cached = File(downloadCacheDir, "$hash.mp4")
         if (cached.length() > 0L) return Download(cached, persistable = true)
@@ -171,7 +172,7 @@ object VideoThumbnailCache {
 
         var wrote = false
         var rangeHonored = false
-        DesktopHttpClient.currentClient().newCall(buildRangeRequest(url)).execute().use { resp ->
+        DesktopHttpClient.currentClient().newCall(buildRangeRequest(url)).executeAsync().use { resp ->
             if (!resp.isSuccessful && resp.code != 206) return null
             val contentType = resp.header("Content-Type")?.lowercase().orEmpty()
             if (contentType.startsWith("text/") || "html" in contentType) return null

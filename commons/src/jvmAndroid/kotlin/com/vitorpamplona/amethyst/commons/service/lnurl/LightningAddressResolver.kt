@@ -30,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.URLEncoder
@@ -191,7 +192,7 @@ class LightningAddressResolver(
         withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder().url(url).build()
-                httpClient.newCall(request).execute().use { response ->
+                httpClient.newCall(request).executeAsync().use { response ->
                     if (response.isSuccessful) {
                         response.body.string()
                     } else {
@@ -222,7 +223,7 @@ class LightningAddressResolver(
                 }
 
                 val request = Request.Builder().url(url).build()
-                httpClient.newCall(request).execute().use { response ->
+                httpClient.newCall(request).executeAsync().use { response ->
                     // Return body even on error — caller extracts "reason" or "message" from JSON
                     response.body.string()
                 }

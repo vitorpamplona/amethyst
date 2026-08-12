@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 
 object ServerHealthCheck {
     enum class ServerStatus {
@@ -45,7 +46,7 @@ object ServerHealthCheck {
                         .url(url)
                         .head()
                         .build()
-                val response = DesktopHttpClient.currentClient().newCall(request).execute()
+                val response = DesktopHttpClient.currentClient().newCall(request).executeAsync()
                 response.use {
                     if (it.isSuccessful || it.code == 405) ServerStatus.ONLINE else ServerStatus.OFFLINE
                 }
