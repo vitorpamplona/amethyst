@@ -1154,13 +1154,13 @@
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
     <string name="relay_auth_login_as">Log in as %1$s?</string>
     <string name="relay_auth_relay_asks">asks who you are</string>
-    <string name="relay_auth_why_send_dm">It won\'t accept your message for %1$s from someone it can\'t identify.</string>
-    <string name="relay_auth_why_notify_inbox">%1$s won\'t hear about your reply unless it can identify the sender.</string>
-    <string name="relay_auth_why_read_outbox">It won\'t serve posts from %1$s to readers it can\'t identify.</string>
-    <string name="relay_auth_why_post_venue">It won\'t accept your post in %1$s from someone it can\'t identify.</string>
-    <string name="relay_auth_why_read_venue">It won\'t serve %1$s to readers it can\'t identify.</string>
-    <string name="relay_auth_why_my_inbox">It won\'t serve your incoming replies, zaps and messages to readers it can\'t identify.</string>
-    <string name="relay_auth_why_thread">It won\'t serve the rest of this conversation to readers it can\'t identify.</string>
+    <string name="relay_auth_why_send_dm">It won\'t accept your message for %1$s unless you log in.</string>
+    <string name="relay_auth_why_notify_inbox">%1$s won\'t hear about your reply unless you log in.</string>
+    <string name="relay_auth_why_read_outbox">It won\'t serve posts from %1$s unless you log in.</string>
+    <string name="relay_auth_why_post_venue">It won\'t accept your post in %1$s unless you log in.</string>
+    <string name="relay_auth_why_read_venue">It won\'t serve %1$s unless you log in.</string>
+    <string name="relay_auth_why_my_inbox">It won\'t serve your incoming replies, zaps and messages unless you log in.</string>
+    <string name="relay_auth_why_thread">It won\'t serve the rest of this conversation unless you log in.</string>
     <string name="relay_auth_why_my_own_relay">This is one of your own relays, and it asks everyone to log in.</string>
     <string name="relay_auth_why_other">It asks everyone to log in. Amethyst can\'t tell what it\'s holding back.</string>
     <string name="relay_auth_someone_unloaded">someone you haven\'t loaded yet</string>
