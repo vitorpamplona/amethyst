@@ -13,6 +13,7 @@ _Audited 2026-06-30. 6 plans: 2 shipped (archived), 2 in-progress, 2 queued, 0 a
 | ---- | ------- |
 | [2026-04-21-event-renderer.md](2026-04-21-event-renderer.md) | Cross-platform UI-agnostic `RenderedEvent` subsystem shared by Amy, Desktop, and Android; not started. |
 | [2026-05-30-amethyst-to-commons-migration.md](2026-05-30-amethyst-to-commons-migration.md) | Roadmap to move shared `amethyst` Android code into `commons`; keystone `Account`/`LocalCache` extraction not begun. |
+| [2026-08-03-poll-results-page.md](2026-08-03-poll-results-page.md) | Extended NIP-88 poll results page (per-option counts + who voted for what) for Android and Desktop; also specifies four tally-correctness fixes and the missing poll-relay subscription. Proposed, not started. |
 
 ## Archived (shipped)
 | Plan | Summary |

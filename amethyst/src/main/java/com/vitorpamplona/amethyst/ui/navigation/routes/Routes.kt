@@ -575,6 +575,10 @@ sealed class Route {
         val noteId: String,
     ) : Route()
 
+    @Serializable data class PollResults(
+        val noteId: String,
+    ) : Route()
+
     @Serializable data class Hashtag(
         val hashtag: String,
     ) : Route()

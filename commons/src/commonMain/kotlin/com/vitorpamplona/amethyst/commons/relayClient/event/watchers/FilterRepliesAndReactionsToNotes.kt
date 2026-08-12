@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.NIP90StatusEvent
@@ -87,6 +88,14 @@ fun filterRepliesAndReactionsToNotes(
         mapOfSet {
             events.forEach { note ->
                 note.relayUrlsForReactions().forEach { relay ->
+                    add(relay, note.idHex)
+                }
+
+                // NIP-88 tells respondents to publish their kind-1018 votes to the relays the poll
+                // itself declares, and EventBroadcaster obeys that on the way out. Those relays are
+                // usually not the author's inbox nor where we saw the poll, so without this the
+                // tally silently under-counts — often down to just our own vote.
+                (note.event as? PollEvent)?.relays()?.forEach { relay ->
                     add(relay, note.idHex)
                 }
             }

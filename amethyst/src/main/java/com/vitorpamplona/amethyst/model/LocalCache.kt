@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilter
@@ -2946,11 +2947,31 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             val new = consumeRegularEvent(event, relay, wasVerified)
             if (new) {
                 pollNote.pollState().addResponse(responseNote)
+                // Responses and their poll race each other. If the poll is already here, hand the
+                // tally its rules now; if it isn't, consume(PollEvent) does it on arrival.
+                (pollNote.event as? PollEvent)?.let {
+                    pollNote.pollState().updatePolicy(PollTallyPolicy.from(it))
+                }
             }
             return new
         }
 
         return false
+    }
+
+    fun consume(
+        event: PollEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeRegularEvent(event, relay, wasVerified)
+        attachToRelayGroupIfScoped(event, relay)
+
+        // Not gated on `new`: the tally may have been built from responses that arrived before this
+        // poll did, and updatePolicy is idempotent for the usual re-delivery from another relay.
+        getOrCreateNote(event.id).pollState().updatePolicy(PollTallyPolicy.from(event))
+
+        return new
     }
 
     fun consume(
@@ -3528,11 +3549,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                     }
                 }
 
-                is PollEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified).also {
-                        attachToRelayGroupIfScoped(event, relay)
-                    }
-                }
+                is PollEvent -> consume(event, relay, wasVerified)
 
                 is ThreadEvent -> {
                     consumeRegularEvent(event, relay, wasVerified).also {

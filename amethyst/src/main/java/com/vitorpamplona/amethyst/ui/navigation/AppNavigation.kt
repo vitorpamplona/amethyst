@@ -242,6 +242,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.NewPodca
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.PodcastAuthoringScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.PollResultsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.ProductsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
@@ -631,6 +632,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.ShareNoteAsQr> { ShareNoteAsQrScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.ContactListUsers> { ContactListUsersScreen(it.noteId, accountViewModel, nav) }
+        composableFromEndArgs<Route.PollResults> { PollResultsScreen(it.noteId, accountViewModel, nav) }
         composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.Url> { UrlScreen(it, accountViewModel, nav) }
