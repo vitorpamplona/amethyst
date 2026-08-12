@@ -988,6 +988,7 @@
     <string name="private_note_locked">ব্যক্তিগত নোটের উত্তর সবসময় ব্যক্তিগত থাকে</string>
     <string name="private_note_visible_to">দৃশ্যমান</string>
     <string name="private_note_no_receivers">এখনো কোনো প্রাপক নেই: শুধুমাত্র আপনি এই নোট দেখতে পাবেন। শেয়ার করতে লোক যোগ করুন।</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">যোগ করুন</string>
     <string name="notify_remove_user">বিজ্ঞপ্তি থেকে ব্যবহারকারী সরান</string>
     <string name="notify_search_and_add_user">বিজ্ঞাপনের জন্য ব্যবহারকারী অনুসন্ধান ও যোগ করুন</string>

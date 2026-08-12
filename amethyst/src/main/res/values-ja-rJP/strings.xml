@@ -976,6 +976,7 @@
     <string name="private_note_locked">プライベートノートへの返信は常にプライベートのままです</string>
     <string name="private_note_visible_to">閲覧可能なユーザー</string>
     <string name="private_note_no_receivers">まだ受信者がいません：あなただけがこのノートを見ることができます。共有したい人を追加してください。</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">追加</string>
     <string name="notify_remove_user">通知からユーザーを削除</string>
     <string name="notify_search_and_add_user">通知するユーザーを検索して追加</string>

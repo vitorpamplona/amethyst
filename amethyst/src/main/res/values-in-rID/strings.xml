@@ -954,6 +954,7 @@
     <string name="private_note_locked">Balasan ke catatan pribadi selalu tetap pribadi</string>
     <string name="private_note_visible_to">Terlihat oleh</string>
     <string name="private_note_no_receivers">Belum ada penerima: hanya Anda yang dapat melihat catatan ini. Tambahkan orang untuk berbagi.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Tambah</string>
     <string name="notify_remove_user">Hapus pengguna dari notifikasi</string>
     <string name="notify_search_and_add_user">Cari dan tambah pengguna untuk diberitahu</string>

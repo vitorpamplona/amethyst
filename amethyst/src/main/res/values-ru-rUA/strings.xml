@@ -995,6 +995,7 @@
     <string name="private_note_locked">Ответы на приватную заметку всегда остаются приватными</string>
     <string name="private_note_visible_to">Видно для</string>
     <string name="private_note_no_receivers">Получателей пока нет: только вы сможете видеть эту заметку. Добавьте людей, чтобы поделиться с ними.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Добавить</string>
     <string name="notify_remove_user">Удалить пользователя из уведомлений</string>
     <string name="notify_search_and_add_user">Найти и добавить пользователя для уведомления</string>

@@ -1461,6 +1461,7 @@
     <string name="private_note_locked">Svar på en privat anteckning förblir alltid privata</string>
     <string name="private_note_visible_to">Synlig för</string>
     <string name="private_note_no_receivers">Inga mottagare ännu: bara du kommer att kunna se den här anteckningen. Lägg till personer att dela den med.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Lägg till</string>
     <string name="notify_remove_user">Ta bort användare från aviseringar</string>
     <string name="notify_mute_user">Aviserar. Tryck för att tysta aviseringen för den här användaren</string>

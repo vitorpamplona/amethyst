@@ -1004,6 +1004,7 @@
     <string name="private_note_locked">Відповіді на приватну нотатку завжди залишаються приватними</string>
     <string name="private_note_visible_to">Видно для</string>
     <string name="private_note_no_receivers">Немає одержувачів: лише ви зможете бачити цю нотатку. Додайте людей, щоб поділитися нею.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Додати</string>
     <string name="notify_remove_user">Видалити користувача з сповіщень</string>
     <string name="notify_search_and_add_user">Знайти та додати користувача для сповіщення</string>

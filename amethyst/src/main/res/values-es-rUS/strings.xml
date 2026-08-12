@@ -1001,6 +1001,7 @@
     <string name="private_note_locked">Las respuestas a una nota privada siempre permanecen privadas</string>
     <string name="private_note_visible_to">Visible para</string>
     <string name="private_note_no_receivers">Aún no hay destinatarios: solo tú podrás ver esta nota. Añade personas para compartirla.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Añadir</string>
     <string name="notify_remove_user">Eliminar usuario de las notificaciones</string>
     <string name="notify_search_and_add_user">Buscar y añadir un usuario para notificar</string>

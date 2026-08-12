@@ -982,6 +982,7 @@
     <string name="private_note_locked">தனிப்பட்ட குறிப்புக்கான பதில்கள் எப்போதும் தனிப்பட்டதாக இருக்கும்</string>
     <string name="private_note_visible_to">யாருக்கு தெரியும்</string>
     <string name="private_note_no_receivers">இன்னும் பெறுநர்கள் இல்லை: இந்த குறிப்பை நீங்கள் மட்டுமே காண முடியும். பகிர்வதற்கு மக்களை சேர்க்கவும்.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">சேர்</string>
     <string name="notify_remove_user">அறிவிப்புகளிலிருந்து பயனரை நீக்கு</string>
     <string name="notify_search_and_add_user">அறிவிக்க ஒரு பயனரை தேடி சேர்க்கவும்</string>

@@ -976,6 +976,7 @@
     <string name="private_note_locked">Οι απαντήσεις σε ιδιωτική σημείωση παραμένουν πάντα ιδιωτικές</string>
     <string name="private_note_visible_to">Ορατό σε</string>
     <string name="private_note_no_receivers">Δεν υπάρχουν ακόμη παραλήπτες: μόνο εσείς θα μπορείτε να δείτε αυτή τη σημείωση. Προσθέστε άτομα για να τη μοιραστείτε μαζί τους.</string>
+    <!-- Composer audience control (Notify / "Visible to") -->
     <string name="notify_add_user">Προσθήκη</string>
     <string name="notify_remove_user">Αφαίρεση χρήστη από τις ειδοποιήσεις</string>
     <string name="notify_search_and_add_user">Αναζητήστε και προσθέστε έναν χρήστη για ειδοποίηση</string>
