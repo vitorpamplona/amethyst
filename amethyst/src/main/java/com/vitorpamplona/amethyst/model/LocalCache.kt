@@ -847,6 +847,15 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     fun getOrCreateConcordChannel(key: ConcordChannelId): ConcordChannel = concordChannels.getOrCreate(key) { ConcordChannel(key) }
 
     /**
+     * Any known channel of Concord community [communityId], or null when we hold none.
+     *
+     * A community is not itself a cached object — it has no metadata event, only a folded Control
+     * Plane — so its display fields (`communityName`, icon, relays) are carried on every one of its
+     * channels. Callers that need to *name* a community therefore ask for whichever channel we have.
+     */
+    fun getAnyConcordChannelOfCommunity(communityId: HexKey): ConcordChannel? = concordChannels.filter { key, _ -> key.communityId == communityId }.firstOrNull()
+
+    /**
      * Lands a decrypted Concord chat rumor in the cache as a real Note and, for
      * message-like kinds, attaches it to its channel so the shared chat feed and
      * the Messages inbox render it (with previews, threading, OTS, reactions/zaps

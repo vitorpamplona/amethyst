@@ -37,6 +37,14 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
  * [globalPolicy] → prompt-if-attributable-else-deny. Under [RelayAuthPolicy.CUSTOM] the
  * [customToggles] gate each category, using [isFollowed] to split the counterparties carried in the
  * [RelayAuthContext] into followed vs. stranger.
+ *
+ * Venues come in two shapes and both count as "a room I joined" for the
+ * [RelayAuthCustomToggles.myRelaysAndVenues] toggle: [isTrustedVenue] recognizes a venue *id* named
+ * by a purpose (a NIP-28 chat, a NIP-72 community, a NIP-53 stream, a NIP-29 group id, a Concord
+ * community id), while [isVenueHostRelay] recognizes the relay that *hosts* one — the only signal
+ * available for a room whose traffic never names it in a way the deriver can see, or whose challenge
+ * arrives before its subscription does. [isTrustedVenue] is asked about the (relay, venue) pair
+ * rather than the id alone because a NIP-29 group id means nothing without its host relay.
  */
 class RelayAuthPermissionLedger(
     val store: RelayAuthPermissionStore,
@@ -45,7 +53,8 @@ class RelayAuthPermissionLedger(
     val isInMyRelayList: (String) -> Boolean = { false },
     val isBlocked: (String) -> Boolean = { false },
     val isFollowed: (String) -> Boolean = { false },
-    val isTrustedVenue: (String) -> Boolean = { false },
+    val isTrustedVenue: (relayUrl: String, venueId: String) -> Boolean = { _, _ -> false },
+    val isVenueHostRelay: (String) -> Boolean = { false },
 ) {
     /**
      * The authorization verdict for [ctx], taking the challenge's purpose into account.
@@ -59,6 +68,15 @@ class RelayAuthPermissionLedger(
         isFirstParty: Boolean = true,
     ): RelayAuthVerdict {
         fun isWrite(kind: AuthPurposeKind) = kind == AuthPurposeKind.SEND_DM || kind == AuthPurposeKind.NOTIFY_INBOX
+
+        // The relay itself hosts a room this account joined — a NIP-29 relay group or a Concord
+        // community. Computed apart from the purposes because those rooms are the relay's whole
+        // reason to be here: their traffic is `#h`-scoped (NIP-29) or addressed to derived stream
+        // keys (Concord), so an AUTH challenge that lands before the room's subscription is
+        // assembled carries no venue to match — and the joined room would sit empty behind a
+        // question the user already answered by joining it.
+        val hostsMyVenue = isVenueHostRelay(ctx.relayUrl)
+
         val inputs =
             RelayAuthInputs(
                 storedOverride = store.loadDecision(ctx.relayUrl),
@@ -67,10 +85,11 @@ class RelayAuthPermissionLedger(
                 toggles = customToggles(),
                 isInMyRelayList = isInMyRelayList(ctx.relayUrl),
                 servesTrustedVenue =
-                    ctx.purposes.any { p ->
-                        (p.kind == AuthPurposeKind.POST_VENUE || p.kind == AuthPurposeKind.READ_VENUE) &&
-                            p.venues.any(isTrustedVenue)
-                    },
+                    hostsMyVenue ||
+                        ctx.purposes.any { p ->
+                            (p.kind == AuthPurposeKind.POST_VENUE || p.kind == AuthPurposeKind.READ_VENUE) &&
+                                p.venues.any { isTrustedVenue(ctx.relayUrl, it) }
+                        },
                 // Reading a followed author's outbox.
                 servesFollowedReadCounterparty =
                     ctx.purposes.any { p ->
@@ -82,18 +101,22 @@ class RelayAuthPermissionLedger(
                 // Messaging a non-followed user's inbox.
                 servesStrangerWriteCounterparty =
                     ctx.purposes.any { p -> isWrite(p.kind) && p.counterparties.any { !isFollowed(it) } },
+                // Hosting a joined room is itself an explanation, and the only one available when the
+                // challenge arrives before any of that room's filters do. Without it, a user on
+                // "decide per relay" (or with the venue toggle off) would get a silent denial for a
+                // room they joined instead of the question. MY_INBOX and THREAD likewise name no
+                // counterparty by design — the relay is holding back the user's *own* inbox or the
+                // conversation on screen — and are fully explainable, so they too must reach ASK.
                 hasAttributablePurpose =
-                    ctx.purposes.any {
-                        // MY_INBOX and THREAD name no counterparty by design — the relay is holding
-                        // back the user's *own* inbox or the conversation on screen. They are still
-                        // fully explainable, so they must reach ASK rather than a silent DENY.
-                        it.kind == AuthPurposeKind.MY_OWN_RELAY ||
-                            it.kind == AuthPurposeKind.OTHER ||
-                            it.kind == AuthPurposeKind.MY_INBOX ||
-                            it.kind == AuthPurposeKind.THREAD ||
-                            it.counterparties.isNotEmpty() ||
-                            it.venues.isNotEmpty()
-                    },
+                    hostsMyVenue ||
+                        ctx.purposes.any {
+                            it.kind == AuthPurposeKind.MY_OWN_RELAY ||
+                                it.kind == AuthPurposeKind.OTHER ||
+                                it.kind == AuthPurposeKind.MY_INBOX ||
+                                it.kind == AuthPurposeKind.THREAD ||
+                                it.counterparties.isNotEmpty() ||
+                                it.venues.isNotEmpty()
+                        },
                 isFirstParty = isFirstParty,
             )
         return RelayAuthResolver.resolve(inputs)

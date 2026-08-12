@@ -277,6 +277,22 @@ class ConcordCommunitySession(
      */
     fun channelAddresses(): Set<HexKey> = lock.withLock { channelKeysByAddress.keys + historicalChannelKeysByAddress.keys }
 
+    /**
+     * True when [address] is one of this community's plane addresses — Control (current or a prior
+     * epoch we still hold), Guestbook, next-epoch rekey, or any folded Chat Plane.
+     *
+     * A membership test rather than a set to iterate, because the caller is the NIP-42 auth path
+     * asking "whose room is this wrap for?" on every challenge: answering that from
+     * [channelAddresses] + [historicalControlPlaneAddresses] allocates a fresh union per community
+     * per question, where four map lookups do.
+     */
+    fun ownsPlane(address: HexKey): Boolean =
+        address == controlPlaneAddress ||
+            address == guestbookAddress ||
+            address == nextBaseRekeyAddress ||
+            address in historicalControlKeys ||
+            lock.withLock { address in channelKeysByAddress || address in historicalChannelKeysByAddress }
+
     /** The Chat Plane stream address for [channelIdHex], once this community has folded that channel (else null). */
     fun channelPlaneAddress(channelIdHex: HexKey): HexKey? = lock.withLock { channelKeysByAddress.entries.firstOrNull { it.value.first == channelIdHex }?.key }
 

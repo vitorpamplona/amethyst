@@ -157,6 +157,13 @@ class ConcordSessionManager(
         return outcome.claimed
     }
 
+    /**
+     * The joined community [planeAddress] streams for, or null when it isn't one of ours. Lets the
+     * NIP-42 auth path name a pending plane wrap as a post into that community instead of reading its
+     * throwaway `p` tag as a DM recipient (see [ConcordSessionRegistry.communityIdForPlane]).
+     */
+    fun communityIdForPlane(planeAddress: HexKey): HexKey? = registry.communityIdForPlane(planeAddress)
+
     fun sessions() = registry.sessions()
 
     fun sessionFor(communityId: HexKey) = registry.sessionFor(communityId)
