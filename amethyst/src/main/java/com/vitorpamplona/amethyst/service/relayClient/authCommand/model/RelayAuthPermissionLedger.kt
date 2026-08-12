@@ -47,8 +47,17 @@ class RelayAuthPermissionLedger(
     val isFollowed: (String) -> Boolean = { false },
     val isTrustedVenue: (String) -> Boolean = { false },
 ) {
-    /** The authorization verdict for [ctx], taking the challenge's purpose into account. */
-    suspend fun decide(ctx: RelayAuthContext): RelayAuthVerdict {
+    /**
+     * The authorization verdict for [ctx], taking the challenge's purpose into account.
+     *
+     * [isFirstParty] says whether this account has a reason of its own to be on the relay. It gates
+     * the automatic grants only — a non-first-party challenge is never auto-allowed, but one we can
+     * explain still reaches the user as a prompt.
+     */
+    suspend fun decide(
+        ctx: RelayAuthContext,
+        isFirstParty: Boolean = true,
+    ): RelayAuthVerdict {
         fun isWrite(kind: AuthPurposeKind) = kind == AuthPurposeKind.SEND_DM || kind == AuthPurposeKind.NOTIFY_INBOX
         val inputs =
             RelayAuthInputs(
@@ -85,6 +94,7 @@ class RelayAuthPermissionLedger(
                             it.counterparties.isNotEmpty() ||
                             it.venues.isNotEmpty()
                     },
+                isFirstParty = isFirstParty,
             )
         return RelayAuthResolver.resolve(inputs)
     }

@@ -92,10 +92,17 @@ class AuthCoordinator(
                 authWithAccounts.distinctValues().forEach forEachAccount@{ screen ->
                     val account = screen.account
                     if (!account.signer.isWriteable()) return@forEachAccount
-                    if (!isFirstParty(account, relayUrl)) return@forEachAccount
+
+                    // Not a gate any more, an input. Failing it only rules out the *automatic* grants
+                    // (see RelayAuthResolver): a relay this account has no first-party reason to be on
+                    // is never silently authenticated, but a challenge we can explain still becomes a
+                    // question. Returning early here instead made "decide per relay" mean "deny, and
+                    // don't mention it" for every purpose that names someone else — the exact case the
+                    // prompt was built to explain.
+                    val firstParty = isFirstParty(account, relayUrl)
 
                     val approve =
-                        when (account.relayAuthLedger.decide(context)) {
+                        when (account.relayAuthLedger.decide(context, firstParty)) {
                             RelayAuthVerdict.ALLOW -> true
                             RelayAuthVerdict.DENY -> false
                             RelayAuthVerdict.ASK -> {

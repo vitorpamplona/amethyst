@@ -56,6 +56,12 @@ data class RelayAuthCustomToggles(
  * @param servesStrangerWriteCounterparty a non-followed user's inbox is served here (messaging them).
  * @param hasAttributablePurpose we know *why* this relay wants auth (so a prompt can explain it).
  *   When false, an unresolved challenge is denied silently rather than prompting.
+ * @param isFirstParty this account has a reason of its *own* to be on this relay — it is publishing
+ *   there, a subscription there reads its own inbox/outbox, or the relay is in its own relay list.
+ *   False means the only reason we are here belongs to somebody else (another logged-in account's
+ *   traffic, or a followed author whose outbox happens to live here). Gates the *automatic* grants
+ *   only: a non-first-party challenge is never auto-allowed, but it still reaches the user as a
+ *   prompt rather than a silent denial.
  */
 data class RelayAuthInputs(
     val storedOverride: RelayAuthDecision?,
@@ -68,6 +74,7 @@ data class RelayAuthInputs(
     val servesFollowedWriteCounterparty: Boolean,
     val servesStrangerWriteCounterparty: Boolean,
     val hasAttributablePurpose: Boolean,
+    val isFirstParty: Boolean = true,
 )
 
 /**
@@ -82,6 +89,12 @@ data class RelayAuthInputs(
  *      this relay (own relays/venues, reading follows, messaging follows, messaging strangers);
  *      else fall through
  * 4. Fall-through → [RelayAuthVerdict.ASK] when the purpose is known, otherwise DENY.
+ *
+ * Both automatic grants in step 3 additionally require [RelayAuthInputs.isFirstParty]: an account
+ * never reveals its identity *without being asked* on a relay it has no reason of its own to be on.
+ * That is what keeps a bystander account off a relay only another account uses. It deliberately does
+ * not suppress the question — a non-first-party challenge we can explain falls through to ASK, so
+ * "decide per relay" means the user decides rather than a silent denial they never see.
  */
 object RelayAuthResolver {
     fun resolve(inputs: RelayAuthInputs): RelayAuthVerdict {
@@ -96,9 +109,9 @@ object RelayAuthResolver {
 
         return when (inputs.policy) {
             RelayAuthPolicy.NEVER -> RelayAuthVerdict.DENY
-            RelayAuthPolicy.ALWAYS -> RelayAuthVerdict.ALLOW
+            RelayAuthPolicy.ALWAYS -> if (inputs.isFirstParty) RelayAuthVerdict.ALLOW else fallThrough(inputs)
             RelayAuthPolicy.CUSTOM ->
-                if (customAllows(inputs)) RelayAuthVerdict.ALLOW else fallThrough(inputs)
+                if (inputs.isFirstParty && customAllows(inputs)) RelayAuthVerdict.ALLOW else fallThrough(inputs)
         }
     }
 

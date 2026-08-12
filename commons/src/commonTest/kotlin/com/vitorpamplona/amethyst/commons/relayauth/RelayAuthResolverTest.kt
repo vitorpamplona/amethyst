@@ -35,6 +35,7 @@ class RelayAuthResolverTest {
         servesFollowedWriteCounterparty: Boolean = false,
         servesStrangerWriteCounterparty: Boolean = false,
         hasAttributablePurpose: Boolean = true,
+        isFirstParty: Boolean = true,
     ) = RelayAuthInputs(
         storedOverride = storedOverride,
         isBlocked = isBlocked,
@@ -46,6 +47,7 @@ class RelayAuthResolverTest {
         servesFollowedWriteCounterparty = servesFollowedWriteCounterparty,
         servesStrangerWriteCounterparty = servesStrangerWriteCounterparty,
         hasAttributablePurpose = hasAttributablePurpose,
+        isFirstParty = isFirstParty,
     )
 
     private fun resolve(inputs: RelayAuthInputs) = RelayAuthResolver.resolve(inputs)
@@ -129,5 +131,36 @@ class RelayAuthResolverTest {
         // Nothing matches -> prompt when we know why, else silent deny.
         assertEquals(RelayAuthVerdict.ASK, resolve(inputs(hasAttributablePurpose = true)))
         assertEquals(RelayAuthVerdict.DENY, resolve(inputs(hasAttributablePurpose = false)))
+    }
+
+    @Test
+    fun nonFirstPartyAsksInsteadOfAutoAllowing() {
+        // Every category that would auto-auth on our own relay becomes a question on a relay we have
+        // no first-party reason to be on. Nothing here is *denied* — the user still gets to decide.
+        val allOn = RelayAuthCustomToggles(myRelaysAndVenues = true, readFollows = true, messageFollows = true, messageStrangers = true)
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, isInMyRelayList = true, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesTrustedVenue = true, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesFollowedReadCounterparty = true, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesFollowedWriteCounterparty = true, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesStrangerWriteCounterparty = true, isFirstParty = false)))
+    }
+
+    @Test
+    fun nonFirstPartyNeverAutoAuthsUnderAlwaysPolicy() {
+        // "Always log in" is a statement about the relays this account uses. A relay it is only
+        // touching because of somebody else's traffic still has to be asked about.
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(policy = RelayAuthPolicy.ALWAYS, isFirstParty = true)))
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(policy = RelayAuthPolicy.ALWAYS, isFirstParty = false)))
+    }
+
+    @Test
+    fun nonFirstPartyStillHonoursBlocksOverridesAndNever() {
+        // Restoring the question must not reopen anything the user already closed.
+        assertEquals(RelayAuthVerdict.DENY, resolve(inputs(isBlocked = true, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.DENY, resolve(inputs(storedOverride = RelayAuthDecision.DENY, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(storedOverride = RelayAuthDecision.ALLOW, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.DENY, resolve(inputs(policy = RelayAuthPolicy.NEVER, isFirstParty = false)))
+        // Still no prompt when we cannot explain the challenge.
+        assertEquals(RelayAuthVerdict.DENY, resolve(inputs(hasAttributablePurpose = false, isFirstParty = false)))
     }
 }
