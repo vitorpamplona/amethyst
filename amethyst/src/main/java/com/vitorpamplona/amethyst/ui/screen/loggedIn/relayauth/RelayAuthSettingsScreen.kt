@@ -251,11 +251,9 @@ fun RelayAuthSettingsScreen(
                                     onCheckedChange = { account.settings.changeRelayAuthTrustMessageFollows(it) },
                                 )
                                 SettingsDivider()
-                                // The one row whose default is not obvious keeps a single short line.
                                 SettingsSwitchTile(
                                     icon = MaterialSymbols.Public,
                                     title = R.string.relay_auth_auto_message_strangers,
-                                    description = R.string.relay_auth_auto_message_strangers_desc,
                                     checked = messageStrangers,
                                     onCheckedChange = { account.settings.changeRelayAuthTrustMessageStrangers(it) },
                                 )

@@ -1147,7 +1147,6 @@
     <string name="relay_auth_auto_read_follows">\u2026I\'m reading someone I follow</string>
     <string name="relay_auth_auto_message_follows">\u2026I\'m messaging someone I follow</string>
     <string name="relay_auth_auto_message_strangers">\u2026I\'m messaging anyone else</string>
-    <string name="relay_auth_auto_message_strangers_desc">Off \u2014 you\'ll be asked each time.</string>
 
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
@@ -1157,7 +1156,7 @@
     <string name="relay_auth_relay_asks">asks who you are</string>
     <string name="relay_auth_why_send_dm">It won\'t accept your message for %1$s from someone it can\'t identify.</string>
     <string name="relay_auth_why_notify_inbox">%1$s won\'t hear about your reply unless it can identify the sender.</string>
-    <string name="relay_auth_why_read_outbox">It won\'t serve %1$s\'s posts to readers it can\'t identify.</string>
+    <string name="relay_auth_why_read_outbox">It won\'t serve posts from %1$s to readers it can\'t identify.</string>
     <string name="relay_auth_why_post_venue">It won\'t accept your post in %1$s from someone it can\'t identify.</string>
     <string name="relay_auth_why_read_venue">It won\'t serve %1$s to readers it can\'t identify.</string>
     <string name="relay_auth_why_my_inbox">It won\'t serve your incoming replies, zaps and messages to readers it can\'t identify.</string>

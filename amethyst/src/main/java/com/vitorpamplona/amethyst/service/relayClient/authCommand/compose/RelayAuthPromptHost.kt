@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.compose
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,7 +28,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
@@ -52,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -179,9 +178,6 @@ private fun RelayAuthPromptDialog(
                     face = faces.firstOrNull(),
                     accountViewModel = accountViewModel,
                 )
-
-                // More than one face behind the name: show them, so "and 4 others" is not a black box.
-                if (faces.size > 1) CounterpartyFacepile(faces, accountViewModel)
 
                 // Everything else this relay is holding back, as one line instead of stacked sections.
                 secondaryLine(prompt.purposes, primary)?.let {
@@ -324,9 +320,11 @@ private fun RememberRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    // No fill: this is the least important control in the dialog and it sits directly above the two
+    // that matter. A filled surfaceVariant block reads as a black box in dark theme and gives the
+    // switch more weight than the buttons under it.
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.medium,
+        color = Color.Transparent,
         modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) },
     ) {
         Row(
@@ -339,39 +337,6 @@ private fun RememberRow(
                 modifier = Modifier.weight(1f),
             )
             Switch(checked = checked, onCheckedChange = onCheckedChange)
-        }
-    }
-}
-
-@Composable
-private fun CounterpartyFacepile(
-    pubkeys: List<HexKey>,
-    accountViewModel: AccountViewModel,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy((-8).dp),
-    ) {
-        pubkeys.take(FACEPILE_MAX).forEach { pubkey ->
-            LoadRelayAuthUser(pubkey, accountViewModel) { user ->
-                if (user != null) {
-                    ClickableUserPicture(
-                        baseUser = user,
-                        size = 30.dp,
-                        accountViewModel = accountViewModel,
-                        modifier = Modifier.border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
-                    )
-                }
-            }
-        }
-        val extra = pubkeys.size - FACEPILE_MAX
-        if (extra > 0) {
-            Text(
-                text = "+$extra",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 14.dp),
-            )
         }
     }
 }
