@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 
 val Context.sharedPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(name = "shared_settings")
@@ -67,16 +68,39 @@ class UiSharedPreferences(
 
     val languageUpdate =
         value.preferredLanguage
-            .onEach { language ->
-                AppCompatDelegate.setApplicationLocales(
-                    LocaleListCompat.forLanguageTags(language),
-                )
-            }.flowOn(Dispatchers.Main)
+            .onEach { language -> applyLanguage(language) }
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 value.toSettings(),
             )
+
+    /**
+     * Pushes the preferred language into AppCompat, skipping the call when the app already
+     * runs in that locale.
+     *
+     * On API 33+, [AppCompatDelegate.setApplicationLocales] does not deduplicate: every call
+     * is a blocking Binder round trip into the system's LocaleManagerService, which commits a
+     * SharedPreferences file (and, on Samsung ROMs, appends to a log file) before returning.
+     * That was measured at ~220ms on a Galaxy device, charged to the calling thread. Since
+     * this flow starts eagerly, the app paid it on the main thread on every launch, even when
+     * the locale had not changed since the previous run -- and StrictMode reported it as a
+     * DiskReadViolation via the Binder call.
+     *
+     * [AppCompatDelegate.getApplicationLocales] is `@AnyThread` and only reads state, so the
+     * comparison runs off the main thread. Actual changes still hop to the main thread:
+     * below API 33 AppCompat applies them in process by reconfiguring (and possibly
+     * recreating) the active activities.
+     */
+    private suspend fun applyLanguage(language: String?) {
+        val newLocales = LocaleListCompat.forLanguageTags(language)
+        if (newLocales == AppCompatDelegate.getApplicationLocales()) return
+
+        withContext(Dispatchers.Main) {
+            AppCompatDelegate.setApplicationLocales(newLocales)
+        }
+    }
 
     @OptIn(FlowPreview::class)
     val saving =
