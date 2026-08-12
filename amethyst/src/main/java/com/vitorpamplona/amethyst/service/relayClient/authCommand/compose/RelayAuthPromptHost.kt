@@ -51,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -399,7 +400,7 @@ private fun secondaryLine(
 ): String? {
     val others = purposes.filter { it !== primary }
     if (others.isEmpty()) return null
-    return stringRes(R.string.relay_auth_also_holding_back, others.size)
+    return pluralStringResource(R.plurals.relay_auth_also_holding_back, others.size, others.size)
 }
 
 /** A short label for a set of counterparties: the first person's name, or "Alice and 4 others". */
@@ -409,8 +410,37 @@ private fun counterpartyLabel(
     accountViewModel: AccountViewModel,
 ): String {
     val first = pubkeys.firstOrNull() ?: return ""
-    val name = rememberDisplayName(first, accountViewModel)
+    val name = rememberCounterpartyName(first, accountViewModel)
     return if (pubkeys.size > 1) stringRes(R.string.relay_auth_name_and_n_others, name, (pubkeys.size - 1).toString()) else name
+}
+
+/**
+ * Like [rememberDisplayName], but never renders a bare npub.
+ *
+ * The reason sentence exists to name *a person* — "it won't serve posts from Alice". A pubkey we
+ * have no metadata for has no name to give, and [User.toBestDisplayName] falls back to the shortened
+ * npub, so the sentence became "it won't serve posts from npub1j9hlsge8…kqy003h0 unless you log in":
+ * a string the reader cannot recognize, dressed up as if it were a name. Falling back to the generic
+ * phrase says the same amount and reads as language.
+ *
+ * The dialog *title* deliberately keeps the npub ([rememberDisplayName]): it names the account whose
+ * identity is about to be revealed, where an unrecognizable-but-exact key still beats "someone you
+ * haven't loaded yet" — the user can at least match it against the account they are logged in as.
+ */
+@Composable
+private fun rememberCounterpartyName(
+    pubkey: HexKey,
+    accountViewModel: AccountViewModel,
+): String {
+    var user by remember(pubkey) { mutableStateOf(accountViewModel.getUserIfExists(pubkey)) }
+    if (user == null) {
+        LaunchedEffect(pubkey) { user = accountViewModel.checkGetOrCreateUser(pubkey) }
+    }
+    val loaded = user ?: return stringRes(R.string.relay_auth_someone_unloaded)
+    val metadata by observeUserInfo(loaded, accountViewModel)
+    return metadata?.info?.bestName()
+        ?: loaded.metadataOrNull()?.bestName()
+        ?: stringRes(R.string.relay_auth_someone_unloaded)
 }
 
 /**

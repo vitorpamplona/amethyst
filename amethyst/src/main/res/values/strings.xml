@@ -1165,7 +1165,10 @@
     <string name="relay_auth_why_other">It asks everyone to log in. Amethyst can\'t tell what it\'s holding back.</string>
     <string name="relay_auth_someone_unloaded">someone you haven\'t loaded yet</string>
     <string name="relay_auth_name_and_n_others">%1$s and %2$s others</string>
-    <string name="relay_auth_also_holding_back">It\'s also holding back %1$d other thing(s).</string>
+    <plurals name="relay_auth_also_holding_back">
+        <item quantity="one">It\'s also holding back %1$d other thing.</item>
+        <item quantity="other">It\'s also holding back %1$d other things.</item>
+    </plurals>
     <string name="relay_auth_remember_relay">Remember for this relay</string>
     <string name="relay_auth_log_in">Log in</string>
     <string name="relay_auth_not_now">Not now</string>
