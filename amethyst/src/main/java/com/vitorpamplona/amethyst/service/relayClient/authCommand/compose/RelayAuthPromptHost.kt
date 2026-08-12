@@ -411,7 +411,9 @@ private fun counterpartyLabel(
 ): String {
     val first = pubkeys.firstOrNull() ?: return ""
     val name = rememberCounterpartyName(first, accountViewModel)
-    return if (pubkeys.size > 1) stringRes(R.string.relay_auth_name_and_n_others, name, (pubkeys.size - 1).toString()) else name
+    if (pubkeys.size == 1) return name
+    val others = pubkeys.size - 1
+    return pluralStringResource(R.plurals.relay_auth_name_and_n_others, others, name, others)
 }
 
 /**
