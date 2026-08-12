@@ -20,25 +20,28 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 fun filterLastPostsFromKey(
     relay: NormalizedRelayUrl,
-    pubkey: HexKey,
+    pubkeys: List<HexKey>,
     since: Long?,
 ): List<RelayBasedFilter> {
-    if (pubkey.isEmpty()) return emptyList()
+    if (pubkeys.isEmpty()) return emptyList()
 
     return listOf(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
-                    authors = listOf(pubkey),
-                    limit = 100,
+                ExplainedFilter(
+                    purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = pubkeys,
+                    authors = pubkeys,
+                    limit = 100 * pubkeys.size,
                     since = since,
                 ),
         ),

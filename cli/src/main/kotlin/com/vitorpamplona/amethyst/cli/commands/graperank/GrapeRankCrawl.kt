@@ -129,7 +129,7 @@ object GrapeRankCrawl {
     /** Echo any relay NOTICE/CLOSED feedback + adaptive throttling the crawl saw. */
     internal fun reportRelayFeedback(ctx: Context) {
         if (ctx.relayDiagnostics.hadFeedback()) {
-            System.err.println("[graperank] relay feedback: ${ctx.relayDiagnostics.snapshot()}")
+            System.err.println("[graperank] relay feedback: ${ctx.relayDiagnostics.summary()}")
         }
         if (ctx.relayLimiter.hadThrottling()) {
             System.err.println("[graperank] relay throttling: ${ctx.relayLimiter.snapshot()}")
@@ -204,7 +204,7 @@ object GrapeRankCrawl {
                     "observer" to observer,
                     "crawl_rounds" to stats.rounds,
                     "relays_contacted" to stats.relaysContacted,
-                    "relay_feedback" to if (ctx.relayDiagnostics.hadFeedback()) ctx.relayDiagnostics.snapshot() else null,
+                    "relay_feedback" to if (ctx.relayDiagnostics.hadFeedback()) ctx.relayDiagnostics.summary() else null,
                     "relay_throttling" to if (ctx.relayLimiter.hadThrottling()) ctx.relayLimiter.snapshot() else null,
                     "max_hop_reached" to (stats.hopHistogram.keys.maxOrNull() ?: 0),
                     "users_by_hop" to stats.hopHistogram.mapKeys { it.key.toString() },
@@ -287,7 +287,7 @@ object GrapeRankCrawl {
                             // Default null → pull EVERY follower each relay holds; --max
                             // N caps the total per relay for a quick spot check.
                             maxPerRelay = args.flag("max")?.toIntOrNull(),
-                            timeoutMs = args.timeoutMs(15),
+                            idleTimeoutMs = args.timeoutMs(15),
                             maxConcurrentRelays = relayConcurrency,
                             insertBatchSize = args.intFlag(FLAG_INSERT_BATCH, INSERT_BATCH_DEFAULT),
                         ),

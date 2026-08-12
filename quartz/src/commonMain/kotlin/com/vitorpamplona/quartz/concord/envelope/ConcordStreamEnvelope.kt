@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.quartz.concord.envelope
 
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
@@ -96,12 +98,43 @@ object ConcordStreamEnvelope {
         stream: GroupKey,
         ephemeral: Boolean = false,
         createdAt: Long = TimeUtils.now(),
+    ): Event = wrapSeal(seal, stream, stream.conversationKey, ephemeral, createdAt)
+
+    /**
+     * Write-restricted variant (CORD-01, Write-Restricted Streams): the wrap is
+     * signed by [signerKey] (its pk the stream address, its sk held by the writers
+     * alone) while the content is encrypted under [readConversationKey], the second
+     * shared key the full readership holds. Concord's Control Plane wraps this way
+     * on a split epoch (CORD-02 §5).
+     */
+    fun wrapSeal(
+        seal: Event,
+        signerKey: GroupKey,
+        readConversationKey: ByteArray,
+        ephemeral: Boolean = false,
+        createdAt: Long = TimeUtils.now(),
     ): Event {
-        val streamSigner = NostrSignerSync(KeyPair(privKey = stream.secretKey))
-        val content = Nip44.v2.encrypt(seal.toJson(), stream.conversationKey).encodePayload()
+        val streamSigner = NostrSignerSync(KeyPair(privKey = signerKey.secretKey))
+        val content = Nip44.v2.encrypt(seal.toJson(), readConversationKey).encodePayload()
         val ephemeralP = KeyPair().pubKey.toHexKey()
         val kind = if (ephemeral) KIND_WRAP_EPHEMERAL else KIND_WRAP
         return streamSigner.signNormal(createdAt, kind, arrayOf(arrayOf("p", ephemeralP)), content)
+    }
+
+    /**
+     * Wraps [seal] onto the Control Plane described by [keys]: signed by its signer
+     * (which the holder must have — throws when [ControlPlaneKeys.canWrite] is
+     * false), encrypted under its read key. On a legacy epoch signer == read key
+     * and this is the classic single-key wrap.
+     */
+    fun wrapSeal(
+        seal: Event,
+        keys: ControlPlaneKeys,
+        ephemeral: Boolean = false,
+        createdAt: Long = TimeUtils.now(),
+    ): Event {
+        val signer = requireNotNull(keys.signer) { "This account cannot write to the Control Plane: control_root not held (CORD-02 §2)" }
+        return wrapSeal(seal, signer, keys.readKey.conversationKey, ephemeral, createdAt)
     }
 
     /** Convenience: [seal] then [wrapSeal] in one call. */
@@ -113,6 +146,20 @@ object ConcordStreamEnvelope {
         ephemeral: Boolean = false,
         createdAt: Long = TimeUtils.now(),
     ): Event = wrapSeal(seal(rumor, stream, authorSigner, encrypted), stream, ephemeral, createdAt)
+
+    /**
+     * Convenience for the Control Plane: seals under [keys]' read key (an encrypted
+     * seal's rumor must decrypt for every reader, not only writers) and wraps with
+     * its signer. Throws when the account cannot write (see [wrapSeal]).
+     */
+    suspend fun wrap(
+        rumor: Event,
+        keys: ControlPlaneKeys,
+        authorSigner: NostrSigner,
+        encrypted: Boolean,
+        ephemeral: Boolean = false,
+        createdAt: Long = TimeUtils.now(),
+    ): Event = wrapSeal(seal(rumor, keys.readKey, authorSigner, encrypted), keys, ephemeral, createdAt)
 
     /**
      * Opens a stream [wrap] for the [stream] plane and returns the verified author
@@ -129,16 +176,31 @@ object ConcordStreamEnvelope {
     fun open(
         wrap: Event,
         stream: GroupKey,
+    ): OpenedStreamEvent = open(wrap, stream.publicKeyHex, stream.conversationKey)
+
+    /**
+     * Write-restricted variant (CORD-01, Write-Restricted Streams): opening takes
+     * only the stream [address] (the writers' pubkey, held by every reader) and the
+     * [readConversationKey] — never the signer's secret. `wrap.verify()` checks the
+     * signature against `wrap.pubkey`, which the address equality pins to the
+     * writers' key, so a wrap minted by anyone else fails here. A verifying wrap
+     * proves only that *a* writer published it; the seal's actor stays the sole
+     * authority (CORD-04).
+     */
+    fun open(
+        wrap: Event,
+        address: HexKey,
+        readConversationKey: ByteArray,
     ): OpenedStreamEvent {
         require(wrap.kind == KIND_WRAP || wrap.kind == KIND_WRAP_EPHEMERAL) {
             "Not a Concord stream wrap: kind ${wrap.kind}"
         }
-        require(wrap.pubKey == stream.publicKeyHex) {
-            "Wrap author ${wrap.pubKey} is not the stream address ${stream.publicKeyHex}"
+        require(wrap.pubKey == address) {
+            "Wrap author ${wrap.pubKey} is not the stream address $address"
         }
         require(wrap.verify()) { "Wrap signature/id is invalid" }
 
-        val seal = Event.fromJson(Nip44.v2.decrypt(wrap.content, stream.conversationKey))
+        val seal = Event.fromJson(Nip44.v2.decrypt(wrap.content, readConversationKey))
         require(seal.kind == KIND_SEAL_ENCRYPTED || seal.kind == KIND_SEAL_PLAINTEXT) {
             "Not a Concord seal: kind ${seal.kind}"
         }
@@ -146,7 +208,7 @@ object ConcordStreamEnvelope {
 
         val rumorJson =
             if (seal.kind == KIND_SEAL_ENCRYPTED) {
-                Nip44.v2.decrypt(seal.content, stream.conversationKey)
+                Nip44.v2.decrypt(seal.content, readConversationKey)
             } else {
                 seal.content
             }
@@ -160,16 +222,39 @@ object ConcordStreamEnvelope {
         return OpenedStreamEvent(rumor, seal.kind, seal.pubKey, seal)
     }
 
+    /**
+     * Opens a Control Plane wrap with [keys] (split or legacy): verified against the
+     * plane's address, decrypted under its read key. Needs no write key, so a regular
+     * member reads exactly as staff does (CORD-02 §5).
+     */
+    fun open(
+        wrap: Event,
+        keys: ControlPlaneKeys,
+    ): OpenedStreamEvent = open(wrap, keys.address, keys.readKey.conversationKey)
+
     /** Like [open] but returns null instead of throwing on any validation failure. */
     fun openOrNull(
         wrap: Event,
         stream: GroupKey,
+    ): OpenedStreamEvent? = openOrNull(wrap, stream.publicKeyHex, stream.conversationKey)
+
+    /** Like the write-restricted [open] but returns null instead of throwing. */
+    fun openOrNull(
+        wrap: Event,
+        address: HexKey,
+        readConversationKey: ByteArray,
     ): OpenedStreamEvent? =
         try {
-            open(wrap, stream)
+            open(wrap, address, readConversationKey)
         } catch (_: Exception) {
             null
         }
+
+    /** Opens a Control Plane wrap with [keys] (split or legacy), or null on failure. */
+    fun openOrNull(
+        wrap: Event,
+        keys: ControlPlaneKeys,
+    ): OpenedStreamEvent? = openOrNull(wrap, keys.address, keys.readKey.conversationKey)
 
     private val EMPTY_TAGS = emptyArray<Array<String>>()
 }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip44Encryption.crypto
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.equalsConstantTime
 import com.vitorpamplona.quartz.utils.mac.MacInstance
 
 class Hkdf(
@@ -194,7 +195,7 @@ class Hkdf(
             mac.update(ciphertext)
             val calculatedMac = mac.doFinal()
 
-            check(calculatedMac.contentEquals(ciphertextMac)) {
+            check(calculatedMac.equalsConstantTime(ciphertextMac)) {
                 "Invalid Mac: Calculated ${calculatedMac.toHexKey()}, decoded: ${ciphertextMac.toHexKey()}"
             }
         }

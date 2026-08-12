@@ -67,7 +67,9 @@ class RoleBasedHttpClientBuilder(
         normalizedUrl: String,
         final: Boolean,
     ): Boolean =
-        if (RelayUrlNormalizer.isLocalHost(normalizedUrl)) {
+        if (RelayUrlNormalizer.isLocalHost(normalizedUrl) || RelayUrlNormalizer.isOverlayNetwork(normalizedUrl)) {
+            // Overlay-mesh hosts (0200::/7) are reachable only through the local mesh
+            // interface — Tor cannot route the range, so proxying only breaks the fetch.
             false
         } else if (RelayUrlNormalizer.isOnion(normalizedUrl)) {
             true
@@ -113,7 +115,7 @@ class RoleBasedHttpClientBuilder(
         isOnionRelaysActive: Boolean,
         final: Boolean,
     ): Boolean =
-        if (RelayUrlNormalizer.isLocalHost(normalizedUrl)) {
+        if (RelayUrlNormalizer.isLocalHost(normalizedUrl) || RelayUrlNormalizer.isOverlayNetwork(normalizedUrl)) {
             false
         } else if (RelayUrlNormalizer.isOnion(normalizedUrl)) {
             isOnionRelaysActive

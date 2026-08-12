@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 
@@ -72,7 +73,9 @@ class ReactionsFilterAssembler(
 
         // Create filter for reactions (Kind 7) targeting these notes via e-tags
         val filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.ENGAGEMENT,
+                purposeDetail = "reactions on notes currently on screen",
                 kinds = listOf(ReactionEvent.KIND),
                 tags = mapOf("e" to noteIdList),
             )

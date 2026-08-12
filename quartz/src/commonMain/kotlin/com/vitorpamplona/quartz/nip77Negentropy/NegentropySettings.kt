@@ -32,7 +32,9 @@ package com.vitorpamplona.quartz.nip77Negentropy
  *   unlimited).
  * @param maxSyncEvents Hard cap on the snapshot size for a single
  *   NEG-OPEN. Mirrors strfry's `relay__negentropy__maxSyncEvents`.
- *   Overflow returns NEG-ERR `"blocked: too many query results"`.
+ *   Overflow returns NEG-ERR `"blocked: too many query results"`
+ *   carrying this number as its fourth element, so a client can size
+ *   its next window instead of halving its way down to one.
  * @param maxSessionsPerConnection Cap on concurrent NEG sessions
  *   held by one connection. strfry shares 200 with REQ subs; we
  *   count NEG independently. Overflow sends NOTICE

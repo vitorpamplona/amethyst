@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -40,9 +41,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** One open NIP-29 group whose older history the chat screen wants paged in. */
 class RelayGroupOpenChatHistoryQueryState(
-    val account: Account,
+    override val account: Account,
     val groupId: GroupId,
-)
+) : AccountScopedQuery
 
 /**
  * Mounts the on-demand **history** pager for whichever NIP-29 group chat screen is open. The live
@@ -125,7 +126,7 @@ class RelayGroupOpenChatHistorySubAssembler(
         // cursors so a late callback can't move another group's cursors. newEose runs regardless.
         val myCursors = cursorsFor(key)
         return object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,

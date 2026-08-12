@@ -457,6 +457,8 @@ sealed class Route {
 
     @Serializable object BottomBarSettings : Route()
 
+    @Serializable object DrawerSettings : Route()
+
     @Serializable object HomeTabsSettings : Route()
 
     @Serializable object ProfileUiSettings : Route()
@@ -496,6 +498,9 @@ sealed class Route {
     @Serializable object EditProfile : Route()
 
     @Serializable object EditRelays : Route()
+
+    /** Diagnostic: explains why the app currently holds the subscriptions it holds. */
+    @Serializable object ActiveSubscriptions : Route()
 
     @Serializable object EventSync : Route()
 
@@ -567,6 +572,10 @@ sealed class Route {
     ) : Route()
 
     @Serializable data class ContactListUsers(
+        val noteId: String,
+    ) : Route()
+
+    @Serializable data class PollResults(
         val noteId: String,
     ) : Route()
 
@@ -822,6 +831,10 @@ sealed class Route {
     ) : Route()
 
     @Serializable data class ConcordEdit(
+        val communityId: String,
+    ) : Route()
+
+    @Serializable data class ConcordInviteLinks(
         val communityId: String,
     ) : Route()
 

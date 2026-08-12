@@ -1269,6 +1269,16 @@
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="other">%1$d 件の relay に接続中</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">インボックス relay に接続中…</string>
     <string name="always_on_notif_setting_title">常時接続通知サービス</string>
     <string name="always_on_notif_setting_description">インボックス relay への永続的な接続を維持し、通知をすぐに届けます。継続中の通知が表示されます。バッテリー消費は増えますが、メッセージを見逃しません。</string>

@@ -268,7 +268,7 @@ class SearchBarViewModel(
             }
 
             if (term.isBlank()) return@combine emptyList<User>()
-            val users = LocalCache.findUsersStartingWith(term, account)
+            val users = LocalCache.search.findUsersStartingWith(term, account)
             if (follows != null) users.filter { it.pubkeyHex in follows } else users
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
@@ -285,7 +285,7 @@ class SearchBarViewModel(
         ) { term, _, currentScope, order, follows ->
             if (currentScope == SearchScope.PEOPLE) return@combine emptyList()
 
-            val raw = LocalCache.findNotesStartingWith(term, account.hiddenUsers)
+            val raw = LocalCache.search.findNotesStartingWith(term, account.hiddenUsers)
             val filtered = if (follows != null) raw.filter { it.author?.pubkeyHex in follows } else raw
 
             when (order) {
@@ -317,7 +317,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findPublicChatChannelsStartingWith(term)
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findPublicChatChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -327,7 +327,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findEphemeralChatChannelsStartingWith(term)
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findEphemeralChatChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 
@@ -337,7 +337,7 @@ class SearchBarViewModel(
             invalidations,
             scope,
         ) { term, _, currentScope ->
-            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.findLiveActivityChannelsStartingWith(term)
+            if (currentScope != SearchScope.ALL) emptyList() else LocalCache.search.findLiveActivityChannelsStartingWith(term)
         }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, WhileSubscribed(5000), emptyList())
 

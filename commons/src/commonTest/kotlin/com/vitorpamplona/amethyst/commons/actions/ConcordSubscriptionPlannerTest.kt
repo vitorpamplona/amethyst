@@ -48,6 +48,8 @@ class ConcordSubscriptionPlannerTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     heldRoots =
                         listOf(
                             com.vitorpamplona.quartz.concord.cord02Community
@@ -78,6 +80,8 @@ class ConcordSubscriptionPlannerTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
@@ -85,7 +89,7 @@ class ConcordSubscriptionPlannerTest {
             // Control-plane sub address must equal the derived control plane pk.
             val controlSubs = ConcordSubscriptionPlanner.controlPlaneSubs(listOf(entry))
             assertEquals(1, controlSubs.size)
-            assertEquals(community.controlPlane.publicKeyHex, controlSubs[0].pubKeyHex)
+            assertEquals(community.controlPlane.address, controlSubs[0].pubKeyHex)
             assertTrue(controlSubs[0].channelId == null)
 
             // Channel-plane subs cover the folded #general channel.
@@ -103,7 +107,7 @@ class ConcordSubscriptionPlannerTest {
             assertEquals(1, filters.size) // single relay
             val filter = filters.values.first().first()
             assertEquals(listOf(1059), filter.kinds)
-            assertTrue(filter.authors!!.contains(community.controlPlane.publicKeyHex))
+            assertTrue(filter.authors!!.contains(community.controlPlane.address))
             assertTrue(filter.authors!!.contains(general.pubKeyHex))
         }
 
@@ -118,6 +122,8 @@ class ConcordSubscriptionPlannerTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
@@ -147,6 +153,8 @@ class ConcordSubscriptionPlannerTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
@@ -176,6 +184,8 @@ class ConcordSubscriptionPlannerTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
@@ -189,7 +199,7 @@ class ConcordSubscriptionPlannerTest {
             assertEquals(relay, filters[0].relay)
             assertEquals(listOf(1059, 21059), filters[0].filter.kinds)
             assertEquals(1234L, filters[0].filter.since)
-            assertTrue(filters[0].filter.authors!!.contains(community.controlPlane.publicKeyHex))
+            assertTrue(filters[0].filter.authors!!.contains(community.controlPlane.address))
 
             // No planes resolve to a relay -> nothing to subscribe.
             assertNull(ConcordSubscriptionPlanner.relayBasedFilters(emptyList(), null))
@@ -210,12 +220,14 @@ class ConcordSubscriptionPlannerTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
             val state = ConcordActions.foldCommunity(community.genesisWraps, community.controlPlane, community.ownerPubKey)
 
-            val controlPk = community.controlPlane.publicKeyHex
+            val controlPk = community.controlPlane.address
             val guestbookPk = ConcordActions.guestbookPlane(community.communityRoot, community.communityId, community.rootEpoch).publicKeyHex
             val generalPk = ConcordActions.publicChannel(community.communityRoot, community.generalChannelId, community.rootEpoch).publicKeyHex
 

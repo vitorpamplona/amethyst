@@ -167,7 +167,7 @@ object NipCommand {
         val remaining = SEARCH_RELAYS.toMutableSet()
         val listener =
             object : SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

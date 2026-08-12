@@ -21,56 +21,137 @@
 package com.vitorpamplona.amethyst.service.location
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
 import android.os.Looper
-import com.vitorpamplona.amethyst.service.location.LocationState.Companion.MIN_DISTANCE
-import com.vitorpamplona.amethyst.service.location.LocationState.Companion.MIN_TIME
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 
+/**
+ * Wraps [LocationManager] update registration as a cold [Flow].
+ *
+ * Registers on **one** provider, chosen by [LocationProviderLadder], rather than
+ * on every provider the device reports. The previous shotgun cost four
+ * simultaneous registrations — passive, network, fused and gps, the last at
+ * HIGH_ACCURACY — to produce a 5 km geohash.
+ *
+ * Takes a [LocationManager] rather than a `Context` so the registration
+ * behaviour is unit-testable; the caller does the `getSystemService` lookup.
+ *
+ * [onListening] is fired from inside the flow, after a registration succeeds, and
+ * released again from the `try`/`finally` that wraps everything after it, never
+ * as an `onStart`/`onCompletion` pair on the returned flow. The distinction
+ * matters: an `onStart` fires on collection even when nothing registered, so a
+ * device with no usable provider would accrue location time with no location
+ * running, and — because the ledger refcounts the two [LocationState] flows
+ * together — the unpaired close would steal the other flow's holder.
+ *
+ * The pair is kept honest from both ends. The acquire cannot fire without a
+ * registration, because a failure to register throws before reaching it. The
+ * release cannot be skipped, because everything after the acquire runs inside a
+ * `try`/`finally` rather than inside `awaitClose` — [freshestLastKnownLocation]
+ * (the seed sweep below) can throw a non-cancellation exception and unwind
+ * before `awaitClose` is ever reached, and `try`/`finally` is what still runs
+ * the release on that path; see `releasesTheRegistrationWhenTheSeedThrows` in
+ * `LocationFlowTest`. (In principle a collector cancelling mid-seed would also
+ * unwind past `awaitClose` the same way, but that path could not be
+ * reproduced — `callbackFlow`'s buffer is empty at this point, so the single
+ * seed send returns without suspending and never observes the cancellation.)
+ */
 class LocationFlow(
-    private val context: Context,
+    private val locationManager: LocationManager,
+    private val sdkInt: Int = Build.VERSION.SDK_INT,
 ) {
     @SuppressLint("MissingPermission")
     fun get(
-        minTimeMs: Long = MIN_TIME,
-        minDistanceM: Float = MIN_DISTANCE,
+        minTimeMs: Long,
+        minDistanceM: Float,
+        onListening: ((Boolean) -> Unit)? = null,
     ): Flow<Location> =
         callbackFlow {
-            Log.i("LocationFlow", "Start")
-            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-
             val locationCallback =
                 LocationListener { location ->
                     Log.d("LocationFlow") { "onLocationChanged $location" }
                     launch { send(location) }
                 }
 
-            locationManager.allProviders.forEach {
-                val location = locationManager.getLastKnownLocation(it)
-                Log.d("LocationFlow") { "Last Known location is $location" }
-                if (location != null) {
-                    send(location)
-                }
-                Log.d("LocationFlow", "Requesting Updates")
-                locationManager.requestLocationUpdates(
-                    it,
-                    minTimeMs,
-                    minDistanceM,
-                    locationCallback,
-                    Looper.getMainLooper(),
-                )
-            }
+            // One binder call, reused for both the ladder filter and the seed.
+            val providers = locationManager.allProviders
 
-            awaitClose {
-                Log.i("LocationFlow", "Stop")
+            val candidates = LocationProviderLadder.chooseProviders(sdkInt) { it in providers }
+
+            val registered =
+                candidates.firstOrNull { requestUpdates(it, minTimeMs, minDistanceM, locationCallback) }
+                    ?: throw SecurityException("No usable location provider. Candidates: $candidates")
+
+            Log.i("LocationFlow") { "Listening on $registered every ${minTimeMs}ms / ${minDistanceM}m" }
+            onListening?.invoke(true)
+
+            // Cleanup lives in this finally, not in awaitClose — see the class
+            // KDoc, and `releasesTheRegistrationWhenTheSeedThrows` in
+            // LocationFlowTest, which fails if it moves.
+            try {
+                // Seeded after registration so the no-provider path throws
+                // without having emitted anything; seeding first would show the
+                // consumer Success -> LackPermission on a device with no
+                // compatible provider.
+                freshestLastKnownLocation(candidates)?.let {
+                    Log.d("LocationFlow") { "Last known location is $it" }
+                    send(it)
+                }
+
+                awaitClose { }
+            } finally {
+                Log.i("LocationFlow") { "Stopped listening on $registered" }
                 locationManager.removeUpdates(locationCallback)
+                onListening?.invoke(false)
             }
         }
+
+    /** True when the registration was accepted; false when the provider refused it. */
+    @SuppressLint("MissingPermission")
+    private fun requestUpdates(
+        provider: String,
+        minTimeMs: Long,
+        minDistanceM: Float,
+        locationCallback: LocationListener,
+    ): Boolean =
+        try {
+            locationManager.requestLocationUpdates(
+                provider,
+                minTimeMs,
+                minDistanceM,
+                locationCallback,
+                Looper.getMainLooper(),
+            )
+            true
+        } catch (e: SecurityException) {
+            Log.w("LocationFlow", "Provider $provider refused the update request", e)
+            false
+        }
+
+    /**
+     * The freshest cached fix across the providers the ladder deemed usable.
+     * Sweeping every provider the device reports instead would, on the
+     * coarse-only legacy path, pay a guaranteed-to-throw binder call per
+     * fine-only provider on every flow start. Still guarded per provider, like
+     * the update request is — on a device where one refuses us, the others
+     * should still seed.
+     */
+    @SuppressLint("MissingPermission")
+    private fun freshestLastKnownLocation(providers: List<String>): Location? =
+        providers
+            .mapNotNull { provider ->
+                try {
+                    locationManager.getLastKnownLocation(provider)
+                } catch (e: SecurityException) {
+                    Log.w("LocationFlow", "No permission to read the last known location of $provider", e)
+                    null
+                }
+            }.maxByOrNull { it.time }
 }

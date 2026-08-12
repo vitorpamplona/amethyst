@@ -347,7 +347,7 @@ class ReloadMintViewModel : ViewModel() {
             // Fire-and-forget: the mint-quote poll below is the source of truth for
             // whether the payment actually landed.
             runCatching {
-                vm.account.sendNwcRequestToWallet(walletUri, PayInvoiceMethod.create(flow.invoice)) { }
+                vm.account.zaps.sendNwcRequestToWallet(walletUri, PayInvoiceMethod.create(flow.invoice)) { }
             }
         } else {
             // No NWC — surface the invoice for an external wallet and keep polling.

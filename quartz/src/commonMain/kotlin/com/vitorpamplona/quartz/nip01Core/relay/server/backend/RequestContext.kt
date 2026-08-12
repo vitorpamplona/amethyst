@@ -63,7 +63,10 @@ interface RequestContext {
      * The pubkeys that have authenticated on this connection via NIP-42. Empty
      * when the connection is unauthenticated. Backed by the engine-owned scope
      * and read live, so a REQ that arrives after a successful AUTH sees the
-     * freshly recorded pubkey(s).
+     * freshly recorded pubkey(s). Each read returns an **immutable snapshot**
+     * (the engine swaps the set copy-on-write on AUTH), so holding one across
+     * a long replay is safe — it just won't grow if another AUTH lands
+     * mid-query.
      */
     val authenticatedUsers: Set<HexKey>
 }

@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -58,6 +59,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The trust boundary's main-process endpoint. The untrusted `:napplet` process binds this
@@ -93,7 +95,11 @@ class NappletBrokerService : Service() {
 
     // Live relay subscriptions, keyed by the applet's subId. The account comes per-open from the
     // requesting surface's launch token, so a surface's REQs always target the account it acts as.
-    private val liveSubscriptions = NappletLiveSubscriptions()
+    private val liveSubscriptions = NappletLiveSubscriptions(scope)
+
+    // NAP-RESOURCE cancellation is keyed by the trusted launch token plus the caller's request id.
+    // Cancelling removes the job before it can emit a late terminal envelope to the sandbox.
+    private val resourceRequests = ConcurrentHashMap<String, Job>()
 
     // The app-wide inc pub/sub bus: routes inc.emit between live napplet sessions as inc.event pushes.
     private val incBus = NappletIncBus { replyTo, payload -> push(replyTo, payload) }
@@ -117,7 +123,7 @@ class NappletBrokerService : Service() {
 
     override fun onDestroy() {
         liveSubscriptions.closeAll()
-        identityWatch.stop()
+        identityWatch.stopAll()
         // Every applet/browser surface has unbound, so the "session" the user granted for is over.
         // The ledger and the broker cache are now app-wide singletons that outlive this service, so
         // their in-memory session grants have to be dropped explicitly here — that keeps the lifetime
@@ -280,38 +286,57 @@ class NappletBrokerService : Service() {
         // Resolve the launch token to the trusted identity + declared set. The sandbox never states
         // its own coordinate, so a compromised :napplet process can only ever act as the napplet it
         // was launched as (it holds only its own token). An unknown token = no session; refuse.
-        val session = NappletLaunchRegistry.resolve(data.getString(NappletIpc.KEY_LAUNCH_TOKEN))
+        val launchToken = data.getString(NappletIpc.KEY_LAUNCH_TOKEN)
+        val session = NappletLaunchRegistry.resolve(launchToken)
         if (session == null) {
             reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("Unknown napplet session.")))
             return true
         }
         val identity = session.identity
         val declared = session.declared
+        val resourceRequestKey = "$launchToken\u0000$requestId"
+        if (requestType == "resource.cancel") {
+            resourceRequests.remove(resourceRequestKey)?.cancel()
+            return true
+        }
+        val tracksResourceRequest = requestType == "resource.bytes" || requestType == "resource.bytesMany"
 
-        scope.launch {
-            // The shared, host-agnostic router owns decode → broker → encode and the subscribe-vs-reply
-            // decision (it stays wire-identical with the future desktop host). This service only supplies
-            // the broker, the Messenger transport, and the live relay subscription each Outcome implies.
-            // The launch token decides whose key signs — not the active account. A surface opened by
-            // one account can never be handed another's signer, even while it stays open across a switch.
-            val broker = brokerFor(session.accountPubKey)
-            if (broker == null) {
-                reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("That account is no longer signed in.")))
-                return@launch
+        val requestJob =
+            scope.launch(start = if (tracksResourceRequest) CoroutineStart.LAZY else CoroutineStart.DEFAULT) {
+                // The shared, host-agnostic router owns decode → broker → encode and the subscribe-vs-reply
+                // decision (it stays wire-identical with the future desktop host). This service only supplies
+                // the broker, the Messenger transport, and the live relay subscription each Outcome implies.
+                // The launch token decides whose key signs — not the active account. A surface opened by
+                // one account can never be handed another's signer, even while it stays open across a switch.
+                val broker = brokerFor(session.accountPubKey)
+                if (broker == null) {
+                    reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("That account is no longer signed in.")))
+                    return@launch
+                }
+                when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload)) {
+                    is NappletRequestRouter.Outcome.Ignore -> {}
+                    is NappletRequestRouter.Outcome.Reply -> {
+                        reply(replyTo, requestId, outcome.payload)
+                        // NAP-IDENTITY has no watch/unwatch request. Once the consent-gated startup
+                        // snapshot succeeds, the runtime owns identity.changed delivery for this
+                        // trusted launch token until the broker service closes.
+                        if (requestType == "identity.getPublicKey" && outcome.response is NappletResponse.PublicKey && launchToken != null) {
+                            identityWatch.start(launchToken, session.accountPubKey) { push(replyTo, it) }
+                        }
+                    }
+                    is NappletRequestRouter.Outcome.OpenSubscription ->
+                        liveSubscriptions.open(outcome.subId, outcome.filters, accountFor(session.accountPubKey)) { push(replyTo, it) }
+                    is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(outcome.subId)
+                    is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
+                    is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)
+                    is NappletRequestRouter.Outcome.UnsubscribeInc -> incBus.unsubscribe(replyTo, outcome.topic)
+                    is NappletRequestRouter.Outcome.EmitInc -> incBus.emit(replyTo, identity.coordinate, outcome.topic, outcome.payloadRaw)
+                }
             }
-            when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload)) {
-                is NappletRequestRouter.Outcome.Ignore -> {}
-                is NappletRequestRouter.Outcome.Reply -> reply(replyTo, requestId, outcome.payload)
-                is NappletRequestRouter.Outcome.OpenSubscription ->
-                    liveSubscriptions.open(outcome.subId, outcome.filters, accountFor(session.accountPubKey)) { push(replyTo, it) }
-                is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(outcome.subId)
-                is NappletRequestRouter.Outcome.WatchIdentity -> identityWatch.start(session.accountPubKey) { push(replyTo, it) }
-                is NappletRequestRouter.Outcome.UnwatchIdentity -> identityWatch.stop()
-                is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
-                is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)
-                is NappletRequestRouter.Outcome.UnsubscribeInc -> incBus.unsubscribe(replyTo, outcome.topic)
-                is NappletRequestRouter.Outcome.EmitInc -> incBus.emit(replyTo, identity.coordinate, outcome.topic, outcome.payloadRaw)
-            }
+        if (tracksResourceRequest) {
+            resourceRequests.put(resourceRequestKey, requestJob)?.cancel()
+            requestJob.invokeOnCompletion { resourceRequests.remove(resourceRequestKey, requestJob) }
+            requestJob.start()
         }
         return true
     }

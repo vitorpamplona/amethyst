@@ -669,6 +669,7 @@ also carried on-relay as an encrypted kind:13302.
 | `amy concord send COMMUNITY CHANNEL TEXT` | Post a message (CHANNEL = `general`\|name\|id). |
 | `amy concord read COMMUNITY CHANNEL [--limit N] [--epoch N] [--root HEX]` | Read a channel's messages (default 50); `--epoch`/`--root` read a prior epoch's plane. |
 | `amy concord invite COMMUNITY [--base URL]` | Mint + publish a shareable invite link. |
+| `amy concord revoke COMMUNITY TOKEN\|URL` | Retire a link you minted: publishes a `vsk=9` tombstone at its coordinate, then records it in your Invite List. |
 | `amy concord join URL` | Redeem an invite link and save the community. |
 | `amy concord roles COMMUNITY` | List live roles + the current banlist (CORD-04). |
 | `amy concord role COMMUNITY NAME POSITION PERM…` | Define a role (perms by name, e.g. `BAN KICK`). |

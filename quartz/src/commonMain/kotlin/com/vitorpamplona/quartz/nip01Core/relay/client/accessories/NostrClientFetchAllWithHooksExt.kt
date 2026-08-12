@@ -41,13 +41,13 @@ import kotlinx.coroutines.withTimeoutOrNull
  * funnel every arriving event through the suspending [onEvent] hook (verify /
  * persist / filter — return `true` to keep it in the result), and return the
  * accepted `(relay, event)` pairs once every relay reached a terminal state
- * (EOSE, CLOSED, or cannot-connect) or the line went quiet for [timeoutMs].
+ * (EOSE, CLOSED, or cannot-connect) or the line went quiet for [idleTimeoutMs].
  *
- * [timeoutMs] is an **idle window, not a hard cap**: the clock only runs while
+ * [idleTimeoutMs] is an **idle window, not a hard cap**: the clock only runs while
  * the relays are silent, and every arriving event or terminal signal resets
  * it. A slow relay actively streaming a large backlog is therefore never
  * cropped mid-delivery — the fetch ends when the work is done or when nothing
- * has arrived for [timeoutMs] (a stall). The terminal conditions (EOSE /
+ * has arrived for [idleTimeoutMs] (a stall). The terminal conditions (EOSE /
  * CLOSED / cannot-connect per relay) are what bound the fetch; the timeout's
  * only job is detecting relays that will never reach one. [maxTotalMs]
  * (default 10x the idle window) is the wall-clock ceiling that keeps a
@@ -62,23 +62,31 @@ import kotlinx.coroutines.withTimeoutOrNull
  *    as a hard failure via [classifyDrainFailure] (connect refused / DNS / TLS /
  *    dead HTTP upgrade — NOT slow relays or 429s) is recorded, so callers can
  *    prune proven-dead relays from future routing instead of paying the full
- *    [timeoutMs] on them again.
+ *    [idleTimeoutMs] on them again.
  *  - **[pendingOnAuthRequired]** — a relay that refuses the REQ with an
  *    `auth-required:` CLOSED is kept pending rather than treated as terminal:
  *    the caller's NIP-42 responder answers the challenge and the client re-fires
  *    this same subscription, so the post-auth events are collected instead of
  *    returning empty. If auth never satisfies it, the relay simply falls through
- *    to the [timeoutMs].
+ *    to the [idleTimeoutMs].
  *  - **[onTimeout]** — diagnostic hook fired when the idle window elapsed with
  *    relays still pending: receives the stalled set, the terminal reasons seen so
  *    far (`"eose"` / `"closed:<msg>"` / `"cannot:<msg>"`), and what was collected.
  */
 suspend fun INostrClient.fetchAllWithHooks(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
-    timeoutMs: Long = 8_000L,
+    idleTimeoutMs: Long = 8_000L,
     subscriptionId: String = newSubId(),
     pendingOnAuthRequired: Boolean = false,
     deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
+    /**
+     * Receives the terminal reason per relay ("eose", "closed:…", "cannot:…"), so a caller can
+     * tell "a relay served us and had nothing" from "nobody served us". An empty result alone
+     * cannot: both look like zero events, and treating the second as the first is how a
+     * read-merge-write on a replaceable event destroys the entries it failed to read. See
+     * [anyRelayServed].
+     */
+    doneOut: MutableMap<NormalizedRelayUrl, String>? = null,
     onTimeout: ((stalled: Set<NormalizedRelayUrl>, doneReasons: Map<NormalizedRelayUrl, String>, collected: List<Pair<NormalizedRelayUrl, Event>>) -> Unit)? = null,
     /**
      * Hard wall-clock ceiling. The idle window alone is unbounded when a relay
@@ -86,9 +94,11 @@ suspend fun INostrClient.fetchAllWithHooks(
      * adversarial or misbehaving relay could pin the caller forever. The cap
      * restores an upper bound while staying far above the idle window, so a
      * legitimately streaming relay still finishes its backlog. Pass
-     * [Long.MAX_VALUE] for a deliberately uncapped drain.
+     * [Long.MAX_VALUE] for a deliberately uncapped drain; a non-positive value
+     * also uncaps (absorbing an `idleTimeoutMs * 10` overflow from an
+     * effectively-infinite idle window).
      */
-    maxTotalMs: Long = timeoutMs * 10,
+    maxTotalMs: Long = idleTimeoutMs * 10,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): List<Pair<NormalizedRelayUrl, Event>> {
     if (filters.isEmpty()) return emptyList()
@@ -100,7 +110,7 @@ suspend fun INostrClient.fetchAllWithHooks(
     val doneReasons = HashMap<NormalizedRelayUrl, String>()
     val listener =
         object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,
@@ -144,7 +154,7 @@ suspend fun INostrClient.fetchAllWithHooks(
         coroutineScope {
             subscribe(subscriptionId, filters, listener)
             val watchdog =
-                if (maxTotalMs == Long.MAX_VALUE) {
+                if (maxTotalMs <= 0 || maxTotalMs == Long.MAX_VALUE) {
                     null
                 } else {
                     launch {
@@ -188,7 +198,7 @@ suspend fun INostrClient.fetchAllWithHooks(
                 // Slow path: both dry — arm one idle wait for the next signal.
                 if (pending == null) {
                     val progressed =
-                        withTimeoutOrNull(timeoutMs) {
+                        withTimeoutOrNull(idleTimeoutMs) {
                             select<Unit> {
                                 eventChannel.onReceive { pending = it }
                                 doneChannel.onReceive { (relay, reason) ->
@@ -235,8 +245,21 @@ suspend fun INostrClient.fetchAllWithHooks(
             classifyDrainFailure(reason)?.let { out[relay] = it }
         }
     }
+    doneOut?.putAll(doneReasons)
     return collected
 }
+
+/** The terminal reason recorded when a relay finished serving a subscription normally. */
+const val DONE_REASON_EOSE = "eose"
+
+/**
+ * True when at least one relay completed the fetch normally, i.e. answered and reached EOSE.
+ *
+ * Read against the map filled by `fetchAllWithHooks`'s `doneOut`. An empty event list means
+ * "nothing matched" only when this is true; otherwise it means "nobody told us", and a caller
+ * that overwrites a replaceable event on that basis deletes whatever it could not read.
+ */
+fun Map<NormalizedRelayUrl, String>.anyRelayServed(): Boolean = values.any { it == DONE_REASON_EOSE }
 
 /**
  * [fetchAllPagesFromPool] with a suspending per-event hook: paginates every relay
@@ -254,7 +277,7 @@ suspend fun INostrClient.fetchAllWithHooks(
  */
 suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
-    timeoutMs: Long = 30_000L,
+    idleTimeoutMs: Long = 30_000L,
     maxConcurrentRelays: Int = 8,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): List<Pair<NormalizedRelayUrl, Event>> {
@@ -285,7 +308,7 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
         try {
             fetchAllPagesFromPool(
                 filters = filters,
-                timeoutMs = timeoutMs,
+                idleTimeoutMs = idleTimeoutMs,
                 maxConcurrentRelays = maxConcurrentRelays,
             ) { event, relay -> eventChannel.trySend(relay to event) }
         } finally {

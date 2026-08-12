@@ -23,16 +23,24 @@ package com.vitorpamplona.quartz.nip56Reports.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 class ReportedEventTag(
-    val eventId: HexKey,
+    override val eventId: HexKey,
+    override val relay: NormalizedRelayUrl? = null,
     override val type: ReportType? = null,
-) : BaseReportTag {
-    fun toTagArray() = assemble(eventId, type)
+) : BaseReportTag,
+    GenericETag {
+    /** NIP-56 `e` tags carry no author slot — slot 3 is the report type. */
+    override val author: HexKey? = null
+
+    override fun toTagArray() = assemble(eventId, relay, type)
 
     companion object {
         const val TAG_NAME = "e"
@@ -45,21 +53,46 @@ class ReportedEventTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val type =
-                if (tag.size == 2) {
-                    defaultReportType
-                } else if (tag.size == 3) {
-                    ReportType.parseOrNull(tag[2], tag) ?: defaultReportType
-                } else {
-                    ReportType.parseOrNull(tag[3], tag) ?: defaultReportType
-                }
+            return ReportedEventTag(
+                tag[1],
+                ReportTagLayout.relayHint(tag),
+                ReportTagLayout.reportType(tag, defaultReportType),
+            )
+        }
 
-            return ReportedEventTag(tag[1], type)
+        fun parseId(tag: Array<String>): HexKey? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            return tag[1]
+        }
+
+        fun parseAsHint(tag: Array<String>): EventIdHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+
+            val hint = ReportTagLayout.relayHint(tag)
+
+            ensure(hint != null) { return null }
+
+            return EventIdHint(tag[1], hint)
+        }
+
+        /** See [ReportedAuthorTag.assemble] for why the layout is conditional. */
+        fun assemble(
+            eventId: HexKey,
+            relay: NormalizedRelayUrl?,
+            type: ReportType?,
+        ) = if (relay != null) {
+            arrayOfNotNull(TAG_NAME, eventId, relay.url, type?.code)
+        } else {
+            arrayOfNotNull(TAG_NAME, eventId, type?.code)
         }
 
         fun assemble(
             eventId: HexKey,
             type: ReportType? = null,
-        ) = arrayOfNotNull(TAG_NAME, eventId, type?.code)
+        ) = assemble(eventId, null, type)
     }
 }

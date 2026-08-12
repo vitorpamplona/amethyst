@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.filterGroupNotificationsToPubkey
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
@@ -41,9 +42,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** One joined group whose recent chat is kept live for the Messages-list preview. */
 class RelayGroupJoinedChatTailQueryState(
-    val account: Account,
+    override val account: Account,
     val groupId: GroupId,
-)
+) : AccountScopedQuery
 
 /**
  * Always-on **live tail** for the recent chat of every NIP-29 group the user has joined — the group

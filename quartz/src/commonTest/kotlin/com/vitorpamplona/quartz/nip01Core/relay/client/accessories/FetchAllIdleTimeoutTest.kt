@@ -89,7 +89,7 @@ class FetchAllIdleTimeoutTest {
             val collected =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                 ) { _, _ -> true }
             feeder.join()
             assertEquals(10, collected.size, "an actively streaming relay must never be cropped")
@@ -111,7 +111,7 @@ class FetchAllIdleTimeoutTest {
             val collected =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                     onTimeout = { stalled, _, _ -> stalledRelays = stalled },
                 ) { _, _ -> true }
             assertEquals(2, collected.size, "events before the stall are kept")
@@ -136,7 +136,7 @@ class FetchAllIdleTimeoutTest {
             val events =
                 client.fetchAll(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                 )
             feeder.join()
             assertEquals(10, events.size, "fetchAll shares the idle-window semantics")
@@ -162,7 +162,7 @@ class FetchAllIdleTimeoutTest {
             val collected =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                     maxTotalMs = 1_000,
                     onTimeout = { stalled, _, _ -> stalledRelays = stalled },
                 ) { _, _ -> true }
@@ -186,7 +186,7 @@ class FetchAllIdleTimeoutTest {
             val collected =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
-                    timeoutMs = 300,
+                    idleTimeoutMs = 300,
                 ) { _, _ -> true }
             assertEquals(1, collected.size)
             assertTrue(currentTime - start < 300, "a terminal EOSE must not wait out the window")

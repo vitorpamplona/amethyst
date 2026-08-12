@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.UserContext
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
@@ -89,6 +91,9 @@ class DesktopLocalCache : ICacheProvider {
     val notes = LargeSoftCache<HexKey, Note>()
     val addressableNotes = LargeSoftCache<String, AddressableNote>()
     private val deletedEvents = ConcurrentHashMap.newKeySet<HexKey>()
+
+    /** NIP-hints index accumulated from consumed events (event/address/pubkey → relay). */
+    override val relayHints = HintIndexer()
 
     val eventStream = DesktopCacheEventStream()
 
@@ -487,6 +492,9 @@ class DesktopLocalCache : ICacheProvider {
         relay: NormalizedRelayUrl?,
     ): Boolean {
         val note = getOrCreateNote(event.id)
+        // Not gated on the early return below: the tally may already hold responses that arrived
+        // before this poll did, and updatePolicy is idempotent for re-delivery from another relay.
+        note.pollState().updatePolicy(PollTallyPolicy.from(event))
         if (note.event != null) return false
         val author = getOrCreateUser(event.pubKey)
         note.loadEvent(event, author, emptyList())
@@ -510,6 +518,7 @@ class DesktopLocalCache : ICacheProvider {
     ): Boolean {
         val pollId = event.poll()?.eventId ?: return false
         val pollNote = getOrCreateNote(pollId)
+        (pollNote.event as? PollEvent)?.let { pollNote.pollState().updatePolicy(PollTallyPolicy.from(it)) }
         val responseNote = getOrCreateNote(event.id)
         if (responseNote.event != null) return false
         val author = getOrCreateUser(event.pubKey)
@@ -904,9 +913,9 @@ class DesktopLocalCache : ICacheProvider {
             Note(hexKey)
         }
 
-    override fun getOrCreateAddressableNote(key: Address): AddressableNote =
-        addressableNotes.getOrCreate(key.toValue()) {
-            AddressableNote(key)
+    override fun getOrCreateAddressableNote(address: Address): AddressableNote =
+        addressableNotes.getOrCreate(address.toValue()) {
+            AddressableNote(address)
         }
 
     // ----- Channel operations -----

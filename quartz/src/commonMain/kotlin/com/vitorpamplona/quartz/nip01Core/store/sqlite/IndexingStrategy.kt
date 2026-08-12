@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import com.vitorpamplona.quartz.nip01Core.core.Tag
+import com.vitorpamplona.quartz.nip01Core.tags.isIndexableTagName
 
 interface IndexingStrategy {
     /**
@@ -165,5 +166,5 @@ class DefaultIndexingStrategy(
     override fun shouldIndex(
         kind: Int,
         tag: Tag,
-    ) = tag.size >= 2 && tag[0].length == 1
+    ) = tag.size >= 2 && isIndexableTagName(tag[0])
 }

@@ -276,7 +276,7 @@ class Nip01ComplianceTest : RelayClientTest() {
                 "sub-A",
                 mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(1)))),
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -297,7 +297,7 @@ class Nip01ComplianceTest : RelayClientTest() {
                 "sub-B",
                 mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(4)))),
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -385,7 +385,7 @@ class Nip01ComplianceTest : RelayClientTest() {
                 "live-1",
                 mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(1)))),
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -424,7 +424,7 @@ class Nip01ComplianceTest : RelayClientTest() {
                 "live-2",
                 mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(1)))),
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -465,7 +465,7 @@ class Nip01ComplianceTest : RelayClientTest() {
                 "eph-1",
                 mapOf(defaultRelayUrl to listOf(Filter(kinds = listOf(20_001)))),
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -534,7 +534,7 @@ class Nip01ComplianceTest : RelayClientTest() {
                     relayB to listOf(Filter(kinds = listOf(1))),
                 ),
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,

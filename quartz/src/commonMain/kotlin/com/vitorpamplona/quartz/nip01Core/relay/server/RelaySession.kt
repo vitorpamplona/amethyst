@@ -53,6 +53,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -82,8 +83,18 @@ class RelaySession(
      * The authenticated-identity store for this connection. The engine is the
      * only writer (committed in [handleAuth] on a successful NIP-42 AUTH); the
      * policy and the data plane read it through [requestContext].
+     *
+     * Copy-on-write on purpose: readers run concurrently with the engine —
+     * a REQ replay coroutine can hold the set (via `StoreQueryContext` or an
+     * `EventSource` reading [RequestContext.authenticatedUsers]) while a
+     * later AUTH frame commits a new identity. Each read hands out the
+     * current **immutable** set, so an in-flight query keeps a consistent
+     * snapshot instead of racing a mutating `LinkedHashSet`; `@Volatile`
+     * makes the swapped reference visible across threads. AUTH is rare, so
+     * the copy costs nothing on the hot path.
      */
-    private val authenticatedUsers = mutableSetOf<HexKey>()
+    @Volatile
+    private var authenticatedUsers = setOf<HexKey>()
 
     /**
      * The per-connection scope. Handed to the [policy] at connect (so gating
@@ -203,6 +214,13 @@ class RelaySession(
                     is IEventStore.InsertOutcome.Rejected -> {
                         send(OkMessage(cmd.event.id, false, outcome.reason))
                     }
+
+                    is IEventStore.InsertOutcome.Failed -> {
+                        // The store's error, not the event's — NIP-01's
+                        // machine-readable prefix for that is "error:".
+                        val reason = outcome.reason
+                        send(OkMessage(cmd.event.id, false, if (reason.startsWith("error:")) reason else "error: $reason"))
+                    }
                 }
             }
         } catch (_: ClosedSendChannelException) {
@@ -261,7 +279,7 @@ class RelaySession(
 
         // Single, engine-side commit into the connection scope — after the full
         // chain approved and a verifying policy voted to record.
-        if (record) authenticatedUsers.add(cmd.event.pubKey)
+        if (record) authenticatedUsers = authenticatedUsers + cmd.event.pubKey
 
         send(OkMessage(cmd.event.id, true, ""))
     }

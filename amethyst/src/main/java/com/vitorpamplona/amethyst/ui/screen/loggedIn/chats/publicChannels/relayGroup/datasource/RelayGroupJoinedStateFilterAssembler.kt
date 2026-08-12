@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.launchChatFeedToggleObserver
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
@@ -33,8 +34,8 @@ import kotlinx.coroutines.Job
 
 /** One request to keep the relay-signed state of the user's joined groups live. */
 class RelayGroupJoinedStateQueryState(
-    val account: Account,
-)
+    override val account: Account,
+) : AccountScopedQuery
 
 /**
  * Keeps the relay-signed **state** of every group the user has joined live and current — name, picture,

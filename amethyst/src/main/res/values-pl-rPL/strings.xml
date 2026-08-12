@@ -211,6 +211,8 @@
     <string name="connection_success_rate_description">Odsetek udanych połączeń z transmiterem</string>
     <string name="search_and_add_a_user">Szukaj i dodaj użytkownika</string>
     <string name="add_a_relay">Dodaj Transmiter</string>
+    <string name="relay_url_not_valid">Nieprawidłowy adres transmitera. Użyj nazwy hosta lub adresu IP w nawiasach (na przykład
+[201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Moje imię @tag</string>
     <string name="display_name">Nazwa użytkownika</string>
     <string name="my_display_name">Mój nick</string>
@@ -2022,6 +2024,107 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="many">Podłączono do %1$d transmiterów</item>
         <item quantity="other">Podłączono do %1$d transmiterów</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d transmiter</item>
+        <item quantity="few">%1$s \u00b7 %2$d transmiterów</item>
+        <item quantity="many">%1$s \u00b7 %2$d transmiterów</item>
+        <item quantity="other">%1$s \u00b7 %2$d transmitery</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Przeglądanie</string>
+    <string name="relay_purpose_media">Multimedia</string>
+    <string name="relay_purpose_tags">Hashtagi</string>
+    <string name="relay_purpose_topics">Tematy</string>
+    <string name="relay_purpose_thread">Rozmowa</string>
+    <string name="relay_purpose_search">Szukaj</string>
+    <string name="relay_purpose_referenced">Wyszukiwanie brakujących wydarzeń</string>
+    <string name="relay_purpose_engagement">Obserwowanie wydarzeń</string>
+    <string name="relay_explain_referenced">Pobiera wydarzenia na podstawie identyfikatora, do których odnosi się jakiś element na ekranie, ale których jeszcze nie masz — cytat, wiadomość nadrzędna odpowiedzi, początek wątku.</string>
+    <string name="relay_explain_engagement">Monitoruje aktualnie wyświetlane wydarzenia pod kątem nowych odpowiedzi, reakcji, udostępnień, zapsów i zgłoszeń, dzięki czemu liczby są aktualizowane na bieżąco podczas czytania.</string>
+    <string name="relay_purpose_add_ons">Dodatki</string>
+    <string name="relay_purpose_relay_info">Informacje o transmiterze</string>
+    <string name="relay_purpose_other">Inne</string>
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Wyszukiwarka listy transmiterów</string>
+    <string name="relay_purpose_observing_profiles">Obserwowanie profili</string>
+    <string name="relay_purpose_your_account">Dane konta</string>
+    <string name="relay_purpose_home_feed">Główny kanał</string>
+    <string name="relay_purpose_relay_groups">Grupy Transmiterów</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d grupa</item>
+        <item quantity="few">%1$d grup</item>
+        <item quantity="many">%1$d grup</item>
+        <item quantity="other">%1$d grupy</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">Czaty efemeryczne</string>
+    <string name="relay_purpose_geohash_chats">Czaty z funkcją lokalizacji</string>
+    <string name="relay_purpose_live_chat">Czat podczas transmisji na żywo</string>
+    <string name="relay_explain_relay_groups">Grupy NIP-29, do których dołączyłeś. Każda grupa działa na jednym transmiterze, więc aplikacja łączy się z każdym transmiterem, na którym znajduje się jakaś Twoja grupa.</string>
+    <string name="relay_explain_ephemeral_chats">Czaty, w których nie jest zapisywana historia — wiadomości są dostępne tylko wtedy, gdy użytkownik jest podłączony, więc aby otrzymywać jakiekolwiek wiadomości, należy pozostać subskrybentem.</string>
+    <string name="relay_explain_geohash_chats">Pokoje powiązane z lokalizacją dla obszarów, które obserwujesz, wymagane od transmiterów, które je obsługują.</string>
+    <string name="relay_explain_live_chat">Czatuj i zap cele powiązane z transmisjami na żywo, które masz otwarte lub które obserwujesz.</string>
+    <string name="relay_purpose_dm_inbox">Skrzynka odbiorcza DM</string>
+    <string name="relay_purpose_your_wallet">Portfel</string>
+    <string name="relay_purpose_nutzap_inbox">Skrzynka odbiorcza Nutzap</string>
+    <string name="relay_purpose_mint_directory">Katalog Mint</string>
+    <string name="relay_purpose_nwc">Podłącz portfel</string>
+    <string name="relay_purpose_community_chats">Czaty społecznościowe</string>
+    <string name="relay_purpose_community_feeds">Kanały społecznościowe</string>
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <string name="relay_explain_notifications">Twoje transmitery skrzynek odbiorczych oraz niewielka, zmieniająca się próbka transmiterów, na których publikują osoby, które obserwujesz – na wypadek, gdyby wzmianka została dostarczona gdzie indziej.</string>
+    <string name="relay_explain_direct_messages">Transmitery skrzynek odbiorczych DM, gdzie dostarczane są zawijane wiadomości DM.</string>
+    <string name="relay_explain_public_chats">Transmiter domowy każdego czatu, który masz otwarty lub do którego dołączyłeś.</string>
+    <string name="relay_explain_community_chats">Transmitery, na których każda społeczność publikuje swoje plany.</string>
+    <string name="relay_explain_encrypted_groups">Wiadomości grupowe i pakiety kluczy na transmiterach poszczególnych grup.</string>
+    <string name="relay_explain_live_rooms">Transmitery pokoju, dopóki jest otwarty.</string>
+    <string name="relay_explain_account_data">Twój profil, ustawienia i wersje robocze na Twoich domowych transmiterach.</string>
+    <string name="relay_explain_profiles">Profile osób znajdujących się obecnie na ekranie.</string>
+    <string name="relay_explain_relay_lists">Ustala, na jakich transmiterach poszczególne osoby publikują swoje treści, dzięki czemu ich posty mogą być pobierane z właściwego miejsca.</string>
+    <string name="relay_explain_follows">Listy obserwacji, używane do budowania Twojego kanału i Twojej sieci WoT.</string>
+    <string name="relay_explain_moderation">Raporty sporządzone przez obserwowanych przez Ciebie użytkowników na temat profili wyświetlanych obecnie na ekranie, uzyskane z poszczególnych transmiterów, na których publikują ci użytkownicy.</string>
+    <string name="relay_purpose_reports_from_follows">Zgłoszenia od obserwujących</string>
+    <string name="relay_explain_wallet">Własne zdarzenia z portfela, odczytane z transmiterów, na których zostały opublikowane.</string>
+    <string name="relay_explain_nutzap_inbox">Monitoruje transmitery Nutzap, a także transmitery skrzynek odbiorczych i wiadomości prywatnych, dzięki czemu żadna płatność nie umknie.</string>
+    <string name="relay_explain_mint_directory">Sprawdza na różnych transmiterach, na których istnieją serwisy typu „mint”, oraz które z nich są polecane przez użytkowników.</string>
+    <string name="relay_explain_nwc">Powiadomienia z podłączonego portfela.</string>
+    <string name="active_subs_title">Aktywne subskrypcje transmitera</string>
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d filtr</item>
+        <item quantity="few">%1$d filtrów</item>
+        <item quantity="many">%1$d filtrów</item>
+        <item quantity="other">%1$d filtry</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d transmiter</item>
+        <item quantity="few">%1$d transmiterów</item>
+        <item quantity="many">%1$d/ transmiterów</item>
+        <item quantity="other">%1$d transmitery</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d filtr nie został jeszcze przypisany</item>
+        <item quantity="few">%1$d filtrów nie zostało jeszcze przypisanych</item>
+        <item quantity="many">%1$d filtrów nie zostało jeszcze przypisanych</item>
+        <item quantity="other">%1$d filtry nie zostały jeszcze przypisane</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Nie przypisano do konta</string>
+    <string name="active_subs_no_entity">Wszystkie</string>
+    <string name="active_subs_scope_global">Wszyscy</string>
+    <string name="active_subs_scope_follows">Osoby, które obserwujesz</string>
+    <string name="active_subs_scope_authors">Wybrana lista osób</string>
+    <string name="active_subs_scope_muted">Uciszone osoby</string>
+    <string name="active_subs_scope_all_communities">Twoje społeczności</string>
+    <string name="active_subs_scope_algo">Ulubiony kanał algorytmów</string>
+    <string name="active_subs_share">%1$d%% z wszystkich</string>
+    <string name="active_subs_search_keywords">subskrypcje filtry przekaźniki, żądania (reqs) połączenia dlaczego diagnostyka</string>
+    <string name="relay_explain_home">Posty osób, które obserwujesz, są pobierane z transmiterów, na których każda z nich publikuje swoje treści.</string>
     <string name="always_on_notif_connecting">Łączenie z transmiterami odbiorczymi\u2026</string>
     <string name="always_on_notif_setting_title">Usługa powiadomień zawsze włączona</string>
     <string name="always_on_notif_setting_description">Utrzymuje stałe połączenie z transmiterami odbiorczymi, aby zapewnić natychmiastowe dostarczanie powiadomień. Wyświetla bieżące powiadomienia. Zużywa więcej baterii, ale gwarantuje, że nigdy nie przegapisz żadnej wiadomości.</string>
@@ -2236,7 +2339,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="home_content_type_ephemeral_chat">Czaty efemeryczne</string>
     <string name="home_content_type_interactive_stories">Interaktywne opowieści</string>
     <string name="home_content_type_chess">Szachy</string>
-    <string name="home_content_type_attestations">Świadectwa</string>
+    <string name="home_content_type_birds">Obserwacje ptaków</string>
+    <string name="home_content_type_attestations">Certyfikaty</string>
     <string name="home_content_type_nips">Szkice NIP</string>
     <string name="home_content_type_music">Muzyka &amp; audio</string>
     <string name="home_content_type_podcasts">Podcasty</string>
@@ -2302,8 +2406,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="geohash_exclusive">Post ekskluzywny dla lokalizacji</string>
     <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji to zobaczą. Twoi ogólni obserwatorzy nie zobaczą tego.</string>
     <string name="hashtag_exclusive">Wpis hasztagowy</string>
+    <string name="external_content_title">Treści zewnętrzne</string>
     <string name="external_url_scope">Skomentuj na stronie internetowej</string>
     <string name="external_id_scope">Skomentuj na zewnętrznym serwisie</string>
+    <string name="url_preview_open_in_browser">Otwórz w przeglądarce</string>
     <string name="long_form_reading_minutes">Czas czytania: %1$d min.</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d utwór</item>
@@ -2637,6 +2743,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="share_to_dm_title">Wyślij do…</string>
     <string name="share_to_dm_start_new">Nowa wiadomość</string>
     <string name="share_target_as_highlight">Nowe wyróżnienie</string>
+    <string name="share_target_as_picture">Nowe zdjęcie</string>
+    <string name="share_target_as_short_video">Nowy filmik</string>
+    <string name="share_target_as_video">Nowe wideo</string>
     <string name="new_highlight_title">Nowe wyróżnienie</string>
     <string name="new_highlight_passage_label">Wyróżniony tekst</string>
     <string name="new_highlight_passage_placeholder">Co szczególnie zwróciło twoją uwagę?</string>
@@ -3240,6 +3349,21 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="bottom_bar_category_feeds">Kanały</string>
     <string name="bottom_bar_category_apps">Aplikacje &amp; Strony</string>
     <string name="bottom_bar_category_other">Inne</string>
+    <string name="drawer_settings">Menu boczne</string>
+    <string name="drawer_settings_title">Twoje menu boczne</string>
+    <string name="drawer_settings_description">Otwórz sekcję i wyłącz wiersze, których nigdy nie używasz. Ustawienia zawsze pozostają widoczne, więc zawsze możesz tu wrócić. Kolejność sekcji jest ustalona.</string>
+    <string name="drawer_settings_sections">Sekcje</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d ukryta</item>
+        <item quantity="few">%1$d ukryte</item>
+        <item quantity="many">%1$d ukrytych</item>
+        <item quantity="other">%1$d ukrytych</item>
+    </plurals>
+    <string name="drawer_settings_visible">Widoczne</string>
+    <string name="drawer_settings_hidden">Ukryte</string>
+    <string name="drawer_settings_always_on">Zawsze włączony</string>
+    <string name="drawer_settings_show_all">Pokaż wszystkie</string>
+    <string name="drawer_settings_hide_all">Ukryj wszystkie</string>
     <string name="home_tabs_settings">Karty główne</string>
     <string name="home_tabs_settings_description">Wybierz, które karty pojawiają się na ekranie głównym. Gdy tylko jedna karta jest aktywna, pasek karty jest ukryty.</string>
     <string name="home_tab_everything">Wszystko</string>
@@ -3339,8 +3463,20 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
     <string name="buzz_system_unknown">%1$s: %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_huddle_started">🔊 %1$s rozpoczął/a naradę</string>
+    <string name="buzz_huddle_joined">🔊 %1$s dołączył do zgromadzenia</string>
+    <string name="buzz_huddle_left">🔊 %1$s opuścił zgromadzenie</string>
+    <string name="buzz_huddle_ended">🔊 Zebranie zakończone</string>
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_job_requested">⚙️ %1$s zapytał o pracę</string>
+    <string name="buzz_job_accepted">⚙️ %1$s zaakceptował ofertę</string>
+    <string name="buzz_job_progress">⚙️ Postęp pracy</string>
+    <string name="buzz_job_result">⚙️ Wynik pracy</string>
+    <string name="buzz_job_cancelled">⚙️ Praca anulowana</string>
+    <string name="buzz_job_error">⚠️ Błąd Zadania</string>
     <!-- Buzz forum votes (kind 45002). -->
+    <string name="buzz_forum_upvoted">◆ %1$s głosował na post</string>
+    <string name="buzz_forum_downvoted">◆ %1$s ocenił post negatywnie</string>
     <string name="buzz_canvas_title">Płótno</string>
     <string name="buzz_canvas_empty">Żadne płótno nie zostało jeszcze udostępnione w tym projekcie.</string>
     <string name="buzz_canvas_edit">Edytuj płótno</string>
@@ -3382,6 +3518,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_dm_workspace">Przestrzeń robocza</string>
     <string name="buzz_dm_recipients">Do</string>
     <string name="buzz_dm_add_hint">Dodaj kogoś (npub lub hex)</string>
+    <string name="buzz_add_people_hint">Szukaj wg nazwy, NIP-05 lub npub</string>
+    <string name="buzz_add_people_empty">Nie znaleziono żadnych wyników. Spróbuj wpisać inne imię i nazwisko, adres NIP-05 lub wklej numer npub.</string>
     <string name="buzz_dm_start">Rozpocznij konwersację</string>
     <string name="buzz_dm_opening">Otwieranie…</string>
     <string name="buzz_dm_remove">Usuń</string>
@@ -3405,6 +3543,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_import_empty_body">Wygląda na to, że nie jesteś jeszcze członkiem żadnego kanału w tym transmiterze. Najpierw zaakceptuj zaproszenie do przestrzeni roboczej w przeglądarce, a następnie spróbuj ponownie.</string>
     <string name="relay_group_section_channels">Kanały</string>
     <string name="relay_group_section_forums">Fora</string>
+    <string name="relay_group_section_archived">Zarchiwizowane</string>
     <string name="buzz_agent_working">Pracuję…</string>
     <string name="relay_group_add_member">Dodaj członka</string>
     <string name="buzz_community_add_people">Dodaj osoby do tej przestrzeni roboczej</string>
@@ -3417,6 +3556,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_pin">Przypnij kanał</string>
     <string name="buzz_unpin">Odepnij kanał</string>
     <string name="buzz_dm_section_empty">Brak konwersacji</string>
+    <plurals name="buzz_dm_hidden_count">
+        <item quantity="one">%1$d ukryta rozmowa</item>
+        <item quantity="few">%1$d ukrytych rozmów</item>
+        <item quantity="many">%1$d ukrytych rozmów</item>
+        <item quantity="other">%1$d ukryte rozmowy</item>
+    </plurals>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">Zobacz %1$d rozmowę więcej</item>
         <item quantity="few">Zobacz %1$d rozmów więcej</item>
@@ -3598,6 +3743,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="git_repo_settings_save">Zapisz</string>
     <string name="git_repositories">Repozytoria Git</string>
     <string name="highlights">Wyróżnienia</string>
+    <string name="git_repositories_search_open">Filtruj repozytoria</string>
+    <string name="git_repositories_search_close">Zamknij filtr</string>
+    <string name="git_repositories_search_placeholder">Filtruj według nazwy, tematu, hosta, opiekuna…</string>
+    <string name="git_repositories_search_no_results">Brak repozytoriów w bieżącym kanale pasujących do tego wyszukiwania.</string>
     <string name="nsite_title">Statyczna Witryna: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Uprawnienia:</string>
@@ -3830,6 +3979,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="resource_usage_send_section">Udostępnij deweloperom</string>
     <string name="resource_usage_send_explanation">Jeśli zauważysz, że aplikacja Amethyst nadmiernie zużywa baterię lub transfer danych, możesz przesłać ten raport do twórców w zaszyfrowanej wiadomości prywatnej. Zawiera on wyłącznie liczby widoczne na tym ekranie oraz związane z nimi liczniki techniczne \u2014 nie zawiera żadnych postów, kontaktów ani szczegółów dotyczących przeglądania stron. Żadne dane nie zostaną wysłane, dopóki nie klikniesz przycisku „Wyślij” na ekranie wiadomości.</string>
     <string name="resource_usage_send_button">Wyślij raport za pośrednictwem DM</string>
+    <string name="resource_usage_copy_button">Kopiuj</string>
+    <string name="resource_usage_share_button">Udostępnij</string>
     <string name="resource_usage_alert_title">Wykryto wysokie użycie zasobów</string>
     <string name="resource_usage_alert_message">W ostatnim czasie Amethyst zużył więcej zasobów, niż oczekiwano: %1$s. Czy chcesz wysłać raport dotyczący zużycia do twórców w zaszyfrowanej wiadomości prywatnej? Przed wysłaniem zobaczysz pełną treść raportu.</string>
     <string name="resource_usage_reason_bg_data">%1$s danych komórkowych w tle w ciągu jednego dnia</string>
@@ -4679,14 +4830,31 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="new_conversation_location_pro_2">Kompatybilny z Bitchatem; dociera do pobliskich użytkowników na tych samych transmiterach.</string>
     <string name="new_conversation_location_con_1">Publiczny i efemeryczny – brak historii, każdy uczestnik może go odczytać.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_job_board_title">Zaległości</string>
+    <string name="buzz_workflow_runs_title">Uruchomienia Workflow</string>
+    <string name="buzz_agent_work_title">Praca agenta</string>
+    <string name="buzz_workflow_new_run">Nowe uruchomienie</string>
+    <string name="buzz_workflow_section_awaiting">Wymaga Twojej zgody</string>
     <string name="buzz_workflow_section_active">Pracuje teraz</string>
     <string name="buzz_workflow_section_shipped">Wysłano</string>
     <string name="buzz_workflow_section_closed">Zamknięte</string>
     <string name="buzz_workflow_gate_needs_you">Wymaga zatwierdzenia</string>
     <string name="buzz_workflow_gate_awaiting">Oczekiwanie na zatwierdzenie</string>
     <string name="buzz_workflow_no_description">(brak opisu)</string>
+    <string name="buzz_workflow_id_prefix">Workflow: %1$s</string>
     <string name="buzz_workflow_by">przez</string>
+    <string name="buzz_workflow_waiting_on">oczekiwanie na</string>
+    <string name="buzz_workflow_readonly_approver">To Ty jesteś osobą zatwierdzającą, ale to konto nie ma uprawnień do podejmowania decyzji.</string>
+    <string name="buzz_workflow_deny">Odrzuć</string>
+    <string name="buzz_workflow_approve_open_pr">Zatwierdź &amp; otwórz PR</string>
+    <string name="buzz_workflow_approve_title">Zatwierdzić to działanie?</string>
+    <string name="buzz_workflow_deny_title">Zabronić to działanie?</string>
+    <string name="buzz_workflow_approve_body">Runner wypchnie swoją gałąź i otworzy pull request dla „%1$s”. Zatwierdzanie nigdy nie łączy się ani nie wdraża-to nadal dzieje się na GitHubie.</string>
+    <string name="buzz_workflow_deny_body">Praca agenta dla \"%1$s\" zostanie odrzucona. Tej operacji nie można cofnąć.</string>
+    <string name="buzz_workflow_this_run">ten bieg</string>
     <string name="buzz_workflow_cancel">Anuluj</string>
+    <string name="buzz_workflow_waiting_for_approval">Oczekiwanie na zatwierdzenie</string>
+    <string name="buzz_workflow_triggered_toast">Uruchom zatwierdzone</string>
     <string name="buzz_workflow_trigger_failed_toast">Nie udało się uruchomić zadania — sprawdź, czy możesz publikować posty w tej przestrzeni roboczej</string>
     <string name="buzz_workflow_approved_toast">Zatwierdzono — autor tworzy pull request</string>
     <string name="buzz_workflow_denied_toast">Odmowa – prace zostały odrzucone</string>
@@ -4725,5 +4893,39 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_workflow_empty_desc">Naciśnij „Nowe uruchomienie” w celu uruchomienia procesu. Moduł wykonawczy realizuje zadanie i zatrzymuje się na etapie zatwierdzenia — przed wysłaniem jakichkolwiek danych zatwierdzenie musi udzielić osoba.</string>
     <!-- Buzz agent attestation -->
     <string name="buzz_attest_topbar">Świadectwa</string>
+    <string name="buzz_attest_hold_title">Zachowaj certyfikat</string>
+    <string name="buzz_attest_holding">Posiadam certyfikat dotyczący tego konta. Jest on dołączany automatycznie podczas uwierzytelniania się na transmiterze Buzz.</string>
+    <string name="buzz_attest_grants_prefix">Dotacje: %1$s</string>
+    <string name="buzz_attest_grants_unrestricted">wszelkiego rodzaju – w dowolnym czasie (nieograniczony)</string>
+    <string name="buzz_attest_remove">Usuń</string>
+    <string name="buzz_attest_hold_desc">Wklej podpisany przez właściciela tag autoryzacyjny wydany dla tego konta, aby uwierzytelnić się w przestrzeni roboczej Buzz jako członek wirtualny.</string>
+    <string name="buzz_attest_authtag_label">tag autoryzacji JSON</string>
+    <string name="buzz_attest_hold_button">Przeprowadzić certyfikację</string>
+    <string name="buzz_attest_readonly_title">Wymagany klucz lokalny</string>
+    <string name="buzz_attest_readonly_desc">Certyfikat NIP-OA stanowi podpis pod zaszyfrowanym zobowiązaniem, a nie zdarzeniem Nostr, dlatego może je wygenerować wyłącznie podpisujący, który posiada nieprzetworzony klucz prywatny użytkownika. To konto korzysta ze zdalnego (bunkier NIP-46) lub zewnętrznego (NIP-55) sygnatariusza, który nie może potwierdzić certyfikatu.</string>
+    <string name="buzz_attest_form_desc">Upoważnij klucz publiczny agenta do publikowania w Twojej przestrzeni roboczej bez konieczności rejestrowania tego klucza. Agent dołącza do swoich zdarzeń poniższy sygnowany tag.</string>
+    <string name="buzz_attest_agent_label">Agent (wyszukaj nazwę lub wklej npub / hex)</string>
+    <string name="buzz_attest_agent_paste_error">Wprowadź npub lub 64-char hex klucz.</string>
+    <string name="buzz_attest_change_agent">Zmień agenta</string>
+    <string name="buzz_attest_conditions_hint">Warunki (opcjonalnie) — pozostaw puste, aby uzyskać certyfikację bez ograniczeń.</string>
+    <string name="buzz_attest_kind_label">Ogranicz do typu (0–65535)</string>
+    <string name="buzz_attest_after_label">Tylko zdarzenia po (unix sekund)</string>
+    <string name="buzz_attest_before_label">Tylko zdarzenia przed (unix sekund)</string>
+    <string name="buzz_attest_generate">Generuj certyfikat</string>
+    <string name="buzz_attest_signed_title">Podpisany certyfikat</string>
+    <string name="buzz_attest_copy_tag">Kopiuj tag</string>
+    <string name="buzz_attest_warning">⚠ Dokument ten należy przekazać wyłącznie operatorowi agenta. Dopóki dokument ten jest ważny, a użytkownik pozostaje członkiem przestrzeni roboczej, upoważnienie to pozwala agentowi na publikowanie postów jako członek zgodnie z powyższymi warunkami.</string>
     <!-- Buzz agent persona editor -->
+    <string name="buzz_persona_new_title">Nowa persona</string>
+    <string name="buzz_persona_edit_title">Edytuj persona</string>
+    <string name="buzz_persona_slug">Slug (persona id)</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, \'-\' lub \'_\'. Nie można zmienić po utworzeniu.</string>
+    <string name="buzz_persona_display_name">Nazwa wyświetlana</string>
+    <string name="buzz_persona_system_prompt">Komunikat systemowy</string>
+    <string name="buzz_persona_model">Model (opcjonalnie)</string>
+    <string name="buzz_persona_provider">Dostawca (opcjonalnie)</string>
+    <string name="buzz_persona_runtime">Czas pracy (opcjonalnie)</string>
+    <string name="buzz_persona_avatar">Adres URL awatara (opcjonalnie)</string>
+    <string name="buzz_persona_publishing">Publikowanie…</string>
+    <string name="buzz_persona_publish">Publikuj persona</string>
 </resources>

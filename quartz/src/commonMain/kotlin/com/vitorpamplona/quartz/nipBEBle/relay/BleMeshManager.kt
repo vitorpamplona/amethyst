@@ -260,7 +260,7 @@ class BleMeshManager(
     private inner class ClientConnectionListener(
         val peerUuid: String,
     ) : RelayConnectionListener {
-        override fun onIncomingMessage(
+        override suspend fun onIncomingMessage(
             relay: IRelayClient,
             msgStr: String,
             msg: Message,

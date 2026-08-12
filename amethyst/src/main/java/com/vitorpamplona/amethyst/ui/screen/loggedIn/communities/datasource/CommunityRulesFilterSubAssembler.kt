@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 
@@ -64,7 +65,8 @@ class CommunityRulesFilterSubAssembler(
                 RelayBasedFilter(
                     relay = relay,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.COMMUNITY_FEED,
                             kinds = listOf(CommunityRulesEvent.KIND),
                             authors = signers.sorted(),
                             tags = mapOf("a" to listOf(commEvent.addressTag())),

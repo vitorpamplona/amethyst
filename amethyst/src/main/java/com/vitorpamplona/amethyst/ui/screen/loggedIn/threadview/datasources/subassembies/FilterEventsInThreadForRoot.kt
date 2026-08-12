@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 fun filterEventsInThreadForRoot(
     root: Note,
@@ -42,7 +43,8 @@ fun filterEventsInThreadForRoot(
                     RelayBasedFilter(
                         relay = it,
                         filter =
-                            Filter(
+                            ExplainedFilter(
+                                purpose = SubPurpose.THREAD,
                                 tags = mapOf("a" to listOf(addressRoot)),
                                 since = since,
                             ),
@@ -50,7 +52,8 @@ fun filterEventsInThreadForRoot(
                     RelayBasedFilter(
                         relay = it,
                         filter =
-                            Filter(
+                            ExplainedFilter(
+                                purpose = SubPurpose.THREAD,
                                 tags = mapOf("A" to listOf(addressRoot)),
                                 since = since,
                             ),
@@ -66,7 +69,8 @@ fun filterEventsInThreadForRoot(
                     RelayBasedFilter(
                         relay = it,
                         filter =
-                            Filter(
+                            ExplainedFilter(
+                                purpose = SubPurpose.THREAD,
                                 tags = mapOf("e" to listOf(eventRoot)),
                                 since = since,
                             ),
@@ -74,7 +78,8 @@ fun filterEventsInThreadForRoot(
                     RelayBasedFilter(
                         relay = it,
                         filter =
-                            Filter(
+                            ExplainedFilter(
+                                purpose = SubPurpose.THREAD,
                                 tags = mapOf("E" to listOf(eventRoot)),
                                 since = since,
                             ),

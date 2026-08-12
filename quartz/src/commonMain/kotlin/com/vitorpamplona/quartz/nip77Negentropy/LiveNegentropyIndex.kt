@@ -22,8 +22,7 @@ package com.vitorpamplona.quartz.nip77Negentropy
 
 import com.vitorpamplona.negentropy.storage.IStorage
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
-import kotlin.concurrent.atomics.AtomicBoolean
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
 
 /**
  * Always-current `(created_at, id)` index for NIP-77 negentropy — the
@@ -54,13 +53,12 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  *    sealed storage, so one snapshot backs any number of concurrent
  *    sessions and stays valid even if the live index mutates after.
  *
- * Thread-safety: all operations take a short spin lock (same pattern as
- * `LiveEventStore`'s replay dedup). Mutations arrive from the store's
- * single writer; snapshots from any REQ coroutine.
+ * Thread-safety: all operations take a short parking lock ([PlatformLock]).
+ * Mutations arrive from the store's single writer; snapshots from any REQ
+ * coroutine.
  */
-@OptIn(ExperimentalAtomicApi::class)
 class LiveNegentropyIndex {
-    private val lock = AtomicBoolean(false)
+    private val lock = PlatformLock()
 
     /** Sorted by (createdAt, id). Only touched under [locked]. */
     private var entries = ArrayList<IdAndTime>()
@@ -74,14 +72,17 @@ class LiveNegentropyIndex {
     private var cachedSnapshot: IStorage? = null
     private var cachedGeneration = -1L
 
+    // Parks rather than busy-waits. This lock's critical sections are FAR longer than a
+    // handful of map ops — [rebuild] sorts the whole entry list and snapshotting builds a
+    // storage — so a spinning waiter would burn a core for the duration of a sort while
+    // concurrent ingest threads pile up. Same defect that produced the client-side ANR
+    // documented on PlatformLock; see quartz/.../prodbench/SpinLockConvoyBenchmark.kt.
     private inline fun <R> locked(block: () -> R): R {
-        while (lock.exchange(true)) {
-            while (lock.load()) { }
-        }
+        lock.lock()
         try {
             return block()
         } finally {
-            lock.store(false)
+            lock.unlock()
         }
     }
 

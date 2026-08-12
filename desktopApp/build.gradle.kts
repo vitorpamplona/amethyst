@@ -246,18 +246,30 @@ compose.desktop {
 //   - amethyst.png        512x512 icon
 //
 // appimagetool binary is fetched by CI (SHA-verified) into
-// desktopApp/packaging/appimage/ as appimagetool-x86_64.AppImage.
+// desktopApp/packaging/appimage/ as appimagetool-<arch>.AppImage.
+// The arch is selected at task-execution time from the host JVM's os.arch, so
+// the same task builds the correct AppImage on both x86_64 and aarch64 hosts.
 // BUILDING.md documents local-dev fetch.
 val createReleaseAppImage by tasks.registering(Exec::class) {
     group = "compose desktop"
     description = "Package createReleaseDistributable output into a Linux AppImage via appimagetool."
     dependsOn("createReleaseDistributable")
 
+    // AppImage's ARCH env accepts the Linux kernel arch names: x86_64 / aarch64
+    // / armhf / i686. jpackage produces host-native binaries, so mirror the
+    // host JVM arch. Do not read the property inside doFirst — it needs to be
+    // resolved at configuration time so outputs.file() below is stable.
+    val hostArch = when (val a = System.getProperty("os.arch").lowercase()) {
+        "amd64", "x86_64" -> "x86_64"
+        "aarch64", "arm64" -> "aarch64"
+        else -> a
+    }
+
     val distDir = layout.buildDirectory.dir("compose/binaries/main-release/app/Amethyst")
     val appDir = layout.buildDirectory.dir("appimage/Amethyst.AppDir")
-    val outFile = layout.buildDirectory.file("appimage/Amethyst-$appVersion-x86_64.AppImage")
+    val outFile = layout.buildDirectory.file("appimage/Amethyst-$appVersion-$hostArch.AppImage")
     val toolRoot = layout.projectDirectory.dir("packaging/appimage")
-    val appimagetool = toolRoot.file("appimagetool-x86_64.AppImage")
+    val appimagetool = toolRoot.file("appimagetool-$hostArch.AppImage")
 
     inputs.dir(distDir)
     inputs.dir(toolRoot)
@@ -292,7 +304,7 @@ val createReleaseAppImage by tasks.registering(Exec::class) {
         appDir.get().asFile.absolutePath,
         outFile.get().asFile.absolutePath,
     )
-    environment("ARCH", "x86_64")
+    environment("ARCH", hostArch)
     // Bypass FUSE requirement on CI runners (ubuntu-latest lacks libfuse.so.2).
     // AppImage standard env var: extracts + runs without mounting.
     environment("APPIMAGE_EXTRACT_AND_RUN", "1")

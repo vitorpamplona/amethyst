@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -174,6 +176,7 @@ fun InnerRenderPoll(
             event = event,
             pollState = note.pollState(),
             accountViewModel = accountViewModel,
+            footerContent = { if (!makeItShort) PollResultsLink(note, nav) },
             galleryUser = { user ->
                 ClickableUserPicture(
                     user,
@@ -205,6 +208,38 @@ fun InnerRenderPoll(
     }
 }
 
+/**
+ * The way out of the card. The avatar stack tops out at four faces and the "+N" chip counts people
+ * the card has no room to show — this is the door to the rest of them.
+ *
+ * Rendered only from [RenderResults], i.e. only once the card is already showing the tally. Putting
+ * it beside the voting controls would hand every reader a one-tap bypass of the vote-first gate,
+ * and — since opening the screen counts as opting in — permanently so.
+ *
+ * Shown at zero votes too. A card with no votes is exactly when a reader doubts the number, and the
+ * page is the only place that can answer them: it says whether it is still loading, and what the
+ * relays claim exists against what we hold. Hiding the link there left the page's own "no votes
+ * yet" state unreachable through the only door into it.
+ */
+@Composable
+private fun PollResultsLink(
+    note: Note,
+    nav: INav,
+) {
+    val tally by note.pollState().responses.collectAsStateWithLifecycle()
+    val voters = tally.totalVoters()
+
+    Text(
+        text = pluralStringResource(R.plurals.poll_results_vote_count_link, voters, voters),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier =
+            Modifier
+                .clickable { nav.nav(Route.PollResults(note.idHex)) }
+                .padding(vertical = 4.dp),
+    )
+}
+
 @Stable
 class PollCard(
     val options: List<PollItemCard>,
@@ -231,6 +266,7 @@ fun RenderPollCard(
     pollState: PollResponsesCache,
     accountViewModel: AccountViewModel,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
+    footerContent: @Composable () -> Unit = {},
     labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
     val card =
@@ -278,6 +314,7 @@ fun RenderPollCard(
         onViewResults = { accountViewModel.markPollResultsViewed(event.id, event.endsAt()) },
         hasViewedResults = { accountViewModel.hasViewedPollResults(event.id) },
         resultContent = galleryUser,
+        footerContent = footerContent,
         labelContent = labelContent,
     )
 }
@@ -290,28 +327,29 @@ fun RenderPollCard(
     onViewResults: () -> Unit = {},
     hasViewedResults: () -> Boolean = { false },
     resultContent: @Composable RowScope.(user: User) -> Unit,
+    footerContent: @Composable () -> Unit = {},
     labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
     Column(
         verticalArrangement = SpacedBy5dp,
     ) {
         if (card.isMyPoll) {
-            RenderResults(card, resultContent, labelContent)
+            RenderResults(card, resultContent, footerContent, labelContent)
         } else {
             val haveIVoted = card.haveIVoted()
             if (haveIVoted) {
-                RenderResults(card, resultContent, labelContent)
+                RenderResults(card, resultContent, footerContent, labelContent)
             } else {
                 // waits for vote
                 val haveIVoted by card.haveIVotedFlow.collectAsStateWithLifecycle(haveIVoted)
                 if (haveIVoted) {
-                    RenderResults(card, resultContent, labelContent)
+                    RenderResults(card, resultContent, footerContent, labelContent)
                 } else if (card.hasEnded() || hasViewedResults()) {
-                    RenderResults(card, resultContent, labelContent)
+                    RenderResults(card, resultContent, footerContent, labelContent)
                 } else {
                     var viewingResults by remember { mutableStateOf(false) }
                     if (viewingResults) {
-                        RenderResults(card, resultContent, labelContent)
+                        RenderResults(card, resultContent, footerContent, labelContent)
                     } else {
                         when (card.type) {
                             PollType.SINGLE_CHOICE -> RenderSingleChoiceOptions(card, labelContent, onRespond)
@@ -437,6 +475,7 @@ private fun ColumnScope.RenderMultiChoiceOptions(
 private fun RenderResults(
     card: PollCard,
     resultContent: @Composable RowScope.(user: User) -> Unit,
+    footerContent: @Composable () -> Unit,
     labelContent: @Composable (ColumnScope.(code: String, label: String) -> Unit),
 ) {
     val showGallery =
@@ -451,6 +490,8 @@ private fun RenderResults(
             labelContent(pollItem.code, pollItem.label)
         }
     }
+
+    footerContent()
 }
 
 @Composable
@@ -536,6 +577,14 @@ private fun RenderClosedItem(
                     UserGallery(tally, resultContent)
                 }
 
+                // The percentage alone never said how many people that was.
+                Text(
+                    text = tally.size.toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+
                 Text(
                     text = "${(tally.percent * 100).toInt()}%",
                     style = MaterialTheme.typography.bodyMedium,
@@ -567,37 +616,54 @@ fun measure100PercentWidthModifier(textStyle: TextStyle): Modifier {
     }
 }
 
+/** Faces drawn before the rest collapse into a "+N" chip. */
+private const val GALLERY_FACES = PollResponsesCache.GALLERY_FACES
+
 @Composable
 fun UserGallery(
     tally: TallyResults,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
-) {
-    if (tally.users.isNotEmpty()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy((-10).dp),
-        ) {
-            tally.users.take(4).forEach {
-                key(it.pubkeyHex) {
-                    galleryUser(it)
-                }
-            }
+) = UserGallery(tally.topUsers(GALLERY_FACES), tally.size, galleryUser)
 
-            if (tally.users.size > 4) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier =
-                        Modifier
-                            .size(Size25dp)
-                            .clip(shape = CircleShape)
-                            .background(MaterialTheme.colorScheme.secondaryContainer),
-                ) {
-                    Text(
-                        text = "+" + showCount(tally.users.size - 4),
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+/**
+ * The faces behind a count: a few overlapping avatars, then "+N" for everyone who didn't fit.
+ *
+ * Takes the shown users and the true total rather than a tally, so the poll card and the poll
+ * results screen draw the same widget from their different sources instead of each owning a copy
+ * that can drift in size, spacing or cap.
+ */
+@Composable
+fun UserGallery(
+    shown: List<User>,
+    total: Int,
+    galleryUser: @Composable RowScope.(user: User) -> Unit,
+) {
+    if (total <= 0) return
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy((-10).dp),
+    ) {
+        shown.forEach {
+            key(it.pubkeyHex) {
+                galleryUser(it)
+            }
+        }
+
+        if (total > shown.size) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .size(Size25dp)
+                        .clip(shape = CircleShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+            ) {
+                Text(
+                    text = "+" + showCount(total - shown.size),
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
     }

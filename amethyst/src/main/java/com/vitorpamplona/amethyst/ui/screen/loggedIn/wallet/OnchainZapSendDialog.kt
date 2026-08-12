@@ -425,7 +425,7 @@ fun OnchainZapSendDialog(
                                                         )
                                                     return@launch
                                                 }
-                                            accountViewModel.account.sendOnchainZapWithSplits(
+                                            accountViewModel.account.zaps.sendOnchainZapWithSplits(
                                                 recipients = shares,
                                                 feeRateSatPerVByte = feeRate,
                                                 comment = comment.trim(),
@@ -433,7 +433,7 @@ fun OnchainZapSendDialog(
                                             )
                                         } else {
                                             val recipient = resolvedRecipient ?: return@launch
-                                            accountViewModel.account.sendOnchainZap(
+                                            accountViewModel.account.zaps.sendOnchainZap(
                                                 recipientPubKey = recipient,
                                                 amountSats = amount,
                                                 feeRateSatPerVByte = feeRate,

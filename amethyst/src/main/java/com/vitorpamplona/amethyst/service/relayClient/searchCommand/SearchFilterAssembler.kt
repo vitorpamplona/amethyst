@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchPostWatcherSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies.SearchUserWatcherSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -35,8 +36,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Stable
 class SearchQueryState(
     val searchQuery: MutableStateFlow<String>,
-    val account: Account,
-) : MutableQueryState {
+    override val account: Account,
+) : MutableQueryState,
+    AccountScopedQuery {
     override fun flow(): Flow<String> = searchQuery
 }
 

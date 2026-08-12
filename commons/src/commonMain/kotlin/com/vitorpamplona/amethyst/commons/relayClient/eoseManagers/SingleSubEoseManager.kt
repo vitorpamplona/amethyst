@@ -53,6 +53,18 @@ abstract class SingleSubEoseManager<T>(
 
     fun since() = latestEOSEs.since()
 
+    /**
+     * Drops one relay's EOSE cursor so the next assembly asks it from scratch.
+     *
+     * This manager keeps a single cursor per relay for the whole key set, which is right while that
+     * set is stable and wrong the moment it grows: a key that joins later inherits a cursor earned by
+     * keys that were already there, and everything older than it is never requested. Subclasses whose
+     * filters merge keys together call this when a relay's set of keys gains a member.
+     */
+    protected fun clearEoseFor(relay: NormalizedRelayUrl) {
+        latestEOSEs.remove(relay)
+    }
+
     open fun newEose(
         relay: NormalizedRelayUrl,
         time: Long,
@@ -74,7 +86,7 @@ abstract class SingleSubEoseManager<T>(
                     newEose(relay, TimeUtils.now(), forFilters)
                 }
 
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

@@ -76,7 +76,7 @@ fun ConcordInviteCard(
 
     // Peek the bundle once per link to reveal the community name (null until it resolves).
     val invite by produceState<CommunityInvite?>(initialValue = null, linkText) {
-        value = accountViewModel.account.peekConcordInvite(linkText)
+        value = accountViewModel.account.concord.peekConcordInvite(linkText)
     }
 
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
-import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssembler
@@ -79,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.OnePodc
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastEpisodesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.datasources.PollResponsesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.PublicChatsFilterAssembler
@@ -168,6 +168,9 @@ class RelaySubscriptionsCoordinator(
     val chess = ChessFilterAssembler(client)
 
     val polls = PollsFilterAssembler(client)
+
+    // Votes for the poll whose results screen is open.
+    val pollResponses = PollResponsesFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
     val workouts = WorkoutsFilterAssembler(client)
     val gitRepositories = GitRepositoriesFilterAssembler(client)
@@ -204,10 +207,6 @@ class RelaySubscriptionsCoordinator(
     // active when the wallet's on-chain transactions screen is on top.
     val onchainZaps = OnchainZapsFilterAssembler(client)
 
-    // active when a NIP-60 Cashu wallet exists for the account.
-    // Subscribes to kinds 17375/7375/7376/7374/10019 by author + inbound 9321 #p=self.
-    val cashuWallet = CashuWalletFilterAssembler(client)
-
     // active while the user is browsing the NIP-87 mint picker. Subscribes to
     // kind:38172 cashu mint announcements + kind:38000 cashu-scoped
     // recommendations on the configured relay set.
@@ -234,6 +233,7 @@ class RelaySubscriptionsCoordinator(
             video,
             discovery,
             polls,
+            pollResponses,
             pictures,
             workouts,
             gitRepositories,
@@ -279,7 +279,6 @@ class RelaySubscriptionsCoordinator(
             chess,
             nwc,
             onchainZaps,
-            cashuWallet,
             cashuMintDirectory,
         )
 

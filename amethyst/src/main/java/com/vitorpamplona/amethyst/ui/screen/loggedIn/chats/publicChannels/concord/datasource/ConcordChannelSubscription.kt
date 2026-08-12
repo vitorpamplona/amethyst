@@ -150,7 +150,7 @@ private fun ConcordControlPlaneSync(accountViewModel: AccountViewModel) {
 
     // (1) Load + membership/epoch change: one complete sweep of the whole set.
     LaunchedEffect(sig) {
-        if (communities.isNotEmpty()) account.syncConcordControlPlanes(communities)
+        if (communities.isNotEmpty()) account.concord.syncConcordControlPlanes(communities)
     }
 
     // (2) Reconnect: re-sweep when a relay of ours transitions disconnected → connected.
@@ -174,7 +174,7 @@ private fun ConcordControlPlaneSync(accountViewModel: AccountViewModel) {
             val now = TimeUtils.nowMillis()
             if (now - lastSweep < RECONNECT_RESWEEP_MIN_INTERVAL_MS) return@collect
             lastSweep = now
-            account.syncConcordControlPlanes(liveCommunities)
+            account.concord.syncConcordControlPlanes(liveCommunities)
         }
     }
 }

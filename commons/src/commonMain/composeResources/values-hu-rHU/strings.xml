@@ -1,17 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login & Auth -->
+    <string name="login_title">Üdvözöljük az Amethystben</string>
+    <string name="login_subtitle">Jelentkezzen be Nostr a-fiókjába</string>
+    <string name="login_subtitle_desktop">Asztali Nostr-kliens</string>
+    <string name="login_card_title">Jelentkezzen be Nostr-a kulcsával</string>
+    <string name="login_card_subtitle">nsec a teljes hozzáféréshez, bunker:// a távoli aláíróhoz, vagy npub a csak olvasható módhoz</string>
+    <string name="login_with_key">Bejelentkezés kulccsal</string>
+    <string name="login_button">Bejelentkezés</string>
+    <string name="login_generate_new">Új kulcs előállítása</string>
+    <string name="login_generate_button">Új előállítása</string>
+    <string name="login_key_hint">Adja meg a privát kulcsát (nsec) vagy a nyilvános kulcsát (npub)</string>
+    <string name="login_key_label">nsec, bunker:// vagy npub</string>
+    <string name="login_key_placeholder">nsec1… / bunker://… / npub1…</string>
+    <string name="login_show_key">Kulcs megjelenítése</string>
+    <string name="login_hide_key">Kulcs elrejtése</string>
     <!-- New Key Warning -->
+    <string name="new_key_warning_title">FONTOS: Mentse el a kulcsait!</string>
+    <string name="new_key_warning_message">A titkos kulcsa (nsec) az EGYETLEN módja annak, hogy hozzáférjen a fiókjához. Ha elveszíti, akkor a fiókja végleg elvész. Mentse el egy biztonságos helyre!</string>
+    <string name="new_key_public_label">Nyilvános kulcs (megosztható):</string>
+    <string name="new_key_secret_label">Titkos kulcs (SOHA ne ossza meg!):</string>
+    <string name="new_key_continue_button">Elmentettem a kulcsaimat, folytatás</string>
     <!-- Common Actions -->
+    <string name="action_copy">Másolás</string>
+    <string name="action_paste">Beillesztés</string>
+    <string name="action_cancel">Mégse</string>
+    <string name="action_ok">OK</string>
+    <string name="action_save">Mentés</string>
+    <string name="action_delete">Törlés</string>
+    <string name="action_share">Megosztás</string>
     <!-- Errors -->
+    <string name="error_invalid_key">Érvénytelen kulcsformátum. Ellenőrizze, és próbálja újra.</string>
+    <string name="error_network">Hálózati hiba. Ellenőrizze a kapcsolatot.</string>
+    <string name="error_generic">Hiba történt. Próbálja újra.</string>
     <!-- Loading & Empty States -->
+    <string name="action_refresh">Frissítés</string>
+    <string name="action_try_again">Próbálja újra</string>
+    <string name="feed_empty">A hírfolyam üres</string>
+    <string name="error_loading_feed">Hiba történt a hírfolyam betöltésekor: %s</string>
     <!-- Placeholder Screens -->
+    <string name="screen_search_title">Keresés</string>
+    <string name="screen_search_description">Keressen felhasználókat, bejegyzéseket és kulcsszavakat.</string>
+    <string name="screen_messages_title">Üzenetek</string>
+    <string name="screen_messages_description">Az Ön titkosított közvetlen üzenetei itt fognak megjelenni.</string>
+    <string name="screen_notifications_title">Értesítések</string>
+    <string name="screen_notifications_description">Az említések, válaszok és reakciók itt fognak megjelenni.</string>
     <!-- Accessibility -->
+    <string name="accessibility_user_avatar">Felhasználó profilképe</string>
+    <string name="accessibility_navigate">Navigáció</string>
     <!-- Relay history paging (shared feed markers + status card) -->
+    <string name="chats_history_loading_label">Betöltés:</string>
+    <string name="chats_history_fully_loaded_label">Teljesen betöltve:</string>
+    <string name="chats_history_fully_loaded">(teljesen betöltve)</string>
+    <string name="chats_history_by_relay">Előzmények átjátszónként</string>
+    <string name="chats_history_stalled_retry">Újra megpróbálja, amint újra megnyitja ezt a képernyőt</string>
+    <string name="chats_history_older">%1$s korábbi üzenet</string>
+    <string name="chats_history_all_caught_up">Naprakész</string>
+    <string name="chats_history_reached_start">Elérte a(z) %1$s üzeneteinek elejét</string>
+    <string name="chats_history_subtitle">%1$s · %2$s · betöltve ekkortól: %3$s</string>
+    <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
+    <string name="chats_history_waiting">várakozás erre: %1$s</string>
+    <string name="chats_history_incomplete">Néhány átjátszó nem válaszolt</string>
+    <string name="chats_history_incomplete_sub">%1$s nem érhető el · koppintson a részletekért</string>
+    <string name="chats_history_relays_title">%1$s · előzmények átjátszónként</string>
+    <string name="chats_history_relay_since">ekkortól: %1$s</string>
+    <string name="action_dismiss">Eltüntetés</string>
+    <plurals name="chats_history_relays">
+        <item quantity="one">%1$d átjátszó</item>
+        <item quantity="other">%1$d relé</item>
+    </plurals>
     <!-- Notes & Replies -->
+    <string name="replying_to">válasz neki: </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
+    <string name="nsite_title">nOldal: %1$s</string>
+    <string name="napplet_card_title">nKisalkalmazás: %1$s</string>
+    <string name="napplet_card_kind">nKisalkalmazás</string>
+    <string name="nsite_website_kind">nOldal</string>
+    <string name="napplet_card_permissions">Amihez hozzáférhet</string>
+    <string name="nsite_root_site">Gyökéroldal</string>
+    <string name="nsite_source">Forrás:</string>
+    <string name="nsite_servers">Kiszolgálók:</string>
+    <string name="nsite_open">Megnyitás</string>
     <!-- Custom emoji suggestions (NIP-30) -->
+    <string name="use_direct_url">Közvetlen webcím használata</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_title">Becenév</string>
+    <string name="nickname_dialog_explainer">Ez jelenik meg Önnek ezen felhasználó neve helyett az alkalmazásban bárhol. Titkosítva tárolódik el a kapcsolatkártyájára: csak Ön olvashatja. Írjon be kettőspontot (:) az egyéni emodzsik használatához.</string>
+    <string name="nickname_label">Becenév</string>
+    <string name="nickname_summary_label">Privát megjegyzés erről a felhasználóról</string>
+    <string name="nickname_save">Mentés</string>
+    <string name="nickname_cancel">Mégse</string>
     <string name="git_status_open">Nyitva</string>
     <string name="git_status_merged">Beolvasztva</string>
     <string name="git_status_closed">Lezárva</string>
@@ -53,6 +131,7 @@
     <string name="road_event_traffic_jam">Forgalmi dugó</string>
     <string name="road_event_unknown">Útesemény</string>
     <string name="podcast_value_zap_split_hint">Az erre küldött Zapek megoszlanak a következők között:</string>
+    <string name="podcast_value_split_percent">%1$d%%</string>
     <string name="podcast_value_for_value">Értéket az értékért</string>
     <string name="relay_monitor_rtt_open">Megnyitás</string>
     <string name="relay_monitor_rtt_read">Olvasás </string>
@@ -61,6 +140,7 @@
     <string name="relay_monitor_relay_type">Típus</string>
     <string name="relay_monitor_requirements">Követelmények</string>
     <string name="relay_monitor_supported_nips">Támogatott NIP-ek</string>
+    <string name="relay_monitor_ms">%1$d ms</string>
     <string name="relay_discovery_accepted_kinds">Elfogadott típusok</string>
     <string name="relay_discovery_geohash">Helyszín</string>
     <string name="calendar_rsvp_going">Ott leszek</string>

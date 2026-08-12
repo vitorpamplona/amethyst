@@ -1240,6 +1240,16 @@
         <item quantity="one">Connecté à %1$d relais</item>
         <item quantity="other">Connecté à %1$d relais</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">Connexion aux relais de boîte de réception…</string>
     <string name="always_on_notif_setting_title">Service de notification permanent</string>
     <string name="always_on_notif_setting_description">Maintient une connexion persistante à vos relais de boîte de réception pour une livraison instantanée des notifications. Affiche une notification permanente. Consomme plus de batterie mais garantit que vous ne manquez aucun message.</string>

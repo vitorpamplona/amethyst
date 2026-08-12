@@ -32,6 +32,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_navigate
 import com.vitorpamplona.amethyst.commons.resources.accessibility_user_avatar
@@ -51,6 +53,12 @@ import org.jetbrains.compose.resources.stringResource
  * @param badge Optional overlay drawn on top of the avatar (bottom-right
  *   by convention). Used by Desktop for the WoT trust-score chip; Android
  *   call sites leave it null. Forwarded to [UserAvatar].
+ *
+ * Loads the user's kind-0 metadata only while the card is composed via
+ * [observeUserInfo], so a search-results list only fetches metadata for the
+ * users currently on screen (coalesced into the shared finder's batched REQs).
+ * Requires [LocalUserFinder]/[LocalUserFinderAccount] in scope — provided at
+ * the Desktop logged-in roots; this card is Desktop-only.
  */
 @Composable
 fun UserSearchCard(
@@ -59,6 +67,8 @@ fun UserSearchCard(
     modifier: Modifier = Modifier,
     badge: @Composable (BoxScope.() -> Unit)? = null,
 ) {
+    val metadata by observeUserInfo(user)
+
     Card(
         modifier =
             modifier
@@ -76,7 +86,7 @@ fun UserSearchCard(
         ) {
             UserAvatar(
                 userHex = user.pubkeyHex,
-                pictureUrl = user.profilePicture(),
+                pictureUrl = metadata?.info?.picture ?: user.profilePicture(),
                 size = 40.dp,
                 contentDescription = stringResource(Res.string.accessibility_user_avatar),
                 badge = badge,
@@ -84,11 +94,11 @@ fun UserSearchCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    user.toBestDisplayName(),
+                    metadata?.info?.bestName() ?: user.toBestDisplayName(),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                val nip05 = user.metadataOrNull()?.nip05()
+                val nip05 = metadata?.info?.nip05 ?: user.metadataOrNull()?.nip05()
                 if (nip05 != null) {
                     Text(
                         nip05,

@@ -27,7 +27,37 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import kotlin.coroutines.cancellation.CancellationException
 
+/**
+ * Storage contract for Nostr events: insert, filter-query, count, delete,
+ * NIP-50 full-text search, and NIP-77 negentropy snapshots.
+ *
+ * ## NIP-50 `search` contract
+ *
+ * Query/count/delete filters arrive with [Filter.search] **verbatim as the
+ * client sent it**, `key:value` extension tokens included (`include:spam`,
+ * `domain:example.com`, `language:en`, …). No layer above the store rewrites
+ * the string, so each implementation decides which extensions it supports:
+ *
+ * - A store that interprets an extension (rank profiles, trust floors,
+ *   observer-relative scoring, …) reads it from the raw string — parse it
+ *   with [com.vitorpamplona.quartz.nip50Search.SearchQuery.parse].
+ * - Extensions the store does NOT support must be **ignored, not matched as
+ *   literal text and not treated as match-nothing** (NIP-50: relays "SHOULD
+ *   ignore extensions they don't support"). Stores whose text engine would
+ *   choke on the raw tokens strip them first with
+ *   [com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions] — this
+ *   is what the built-in SQLite and filesystem stores do. An extensions-only
+ *   search therefore collapses to an unconstrained query.
+ *
+ * ## Caller identity
+ *
+ * Ranked/observer-relative stores can read the caller's NIP-42-authenticated
+ * identity from the coroutine context via [StoreQueryContext]; the relay
+ * layer installs it around every REQ/COUNT-driven store call. It is ranking
+ * context only and absent for unauthenticated callers.
+ */
 interface IEventStore : AutoCloseable {
     companion object {
         /**
@@ -37,6 +67,12 @@ interface IEventStore : AutoCloseable {
          * small enough that a pause request is honoured promptly.
          */
         const val DEFAULT_FTS_REINDEX_BATCH = 1000
+
+        /**
+         * Suggested [snapshotIdsForNegentropy] `onProgress` cadence: report
+         * the running count roughly every this many collected entries.
+         */
+        const val NEGENTROPY_PROGRESS_EVERY = 1000
     }
 
     /**
@@ -57,37 +93,64 @@ interface IEventStore : AutoCloseable {
 
     /**
      * Per-row outcome from [batchInsert]. The OK frame on the wire is
-     * built from this — `Accepted` becomes `OK true`, `Rejected.reason`
-     * becomes the false reason. NIP-01 says OK pairs to its EVENT by
+     * built from this — `Accepted` becomes `OK true`, the other two
+     * become the false reason. NIP-01 says OK pairs to its EVENT by
      * id, not by order, so callers may dispatch outcomes in any order.
      */
     sealed class InsertOutcome {
         data object Accepted : InsertOutcome()
 
+        /**
+         * The EVENT's fault: policy said no — a duplicate, an expired
+         * or invalid event, a blocked author. Final: re-offering the
+         * same event yields the same answer, so dropping it is correct.
+         */
         data class Rejected(
+            val reason: String,
+        ) : InsertOutcome()
+
+        /**
+         * The STORE's fault: the event was acceptable but could not be
+         * written — schema drift, a failed feed, a resource error. The
+         * event is lost unless the caller re-offers it, and nothing
+         * else will. Callers should count these apart from [Rejected]:
+         * a rising [Rejected] is usually the protocol working
+         * (duplicates on a wide fan-out), while a rising [Failed]
+         * means the store is losing good events.
+         */
+        data class Failed(
             val reason: String,
         ) : InsertOutcome()
     }
 
     /**
-     * Bulk insert in a single transaction with per-row error isolation.
-     * Returns one outcome per input event in the same order.
+     * Bulk insert with per-row attribution. Returns one outcome per
+     * input event in the same order.
      *
-     * Implementations must isolate per-row failures so one bad event
-     * doesn't roll back the others (SQLite uses SAVEPOINTs). If the
-     * outer commit itself fails, every entry in the returned list is
-     * `Rejected` with the commit-failure reason.
+     * Implementations must isolate per-row problems so one bad event
+     * never costs the batch: a policy refusal is [InsertOutcome.Rejected],
+     * a store-side write error is [InsertOutcome.Failed] (SQLite uses
+     * SAVEPOINTs for the isolation). Throwing is reserved for failures
+     * with no per-event answer — the engine unreachable, the transaction
+     * never started — and a caller may read a throw as "nothing in this
+     * batch was written".
      *
      * Default impl runs each insert in its own transaction — correct
-     * but loses the group-commit win. SQLite overrides this.
+     * but loses the group-commit win — and cannot classify a throw from
+     * [insert], so it reports `Failed`: re-offering a duplicate is
+     * idempotent, while dropping a good event on a transient store
+     * error is not. Implementations that can tell a refusal from a
+     * write error should override and say which.
      */
     suspend fun batchInsert(events: List<Event>): List<InsertOutcome> =
         events.map { event ->
             try {
                 insert(event)
                 InsertOutcome.Accepted
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Throwable) {
-                InsertOutcome.Rejected(e.message ?: e::class.simpleName ?: "insert failed")
+                InsertOutcome.Failed(e.message ?: e::class.simpleName ?: RejectionReason.INSERT_FAILED)
             }
         }
 
@@ -173,6 +236,13 @@ interface IEventStore : AutoCloseable {
      * guard). The +1 sentinel lets the caller distinguish "exactly
      * capped" from "too many to fit".
      *
+     * [onProgress] is a liveness hook for corpora large enough that the
+     * walk takes minutes: implementations SHOULD invoke it every
+     * [NEGENTROPY_PROGRESS_EVERY]-ish collected entries with the running
+     * count. Callers must not rely on any particular cadence — a store
+     * that answers from an index may legitimately never call it. Pass
+     * `null` (the default) to opt out at zero cost.
+     *
      * Default implementation falls back to the full-decode path so
      * non-SQLite stores stay correct; SQLite overrides with a direct
      * `SELECT id, created_at` against the `query_by_created_at_id`
@@ -182,8 +252,13 @@ interface IEventStore : AutoCloseable {
     suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
         maxEntries: Int? = null,
+        onProgress: ((collected: Int) -> Unit)? = null,
     ): List<IdAndTime> {
-        val all = query<Event>(filters).map { IdAndTime(it.createdAt, it.id) }
+        val all = ArrayList<IdAndTime>()
+        query<Event>(filters) { event ->
+            all.add(IdAndTime(event.createdAt, event.id))
+            if (onProgress != null && all.size % NEGENTROPY_PROGRESS_EVERY == 0) onProgress(all.size)
+        }
         return if (maxEntries != null && all.size > maxEntries + 1) {
             all.subList(0, maxEntries + 1)
         } else {
@@ -258,6 +333,11 @@ interface IEventStore : AutoCloseable {
      *
      * Process roughly [batchSize] events starting from [resumeFrom]
      * (`null` = from the beginning) and return a [FtsReindexProgress].
+     * [resumeFrom] / [FtsReindexProgress.cursor] is an **opaque,
+     * store-defined string**: callers persist it and pass it back
+     * unchanged, and must never parse, order, or compare it (SQLite
+     * encodes a kind + row id; another store may carry an engine
+     * continuation token).
      * Drive it in a loop, feeding [FtsReindexProgress.cursor] back in,
      * until [FtsReindexProgress.done] is `true`:
      *

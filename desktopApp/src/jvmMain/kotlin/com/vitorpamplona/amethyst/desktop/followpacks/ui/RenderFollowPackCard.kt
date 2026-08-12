@@ -102,7 +102,7 @@ fun RenderFollowPackCard(
                 listOf(filter),
                 listener =
                     object : com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener {
-                        override fun onEvent(
+                        override suspend fun onEvent(
                             event: com.vitorpamplona.quartz.nip01Core.core.Event,
                             isLive: Boolean,
                             relay: com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl,

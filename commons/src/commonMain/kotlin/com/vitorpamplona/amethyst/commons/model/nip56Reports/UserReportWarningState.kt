@@ -85,7 +85,7 @@ fun dmReportWarningFor(
 
         (report.event as? ReportEvent)?.reportedAuthor()?.forEach {
             // A single report can name several people; only this counterpart's reason belongs here.
-            if (it.pubkey == counterpart.pubkeyHex) it.type?.let(types::add)
+            if (it.pubKey == counterpart.pubkeyHex) it.type?.let(types::add)
         }
     }
 

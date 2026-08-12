@@ -35,6 +35,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ConcordCommunityListTest {
@@ -45,14 +46,20 @@ class ConcordCommunityListTest {
         id: String,
         name: String,
         epoch: Long = 0,
+        controlPk: String? = null,
+        controlRoot: String? = null,
+        inviteRef: String? = null,
     ) = ConcordCommunityListEntry(
         id = id,
         owner = "0f".repeat(32),
         ownerSalt = "aa".repeat(32),
         root = "bb".repeat(32),
         rootEpoch = epoch,
+        controlPk = controlPk,
+        controlRoot = controlRoot,
         relays = listOf("wss://relay.example"),
         name = name,
+        inviteRef = inviteRef,
     )
 
     @Test
@@ -417,7 +424,7 @@ class ConcordCommunityListTest {
                 ownerSalt = decoded.ownerSalt,
                 root = decoded.root,
                 rootEpoch = decoded.rootEpoch,
-                heldRoots = decoded.heldRoots.map { HeldRoot(it.epoch, it.key, buildJsonObject { put("key", "STALE") }) },
+                heldRoots = decoded.heldRoots.map { HeldRoot(it.epoch, it.key, it.controlPk, it.controlRoot, buildJsonObject { put("key", "STALE") }) },
                 privateChannels = decoded.privateChannels.map { PrivateChannelKey(it.channelId, it.key, it.epoch, it.name, buildJsonObject { put("name", "STALE") }) },
                 relays = decoded.relays,
                 name = "Renamed",
@@ -485,5 +492,49 @@ class ConcordCommunityListTest {
         val merged = ConcordCommunityList.merge(a, b)
         assertEquals(2, merged.size)
         assertEquals("New", merged.first { it.id == "11".repeat(32) }.name) // higher epoch wins
+    }
+
+    @Test
+    fun mergeAtTheSameEpochFillsMissingControlKeyMaterialFromEitherSide() {
+        // The second-device gap (CORD-02 §8): device A was promoted to staff (it adopted the
+        // control_root via a Grant's control_wrap), device B holds the invite anchor and the
+        // delivered control_pk. Both describe the same epoch, so a merge must end holding all
+        // of it — this is how the write secret reaches a staffer's own other devices.
+        val id = "11".repeat(32)
+        val promoted = listOf(entry(id, "Nostrichs", epoch = 2, controlPk = "cc".repeat(32), controlRoot = "dd".repeat(32)))
+        val joined = listOf(entry(id, "Nostrichs", epoch = 2, controlPk = "cc".repeat(32), inviteRef = "https://vector.chat/i/abc"))
+
+        val merged = ConcordCommunityList.merge(promoted, joined).single()
+        assertEquals("cc".repeat(32), merged.controlPk)
+        assertEquals("dd".repeat(32), merged.controlRoot, "the staff write key must reach the holder's other devices")
+        assertEquals("https://vector.chat/i/abc", merged.inviteRef, "the recovery anchor must survive the fill")
+
+        // Order-independent: the fill works whichever side holds the secret.
+        val reversed = ConcordCommunityList.merge(joined, promoted).single()
+        assertEquals("dd".repeat(32), reversed.controlRoot)
+        assertEquals("https://vector.chat/i/abc", reversed.inviteRef)
+    }
+
+    @Test
+    fun mergeNeverInheritsControlKeysAcrossEpochs() {
+        // A lower epoch's control_pk/control_root is stale for the winner's planes (CORD-06):
+        // the pair rolls at every Refounding, so carrying it forward would point the client at
+        // a dead address (pk) or derive a wrong one entirely (root). A winner without control
+        // material is a legacy rotation and must stay that way.
+        val id = "11".repeat(32)
+        val stale = listOf(entry(id, "Old", epoch = 1, controlPk = "cc".repeat(32), controlRoot = "dd".repeat(32), inviteRef = "https://vector.chat/i/abc"))
+        val rotated = listOf(entry(id, "New", epoch = 2))
+
+        val merged = ConcordCommunityList.merge(stale, rotated).single()
+        assertEquals(2, merged.rootEpoch)
+        assertNull(merged.controlPk, "a prior epoch's control_pk must not shadow the new epoch")
+        assertNull(merged.controlRoot, "a prior epoch's control_root must die with its epoch")
+        assertEquals("https://vector.chat/i/abc", merged.inviteRef) // the anchor, and only the anchor, survives
+
+        val reversed = ConcordCommunityList.merge(rotated, stale).single()
+        assertEquals(2, reversed.rootEpoch)
+        assertNull(reversed.controlPk)
+        assertNull(reversed.controlRoot)
+        assertEquals("https://vector.chat/i/abc", reversed.inviteRef)
     }
 }

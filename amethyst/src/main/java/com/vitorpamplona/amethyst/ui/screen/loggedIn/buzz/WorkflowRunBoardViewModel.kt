@@ -199,21 +199,21 @@ class WorkflowRunBoardViewModel : ViewModel() {
         task: String,
         onResult: (Boolean) -> Unit,
     ) = act(onResult) { account, relay, channelId ->
-        account.triggerBuzzWorkflow(relay, channelId, workflowId, task) != null
+        account.relayGroups.triggerBuzzWorkflow(relay, channelId, workflowId, task) != null
     }
 
     fun approve(
         runId: HexKey,
         onResult: (Boolean) -> Unit,
     ) = act(onResult) { account, relay, _ ->
-        account.approveBuzzWorkflowRun(relay, runId) != null
+        account.relayGroups.approveBuzzWorkflowRun(relay, runId) != null
     }
 
     fun deny(
         runId: HexKey,
         onResult: (Boolean) -> Unit,
     ) = act(onResult) { account, relay, _ ->
-        account.denyBuzzWorkflowRun(relay, runId) != null
+        account.relayGroups.denyBuzzWorkflowRun(relay, runId) != null
     }
 
     /**
@@ -234,7 +234,7 @@ class WorkflowRunBoardViewModel : ViewModel() {
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
-            val newId = account.publishBuzzWorkflowDef(relay, channelId, name, yaml)
+            val newId = account.relayGroups.publishBuzzWorkflowDef(relay, channelId, name, yaml)
             withContext(Dispatchers.Main) { onResult(newId) }
         }
     }

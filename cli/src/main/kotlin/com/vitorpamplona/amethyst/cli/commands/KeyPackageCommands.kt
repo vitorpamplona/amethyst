@@ -99,7 +99,7 @@ object KeyPackageCommands {
                     client = ctx.client,
                     targetPubKey = targetHex,
                     relays = relays,
-                    timeoutMs = 10_000,
+                    idleTimeoutMs = 10_000,
                 )
             if (event == null) {
                 return Output.error("not_found", "no KeyPackage for $targetHex on ${relays.size} relay(s)")

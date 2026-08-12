@@ -35,8 +35,18 @@ object ConcordLabels {
     /** Per-Channel Chat Plane key (CORD-03). */
     const val CHANNEL = "concord/channel"
 
-    /** Control Plane key (CORD-02). */
+    /**
+     * Control Plane *read* key (CORD-02 §5): community_root-derived, its conv_key
+     * encrypts the wraps. Pre-split epochs used its pk/sk as the plane's address and
+     * signer too — that use is retained for reading legacy epochs (CORD-06 §3).
+     */
     const val CONTROL = "concord/control"
+
+    /**
+     * Control Plane signer (CORD-02 §5): control_root-derived, its pk is the plane's
+     * address and its staff-only sk signs the wraps (CORD-01, Write-Restricted Streams).
+     */
+    const val CONTROL_SIGNER = "concord/control-signer"
 
     /** Guestbook Plane key (CORD-02). */
     const val GUESTBOOK = "concord/guestbook"

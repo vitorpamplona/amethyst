@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.server.backend
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Group-commit writer for incoming EVENT publishes.
@@ -268,8 +270,8 @@ class IngestQueue(
      * Run the SQLite transaction for the verified subset of [batch]
      * and stitch outcomes back to a per-batch-index array. Failed
      * verifies pre-mark `Rejected` and skip the insert. A whole-batch
-     * commit failure converts every persisted entry to `Rejected`
-     * with the throw message.
+     * commit failure converts every persisted entry to `Failed` with
+     * the throw message — the events were good; the store was not.
      */
     private suspend fun runInsertStage(
         batch: List<Submission>,
@@ -290,10 +292,15 @@ class IngestQueue(
             } else {
                 try {
                     store.batchInsert(toInsert)
+                } catch (e: CancellationException) {
+                    // Shutdown, not a store failure: rethrow so the loop
+                    // stops instead of stamping the batch Failed and
+                    // carrying on while cancelled.
+                    throw e
                 } catch (e: Throwable) {
                     Log.w("IngestQueue") { "batchInsert failed for ${toInsert.size} events: ${e.message}" }
-                    val reason = e.message ?: e::class.simpleName ?: "insert failed"
-                    List(toInsert.size) { IEventStore.InsertOutcome.Rejected(reason) }
+                    val reason = e.message ?: e::class.simpleName ?: RejectionReason.INSERT_FAILED
+                    List(toInsert.size) { IEventStore.InsertOutcome.Failed(reason) }
                 }
             }
 
@@ -349,7 +356,7 @@ class IngestQueue(
          * inserts), so the message is informational, not user-facing.
          */
         private val missingOutcome =
-            IEventStore.InsertOutcome.Rejected("internal error: missing outcome")
+            IEventStore.InsertOutcome.Failed("internal error: missing outcome")
 
         /**
          * Cap per batch. Sized to keep per-batch latency low (each

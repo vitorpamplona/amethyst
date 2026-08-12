@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.filterGroupNotificationsToPubkey
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
@@ -40,9 +41,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** One Buzz DM channel whose recent chat is kept live. */
 class BuzzDmJoinedChatTailQueryState(
-    val account: Account,
+    override val account: Account,
     val groupId: GroupId,
-)
+) : AccountScopedQuery
 
 /**
  * Always-on **live tail** for the recent chat of every Buzz DM channel the viewer belongs to — the DM

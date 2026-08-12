@@ -72,6 +72,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.reactions_settings, MaterialSymbols.ThumbUp, R.string.reactions_settings_search_keywords, Route.ReactionsSettings),
                     symEntry(R.string.messages_settings, MaterialSymbols.Mail, R.string.messages_settings_search_keywords, Route.MessagesSettings),
                     symEntry(R.string.bottom_bar_settings, MaterialSymbols.Dashboard, R.string.bottom_bar_search_keywords, Route.BottomBarSettings),
+                    symEntry(R.string.drawer_settings, MaterialSymbols.AutoMirrored.ViewList, R.string.drawer_search_keywords, Route.DrawerSettings),
                     symEntry(R.string.video_player_settings, MaterialSymbols.VideoSettings, R.string.video_player_search_keywords, Route.VideoPlayerSettings),
                     symEntry(R.string.audio_visualizer_settings, MaterialSymbols.MusicNote, R.string.audio_visualizer_search_keywords, Route.AudioVisualizerSettings),
                     symEntry(R.string.favorite_dvms_title, MaterialSymbols.AutoAwesome, R.string.favorite_dvms_search_keywords, Route.EditFavoriteAlgoFeeds),
@@ -104,6 +105,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.calendar_reminder_settings_title, MaterialSymbols.CalendarMonth, R.string.calendar_reminder_search_keywords, Route.CalendarReminderSettings),
                     symEntry(R.string.ots_explorer_settings, MaterialSymbols.Search, R.string.ots_explorer_search_keywords, Route.OtsSettings),
                     symEntry(R.string.namecoin_settings, MaterialSymbols.Security, R.string.namecoin_search_keywords, Route.NamecoinSettings),
+                    symEntry(R.string.active_subs_title, MaterialSymbols.CloudSync, R.string.active_subs_search_keywords, Route.ActiveSubscriptions),
                     symEntry(R.string.resource_usage_title, MaterialSymbols.Bolt, R.string.resource_usage_search_keywords, Route.ResourceUsage),
                 ),
         )

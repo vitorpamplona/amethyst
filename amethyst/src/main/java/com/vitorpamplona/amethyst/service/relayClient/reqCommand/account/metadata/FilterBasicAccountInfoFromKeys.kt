@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -78,6 +79,12 @@ fun filterBasicAccountInfoFromKeys(
     relay: NormalizedRelayUrl,
     otherAccounts: List<HexKey>?,
     since: Long?,
+    /**
+     * Who wants these profiles. The `authors` here are OTHER people — the account-switcher's
+     * avatars — so unlike every other builder in this package the authors are NOT the accounts
+     * asking, and attribution has to be passed in or the row reads as unattributed.
+     */
+    requestedBy: List<HexKey>,
 ): List<RelayBasedFilter> {
     if (otherAccounts.isNullOrEmpty()) return emptyList()
 
@@ -85,7 +92,9 @@ fun filterBasicAccountInfoFromKeys(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = requestedBy,
                     kinds = BasicAccountInfoKinds,
                     authors = otherAccounts.toList(),
                     limit = otherAccounts.size * BasicAccountInfoKinds.size,
@@ -95,7 +104,9 @@ fun filterBasicAccountInfoFromKeys(
         RelayBasedFilter(
             relay = relay,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.ACCOUNT_DATA,
+                    accountPubKeys = requestedBy,
                     kinds = BasicAccountInfoKinds2,
                     authors = otherAccounts.toList(),
                     limit = otherAccounts.size * BasicAccountInfoKinds2.size,

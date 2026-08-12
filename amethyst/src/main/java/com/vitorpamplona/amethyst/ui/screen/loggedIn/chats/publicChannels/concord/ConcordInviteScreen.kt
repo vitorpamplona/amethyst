@@ -116,7 +116,7 @@ fun ConcordInviteScreen(
     LaunchedEffect(link, state) {
         if (state is RedeemState.Working) {
             state =
-                when (val result = accountViewModel.account.joinConcordViaInvite(link)) {
+                when (val result = accountViewModel.account.concord.joinConcordViaInvite(link)) {
                     is ConcordInviteResult.Joined -> RedeemState.Done(result.communityId)
                     is ConcordInviteResult.InvalidLink ->
                         RedeemState.Failed(R.string.concord_invite_failed_invalid, canRetry = false)
@@ -124,6 +124,8 @@ fun ConcordInviteScreen(
                         RedeemState.Failed(R.string.concord_invite_failed_incompatible, canRetry = false)
                     is ConcordInviteResult.Revoked ->
                         RedeemState.Failed(R.string.concord_invite_failed_revoked, canRetry = false)
+                    is ConcordInviteResult.Banned ->
+                        RedeemState.Failed(R.string.concord_invite_failed_banned, canRetry = false)
                     is ConcordInviteResult.Expired ->
                         RedeemState.Failed(R.string.concord_invite_failed_expired, canRetry = false)
                     is ConcordInviteResult.NotReachable ->
@@ -161,6 +163,10 @@ fun ConcordInviteScreen(
                 Text(
                     stringRes(R.string.concord_redeeming_invite),
                     modifier = Modifier.padding(top = 16.dp),
+                    // Explicit: this Column sits on the bare window background with no Surface
+                    // above it, so LocalContentColor is still the M3 default black — which renders
+                    // every one of these labels invisible in the dark theme.
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -170,6 +176,7 @@ fun ConcordInviteScreen(
                 Text(
                     stringRes(failed.messageRes),
                     style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                 )
                 if (failed.canRetry) {

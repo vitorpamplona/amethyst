@@ -78,69 +78,70 @@ class PoolRequestsConcurrencyTest {
     }
 
     @Test
-    fun concurrentEoseResendAndSubscribeSendExactlyOneReq() {
-        val url = RelayUrlNormalizer.normalize("ws://race/")
-        val subId = "shared-sub"
-        val filtersA = listOf(Filter(kinds = listOf(1)))
-        val filtersB = listOf(Filter(kinds = listOf(2)))
-        val listener = object : SubscriptionListener {}
+    fun concurrentEoseResendAndSubscribeSendExactlyOneReq() =
+        kotlinx.coroutines.test.runTest {
+            val url = RelayUrlNormalizer.normalize("ws://race/")
+            val subId = "shared-sub"
+            val filtersA = listOf(Filter(kinds = listOf(1)))
+            val filtersB = listOf(Filter(kinds = listOf(2)))
+            val listener = object : SubscriptionListener {}
 
-        // Many episodes so a regression that only sometimes doubles still trips.
-        repeat(300) { episode ->
-            val pool = PoolRequests()
-            val reqBCount = AtomicInteger(0)
+            // Many episodes so a regression that only sometimes doubles still trips.
+            repeat(300) { episode ->
+                val pool = PoolRequests()
+                val reqBCount = AtomicInteger(0)
 
-            fun countReqB(cmd: Command) {
-                if (cmd is ReqCmd && cmd.filters == filtersB) reqBCount.incrementAndGet()
-            }
-
-            val fakeRelay =
-                FakeRelay(url) { cmd ->
-                    // relay-reader auto-resend send path
-                    countReqB(cmd)
-                    pool.onSent(url, cmd)
+                fun countReqB(cmd: Command) {
+                    if (cmd is ReqCmd && cmd.filters == filtersB) reqBCount.incrementAndGet()
                 }
 
-            // Bring the sub to LIVE with filters A.
-            val setupRelays = pool.addOrUpdate(subId, mapOf(url to filtersA), listener)
-            pool.sendToRelayIfChanged(subId, setupRelays) { _, cmd -> pool.onSent(url, cmd) }
-            pool.onIncomingMessage(fakeRelay, EoseMessage(subId))
-
-            // The desired filters change to B (e.g. the next page of a paged download).
-            pool.addOrUpdate(subId, mapOf(url to filtersB), listener)
-
-            val appProducedReq = CountDownLatch(1)
-            val readerDone = CountDownLatch(1)
-
-            val appThread =
-                thread {
-                    pool.sendToRelayIfChanged(subId, setOf(url)) { _, cmd ->
+                val fakeRelay =
+                    FakeRelay(url) { cmd ->
+                        // relay-reader auto-resend send path
                         countReqB(cmd)
-                        // App has produced its REQ(B); park before onSent so the
-                        // subscription state is not yet advanced — the exact window
-                        // the race needs.
-                        appProducedReq.countDown()
-                        readerDone.await()
                         pool.onSent(url, cmd)
                     }
-                }
 
-            val readerThread =
-                thread {
-                    appProducedReq.await()
-                    pool.onIncomingMessage(fakeRelay, EoseMessage(subId))
-                    readerDone.countDown()
-                }
+                // Bring the sub to LIVE with filters A.
+                val setupRelays = pool.addOrUpdate(subId, mapOf(url to filtersA), listener)
+                pool.sendToRelayIfChanged(subId, setupRelays) { _, cmd -> pool.onSent(url, cmd) }
+                pool.onIncomingMessage(fakeRelay, EoseMessage(subId))
 
-            appThread.join()
-            readerThread.join()
+                // The desired filters change to B (e.g. the next page of a paged download).
+                pool.addOrUpdate(subId, mapOf(url to filtersB), listener)
 
-            assertEquals(
-                1,
-                reqBCount.get(),
-                "episode $episode: exactly one REQ must be sent for the changed filters, " +
-                    "never a duplicate from the app + reader race",
-            )
+                val appProducedReq = CountDownLatch(1)
+                val readerDone = CountDownLatch(1)
+
+                val appThread =
+                    thread {
+                        pool.sendToRelayIfChanged(subId, setOf(url)) { _, cmd ->
+                            countReqB(cmd)
+                            // App has produced its REQ(B); park before onSent so the
+                            // subscription state is not yet advanced — the exact window
+                            // the race needs.
+                            appProducedReq.countDown()
+                            readerDone.await()
+                            pool.onSent(url, cmd)
+                        }
+                    }
+
+                val readerThread =
+                    thread {
+                        appProducedReq.await()
+                        kotlinx.coroutines.runBlocking { pool.onIncomingMessage(fakeRelay, EoseMessage(subId)) }
+                        readerDone.countDown()
+                    }
+
+                appThread.join()
+                readerThread.join()
+
+                assertEquals(
+                    1,
+                    reqBCount.get(),
+                    "episode $episode: exactly one REQ must be sent for the changed filters, " +
+                        "never a duplicate from the app + reader race",
+                )
+            }
         }
-    }
 }

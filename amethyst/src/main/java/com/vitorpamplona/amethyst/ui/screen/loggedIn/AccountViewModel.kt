@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.Dao
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
@@ -88,11 +89,11 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismis
 import com.vitorpamplona.amethyst.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
-import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapraiserStatus
@@ -548,7 +549,7 @@ class AccountViewModel(
         // public relays. Route the reaction through a channel-plane wrap instead. (Retraction of an
         // existing Concord reaction is a follow-up; for now this only adds one.)
         if (note.inGatherers?.any { it is ConcordChannel } == true) {
-            launchSigner { account.reactToConcordMessage(note, reaction) }
+            launchSigner { account.concord.reactToConcordMessage(note, reaction) }
             return
         }
 
@@ -606,15 +607,15 @@ class AccountViewModel(
 
     /** Ban the author of a Concord channel message (no-op unless this account may ban them). */
     fun banConcordMember(note: Note) {
-        val (communityId, member) = account.concordBanTarget(note) ?: return
-        launchSigner { account.banConcordMember(communityId, member) }
+        val (communityId, member) = account.concord.concordBanTarget(note) ?: return
+        launchSigner { account.concord.banConcordMember(communityId, member) }
     }
 
     /** Toggle the Admin role on the author of a Concord channel message (owner only). */
     fun toggleConcordAdmin(note: Note) {
-        val (communityId, member, isAdmin) = account.concordAdminTarget(note) ?: return
+        val (communityId, member, isAdmin) = account.concord.concordAdminTarget(note) ?: return
         launchSigner {
-            if (isAdmin) account.removeConcordAdmin(communityId, member) else account.makeConcordAdmin(communityId, member)
+            if (isAdmin) account.concord.removeConcordAdmin(communityId, member) else account.concord.makeConcordAdmin(communityId, member)
         }
     }
 
@@ -624,7 +625,7 @@ class AccountViewModel(
         member: HexKey,
         makeAdmin: Boolean,
     ) = launchSigner {
-        if (makeAdmin) account.makeConcordAdmin(communityId, member) else account.removeConcordAdmin(communityId, member)
+        if (makeAdmin) account.concord.makeConcordAdmin(communityId, member) else account.concord.removeConcordAdmin(communityId, member)
     }
 
     /**
@@ -640,7 +641,7 @@ class AccountViewModel(
         member: HexKey,
         roleIds: List<String>,
     ) = launchSigner {
-        if (!account.grantConcordRole(communityId, member, roleIds)) {
+        if (!account.concord.grantConcordRole(communityId, member, roleIds)) {
             toastManager.toast(R.string.concord_members_roles_title, R.string.concord_members_roles_failed)
         }
     }
@@ -651,7 +652,7 @@ class AccountViewModel(
         member: HexKey,
         ban: Boolean,
     ) = launchSigner {
-        if (ban) account.banConcordMember(communityId, member) else account.unbanConcordMember(communityId, member)
+        if (ban) account.concord.banConcordMember(communityId, member) else account.concord.unbanConcordMember(communityId, member)
     }
 
     /**
@@ -663,7 +664,7 @@ class AccountViewModel(
         communityId: String,
         member: HexKey,
     ) = launchSigner {
-        account.refoundConcordCommunity(communityId, setOf(member))
+        account.concord.refoundConcordCommunity(communityId, setOf(member))
     }
 
     /**
@@ -683,7 +684,7 @@ class AccountViewModel(
                             else -> emptyList()
                         }
                     }.mapNotNullTo(HashSet()) { RelayUrlNormalizer.normalizeOrNull(it) }
-            account.importConcordCommunities(pinnedRelays)
+            account.concord.importConcordCommunities(pinnedRelays)
         }
 
     /** Publish an ephemeral typing heartbeat to a Concord channel (throttled by the caller). */
@@ -691,12 +692,12 @@ class AccountViewModel(
         communityId: String,
         channelIdHex: String,
     ) = viewModelScope.launch(Dispatchers.IO) {
-        account.sendConcordTyping(communityId, channelIdHex)
+        account.concord.sendConcordTyping(communityId, channelIdHex)
     }
 
     fun sendBuzzTyping(channel: RelayGroupChannel) =
         viewModelScope.launch(Dispatchers.IO) {
-            account.sendBuzzTyping(channel)
+            account.relayGroups.sendBuzzTyping(channel)
         }
 
     @Immutable
@@ -843,7 +844,7 @@ class AccountViewModel(
         afterTimeInSeconds: Long,
     ): Boolean =
         withContext(Dispatchers.IO) {
-            account.calculateIfNoteWasZappedByAccount(zappedNote, afterTimeInSeconds)
+            account.zaps.calculateIfNoteWasZappedByAccount(zappedNote, afterTimeInSeconds)
         }
 
     suspend fun calculateZapAmount(zappedNote: Note): String {
@@ -854,7 +855,7 @@ class AccountViewModel(
         val ownPendingOnchain = zappedNote.extraOwnPendingOnchainSats(account.userProfile().pubkeyHex)
         return if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                val nwc = account.calculateZappedAmount(zappedNote)
+                val nwc = account.zaps.calculateZappedAmount(zappedNote)
                 showAmount(nwc + java.math.BigDecimal(ownPendingOnchain))
             }
         } else {
@@ -866,7 +867,7 @@ class AccountViewModel(
         val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
         return if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                val newZapAmount = account.calculateZappedAmount(zappedNote)
+                val newZapAmount = account.zaps.calculateZappedAmount(zappedNote)
                 var percentage = newZapAmount.div(zapraiserAmount.toBigDecimal()).toFloat()
 
                 if (percentage > 1) {
@@ -1202,7 +1203,7 @@ class AccountViewModel(
             .isNotEmpty()
 
     /** True when a BOLT12 offer can be paid in-app: an NWC wallet is set and advertises `pay` (nwc#2). */
-    fun canPayBolt12ViaNwc(): Boolean = hasNwcWallet() && account.defaultWalletSupportsBolt12Pay()
+    fun canPayBolt12ViaNwc(): Boolean = hasNwcWallet() && account.zaps.defaultWalletSupportsBolt12Pay()
 
     /**
      * Pays a recipient's BOLT12 [offer] over the default NWC wallet using the nwc#2
@@ -1214,7 +1215,7 @@ class AccountViewModel(
         offer: String,
         amountMillisats: Long,
     ) = launchSigner {
-        account.sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
+        account.zaps.sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
             when (response) {
                 is PaySuccessResponse -> toastManager.toast(R.string.bolt12_offers, R.string.bolt12_payment_sent)
                 is IErrorResponseLike ->
@@ -1586,6 +1587,29 @@ class AccountViewModel(
     }
 
     /**
+     * [decrypt] that always answers: [onReady] gets null when the content can't be read — a
+     * read-only account holding no key, a DM this account isn't part of, or a signer that
+     * refused/timed out. [decrypt] stays silent in those cases, which strands callers that must
+     * finish either way (a menu that only closes once the copy resolves, say).
+     */
+    fun decryptOrNull(
+        note: Note,
+        onReady: (String?) -> Unit,
+    ) = launchSigner {
+        val decrypted =
+            try {
+                account.decryptContent(note)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // launchSigner still gets the exception to toast/log the signer failure.
+                onReady(null)
+                throw e
+            }
+        onReady(decrypted)
+    }
+
+    /**
      * Runs an action that has both a tracked and a direct broadcast variant,
      * picking the path the user selected via the "Tracked broadcasts" setting.
      */
@@ -1668,12 +1692,12 @@ class AccountViewModel(
     fun joinRelayGroup(
         channel: RelayGroupChannel,
         code: String? = null,
-    ) = launchSigner { account.joinRelayGroup(channel, code) }
+    ) = launchSigner { account.relayGroups.joinRelayGroup(channel, code) }
 
-    fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.leaveRelayGroup(channel) }
+    fun leaveRelayGroup(channel: RelayGroupChannel) = launchSigner { account.relayGroups.leaveRelayGroup(channel) }
 
     /** Delete the channel/group for everyone (kind-9008). Owner/admin only; the relay enforces it. */
-    fun deleteRelayGroup(channel: RelayGroupChannel) = launchSigner { account.deleteRelayGroup(channel) }
+    fun deleteRelayGroup(channel: RelayGroupChannel) = launchSigner { account.relayGroups.deleteRelayGroup(channel) }
 
     /**
      * Archive/unarchive a Buzz channel (kind-9002 `archived` tag) — hides it from the sidebar without
@@ -1682,7 +1706,7 @@ class AccountViewModel(
     fun archiveRelayGroup(
         channel: RelayGroupChannel,
         archived: Boolean,
-    ) = launchSigner { account.archiveRelayGroup(channel, archived) }
+    ) = launchSigner { account.relayGroups.archiveRelayGroup(channel, archived) }
 
     /**
      * Take a relay group off Messages WITHOUT leaving it: drop it from my kind-10009 list so it stops
@@ -1721,7 +1745,7 @@ class AccountViewModel(
      * Hide a Buzz DM from Messages (kind-41012). DM-specific — a DM has no kind-10009 entry; the relay
      * republishes my per-viewer 30622 hidden snapshot, dropping it from the inbox until I re-open it.
      */
-    fun hideBuzzDm(channel: RelayGroupChannel) = launchSigner { account.hideBuzzDm(channel) }
+    fun hideBuzzDm(channel: RelayGroupChannel) = launchSigner { account.relayGroups.hideBuzzDm(channel) }
 
     /**
      * Bring a hidden Buzz DM back to Messages: Buzz has no "unhide", so re-open the conversation with
@@ -1731,7 +1755,7 @@ class AccountViewModel(
     fun unhideBuzzDm(
         relay: NormalizedRelayUrl,
         participants: List<HexKey>,
-    ) = launchSigner { account.openBuzzDm(relay, participants) }
+    ) = launchSigner { account.relayGroups.openBuzzDm(relay, participants) }
 
     /**
      * Keep the channel off Messages without touching membership. Local and reversible — I stay in the
@@ -1745,7 +1769,7 @@ class AccountViewModel(
     /** Actually leave: kind-9022 to the host relay, and drop it from my list and the pending set. */
     fun leaveChannelInvite(channel: RelayGroupChannel) =
         launchSigner {
-            account.leaveRelayGroup(channel)
+            account.relayGroups.leaveRelayGroup(channel)
             BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
         }
 
@@ -1756,7 +1780,7 @@ class AccountViewModel(
      * what makes leaving a community whose own relays are dead work at all — the list lives in *our*
      * outbox, not in the community's relays.
      */
-    fun leaveConcordCommunity(communityId: String) = launchSigner { account.leaveConcordCommunity(communityId) }
+    fun leaveConcordCommunity(communityId: String) = launchSigner { account.concord.leaveConcordCommunity(communityId) }
 
     fun createRelayGroup(
         relay: NormalizedRelayUrl,
@@ -1771,7 +1795,7 @@ class AccountViewModel(
         hashtags: List<String>,
         geohashes: List<String>,
     ) = launchSigner {
-        account.createRelayGroup(
+        account.relayGroups.createRelayGroup(
             relay,
             groupId,
             name,
@@ -1789,47 +1813,47 @@ class AccountViewModel(
     fun createRelayGroupInvite(
         channel: RelayGroupChannel,
         code: String,
-    ) = launchSigner { account.createRelayGroupInvite(channel, code) }
+    ) = launchSigner { account.relayGroups.createRelayGroupInvite(channel, code) }
 
     fun postRelayGroupThread(
         channel: RelayGroupChannel,
         title: String,
         body: String,
-    ) = launchSigner { account.postRelayGroupThread(channel, title, body) }
+    ) = launchSigner { account.relayGroups.postRelayGroupThread(channel, title, body) }
 
     fun pinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.pinRelayGroupMessage(channel, note.idHex) }
+    ) = launchSigner { account.relayGroups.pinRelayGroupMessage(channel, note.idHex) }
 
     fun unpinRelayGroupMessage(
         channel: RelayGroupChannel,
         note: Note,
-    ) = launchSigner { account.unpinRelayGroupMessage(channel, note.idHex) }
+    ) = launchSigner { account.relayGroups.unpinRelayGroupMessage(channel, note.idHex) }
 
     fun removeRelayGroupUser(
         channel: RelayGroupChannel,
         pubkey: HexKey,
-    ) = launchSigner { account.removeRelayGroupUser(channel, pubkey) }
+    ) = launchSigner { account.relayGroups.removeRelayGroupUser(channel, pubkey) }
 
     fun putRelayGroupUser(
         channel: RelayGroupChannel,
         pubkey: HexKey,
         roles: List<String>,
-    ) = launchSigner { account.putRelayGroupUser(channel, pubkey, roles) }
+    ) = launchSigner { account.relayGroups.putRelayGroupUser(channel, pubkey, roles) }
 
     /** Add [pubkey] to a Buzz community (relay-wide, kind 9030). Owner/admin only; relay enforces. */
     fun addCommunityMember(
         relay: NormalizedRelayUrl,
         pubkey: HexKey,
         role: String? = null,
-    ) = launchSigner { account.addCommunityMember(relay, pubkey, role) }
+    ) = launchSigner { account.relayGroups.addCommunityMember(relay, pubkey, role) }
 
     /** Remove [pubkey] from a Buzz community (relay-wide, kind 9031). Owner/admin only. */
     fun removeCommunityMember(
         relay: NormalizedRelayUrl,
         pubkey: HexKey,
-    ) = launchSigner { account.removeCommunityMember(relay, pubkey) }
+    ) = launchSigner { account.relayGroups.removeCommunityMember(relay, pubkey) }
 
     fun editRelayGroupMetadata(
         channel: RelayGroupChannel,
@@ -1843,7 +1867,7 @@ class AccountViewModel(
         hashtags: List<String>,
         geohashes: List<String>,
     ) = launchSigner {
-        account.editRelayGroupMetadata(
+        account.relayGroups.editRelayGroupMetadata(
             channel,
             name,
             about,
@@ -1986,6 +2010,15 @@ class AccountViewModel(
 
     fun bottomBarItemsFlow(): StateFlow<List<BottomBarEntry>> = account.settings.syncedSettings.navigation.bottomBarItems
 
+    fun hiddenDrawerItemsFlow(): StateFlow<Set<NavBarItem>> = account.settings.syncedSettings.navigation.hiddenDrawerItems
+
+    /** Same ordering contract as [changeBottomBarItems]: apply on the caller's thread, publish off it. */
+    fun changeHiddenDrawerItems(items: Set<NavBarItem>) {
+        if (account.applyHiddenDrawerItems(items)) {
+            launchSigner { account.sendNewAppSpecificData() }
+        }
+    }
+
     fun changeBottomBarItems(items: List<BottomBarEntry>) {
         // Apply to the reactive flow synchronously on the caller (UI) thread so rapid edits stay
         // ordered — launchSigner dispatches on a multi-threaded pool, so wrapping the emit too would
@@ -2096,7 +2129,7 @@ class AccountViewModel(
 
     fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 
-    override fun getOrCreateUser(hex: HexKey): User = LocalCache.getOrCreateUser(hex)
+    override fun getOrCreateUser(pubkey: HexKey): User = LocalCache.getOrCreateUser(pubkey)
 
     fun getUserIfExists(hex: HexKey): User? = LocalCache.getUserIfExists(hex)
 
@@ -2330,8 +2363,8 @@ class AccountViewModel(
                     mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
                 )
                 ?: return
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
     }
 
     suspend fun sendMarmotGroupMediaMessage(
@@ -2356,21 +2389,21 @@ class AccountViewModel(
                     account.signer.pubKey,
                     template,
                 )
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
     }
 
     fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
 
     suspend fun createMarmotGroup(nostrGroupId: String) {
-        account.createMarmotGroup(nostrGroupId)
+        account.marmot.createMarmotGroup(nostrGroupId)
     }
 
     suspend fun publishMarmotKeyPackage() {
-        account.publishMarmotKeyPackage()
+        account.marmot.publishMarmotKeyPackage()
     }
 
-    suspend fun hasPublishedKeyPackage(): Boolean = account.hasPublishedKeyPackage()
+    suspend fun hasPublishedKeyPackage(): Boolean = account.marmot.hasPublishedKeyPackage()
 
     /**
      * Whether this account has a kind:10051 KeyPackage Relay List (MIP-00)
@@ -2394,12 +2427,12 @@ class AccountViewModel(
     }
 
     suspend fun leaveMarmotGroup(nostrGroupId: String) {
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.leaveMarmotGroup(nostrGroupId, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.leaveMarmotGroup(nostrGroupId, relays)
     }
 
     suspend fun resetMarmotState() {
-        account.resetMarmotState()
+        account.marmot.resetMarmotState()
     }
 
     fun marmotGroupMembers(nostrGroupId: String): List<com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
@@ -2407,30 +2440,30 @@ class AccountViewModel(
     suspend fun addMarmotGroupMember(
         nostrGroupId: String,
         memberPubKey: String,
-    ): String = account.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
+    ): String = account.marmot.fetchKeyPackageAndAddMember(nostrGroupId, memberPubKey)
 
     suspend fun removeMarmotGroupMember(
         nostrGroupId: String,
         targetLeafIndex: Int,
     ) {
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
     }
 
     suspend fun grantMarmotGroupAdmin(
         nostrGroupId: String,
         targetPubKey: String,
     ) {
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.grantMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.grantMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
     }
 
     suspend fun revokeMarmotGroupAdmin(
         nostrGroupId: String,
         targetPubKey: String,
     ) {
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.revokeMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.revokeMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
     }
 
     /**
@@ -2486,8 +2519,8 @@ class AccountViewModel(
                         imageUploadKey = icon.upload.imageUploadKey,
                     )
             }
-        val relays = account.marmotGroupRelays(nostrGroupId)
-        account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId)
+        account.marmot.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }
 
     override fun onCleared() {
@@ -2745,7 +2778,7 @@ class AccountViewModel(
         onSent: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ) = launchSigner {
-        account.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
+        account.zaps.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
         onSent()
     }
 
@@ -2801,7 +2834,7 @@ class AccountViewModel(
                     if (effectiveZapType != LnZapEvent.ZapType.NONZAP) {
                         // NIP-57 Appendix F: include amount + lnurl so the receipt can be validated.
                         val splitLnurl = LnurlForm.toUrl(lnAddress)?.let(LnurlForm::urlToBech32)
-                        account.createZapRequestFor(
+                        account.zaps.createZapRequestFor(
                             user = user,
                             message = message,
                             zapType = effectiveZapType,
@@ -3004,10 +3037,6 @@ fun mockAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
-            cashuWalletFilterAssembler = {
-                com.vitorpamplona.amethyst.commons.relayClient.assemblers
-                    .CashuWalletFilterAssembler(client)
-            },
             cashuMintDirectoryFilterAssembler = {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuMintDirectoryFilterAssembler(client)
@@ -3064,10 +3093,6 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
-            cashuWalletFilterAssembler = {
-                com.vitorpamplona.amethyst.commons.relayClient.assemblers
-                    .CashuWalletFilterAssembler(client)
-            },
             cashuMintDirectoryFilterAssembler = {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuMintDirectoryFilterAssembler(client)

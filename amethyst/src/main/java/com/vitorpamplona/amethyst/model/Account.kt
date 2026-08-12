@@ -24,20 +24,17 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.actions.ConcordActions
-import com.vitorpamplona.amethyst.commons.actions.ConcordModeration
-import com.vitorpamplona.amethyst.commons.actions.ConcordSubscriptionPlanner
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
-import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunPayload
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -50,10 +47,8 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListState
-import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupMembership
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
@@ -66,11 +61,7 @@ import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCa
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
-import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
-import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
-import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
-import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
-import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
@@ -162,43 +153,13 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentF
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.concordChannelLastReadRoute
-import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
-import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
-import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
-import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
-import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
-import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
-import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
-import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
-import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
-import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
-import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
-import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
-import com.vitorpamplona.quartz.buzz.workflow.workflowChannel
-import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_ADMIN
-import com.vitorpamplona.quartz.buzz.workspace.BUZZ_ROLE_MEMBER
-import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_OPEN
-import com.vitorpamplona.quartz.buzz.workspace.BUZZ_VISIBILITY_PRIVATE
-import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
-import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
-import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
-import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
-import com.vitorpamplona.quartz.concord.cord04Roles.ChannelEntity
-import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
-import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
-import com.vitorpamplona.quartz.concord.cord04Roles.RoleEntity
-import com.vitorpamplona.quartz.concord.cord05Invites.CommunityInvite
-import com.vitorpamplona.quartz.concord.cord05Invites.InviteBundleStatus
-import com.vitorpamplona.quartz.concord.cord05Invites.InviteRelayDictionary
-import com.vitorpamplona.quartz.concord.crypto.GroupKey
-import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -226,24 +187,12 @@ import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
-import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchFirst
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCollectResults
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -274,7 +223,6 @@ import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.signer.PoWNostrSigner
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
-import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
@@ -295,20 +243,8 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
-import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateInviteEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.EditMetadataEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.PutUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.RemoveUserEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.moderation.UpdatePinListEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
-import com.vitorpamplona.quartz.nip29RelayGroups.request.JoinRequestEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.request.LeaveRequestEvent
-import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -316,19 +252,8 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaySuccessResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
-import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -345,12 +270,10 @@ import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapTemplateConversion
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
-import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureMeta
@@ -366,8 +289,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.KindRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
-import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
-import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
@@ -390,8 +312,6 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
-import com.vitorpamplona.quartz.nipB1Bolt12Zaps.builder.Bolt12ZapBuilder
-import com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify.Bolt12ZapValidation
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
@@ -413,26 +333,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.math.BigDecimal
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
-
-private const val ONCHAIN_BACKEND_NOT_CONFIGURED = "Bitcoin chain backend is not configured"
-
-/** Name of the default Concord community Admin role minted by "Make admin". */
-private const val CONCORD_ADMIN_ROLE = "Admin"
-
-/**
- * How often a joined Concord community's stored invite link is re-resolved to check whether
- * we were left out of a Refounding (see `recoverStrandedConcordCommunities`). Stranding is
- * rare and silent, so this trades detection latency for not turning the revision tick into a
- * relay-fetch loop.
- */
-private const val RECOVERY_CHECK_INTERVAL_MS = 15 * 60 * 1000L
 
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
@@ -441,7 +345,6 @@ class Account(
     override val signer: NostrSigner,
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
-    val cashuWalletFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler,
     val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
     val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
     val otsResolverBuilder: () -> OtsResolver,
@@ -455,7 +358,8 @@ class Account(
     relayAuthPermissionStore: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
     signerPermissionStore: NostrSignerPermissionStore = InMemoryNostrSignerPermissionStore(),
     nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
-) : IAccount {
+) : IAccount,
+    UserFinderAccount {
     private var userProfileCache: User? = null
 
     override fun userProfile(): User = userProfileCache ?: cache.getOrCreateUser(signer.pubKey).also { userProfileCache = it }
@@ -466,6 +370,34 @@ class Account(
     override val hiddenWordsCase: List<DualCase> get() = hiddenUsers.flow.value.hiddenWordsCase
     override val hiddenUsersHashCodes: Set<Int> get() = hiddenUsers.flow.value.hiddenUsersHashCodes
     override val spammersHashCodes: Set<Int> get() = hiddenUsers.flow.value.spammersHashCodes
+
+    // UserFinderAccount — narrow, read-only relay-hint view used by the shared
+    // per-user metadata + per-note event finders (moved to commons). Snapshot
+    // getters read `.value` fresh on every filter rebuild. userFinderPubkeyHex
+    // doubles as the attribution pubkey for ExplainedFilter.accountPubKeys.
+    override val userFinderPubkeyHex: HexKey get() = userProfile().pubkeyHex
+
+    override fun indexRelays(): Set<NormalizedRelayUrl> = indexerRelayList.flow.value.ifEmpty { DefaultIndexerRelayList }
+
+    override fun outboxHomeRelays(): Set<NormalizedRelayUrl> = nip65RelayList.allFlowNoDefaults.value + privateStorageRelayList.flow.value + localRelayList.flow.value
+
+    // searchRelayList.flow already applies the DefaultSearchRelayList fallback internally
+    // (SearchRelayListState.normalizeSearchRelayListWithBackup), so no ifEmpty needed here.
+    override fun searchRelays(): Set<NormalizedRelayUrl> = (trustedRelayList.flow.value + searchRelayList.flow.value).toSet()
+
+    override fun searchOnlyRelays(): Set<NormalizedRelayUrl> = searchRelayList.flow.value
+
+    override fun followPlusAllMineWithSearchRelays(): Set<NormalizedRelayUrl> = followPlusAllMineWithSearch.flow.value
+
+    override fun commonRelays(): Set<NormalizedRelayUrl> = followSharedOutboxesOrProxy.flow.value.ifEmpty { Constants.eventFinderRelays }
+
+    override fun cardHomeRelays(): Set<NormalizedRelayUrl> = homeRelays.flow.value
+
+    override fun trustProvider(): ServiceProviderTag? = trustProviderList.liveUserRankProvider.value
+
+    override fun followerCountProvider(): ServiceProviderTag? = trustProviderList.liveUserFollowerCount.value
+
+    override fun declaredFollowsByOutboxRelay(): Map<NormalizedRelayUrl, Set<HexKey>> = declaredFollowsPerOutboxRelay.value
 
     val userMetadata = UserMetadataState(signer, cache, scope, settings)
 
@@ -741,7 +673,6 @@ class Account(
             signer = signer,
             cache = cache,
             scope = scope,
-            assembler = cashuWalletFilterAssembler(),
             outboxRelaysFlow = outboxRelays.flow,
             inboxRelaysFlow = notificationRelays.flow,
             dmRelaysFlow = dmRelays.flow,
@@ -803,6 +734,25 @@ class Account(
     // Per-message publish acceptance (relay OKs), feeding the delivery ticks on
     // own chat bubbles.
     val chatDeliveryTracker = ChatDeliveryTracker(client)
+
+    /** Concord community orchestration (join/create/messages/moderation). */
+    val concord = AccountConcordActions(this)
+
+    /** Marmot/MLS group orchestration (create/members/admins/messages/key packages). */
+    val marmot = AccountMarmotActions(this)
+
+    /** NIP-29 relay-group + Buzz workspace orchestration. */
+    val relayGroups = AccountRelayGroupActions(this)
+
+    /** Zap/payment orchestration (NIP-57, NWC, BOLT12, onchain). */
+    val zaps = AccountZapActions(this)
+
+    /**
+     * Relay routing + sign-and-publish choke point: computes which relays an event
+     * should go to (outbox model, hints, channels, broadcast lists) and owns every
+     * publish path. All Account send helpers delegate here.
+     */
+    val broadcaster = EventBroadcaster(this)
 
     val otsState = OtsState(signer, cache, otsResolverBuilder, scope, settings)
 
@@ -1038,6 +988,9 @@ class Account(
      * re-seeds from this flow). Pair a `true` result with [sendNewAppSpecificData] to publish.
      */
     fun applyBottomBarItems(items: List<BottomBarEntry>): Boolean = settings.changeBottomBarItems(items)
+
+    /** The drawer counterpart of [applyBottomBarItems] — same synchronous-apply, publish-after contract. */
+    fun applyHiddenDrawerItems(items: Set<NavBarItem>): Boolean = settings.changeHiddenDrawerItems(items)
 
     suspend fun toggleChatroomPin(room: ChatroomKey) {
         settings.toggleChatroomPin(room)
@@ -1410,278 +1363,6 @@ class Account(
         cache.justConsumeMyOwnEvent(event)
     }
 
-    suspend fun createZapRequestFor(
-        event: Event,
-        pollOption: Int?,
-        message: String = "",
-        zapType: LnZapEvent.ZapType,
-        toUser: User?,
-        additionalRelays: Set<NormalizedRelayUrl>? = null,
-        amountMillisats: Long? = null,
-        lnurl: String? = null,
-    ) = LnZapRequestEvent.create(
-        zappedEvent = event,
-        relays = nip65RelayList.inboxFlow.value + (additionalRelays ?: emptySet()),
-        signer = signer,
-        pollOption = pollOption,
-        message = message,
-        zapType = zapType,
-        toUserPubHex = toUser?.pubkeyHex,
-        amountMillisats = amountMillisats,
-        lnurl = lnurl,
-    )
-
-    suspend fun calculateIfNoteWasZappedByAccount(
-        zappedNote: Note?,
-        afterTimeInSeconds: Long,
-    ): Boolean = zappedNote?.isZappedBy(userProfile(), afterTimeInSeconds, this) == true
-
-    suspend fun calculateZappedAmount(zappedNote: Note): BigDecimal = zappedNote.zappedAmountWithNWCPayments(nip47SignerState)
-
-    suspend fun sendNwcRequest(
-        request: Request,
-        onResponse: (Response?) -> Unit,
-    ) {
-        val (event, relay) = nip47SignerState.sendNwcRequest(request, onResponse)
-        client.publish(event, setOf(relay))
-    }
-
-    suspend fun sendNwcRequestToWallet(
-        walletUri: Nip47WalletConnect.Nip47URINorm,
-        request: Request,
-        onResponse: (Response?) -> Unit,
-    ): HexKey {
-        val (event, relay) = nip47SignerState.sendNwcRequestToWallet(walletUri, request, onResponse)
-        client.publish(event, setOf(relay))
-        return event.id
-    }
-
-    /**
-     * Number of spoofed (wrong-author) NIP-47 replies that have arrived for
-     * the given request id. 0 if the request is unknown or already resolved.
-     */
-    fun nwcSpoofAttempts(requestId: HexKey): Int = LocalCache.paymentTracker.spoofAttemptsFor(requestId)
-
-    /**
-     * Removes a pending NIP-47 request from the tracker. Call this when the
-     * UI gives up waiting (timeout) so the entry doesn't stick around.
-     */
-    fun cleanupNwcRequest(requestId: HexKey) = LocalCache.paymentTracker.cleanup(requestId)
-
-    suspend fun sendZapPaymentRequestFor(
-        bolt11: String,
-        zappedNote: Note?,
-        onResponse: (Response?) -> Unit,
-    ) {
-        val (event, relay) = nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
-        client.publish(event, setOf(relay))
-    }
-
-    /**
-     * True when the default NWC wallet advertises the nwc#2 `pay` method — the rail a
-     * BOLT12 zap needs to obtain a payer proof. Read from the wallet's cached kind:13194
-     * info event (its capability advertisement), which [NwcSignerState] already refreshes
-     * on wallet change. A missing/unfetched info event reads as false, so the zap path
-     * falls back to lightning rather than attempting a `pay` the wallet can't honor.
-     */
-    fun defaultWalletSupportsBolt12Pay(): Boolean {
-        val uri = nip47SignerState.defaultWalletUri.value ?: return false
-        return nip47SignerState.infoCache?.current(uri)?.supportsMethod(NwcMethod.PAY) == true
-    }
-
-    /**
-     * Sends a NIP-B1 BOLT12 zap to [recipientPubKey] over the default NWC wallet.
-     *
-     * Signs a kind 9737 intent, pays [offer] via the nwc#2 `pay` method with the
-     * intent-bound `payer_note`, then — only if the wallet returns a payer proof that
-     * validates — builds, self-consumes, and publishes the kind 9736 zap. Validation
-     * is the fail-safe: a wallet that drops or misroutes the note yields a proof that
-     * fails the binding check, so no invalid receipt is ever published (the payment
-     * still happened; [onError] reports "paid, no receipt"). [zappedEvent] is null for
-     * a profile zap. Requires an NWC wallet (see [hasNwcWallet]); BOLT12 zaps have no
-     * external-wallet or LNURL fallback because only NWC returns the proof.
-     */
-    suspend fun sendBolt12Zap(
-        zappedEvent: Event?,
-        recipientPubKey: HexKey,
-        offer: String,
-        amountMillisats: Long,
-        message: String,
-        zapType: LnZapEvent.ZapType,
-        // (messageResId, detail) — the caller localizes; detail carries a wallet error, if any.
-        onError: (Int, String?) -> Unit,
-        onProcessed: () -> Unit,
-    ) {
-        // NONZAP means "pay, but publish no receipt" — settle the offer without binding
-        // a zap intent or emitting a 9736, matching the privacy of a bolt11 NONZAP.
-        if (zapType == LnZapEvent.ZapType.NONZAP) {
-            sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats)) { response ->
-                scope.launch {
-                    if (response is IErrorResponseLike) onError(R.string.bolt12_payment_failed, response.errorMessage())
-                    onProcessed()
-                }
-            }
-            return
-        }
-
-        val anonymous = zapType == LnZapEvent.ZapType.ANONYMOUS
-        // The 9737 intent and the 9736 zap MUST be signed by the same key. An anonymous
-        // zap uses a fresh ephemeral key so it carries no `P` tag and isn't traceable.
-        val zapSigner = if (anonymous) NostrSignerInternal(KeyPair()) else signer
-
-        val intent =
-            if (zappedEvent == null) {
-                Bolt12ZapBuilder.buildProfileIntent(zapSigner, recipientPubKey, amountMillisats, offer, message)
-            } else {
-                Bolt12ZapBuilder.buildIntent(zapSigner, recipientPubKey, amountMillisats, offer, EventHintBundle(zappedEvent), message)
-            }
-
-        val payerNote = Bolt12ZapBuilder.payerNote(intent)
-
-        sendNwcRequest(PayMethod.create("bitcoin:?lno=$offer", amountMillisats, payerNote)) { response ->
-            scope.launch {
-                // try/finally so a failure while assembling/publishing the receipt (e.g. a
-                // remote signer error) still steps progress and surfaces an error, instead
-                // of vanishing as an uncaught coroutine exception. The payment already
-                // settled at this point, so such a failure means "paid, no receipt".
-                try {
-                    when (response) {
-                        is PaySuccessResponse -> {
-                            val proof = response.result?.payer_proof
-                            if (proof.isNullOrBlank()) {
-                                onError(R.string.bolt12_zap_paid_no_receipt, null)
-                            } else {
-                                val zap = Bolt12ZapBuilder.buildZap(zapSigner, intent, proof, anonymous)
-                                if (cache.bolt12ZapValidator.validate(zap, verifyEventSignature = false) is Bolt12ZapValidation.Valid) {
-                                    cache.justConsumeMyOwnEvent(zap)
-                                    client.publish(zap, computeRelayListToBroadcast(zap))
-                                } else {
-                                    onError(R.string.bolt12_zap_invalid_receipt, null)
-                                }
-                            }
-                        }
-
-                        is IErrorResponseLike -> onError(R.string.bolt12_payment_failed, response.errorMessage())
-
-                        else -> onError(R.string.bolt12_zap_paid_no_receipt, null)
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w("Account", "BOLT12 zap receipt assembly failed after payment", e)
-                    onError(R.string.bolt12_zap_paid_no_receipt, null)
-                } finally {
-                    onProcessed()
-                }
-            }
-        }
-    }
-
-    suspend fun createZapRequestFor(
-        user: User,
-        message: String = "",
-        zapType: LnZapEvent.ZapType,
-        amountMillisats: Long? = null,
-        lnurl: String? = null,
-    ): LnZapRequestEvent {
-        val zapRequest =
-            LnZapRequestEvent.create(
-                userHex = user.pubkeyHex,
-                relays = nip65RelayList.inboxFlow.value + (user.inboxRelays() ?: emptyList()),
-                signer = signer,
-                message = message,
-                zapType = zapType,
-                amountMillisats = amountMillisats,
-                lnurl = lnurl,
-            )
-
-        cache.justConsumeMyOwnEvent(zapRequest)
-        return zapRequest
-    }
-
-    private fun onchainBackendNotConfigured() =
-        OnchainZapSendResult.Failure(
-            OnchainZapSendStage.LOADING_UTXOS,
-            OnchainZapSendError.BACKEND_NOT_CONFIGURED,
-            ONCHAIN_BACKEND_NOT_CONFIGURED,
-        )
-
-    /**
-     * Send a NIP-BC onchain zap: build a Bitcoin transaction paying the recipient's
-     * derived Taproot address, sign it, broadcast it, and publish the kind:8333
-     * zap receipt. Pass [zappedEvent] to attribute the zap to a specific event, or
-     * leave it null for a profile zap.
-     */
-    suspend fun sendOnchainZap(
-        recipientPubKey: HexKey,
-        amountSats: Long,
-        feeRateSatPerVByte: Double,
-        comment: String = "",
-        zappedEvent: EventHintBundle<out Event>? = null,
-    ): OnchainZapSendResult {
-        val backend =
-            cache.onchainBackend
-                ?: return onchainBackendNotConfigured()
-        return OnchainZapSender.send(
-            backend = backend,
-            signer = signer,
-            senderPubKey = signer.pubKey,
-            recipientPubKey = recipientPubKey,
-            amountSats = amountSats,
-            feeRateSatPerVByte = feeRateSatPerVByte,
-            comment = comment,
-            zappedEvent = zappedEvent,
-        ) { template -> signAndComputeBroadcast(template) }
-    }
-
-    /**
-     * Pay an explicit Bitcoin address (e.g. a profile's NIP-A3 `bitcoin`
-     * payment target) from the NIP-BC Taproot wallet. A plain wallet send —
-     * no kind:8333 receipt is published. See [OnchainZapSender.sendToAddress].
-     */
-    suspend fun sendOnchainToAddress(
-        recipientAddress: String,
-        amountSats: Long,
-        feeRateSatPerVByte: Double,
-    ): OnchainZapSendResult {
-        val backend =
-            cache.onchainBackend
-                ?: return onchainBackendNotConfigured()
-        return OnchainZapSender.sendToAddress(
-            backend = backend,
-            signer = signer,
-            senderPubKey = signer.pubKey,
-            recipientAddress = recipientAddress,
-            amountSats = amountSats,
-            feeRateSatPerVByte = feeRateSatPerVByte,
-        )
-    }
-
-    /**
-     * Send a NIP-BC onchain split zap: a single Bitcoin transaction paying
-     * each recipient their precomputed share, plus one kind:8333 receipt per
-     * recipient. See [OnchainZapSender.sendSplit] for failure semantics.
-     */
-    suspend fun sendOnchainZapWithSplits(
-        recipients: List<OnchainZapShare>,
-        feeRateSatPerVByte: Double,
-        comment: String = "",
-        zappedEvent: EventHintBundle<out Event>? = null,
-    ): OnchainZapSendResult {
-        val backend =
-            cache.onchainBackend
-                ?: return onchainBackendNotConfigured()
-        return OnchainZapSender.sendSplit(
-            backend = backend,
-            signer = signer,
-            senderPubKey = signer.pubKey,
-            recipients = recipients,
-            feeRateSatPerVByte = feeRateSatPerVByte,
-            comment = comment,
-            zappedEvent = zappedEvent,
-        ) { template -> signAndComputeBroadcast(template) }
-    }
-
     suspend fun report(
         note: Note,
         type: ReportType,
@@ -1931,239 +1612,57 @@ class Account(
             relaysItCameFrom
     }
 
-    private fun computeRelayListForLinkedUser(user: User): Set<NormalizedRelayUrl> =
-        if (user == userProfile()) {
-            notificationRelays.flow.value
-        } else {
-            user.inboxRelays()?.ifEmpty { null }?.toSet()
-                ?: (cache.relayHints.hintsForKey(user.pubkeyHex).toSet() + user.allUsedRelays())
-        }
+    // ------------------------------------------------------------------
+    // Broadcast / relay-routing delegates (logic lives in EventBroadcaster).
+    // ------------------------------------------------------------------
 
-    private fun computeRelayListForLinkedUser(pubkey: HexKey): Set<NormalizedRelayUrl> =
-        if (pubkey == userProfile().pubkeyHex) {
-            notificationRelays.flow.value
-        } else {
-            cache
-                .getUserIfExists(pubkey)
-                ?.inboxRelays()
-                ?.ifEmpty { null }
-                ?.toSet()
-                ?: cache.relayHints.hintsForKey(pubkey).toSet()
-        }
+    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = broadcaster.computeRelayListToBroadcast(event)
 
-    private fun computeRelaysForChannels(event: Event): Set<NormalizedRelayUrl> = cache.getAnyChannel(event)?.relays() ?: emptySet()
+    fun computeRelayListToBroadcast(note: Note): Set<NormalizedRelayUrl> = broadcaster.computeRelayListToBroadcast(note)
 
-    // Personal events the user stores just for themselves — drafts, app settings, bookmark
-    // lists — and channel/community events that already declare their own home relays
-    // should not be replicated to the user's broadcasting relays. Channel/community events
-    // that don't define any home relays fall through to broadcast, since there's nowhere
-    // else for them to land.
-    private fun wantsBroadcastRelays(event: Event): Boolean {
-        if (event is DraftWrapEvent ||
-            event is AppSpecificDataEvent ||
-            event is BookmarkListEvent ||
-            event is OldBookmarkListEvent ||
-            event is LabeledBookmarkListEvent
-        ) {
-            return false
-        }
-        if (event is PollEvent && event.relays().isNotEmpty()) return false
-        if (event is MeetingSpaceEvent && event.allRelayUrls().isNotEmpty()) return false
-        if (event is MeetingRoomEvent && event.allRelayUrls().isNotEmpty()) return false
-        if (event is LiveActivitiesEvent && event.allRelayUrls().isNotEmpty()) return false
+    suspend fun broadcast(note: Note) = broadcaster.broadcast(note)
 
-        val channelRelays = cache.getAnyChannel(event)?.relays()
-        if (channelRelays != null && channelRelays.isNotEmpty()) return false
+    fun sendAutomatic(events: List<Event>) = broadcaster.sendAutomatic(events)
 
-        return true
-    }
+    fun sendAutomatic(event: Event?) = broadcaster.sendAutomatic(event)
 
-    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = computeRelayListToBroadcast(event, mutableSetOf())
+    fun sendMyPublicAndPrivateOutbox(event: Event?) = broadcaster.sendMyPublicAndPrivateOutbox(event)
 
-    private fun computeRelayListToBroadcast(
-        event: Event,
-        visited: MutableSet<HexKey>,
-    ): Set<NormalizedRelayUrl> {
-        // a-tagged events can form cycles; without this the two recursive descents stack-overflow.
-        if (!visited.add(event.id)) return emptySet()
+    fun sendMyPublicAndPrivateOutbox(events: List<Event>) = broadcaster.sendMyPublicAndPrivateOutbox(events)
 
-        if (event is GiftWrapEvent) {
-            val receiver = event.recipientPubKey()
-            return if (receiver != null) {
-                val relayList =
-                    cache
-                        .getOrCreateUser(receiver)
-                        .dmInboxRelayList()
-                        ?.relays()
-                        ?.ifEmpty { null }
-                relayList?.toSet() ?: computeRelayListForLinkedUser(receiver)
-            } else {
-                emptySet()
-            }
-        }
-        // Seals, inner DM messages, and unsigned rumors never get broadcast
-        // relays: they only travel inside gift wraps.
-        if (event is SealedRumorEvent || event is BaseDMGroupEvent || event.sig.isEmpty()) {
-            return emptySet()
-        }
+    fun sendLiterallyEverywhere(event: Event) = broadcaster.sendLiterallyEverywhere(event)
 
-        val includeBroadcast = wantsBroadcastRelays(event)
-        val broadcastRelays = if (includeBroadcast) broadcastRelayList.flow.value else emptySet()
+    suspend fun <T : Event> signAndSendPrivately(
+        template: EventTemplate<T>,
+        relayList: Set<NormalizedRelayUrl>,
+    ) = broadcaster.signAndSendPrivately(template, relayList)
 
-        if (event is MetadataEvent || event is AdvertisedRelayListEvent) {
-            // everywhere
-            return followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value + broadcastRelays
-        }
+    suspend fun <T : Event> signWithAndSendPrivately(
+        template: EventTemplate<T>,
+        signer: NostrSigner,
+        relayList: Set<NormalizedRelayUrl>,
+    ): T = broadcaster.signWithAndSendPrivately(template, signer, relayList)
 
-        val relayList = mutableSetOf<NormalizedRelayUrl>()
-        relayList.addAll(broadcastRelays)
+    suspend fun <T : Event> signAndSendPrivatelyOrBroadcast(
+        template: EventTemplate<T>,
+        relayList: (T) -> List<NormalizedRelayUrl>?,
+    ): T = broadcaster.signAndSendPrivatelyOrBroadcast(template, relayList)
 
-        val author = cache.getUserIfExists(event.pubKey)
+    suspend fun <T : Event> signAndComputeBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+    ): T = broadcaster.signAndComputeBroadcast(template, broadcast)
 
-        if (author != null) {
-            if (author == userProfile()) {
-                if (includeBroadcast) {
-                    relayList.addAll(outboxRelays.flow.value)
-                } else {
-                    // outboxRelays mixes in the broadcast list; for personal/channel events
-                    // we want the user's NIP-65 / private / local outbox without it.
-                    relayList.addAll(nip65RelayList.outboxFlow.value)
-                    relayList.addAll(privateStorageRelayList.flow.value)
-                    relayList.addAll(localRelayList.flow.value)
-                }
-            } else {
-                val relays =
-                    author.outboxRelays()?.ifEmpty { null }
-                        ?: author.allUsedRelaysOrNull()
-                        ?: cache.relayHints.hintsForKey(author.pubkeyHex)
+    suspend fun <T : Event> signAnonymouslyAndBroadcast(
+        template: EventTemplate<T>,
+        broadcast: List<Event> = emptyList(),
+        anonymousSigner: NostrSigner = NostrSignerInternal(KeyPair()),
+    ): T = broadcaster.signAnonymouslyAndBroadcast(template, broadcast, anonymousSigner)
 
-                relayList.addAll(relays)
-            }
-        } else {
-            relayList.addAll(cache.relayHints.hintsForKey(event.pubKey))
-        }
-
-        if (event is PubKeyHintProvider) {
-            event.pubKeyHints().forEach {
-                relayList.add(it.relay)
-            }
-            event.linkedPubKeys().forEach { pubkey ->
-                relayList.addAll(computeRelayListForLinkedUser(pubkey))
-            }
-        }
-
-        if (event is EventHintProvider) {
-            event.eventHints().forEach {
-                relayList.add(it.relay)
-            }
-            event.linkedEventIds().forEach { eventId ->
-                cache.getNoteIfExists(eventId)?.let { linkedNote ->
-                    val linkedNoteAuthor = linkedNote.author
-
-                    if (linkedNoteAuthor != null) {
-                        relayList.addAll(computeRelayListForLinkedUser(linkedNoteAuthor))
-                    } else {
-                        relayList.addAll(linkedNote.relays.toSet())
-                    }
-
-                    linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelayListToBroadcast(linkedEvent, visited))
-                    }
-                }
-            }
-        }
-
-        if (event is AddressHintProvider) {
-            event.addressHints().forEach {
-                relayList.add(it.relay)
-            }
-            event.linkedAddressIds().forEach { addressId ->
-                cache.getAddressableNoteIfExists(addressId)?.let { linkedNote ->
-                    val linkedNoteAuthor = linkedNote.author
-
-                    if (linkedNoteAuthor != null) {
-                        relayList.addAll(computeRelayListForLinkedUser(linkedNoteAuthor))
-                    } else {
-                        relayList.addAll(linkedNote.relays.toSet())
-                    }
-
-                    linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelayListToBroadcast(linkedEvent, visited))
-                    }
-                }
-            }
-        }
-
-        if (event is PollEvent) {
-            relayList.addAll(event.relays())
-        }
-
-        if (event is MeetingSpaceEvent) {
-            relayList.addAll(event.allRelayUrls())
-        }
-
-        if (event is MeetingRoomEvent) {
-            relayList.addAll(event.allRelayUrls())
-        }
-
-        if (event is LiveActivitiesEvent) {
-            relayList.addAll(event.allRelayUrls())
-        }
-
-        relayList.addAll(computeRelaysForChannels(event))
-
-        return relayList
-    }
-
-    fun computeRelayListToBroadcast(note: Note): Set<NormalizedRelayUrl> {
-        val noteEvent = note.event
-        return if (noteEvent != null) {
-            computeRelayListToBroadcast(noteEvent)
-        } else {
-            note.relays.toSet()
-        }
-    }
-
-    suspend fun broadcast(note: Note) {
-        note.event?.let { noteEvent ->
-            val host = note.rumorHost
-            if (host != null) {
-                // Rumors are rebroadcast as their delivering envelope: the
-                // cached copy is content-stripped, so download it and send it.
-                // A just-sent note has no relays until its self-wrap echoes
-                // back — fall back to our own DM inbox relays. Bare seals
-                // (kind 13) carry no p tag, so that filter is wrap-only.
-                val relays = note.relays.ifEmpty { dmRelays.flow.value.toList() }
-                val filter =
-                    if (host.kind == SealedRumorEvent.KIND) {
-                        Filter(
-                            kinds = listOf(host.kind),
-                            ids = listOf(host.id),
-                        )
-                    } else {
-                        Filter(
-                            kinds = listOf(host.kind),
-                            tags = mapOf("p" to listOf(pubKey)),
-                            ids = listOf(host.id),
-                        )
-                    }
-                client
-                    .fetchFirst(
-                        filters = relays.associateWith { _ -> listOf(filter) },
-                    )?.let { downloadedEvent ->
-                        val toRelays = computeRelayListToBroadcast(downloadedEvent)
-                        client.publish(downloadedEvent, toRelays)
-                    }
-            } else if (noteEvent.sig.isEmpty()) {
-                // Rumor with no known wrap: publishing it would disclose the
-                // private content to relays even though they reject the
-                // missing signature.
-                return
-            } else {
-                client.publish(noteEvent, computeRelayListToBroadcast(note))
-            }
-        }
-    }
+    fun republishEventsTo(
+        events: List<Event>,
+        relays: Set<NormalizedRelayUrl>,
+    ) = broadcaster.republishEventsTo(events, relays)
 
     fun upgradeAttestations() = otsState.upgradeAttestationsIfNeeded(::sendAutomatic)
 
@@ -2186,245 +1685,6 @@ class Account(
     suspend fun unfollow(channel: RelayGroupChannel) = sendMyPublicAndPrivateOutbox(relayGroupList.unfollow(channel))
 
     /**
-     * Add a joined Concord community (secret-bearing entry) to the private kind-13302
-     * list, and announce a self-signed Guestbook JOIN so this member is visible to
-     * whoever later refounds the community (CORD-06 re-keys the Guestbook membership).
-     */
-    suspend fun joinConcordCommunity(
-        entry: ConcordCommunityListEntry,
-        inviteCreator: HexKey? = null,
-        inviteLabel: String? = null,
-    ) {
-        sendMyPublicAndPrivateOutbox(concordChannelList.follow(entry))
-        announceConcordGuestbookJoin(entry, inviteCreator, inviteLabel)
-    }
-
-    /** Publishes a Guestbook JOIN (kind 3306) for [entry] to its community relays. */
-    private suspend fun announceConcordGuestbookJoin(
-        entry: ConcordCommunityListEntry,
-        inviteCreator: HexKey?,
-        inviteLabel: String?,
-    ) {
-        if (!isWriteable()) return
-        val guestbook = ConcordActions.guestbookPlane(entry.root.hexToByteArray(), entry.id.hexToByteArray(), entry.rootEpoch)
-        val wrap = ConcordActions.buildGuestbookJoin(signer, guestbook, TimeUtils.now(), inviteCreator, inviteLabel)
-        concordSessions.ingest(wrap)
-        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-        if (relays.isNotEmpty()) client.publish(wrap, relays)
-    }
-
-    /**
-     * Create a new Concord community: mint its genesis (metadata + #general),
-     * publish the owner-signed genesis wraps to [relays] (or our outbox), and add
-     * the secret-bearing entry to the kind-13302 joined list. Returns the new
-     * community id, or null if not writeable.
-     */
-    suspend fun createConcordCommunity(
-        name: String,
-        description: String? = null,
-        relays: List<String> = emptyList(),
-        icon: ImagePointer? = null,
-    ): String? {
-        if (!isWriteable()) return null
-        val relayUrls = relays.ifEmpty { outboxRelays.flow.value.map { it.url } }
-        val community = ConcordActions.createCommunity(signer, name, TimeUtils.now(), description, relayUrls, icon)
-
-        val publishTo = relayUrls.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { outboxRelays.flow.value }
-        community.genesisWraps.forEach { client.publish(it, publishTo) }
-
-        joinConcordCommunity(
-            ConcordCommunityListEntry(
-                id = community.communityIdHex,
-                owner = community.ownerPubKey,
-                ownerSalt = community.ownerSalt.toHexKey(),
-                root = community.communityRoot.toHexKey(),
-                rootEpoch = community.rootEpoch,
-                relays = relayUrls,
-                name = name,
-                addedAt = TimeUtils.now() * 1000,
-            ),
-        )
-        return community.communityIdHex
-    }
-
-    /**
-     * Mint a shareable invite link for a joined community and publish its
-     * kind-33301 public bundle to the community relays. Returns the `…/invite/…`
-     * URL, or null if the community isn't joined or isn't writeable.
-     */
-    suspend fun mintConcordInvite(
-        communityId: String,
-        base: String = "https://amethyst.social",
-    ): String? {
-        if (!isWriteable()) return null
-        val entry = concordChannelList.liveCommunities.value.firstOrNull { it.id == communityId } ?: return null
-        val invite =
-            ConcordActions.inviteFor(
-                communityIdHex = entry.id,
-                ownerPubKey = entry.owner,
-                ownerSaltHex = entry.ownerSalt,
-                communityRootHex = entry.root,
-                rootEpoch = entry.rootEpoch,
-                name = entry.name,
-                relays = entry.relays,
-            )
-        val minted = ConcordActions.mintInviteLink(base, invite, TimeUtils.now(), entry.relays)
-
-        val publishTo = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }.ifEmpty { outboxRelays.flow.value }
-        if (publishTo.isNotEmpty()) client.publish(minted.bundleEvent, publishTo)
-        return minted.url
-    }
-
-    /** Drop a joined Concord community from the private kind-13302 list by its id. */
-    suspend fun leaveConcordCommunity(communityId: String) = sendMyPublicAndPrivateOutbox(concordChannelList.unfollow(communityId))
-
-    /**
-     * Redeem a Concord invite link (`…/invite/<naddr>#<fragment>`): parse it, fetch
-     * the kind-33301 public bundle from the link's relays (+ our outbox), unlock it
-     * with the fragment token, and add the resulting secret-bearing entry to the
-     * kind-13302 joined list.
-     *
-     * Returns a [ConcordInviteResult] that separates the failure modes so the UI can
-     * both explain what went wrong and decide whether a retry could ever help — a
-     * bundle we can't open (e.g. minted by a newer client) must not strand the user
-     * on a spinner that retries forever.
-     *
-     * A bundle whose `expires_at` has passed is rejected with
-     * [ConcordInviteResult.Expired]. Expiry is resolved inside
-     * [ConcordActions.classifyInvite], so it is enforced on every redeem path rather
-     * than being a field nobody reads.
-     *
-     * **This must only ever be called from an explicit user action.** It contacts
-     * relay URLs carried in the link (chosen by whoever minted it) and publishes a
-     * Guestbook JOIN signed by this account, so calling it on deep-link arrival would
-     * leak the user's IP and enroll them without consent — see `ConcordInviteScreen`.
-     *
-     * If the resolved community is already in the joined list, this returns
-     * [ConcordInviteResult.Joined] without re-following or re-announcing a Guestbook
-     * JOIN, so reopening an old invite for a community you're already in simply takes
-     * you to it.
-     */
-    suspend fun joinConcordViaInvite(url: String): ConcordInviteResult {
-        if (!isWriteable()) return ConcordInviteResult.InvalidLink
-        val parsed = ConcordActions.parseInviteLink(url) ?: return ConcordInviteResult.InvalidLink
-
-        val relays =
-            (parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } + outboxRelays.flow.value).toSet()
-        if (relays.isEmpty()) return ConcordInviteResult.NotReachable
-
-        val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
-        val wraps = client.fetchAll(filters = filters)
-
-        // Resolve the coordinate per CORD-05 §2 (newest wins; a vsk=9 tombstone revokes even over a
-        // stale openable copy) so we honour revocation and can tell the user *why* a link won't open
-        // instead of stranding them on a spinner that retries a link we can never redeem.
-        val bundle =
-            when (val status = ConcordActions.classifyInvite(wraps, parsed.fragment.token)) {
-                is InviteBundleStatus.Live -> status.invite
-                is InviteBundleStatus.Expired -> return ConcordInviteResult.Expired
-                InviteBundleStatus.Revoked -> return ConcordInviteResult.Revoked
-                InviteBundleStatus.Unreadable -> return ConcordInviteResult.Incompatible
-                InviteBundleStatus.Absent -> return ConcordInviteResult.NotReachable
-            }
-
-        // Already a member? Just take the user to the community. Re-following and re-announcing a
-        // Guestbook JOIN (kind 3306) would spam the community relays with a fresh join every time an
-        // old invite is reopened, so short-circuit to Joined — the screen forwards to the community
-        // either way ("take me there", not "join again").
-        if (concordChannelList.liveCommunities.value.any { it.id == bundle.communityId }) {
-            return ConcordInviteResult.Joined(bundle.communityId)
-        }
-
-        val entry =
-            ConcordCommunityListEntry(
-                id = bundle.communityId,
-                owner = bundle.owner,
-                ownerSalt = bundle.ownerSalt,
-                root = bundle.communityRoot,
-                rootEpoch = bundle.rootEpoch,
-                relays = bundle.relays,
-                name = bundle.name,
-                addedAt = TimeUtils.now() * 1000,
-                // Anchor for stranded recovery: keep the link we joined through, domain-agnostic, so a
-                // Refounding that leaves us out of the recipient set is recoverable later. See
-                // recoverStrandedConcordCommunities().
-                inviteRef = ConcordActions.bareInviteRef(url),
-            )
-        joinConcordCommunity(entry)
-        return ConcordInviteResult.Joined(bundle.communityId)
-    }
-
-    /**
-     * Post [text] to a Concord channel: derive the channel plane key, build an
-     * encrypted-seal kind-1059 wrap authored by that plane key (not our identity),
-     * fold it locally for an instant echo, and publish it to the community's relays.
-     * The `p` tag is ephemeral, so this never routes through the DM outbox — it goes
-     * straight to the community relay set. Returns false if not writeable or the
-     * community isn't currently joined/folded.
-     */
-    suspend fun sendConcordChannelMessage(
-        communityId: String,
-        channelIdHex: String,
-        text: String,
-        replyTo: Note? = null,
-        replyMode: ReplyMode = ReplyMode.INLINE,
-        imetas: List<IMetaTag> = emptyList(),
-    ): Boolean {
-        if (!isWriteable()) return false
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        val entry = session.entry
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-
-        // NIP-30 custom-emoji tags for any `:shortcode:` the user typed, so the message renders the
-        // custom image everywhere (the kind-9 rumor carries them; recipients render via the tags).
-        val emojiTags = emoji.findEmojiTags(text).map { it.toTagArray() }.toTypedArray()
-
-        val parent = replyTo?.event
-        val wrap =
-            when {
-                // A minichat reply is a kind-1111 thread comment (carrying encrypted image imetas when
-                // the user attached media); an inline reply is a kind-9 message quoting the parent; a
-                // fresh post is a plain kind-9 message.
-                parent != null && replyMode == ReplyMode.MINICHAT && imetas.isNotEmpty() ->
-                    ConcordActions.buildChannelImageReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, imetas, TimeUtils.now(), emojiTags)
-                parent != null && replyMode == ReplyMode.MINICHAT ->
-                    ConcordActions.buildChannelReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
-                parent != null ->
-                    ConcordActions.buildChannelInlineReply(signer, channelKey, channelIdHex, entry.rootEpoch, parent, text, TimeUtils.now(), emojiTags)
-                else ->
-                    ConcordActions.buildChannelMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, TimeUtils.now(), emojiTags)
-            }
-        trackConcordDelivery(entry, channelKey, wrap)
-        publishConcordWrap(entry, wrap)
-        return true
-    }
-
-    /**
-     * Send a channel message carrying encrypted image attachments ([imetas], built by the composer
-     * from the encrypted upload) — Armada's `encryptAttachments` shape. The ciphertext URLs are
-     * appended to [text] and each rides as a NIP-92 `imeta` with `aes-gcm` decryption params. With no
-     * attachments this is just a plain [sendConcordChannelMessage].
-     */
-    suspend fun sendConcordChannelImageMessage(
-        communityId: String,
-        channelIdHex: String,
-        text: String,
-        imetas: List<IMetaTag>,
-    ): Boolean {
-        if (imetas.isEmpty()) return sendConcordChannelMessage(communityId, channelIdHex, text)
-        if (!isWriteable()) return false
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        val entry = session.entry
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-        // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the caption, same as a plain message.
-        val emojiTags = emoji.findEmojiTags(text).map { it.toTagArray() }.toTypedArray()
-        val wrap = ConcordActions.buildChannelImageMessage(signer, channelKey, channelIdHex, entry.rootEpoch, text, imetas, TimeUtils.now(), emojiTags)
-        trackConcordDelivery(entry, channelKey, wrap)
-        publishConcordWrap(entry, wrap)
-        return true
-    }
-
-    /**
      * Post [text] into [rootNote]'s minichat — a kind-1111 thread reply rooted at that
      * message. Resolves the chat context from the note's gatherer; today it drives the
      * Concord channel path (NIP-28/NIP-29 public-chat minichats are a follow-up). Returns
@@ -2439,7 +1699,7 @@ class Account(
         val gatherers = rootNote.inGatherers
 
         gatherers?.firstNotNullOfOrNull { it as? ConcordChannel }?.let { concord ->
-            return sendConcordChannelMessage(
+            return this.concord.sendConcordChannelMessage(
                 concord.channelId.communityId,
                 concord.channelId.channelId,
                 text,
@@ -2538,1177 +1798,6 @@ class Account(
         return (listOf(text) + extraUrls).filter { it.isNotBlank() }.joinToString("\n")
     }
 
-    /**
-     * React to a Concord message with [reaction] (e.g. `"+"`, an emoji). Mirrors
-     * [sendConcordChannelMessage]: builds a kind-7 rumor bound to the message's
-     * channel/epoch, wraps it on the plane, and publishes it — so the reaction stays
-     * inside the encrypted channel (never a plaintext public kind-7 that would leak
-     * the message id). [note] must be a Concord channel message (carries a
-     * [ConcordChannel] gatherer).
-     */
-    suspend fun reactToConcordMessage(
-        note: Note,
-        reaction: String,
-    ): Boolean {
-        if (!isWriteable()) return false
-        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
-        val target = note.event ?: return false
-        val communityId = channel.channelId.communityId
-        val channelIdHex = channel.channelId.channelId
-        val entry = concordSessions.sessionFor(communityId)?.entry ?: return false
-
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-        // A custom-emoji reaction is a `:shortcode:` content that needs its NIP-30 `emoji` tag to
-        // resolve to an image on the other side; a plain unicode/`+` reaction yields no tags.
-        val emojiTags = emoji.findEmojiTags(reaction).map { it.toTagArray() }.toTypedArray()
-        val wrap = ConcordActions.buildChannelReaction(signer, channelKey, channelIdHex, entry.rootEpoch, target, reaction, TimeUtils.now(), emojiTags)
-        publishConcordWrap(entry, wrap)
-        return true
-    }
-
-    /**
-     * Edit my own Concord channel message [note] to [newText]. Mirrors
-     * [reactToConcordMessage]: builds a kind-3302 [ChannelChat.edit] rumor bound to the
-     * message's channel/epoch, wraps it on the plane, and publishes it — so the edit stays
-     * inside the encrypted channel (a public edit would e-tag the private rumor id onto
-     * public relays). The receiving side overlays the newest edit onto the target message;
-     * only the *original author's* edits are applied, so we gate to my own kind-9 messages.
-     * Returns false if [note] isn't an editable Concord message I authored.
-     */
-    suspend fun editConcordChannelMessage(
-        note: Note,
-        newText: String,
-    ): Boolean {
-        if (!isWriteable()) return false
-        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return false
-        val target = note.event ?: return false
-        // Edits only apply to plain kind-9 messages, and only the author may edit their own.
-        if (target !is ChatEvent || target.pubKey != signer.pubKey) return false
-
-        val communityId = channel.channelId.communityId
-        val channelIdHex = channel.channelId.channelId
-        val entry = concordSessions.sessionFor(communityId)?.entry ?: return false
-
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-        // Carry NIP-30 custom-emoji tags for any `:shortcode:` in the new text, same as a fresh message.
-        val emojiTags = emoji.findEmojiTags(newText).map { it.toTagArray() }.toTypedArray()
-        val wrap = ConcordActions.buildChannelEdit(signer, channelKey, channelIdHex, entry.rootEpoch, target, newText, TimeUtils.now(), emojiTags)
-        publishConcordWrap(entry, wrap)
-        return true
-    }
-
-    /**
-     * Publish a typing heartbeat (kind-23311, ephemeral 21059) to a Concord channel — call at
-     * most every few seconds while composing. Not folded locally (we never show our own typing);
-     * ephemeral, so relays broadcast but never store it.
-     */
-    suspend fun sendConcordTyping(
-        communityId: String,
-        channelIdHex: String,
-    ) {
-        if (!isWriteable()) return
-        val entry = concordSessions.sessionFor(communityId)?.entry ?: return
-        val channelKey = ConcordActions.publicChannel(entry.root.hexToByteArray(), channelIdHex.hexToByteArray(), entry.rootEpoch)
-        val wrap = ConcordActions.buildChannelTyping(signer, channelKey, channelIdHex, entry.rootEpoch, TimeUtils.now())
-        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-        if (relays.isNotEmpty()) client.publish(wrap, relays)
-    }
-
-    /** Instant local echo (the session folds it back as a Note) + publish to the community relays. */
-    private fun publishConcordWrap(
-        entry: ConcordCommunityListEntry,
-        wrap: Event,
-    ) {
-        concordSessions.ingest(wrap)
-        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-        if (relays.isNotEmpty()) client.publish(wrap, relays)
-    }
-
-    /**
-     * Registers an own Concord channel message with the delivery tracker so its chat
-     * bubble shows relay-acceptance ticks. Relays OK the encrypted [wrap], but the feed
-     * shows the inner rumor, so we re-open the wrap (we just built it, so this always
-     * succeeds) to key the tracker by the rumor id the bubble is drawn from. Reactions
-     * and typing wraps skip this — they never become a feed row.
-     */
-    private fun trackConcordDelivery(
-        entry: ConcordCommunityListEntry,
-        channelKey: GroupKey,
-        wrap: Event,
-    ) {
-        val rumorId = ConcordStreamEnvelope.openOrNull(wrap, channelKey)?.rumor?.id ?: return
-        val relays = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-        chatDeliveryTracker.trackWrappedPublic(rumorId, wrap.id, relays)
-    }
-
-    // ── Concord roles & moderation (CORD-04) ─────────────────────────────────
-    // Each publishes a Control Plane edition; authority is enforced at fold time by
-    // every client's AuthorityResolver, so a call by someone who doesn't outrank the
-    // target is simply dropped on fold. Owner-authored calls always take effect.
-
-    /** Grant [member] exactly [roleIds] (empty list revokes their roles). */
-    suspend fun grantConcordRole(
-        communityId: String,
-        member: HexKey,
-        roleIds: List<String>,
-    ): Boolean {
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        if (!isWriteable()) return false
-        val wrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, roleIds, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-        publishConcordWrap(session.entry, wrap)
-        return true
-    }
-
-    /** The default community Admin role: position 1, holding every management + moderation permission. */
-    private fun concordAdminRole() =
-        RoleEntity(
-            name = CONCORD_ADMIN_ROLE,
-            position = 1,
-            permissions =
-                ConcordPermissions
-                    .of(
-                        ConcordPermissions.MANAGE_ROLES,
-                        ConcordPermissions.MANAGE_CHANNELS,
-                        ConcordPermissions.MANAGE_METADATA,
-                        ConcordPermissions.KICK,
-                        ConcordPermissions.BAN,
-                        ConcordPermissions.MANAGE_MESSAGES,
-                        ConcordPermissions.CREATE_INVITE,
-                    ).toWire(),
-        )
-
-    /**
-     * If [note] is a Concord channel message whose author the OWNER may toggle
-     * "admin" on, returns `(communityId, memberHex, isAlreadyAdmin)`. Only the owner
-     * qualifies — the Admin role sits at position 1 and the resolver requires the
-     * granter to *strictly* outrank it, which only the owner (rank 0) does. Null for
-     * the owner's own note, the owner as target, or a non-owner actor.
-     */
-    fun concordAdminTarget(note: Note): Triple<String, HexKey, Boolean>? {
-        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return null
-        val author = note.author?.pubkeyHex ?: note.event?.pubKey ?: return null
-        if (author == signer.pubKey) return null
-        val communityId = channel.channelId.communityId
-        val state = concordSessions.sessionFor(communityId)?.state?.value ?: return null
-        if (state.authority.isOwner(author) || !state.authority.isOwner(signer.pubKey)) return null
-        val adminRoleId =
-            state.roles.entries
-                .firstOrNull { it.value.name == CONCORD_ADMIN_ROLE && it.value.position == 1L }
-                ?.key
-        val isAdmin = adminRoleId != null && adminRoleId in state.authority.rolesOf(author)
-        return Triple(communityId, author, isAdmin)
-    }
-
-    /** Promote [member] to the community Admin role, defining that role first if it doesn't exist yet. */
-    suspend fun makeConcordAdmin(
-        communityId: String,
-        member: HexKey,
-    ): Boolean {
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        if (!isWriteable()) return false
-        val cp = session.controlPlaneKey()
-
-        val existing =
-            session.state.value
-                ?.roles
-                ?.entries
-                ?.firstOrNull { it.value.name == CONCORD_ADMIN_ROLE && it.value.position == 1L }
-        val roleIdHex =
-            existing?.key ?: run {
-                val roleId = RandomInstance.bytes(32)
-                val roleWrap = ConcordModeration.defineRole(signer, cp, roleId, concordAdminRole(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-                publishConcordWrap(session.entry, roleWrap)
-                roleId.toHexKey()
-            }
-
-        val grantWrap = ConcordModeration.grant(signer, cp, communityId.hexToByteArray(), member, listOf(roleIdHex), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-        publishConcordWrap(session.entry, grantWrap)
-        return true
-    }
-
-    /** Revoke all roles from [member] (demote an admin back to a plain member). */
-    suspend fun removeConcordAdmin(
-        communityId: String,
-        member: HexKey,
-    ): Boolean {
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        if (!isWriteable()) return false
-        val grantWrap = ConcordModeration.grant(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, emptyList(), session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-        publishConcordWrap(session.entry, grantWrap)
-        return true
-    }
-
-    /**
-     * If [note] is a Concord channel message whose author this account is allowed to
-     * ban — the actor outranks the target and holds the BAN permission, and the target
-     * is neither the owner nor the actor — returns `(communityId, memberHex)`. Null
-     * otherwise, so the UI offers Ban only where we are willing to act.
-     *
-     * The rank half is ours alone. CORD-04 rank-gates role grants (`canActOn`) but the
-     * BANLIST is a single whole-list entity, so neither this client's fold nor Armada's
-     * rank-checks the *contents* of a banlist edition — both gate only on the author's
-     * BAN bit (Armada: `banlistGate` → `isAuthorized(.., Permissions.BAN)`, while its
-     * role path uses the rank-aware `canActOnPosition`). A moderator's ban of an admin
-     * above them is therefore *accepted* by every client today. Since we cannot refuse
-     * such a ban without diverging from Armada, we at least refuse to author one — this
-     * restricts what we write, never what we accept, so it cannot split consensus.
-     * Enforcing it on the fold needs a spec change; see the QA plan's open findings.
-     */
-    fun concordBanTarget(note: Note): Pair<String, HexKey>? {
-        val channel = note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } ?: return null
-        val author = note.author?.pubkeyHex ?: note.event?.pubKey ?: return null
-        if (author == signer.pubKey) return null
-        val communityId = channel.channelId.communityId
-        val authority =
-            concordSessions
-                .sessionFor(communityId)
-                ?.state
-                ?.value
-                ?.authority ?: return null
-        if (authority.isOwner(author)) return null
-        // The owner short-circuits rather than going through canActOn: canActOn starts at
-        // hasPermission, which is false while banned, and a rogue BAN holder *can* currently put
-        // the owner on the banlist (see the KDoc) — routing the owner through it would let them be
-        // locked out of moderating their own community.
-        val canBan = authority.isOwner(signer.pubKey) || authority.canActOn(signer.pubKey, author, ConcordPermissions.BAN)
-        return if (canBan) communityId to author else null
-    }
-
-    /** Add [member] to the community banlist. */
-    suspend fun banConcordMember(
-        communityId: String,
-        member: HexKey,
-    ): Boolean {
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        if (!isWriteable()) return false
-        val wrap = ConcordModeration.ban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-        publishConcordWrap(session.entry, wrap)
-        return true
-    }
-
-    /** Remove [member] from the community banlist. */
-    suspend fun unbanConcordMember(
-        communityId: String,
-        member: HexKey,
-    ): Boolean {
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        if (!isWriteable()) return false
-        val wrap = ConcordModeration.unban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), member, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-        publishConcordWrap(session.entry, wrap)
-        return true
-    }
-
-    // ── Concord refounding / rekey (CORD-06) ──────────────────────────────────
-    // A ban is a soft removal — the banned member still holds the room key and can
-    // still decrypt traffic; every client just declines to *show* their posts. A
-    // Refounding is the hard removal: it rotates the community_root, so a removed
-    // member's key stops working for anything published afterwards.
-
-    /**
-     * Remove [removed] from the community absolutely (CORD-06 Refounding): ban them,
-     * roll the `community_root`, re-key every retained member (Guestbook membership ∪
-     * observed authors ∪ the privileged roster ∪ self) via kind-3303 blobs, and republish the compacted
-     * Control Plane under the new root. A removed member keeps the prior root (so
-     * their history stays readable) but receives no blob, so they can never decrypt
-     * anything published after the rotation.
-     *
-     * Requires ownership or the BAN permission; returns false otherwise (or if the
-     * community isn't joined/writeable, or a target is the owner).
-     */
-    suspend fun refoundConcordCommunity(
-        communityId: String,
-        removed: Set<HexKey>,
-    ): Boolean {
-        if (!isWriteable()) return false
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        val state = session.state.value ?: return false
-        val authority = state.authority
-        val iCanBan = authority.isOwner(signer.pubKey) || authority.effectivePermissions(signer.pubKey).has(ConcordPermissions.BAN)
-        if (!iCanBan) return false
-        val removedLower = removed.mapTo(HashSet()) { it.lowercase() }
-        if (removedLower.isEmpty() || removedLower.any { authority.isOwner(it) }) return false
-
-        // 1. Ban the removed members on the current Control Plane so the compacted snapshot —
-        //    and thus the new epoch — carries the ban. publishConcordWrap folds it in locally
-        //    first, so each subsequent edition chains onto the updated banlist head.
-        for (target in removedLower) {
-            val banWrap = ConcordModeration.ban(signer, session.controlPlaneKey(), communityId.hexToByteArray(), target, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-            publishConcordWrap(session.entry, banWrap)
-        }
-
-        // 2. Recipient set: everyone we're keeping, minus the removed and the already-banned.
-        //    Uses allMembers() — Guestbook joins ∪ OBSERVED AUTHORS ∪ roster ∪ owner — not just the
-        //    Guestbook set. Most members never send a Guestbook Join (Amethyst announces one, other
-        //    clients need not), so building the set without observed authors silently expelled every
-        //    member who had only ever posted: they hold no role, receive no blob, and the Refounding
-        //    strands them. That mainly hit cross-client communities, where Armada members are the
-        //    bulk of the roster.
-        //
-        //    Still a floor, not a census (see allMembers): a member who joined without a Guestbook
-        //    motion, holds no role, and has never posted leaves no trace to find, so a Refounding
-        //    cannot re-key them. Stranded recovery is what gets those members back.
-        val recipients =
-            (session.allMembers() + signer.pubKey)
-                .mapTo(HashSet()) { it.lowercase() }
-                .apply {
-                    removeAll(removedLower)
-                    removeAll(authority.bannedMembers())
-                }.toList()
-
-        // 3. Build the refounding: new root, compacted Control Plane, per-recipient rekey blobs.
-        val entry = session.entry
-        val newRoot = RandomInstance.bytes(32)
-        val build =
-            ConcordActions.buildRefounding(
-                rotatorSigner = signer,
-                communityId = communityId,
-                priorRoot = entry.root.hexToByteArray(),
-                newRoot = newRoot,
-                rootEpoch = entry.rootEpoch,
-                priorControlWraps = session.controlPlaneWraps(),
-                priorControlKey = session.controlPlaneKey(),
-                recipientsXOnly = recipients,
-                createdAt = TimeUtils.now(),
-            )
-
-        // 4. Publish the compacted Control Plane (the new epoch's state) then the rekey blobs
-        //    (the key that unlocks it) to the community relays.
-        val publishTo = entry.relays.mapNotNullTo(mutableSetOf()) { RelayUrlNormalizer.normalizeOrNull(it) }
-        if (publishTo.isNotEmpty()) {
-            build.controlWraps.forEach { client.publish(it, publishTo) }
-            build.rekeyWraps.forEach { client.publish(it, publishTo) }
-        }
-
-        // 5. Adopt the new epoch ourselves. This rebuilds our session under the new root and
-        //    re-folds the compacted Control Plane (with the ban), dropping the removed members.
-        adoptConcordRoot(entry, newRoot, build.newEpoch)
-        return true
-    }
-
-    // Rotations we've already adopted ("communityId:epoch"), so a base-rekey wrap still buffered
-    // in the pre-rebuild window (the session rebuild off `liveCommunities` is async) is not
-    // adopted — and re-published — twice on successive revision ticks.
-    private val adoptedConcordRotations = java.util.Collections.synchronizedSet(HashSet<String>())
-
-    /**
-     * Persist a rotated access root/epoch for [entry], keeping the prior root as a
-     * [HeldRoot], and re-announce our Guestbook membership at the new epoch so the
-     * fresh epoch's Guestbook re-seeds (a later Refounding re-keys that membership —
-     * without this, cascading removals would lose everyone but the roster). No-op if
-     * this exact rotation was already adopted.
-     */
-    private suspend fun adoptConcordRoot(
-        entry: ConcordCommunityListEntry,
-        newRoot: ByteArray,
-        newEpoch: Long,
-    ) {
-        if (!adoptedConcordRotations.add("${entry.id}:$newEpoch")) return
-        val held = (entry.heldRoots + HeldRoot(entry.rootEpoch, entry.root)).distinctBy { it.epoch }
-        val next =
-            ConcordCommunityListEntry(
-                id = entry.id,
-                owner = entry.owner,
-                ownerSalt = entry.ownerSalt,
-                root = newRoot.toHexKey(),
-                rootEpoch = newEpoch,
-                heldRoots = held,
-                privateChannels = entry.privateChannels,
-                relays = entry.relays,
-                name = entry.name,
-                addedAt = entry.addedAt,
-                // The invite_ref anchor must survive a rotation, or the *next* Refounding we're left
-                // out of would be unrecoverable.
-                inviteRef = entry.inviteRef,
-                excludedAtEpoch = entry.excludedAtEpoch,
-                // Unknown keys another client wrote (Armada's list is `[k: string]: unknown`)
-                // must survive our rotation write, or we delete their data on every rekey.
-                residue = entry.residue,
-            )
-        sendMyPublicAndPrivateOutbox(concordChannelList.follow(next))
-        announceConcordGuestbookJoin(next, inviteCreator = null, inviteLabel = null)
-    }
-
-    /**
-     * Drain any buffered inbound base-rotation rekeys (CORD-06 receive path): for
-     * each joined community, look for our new root among the kind-3303 wraps seen at
-     * our next base-rekey address. If a role-authorized rotator (owner or a current,
-     * non-banned BAN-holder) delivered us one, adopt it. Idempotent — once adopted, the
-     * session rebuilds at the new epoch and its next-rekey address moves on, so a stale
-     * wrap never re-triggers. Called on every Concord revision tick.
-     *
-     * Authority is the roster, never key possession: any non-banned BAN-holder may
-     * rotate, including for the owner. The owner deliberately does NOT refuse a root
-     * authored by someone else — refusing would strand the owner alone on the dead
-     * epoch whenever an admin legitimately rotates, and would diverge from Armada,
-     * which forks a community across clients. Self-escalation to BAN is prevented
-     * upstream by the role rank gate in AuthorityResolver.
-     *
-     * A rotation carries only (newRoot, newEpoch, rotator); there is no recipient list,
-     * so a receiver cannot tell who was left out, and a BAN-holder can evict anyone (the
-     * owner included) by omission — nothing on this receive path can prevent it. The
-     * cure is after the fact: see [recoverStrandedConcordCommunities], which re-resolves
-     * the invite link the membership was joined through and merges forward.
-     */
-    private suspend fun drainConcordRekeys() {
-        if (!isWriteable()) return
-        for (session in concordSessions.sessions()) {
-            val wraps = session.pendingBaseRekeyWraps()
-            if (wraps.isEmpty()) continue
-            val entry = session.entry
-            val received =
-                ConcordActions.openBaseRekey(
-                    wraps = wraps,
-                    baseRekey = session.nextBaseRekeyKey(),
-                    recipientSigner = signer,
-                    priorRoot = entry.root.hexToByteArray(),
-                    rootEpoch = entry.rootEpoch,
-                ) ?: continue
-            if (received.newEpoch <= entry.rootEpoch) continue
-            val authority = session.state.value?.authority ?: continue
-
-            // hasPermission, not effectivePermissions: the latter ignores the banlist, so a BAN-holder
-            // who has themselves been banned could still rotate the whole community.
-            val authorized = authority.isOwner(received.rotator) || authority.hasPermission(received.rotator, ConcordPermissions.BAN)
-            if (!authorized) continue
-            adoptConcordRoot(entry, received.newRoot, received.newEpoch)
-        }
-    }
-
-    // Last time we re-resolved each community's invite_ref, so the recovery sweep rides the
-    // Concord revision tick (which fires on every structural change) without turning it into a
-    // relay-fetch loop.
-    private val lastConcordRecoveryCheck = ConcurrentHashMap<String, Long>()
-
-    /**
-     * Stranded recovery (CORD-05/06 receive path). A Refounding carries only
-     * `(newRoot, newEpoch, rotator)` — **no recipient list** — so a member simply left
-     * out of the rekey recipient set receives nothing and sits on the dead epoch
-     * forever while everyone else moves on. This happens to any member, the owner
-     * included, and [drainConcordRekeys] cannot prevent it: there is no message to
-     * miss detecting.
-     *
-     * The way back is the invite link the membership was joined through
-     * ([ConcordCommunityListEntry.inviteRef], persisted by [joinConcordViaInvite] and
-     * carried through every rotation by [adoptConcordRoot]). The community keeps
-     * re-minting its bundle at that same addressable coordinate, so a bundle there at
-     * a **strictly higher** epoch than ours proves we were left behind — and carries
-     * the new root. Same or lower epoch is a no-op. Memberships with no link (direct
-     * invites, legacy entries) are inert here; that is expected, not an error.
-     *
-     * The merge itself ([ConcordActions.recoverStranded]) is epoch-monotonic and keeps
-     * both the `invite_ref` anchor (so the *next* exclusion is recoverable too) and the
-     * entry's [HeldRoot]s (so prior-epoch history the member legitimately holds stays
-     * derivable). We then re-announce the Guestbook at the new epoch, exactly as an
-     * ordinary rotation does, so the recovered member is visible to whoever refounds
-     * next instead of being silently dropped again.
-     *
-     * Called on the Concord revision tick, but rate-limited per community
-     * ([RECOVERY_CHECK_INTERVAL_MS]) — a tick with nothing to do costs a map lookup.
-     */
-    private suspend fun recoverStrandedConcordCommunities() {
-        if (!isWriteable()) return
-        val now = TimeUtils.nowMillis()
-        for (entry in concordChannelList.liveCommunities.value) {
-            val inviteRef = entry.inviteRef ?: continue
-            val last = lastConcordRecoveryCheck[entry.id]
-            if (last != null && now - last < RECOVERY_CHECK_INTERVAL_MS) continue
-            lastConcordRecoveryCheck[entry.id] = now
-
-            val parsed = ConcordActions.parseInviteLink(inviteRef) ?: continue
-            val relays =
-                (
-                    parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } +
-                        entry.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-                ).toSet()
-            if (relays.isEmpty()) continue
-
-            val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
-            val wraps = client.fetchAll(filters = filters)
-            // Only a live bundle recovers: an expired/revoked link is not a rotation we missed.
-            val bundle = (ConcordActions.classifyInvite(wraps, parsed.fragment.token) as? InviteBundleStatus.Live)?.invite ?: continue
-
-            val merged = ConcordActions.recoverStranded(entry, bundle) ?: continue
-            if (!adoptedConcordRotations.add("${entry.id}:${merged.rootEpoch}")) continue
-            Log.i("Concord", "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}")
-            sendMyPublicAndPrivateOutbox(concordChannelList.follow(merged))
-            announceConcordGuestbookJoin(merged, inviteCreator = null, inviteLabel = null)
-        }
-    }
-
-    /**
-     * Replace the community metadata (name / icon / description / relays) with a new
-     * Control-Plane edition. Honored on fold only when this account holds
-     * MANAGE_METADATA (or is the owner); dropped otherwise, like every other edition.
-     */
-    suspend fun editConcordMetadata(
-        communityId: String,
-        name: String,
-        description: String?,
-        icon: ImagePointer?,
-        banner: ImagePointer?,
-        relays: List<String>,
-    ): Boolean {
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        if (!isWriteable()) return false
-        val metadata = MetadataEntity(name = name, icon = icon, banner = banner, description = description, relays = relays)
-        val wrap = ConcordModeration.editMetadata(signer, session.controlPlaneKey(), communityId.hexToByteArray(), metadata, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-        publishConcordWrap(session.entry, wrap)
-        return true
-    }
-
-    /**
-     * Create a new public text channel in [communityId] (CORD-03/04 channel edition). Honored at fold
-     * only when this account holds MANAGE_CHANNELS (or is the owner); the button should be gated on
-     * the same predicate. The channel id is a fresh random 32-byte entity id.
-     */
-    suspend fun createConcordChannel(
-        communityId: String,
-        name: String,
-    ): Boolean {
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        if (!isWriteable()) return false
-        val channelId = RandomInstance.bytes(32)
-        val channel = ChannelEntity(name = name.trim())
-        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelId, channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-        publishConcordWrap(session.entry, wrap)
-        return true
-    }
-
-    /** Rename an existing channel (chains the next channel edition onto its head). MANAGE_CHANNELS only. */
-    suspend fun renameConcordChannel(
-        communityId: String,
-        channelIdHex: String,
-        name: String,
-    ): Boolean {
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        if (!isWriteable()) return false
-        // Carry the standing definition forward and change only the name. A ChannelEntity built from
-        // scratch defaults `private` and `voice` to false, so renaming a private channel used to
-        // publish an edition declaring it PUBLIC — and a voice channel became a text channel.
-        val standing =
-            session.state.value
-                ?.channels
-                ?.get(channelIdHex)
-                ?.definition
-        val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false)
-        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-        publishConcordWrap(session.entry, wrap)
-        return true
-    }
-
-    /** Delete (tombstone) a channel — terminal; its id is never reused. MANAGE_CHANNELS only. */
-    suspend fun deleteConcordChannel(
-        communityId: String,
-        channelIdHex: String,
-        name: String,
-    ): Boolean {
-        val session = concordSessions.sessionFor(communityId) ?: return false
-        if (!isWriteable()) return false
-        // Same as rename: preserve the standing flags so a tombstone does not also silently
-        // reclassify the channel it retires.
-        val standing =
-            session.state.value
-                ?.channels
-                ?.get(channelIdHex)
-                ?.definition
-        val channel = ChannelEntity(name = name.trim(), private = standing?.private ?: false, voice = standing?.voice ?: false, deleted = true)
-        val wrap = ConcordModeration.defineChannel(signer, session.controlPlaneKey(), channelIdHex.hexToByteArray(), channel, session.controlEditions(), TimeUtils.now(), owner = session.entry.owner)
-        publishConcordWrap(session.entry, wrap)
-        return true
-    }
-
-    /**
-     * Read-only preview of an invite link: parse it, fetch the kind-33301 bundle from
-     * the link's relays (+ our outbox), and unlock it with the fragment token — WITHOUT
-     * joining. Returns the [CommunityInvite] (name, relays, community coordinates) so a
-     * card can show what the link opens, or null if the link is invalid/unreadable.
-     */
-    suspend fun peekConcordInvite(url: String): CommunityInvite? {
-        val parsed = ConcordActions.parseInviteLink(url) ?: return null
-        val relays =
-            (parsed.fragment.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } + outboxRelays.flow.value).toSet()
-        if (relays.isEmpty()) return null
-        val filters = relays.associateWith { listOf(ConcordActions.bundleFilter(parsed.linkSignerPubKey)) }
-        val wraps = client.fetchAll(filters = filters)
-        return wraps.firstNotNullOfOrNull { ConcordActions.openBundle(it, parsed.fragment.token) }
-    }
-
-    /**
-     * Bootstrap the Concord hub from the network: fetch this account's kind-13302
-     * joined-communities list and fold the newest into [LocalCache], so communities
-     * we joined on another Concord client with this key surface here.
-     *
-     * We query a wide relay set because different Concord clients publish this
-     * private list to different places: the reference clients (Armada/Vector) push
-     * it to the Concord **stock relays** (e.g. relay.ditto.pub), while a user may
-     * also have copied it onto their **own** outbox/read relays. Our normal account
-     * subscription never asks for kind 13302, so without this explicit fetch a
-     * community joined on Armada would never appear — even if the list sits on the
-     * user's own outbox.
-     *
-     * Read-only import: kind 13302 is replaceable, so folding an older copy is a
-     * no-op and this is safe to call on every hub open. Merging our own edits with
-     * a foreign writer's is a separate concern (newest-wins replaceable).
-     *
-     * [extraRelays] are additional relays to query — the bootstrap relays saved on the
-     * bottom-bar tabs of pinned communities. A community's private list frequently lives
-     * only on the community's own relays (never the user's outbox), so a community pinned
-     * to the bottom bar would otherwise never surface when opened cold.
-     */
-    suspend fun importConcordCommunities(extraRelays: Set<NormalizedRelayUrl> = emptySet()) {
-        val stock = InviteRelayDictionary.STOCK.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-        val relays = (stock + mineRelays.flow.value + outboxRelays.flow.value + extraRelays).toSet()
-        if (relays.isEmpty()) return
-        val filter = Filter(kinds = listOf(ConcordCommunityListEvent.KIND), authors = listOf(signer.pubKey))
-        // Stock relays like relay.ditto.pub can be slow (~10–20s to first response), so give
-        // the fetch a generous window to drain every relay before we pick the newest copy.
-        val events = client.fetchAll(filters = relays.associateWith { listOf(filter) }, timeoutMs = 30_000L)
-        val newest = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
-        val entryCount = newest?.let { runCatching { it.decrypt(signer).size }.getOrElse { -1 } } ?: 0
-        Log.d(
-            "Concord",
-            "importConcordCommunities: queried ${relays.size} relays, fetched ${events.size} 13302 event(s), " +
-                "newest=${newest?.id?.take(8)}@${newest?.createdAt}, decoded $entryCount entr${if (entryCount == 1) "y" else "ies"}",
-        )
-        newest?.let { cache.justConsumeMyOwnEvent(it) }
-    }
-
-    /**
-     * One-shot warm of every channel of [entries] so a community's channel list and the Messages inbox
-     * fill in without the user opening each channel one by one. Per channel, a channel read before is
-     * caught up from its last-read time (accurate unread badge + the missed messages ready when it
-     * opens) while a channel never read pulls only its single newest wrap for a preview — see
-     * [ConcordSubscriptionPlanner.channelPreviewFilters].
-     *
-     * This is deliberately **not** a live subscription: every wrap the drain pulls flows through the
-     * global cache connector (`CacheClientConnector` → `LocalCache.justConsume` → `concordSessions.ingest`),
-     * so it lands in the channel's message store the previews/unread counts read — and the always-on
-     * plane subscription ([RelaySubscriptionsCoordinator.concordChannels]) keeps them fresh afterward.
-     * So this only needs to run when a community's channels first fold (the account preload) or its
-     * screen is opened. One drain per call: all [entries]' per-channel filters are grouped by relay.
-     */
-    suspend fun warmConcordChannelPreviews(entries: List<ConcordCommunityListEntry>) {
-        val filters =
-            entries.flatMap { entry ->
-                val state = concordSessions.sessionFor(entry.id)?.state?.value ?: return@flatMap emptyList()
-                ConcordSubscriptionPlanner.channelPreviewFilters(entry, state, lastReadFor = { channelIdHex ->
-                    loadLastRead(concordChannelLastReadRoute(entry.id, channelIdHex))
-                })
-            }
-        if (filters.isEmpty()) return
-        val byRelay = filters.groupBy { it.relay }.mapValues { (_, group) -> group.map { it.filter } }
-        client.fetchAll(filters = byRelay, timeoutMs = 20_000L)
-    }
-
-    /**
-     * COMPLETE-mode Control-Plane sync — Armada's plane-sweep discipline for the one plane that must
-     * never fold on a truncated edition set.
-     *
-     * The Control Plane defines the channel list, the roster and the banlist, so a *partial* fold
-     * silently drops channels or mis-renders membership. Two ways that happens, both closed here:
-     *  - **Forward-cursor gap:** the live plane subscription advances a `since` cursor, so an edition
-     *    with a `created_at` below the high-water mark that we never actually ingested — an unban
-     *    published while we were offline, a CORD-06 compaction re-wrap under a newly-held epoch — is
-     *    never asked for again and stays invisible. This sweep uses **no `since`**: it re-fetches the
-     *    whole plane every run.
-     *  - **Per-filter cap:** a relay caps a REQ's result (~100/filter on relay.dreamith.to), which can
-     *    crop a busy Control Plane. This **pages past the cap** ([fetchAllPagesFromPool] walks `until`
-     *    cursors until a plane is drained), so the fold sees every edition regardless of the cap.
-     *
-     * Current + every held-prior epoch's Control Plane is swept (the anti-rollback floor folds from the
-     * priors). Wraps ingest through the global cache connector → [concordSessions] like every other
-     * Concord drain; AUTH is the shared stream-key handler. Merging communities that share a relay into
-     * one filter is safe here precisely because we page — the cap no longer truncates. The live control
-     * subscription still carries brand-new editions in real time; this is the periodic completeness pass.
-     */
-    suspend fun syncConcordControlPlanes(entries: List<ConcordCommunityListEntry>) {
-        if (entries.isEmpty()) return
-        val authorsByRelay = HashMap<NormalizedRelayUrl, MutableSet<String>>()
-        for (entry in entries) {
-            for (sub in ConcordSubscriptionPlanner.controlPlaneSubs(listOf(entry))) {
-                for (relay in sub.relays) authorsByRelay.getOrPut(relay) { HashSet() }.add(sub.pubKeyHex)
-            }
-        }
-        if (authorsByRelay.isEmpty()) return
-        // No `since`, no `limit` → fetchAllPages treats each filter as unbounded and pages until a
-        // plane is fully drained (empty page), so the whole Control Plane lands regardless of the cap.
-        val byRelay = authorsByRelay.mapValues { (_, authors) -> listOf(ConcordActions.planeFilterFor(authors.toList())) }
-        var drained = 0
-        client.fetchAllPagesFromPool(filters = byRelay) { _, _ -> drained++ }
-        Log.d("Concord", "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), drained $drained control wrap(s)")
-    }
-
-    // ── NIP-29 relay-group actions ───────────────────────────────────────────
-    // All group commands are published ONLY to the group's host relay, where
-    // relay29 authorizes them. The relay is the source of truth; the kind-10009
-    // list is our own cross-device bookkeeping of what we joined.
-
-    /** Send a kind 9021 join request to the group's host relay and remember it. */
-    suspend fun joinRelayGroup(
-        channel: RelayGroupChannel,
-        code: String? = null,
-    ) {
-        val template = JoinRequestEvent.build(channel.groupId.id, inviteCode = code)
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-        follow(channel)
-    }
-
-    /**
-     * Fire a Buzz kind-20002 typing heartbeat for [channel] to its host relay. Ephemeral
-     * (never stored) and fire-and-forget — no delivery tracking, no local echo (we filter
-     * our own typing in the UI). Throttled by the composer to [BuzzTypingState.TYPING_HEARTBEAT_SECS].
-     */
-    suspend fun sendBuzzTyping(channel: RelayGroupChannel) {
-        if (!isWriteable()) return
-        val signed = signer.sign(TypingIndicatorEvent.build(channel.groupId.id))
-        client.publish(signed, setOf(channel.groupId.relayUrl))
-    }
-
-    /**
-     * Open (or re-surface) a Buzz DM with [participants] on [relay] via a kind-41010
-     * command. [participants] are the OTHER 1-8 people — the relay adds me, derives the
-     * canonical channel UUID, and confirms with a relay-signed [DmCreatedEvent]
-     * (kind-41001) that lands in [com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry].
-     * We never assign the channel id ourselves, so callers discover the materialized DM
-     * by watching that registry rather than from this call's return.
-     */
-    suspend fun openBuzzDm(
-        relay: NormalizedRelayUrl,
-        participants: List<HexKey>,
-    ): String? {
-        val signed = signer.sign(DmOpenEvent.build(participants))
-        // The relay confirms the DM synchronously in the OK as `response:{"channel_id":"…"}` —
-        // the authoritative, relay-assigned channel UUID (the deployed relay does not emit a
-        // queryable kind-41001). Read it straight from the ack so the caller can open the chat.
-        var results = client.publishAndCollectResults(signed, setOf(relay))
-        var channelId = buzzDmChannelIdFromAck(results)
-
-        // NIP-42 write race: on a cold connection the relay rejects the first publish with
-        // `auth-required` (our AUTH reply lands async and the write path doesn't re-send). Warm
-        // the connection with a pendingOnAuthRequired read so the auth coordinator completes the
-        // handshake, then retry the publish on the now-authed socket. Mirrors the amy CLI fix.
-        if (channelId == null && results.values.any { !it.accepted && it.message.contains("auth-required", ignoreCase = true) }) {
-            client.fetchAllWithHooks(
-                filters = mapOf(relay to listOf(Filter(kinds = listOf(DmOpenEvent.KIND), limit = 1))),
-                timeoutMs = 8_000,
-                pendingOnAuthRequired = true,
-            ) { _, _ -> false }
-            results = client.publishAndCollectResults(signed, setOf(relay))
-            channelId = buzzDmChannelIdFromAck(results)
-        }
-        return channelId
-    }
-
-    /** The relay-assigned DM channel id from a DM-open OK message (`response:{"channel_id":"…"}`). */
-    private fun buzzDmChannelIdFromAck(results: Map<NormalizedRelayUrl, PublishResult>): String? =
-        results.values
-            .firstOrNull { it.accepted }
-            ?.message
-            ?.substringAfter("\"channel_id\":\"", "")
-            ?.substringBefore('"')
-            ?.takeIf { it.isNotBlank() }
-
-    /** Hide a Buzz DM from my sidebar with a kind-41012 command (re-opening it un-hides). */
-    suspend fun hideBuzzDm(channel: RelayGroupChannel) {
-        val template = DmHideEvent.build(channel.groupId.id)
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
-    /** Add [member] to an existing group DM with a kind-41011 command (creates a new DM set). */
-    suspend fun addBuzzDmMember(
-        channel: RelayGroupChannel,
-        member: HexKey,
-    ) {
-        val template = DmAddMemberEvent.build(channel.groupId.id, member)
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
-    /**
-     * File a Buzz agent job (kind-43001) into channel [channelId] on [relay] — a shared
-     * feature-request the workspace bot can pick up. Untargeted: any agent watching the
-     * channel may accept it. Returns the new job id (the request event id), or null when the
-     * account can't write. See [com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator].
-     */
-    suspend fun fileBuzzJob(
-        relay: NormalizedRelayUrl,
-        channelId: String,
-        request: String,
-    ): HexKey? {
-        if (!isWriteable()) return null
-        val signed = signer.sign(JobRequestEvent.build(request, channelId, null))
-        // Reflect it locally so the board updates immediately (publish only sends to relays).
-        cache.justConsumeMyOwnEvent(signed)
-        client.publish(signed, setOf(relay))
-        return signed.id
-    }
-
-    /** Cancel a Buzz job [jobId] with a kind-43005 scoped to [channelId] on [relay]. */
-    suspend fun cancelBuzzJob(
-        relay: NormalizedRelayUrl,
-        channelId: String,
-        jobId: HexKey,
-    ) {
-        if (!isWriteable()) return
-        val signed = signer.sign(JobCancelEvent.build(jobId, "", channelId))
-        cache.justConsumeMyOwnEvent(signed)
-        client.publish(signed, setOf(relay))
-    }
-
-    /**
-     * Trigger a Buzz **workflow** run (kind-46020) for [workflowId] into channel [channelId] on
-     * [relay], carrying [task] as the run's request. The trigger's event id IS the run id (and the
-     * approval token), returned here. A run pauses on a human-approval gate before anything ships —
-     * see [com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator].
-     */
-    suspend fun triggerBuzzWorkflow(
-        relay: NormalizedRelayUrl,
-        channelId: String,
-        workflowId: String,
-        task: String,
-    ): HexKey? {
-        if (!isWriteable()) return null
-        val content = Json.encodeToString(WorkflowRunPayload(task = task, workflow = workflowId))
-        val signed = signer.sign(WorkflowTriggerEvent.build(workflowId, content) { workflowChannel(channelId) })
-        cache.justConsumeMyOwnEvent(signed)
-        client.publish(signed, setOf(relay))
-        return signed.id
-    }
-
-    /**
-     * Publish a Buzz **workflow definition** (kind-30620) into channel [channelId] on [relay]: an
-     * addressable event whose `d` tag is a freshly-minted workflow UUID (returned here), carrying a
-     * human-readable [name] and the workflow's [yaml] recipe. On a real Buzz relay the relay parses
-     * the YAML and runs it; self-hosted on geode the definition is a named catalog entry the picker
-     * offers and `amy` triggers by id. Returns the new workflow id, or null when the account can't write.
-     */
-    suspend fun publishBuzzWorkflowDef(
-        relay: NormalizedRelayUrl,
-        channelId: String,
-        name: String,
-        yaml: String,
-    ): String? {
-        if (!isWriteable()) return null
-        val workflowId = RandomInstance.randomChars(16)
-        val signed = signer.sign(WorkflowDefEvent.build(workflowId, channelId, yaml, name.ifBlank { null }))
-        cache.justConsumeMyOwnEvent(signed)
-        client.publish(signed, setOf(relay))
-        return workflowId
-    }
-
-    /**
-     * Grant a paused Buzz workflow run's approval gate (kind-46030). [runId] is the run id, which
-     * doubles as the approval token (the grant's `d` tag). Resuming lets the runner ship the work.
-     * Publishing to the single group [relay]; the runner discovers the decision by author.
-     */
-    suspend fun approveBuzzWorkflowRun(
-        relay: NormalizedRelayUrl,
-        runId: HexKey,
-        note: String = "",
-    ): HexKey? {
-        if (!isWriteable()) return null
-        val signed = signer.sign(ApprovalGrantEvent.build(runId, note))
-        cache.justConsumeMyOwnEvent(signed)
-        client.publish(signed, setOf(relay))
-        return signed.id
-    }
-
-    /** Deny a paused Buzz workflow run's approval gate (kind-46031); the run is terminal (DENIED). */
-    suspend fun denyBuzzWorkflowRun(
-        relay: NormalizedRelayUrl,
-        runId: HexKey,
-        note: String = "",
-    ): HexKey? {
-        if (!isWriteable()) return null
-        val signed = signer.sign(ApprovalDenyEvent.build(runId, note))
-        cache.justConsumeMyOwnEvent(signed)
-        client.publish(signed, setOf(relay))
-        return signed.id
-    }
-
-    /**
-     * Upvote a Buzz job [jobId] (authored by [jobAuthor]) — a NIP-25 like (kind-7 `+`) `e`-tagging
-     * the request, `p`-tagging its author and `k`-tagging the reacted kind per NIP-25, and
-     * `h`-scoped to [channelId] so the scheduler (and the board) count it toward priority.
-     */
-    suspend fun upvoteBuzzJob(
-        relay: NormalizedRelayUrl,
-        channelId: String,
-        jobId: HexKey,
-        jobAuthor: HexKey?,
-    ) {
-        if (!isWriteable()) return
-        val template =
-            eventTemplate<ReactionEvent>(ReactionEvent.KIND, ReactionEvent.LIKE) {
-                addUnique(ETag.assemble(jobId, null, null))
-                jobAuthor?.let { addUnique(PTag.assemble(it, null)) }
-                addUnique(arrayOf("k", JobRequestEvent.KIND.toString()))
-                addUnique(GroupIdTag.assemble(channelId))
-            }
-        val signed = signer.sign(template)
-        cache.justConsumeMyOwnEvent(signed)
-        client.publish(signed, setOf(relay))
-    }
-
-    /** Send a kind 9022 leave request to the host relay and drop it from our list. */
-    suspend fun leaveRelayGroup(channel: RelayGroupChannel) {
-        val template = LeaveRequestEvent.build(channel.groupId.id)
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-        unfollow(channel)
-    }
-
-    /**
-     * Delete the whole group with a kind 9008 delete-group event (owner/admin only — the relay
-     * enforces this). Unlike [leaveRelayGroup], this destroys the channel for everyone rather than
-     * just removing me; the relay drops the group and its messages. Also drops it from our own list
-     * so it disappears from Messages immediately instead of lingering as a now-dead id.
-     */
-    suspend fun deleteRelayGroup(channel: RelayGroupChannel) {
-        val template = DeleteGroupEvent.build(channel.groupId.id)
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-        unfollow(channel)
-        // Remember the deletion so the channel leaves the community's browse list immediately and
-        // stays gone across a restart — the relay drops the group but our cached 39000 metadata (and a
-        // stale re-announced 44100 on a Buzz relay) would otherwise keep it visible.
-        RelayGroupDeletions.markDeleted(channel.groupId)
-    }
-
-    /**
-     * Create a new group on [relay]: kind 9007 (create-group) then kind 9002
-     * (edit-metadata) with the chosen name/visibility, then remember it. Returns
-     * the new group's id.
-     */
-    suspend fun createRelayGroup(
-        relay: NormalizedRelayUrl,
-        groupId: String,
-        name: String,
-        about: String? = null,
-        picture: String? = null,
-        isPrivate: Boolean = false,
-        isClosed: Boolean = false,
-        isHidden: Boolean = false,
-        isRestricted: Boolean = false,
-        hashtags: List<String> = emptyList(),
-        geohashes: List<String> = emptyList(),
-        parent: String? = null,
-        channelType: String? = null,
-    ): GroupId {
-        // The metadata rides the create event as well as the 9002 below. A plain NIP-29 relay takes
-        // its metadata from the 9002 and ignores these tags; Buzz rejects the 9007 outright without
-        // a `name` (see CreateGroupEvent.build), which used to make "create group" on a Buzz relay
-        // publish two events and produce nothing at all.
-        signAndSendPrivatelyOrBroadcast(
-            CreateGroupEvent.build(
-                groupId = groupId,
-                name = name,
-                about = about,
-                visibility = if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN,
-                channelType = channelType,
-            ),
-        ) { listOf(relay) }
-
-        val edit =
-            EditMetadataEvent.build(
-                groupId,
-                name = name,
-                about = about,
-                picture = picture,
-                status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
-                hashtags = hashtags,
-                geohashes = geohashes,
-                parent = parent,
-            )
-        signAndSendPrivatelyOrBroadcast(edit) { listOf(relay) }
-
-        val id = GroupId(groupId, relay)
-        follow(LocalCache.getOrCreateRelayGroupChannel(id))
-        return id
-    }
-
-    /**
-     * The set of NIP-29 status flags to emit on a kind-9002 metadata event. Flags are
-     * presence-only — public/open/visible/unrestricted are simply the ABSENCE of their
-     * restrictive counterpart — so only the enabled restrictive flags are added.
-     */
-    private fun relayGroupStatus(
-        isPrivate: Boolean,
-        isClosed: Boolean,
-        isHidden: Boolean,
-        isRestricted: Boolean,
-    ): Set<GroupMetadataEvent.GroupStatus> =
-        buildSet {
-            if (isPrivate) add(GroupMetadataEvent.GroupStatus.PRIVATE)
-            if (isClosed) add(GroupMetadataEvent.GroupStatus.CLOSED)
-            if (isHidden) add(GroupMetadataEvent.GroupStatus.HIDDEN)
-            if (isRestricted) add(GroupMetadataEvent.GroupStatus.RESTRICTED)
-        }
-
-    /** Post a kind 11 thread (forum-style) to the group, scoped by its `h` tag. */
-    suspend fun postRelayGroupThread(
-        channel: RelayGroupChannel,
-        title: String,
-        body: String,
-    ) {
-        val template =
-            ThreadEvent.build(body, title) {
-                hTag(channel.groupId.id)
-                previous(channel.previousEventRefs(pubKey))
-            }
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
-    /** Mint a kind 9009 invite code for the group (admin/moderator only). */
-    suspend fun createRelayGroupInvite(
-        channel: RelayGroupChannel,
-        code: String,
-    ) {
-        val template = CreateInviteEvent.build(channel.groupId.id, code)
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
-    /**
-     * Replace the group's pinned-message list with a kind 9010 update-pin-list event
-     * (admin/moderator only). NIP-29 carries the FULL list, so the relay applies it and
-     * republishes the kind-39005 [com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent].
-     */
-    suspend fun updateRelayGroupPins(
-        channel: RelayGroupChannel,
-        pinnedEventIds: List<HexKey>,
-    ) {
-        val template = UpdatePinListEvent.build(channel.groupId.id, pinnedEventIds)
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
-    /** Pin [eventId] by appending it to the current list (no-op if already pinned). */
-    suspend fun pinRelayGroupMessage(
-        channel: RelayGroupChannel,
-        eventId: HexKey,
-    ) {
-        if (channel.isPinned(eventId)) return
-        updateRelayGroupPins(channel, channel.pinnedEventIds + eventId)
-    }
-
-    /** Unpin [eventId] by removing it from the current list (no-op if not pinned). */
-    suspend fun unpinRelayGroupMessage(
-        channel: RelayGroupChannel,
-        eventId: HexKey,
-    ) {
-        if (!channel.isPinned(eventId)) return
-        updateRelayGroupPins(channel, channel.pinnedEventIds - eventId)
-    }
-
-    /** Kick [pubkey] out of the group with a kind 9001 remove-user event (moderator only). */
-    suspend fun removeRelayGroupUser(
-        channel: RelayGroupChannel,
-        pubkey: HexKey,
-    ) {
-        val template = RemoveUserEvent.build(channel.groupId.id, listOf(pubkey))
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
-    /**
-     * Add [pubkey] to the group (or change its roles) with a kind 9000 put-user
-     * event (moderator only). Pass an empty [roles] list for a plain member.
-     */
-    suspend fun putRelayGroupUser(
-        channel: RelayGroupChannel,
-        pubkey: HexKey,
-        roles: List<String>,
-    ) {
-        // Buzz ignores the roles inside the `p` tag and reads a top-level `role` tag instead, in its
-        // own vocabulary — so map ours onto its set before sending. Anything it cannot parse fails
-        // the whole put-user, which is why an unmapped role must become `member` rather than travel.
-        val buzzRole =
-            if (BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)) {
-                when {
-                    roles.any { it.equals(RelayGroupMembership.ROLE_ADMIN, true) } -> BUZZ_ROLE_ADMIN
-                    else -> BUZZ_ROLE_MEMBER
-                }
-            } else {
-                null
-            }
-        val template = PutUserEvent.build(channel.groupId.id, listOf(pubkey to roles), buzzRole = buzzRole)
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
-    /**
-     * Add [pubkey] to a Buzz **community** (the whole relay/tenant, not one channel) via the
-     * relay-admin add-member command (kind 9030). Owner/admin only — the relay validates the
-     * sender's role and, on a new insert, updates its NIP-43 membership list (13534). Published to
-     * [relay] with no channel scope.
-     */
-    suspend fun addCommunityMember(
-        relay: NormalizedRelayUrl,
-        pubkey: HexKey,
-        role: String? = null,
-    ) {
-        signAndSendPrivatelyOrBroadcast(RelayAdminAddMemberEvent.build(pubkey, role)) { listOf(relay) }
-    }
-
-    /** Remove [pubkey] from a Buzz community via the relay-admin remove-member command (kind 9031). */
-    suspend fun removeCommunityMember(
-        relay: NormalizedRelayUrl,
-        pubkey: HexKey,
-    ) {
-        signAndSendPrivatelyOrBroadcast(RelayAdminRemoveMemberEvent.build(pubkey)) { listOf(relay) }
-    }
-
-    /**
-     * Edit the group's relay-signed metadata with a kind 9002 event (admin only).
-     *
-     * NIP-29 §Subgroups makes the metadata edit a full replacement of the hierarchy
-     * links: a 9002 with no `parent` tag re-roots the group, and one that drops any
-     * existing `child` is rejected by the relay. So unless the caller is explicitly
-     * re-parenting, we re-carry the group's current [parent] and full [children] list
-     * from its latest known metadata to keep the tree intact across a plain name/flag
-     * edit. Pass an explicit value to change them.
-     */
-    suspend fun editRelayGroupMetadata(
-        channel: RelayGroupChannel,
-        name: String?,
-        about: String?,
-        picture: String?,
-        isPrivate: Boolean,
-        isClosed: Boolean,
-        isHidden: Boolean,
-        isRestricted: Boolean,
-        hashtags: List<String> = emptyList(),
-        geohashes: List<String> = emptyList(),
-        parent: String? = channel.parentGroupId(),
-        children: List<String> = channel.childGroupIds(),
-    ) {
-        // On a Buzz relay, visibility rides a `visibility` ("open"/"private") tag — the relay does NOT
-        // read NIP-29's `private` status flag — so a Buzz channel's visibility only actually changes on
-        // edit when we send that tag. A plain NIP-29 relay ignores it and honours the status flag.
-        val isBuzz = BuzzRelayDialect.isBuzz(channel.groupId.relayUrl)
-        val template =
-            EditMetadataEvent.build(
-                channel.groupId.id,
-                name = name,
-                about = about,
-                picture = picture,
-                status = relayGroupStatus(isPrivate, isClosed, isHidden, isRestricted),
-                hashtags = hashtags,
-                geohashes = geohashes,
-                parent = parent,
-                children = children,
-                visibility = if (isBuzz) (if (isPrivate) BUZZ_VISIBILITY_PRIVATE else BUZZ_VISIBILITY_OPEN) else null,
-            )
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
-    /**
-     * Archive or unarchive a Buzz channel (a minimal kind-9002 carrying only the `archived` tag). The
-     * relay hides an archived channel from the sidebar and stamps the 39000, but keeps it and its
-     * history — the reversible counterpart to [deleteRelayGroup]. Admin/owner only; the relay enforces.
-     */
-    suspend fun archiveRelayGroup(
-        channel: RelayGroupChannel,
-        archived: Boolean,
-    ) {
-        val template = EditMetadataEvent.build(channel.groupId.id, archived = archived)
-        signAndSendPrivatelyOrBroadcast(template) { channel.relays().toList() }
-    }
-
     suspend fun follow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.follow(community))
 
     suspend fun unfollow(community: AddressableNote) = sendMyPublicAndPrivateOutbox(communityList.unfollow(community))
@@ -3743,14 +1832,6 @@ class Account(
 
         cache.justConsumeMyOwnEvent(signedEvent)
         client.publish(signedEvent, relays)
-    }
-
-    fun sendAutomatic(events: List<Event>) = events.forEach { sendAutomatic(it) }
-
-    fun sendAutomatic(event: Event?) {
-        if (event == null) return
-        cache.justConsumeMyOwnEvent(event)
-        client.publish(event, computeRelayListToBroadcast(event))
     }
 
     suspend fun sendWebBookmark(
@@ -3969,24 +2050,6 @@ class Account(
             }
 
         client.publish(signedEvent, outboxRelays.flow.value)
-    }
-
-    fun sendMyPublicAndPrivateOutbox(event: Event?) {
-        if (event == null) return
-        cache.justConsumeMyOwnEvent(event)
-        client.publish(event, outboxRelays.flow.value)
-    }
-
-    fun sendMyPublicAndPrivateOutbox(events: List<Event>) {
-        events.forEach {
-            client.publish(it, outboxRelays.flow.value)
-            cache.justConsumeMyOwnEvent(it)
-        }
-    }
-
-    fun sendLiterallyEverywhere(event: Event) {
-        client.publish(event, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
-        cache.justConsumeMyOwnEvent(event)
     }
 
     suspend fun pollRespond(
@@ -4219,96 +2282,6 @@ class Account(
             }
 
         signAndComputeBroadcast(template)
-    }
-
-    suspend fun <T : Event> signAndSendPrivately(
-        template: EventTemplate<T>,
-        relayList: Set<NormalizedRelayUrl>,
-    ) {
-        val event = signer.sign(template)
-        cache.justConsumeMyOwnEvent(event)
-        client.publish(event, relayList)
-    }
-
-    /**
-     * Sign [template] with an arbitrary [signer] (e.g. a per-geohash ephemeral
-     * identity that is deliberately NOT this account's key) and publish to exactly
-     * [relayList]. Used by geohash location chat, where authorship inside a cell
-     * must not be linkable to the user's npub.
-     */
-    suspend fun <T : Event> signWithAndSendPrivately(
-        template: EventTemplate<T>,
-        signer: NostrSigner,
-        relayList: Set<NormalizedRelayUrl>,
-    ): T {
-        val event = signer.sign(template)
-        cache.justConsumeMyOwnEvent(event)
-        if (relayList.isNotEmpty()) client.publish(event, relayList)
-        return event
-    }
-
-    suspend fun <T : Event> signAndSendPrivatelyOrBroadcast(
-        template: EventTemplate<T>,
-        relayList: (T) -> List<NormalizedRelayUrl>?,
-    ): T {
-        val event = signer.sign(template)
-        cache.justConsumeMyOwnEvent(event)
-        val relays = relayList(event)
-        val targets =
-            if (!relays.isNullOrEmpty()) {
-                relays.toSet()
-            } else {
-                computeRelayListToBroadcast(event)
-            }
-        chatDeliveryTracker.trackPublic(event.id, targets)
-        client.publish(event, targets)
-        return event
-    }
-
-    suspend fun <T : Event> signAndComputeBroadcast(
-        template: EventTemplate<T>,
-        broadcast: List<Event> = emptyList(),
-    ): T {
-        val event = signer.sign(template)
-        cache.justConsumeMyOwnEvent(event)
-        val note =
-            if (event is AddressableEvent) {
-                cache.getOrCreateAddressableNote(event.address())
-            } else {
-                cache.getOrCreateNote(event.id)
-            }
-
-        val relayList = computeRelayListToBroadcast(note)
-
-        client.publish(event, relayList)
-
-        broadcast.forEach { client.publish(it, relayList) }
-
-        return event
-    }
-
-    suspend fun <T : Event> signAnonymouslyAndBroadcast(
-        template: EventTemplate<T>,
-        broadcast: List<Event> = emptyList(),
-        anonymousSigner: NostrSigner = NostrSignerInternal(KeyPair()),
-    ): T {
-        val event = anonymousSigner.sign(template)
-
-        cache.justConsumeMyOwnEvent(event)
-        val note =
-            if (event is AddressableEvent) {
-                cache.getOrCreateAddressableNote(event.address())
-            } else {
-                cache.getOrCreateNote(event.id)
-            }
-
-        val relayList = computeRelayListToBroadcast(note)
-
-        client.publish(event, relayList)
-
-        broadcast.forEach { client.publish(it, relayList) }
-
-        return event
     }
 
     /**
@@ -4802,541 +2775,6 @@ class Account(
     }
 
     // --- Marmot Group Messaging ---
-
-    /**
-     * Resolve the relay set for a Marmot group. Prefer the relays carried in
-     * the MLS GroupContext metadata so every member converges on the same
-     * canonical set; fall back to the account's outbox relays if the group
-     * has none (e.g. a group joined before MIP-01 metadata existed).
-     *
-     * Lives on Account (not AccountViewModel) so that headless callers —
-     * notifications' BroadcastReceiver, background workers — can resolve
-     * relays without spinning up a ViewModel.
-     */
-    fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> {
-        val groupRelays =
-            marmotManager
-                ?.groupMetadata(nostrGroupId)
-                ?.relays
-                ?.mapNotNull {
-                    com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-                        .normalizeOrNull(it)
-                }?.toSet()
-        return if (!groupRelays.isNullOrEmpty()) groupRelays else outboxRelays.flow.value
-    }
-
-    /**
-     * Send a message to a Marmot MLS group.
-     * Encrypts the inner event and publishes the GroupEvent to group relays.
-     */
-    suspend fun sendMarmotGroupMessage(
-        nostrGroupId: HexKey,
-        innerEvent: Event,
-        groupRelays: Set<NormalizedRelayUrl>,
-    ) {
-        Log.d("MarmotDbg") {
-            "sendMarmotGroupMessage: group=${nostrGroupId.take(8)}… innerKind=${innerEvent.kind} innerId=${innerEvent.id.take(8)}… " +
-                "→ ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
-        }
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
-
-        val outbound = manager.buildGroupMessage(nostrGroupId, innerEvent)
-        Log.d("MarmotDbg") {
-            "sendMarmotGroupMessage: built outer kind:${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
-        }
-        // Link the envelope to the inner message we just encrypted so relay
-        // OK acceptances drill down to the note the chat renders (see
-        // LocalCache.addRelayToNoteAndInners).
-        outbound.signedEvent.innerEventId = innerEvent.id
-        cache.justConsumeMyOwnEvent(outbound.signedEvent)
-        // Sending a message moves the group out of "New Requests" into
-        // "Known" — do this eagerly before relay round-trip so the UI
-        // updates immediately.
-        marmotGroupList.markAsKnown(nostrGroupId)
-        if (groupRelays.isEmpty()) {
-            Log.w("MarmotDbg") {
-                "sendMarmotGroupMessage: NO group relays for group=${nostrGroupId.take(8)}… — message will be silently dropped"
-            }
-        }
-        client.publish(outbound.signedEvent, groupRelays)
-    }
-
-    /**
-     * Fetch a user's KeyPackage from relays and add them to a Marmot group.
-     * Returns a status message describing the outcome.
-     */
-    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
-    suspend fun fetchKeyPackageAndAddMember(
-        nostrGroupId: HexKey,
-        memberPubKey: HexKey,
-    ): String {
-        Log.d("MarmotDbg") {
-            "fetchKeyPackageAndAddMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}…"
-        }
-        val manager = marmotManager ?: return "Error: Marmot not initialized"
-        if (!isWriteable()) return "Error: Account is read-only"
-
-        // Per MIP-00, invitees advertise the relays that host their
-        // KeyPackages in a kind:10051 KeyPackageRelayListEvent. Look
-        // there first, then fall back to the invitee's NIP-65 outbox
-        // (where KeyPackages typically also land), and finally union
-        // with our own outbox so we still find packages that ended up
-        // on a shared relay.
-        val myOutbox = outboxRelays.flow.value
-        val memberKeyPackageRelays =
-            (
-                cache
-                    .getAddressableNoteIfExists(
-                        com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
-                            .createAddress(memberPubKey),
-                    )?.event as? com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
-            )?.relays()?.toSet().orEmpty()
-        val memberOutbox =
-            cache
-                .getOrCreateUser(memberPubKey)
-                .outboxRelays()
-                ?.toSet()
-                .orEmpty()
-        val fetchRelays =
-            com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-                .fetchRelaysFor(memberKeyPackageRelays, memberOutbox, myOutbox)
-
-        Log.d("MarmotDbg") {
-            "fetchKeyPackageAndAddMember: querying ${fetchRelays.size} relay(s) for ${memberPubKey.take(8)}… KeyPackage " +
-                "(memberKeyPackageRelays=${memberKeyPackageRelays.size}, memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${fetchRelays.map { it.url }}"
-        }
-
-        val event =
-            com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-                .fetchKeyPackage(client, memberPubKey, fetchRelays)
-
-        if (event == null) {
-            Log.w("MarmotDbg") {
-                "fetchKeyPackageAndAddMember: NO KeyPackage found for ${memberPubKey.take(8)}… on any of ${fetchRelays.size} relay(s)"
-            }
-            return "Error: No KeyPackage found for this user. They may not have published one yet."
-        }
-
-        Log.d("MarmotDbg") {
-            "fetchKeyPackageAndAddMember: got KeyPackage event id=${event.id.take(8)}… kind=${event.kind} authored=${event.pubKey.take(8)}…"
-        }
-
-        val keyPackageBase64 = event.keyPackageBase64()
-        if (keyPackageBase64.isBlank()) {
-            Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: KeyPackage event has empty content" }
-            return "Error: KeyPackage event has empty content"
-        }
-
-        // The relays embedded in the WelcomeEvent tell the new member
-        // where to subscribe for subsequent GroupEvents. Use our own
-        // outbox — that's where we will publish them.
-        val groupRelays = myOutbox.toList()
-
-        Log.d("MarmotDbg") {
-            "fetchKeyPackageAndAddMember: addMarmotGroupMember → groupRelays=${groupRelays.size}: ${groupRelays.map { it.url }}"
-        }
-
-        addMarmotGroupMember(
-            nostrGroupId = nostrGroupId,
-            keyPackageEvent = event,
-            groupRelays = groupRelays,
-        )
-
-        return "Success: Member added to group"
-    }
-
-    /**
-     * Add a member to a Marmot MLS group.
-     * Publishes the commit GroupEvent, then sends the Welcome gift wrap.
-     */
-    suspend fun addMarmotGroupMember(
-        nostrGroupId: HexKey,
-        keyPackageEvent: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent,
-        groupRelays: List<NormalizedRelayUrl>,
-    ) {
-        val memberPubKey = keyPackageEvent.pubKey
-        Log.d("MarmotDbg") {
-            "addMarmotGroupMember: group=${nostrGroupId.take(8)}… member=${memberPubKey.take(8)}… " +
-                "groupRelays=${groupRelays.size}"
-        }
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
-
-        val (commitEvent, welcomeDelivery) =
-            manager.addMember(
-                nostrGroupId = nostrGroupId,
-                keyPackageEvent = keyPackageEvent,
-                relays = groupRelays,
-            )
-
-        // The MLS commit has already been applied to the local group state —
-        // surface the new member list in the chatroom now so observers (e.g.
-        // MarmotGroupInfoScreen) update without waiting for our own commit to
-        // loop back through the relay.
-        val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
-        manager.syncMetadataTo(nostrGroupId, chatroom)
-
-        Log.d("MarmotDbg") {
-            "addMarmotGroupMember: built commit kind=${commitEvent.signedEvent.kind} id=${commitEvent.signedEvent.id.take(8)}… " +
-                "welcomeDelivery=${if (welcomeDelivery != null) "present(giftWrapId=${welcomeDelivery.giftWrapEvent.id.take(8)}…)" else "null"}"
-        }
-
-        // Publish commit first (critical ordering)
-        Log.d("MarmotDbg") {
-            "addMarmotGroupMember: publishing commit kind:${commitEvent.signedEvent.kind} to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
-        }
-        client.publish(commitEvent.signedEvent, groupRelays.toSet())
-
-        // Then send the Welcome gift wrap to the new member.
-        //
-        // Use the same delivery path that NIP-17 DMs (kind:1059) take —
-        // computeRelayListToBroadcast() — which has fallbacks for kind:10050
-        // → NIP-65 read → relay hints. Empirically, NIP-17 DMs reach the
-        // invitee, so this path is the one we know works. We also union
-        // with our own outbox + the recipient's dmInboxRelays() as a
-        // belt-and-braces measure in case the cache hasn't been hydrated
-        // yet for this contact.
-        if (welcomeDelivery != null) {
-            val computed = computeRelayListToBroadcast(welcomeDelivery.giftWrapEvent)
-            val recipientInbox =
-                cache
-                    .getOrCreateUser(memberPubKey)
-                    .dmInboxRelays()
-                    .orEmpty()
-            val relayList = computed + outboxRelays.flow.value + recipientInbox
-            Log.d("MarmotDbg") {
-                "addMarmotGroupMember: welcome gift wrap relay sources " +
-                    "computeRelayListToBroadcast=${computed.size} myOutbox=${outboxRelays.flow.value.size} " +
-                    "recipientInbox=${recipientInbox.size} → union=${relayList.size}"
-            }
-            if (relayList.isEmpty()) {
-                Log.w("MarmotDbg") {
-                    "addMarmotGroupMember: NO relays to deliver welcome gift wrap to ${memberPubKey.take(8)}… — welcome will be silently dropped"
-                }
-            } else {
-                Log.d("MarmotDbg") {
-                    "addMarmotGroupMember: publishing welcome gift wrap id=${welcomeDelivery.giftWrapEvent.id.take(8)}… " +
-                        "kind:${welcomeDelivery.giftWrapEvent.kind} → ${relayList.size} relay(s): ${relayList.map { it.url }}"
-                }
-            }
-            client.publish(welcomeDelivery.giftWrapEvent, relayList)
-        } else {
-            Log.w("MarmotDbg") {
-                "addMarmotGroupMember: welcomeDelivery is NULL — invitee ${memberPubKey.take(8)}… will receive nothing!"
-            }
-        }
-    }
-
-    /**
-     * Relays where this account publishes kind:30443 KeyPackage events.
-     * Per MIP-00: prefer kind:10051 KeyPackage Relay List; fall back to NIP-65 outbox.
-     */
-    fun keyPackagePublishRelays(): Set<NormalizedRelayUrl> =
-        com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-            .publishRelaysFor(keyPackageRelayList.flow.value, outboxRelays.flow.value)
-
-    /**
-     * Publish or rotate KeyPackage events.
-     */
-    suspend fun publishMarmotKeyPackages() {
-        val manager =
-            marmotManager ?: run {
-                Log.w("MarmotDbg") { "publishMarmotKeyPackages: marmotManager is NULL — no-op" }
-                return
-            }
-        if (!isWriteable()) {
-            Log.w("MarmotDbg") { "publishMarmotKeyPackages: account is not writeable — no-op" }
-            return
-        }
-
-        val relays = keyPackagePublishRelays()
-        val needsRotation = manager.needsKeyPackageRotation()
-        Log.d("MarmotDbg") {
-            "publishMarmotKeyPackages: needsRotation=$needsRotation relays=${relays.size}"
-        }
-
-        if (needsRotation) {
-            val rotatedEvents = manager.rotateConsumedKeyPackages(relays.toList())
-            Log.d("MarmotDbg") {
-                "publishMarmotKeyPackages: rotateConsumedKeyPackages produced ${rotatedEvents.size} event(s)"
-            }
-            rotatedEvents.forEach { event ->
-                cache.justConsumeMyOwnEvent(event)
-                Log.d("MarmotDbg") {
-                    "publishMarmotKeyPackages: publishing rotated kind:${event.kind} id=${event.id.take(8)}… " +
-                        "→ ${relays.size} relay(s): ${relays.map { it.url }}"
-                }
-                client.publish(event, relays)
-            }
-        }
-    }
-
-    /**
-     * Generate and publish initial KeyPackage for this account.
-     */
-    suspend fun publishMarmotKeyPackage() {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
-
-        val relays = keyPackagePublishRelays()
-        Log.d("MarmotDbg") {
-            "publishMarmotKeyPackage: generating + publishing KeyPackage event → ${relays.size} relay(s): ${relays.map { it.url }}"
-        }
-        val event = manager.generateKeyPackageEvent(relays.toList())
-        Log.d("MarmotDbg") {
-            "publishMarmotKeyPackage: signed kind:${event.kind} id=${event.id.take(8)}… authored=${event.pubKey.take(8)}…"
-        }
-        cache.justConsumeMyOwnEvent(event)
-        client.publish(event, relays)
-    }
-
-    /**
-     * Ensure the local user has at least one active KeyPackage bundle and
-     * a published KeyPackage event on relays. Called from [init] after
-     * Marmot state has been restored from disk.
-     *
-     * - If [KeyPackageRotationManager] already has an active bundle (from
-     *   the persisted snapshot), we trust the previous session and do
-     *   nothing. The matching kind:30443 should already be on relays from
-     *   when the bundle was first generated.
-     * - Otherwise we generate a fresh bundle (which is now persisted to
-     *   disk by [KeyPackageRotationManager.generateKeyPackage]) and
-     *   publish the corresponding event.
-     *
-     * Best-effort: failures are logged but never propagated. We don't want
-     * a flaky relay or missing outbox config at startup to crash account
-     * initialization.
-     */
-    private suspend fun ensureMarmotKeyPackagePublished() {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
-        try {
-            val hasBundle = manager.hasActiveKeyPackages()
-            Log.d("MarmotDbg") {
-                "ensureMarmotKeyPackagePublished: hasActiveKeyPackages=$hasBundle for ${signer.pubKey.take(8)}…"
-            }
-            if (hasBundle) {
-                return
-            }
-            Log.d("MarmotDbg") {
-                "ensureMarmotKeyPackagePublished: no active bundle — generating + publishing now"
-            }
-            publishMarmotKeyPackage()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("MarmotDbg", "ensureMarmotKeyPackagePublished failed: ${e.message}", e)
-        }
-    }
-
-    /**
-     * Check if a KeyPackage has been published in this session.
-     * The d-tag is a randomly-generated value stored in the KeyPackageRotationManager's
-     * persisted snapshot, so there is no fixed address to query in the cache.
-     */
-    suspend fun hasPublishedKeyPackage(): Boolean {
-        val manager = marmotManager ?: return false
-        return manager.hasActiveKeyPackages()
-    }
-
-    /**
-     * Create a new Marmot MLS group.
-     */
-    suspend fun createMarmotGroup(nostrGroupId: HexKey) {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
-        manager.createGroup(nostrGroupId)
-        // Creator owns the group — mark it as "known" immediately so it
-        // doesn't appear under "New Requests" before the first message.
-        marmotGroupList.markAsKnown(nostrGroupId)
-    }
-
-    /**
-     * Leave a Marmot MLS group.
-     * Publishes the SelfRemove proposal and removes local state.
-     *
-     * MIP-01/MIP-03: admins MUST first publish a GroupContextExtensions
-     * commit dropping themselves from `admin_pubkeys` before issuing a
-     * SelfRemove proposal. Without that, [MlsGroup.selfRemove] throws
-     * `IllegalStateException("Admin must self-demote via GroupContextExtensions
-     * before SelfRemove (MIP-01)")` and the leave aborts. Demote commit and
-     * SelfRemove proposal both go to the same group relays, demote first so
-     * peers apply it before they see the SelfRemove.
-     */
-    suspend fun leaveMarmotGroup(
-        nostrGroupId: HexKey,
-        groupRelays: Set<NormalizedRelayUrl>,
-    ) {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
-
-        val metadata = manager.groupMetadata(nostrGroupId)
-        if (metadata != null && metadata.adminPubkeys.contains(signer.pubKey)) {
-            val remaining = metadata.adminPubkeys.filter { it != signer.pubKey }.toMutableList()
-            // MIP-03 also rejects any GCE commit that leaves the group with zero
-            // admins. If we're the only one, promote an arbitrary non-self
-            // member to admin before stepping down.
-            if (remaining.isEmpty()) {
-                val heir =
-                    manager
-                        .memberPubkeys(nostrGroupId)
-                        .map { it.pubkey }
-                        .firstOrNull { it != signer.pubKey }
-                if (heir != null) remaining.add(heir)
-            }
-            if (remaining.isNotEmpty()) {
-                val demoted = metadata.copy(adminPubkeys = remaining)
-                val demoteCommit = manager.updateGroupMetadata(nostrGroupId, demoted)
-                client.publish(demoteCommit.signedEvent, groupRelays)
-            }
-        }
-
-        val outbound = manager.leaveGroup(nostrGroupId)
-        // manager.leaveGroup already wiped MLS state, relay subscriptions and
-        // the persisted message log. Drop the in-memory chatroom too — that
-        // releases the strong refs to the decrypted inner notes so LocalCache
-        // (which holds them weakly) can GC them, and the Notification feed
-        // (which iterates marmotGroupList.rooms) stops surfacing the group.
-        marmotGroupList.removeGroup(nostrGroupId)
-        client.publish(outbound.signedEvent, groupRelays)
-    }
-
-    /**
-     * User-initiated "nuclear" reset for the Marmot subsystem.
-     *
-     * Wipes every MLS group, every retained epoch secret, every persisted
-     * KeyPackage bundle, every relay subscription and every in-memory
-     * chatroom associated with this account. Does NOT broadcast any
-     * SelfRemove/leave commits to peers — if the user is in this flow at
-     * all, local state may already be unusable and a graceful leave is
-     * probably not possible. Peers will see the user as unresponsive until
-     * their next commit evicts the stale leaf.
-     *
-     * A fresh KeyPackage will be republished lazily on the next
-     * `ensureMarmotKeyPackagePublished` cycle, so the account remains
-     * reachable for future group invites.
-     */
-    suspend fun resetMarmotState() {
-        Log.w("MarmotDbg") { "resetMarmotState(): wiping all Marmot state for ${signer.pubKey.take(8)}…" }
-        marmotManager?.resetAllState()
-        for (groupId in marmotGroupList.allGroupIds()) {
-            marmotGroupList.removeGroup(groupId)
-        }
-    }
-
-    /**
-     * Remove a member from a Marmot MLS group.
-     * Publishes the commit GroupEvent to group relays.
-     */
-    suspend fun removeMarmotGroupMember(
-        nostrGroupId: HexKey,
-        targetLeafIndex: Int,
-        groupRelays: Set<NormalizedRelayUrl>,
-    ) {
-        Log.d("MarmotDbg") {
-            "removeMarmotGroupMember: group=${nostrGroupId.take(8)}… targetLeafIndex=$targetLeafIndex " +
-                "groupRelays=${groupRelays.size}"
-        }
-        val manager =
-            marmotManager ?: run {
-                Log.w("MarmotDbg") { "removeMarmotGroupMember: marmotManager is NULL — no-op" }
-                return
-            }
-        if (!isWriteable()) {
-            Log.w("MarmotDbg") { "removeMarmotGroupMember: account is not writeable — no-op" }
-            return
-        }
-
-        val outbound = manager.removeMember(nostrGroupId, targetLeafIndex)
-        Log.d("MarmotDbg") {
-            "removeMarmotGroupMember: built commit kind=${outbound.signedEvent.kind} id=${outbound.signedEvent.id.take(8)}…"
-        }
-        val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
-        manager.syncMetadataTo(nostrGroupId, chatroom)
-        Log.d("MarmotDbg") {
-            "removeMarmotGroupMember: publishing commit id=${outbound.signedEvent.id.take(8)}… " +
-                "to ${groupRelays.size} relay(s): ${groupRelays.map { it.url }}"
-        }
-        client.publish(outbound.signedEvent, groupRelays)
-    }
-
-    /**
-     * Update a Marmot MLS group's metadata (name, description, etc.).
-     * Publishes the commit GroupEvent to group relays.
-     */
-    suspend fun updateMarmotGroupMetadata(
-        nostrGroupId: HexKey,
-        metadata: com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData,
-        groupRelays: Set<NormalizedRelayUrl>,
-    ) {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
-
-        val outbound = manager.updateGroupMetadata(nostrGroupId, metadata)
-        // The MLS commit has already been applied locally — surface the new
-        // metadata in the chatroom now so the UI reflects it without waiting
-        // for the relay round-trip.
-        val chatroom = marmotGroupList.getOrCreateGroup(nostrGroupId)
-        manager.syncMetadataTo(nostrGroupId, chatroom)
-        client.publish(outbound.signedEvent, groupRelays)
-    }
-
-    /**
-     * Grant admin privileges to [targetPubKey] in a Marmot MLS group by
-     * appending them to `admin_pubkeys` via a GroupContextExtensions commit.
-     *
-     * No-op if the group has no prior metadata (shouldn't happen outside the
-     * first bootstrap commit) or the target is already an admin. Callers
-     * must be an admin themselves — the MLS engine enforces this via the
-     * MIP-03 authorization gate in `enforceAuthorizedProposalSet`.
-     */
-    suspend fun grantMarmotGroupAdmin(
-        nostrGroupId: HexKey,
-        targetPubKey: HexKey,
-        groupRelays: Set<NormalizedRelayUrl>,
-    ) {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
-
-        val metadata = manager.groupMetadata(nostrGroupId) ?: return
-        if (metadata.adminPubkeys.contains(targetPubKey)) return
-
-        val outboxRelayStrings = outboxRelays.flow.value.map { it.url }
-        val updated =
-            metadata
-                .copy(adminPubkeys = metadata.adminPubkeys + targetPubKey)
-                .withMergedRelays(outboxRelayStrings)
-        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
-    }
-
-    /**
-     * Revoke admin privileges from [targetPubKey]. Rejects any change that
-     * would leave the group with zero admins — MIP-03's admin-depletion guard
-     * in [com.vitorpamplona.quartz.marmot.mls.group.MlsGroup] would otherwise
-     * throw at commit time.
-     */
-    suspend fun revokeMarmotGroupAdmin(
-        nostrGroupId: HexKey,
-        targetPubKey: HexKey,
-        groupRelays: Set<NormalizedRelayUrl>,
-    ) {
-        val manager = marmotManager ?: return
-        if (!isWriteable()) return
-
-        val metadata = manager.groupMetadata(nostrGroupId) ?: return
-        if (!metadata.adminPubkeys.contains(targetPubKey)) return
-        val remaining = metadata.adminPubkeys.filter { it != targetPubKey }
-        check(remaining.isNotEmpty()) {
-            "Cannot revoke the last admin from a Marmot group (MIP-03)"
-        }
-
-        val outboxRelayStrings = outboxRelays.flow.value.map { it.url }
-        val updated =
-            metadata
-                .copy(adminPubkeys = remaining)
-                .withMergedRelays(outboxRelayStrings)
-        updateMarmotGroupMetadata(nostrGroupId, updated, groupRelays)
-    }
 
     suspend fun createStatus(newStatus: String) = sendMyPublicAndPrivateOutbox(UserStatusAction.create(newStatus, signer))
 
@@ -5985,14 +3423,6 @@ class Account(
             .mapNotNull { it.event }
 
     /** Publishes the given events to each of the given relays. No-op if either list is empty. */
-    fun republishEventsTo(
-        events: List<Event>,
-        relays: Set<NormalizedRelayUrl>,
-    ) {
-        if (relays.isEmpty() || events.isEmpty()) return
-        events.forEach { client.publish(it, relays) }
-    }
-
     suspend fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
         reason: String,
@@ -6101,7 +3531,7 @@ class Account(
                 // restoreAll() above has already restored any previously
                 // generated bundles. Only generate-and-publish if no active
                 // bundle exists in memory after restore.
-                ensureMarmotKeyPackagePublished()
+                marmot.ensureMarmotKeyPackagePublished()
 
                 // Sync MIP-01 metadata from restored groups to chatrooms and
                 // re-hydrate decrypted messages from persistent storage.
@@ -6165,10 +3595,13 @@ class Account(
             concordSessions.revision.sample(500).collect {
                 refreshConcordChannelIndex()
                 // A revision also bumps when a base-rotation rekey lands; adopt ours if present.
-                runCatching { drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
+                runCatching { concord.drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
+                // A promotion to staff delivers the Control Plane write key inside the Grant
+                // itself (CORD-04 §3), so the fold that seats the role is also when it arrives.
+                runCatching { concord.drainConcordStaffGrants() }.onFailure { Log.w("Concord", "staff grant drain failed", it) }
                 // A rotation we were *excluded* from produces no rekey to drain, so it can only be
                 // found by re-resolving the invite link we joined through. Rate-limited internally.
-                runCatching { recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
+                runCatching { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
             }
         }
 

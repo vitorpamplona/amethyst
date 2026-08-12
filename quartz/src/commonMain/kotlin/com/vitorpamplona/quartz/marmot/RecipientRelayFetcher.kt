@@ -81,7 +81,7 @@ object RecipientRelayFetcher {
         client: INostrClient,
         pubKey: HexKey,
         seedRelays: Set<NormalizedRelayUrl>,
-        timeoutMs: Long = 8_000L,
+        idleTimeoutMs: Long = 8_000L,
     ): Lists {
         if (seedRelays.isEmpty()) return Lists(emptyList(), emptyList(), null)
 
@@ -99,7 +99,7 @@ object RecipientRelayFetcher {
         val events =
             client.fetchAll(
                 filters = seedRelays.associateWith { listOf(filter) },
-                timeoutMs = timeoutMs,
+                idleTimeoutMs = idleTimeoutMs,
             )
 
         var dm: ChatMessageRelayListEvent? = null

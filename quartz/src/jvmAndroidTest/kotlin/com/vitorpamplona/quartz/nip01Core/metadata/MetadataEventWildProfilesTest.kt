@@ -22,6 +22,10 @@ package com.vitorpamplona.quartz.nip01Core.metadata
 
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -149,6 +153,80 @@ class MetadataEventWildProfilesTest {
             assertEquals(false, meta.bot, label)
             assertEquals("Team Soapbox. Freedom advocate.", meta.about, label)
             assertNull(meta.birthday, "$label: an ambiguous string birthday is dropped, not fatal")
+        }
+    }
+
+    /**
+     * `{name: 'lmn_account_1', about: 'A test account'}` — a JavaScript object
+     * literal, not JSON: bare keys *and* single-quoted values. There is no parser,
+     * lenient or not, that reads this as the author meant it, so the profile is
+     * dropped with a warning. What matters is that the event itself still decodes
+     * and nothing downstream throws.
+     */
+    @Test
+    fun javascriptObjectLiteralContentIsDroppedNotFatal() {
+        val json =
+            """
+            {"id":"b0d86331add8bafc8067d2648df268d020d8c8d27593d236429ae58a558d9891","pubkey":"50d09ecac499e0aa07d266135075fb6ae1d7fce739fe32a3dc52ad117eac6373","created_at":1716362070,"kind":0,"tags":[],"content":"{name: 'lmn_account_1', about: 'A test account'}","sig":"9c008cf3d93e6ec1ae55a07d61d9a4a53e8fe3ddf8a32875503fa5622c6d629814a940a9ed34e0f9f9cf7e713b025eb771431e4b4618eaeed374280a62996b7c"}
+            """.trimIndent()
+
+        bothMappers(json) { label, event ->
+            assertEquals("50d09ecac499e0aa07d266135075fb6ae1d7fce739fe32a3dc52ad117eac6373", event.pubKey, label)
+            assertNull(event.contactMetaData(), "$label: a js object literal has no readable profile")
+            assertNull(event.contactMetadataJson(), label)
+            assertEquals("", event.indexableContent(), "$label: nothing to index, but no throw")
+        }
+    }
+
+    /**
+     * `{"name":"test0","display_name":test0""}` — well-formed up to `display_name`,
+     * then stray quotes truncate it. Same outcome: dropped, never fatal. A partial
+     * "read the prefix" recovery is deliberately not attempted — a value that was
+     * cut off mid-write is not a value we can vouch for.
+     */
+    @Test
+    fun strayQuoteContentIsDroppedNotFatal() {
+        val json =
+            """
+            {"id":"e77763a8c547cd120e99d245fc7cbef2212124ef4644f28b086db08230f1065d","pubkey":"961587af1a99984a22cda1f14d020098bc47d687874d5269219305cec12daaeb","created_at":1693387734,"kind":0,"tags":[],"content":"{\"name\":\"test0\",\"display_name\":test0\"\"}","sig":"50bea1dff881a3fae0c7cd795b5faba55fd16e6477826f05010c8cf1a36edfd26d728ebefaa1b62914a3162b4859a2bb8b16f8d7b6c8548f88ac09228927b5ad"}
+            """.trimIndent()
+
+        bothMappers(json) { label, event ->
+            assertEquals("961587af1a99984a22cda1f14d020098bc47d687874d5269219305cec12daaeb", event.pubKey, label)
+            assertNull(event.contactMetaData(), "$label: a truncated value has no readable profile")
+            assertNull(event.contactMetadataJson(), label)
+            assertEquals("", event.indexableContent(), "$label: nothing to index, but no throw")
+        }
+    }
+
+    /**
+     * Bare keys — accepted by the lenient reader [contactMetaData] uses, so the
+     * profile renders. [contactMetadataJson] must accept exactly the same input:
+     * it used to run the *strict* parser, return null, and make [updateFromPast]
+     * start from an empty map — silently deleting every field Amethyst does not
+     * edit itself the first time this user touched their profile.
+     */
+    @Test
+    fun leniencyGapProfileKeepsForeignFieldsOnEdit() {
+        val json =
+            """
+            {"id":"b0d86331add8bafc8067d2648df268d020d8c8d27593d236429ae58a558d9891","pubkey":"50d09ecac499e0aa07d266135075fb6ae1d7fce739fe32a3dc52ad117eac6373","created_at":1716362070,"kind":0,"tags":[],"content":"{name:\"bob\",about:\"hi\",custom_field:\"keepme\"}","sig":"9c008cf3d93e6ec1ae55a07d61d9a4a53e8fe3ddf8a32875503fa5622c6d629814a940a9ed34e0f9f9cf7e713b025eb771431e4b4618eaeed374280a62996b7c"}
+            """.trimIndent()
+
+        bothMappers(json) { label, event ->
+            val meta = event.contactMetaData()
+            assertIs<UserMetadata>(meta, label)
+            assertEquals("bob", meta.name, label)
+
+            val asJson = event.contactMetadataJson()
+            assertIs<JsonObject>(asJson, "$label: both accessors must agree on what parses")
+            assertEquals("keepme", asJson["custom_field"]?.jsonPrimitive?.content, label)
+
+            val updated = MetadataEvent.updateFromPast(latest = event, name = "alice", createdAt = 1716362080)
+            val updatedJson = Json.parseToJsonElement(updated.content).jsonObject
+            assertEquals("alice", updatedJson["name"]?.jsonPrimitive?.content, label)
+            assertEquals("hi", updatedJson["about"]?.jsonPrimitive?.content, "$label: untouched fields survive")
+            assertEquals("keepme", updatedJson["custom_field"]?.jsonPrimitive?.content, "$label: foreign fields survive")
         }
     }
 }

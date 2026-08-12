@@ -164,7 +164,7 @@ class FollowPacksState(
     private fun subscribeToDiscovery() {
         val listener =
             object : SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: com.vitorpamplona.quartz.nip01Core.core.Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

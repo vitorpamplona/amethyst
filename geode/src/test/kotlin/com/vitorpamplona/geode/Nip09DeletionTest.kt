@@ -80,7 +80,7 @@ class Nip09DeletionTest {
             subId,
             mapOf(relayUrl to listOf(filter)),
             object : com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

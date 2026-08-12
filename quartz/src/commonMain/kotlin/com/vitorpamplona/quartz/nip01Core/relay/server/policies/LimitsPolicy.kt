@@ -72,9 +72,13 @@ class LimitsPolicy(
         return PolicyResult.Accepted(if (clamped === cmd.filters) cmd else ReqCmd(cmd.subId, clamped))
     }
 
+    /**
+     * A COUNT is clamped by [RelayLimits.maxLimit] but NEVER given
+     * [RelayLimits.defaultLimit] — see [capLimits].
+     */
     override fun accept(cmd: CountCmd): PolicyResult<CountCmd> {
         subscriptionRejection(cmd.queryId, cmd.filters)?.let { return PolicyResult.Rejected(it) }
-        val clamped = clampLimits(cmd.filters)
+        val clamped = capLimits(cmd.filters)
         return PolicyResult.Accepted(if (clamped === cmd.filters) cmd else CountCmd(cmd.queryId, clamped))
     }
 
@@ -104,6 +108,28 @@ class LimitsPolicy(
         if (limits.maxLimit == null && limits.defaultLimit == null) return filters
         if (filters.none { targetLimit(it.limit) != it.limit }) return filters
         return filters.map { it.copy(limit = targetLimit(it.limit)) }
+    }
+
+    /**
+     * Cap what a COUNT asks for, without inventing a page size for it.
+     *
+     * `defaultLimit` answers "how many events should a REQ return when the
+     * client names no limit". A COUNT returns no events, so that question has
+     * no meaning for it — and applying the answer anyway turns every unbounded
+     * COUNT into `min(matches, defaultLimit)`.
+     *
+     * Silently: a relay holding 12,289,614 profiles replied `{"count":500}`,
+     * which is a plausible-looking number, so a client cannot tell it from the
+     * truth. The kinds that happened to fall under the default were correct,
+     * which is what made it survive.
+     *
+     * `maxLimit` still applies, because a client that explicitly asks to count
+     * at most N is asking a question this relay may bound.
+     */
+    private fun capLimits(filters: List<Filter>): List<Filter> {
+        val max = limits.maxLimit ?: return filters
+        if (filters.none { it.limit != null && it.limit > max }) return filters
+        return filters.map { if (it.limit != null && it.limit > max) it.copy(limit = max) else it }
     }
 
     private fun targetLimit(current: Int?): Int? =

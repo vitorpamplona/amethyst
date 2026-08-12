@@ -53,7 +53,7 @@ class RelayLatencyListener(
         tracker.recordSent(relay.url, cmd, success)
     }
 
-    override fun onIncomingMessage(
+    override suspend fun onIncomingMessage(
         relay: IRelayClient,
         msgStr: String,
         msg: Message,

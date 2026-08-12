@@ -49,7 +49,15 @@ import com.google.zxing.qrcode.encoder.Encoder
 import com.google.zxing.qrcode.encoder.QRCode
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 
-const val QR_MARGIN_PX = 100f
+/**
+ * The quiet zone around the code, in **modules** — the QR spec's minimum of 4.
+ *
+ * It was a fixed 100px per side, which does not scale: at a small draw size those 200px ate most of
+ * the canvas, so a long payload (a Concord invite link, an nprofile) rendered as a postage stamp
+ * floating in white. Expressed in modules the zone stays proportional, so the code fills whatever
+ * box it is given at every size while remaining scannable.
+ */
+const val QR_QUIET_ZONE_MODULES = 4f
 
 @Preview
 @Composable
@@ -78,13 +86,16 @@ fun QrCodeDrawer(
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             // Calculate the height and width of each column/row
-            val rowHeight = (size.width - QR_MARGIN_PX * 2f) / qrCode.matrix.height
-            val columnWidth = (size.width - QR_MARGIN_PX * 2f) / qrCode.matrix.width
+            // Solve for the module size with the quiet zone measured in modules, so the whole code
+            // (zone included) is exactly as wide as the canvas.
+            val rowHeight = size.height / (qrCode.matrix.height + QR_QUIET_ZONE_MODULES * 2f)
+            val columnWidth = size.width / (qrCode.matrix.width + QR_QUIET_ZONE_MODULES * 2f)
             val radius = CornerRadius(20f)
 
             // Draw all of the finder patterns required by the QR spec. Calculate the ratio
             // of the number of rows/columns to the width and height
             drawQrCodeFinders(
+                quietZonePx = columnWidth * QR_QUIET_ZONE_MODULES,
                 sideLength = size.width,
                 finderPatternSize =
                     Size(
@@ -97,6 +108,7 @@ fun QrCodeDrawer(
 
             // Draw data bits (encoded data part)
             drawAllQrCodeDataBits(
+                quietZonePx = columnWidth * QR_QUIET_ZONE_MODULES,
                 bytes = qrCode.matrix,
                 size =
                     Size(
@@ -119,7 +131,7 @@ private fun createQrCode(contents: String): QRCode {
         ErrorCorrectionLevel.Q,
         mapOf(
             EncodeHintType.CHARACTER_SET to "UTF-8",
-            EncodeHintType.MARGIN to QR_MARGIN_PX,
+            EncodeHintType.MARGIN to QR_QUIET_ZONE_MODULES,
             EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.Q,
         ),
     )
@@ -132,6 +144,7 @@ fun newPath(withPath: Path.() -> Unit) =
     }
 
 fun DrawScope.drawAllQrCodeDataBits(
+    quietZonePx: Float,
     bytes: ByteMatrix,
     size: Size,
     color: Color,
@@ -182,8 +195,8 @@ fun DrawScope.drawAllQrCodeDataBits(
                                         Rect(
                                             offset =
                                                 Offset(
-                                                    x = QR_MARGIN_PX + x * size.width,
-                                                    y = QR_MARGIN_PX + y * size.height,
+                                                    x = quietZonePx + x * size.width,
+                                                    y = quietZonePx + y * size.height,
                                                 ),
                                             size = newSize,
                                         ),
@@ -212,6 +225,7 @@ private const val INTERIOR_BACKGROUND_EXTERIOR_SHAPE_CORNER_RADIUS = 0.5f
  * @param finderPatternSize [Size] of each finder patten, based on the QR code spec
  */
 internal fun DrawScope.drawQrCodeFinders(
+    quietZonePx: Float,
     sideLength: Float,
     finderPatternSize: Size,
     cornerRadius: CornerRadius,
@@ -219,11 +233,11 @@ internal fun DrawScope.drawQrCodeFinders(
 ) {
     setOf(
         // Draw top left finder pattern.
-        Offset(x = QR_MARGIN_PX, y = QR_MARGIN_PX),
+        Offset(x = quietZonePx, y = quietZonePx),
         // Draw top right finder pattern.
-        Offset(x = sideLength - (QR_MARGIN_PX + finderPatternSize.width), y = QR_MARGIN_PX),
+        Offset(x = sideLength - (quietZonePx + finderPatternSize.width), y = quietZonePx),
         // Draw bottom finder pattern.
-        Offset(x = QR_MARGIN_PX, y = sideLength - (QR_MARGIN_PX + finderPatternSize.height)),
+        Offset(x = quietZonePx, y = sideLength - (quietZonePx + finderPatternSize.height)),
     ).forEach { offset ->
         drawQrCodeFinder(
             topLeft = offset,

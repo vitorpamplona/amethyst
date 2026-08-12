@@ -25,9 +25,14 @@ package com.vitorpamplona.quartz.marmot.mls.crypto
  *
  * Used in TreeKEM for path secret encryption via HPKE.
  *
- * Platform-specific implementations:
- * - JVM/Android: java.security XDH (Java 11+, Android API 31+)
- * - Native: expect/actual with platform crypto
+ * All platform actuals (jvmAndroid, apple, linux) are the SAME pure-Kotlin
+ * Montgomery-ladder implementation over [Curve25519Field] (a TweetNaCl port) —
+ * they intentionally do NOT delegate to a platform provider such as
+ * `java.security` XDH, because Android's KeyStore/JCA integration for raw X25519
+ * keys is unreliable across API levels. `dh()` rejects an all-zero shared secret
+ * per RFC 7748 §6.1; note the ladder relies on branch-uniform (mask-based)
+ * selection but, being pure Kotlin on the JVM/ART, carries no hardware
+ * constant-time guarantee.
  */
 expect object X25519 {
     /**

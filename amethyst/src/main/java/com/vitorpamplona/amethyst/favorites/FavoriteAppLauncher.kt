@@ -165,27 +165,17 @@ object FavoriteAppLauncher {
         return when (event) {
             is RootNappletEvent ->
                 NappletLauncher.buildLaunchParams(
-                    context,
-                    event.paths(),
-                    event.servers(),
-                    event.pubKey,
-                    "",
-                    event.declaredAggregateHash() ?: event.computeAggregateHash(),
-                    event.title() ?: "Napplet",
-                    event.requires(),
-                    HostProfile.NAPPLET,
+                    context = context,
+                    manifest = event,
+                    authorPubKey = event.pubKey,
+                    identifier = "",
                 )
             is NamedNappletEvent ->
                 NappletLauncher.buildLaunchParams(
-                    context,
-                    event.paths(),
-                    event.servers(),
-                    event.pubKey,
-                    event.identifier(),
-                    event.declaredAggregateHash() ?: event.computeAggregateHash(),
-                    event.title() ?: event.identifier(),
-                    event.requires(),
-                    HostProfile.NAPPLET,
+                    context = context,
+                    manifest = event,
+                    authorPubKey = event.pubKey,
+                    identifier = event.identifier(),
                 )
             is RootSiteEvent ->
                 NappletLauncher.buildLaunchParams(

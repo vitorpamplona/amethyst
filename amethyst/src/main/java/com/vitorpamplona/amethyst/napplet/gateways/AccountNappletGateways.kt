@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentSummary
 import com.vitorpamplona.amethyst.napplet.NappletNotificationStore
+import com.vitorpamplona.amethyst.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.napplet.buildConnectInfo
 import com.vitorpamplona.amethyst.napplet.buildSignerConsentInfo
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
@@ -255,7 +256,7 @@ class AccountNappletGateways(
                 emptyList()
             } else {
                 runCatching {
-                    account.client.fetchAll(filters = relays.associateWith { filters }, timeoutMs = QUERY_TIMEOUT.inWholeMilliseconds)
+                    account.client.fetchAll(filters = relays.associateWith { filters }, idleTimeoutMs = QUERY_TIMEOUT.inWholeMilliseconds)
                 }.getOrDefault(emptyList())
             }
         val fromCache = filters.flatMap { filter -> account.cache.filter(filter).mapNotNull { it.event } }
@@ -265,7 +266,8 @@ class AccountNappletGateways(
                 .distinctBy { it.id }
                 .sortedByDescending { it.createdAt }
         val limit = filters.mapNotNull { it.limit }.maxOrNull()
-        return limit?.let { merged.take(it) } ?: merged
+        val limited = limit?.let { merged.take(it) } ?: merged
+        return limited.mapNotNull { NappletRelayCleartext.forDelivery(it, account.signer) }
     }
 
     /**
@@ -279,7 +281,7 @@ class AccountNappletGateways(
         }
 
         val result = CompletableDeferred<String?>()
-        account.sendZapPaymentRequestFor(invoice, null) { response ->
+        account.zaps.sendZapPaymentRequestFor(invoice, null) { response ->
             when (response) {
                 is PayInvoiceSuccessResponse -> result.complete(response.result?.preimage)
                 is PayInvoiceErrorResponse -> result.completeExceptionally(RuntimeException(response.error?.message ?: "Payment failed."))

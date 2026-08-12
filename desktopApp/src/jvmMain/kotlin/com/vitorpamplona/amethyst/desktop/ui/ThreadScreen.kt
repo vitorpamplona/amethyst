@@ -39,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -194,12 +193,10 @@ fun ThreadScreen(
         onDispose { subId?.let { coordinator.releaseInteractions(it) } }
     }
 
-    // Load metadata for thread authors via coordinator
-    LaunchedEffect(threadNotes, subscriptionsCoordinator) {
-        if (subscriptionsCoordinator != null && threadNotes.isNotEmpty()) {
-            subscriptionsCoordinator.loadMetadataForNotes(threadNotes)
-        }
-    }
+    // Thread-author metadata + note interactions now load per row: each thread
+    // note renders through NoteCard, which opens composition-scoped UserFinder +
+    // EventFinder subscriptions. (requestInteractions above remains the thread's
+    // explicit interaction-refresh path.)
 
     // Fetch quoted notes referenced in thread content
     val quotedNoteIds =

@@ -203,6 +203,7 @@
     <string name="connection_success_rate_description">Prozentsatz erfolgreicher Verbindungen zum Relay</string>
     <string name="search_and_add_a_user">Benutzer suchen und hinzufügen</string>
     <string name="add_a_relay">Relay hinzufügen</string>
+    <string name="relay_url_not_valid">Keine gültige Relay-Adresse. Verwende einen Hostnamen oder eine IP-Adresse in Klammern (zum Beispiel [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Mein @tag-Name</string>
     <string name="display_name">Anzeigename</string>
     <string name="my_display_name">Mein Anzeigename</string>
@@ -1940,6 +1941,97 @@
         <item quantity="one">Mit %1$d Relay verbunden</item>
         <item quantity="other">Mit %1$d Relays verbunden</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d Relay</item>
+        <item quantity="other">%1$s \u00b7 %2$d Relays</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Stöbern</string>
+    <string name="relay_purpose_media">Medien</string>
+    <string name="relay_purpose_tags">Hashtags</string>
+    <string name="relay_purpose_topics">Themen</string>
+    <string name="relay_purpose_thread">Unterhaltung</string>
+    <string name="relay_purpose_search">Suche</string>
+    <string name="relay_purpose_referenced">Fehlende Events finden</string>
+    <string name="relay_purpose_engagement">Events beobachten</string>
+    <string name="relay_explain_referenced">Holt Events per ID, auf die etwas auf deinem Bildschirm verweist, die du aber noch nicht hast — ein Zitat, die übergeordnete Antwort, eine Thread-Wurzel.</string>
+    <string name="relay_explain_engagement">Beobachtet die gerade angezeigten Events auf neue Antworten, Reaktionen, Reposts, Zaps und Meldungen, damit die Zähler beim Lesen aktuell bleiben.</string>
+    <string name="relay_purpose_add_ons">Erweiterungen</string>
+    <string name="relay_purpose_relay_info">Relay-Info</string>
+    <string name="relay_purpose_other">Sonstiges</string>
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Relay-Listen-Finder</string>
+    <string name="relay_purpose_observing_profiles">Profile beobachten</string>
+    <string name="relay_purpose_your_account">Kontodaten</string>
+    <string name="relay_purpose_home_feed">Startseiten-Feed</string>
+    <string name="relay_purpose_relay_groups">Relay-Gruppen</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d Gruppe</item>
+        <item quantity="other">%1$d Gruppen</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">Verschwindende Chats</string>
+    <string name="relay_purpose_geohash_chats">Standort-Chats</string>
+    <string name="relay_purpose_live_chat">Live-Stream-Chat</string>
+    <string name="relay_explain_relay_groups">NIP-29-Gruppen, denen du beigetreten bist. Jede Gruppe liegt auf einem Host-Relay, daher verbindet sich die App mit jedem Relay, das eine deiner Gruppen beherbergt.</string>
+    <string name="relay_explain_ephemeral_chats">Chaträume ohne Verlauf — Nachrichten existieren nur, solange du verbunden bist, deshalb bleiben sie abonniert, damit überhaupt etwas ankommt.</string>
+    <string name="relay_explain_geohash_chats">Standortbasierte Räume für die Gebiete, denen du folgst, abgefragt bei den Relays, die sie führen.</string>
+    <string name="relay_explain_live_chat">Chat und Zap-Ziele, die an Live-Streams hängen, die du geöffnet hast oder denen du folgst.</string>
+    <string name="relay_purpose_dm_inbox">DM-Posteingang</string>
+    <string name="relay_purpose_your_wallet">Wallet</string>
+    <string name="relay_purpose_nutzap_inbox">Nutzap-Posteingang</string>
+    <string name="relay_purpose_mint_directory">Mint-Verzeichnis</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
+    <string name="relay_purpose_community_chats">Community-Chats</string>
+    <string name="relay_purpose_community_feeds">Community-Feeds</string>
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <string name="relay_explain_notifications">Deine Posteingangs-Relays plus eine kleine, rotierende Stichprobe der Relays, auf denen deine Gefolgten veröffentlichen, falls eine Erwähnung woanders zugestellt wurde.</string>
+    <string name="relay_explain_direct_messages">Deine DM-Posteingangs-Relays, an die Gift-Wrap-Nachrichten zugestellt werden.</string>
+    <string name="relay_explain_public_chats">Das Heim-Relay jedes Chats, den du geöffnet hast oder dem du beigetreten bist.</string>
+    <string name="relay_explain_community_chats">Die Relays, auf denen jede Community ihre Planes veröffentlicht.</string>
+    <string name="relay_explain_encrypted_groups">Gruppennachrichten und Schlüsselpakete auf den Relays der jeweiligen Gruppe.</string>
+    <string name="relay_explain_live_rooms">Die Relays des Raums, solange er geöffnet ist.</string>
+    <string name="relay_explain_account_data">Dein eigenes Profil, deine Einstellungen und Entwürfe auf deinen Heim-Relays.</string>
+    <string name="relay_explain_profiles">Profile der gerade angezeigten Personen.</string>
+    <string name="relay_explain_relay_lists">Findet heraus, auf welchen Relays jede Person veröffentlicht, damit ihre Beiträge an der richtigen Stelle abgerufen werden können.</string>
+    <string name="relay_explain_follows">Folgelisten, aus denen dein Feed und dein Web of Trust aufgebaut werden.</string>
+    <string name="relay_explain_moderation">Meldungen, die deine Gefolgten über die gerade angezeigten Profile geschrieben haben, abgefragt bei jedem Relay, auf dem diese Gefolgten veröffentlichen.</string>
+    <string name="relay_purpose_reports_from_follows">Meldungen von Gefolgten</string>
+    <string name="relay_explain_wallet">Deine eigenen Wallet-Events, zurückgelesen von den Relays, auf denen du sie veröffentlicht hast.</string>
+    <string name="relay_explain_nutzap_inbox">Lauscht auf deinen Nutzap-Relays sowie deinen Posteingangs- und DM-Relays, damit keine Zahlung durchrutscht.</string>
+    <string name="relay_explain_mint_directory">Sucht über Relays hinweg, welche Mints existieren und welche empfohlen werden.</string>
+    <string name="relay_explain_nwc">Benachrichtigungen von deiner verbundenen Wallet.</string>
+    <string name="active_subs_title">Aktive Relay-Abonnements</string>
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d Filter</item>
+        <item quantity="other">%1$d Filter</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d Relay</item>
+        <item quantity="other">%1$d Relays</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d Filter ist noch nicht zugeordnet</item>
+        <item quantity="other">%1$d Filter sind noch nicht zugeordnet</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Keinem Konto zugeordnet</string>
+    <string name="active_subs_no_entity">Alle</string>
+    <string name="active_subs_scope_global">Jeder</string>
+    <string name="active_subs_scope_follows">Personen, denen du folgst</string>
+    <string name="active_subs_scope_authors">Eine ausgewählte Liste von Personen</string>
+    <string name="active_subs_scope_muted">Stummgeschaltete Personen</string>
+    <string name="active_subs_scope_all_communities">Deine Communitys</string>
+    <string name="active_subs_scope_algo">Ein bevorzugter Feed-Algorithmus</string>
+    <string name="active_subs_share">%1$d %% von allen</string>
+    <string name="active_subs_search_keywords">abonnements subscriptions filter relays anfragen reqs verbindungen warum diagnose</string>
+    <string name="relay_explain_home">Beiträge von Personen, denen du folgst, gelesen von den Relays, auf denen jede von ihnen veröffentlicht.</string>
     <string name="always_on_notif_connecting">Verbinde mit Inbox-Relays\u2026</string>
     <string name="always_on_notif_setting_title">Dauerhafter Benachrichtigungsdienst</string>
     <string name="always_on_notif_setting_description">Hält eine dauerhafte Verbindung zu deinen Inbox-Relays für sofortige Benachrichtigungen aufrecht. Zeigt eine fortlaufende Benachrichtigung an. Verbraucht mehr Akku, stellt aber sicher, dass du keine Nachricht verpasst.</string>
@@ -2138,13 +2230,17 @@
     <string name="settings_section_home_tabs">Sichtbare Tabs</string>
     <string name="settings_section_home_content_types">Inhalte im Feed</string>
     <string name="home_content_type_text_notes">Textnotizen</string>
+    <string name="home_content_type_reposts">Reposts</string>
     <string name="home_content_type_comments">Kommentare &amp; Antworten</string>
     <string name="home_content_type_pictures">Bilder</string>
+    <string name="home_content_type_videos">Videos</string>
     <string name="home_content_type_shorts">Kurzvideos</string>
     <string name="home_content_type_articles">Artikel</string>
     <string name="home_content_type_wiki">Wiki-Seiten</string>
+    <string name="home_content_type_highlights">Highlights</string>
     <string name="home_content_type_polls">Umfragen</string>
     <string name="home_content_type_classifieds">Kleinanzeigen</string>
+    <string name="home_content_type_torrents">Torrents</string>
     <string name="home_content_type_voice">Sprachnachrichten</string>
     <string name="home_content_type_live_activities">Live-Aktivitäten</string>
     <string name="home_content_type_ephemeral_chat">Ephemere Chats</string>
@@ -2154,6 +2250,7 @@
     <string name="home_content_type_attestations">Attestierungen</string>
     <string name="home_content_type_nips">NIP-Entwürfe</string>
     <string name="home_content_type_music">Musik &amp; Audio</string>
+    <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_fundraisers">Spendenaktionen</string>
     <string name="settings_section_reminders">Erinnerungen</string>
     <string name="wallet_connect">Wallet Verbindung</string>
@@ -2216,8 +2313,10 @@
     <string name="geohash_exclusive">Standort-exklusiver Beitrag</string>
     <string name="geohash_exclusive_explainer">Nur Follower des Ortes werden es sehen. Deine allgemeinen Follower werden es nicht sehen.</string>
     <string name="hashtag_exclusive">Hashtag-exklusive Beitrag</string>
+    <string name="external_content_title">Externe Inhalte</string>
     <string name="external_url_scope">Eine Webseite kommentieren</string>
     <string name="external_id_scope">Eine externe Ressource kommentieren</string>
+    <string name="url_preview_open_in_browser">Im Browser öffnen</string>
     <string name="long_form_reading_minutes">%1$d Min. Lesezeit</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d Titel</item>
@@ -2349,6 +2448,7 @@
     <string name="relay_group_create_title">Eine Gruppe erstellen</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="buzz_channel_create_title">Neuer Kanal</string>
+    <string name="buzz_forum_create_title">Neues Forum</string>
     <string name="buzz_channel_flag_private">Privater Kanal</string>
     <string name="buzz_channel_flag_private_desc">Aus der Kanalliste ausgeblendet und nur mit Einladung. Aus bedeutet, dass jeder auf diesem Relay ihn finden und beitreten kann.</string>
     <string name="buzz_channel_flag_forum">Forumskanal</string>
@@ -2391,6 +2491,8 @@
     <string name="relay_group_delete_confirm">„%1$s“ löschen? Damit werden die Gruppe und ihr Verlauf für alle entfernt, und das lässt sich nicht rückgängig machen.</string>
     <string name="buzz_channel_delete">Kanal löschen</string>
     <string name="buzz_channel_delete_confirm">„%1$s“ löschen? Damit werden der Kanal und seine Nachrichten für alle entfernt, und das lässt sich nicht rückgängig machen.</string>
+    <string name="buzz_channel_archive">Kanal archivieren</string>
+    <string name="buzz_channel_unarchive">Kanal aus dem Archiv nehmen</string>
     <string name="relay_group_threads_title">Threads</string>
     <string name="relay_group_pin_message">Nachricht anheften</string>
     <string name="relay_group_unpin_message">Nachricht loslösen</string>
@@ -2533,6 +2635,9 @@
     <string name="share_to_dm_title">Senden an…</string>
     <string name="share_to_dm_start_new">Neue Nachricht</string>
     <string name="share_target_as_highlight">Neues Highlight</string>
+    <string name="share_target_as_picture">Neues Bild</string>
+    <string name="share_target_as_short_video">Neuer Kurzfilm</string>
+    <string name="share_target_as_video">Neues Video</string>
     <string name="new_highlight_title">Neues Highlight</string>
     <string name="new_highlight_passage_label">Hervorgehobener Text</string>
     <string name="new_highlight_passage_placeholder">Was ist dir aufgefallen?</string>
@@ -3116,6 +3221,19 @@
     <string name="bottom_bar_category_feeds">Feeds</string>
     <string name="bottom_bar_category_apps">Apps &amp; Web</string>
     <string name="bottom_bar_category_other">Sonstiges</string>
+    <string name="drawer_settings">Seitenmenü</string>
+    <string name="drawer_settings_title">Dein Seitenmenü</string>
+    <string name="drawer_settings_description">Öffne einen Bereich und schalte die Zeilen aus, die du nie nutzt. Einstellungen bleibt immer sichtbar, damit du jederzeit hierher zurückkommst. Die Reihenfolge der Bereiche ist fest.</string>
+    <string name="drawer_settings_sections">Bereiche</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d ausgeblendet</item>
+        <item quantity="other">%1$d ausgeblendet</item>
+    </plurals>
+    <string name="drawer_settings_visible">Sichtbar</string>
+    <string name="drawer_settings_hidden">Ausgeblendet</string>
+    <string name="drawer_settings_always_on">Immer an</string>
+    <string name="drawer_settings_show_all">Alle anzeigen</string>
+    <string name="drawer_settings_hide_all">Alle ausblenden</string>
     <string name="home_tabs_settings">Startseiten-Tabs</string>
     <string name="home_tabs_settings_description">Wähle, welche Tabs auf der Startseite erscheinen. Wenn nur ein Tab aktiv ist, wird die Tab-Leiste ausgeblendet.</string>
     <string name="home_tab_everything">Alles</string>
@@ -3295,6 +3413,7 @@
     <string name="buzz_import_empty_body">Du scheinst noch in keinem Kanal auf diesem Relay Mitglied zu sein. Nimm zuerst die Workspace-Einladung im Browser an und versuche es dann erneut.</string>
     <string name="relay_group_section_channels">Kanäle</string>
     <string name="relay_group_section_forums">Foren</string>
+    <string name="relay_group_section_archived">Archiviert</string>
     <string name="buzz_agent_working">Arbeitet…</string>
     <string name="relay_group_add_member">Mitglied hinzufügen</string>
     <string name="buzz_community_add_people">Personen zu diesem Workspace hinzufügen</string>
@@ -3487,6 +3606,11 @@
     <string name="git_repo_settings_topics">Themen (durch Komma getrennt)</string>
     <string name="git_repo_settings_save">Speichern</string>
     <string name="git_repositories">Git Repositories</string>
+    <string name="highlights">Highlights</string>
+    <string name="git_repositories_search_open">Repositories filtern</string>
+    <string name="git_repositories_search_close">Filter schließen</string>
+    <string name="git_repositories_search_placeholder">Nach Name, Thema, Host, Betreuer filtern…</string>
+    <string name="git_repositories_search_no_results">Keine Repositories im aktuellen Feed passen zu dieser Suche.</string>
     <string name="nsite_title">Statische Website: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Berechtigungen:</string>
@@ -3717,6 +3841,8 @@
     <string name="resource_usage_send_section">Mit den Entwicklern teilen</string>
     <string name="resource_usage_send_explanation">Wenn Amethyst Akku oder Daten zu verbrauchen scheint, kannst du diesen Bericht in einer verschlüsselten DM an die Entwickler senden. Er enthält nur die Zahlen auf diesem Bildschirm und die technischen Zähler dahinter — keine Beiträge, Kontakte oder Browserdetails. Es wird nichts gesendet, bis du im Nachrichtenbildschirm auf Senden tippst.</string>
     <string name="resource_usage_send_button">Bericht per DM senden</string>
+    <string name="resource_usage_copy_button">Kopieren</string>
+    <string name="resource_usage_share_button">Teilen</string>
     <string name="resource_usage_alert_title">Hohe Ressourcennutzung erkannt</string>
     <string name="resource_usage_alert_message">Amethyst hat in letzter Zeit mehr als erwartet verbraucht: %1$s. Möchtest du einen Nutzungsbericht in einer verschlüsselten DM an die Entwickler senden? Du siehst den vollständigen Bericht, bevor etwas gesendet wird.</string>
     <string name="resource_usage_reason_bg_data">%1$s mobile Daten im Hintergrund an einem Tag</string>
@@ -4522,6 +4648,7 @@
     <string name="new_conversation_location_pro_2">Bitchat-kompatibel; erreicht Nutzer in der Nähe auf denselben Relays.</string>
     <string name="new_conversation_location_con_1">Öffentlich und flüchtig — kein Verlauf, jeder in der Zelle kann es lesen.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_job_board_title">Backlog</string>
     <string name="buzz_workflow_runs_title">Workflow-Läufe</string>
     <string name="buzz_agent_work_title">Agentenarbeit</string>
     <string name="buzz_workflow_new_run">Neuer Lauf</string>
@@ -4532,6 +4659,7 @@
     <string name="buzz_workflow_gate_needs_you">Benötigt deine Genehmigung</string>
     <string name="buzz_workflow_gate_awaiting">Wartet auf Genehmigung</string>
     <string name="buzz_workflow_no_description">(keine Beschreibung)</string>
+    <string name="buzz_workflow_id_prefix">Workflow: %1$s</string>
     <string name="buzz_workflow_by">von</string>
     <string name="buzz_workflow_waiting_on">wartet auf</string>
     <string name="buzz_workflow_readonly_approver">Du bist der Genehmigende, aber diese Anmeldung kann keine Entscheidung signieren.</string>
@@ -4567,11 +4695,13 @@
     <string name="buzz_workflow_no_defs_hint">Noch keine Workflows. Öffne das Menü oben und wähle „Neue Definition…“, um einen zu erstellen, und löse ihn dann aus.</string>
     <string name="buzz_workflow_task_label">Was soll er tun?</string>
     <string name="buzz_workflow_trigger_run">Lauf auslösen</string>
+    <string name="buzz_workflow_picker_label">Workflow</string>
     <string name="buzz_workflow_picker_empty">Noch keine Workflows definiert</string>
     <string name="buzz_workflow_picker_choose">Workflow auswählen</string>
     <string name="buzz_workflow_new_definition">Neue Definition…</string>
     <string name="buzz_workflow_def_title">Neue Workflow-Definition</string>
     <string name="buzz_workflow_def_desc">Benennt ihn für den Kanal und veröffentlicht sein YAML-Rezept (kind-30620). Ein echtes Buzz-Relay führt das YAML aus. Selbst gehostet führt der Runner seinen konfigurierten Befehl aus — hier benennt und katalogisiert die Definition den Lauf nur.</string>
+    <string name="buzz_workflow_def_name">Name</string>
     <string name="buzz_workflow_def_name_hint">build-und-test</string>
     <string name="buzz_workflow_def_yaml">YAML-Rezept</string>
     <string name="buzz_workflow_def_publish_failed">Die Definition konnte nicht veröffentlicht werden — prüfe, ob du in diesem Workspace posten kannst.</string>

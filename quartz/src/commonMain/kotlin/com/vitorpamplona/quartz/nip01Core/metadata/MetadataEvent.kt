@@ -93,7 +93,11 @@ class MetadataEvent(
             EMPTY_METADATA_JSON
         } else {
             try {
-                Json.parseToJsonElement(content) as JsonObject
+                // Must use the same lenient parser as contactMetaData(). A profile
+                // Amethyst can render but not re-read as JSON makes updateFromPast
+                // fall back to an empty map, silently wiping every field we do not
+                // manage ourselves the next time this user edits their profile.
+                JsonMapper.jsonInstance.parseToJsonElement(content) as JsonObject
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("MetadataEvent") { "Content Parse Error: ${toNostrUri()} ${e.message}" }

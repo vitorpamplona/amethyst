@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
 import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
@@ -57,7 +58,9 @@ fun filterLastMessageFollowingPublicChats(
                     // Metadata comes from any relay
                     relay = it.key,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.PUBLIC_CHATS,
+                            entityIds = it.value.sorted(),
                             kinds = listOf(ChannelMetadataEvent.KIND),
                             tags = mapOf("e" to it.value.sorted()),
                             since = since?.get(it.key)?.time,
@@ -67,7 +70,9 @@ fun filterLastMessageFollowingPublicChats(
                 RelayBasedFilter(
                     relay = it.key,
                     filter =
-                        Filter(
+                        ExplainedFilter(
+                            purpose = SubPurpose.PUBLIC_CHATS,
+                            entityIds = it.value.sorted(),
                             kinds = listOf(ChannelMessageEvent.KIND),
                             tags = mapOf("e" to it.value.sorted()),
                             since = since?.get(it.key)?.time,

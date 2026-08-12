@@ -150,7 +150,7 @@ fun GoalProgressBar(
 
     LaunchedEffect(key1 = zapsState) {
         zapsState?.note?.let {
-            val newZapAmount = accountViewModel.account.calculateZappedAmount(note)
+            val newZapAmount = accountViewModel.account.zaps.calculateZappedAmount(note)
             var percentage = newZapAmount.div(goalAmountSats.toBigDecimal()).toFloat()
             if (percentage > 1) percentage = 1f
 

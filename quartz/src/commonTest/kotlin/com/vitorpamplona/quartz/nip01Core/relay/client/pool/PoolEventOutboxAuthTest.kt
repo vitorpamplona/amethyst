@@ -62,13 +62,13 @@ class PoolEventOutboxAuthTest {
         relays.forEach { onSent(it, EventCmd(event)) }
     }
 
-    private fun PoolEventOutbox.nak(
+    private suspend fun PoolEventOutbox.nak(
         event: Event,
         relay: NormalizedRelayUrl,
         message: String,
     ) = onIncomingMessage(relay, OkMessage(event.id, false, message))
 
-    private fun PoolEventOutbox.ok(
+    private suspend fun PoolEventOutbox.ok(
         event: Event,
         relay: NormalizedRelayUrl,
     ) = onIncomingMessage(relay, OkMessage(event.id, true, ""))
@@ -104,67 +104,71 @@ class PoolEventOutboxAuthTest {
         }
 
     @Test
-    fun authRequiredResetsTheTriesBudgetAcrossManyResends() {
-        val outbox = PoolEventOutbox()
-        val ev = event("ff".repeat(32))
+    fun authRequiredResetsTheTriesBudgetAcrossManyResends() =
+        kotlinx.coroutines.test.runTest {
+            val outbox = PoolEventOutbox()
+            val ev = event("ff".repeat(32))
 
-        outbox.publish(ev, setOf(relay)) // first try
+            outbox.publish(ev, setOf(relay)) // first try
 
-        // A flapping relay / slow AUTH handshake re-pumps the still-pending event many more times
-        // than the 4-try cap, each NAK'd auth-required. newTry() (the send path) grows `tries` and
-        // is not auth-aware, so unless auth-required resets the retry budget these sends would trip
-        // Tries.isDone() and drop the event (with a spurious give-up) before AUTH ever lands.
-        repeat(8) { i ->
-            assertNull(outbox.onSent(relay, EventCmd(ev)), "must not give up on re-pump $i")
-            outbox.nak(ev, relay, "auth-required: authenticate first")
+            // A flapping relay / slow AUTH handshake re-pumps the still-pending event many more times
+            // than the 4-try cap, each NAK'd auth-required. newTry() (the send path) grows `tries` and
+            // is not auth-aware, so unless auth-required resets the retry budget these sends would trip
+            // Tries.isDone() and drop the event (with a spurious give-up) before AUTH ever lands.
+            repeat(8) { i ->
+                assertNull(outbox.onSent(relay, EventCmd(ev)), "must not give up on re-pump $i")
+                outbox.nak(ev, relay, "auth-required: authenticate first")
+            }
+            assertEquals(setOf(relay), outbox.pendingRelaysFor(ev.id))
+
+            // AUTH finally completes -> the event delivers.
+            outbox.ok(ev, relay)
+            assertNull(outbox.pendingRelaysFor(ev.id))
         }
-        assertEquals(setOf(relay), outbox.pendingRelaysFor(ev.id))
-
-        // AUTH finally completes -> the event delivers.
-        outbox.ok(ev, relay)
-        assertNull(outbox.pendingRelaysFor(ev.id))
-    }
 
     @Test
-    fun terminalRejectionStillDiscardsImmediately() {
-        val outbox = PoolEventOutbox()
-        val ev = event("cc".repeat(32))
+    fun terminalRejectionStillDiscardsImmediately() =
+        kotlinx.coroutines.test.runTest {
+            val outbox = PoolEventOutbox()
+            val ev = event("cc".repeat(32))
 
-        outbox.publish(ev, setOf(relay))
-        outbox.nak(ev, relay, "invalid: bad signature")
+            outbox.publish(ev, setOf(relay))
+            outbox.nak(ev, relay, "invalid: bad signature")
 
-        assertNull(outbox.pendingRelaysFor(ev.id))
-    }
-
-    @Test
-    fun givesUpAndSignalsAfterExhaustingTryBudget() {
-        val outbox = PoolEventOutbox()
-        val ev = event("ee".repeat(32))
-
-        // markAsSending + first onSent (1 try). Tries budget is >3 tries.
-        outbox.publish(ev, setOf(relay))
-        // attempts 2, 3 stay under budget and signal nothing.
-        assertNull(outbox.onSent(relay, EventCmd(ev)))
-        assertNull(outbox.onSent(relay, EventCmd(ev)))
-        // the 4th attempt exhausts the budget -> event is returned (gave up) and dropped.
-        assertEquals(ev.id, outbox.onSent(relay, EventCmd(ev))?.id)
-        assertNull(outbox.pendingRelaysFor(ev.id))
-    }
+            assertNull(outbox.pendingRelaysFor(ev.id))
+        }
 
     @Test
-    fun ordinaryTransientFailureStillBounded() {
-        val outbox = PoolEventOutbox()
-        val ev = event("dd".repeat(32))
+    fun givesUpAndSignalsAfterExhaustingTryBudget() =
+        kotlinx.coroutines.test.runTest {
+            val outbox = PoolEventOutbox()
+            val ev = event("ee".repeat(32))
 
-        outbox.publish(ev, setOf(relay))
-        // 3 non-auth error responses exhaust the retry budget. Responses only
-        // accumulate here; the drop happens on the next send attempt.
-        repeat(3) { outbox.nak(ev, relay, "error: rate-limited") }
-        assertEquals(setOf(relay), outbox.pendingRelaysFor(ev.id))
+            // markAsSending + first onSent (1 try). Tries budget is >3 tries.
+            outbox.publish(ev, setOf(relay))
+            // attempts 2, 3 stay under budget and signal nothing.
+            assertNull(outbox.onSent(relay, EventCmd(ev)))
+            assertNull(outbox.onSent(relay, EventCmd(ev)))
+            // the 4th attempt exhausts the budget -> event is returned (gave up) and dropped.
+            assertEquals(ev.id, outbox.onSent(relay, EventCmd(ev))?.id)
+            assertNull(outbox.pendingRelaysFor(ev.id))
+        }
 
-        // The next resend attempt observes the exhausted budget and drops the event
-        // (unlike auth-required, which never poisons the budget).
-        outbox.onSent(relay, EventCmd(ev))
-        assertNull(outbox.pendingRelaysFor(ev.id))
-    }
+    @Test
+    fun ordinaryTransientFailureStillBounded() =
+        kotlinx.coroutines.test.runTest {
+            val outbox = PoolEventOutbox()
+            val ev = event("dd".repeat(32))
+
+            outbox.publish(ev, setOf(relay))
+            // 3 non-auth error responses exhaust the retry budget. Responses only
+            // accumulate here; the drop happens on the next send attempt.
+            repeat(3) { outbox.nak(ev, relay, "error: rate-limited") }
+            assertEquals(setOf(relay), outbox.pendingRelaysFor(ev.id))
+
+            // The next resend attempt observes the exhausted budget and drops the event
+            // (unlike auth-required, which never poisons the budget).
+            outbox.onSent(relay, EventCmd(ev))
+            assertNull(outbox.pendingRelaysFor(ev.id))
+        }
 }

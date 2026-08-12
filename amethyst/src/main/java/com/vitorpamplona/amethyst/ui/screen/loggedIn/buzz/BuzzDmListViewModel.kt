@@ -130,9 +130,7 @@ class BuzzDmListViewModel : ViewModel() {
 
         val newlyJoined = BuzzWorkspaces.join(relay)
         viewModelScope.launch { account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
-        // A join makes the relay first-party; if the socket was already open its one-shot AUTH
-        // challenge was spent unauthenticated, so reconnect to re-challenge and authenticate.
-        if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
+        if (newlyJoined) reconnectPoolAfterJoin(account.client)
 
         // Paint from cache BEFORE any network work. [discoverMemberChannels] learns the channel ids
         // from a relay round-trip, so waiting on it left the Direct Messages section visibly empty
@@ -200,7 +198,7 @@ class BuzzDmListViewModel : ViewModel() {
             )
         account.client.fetchAllWithHooks(
             filters = relays.associateWith { filters },
-            timeoutMs = 8_000,
+            idleTimeoutMs = 8_000,
             pendingOnAuthRequired = true,
         ) { relay, event ->
             (event as? MemberAddedNotificationEvent)?.channel()?.let { memberChannels[it] = relay }
@@ -215,7 +213,7 @@ class BuzzDmListViewModel : ViewModel() {
                 .groupBy({ it.value }, { it.key })
                 .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }
         if (byRelay.isEmpty()) return
-        account.client.fetchAllWithHooks(filters = byRelay, timeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
+        account.client.fetchAllWithHooks(filters = byRelay, idleTimeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
     }
 
     /**
@@ -254,7 +252,7 @@ class BuzzDmListViewModel : ViewModel() {
     fun removeFromMessages(row: DmRow) {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            account.hideBuzzDm(LocalCache.getOrCreateRelayGroupChannel(GroupId(row.channelId, row.relayUrl)))
+            account.relayGroups.hideBuzzDm(LocalCache.getOrCreateRelayGroupChannel(GroupId(row.channelId, row.relayUrl)))
         }
     }
 
@@ -268,7 +266,7 @@ class BuzzDmListViewModel : ViewModel() {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
             val me = account.userProfile().pubkeyHex
-            account.openBuzzDm(row.relayUrl, row.others.ifEmpty { listOf(me) })
+            account.relayGroups.openBuzzDm(row.relayUrl, row.others.ifEmpty { listOf(me) })
             // The relay's new 30622 normally arrives on the live subscription; refresh anyway so the
             // row returns even if this screen's socket missed the snapshot.
             refresh()

@@ -26,6 +26,7 @@ import com.vitorpamplona.geode.testing.RelayClientTest
 import com.vitorpamplona.geode.testing.preload
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropyLocalIndex
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.NegentropySyncException
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.negentropySync
@@ -36,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
+import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +50,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NostrClientNegentropySyncTest : RelayClientTest() {
@@ -252,6 +256,11 @@ class NostrClientNegentropySyncTest : RelayClientTest() {
      * The "try negentropy, else page" combinator: against the same over-cap relay
      * where raw [negentropySync] throws, [negentropySyncOrFetch] transparently pages
      * and delivers every event, reporting that it fell back.
+     *
+     * Every event here shares one `created_at`, so the whole filter IS the
+     * un-reconcilable window: it is drained as one paged window rather than by
+     * abandoning the sync, which is why `fallbackCause` is null. On a filter
+     * spanning more than this second, everything outside it still reconciles.
      */
     @Test
     fun orFetchPagesWhenNegentropyCannotReconcile() =
@@ -275,11 +284,9 @@ class NostrClientNegentropySyncTest : RelayClientTest() {
 
                 assertEquals(10, got.map { it.id }.toSet().size, "all events delivered via the paging fallback")
                 assertEquals(10, result.downloaded)
-                assertTrue(result.pagedFallback, "it should have fallen back to paging")
-                assertEquals(
-                    NegentropySyncException.Reason.OVER_MAX_SYNC_EVENTS,
-                    result.fallbackCause?.reason,
-                )
+                assertTrue(result.pagedFallback, "part of the range came over REQ, so this was not a clean reconcile")
+                assertEquals(1, result.pagedWindows, "exactly the one un-reconcilable window was paged")
+                assertNull(result.fallbackCause, "the sync was not abandoned — one window was drained by paging")
             } finally {
                 client.disconnect()
                 scope.cancel()
@@ -354,6 +361,123 @@ class NostrClientNegentropySyncTest : RelayClientTest() {
         }
 
     /**
+     * `wantId` declines ids BEFORE the download REQ, so the events never cross
+     * the wire — the point of putting the hook here rather than at `onEvent`.
+     *
+     * The assertion that matters is the one on the recorded `REQ` filters: a
+     * gate that merely dropped events after delivery would satisfy every other
+     * check in this test while saving nothing.
+     */
+    @Test
+    fun wantIdSkipsIdsBeforeTheyAreEverRequested() =
+        runBlocking {
+            // Every id the relay was actually asked for, straight off the wire.
+            val requested = java.util.Collections.synchronizedList(mutableListOf<String>())
+            val recording =
+                object : PassThroughPolicy() {
+                    override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> {
+                        cmd.filters.forEach { f -> f.ids?.let { requested.addAll(it) } }
+                        return PolicyResult.Accepted(cmd)
+                    }
+                }
+
+            val hub = InProcessRelays(defaultPolicy = { recording })
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client = NostrClient(hub, scope)
+            try {
+                val url = RelayUrlNormalizer.normalize("ws://127.0.0.1:7791/")
+                val events = (1..20).map { SyntheticEvents.fakeEvent(idSeed = it, kind = 1) }
+                hub.getOrCreate(url).preload(events)
+
+                // Decline the first ten by id.
+                val unwanted = events.take(10).map { it.id }.toSet()
+
+                val got = mutableListOf<Event>()
+                val result =
+                    withTimeout(30_000) {
+                        client.negentropySync(
+                            relay = url,
+                            filter = Filter(kinds = listOf(1)),
+                            idleTimeoutMs = 10_000L,
+                            wantId = { it !in unwanted },
+                        ) { got.add(it) }
+                    }
+
+                assertEquals(10, got.size, "only the wanted half is delivered")
+                assertTrue(got.none { it.id in unwanted }, "no declined event was delivered")
+                assertEquals(10, result.downloaded)
+                assertEquals(10, result.skipped, "the declined ids are reported apart from the download count")
+                assertEquals(
+                    20,
+                    result.needCount,
+                    "needCount stays the honest protocol diff — the relay really did have all 20 that we lacked",
+                )
+
+                // The whole point: the declined ids were never asked for.
+                assertTrue(
+                    requested.none { it in unwanted },
+                    "a declined id must never reach a REQ; requested = ${requested.filter { it in unwanted }}",
+                )
+                // Every wanted id WAS asked for — so the gate declined the right
+                // half rather than simply starving the download. Asserted as a
+                // subset rather than a count because negentropySync also opens a
+                // keep-alive subscription carrying a sentinel id.
+                assertTrue(
+                    requested.containsAll(events.drop(10).map { it.id }),
+                    "every wanted id should still have been requested",
+                )
+            } finally {
+                client.disconnect()
+                scope.cancel()
+                hub.close()
+            }
+        }
+
+    /** With no `wantId` nothing changes: every id is fetched and `skipped` is 0. */
+    @Test
+    fun withoutWantIdEveryIdIsStillRequested() =
+        runBlocking {
+            defaultRelay.preload(SyntheticEvents.batch(12, kind = 1))
+
+            val got = mutableListOf<Event>()
+            val result =
+                withTimeout(20_000) {
+                    client.negentropySync(
+                        relay = defaultRelayUrl,
+                        filter = Filter(kinds = listOf(1)),
+                    ) { got.add(it) }
+                }
+
+            assertEquals(12, got.size)
+            assertEquals(0, result.skipped, "no predicate means nothing is ever skipped")
+        }
+
+    /**
+     * A gate that declines everything must finish cleanly rather than hang: the
+     * empty batches are dropped instead of being queued as REQs for no ids.
+     */
+    @Test
+    fun wantIdDecliningEverythingDownloadsNothingAndStillCompletes() =
+        runBlocking {
+            defaultRelay.preload(SyntheticEvents.batch(15, kind = 1))
+
+            val got = mutableListOf<Event>()
+            val result =
+                withTimeout(20_000) {
+                    client.negentropySync(
+                        relay = defaultRelayUrl,
+                        filter = Filter(kinds = listOf(1)),
+                        wantId = { false },
+                    ) { got.add(it) }
+                }
+
+            assertTrue(got.isEmpty(), "nothing was wanted, so nothing is delivered")
+            assertEquals(0, result.downloaded)
+            assertEquals(15, result.skipped)
+            assertEquals(15, result.needCount, "the reconcile still saw the full diff")
+        }
+
+    /**
      * On a relay that reconciles fine, [negentropySyncOrFetch] uses negentropy and
      * does not page.
      */
@@ -374,5 +498,157 @@ class NostrClientNegentropySyncTest : RelayClientTest() {
             assertEquals(8, got.size)
             assertFalse(result.pagedFallback, "negentropy should have handled it")
             assertEquals(8, result.negentropy?.downloaded)
+        }
+
+    /**
+     * The caller's own count splits a window BEFORE the relay is asked for it.
+     *
+     * Nothing here overflows — the relay would have reconciled the whole filter
+     * in one NEG-OPEN — so every split is driven by [NegentropyLocalIndex.count]
+     * against `targetWindow`. That is what bounds the entries a caller has to
+     * materialise: without it the first (and only) window is the whole filter,
+     * and the local set for it is the whole corpus.
+     */
+    @Test
+    fun targetWindowSplitsFromTheLocalCountAlone() =
+        runBlocking {
+            // 40 seconds of history, one event each; we already hold the even ones.
+            val all = (0 until 40).map { SyntheticEvents.fakeEvent(idSeed = it + 1, kind = 1, createdAt = 1000L + it) }
+            defaultRelay.preload(all)
+            val ours = all.filterIndexed { i, _ -> i % 2 == 0 }.map { IdAndTime(it.createdAt, it.id) }
+
+            val asked = mutableListOf<Filter>()
+            val index =
+                object : NegentropyLocalIndex {
+                    val inner = NegentropyLocalIndex.of(ours)
+
+                    override suspend fun count(window: Filter): Int {
+                        asked += window
+                        return inner.count(window) ?: 0
+                    }
+
+                    override suspend fun entriesFor(window: Filter) = inner.entriesFor(window)
+                }
+
+            val got = mutableListOf<Event>()
+            val result =
+                withTimeout(60_000) {
+                    client.negentropySync(
+                        relay = defaultRelayUrl,
+                        filter = Filter(kinds = listOf(1)),
+                        localIndex = index,
+                        targetWindow = 5,
+                    ) { got.add(it) }
+                }
+
+            assertEquals(20, got.map { it.id }.toSet().size, "only the half we lacked comes down")
+            assertTrue(result.windows > 1, "the local count alone must have split the filter")
+            assertTrue(asked.isNotEmpty(), "windows must be counted before they are asked for")
+            assertNull(result.peerCap, "nothing was refused, so there is no cap to report")
+        }
+
+    /** Passing no target keeps the old shape: one window until the relay objects. */
+    @Test
+    fun withoutATargetTheLocalCountIsNeverConsulted() =
+        runBlocking {
+            defaultRelay.preload(SyntheticEvents.batch(20, kind = 1))
+            var counted = 0
+            val index =
+                object : NegentropyLocalIndex {
+                    override suspend fun count(window: Filter): Int {
+                        counted++
+                        return 1_000_000
+                    }
+
+                    override suspend fun entriesFor(window: Filter) = emptyList<IdAndTime>()
+                }
+
+            val result =
+                withTimeout(20_000) {
+                    client.negentropySync(
+                        relay = defaultRelayUrl,
+                        filter = Filter(kinds = listOf(1)),
+                        localIndex = index,
+                    ) { }
+                }
+
+            assertEquals(0, counted, "targetWindow = 0 must not ask the store anything")
+            assertEquals(1, result.windows)
+            assertEquals(20, result.downloaded)
+        }
+
+    /**
+     * A relay that refuses for size states its cap, and the client reports it —
+     * so the next sync can start at a window that fits instead of rediscovering
+     * it by halving.
+     */
+    @Test
+    fun theRelaysCapIsReportedBack() =
+        runBlocking {
+            val hub = InProcessRelays(negentropySettings = NegentropySettings(maxSyncEvents = 3))
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client = NostrClient(hub, scope)
+            try {
+                val url = RelayUrlNormalizer.normalize("ws://127.0.0.1:7786/")
+                hub.getOrCreate(url).preload((0 until 12).map { SyntheticEvents.fakeEvent(idSeed = it + 1, kind = 1, createdAt = 1000L + it) })
+
+                val result =
+                    withTimeout(60_000) {
+                        client.negentropySync(relay = url, filter = Filter(kinds = listOf(1))) { }
+                    }
+
+                assertEquals(12, result.downloaded)
+                assertTrue(result.windows > 1)
+                assertEquals(3L, result.peerCap, "the relay stated its own max_sync_events")
+            } finally {
+                client.disconnect()
+                scope.cancel()
+                hub.close()
+            }
+        }
+
+    /**
+     * One second the relay will not reconcile at any window size costs that
+     * second, not the sync.
+     *
+     * The whole point of the [NegentropyOrFetchResult.pagedWindows] path: the
+     * dense second is drained over REQ while everything around it still
+     * reconciles. Before, the exception from that one window abandoned the whole
+     * sync and re-paged the entire filter — on a large corpus, exactly the cost
+     * negentropy was there to avoid.
+     */
+    @Test
+    fun oneUnreconcilableSecondDoesNotCostTheRestOfTheFilter() =
+        runBlocking {
+            val hub = InProcessRelays(negentropySettings = NegentropySettings(maxSyncEvents = 3))
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client = NostrClient(hub, scope)
+            try {
+                val url = RelayUrlNormalizer.normalize("ws://127.0.0.1:7787/")
+                // Ten events crammed into one second — no created_at window can
+                // separate them — plus five ordinary seconds around them.
+                val dense = (1..10).map { SyntheticEvents.fakeEvent(idSeed = it, kind = 1, createdAt = 1000L) }
+                val sparse = (0 until 5).map { SyntheticEvents.fakeEvent(idSeed = 100 + it, kind = 1, createdAt = 2000L + it) }
+                hub.getOrCreate(url).preload(dense + sparse)
+
+                val got = mutableListOf<Event>()
+                val result =
+                    withTimeout(60_000) {
+                        client.negentropySyncOrFetch(
+                            relay = url,
+                            filter = Filter(kinds = listOf(1)),
+                        ) { got.add(it) }
+                    }
+
+                assertEquals(15, got.map { it.id }.toSet().size, "everything is delivered, by whichever route")
+                assertEquals(1, result.pagedWindows, "only the dense second is paged")
+                assertNull(result.fallbackCause, "the sync itself was never abandoned")
+                val negentropy = assertNotNull(result.negentropy, "the rest of the range still reconciled")
+                assertTrue(negentropy.windows > 1)
+            } finally {
+                client.disconnect()
+                scope.cancel()
+                hub.close()
+            }
         }
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relay
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -31,8 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 /** One screen's request for the full channel directory of a single relay. */
 class RelayGroupsOnRelayQueryState(
     val relay: NormalizedRelayUrl,
-    val account: Account,
-)
+    override val account: Account,
+) : AccountScopedQuery
 
 /**
  * Subscribes to the relay-signed directory (kinds 39000-39003) of a single relay,

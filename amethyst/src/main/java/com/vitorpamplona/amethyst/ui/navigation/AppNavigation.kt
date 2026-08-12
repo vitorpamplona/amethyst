@@ -50,6 +50,9 @@ import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
+import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
+import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
+import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccount
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
@@ -138,6 +141,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordCreateScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordEditScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordHomeScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteLinksScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordInviteScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.ConcordMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.EphemeralChatScreen
@@ -238,6 +242,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.NewPodca
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.authoring.PodcastAuthoringScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.PollResultsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.ProductsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
@@ -252,6 +257,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.RelayInformationScre
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSyncScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip43.RelayMembersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.nip86.RelayManagementScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.subscriptions.ActiveSubscriptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.RequestToVanishScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish.VanishEventsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
@@ -262,6 +268,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BlockedUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.BottomBarSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.CallSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.ComposeSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.DrawerSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HiddenWordsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.HomeTabsSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.MessagesSettingsScreen
@@ -339,6 +346,15 @@ fun AppNavigation(
     CompositionLocalProvider(
         LocalScreenLayout provides screenLayout,
         LocalTabReselectCoordinator provides tabReselectCoordinator,
+        // Provide the shared finder CompositionLocals so any commons composable that
+        // uses the no-arg observeUser*/EventFinderFilterAssemblerSubscription(note)
+        // overloads works when rendered on Android (they error() if unprovided). Android's
+        // own UI uses the AccountViewModel overloads and doesn't strictly need these, but
+        // providing them removes the runtime trap for shared composables reaching the
+        // logged-in tree. (The :napplet process never renders these composables.)
+        LocalUserFinder provides accountViewModel.dataSources().userFinder,
+        LocalUserFinderAccount provides accountViewModel.account,
+        LocalEventFinder provides accountViewModel.dataSources().eventFinder,
     ) {
         AccountSwitcherAndLeftDrawerLayout(accountViewModel, accountSessionManager, nav) {
             Box(Modifier.fillMaxSize()) {
@@ -577,6 +593,7 @@ fun BuildNavigation(
         composableFromEnd<Route.MessagesSettings> { MessagesSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AudioVisualizerSettings> { AudioVisualizerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.BottomBarSettings> { BottomBarSettingsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.DrawerSettings> { DrawerSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.HomeTabsSettings> { HomeTabsSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileUiSettings> { ProfileUiSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.VideoPlayerSettings> { VideoPlayerSettingsScreen(accountViewModel, nav) }
@@ -591,6 +608,8 @@ fun BuildNavigation(
         composableFromEndArgs<Route.Nip47NWCSetup> { NIP47SetupScreen(accountViewModel, nav, it.nip47) }
         composableFromEndArgs<Route.UpdateZapAmount> { UpdateZapAmountScreen(accountViewModel, nav, it.nip47) }
         composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
+
+        composableFromEndArgs<Route.ActiveSubscriptions> { ActiveSubscriptionsScreen(accountViewModel, nav) }
         composableFromEnd<Route.EventSync> { EventSyncScreen(accountViewModel, nav) }
         composableFromEnd<Route.RequestToVanish> { RequestToVanishScreen(accountViewModel, nav) }
         composableFromEnd<Route.VanishEvents> { VanishEventsScreen(accountViewModel, nav) }
@@ -613,6 +632,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.ShareNoteAsQr> { ShareNoteAsQrScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.ContactListUsers> { ContactListUsersScreen(it.noteId, accountViewModel, nav) }
+        composableFromEndArgs<Route.PollResults> { PollResultsScreen(it.noteId, accountViewModel, nav) }
         composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.Url> { UrlScreen(it, accountViewModel, nav) }
@@ -736,6 +756,14 @@ fun BuildNavigation(
 
         composableFromEndArgs<Route.ConcordMembers> {
             ConcordMembersScreen(
+                communityId = it.communityId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromEndArgs<Route.ConcordInviteLinks> {
+            ConcordInviteLinksScreen(
                 communityId = it.communityId,
                 accountViewModel = accountViewModel,
                 nav = nav,

@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.IEoseManager
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.BundledUpdate
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountUiQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -60,7 +62,7 @@ class AccountFollowsLoaderSubAssembler(
     val scope: CoroutineScope,
     val authStatus: IAuthStatus,
     val failureTracker: RelayOfflineTracker,
-    val allKeys: () -> Set<AccountQueryState>,
+    val allKeys: () -> Set<AccountUiQueryState>,
 ) : IEoseManager {
     private val logTag = "AccountFollowsLoaderSubAssembler"
     private val orchestrator = SubscriptionController(client)
@@ -114,7 +116,7 @@ class AccountFollowsLoaderSubAssembler(
                     newEose(TimeUtils.now(), relay, forFilters)
                 }
 
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,
@@ -157,6 +159,15 @@ class AccountFollowsLoaderSubAssembler(
 
         val connectedRelays = client.connectedRelaysFlow().value
 
+        // Attributed only when one account is asking. The follow lists above are unioned across every
+        // logged-in account and the relays are then picked from that union, so with several accounts
+        // active no single one owns a given filter. Deduped by pubkey because `Account` uses identity
+        // equality.
+        val soleAccountPubKey =
+            accounts
+                .mapTo(mutableSetOf()) { it.userProfile().pubkeyHex }
+                .singleOrNull()
+
         val perRelay = pickRelaysToLoadUsers(users, accounts, connectedRelays, failureTracker.cannotConnectRelays, hasTried)
 
         hasTried.removeEveryoneBut(users)
@@ -165,7 +176,13 @@ class AccountFollowsLoaderSubAssembler(
             if (users.isNotEmpty()) {
                 RelayBasedFilter(
                     relay = relay,
-                    filter = Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = users.sorted()),
+                    filter =
+                        ExplainedFilter(
+                            purpose = SubPurpose.RELAY_LISTS,
+                            kinds = listOf(AdvertisedRelayListEvent.KIND),
+                            authors = users.sorted(),
+                            accountPubKeys = listOfNotNull(soleAccountPubKey),
+                        ),
                 )
             } else {
                 null
@@ -173,7 +190,7 @@ class AccountFollowsLoaderSubAssembler(
         }
     }
 
-    fun updateSubscriptions(keys: Set<AccountQueryState>) {
+    fun updateSubscriptions(keys: Set<AccountUiQueryState>) {
         val uniqueSubscribedAccounts = keys.associate { it.account.userProfile() to it.account }
 
         val allFilters = updateFilterForAllAccounts(uniqueSubscribedAccounts.values)

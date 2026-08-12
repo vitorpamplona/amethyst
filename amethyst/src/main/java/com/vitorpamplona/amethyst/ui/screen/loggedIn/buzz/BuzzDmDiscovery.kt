@@ -97,7 +97,7 @@ private suspend fun runBuzzDmDiscovery(
     // rather than returning empty.
     account.client.fetchAllWithHooks(
         filters = relays.associateWith { discoveryFilters },
-        timeoutMs = 8_000,
+        idleTimeoutMs = 8_000,
         pendingOnAuthRequired = true,
     ) { relay, event ->
         (event as? MemberAddedNotificationEvent)?.let { recordDiscovery(me, it, relay) }
@@ -135,7 +135,7 @@ private suspend fun fetchDmMetadata(
             .groupBy({ it.value }, { it.key })
             .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }
     if (byRelay.isEmpty()) return
-    account.client.fetchAllWithHooks(filters = byRelay, timeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
+    account.client.fetchAllWithHooks(filters = byRelay, idleTimeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
 }
 
 /**

@@ -191,7 +191,7 @@ object GrapeRankScore {
                     "observer" to observer,
                     "crawl_rounds" to (crawlStats?.rounds ?: 0),
                     "relays_contacted" to (crawlStats?.relaysContacted ?: 0),
-                    "relay_feedback" to if (ctx.relayDiagnostics.hadFeedback()) ctx.relayDiagnostics.snapshot() else null,
+                    "relay_feedback" to if (ctx.relayDiagnostics.hadFeedback()) ctx.relayDiagnostics.summary() else null,
                     "relay_throttling" to if (ctx.relayLimiter.hadThrottling()) ctx.relayLimiter.snapshot() else null,
                     "max_hop_reached" to (hopHistogram.keys.maxOrNull() ?: 0),
                     "users_by_hop" to hopHistogram.mapKeys { it.key.toString() },
@@ -303,7 +303,7 @@ object GrapeRankScore {
                 dropped++
                 continue
             }
-            builder.addReports(r.pubKey, r.reportedAuthor().map { it.pubkey })
+            builder.addReports(r.pubKey, r.reportedAuthor().map { it.pubKey })
         }
         if (dropped > 0) System.err.println("[graperank] dropped $dropped retracted reports (NIP-09 deletions)")
         return dropped

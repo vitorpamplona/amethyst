@@ -85,24 +85,45 @@
         ]
       },
       {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
+      {
+        "user": "vitorpamplona",
+        "languages": [
+          "Chinese Simplified",
+          "Czech",
+          "Dutch",
+          "German",
+          "Hindi",
+          "Hungarian",
+          "Polish",
+          "Portuguese, Brazilian",
+          "Slovenian",
+          "Swedish"
+        ]
+      },
+      {
         "user": "maxblake2015",
         "languages": [
           "Polish"
         ]
       },
       {
-        "user": "vitorpamplona",
+        "user": "rajs19420616",
+        "languages": [
+          "Hindi"
+        ]
+      },
+      {
+        "user": "davotoula",
         "languages": [
           "Czech",
           "German",
           "Portuguese, Brazilian",
           "Swedish"
-        ]
-      },
-      {
-        "user": "rajs19420616",
-        "languages": [
-          "Hindi"
         ]
       },
       {
@@ -171,10 +192,6 @@
       },
       {
         "user": "adhrasreoshiathoi",
-        "languages": []
-      },
-      {
-        "user": "davotoula",
         "languages": []
       },
       {
@@ -263,10 +280,6 @@
       },
       {
         "user": "D4rkFIow",
-        "languages": []
-      },
-      {
-        "user": "summoner001",
         "languages": []
       },
       {

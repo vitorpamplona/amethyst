@@ -37,8 +37,10 @@ import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip01Core.store.RawEvent
+import com.vitorpamplona.quartz.nip01Core.store.RejectionReason
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip77Negentropy.LiveNegentropyIndex
@@ -432,7 +434,7 @@ class SQLiteEventStore(
     }
 
     suspend fun insertEvent(event: Event) {
-        if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
+        if (event.isExpired()) throw SQLiteException(RejectionReason.EXPIRED)
         if (event.kind.isEphemeral()) return
 
         pool.useWriter { db ->
@@ -462,8 +464,9 @@ class SQLiteEventStore(
      *    stream still surfaces them; persistence is intentionally a
      *    no-op per NIP-01.
      *
-     * Outer-commit failure throws; the caller treats every entry as
-     * `Rejected` (this is what the IEventStore contract documents).
+     * Outer-commit failure throws; per the IEventStore contract a
+     * throw means "nothing in this batch was written", and the
+     * IngestQueue converts it to per-event `Failed`.
      */
     suspend fun batchInsertEvents(events: List<Event>): List<IEventStore.InsertOutcome> {
         if (events.isEmpty()) return emptyList()
@@ -488,7 +491,7 @@ class SQLiteEventStore(
         delta: LiveIndexDelta?,
     ): IEventStore.InsertOutcome {
         if (event.isExpired()) {
-            return IEventStore.InsertOutcome.Rejected("blocked: Cannot insert an expired event")
+            return IEventStore.InsertOutcome.Rejected(RejectionReason.EXPIRED)
         }
         if (event.kind.isEphemeral()) return IEventStore.InsertOutcome.Accepted
 
@@ -508,7 +511,31 @@ class SQLiteEventStore(
             // ROLLBACK shouldn't mask the original cause.
             runCatching { db.execSQL("ROLLBACK TRANSACTION TO SAVEPOINT $sp") }
             runCatching { db.execSQL("RELEASE SAVEPOINT $sp") }
-            IEventStore.InsertOutcome.Rejected(e.message ?: e::class.simpleName ?: "insert failed")
+            classifyRowError(e)
+        }
+    }
+
+    /**
+     * Which side failed decides whether the caller may drop the event.
+     * Policy refusals are recognizable — every schema trigger RAISEs with
+     * a `blocked:` prefix, the immutability guards say "not allowed", and
+     * a duplicate id is a constraint violation. Anything else (disk full,
+     * I/O error, schema drift) is the store failing to write an acceptable
+     * event: `Failed`, so a rising count is loud instead of blending into
+     * the duplicate tally.
+     */
+    private fun classifyRowError(e: Throwable): IEventStore.InsertOutcome {
+        val message = e.message ?: e::class.simpleName ?: RejectionReason.INSERT_FAILED
+        val refusal =
+            message.contains("blocked:") ||
+                message.contains("duplicate:") ||
+                message.contains(RejectionReason.PREFIX_REPLACED) ||
+                message.contains("not allowed") ||
+                message.contains("constraint", ignoreCase = true)
+        return if (refusal) {
+            IEventStore.InsertOutcome.Rejected(message)
+        } else {
+            IEventStore.InsertOutcome.Failed(message)
         }
     }
 
@@ -517,7 +544,7 @@ class SQLiteEventStore(
         private val delta: LiveIndexDelta?,
     ) : IEventStore.ITransaction {
         override fun insert(event: Event) {
-            if (event.isExpired()) throw SQLiteException("blocked: Cannot insert an expired event")
+            if (event.isExpired()) throw SQLiteException(RejectionReason.EXPIRED)
             if (event.kind.isEphemeral()) return
 
             innerInsertEvent(event, db, delta)
@@ -537,48 +564,58 @@ class SQLiteEventStore(
         }
     }
 
-    suspend fun <T : Event> query(filter: Filter): List<T> = pool.useReader { queryBuilder.query(filter, it) }
+    // Every filter-accepting read/delete strips NIP-50 extension tokens at
+    // this boundary: FTS5 treats `:` as column-filter syntax, so a raw
+    // `include:spam` reaching MATCH raises "no such column" instead of
+    // matching. This store implements no extensions, and NIP-50 says
+    // unsupported extensions are ignored — an extensions-only search
+    // therefore collapses to an unconstrained query, not match-nothing.
+    // Stores that DO interpret extensions receive the raw string from the
+    // relay layer and make their own call (see the IEventStore contract).
 
-    suspend fun <T : Event> query(filters: List<Filter>): List<T> = pool.useReader { queryBuilder.query(filters, it) }
+    suspend fun <T : Event> query(filter: Filter): List<T> = pool.useReader { queryBuilder.query(filter.strippingSearchExtensions(), it) }
+
+    suspend fun <T : Event> query(filters: List<Filter>): List<T> = pool.useReader { queryBuilder.query(filters.strippingSearchExtensions(), it) }
 
     suspend fun <T : Event> query(
         filter: Filter,
         onEach: (T) -> Unit,
-    ) = pool.useReader { queryBuilder.query(filter, it, onEach) }
+    ) = pool.useReader { queryBuilder.query(filter.strippingSearchExtensions(), it, onEach) }
 
     suspend fun <T : Event> query(
         filters: List<Filter>,
         onEach: (T) -> Unit,
-    ) = pool.useReader { queryBuilder.query(filters, it, onEach) }
+    ) = pool.useReader { queryBuilder.query(filters.strippingSearchExtensions(), it, onEach) }
 
-    suspend fun rawQuery(filter: Filter): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filter, it) }
+    suspend fun rawQuery(filter: Filter): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filter.strippingSearchExtensions(), it) }
 
-    suspend fun rawQuery(filters: List<Filter>): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filters, it) }
+    suspend fun rawQuery(filters: List<Filter>): List<RawEvent> = pool.useReader { queryBuilder.rawQuery(filters.strippingSearchExtensions(), it) }
 
     suspend fun rawQuery(
         filter: Filter,
         onEach: (RawEvent) -> Unit,
-    ) = pool.useReader { queryBuilder.rawQuery(filter, it, onEach) }
+    ) = pool.useReader { queryBuilder.rawQuery(filter.strippingSearchExtensions(), it, onEach) }
 
     suspend fun rawQuery(
         filters: List<Filter>,
         onEach: (RawEvent) -> Unit,
-    ) = pool.useReader { queryBuilder.rawQuery(filters, it, onEach) }
+    ) = pool.useReader { queryBuilder.rawQuery(filters.strippingSearchExtensions(), it, onEach) }
 
-    suspend fun planQuery(filter: Filter) = pool.useReader { queryBuilder.planQuery(filter, seedModule.hasher(it), it) }
+    suspend fun planQuery(filter: Filter) = pool.useReader { queryBuilder.planQuery(filter.strippingSearchExtensions(), seedModule.hasher(it), it) }
 
-    suspend fun planQuery(filters: List<Filter>) = pool.useReader { queryBuilder.planQuery(filters, seedModule.hasher(it), it) }
+    suspend fun planQuery(filters: List<Filter>) = pool.useReader { queryBuilder.planQuery(filters.strippingSearchExtensions(), seedModule.hasher(it), it) }
 
-    suspend fun count(filter: Filter): Int = pool.useReader { queryBuilder.count(filter, it) }
+    suspend fun count(filter: Filter): Int = pool.useReader { queryBuilder.count(filter.strippingSearchExtensions(), it) }
 
-    suspend fun count(filters: List<Filter>): Int = pool.useReader { queryBuilder.count(filters, it) }
+    suspend fun count(filters: List<Filter>): Int = pool.useReader { queryBuilder.count(filters.strippingSearchExtensions(), it) }
 
     suspend fun authorsMissingOutbox(): List<HexKey> = pool.useReader { queryBuilder.authorsMissingKind(AdvertisedRelayListEvent.KIND, it) }
 
     suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
         maxEntries: Int? = null,
-    ): List<IdAndTime> = pool.useReader { queryBuilder.snapshotIdsForNegentropy(filters, it, maxEntries) }
+        onProgress: ((collected: Int) -> Unit)? = null,
+    ): List<IdAndTime> = pool.useReader { queryBuilder.snapshotIdsForNegentropy(filters.strippingSearchExtensions(), it, maxEntries, onProgress) }
 
     // The invalidate() calls below run INSIDE useWriter: dropping the
     // index while still holding the mutex means no NEG-OPEN can seal a
@@ -588,7 +625,7 @@ class SQLiteEventStore(
 
     suspend fun delete(filter: Filter) {
         pool.useWriter {
-            queryBuilder.delete(filter, it)
+            queryBuilder.delete(filter.strippingSearchExtensions(), it)
             // Delete-by-filter can't itemize what it removed; drop the
             // live index and let the next NEG-OPEN rebuild from one scan.
             liveNegentropyIndex?.invalidate()
@@ -597,7 +634,7 @@ class SQLiteEventStore(
 
     suspend fun delete(filters: List<Filter>) {
         pool.useWriter {
-            queryBuilder.delete(filters, it)
+            queryBuilder.delete(filters.strippingSearchExtensions(), it)
             liveNegentropyIndex?.invalidate()
         }
     }

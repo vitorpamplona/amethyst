@@ -20,13 +20,19 @@
         <item quantity="one">+%1$d\nválasz</item>
         <item quantity="other">+%1$d\nválasz</item>
     </plurals>
+    <plurals name="dm_sender_reported">
+        <item quantity="one">%1$d Ön által követett személy jelentette</item>
+        <item quantity="other">%1$d Ön által követett személy jelentette</item>
+    </plurals>
     <string name="post_not_found">Az esemény épp betöltődik vagy nem található az átjátszólistában</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Csatorna profilképe</string>
     <string name="referenced_event_not_found">A hivatkozott esemény nem található</string>
     <string name="could_not_decrypt_the_message">Nem sikerült visszafejteni az üzenetet</string>
     <!-- Placeholder shown in a chat row while an encrypted message is still being decrypted -->
+    <string name="chat_preview_decrypting">Visszafejtés…</string>
     <!-- Prefix on a Messages-list preview when the newest message was sent by the logged-in user. %1$s is the message text -->
+    <string name="chat_preview_you_prefix">Ön: %1$s</string>
     <string name="group_picture">Csoport profilképe</string>
     <string name="explicit_content">Szókimondó tartalom</string>
     <string name="relay_notice">Átjátszóval kapcsolatos megjegyzések</string>
@@ -198,6 +204,7 @@
     <string name="connection_success_rate_description">Az átjátszóhoz való sikeres kapcsolatok százalékos aránya</string>
     <string name="search_and_add_a_user">Felhasználó keresése és hozzáadása</string>
     <string name="add_a_relay">Egy átjátszó hozzáadása</string>
+    <string name="relay_url_not_valid">Az átjátszó címe érvénytelen. Használjon gazdagépnevet vagy zárójelben megadott IP-címet (például: [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Saját @említési név</string>
     <string name="display_name">Megjelenítendő név</string>
     <string name="my_display_name">Saját megjelenítendő név</string>
@@ -304,6 +311,22 @@
     <string name="concord_invite_failed_invalid">Ez a meghívási hivatkozás érvénytelen, vagy nem nyitható meg ezzel a fiókkal.</string>
     <string name="concord_invite_failed_incompatible">Ez a meghívó az alkalmazás egy újabb verziójával készült, és itt még nem nyitható meg. Kérjen egy frissített linket, vagy a frissítés után próbálja újra.</string>
     <string name="concord_invite_failed_revoked">Ezt a meghívási hivatkozást visszavonták, és már nem használható. Kérjen egy újat.</string>
+    <string name="concord_invite_failed_banned">Ez a közösség kizárta Önt. A hivatkozás továbbra is működik, de a taglistán nem szerepelhet.</string>
+    <string name="concord_invite_links_title">Meghívási hivatkozások</string>
+    <string name="concord_invite_links_action">Meghívási hivatkozások…</string>
+    <string name="concord_invite_links_created">Létrehozva: %1$s</string>
+    <string name="concord_invite_links_empty">Ehhez a közösséghez még nem hozott létre meghívási hivatkozásokat. A többi rendszergazda által létrehozott hivatkozásokat azok saját eszközeiken kezelik.</string>
+    <string name="concord_invite_links_unreadable">Nem sikerült betölteni a meghívási hivatkozásokat, ezért jelenleg egyik sem vonható vissza. Ellenőrizze az internetkapcsolatot, majd próbálja meg újra.</string>
+    <string name="concord_invite_revoke_action">Hivatkozás visszavonása</string>
+    <string name="concord_invite_revoke_title">Biztosan visszavonja ezt a hivatkozást?</string>
+    <string name="concord_invite_revoke_explainer">Aki még mindig rendelkezik ezzel a hivatkozással, az már nem tud csatlakozni. Azok, akik már csatlakoztak vele, továbbra is a közösség tagjai maradnak. Ez a művelet nem vonható vissza.</string>
+    <string name="concord_invite_revoke_confirm">Visszavonás</string>
+    <string name="concord_invite_revoked_ok">Meghívási hivatkozás visszavonva.</string>
+    <string name="concord_invite_revoked_failed">Nem sikerült visszavonni a meghívási hivatkozást. Ellenőrizze az internetkapcsolatát, majd próbálja meg újra.</string>
+    <string name="concord_invite_failed_expired">Ez a meghívó hivatkozás lejárt és már nem használható. Kérjen egy új hivatkozást.</string>
+    <string name="concord_invite_preview_unknown_name">A közösség neve csak a csatlakozás után válik láthatóvá</string>
+    <string name="concord_invite_preview_explainer">A csatlakozás kapcsolódik a meghívóhoz tartozó átjátszókhoz, közzéteszi a fiókja által aláírt csatlakozási értesítést, és hozzáadja a közösséget az Ön listájához. Semmi sem kerül elküldésre, amíg a Csatlakozás gombra nem koppint.</string>
+    <string name="concord_invite_preview_relays">Átjátszók, amelyekkel ez a meghívó felveszi a kapcsolatot: %1$s</string>
     <string name="concord_home_title">Concord-csatornák</string>
     <string name="concord_home_empty">Még nem csatlakozott egyetlen Concord-csatornához sem. Hozzon létre egyet, vagy nyisson meg egy meghívóhivatkozást.</string>
     <string name="concord_channels_empty">Még nincsenek csatornák.</string>
@@ -319,7 +342,12 @@
     <string name="concord_channel_delete_title">Biztosan törli a csatornát?</string>
     <string name="concord_channel_delete_message">Biztosan törli a(z) #%1$s csatornát? Ez a művelet nem vonható vissza, és a csatorna nem hozható létre újra ugyanezzel az azonosítóval.</string>
     <string name="concord_channel_delete_confirm">Törlés</string>
+    <string name="concord_leave_community">Közösség elhagyása</string>
+    <string name="concord_leave_title">Elhagyja a közösséget?</string>
+    <string name="concord_leave_message">Elhagyja a következőt: %1$s? Eltávolításra kerül ezen fiók listájáról, és leáll a szinkronizálása az Ön eszközein. A közösség nem kap értesítést, és Ön nem kerül le a tagok listájáról. Azok az üzenetek, amelyeket már nem tud visszafejteni, helyreállíthatatlanná válhatnak, és csak új meghívóval térhet vissza.</string>
+    <string name="concord_leave_owner_warning">Ön hozta létre ezt a közösséget. A kilépés nem törli, és nem is adja át másnak, de eldobja a listáján tárolt tulajdonosi kulcsot — a jövőben nem fogja tudni kezelni.</string>
     <string name="concord_edit_relays_desc">Ahol a közösség titkosított síkjait közzéteszik és olvassák.</string>
+    <string name="concord_dissolved_read_only">Ezt a közösséget feloszlatták, és most már csak olvasható. Az előzményeket továbbra is olvashatja, de új üzeneteket már nem lehet közzétenni.</string>
     <string name="concord_typing_one">%1$s gépel…</string>
     <string name="concord_typing_two">%1$s és %2$s gépel…</string>
     <string name="concord_typing_many">Többen is gépelnek…</string>
@@ -329,6 +357,14 @@
     <string name="concord_create_relays">Átjátszók</string>
     <string name="concord_create_icon">Ikon webcíme (nem kötelező)</string>
     <plurals name="concord_channel_count">
+        <item quantity="one">%1$d csatorna</item>
+        <item quantity="other">%1$d csatorna</item>
+    </plurals>
+    <plurals name="buzz_workspaces_count">
+        <item quantity="one">%1$d munkaterület</item>
+        <item quantity="other">%1$d munkaterület</item>
+    </plurals>
+    <plurals name="buzz_workspaces_channel_count">
         <item quantity="one">%1$d csatorna</item>
         <item quantity="other">%1$d csatorna</item>
     </plurals>
@@ -363,6 +399,13 @@
     <string name="concord_members_remove_title">Eltávolítja a tagot?</string>
     <string name="concord_members_remove_message">Ez megváltoztatja a közösség titkosítási kulcsát, így ez a tag már nem tudja elolvasni az ezt követően küldött üzeneteket. Mindenki más kulcsa automatikusan frissül. Ez a művelet nem vonható vissza.</string>
     <string name="concord_members_remove_confirm">Eltávolítás</string>
+    <string name="concord_members_roles">Szerepkörök…</string>
+    <string name="concord_members_roles_title">Szerepkörök hozzárendelése</string>
+    <string name="concord_members_roles_message">Válassza ki az összes szerepkört, amelyet ennek a tagnak be kell töltenie. A jelölés megszüntetése eltávolítja azt.</string>
+    <string name="concord_members_roles_save">Mentés</string>
+    <string name="concord_members_roles_out_of_reach">Ön nem áll magasabb rangban, mint ez a tag</string>
+    <string name="concord_members_roles_none_assignable">Nincsenek Ön által hozzárendelhető szerepkörök</string>
+    <string name="concord_members_roles_failed">Nem sikerült frissíteni a tag szerepköreit.</string>
     <string name="concord_role_owner">Tulajdonos</string>
     <string name="concord_role_admin">Adminisztrátor</string>
     <string name="concord_role_banned">Kitiltva</string>
@@ -381,6 +424,7 @@
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <string name="chat_minichat_title">Szál</string>
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
+    <string name="chat_send_image_title">Kép küldése</string>
     <!-- Chip on a chat message that opens its thread ("minichat") of kind-1111 replies. -->
     <plurals name="chat_minichat_reply_count">
         <item quantity="one">%1$d válasz</item>
@@ -393,7 +437,13 @@
     <string name="chats_reply_not_found">Nem sikerült megtalálni ezt az üzenetet</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <string name="chats_reply_searched">Minden átjátszó le lett kérve · koppintson ide a megtekintéshez</string>
+    <string name="dm_sender_reported_who">Ki jelentette ezt?</string>
+    <string name="dm_sender_reported_dismiss">Eltüntetés</string>
+    <string name="dm_sender_reported_hide">Elrejtés</string>
+    <string name="dm_sender_reported_subtitle">Valaki, akit Ön követ, megjelölte ezt a fiókot</string>
+    <string name="dm_sender_reported_icon">Jelentve</string>
     <!-- Overflow count on the capped reporter avatar row, e.g. "+21". -->
+    <string name="dm_sender_reported_more_count">+%1$d</string>
     <string name="error_loading_replies">"Hiba a válaszok betöltésekor: "</string>
     <string name="try_again">Próbálja újra</string>
     <string name="notification_feed_is_empty">Még nincsenek értesítések.</string>
@@ -402,6 +452,8 @@
     <string name="refresh">Frissítés</string>
     <string name="changed_chat_profile_to">Új csevegési profil:</string>
     <string name="leave">Elhagyás</string>
+    <string name="remove_from_messages">Eltávolítás az Üzenetekből</string>
+    <string name="add_to_messages">Hozzáadás az Üzenetekhez</string>
     <string name="unfollow">Követés megszüntetése</string>
     <string name="channel_created">Csatorna létrehozva</string>
     <string name="channel_information_changed_to">"A csatornainformáció a következőre módosult:"</string>
@@ -491,6 +543,15 @@
     <string name="share_as_image_url">Kép webcímének megosztása</string>
     <string name="share_as_image_generating">Előnézet előállítása…</string>
     <string name="share_as_image_watermark">Megosztva az Amethysten keresztül·</string>
+    <string name="share_as_qr">Megosztás QR-kódként</string>
+    <string name="share_as_qr_mode_web">Webes hivatkozás</string>
+    <string name="share_as_qr_mode_nostr">Nostr hivatkozás</string>
+    <string name="share_as_qr_hint_web">Olvassa be bármilyen telefonkamerával</string>
+    <string name="share_as_qr_hint_nostr">Olvassa be egy Nostr alkalmazással</string>
+    <string name="share_as_qr_kind_picture">Kép</string>
+    <string name="share_as_qr_code_description_web">Ezt a jegyzetet mutató webes hivatkozást tartalmazó QR-kód</string>
+    <string name="share_as_qr_code_description_nostr">Ezt a jegyzetet mutató Nostr hivatkozást tartalmazó QR-kód</string>
+    <string name="share_as_qr_thumbnail_hidden_sensitive">A bélyegkép elrejtve érzékeny tartalom miatt</string>
     <string name="quick_action_copy_user_id">Szerző-azonosító</string>
     <string name="quick_action_copy_note_id">Bejegyzés-azonosító</string>
     <string name="quick_action_copy_text">Szöveg másolása</string>
@@ -718,6 +779,10 @@
     <string name="workout_suggestion_connect_button">Kapcsolódás</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="workout_from_health_connect">Health Connectből</string>
+    <plurals name="workout_suggestion_combined_sessions">
+        <item quantity="one">%1$d tevékenység</item>
+        <item quantity="other">%1$d tevékenység</item>
+    </plurals>
     <string name="exercise_running">Futás</string>
     <string name="exercise_walking">Gyaloglás</string>
     <string name="exercise_cycling">Kerékpározás</string>
@@ -816,6 +881,7 @@
     <string name="napplet_consent_storage">Ez a nKisalkalmazás az Ön privát tárhelyét szeretné használni.</string>
     <string name="napplet_consent_pay">Ez a nKisalkalmazás ki szeretne fizetni egy Lightning számlát.</string>
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
+    <string name="napplet_consent_pay_no_amount">⚠ Ez a nApplet egy olyan Lightning számlát akar kifizetni, amelyen NINCS összeg megadva — a kedvezményezett dönti el, mennyit von le. Csak akkor engedélyezze, ha megbízik benne.</string>
     <string name="napplet_consent_resource">Ez a nKisalkalmazás le szeretne kérni egy webes erőforrást.</string>
     <string name="napplet_consent_upload">Ez a nKisalkalmazás fel szeretne tölteni egy fájlt az Ön médiakiszolgálójára.</string>
     <string name="napplet_consent_notify">Ez a nKisalkalmazás értesítéseket szeretne megjeleníteni Önnek.</string>
@@ -828,11 +894,56 @@
          kind-only summary would hide what is actually being signed. These replaceable lists are
          already cached on the account, so the dialog diffs the proposed list against the current
          one and reports what actually changes rather than a raw total. -->
+    <plurals name="napplet_consent_diff_follow_added">
+        <item quantity="one">%1$d új fiókot követ</item>
+        <item quantity="other">%1$d új fiókot követ</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_follow_removed">
+        <item quantity="one">MEGSZÜNTETI %1$d fiók követését</item>
+        <item quantity="other">MEGSZÜNTETI %1$d fiók követését</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_added">
+        <item quantity="one">hozzáad %1$d átjátszót</item>
+        <item quantity="other">hozzáad %1$d átjátszót</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_relay_removed">
+        <item quantity="one">ELTÁVOLÍT %1$d átjátszót</item>
+        <item quantity="other">ELTÁVOLÍT %1$d átjátszót</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_added">
+        <item quantity="one">némít további %1$d személyt</item>
+        <item quantity="other">némít további %1$d személyt</item>
+    </plurals>
+    <plurals name="napplet_consent_diff_mute_removed">
+        <item quantity="one">VISSZAVONJA %1$d személy némítását</item>
+        <item quantity="other">VISSZAVONJA %1$d személy némítását</item>
+    </plurals>
     <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
          the display name, shown next to their avatar. -->
+    <string name="napplet_consent_diff_follow_one">⚠ Ez elkezdi követni a következőt: %1$s.</string>
+    <string name="napplet_consent_diff_unfollow_one">⚠ Ez MEGSZÜNTETI %1$s követését.</string>
+    <string name="napplet_consent_diff_mute_one">⚠ Ez némítja a következőt: %1$s.</string>
+    <string name="napplet_consent_diff_unmute_one">⚠ Ez VISSZAVONJA %1$s némítását.</string>
     <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
+    <string name="napplet_consent_diff_follows">⚠ Ez felülírja a követési listáját: %1$s.</string>
+    <string name="napplet_consent_diff_relays">⚠ Ez felülírja az átjátszók listáját: %1$s. A bejegyzései és olvasásai vele együtt mozognak.</string>
+    <string name="napplet_consent_diff_mutes">⚠ Ez felülírja a némítási listáját: %1$s. A némított szavak és hashtagek nem jelennek meg itt — koppintson az „Esemény megjelenítése” elemre a teljes listához.</string>
+    <string name="napplet_consent_diff_joiner">%1$s és %2$s</string>
     <!-- Re-publishing an identical list is harmless; say so rather than raising a false alarm. -->
+    <string name="napplet_consent_diff_none">Ez változatlan formában újból közzéteszi az Ön meglévő listáját.</string>
     <!-- No cached copy to compare against, so the whole list is what gets written. -->
+    <plurals name="napplet_consent_diff_no_baseline">
+        <item quantity="one">⚠ Ez egy %1$d bejegyzésből álló listát ír. Az Amethyst nem rendelkezik gyorsítótárazott másolattal az összehasonlításhoz.</item>
+        <item quantity="other">⚠ Ez egy %1$d bejegyzésből álló listát ír. Az Amethyst nem rendelkezik gyorsítótárazott másolattal az összehasonlításhoz.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_deletes">
+        <item quantity="one">⚠ Ez az Ön %1$d eseményének törlését kéri.</item>
+        <item quantity="other">⚠ Ez az Ön %1$d eseményének törlését kéri.</item>
+    </plurals>
+    <plurals name="napplet_consent_effect_tags">
+        <item quantity="one">%1$d címkét tartalmaz. Koppintson az „Esemény megjelenítése” elemre, hogy pontosan lássa, mi kerülne aláírásra.</item>
+        <item quantity="other">%1$d címkét tartalmaz. Koppintson az „Esemény megjelenítése” elemre, hogy pontosan lássa, mi kerülne aláírásra.</item>
+    </plurals>
     <!-- Signer permissions: first-connect dialog -->
     <string name="napplet_connect_title">Kapcsolódás a NOSTR-hoz</string>
     <string name="napplet_connect_subtitle">szeretne csatlakozni a saját Nostr-fiókjához</string>
@@ -869,9 +980,13 @@
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
     <string name="napplet_op_decrypt">saját privát üzenetek olvasása</string>
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
+    <string name="napplet_op_decrypt_from">elolvashatja a magánüzeneteit vele: %1$s</string>
     <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
+    <string name="nip46_signer_allow_always_for">Mindig engedélyezze a következőnek: %1$s</string>
     <!-- Shown as the preview when Amethyst itself cannot decrypt the message the app asked to read -->
+    <string name="nip46_signer_decrypt_failed">Az Amethyst nem tudta visszafejteni ezt az üzenetet. Lehet, hogy nem ennek a fióknak címezték.</string>
     <!-- Label above the counterparty avatar in the decrypt consent dialog -->
+    <string name="nip46_signer_messages_with">Üzenetek vele:</string>
     <!-- Permissions management screen -->
     <string name="napplet_permissions_title">Összekapcsolt alkalmazások</string>
     <string name="napplet_permissions_revoke_all">Minden engedély visszavonása</string>
@@ -883,6 +998,93 @@
     <string name="napplet_decision_deny">Megtagadás</string>
     <string name="napplet_connected_apps_search_keywords">alkalmazások, engedélyek, aláíró, napplet, nsite, webalkalmazás, bizalom, kapcsolódott</string>
     <!-- NIP-46 remote signer (bunker) -->
+    <string name="nip46_signer_title">Távoli aláíró</string>
+    <string name="nip46_signer_search_keywords">aláíró bunker nip46 nostr kapcsolódás távoli aláírás</string>
+    <string name="nip46_signer_explainer">Engedélyezze más alkalmazásoknak a saját kulcsával történő aláírást. Az Amethyst figyeli az Ön bejövő átjátszóit, és aláírás előtt ellenőrzi minden alkalmazás jogosultságait — ugyanazokat a megbízhatósági szinteket használva, mint a Kapcsolódó alkalmazások.</string>
+    <string name="nip46_signer_enable">Működjön távoli aláíróként</string>
+    <plurals name="nip46_signer_status_listening">
+        <item quantity="one">Figyelés %1$d átjátszón</item>
+        <item quantity="other">Figyelés %1$d átjátszón</item>
+    </plurals>
+    <string name="nip46_signer_status_no_relays">Nincsenek bejövő átjátszók beállítva. Adjon hozzá bejövő átjátszókat, hogy az alkalmazások elérhessék az aláíróját.</string>
+    <plurals name="nip46_signer_relays_all_live">
+        <item quantity="one">Figyelés %1$d átjátszón</item>
+        <item quantity="other">Figyelés %1$d átjátszón, mindegyikhez kapcsolódva</item>
+    </plurals>
+    <string name="nip46_signer_relays_some_down">%2$d/%1$d átjátszóhoz kapcsolódva</string>
+    <string name="nip46_signer_bunker_uri_label">Az Ön bunker címe</string>
+    <string name="nip46_signer_bunker_uri_hint">Illessze be ezt egy másik alkalmazásba, hogy a kulcsához kapcsolja azt.</string>
+    <string name="nip46_signer_copy">Másolás</string>
+    <string name="nip46_signer_copied">Bunker címe másolva</string>
+    <string name="nip46_signer_regenerate">Új cím</string>
+    <string name="nip46_signer_regenerated">Új bunker cím generálva</string>
+    <string name="nip46_signer_rotate_confirm_title">Új címet generál?</string>
+    <string name="nip46_signer_rotate_confirm_message">Ez egy új bunker címet hoz létre, és minden jelenleg kapcsolódó alkalmazást leválaszt. Bárki, aki rendelkezik a régi címmel — beleértve a spammereket is — többé nem érheti el Önt. Kapcsolja össze újra a saját alkalmazásait az új kód beolvasásával.</string>
+    <string name="nip46_signer_rotate_confirm_button">Generálás</string>
+    <string name="nip46_signer_cancel">Mégsem</string>
+    <string name="nip46_signer_connect_label">Alkalmazás kapcsolása</string>
+    <string name="nip46_signer_connect_hint">Illesszen be egy nostrconnect:// hivatkozást</string>
+    <string name="nip46_signer_connect_button">Kapcsolódás</string>
+    <string name="nip46_signer_manage_apps">Kapcsolódó alkalmazások kezelése</string>
+    <string name="nip46_signer_apps_empty">Még nincsenek alkalmazások kapcsolva az Ön aláírójához.\n\nOlvassa be vagy illessze be egy alkalmazás kódját a kapcsolódáshoz. A kapcsolódó alkalmazások itt jelennek meg, az inaktívak pedig egy hét után automatikusan eltávolításra kerülnek.</string>
+    <string name="nip46_signer_app_last_used">utoljára használva: %1$s</string>
+    <string name="nip46_signer_app_online">Kapcsolódva</string>
+    <string name="nip46_signer_app_offline">Offline</string>
+    <string name="nip46_signer_app_reconnect">Újrakapcsolódás</string>
+    <string name="nip46_signer_reconnecting">Újrakapcsolódás az átjátszókhoz…</string>
+    <string name="nip46_signer_app_relays_title">Átjátszók</string>
+    <string name="nip46_signer_app_relays_inbox">Az Ön bejövő átjátszóin keresztül ír alá — ez az alkalmazás nem hozott sajátot, így nem tart fenn extra háttérkapcsolatot.</string>
+    <string name="nip46_signer_app_relays_own_hint">Az Amethyst mindegyikhez fenntart egy háttérkapcsolatot, amíg ez az alkalmazás kapcsolódva marad. Felejtse el az alkalmazást a kapcsolatuk eldobásához.</string>
+    <plurals name="nip46_signer_app_relay_count">
+        <item quantity="one">%1$d átjátszó</item>
+        <item quantity="other">%1$d átjátszó</item>
+    </plurals>
+    <string name="nip46_signer_connected_ok">Az alkalmazás kapcsolódott. Az Amethyst mostantól a háttérben ír alá a számára.</string>
+    <string name="nip46_signer_connected_named">Kapcsolódva: %1$s. Az Amethyst mostantól a háttérben ír alá a számára.</string>
+    <string name="nip46_signer_connect_invalid">Nem érvényes nostrconnect:// hivatkozás</string>
+    <string name="nip46_signer_connect_no_relays">Ez a hivatkozás nem tartalmaz átjátszót a kapcsolódáshoz</string>
+    <string name="nip46_signer_connect_failed">Nem sikerült kapcsolódni: %1$s</string>
+    <string name="nip46_signer_connect_declined">A kapcsolat elutasítva</string>
+    <string name="nip46_connect_requests_title">Ez az alkalmazás a következőt kéri:</string>
+    <string name="nip46_signer_readonly">Ez egy csak olvasható fiók, és nem tud aláírni.</string>
+    <string name="nip46_signer_remote_app">Távoli aláíró alkalmazás</string>
+    <string name="nip46_signer_background_hint">Az Amethyst fenntart egy háttérkapcsolatot (amely folyamatos értesítésként jelenik meg), így bezárt állapotban is tud válaszolni az aláírási kérésekre.</string>
+    <string name="nip46_signer_hero_title">Aláírás más alkalmazások számára</string>
+    <string name="nip46_signer_turn_on">Aláíró bekapcsolása</string>
+    <string name="nip46_signer_live">Élő</string>
+    <plurals name="nip46_signer_batch_title">
+        <item quantity="one">%1$d aláírási kérés</item>
+        <item quantity="other">%1$d aláírási kérés</item>
+    </plurals>
+    <string name="nip46_signer_batch_select_all">Összes kijelölése</string>
+    <string name="nip46_signer_batch_select_none">Kijelölés megszüntetése</string>
+    <string name="nip46_signer_batch_remember">Jegyezze meg ezeket minden alkalmazáshoz</string>
+    <string name="nip46_signer_batch_signing_as">mint %1$s</string>
+    <string name="nip46_signer_batch_allow">%1$d engedélyezése</string>
+    <string name="nip46_signer_batch_deny">%1$d elutasítása</string>
+    <string name="nip46_signer_activity_title">Legutóbbi tevékenység</string>
+    <string name="nip46_signer_activity_empty">Még nincsenek kiszolgált kérések.</string>
+    <string name="nip46_signer_activity_denied">elutasítva</string>
+    <string name="nip46_signer_act_signed_kind">Aláírt egy eseményt (típus: %1$d)</string>
+    <string name="nip46_signer_act_encrypted">Titkosított egy üzenetet</string>
+    <string name="nip46_signer_act_decrypted">Visszafejtett egy üzenetet</string>
+    <string name="nip46_signer_act_shared_pubkey">Megosztotta az Ön nyilvános kulcsát</string>
+    <string name="nip46_signer_act_connected">Kapcsolódva</string>
+    <string name="nip46_signer_act_ping">Ping</string>
+    <string name="nip46_signer_act_listed_relays">Kilistázta az átjátszókat</string>
+    <string name="nip46_signer_act_other">%1$s</string>
+    <string name="nip46_signer_notif_channel_name">Aláírási kérések</string>
+    <string name="nip46_signer_notif_channel_desc">Teljes képernyős figyelmeztetések, amelyek arra kérik Önt, hogy hagyjon jóvá egy alkalmazást, amely az Amethysten keresztül szeretne aláírni, titkosítani vagy visszafejteni az Ön kulcsával.</string>
+    <string name="nip46_signer_notif_sign_title">Jóváhagyja az aláírási kérést?</string>
+    <string name="nip46_signer_notif_connect_title">Egy alkalmazás kapcsolódni szeretne</string>
+    <string name="nip46_signer_notif_tap">Koppintson az áttekintéshez</string>
+    <string name="nip46_signer_scan_caption">Olvassa be egy alkalmazásnak a kulcsához való kapcsolásához</string>
+    <string name="nip46_signer_scan_connect">Kód beolvasása</string>
+    <string name="nip46_signer_paste_link">Hivatkozás beillesztése</string>
+    <plurals name="nip46_signer_connected_count">
+        <item quantity="one">%1$d kapcsolódó alkalmazás</item>
+        <item quantity="other">%1$d kapcsolódó alkalmazás</item>
+    </plurals>
     <string name="napplet_connected_app_trust_level">Aláírási bizalmi szint</string>
     <string name="napplet_connected_app_capabilities">Képességek</string>
     <string name="napplet_connected_app_forget">Alkalmazás elfelejtése</string>
@@ -953,6 +1155,7 @@
     <string name="nip82_older_releases_hide">Korábbi kiadások elrejtése</string>
     <string name="shorts">Rövidek</string>
     <string name="public_chats">Nyilvános csevegések</string>
+    <string name="location_channels">Helyszíncsatornák</string>
     <string name="follow_packs">Követési csomagok</string>
     <string name="live_streams">Élő közvetítések</string>
     <string name="nests">Hangszobák</string>
@@ -1081,6 +1284,7 @@
     <string name="nest_create_submit">Tér indítása</string>
     <string name="nest_create_schedule_toggle">Ütemezés későbbre</string>
     <string name="nest_create_when">Válasszon kezdési időpontot</string>
+    <string name="agent_console_title">Ügynöki konzol</string>
     <string name="nests_servers_title">Hangszoba-kiszolgálók</string>
     <string name="nests_servers_explainer">Válassza ki, hogy az Amethyst mely MoQ-kiszolgálókon tegye közzé a hangszobáit. Új tér indításakor alapértelmezetten az első bejegyzés kerül felhasználásra.</string>
     <string name="nests_servers_my_section">Saját kiszolgálók</string>
@@ -1407,11 +1611,88 @@
     <string name="local_blossom_cache_profile_pics_only">Csak a profilképek gyorsítótárazása</string>
     <string name="local_blossom_cache_profile_pics_only_caption">A helyi gyorsítótár korlátozása csak a profilképekre. A hírfolyamban megjelenő képek és videók közvetlenül az eredeti kiszolgálókról lesznek letöltve.</string>
     <string name="no_blossom_server_message">Nincsenek Blossom-kiszolgálók beállítva. Használhatja az Amethyst listáját, vagy hozzáadhat egyet az alábbiakból ↓</string>
+    <string name="media_servers_upload_section">Feltöltési viselkedés</string>
+    <string name="blossom_mirror_uploads">Feltöltések tükrözése</string>
+    <string name="blossom_mirror_uploads_caption">A feltöltés után másolja át a fájlt a többi Blossom kiszolgálójára, hogy elérhető maradjon, ha az egyik offline állapotba kerül.</string>
+    <string name="blossom_optimize_media">Média optimalizálása a kiszolgálón</string>
+    <string name="blossom_optimize_media_caption">Feltöltés a kiszolgáló /media végpontján keresztül, így az eltávolíthatja a metaadatokat és tömörítheti a fájlt. A tárolt fájl eltérhet az eredetitől.</string>
+    <string name="manage_stored_files">Tárolt fájlok kezelése</string>
+    <string name="my_blossom_data">Az én Blossom fájljaim</string>
+    <string name="blossom_refresh">Frissítés</string>
+    <string name="blossom_sync_all">Összes szinkronizálása</string>
+    <string name="blossom_sync_gaps">Néhány fájlja még nincs meg az összes kiszolgálóján.</string>
+    <string name="blossom_syncing">Fájlok másolása a kiszolgálók között…</string>
+    <string name="blossom_sync_done">Szinkronizálás kész</string>
+    <string name="blossom_sync_cancel">Mégsem</string>
+    <string name="blossom_sync_channel_name">Blossom szinkronizálás</string>
+    <string name="blossom_sync_channel_description">Megjeleníti a folyamatot, miközben a fájljait átmásolja a Blossom kiszolgálókra.</string>
+    <string name="manage_stored_files_empty">Nem találhatók tárolt fájlok a Blossom kiszolgálóin.</string>
+    <string name="blossom_stored_on">Tárolás helye</string>
+    <string name="blossom_file_details">Fájl részletei</string>
+    <string name="blossom_on_all_servers">Minden kiszolgálón</string>
+    <string name="blossom_not_on_all_servers">Nem minden kiszolgálón</string>
+    <string name="blossom_mirror_to_missing">Tükrözés a hiányzókra</string>
+    <string name="blossom_delete_from">Törlés innen…</string>
+    <string name="blossom_delete_from_host">Törlés a következőről: %1$s</string>
+    <string name="blossom_report">Jelentés</string>
+    <string name="blossom_open">Megnyitás</string>
+    <string name="blossom_payment_required">Ez a kiszolgáló fizetést igényel a feltöltéshez: %1$s</string>
+    <string name="blossom_payment_title">Fizetés szükséges</string>
+    <string name="blossom_payment_message">%1$s egy lightning fizetést számít fel ezen fájl tárolásáért. A folytatáshoz fizessen a kapcsolódó pénztárcájából.</string>
+    <string name="blossom_payment_server_says">%1$s ezt mondja: „%2$s”</string>
+    <string name="blossom_pay">Fizetés</string>
+    <plurals name="blossom_pay_sats">
+        <item quantity="one">%1$d satoshi fizetése</item>
+        <item quantity="other">%1$d satoshi fizetése</item>
+    </plurals>
+    <string name="blossom_report_title">Adat (blob) jelentése</string>
+    <string name="blossom_report_comment_hint">Ok (opcionális)</string>
+    <string name="blossom_send">Küldés</string>
+    <string name="blossom_more_actions">További műveletek</string>
+    <string name="blossom_import_menu">Fájlok importálása…</string>
+    <string name="blossom_import_title">Fájlok importálása</string>
+    <string name="blossom_import_intro">Ellenőrizzen más Blossom kiszolgálókat, hogy máshova feltöltött fájlokat találjon, és másolja át azokat a saját kiszolgálóira.</string>
+    <string name="blossom_import_sources_section">Ellenőrizendő kiszolgálók</string>
+    <string name="blossom_import_enable_all">Összes engedélyezése</string>
+    <string name="blossom_import_disable_all">Összes letiltása</string>
+    <string name="blossom_import_add_url_label">Vagy illesszen be egy kiszolgálócímet</string>
+    <string name="blossom_import_scan">Kiszolgálók ellenőrzése</string>
+    <string name="blossom_import_scanning">Ellenőrzés…</string>
+    <string name="blossom_import_source_failed">Nem sikerült elérni ezt a kiszolgálót</string>
+    <string name="blossom_import_none_found">Nem találhatók új fájlok a kiválasztott kiszolgálókon.</string>
+    <string name="blossom_import_no_targets">Először adja hozzá a saját Blossom kiszolgálóit, hogy legyen hova másolni az importált fájlokat.</string>
+    <string name="blossom_import_manage_servers">Saját kiszolgálók kezelése</string>
+    <string name="blossom_import_busy">Már fut egy fájlszinkronizálás. Próbálja meg újra az importálást, miután befejeződött.</string>
+    <plurals name="blossom_import_files_found">
+        <item quantity="one">%1$d fájl</item>
+        <item quantity="other">%1$d fájl</item>
+    </plurals>
+    <plurals name="blossom_import_found_files">
+        <item quantity="one">%1$d importálandó fájlt találtunk az Ön kiszolgálóira.</item>
+        <item quantity="other">%1$d importálandó fájlt találtunk az Ön kiszolgálóira.</item>
+    </plurals>
+    <plurals name="blossom_import_start_button">
+        <item quantity="one">%1$d fájl importálása</item>
+        <item quantity="other">%1$d fájl importálása</item>
+    </plurals>
     <string name="recommended_media_servers">Ajánlott médiakiszolgálók</string>
     <string name="built_in_servers_description">Az Amethyst alapértelmezett listája. Hozzáadhatja őket egyenként, vagy hozzáadhatja a listát.</string>
     <string name="use_default_servers">Alapértelmezett lista használata</string>
     <string name="add_media_server">Médiakiszolgáló hozzáadása</string>
     <string name="delete_media_server">Médiakiszolgáló törlése</string>
+    <string name="media_servers_reorder_hint">Húzza az átrendezéshez. A feltöltések fentről lefelé haladva próbálkoznak a kiszolgálókkal.</string>
+    <string name="media_servers_priority_section">Feltöltési prioritás</string>
+    <string name="media_servers_add_section">Kiszolgáló hozzáadása</string>
+    <string name="media_servers_recommended_label">Ajánlott</string>
+    <string name="media_servers_add_url_label">Vagy illesszen be egy kiszolgálócímet</string>
+    <string name="media_servers_cache_section">Eszközön lévő gyorsítótár</string>
+    <string name="media_server_primary_badge">Elsődleges</string>
+    <string name="media_server_added">Hozzáadva</string>
+    <string name="media_server_reorder">Kiszolgáló átrendezése</string>
+    <string name="media_server_status_online">Online</string>
+    <string name="media_server_status_slow">Lassú</string>
+    <string name="media_server_status_offline">Nem elérhető</string>
+    <string name="media_server_status_checking">Ellenőrzés…</string>
     <string name="payment_targets">Fizetési célok</string>
     <string name="payment_targets_explainer">Tegye közzé fizetési címeit, hogy mások közvetlenül küldhessenek Önnek fizetséget.</string>
     <string name="payment_targets_section_explainer">Adjon meg fizetési címeket a különböző hálózatokhoz (például: bitcoin, lightning, ethereum).</string>
@@ -1422,6 +1703,20 @@
     <string name="no_payment_app_found">Nem található alkalmazás a fizetés kezeléséhez. Telepítsen egy kompatibilis pénztárcát.</string>
     <string name="no_payment_app_found_for_type">Nem található alkalmazás a(z) %1$s fizetések kezeléséhez. Telepítsen egy kompatibilis pénztárcát.</string>
     <string name="error_dialog_payment_error">Nem sikerült megnyitni a fizetést</string>
+    <string name="bolt12_offers">BOLT12 Ajánlatok</string>
+    <string name="bolt12_offers_explainer">Tegyen közzé újrafelhasználható BOLT12 ajánlatokat, hogy mások is küldhessenek Önnek zapet a Lightning hálózaton keresztül, anélkül, hogy minden alkalommal külön számlára lenne szükség.</string>
+    <string name="bolt12_offers_section_explainer">Adjon hozzá egy vagy több BOLT12 ajánlatot (lno1…). Ezek nyilvánosan megosztásra kerülnek, így bárki tud Önnek fizetni.</string>
+    <string name="no_bolt12_offers_message">Nincsenek BOLT12 ajánlatok beállítva. Adjon hozzá egyet alább ↓</string>
+    <string name="bolt12_offer">BOLT12 ajánlat (lno1…)</string>
+    <string name="invalid_bolt12_offer">Nem érvényes BOLT12 ajánlat</string>
+    <string name="delete_bolt12_offer">BOLT12 ajánlat törlése</string>
+    <string name="bolt12_pay_with_wallet">Fizetés kapcsolódó pénztárcával</string>
+    <string name="bolt12_payment_amount_sats">Összeg (satoshi)</string>
+    <string name="bolt12_payment_sent">BOLT12 fizetés elküldve</string>
+    <string name="bolt12_payment_failed">BOLT12 fizetés sikertelen: %1$s</string>
+    <string name="bolt12_zap_error">BOLT12 zap hiba</string>
+    <string name="bolt12_zap_paid_no_receipt">A BOLT12 hálózaton keresztül fizetve lett, de a pénztárca nem küldött vissza igazolást, így nem került közzétételre zap nyugta.</string>
+    <string name="bolt12_zap_invalid_receipt">A BOLT12 hálózaton keresztül fizetve lett, de a fizetési igazolás nem érvényes, így nem került közzétételre zap nyugta.</string>
     <string name="uploading_state_ready">Nem kezdődött el</string>
     <string name="uploading_state_compressing">Tömörítés…</string>
     <string name="uploading_state_uploading">Feltöltés…</string>
@@ -1439,6 +1734,11 @@
     <string name="follow_list_kind3follows_users_only">Minden követett felhasználó</string>
     <string name="follow_list_kind3_follows_users_only">Alapértelmezett követési lista</string>
     <string name="follow_list_aroundme">Közelemben</string>
+    <string name="follow_list_teleport">Teleportálás egy helyre…</string>
+    <string name="follow_geohash">Kövesse ezt a helyet</string>
+    <string name="unfollow_geohash">Ezen hely követésének megszüntetése</string>
+    <string name="geo_post_posting_to">Közzététel ide:</string>
+    <string name="geo_post_change_place">Módosítás</string>
     <string name="follow_list_global">Globális</string>
     <string name="follow_list_curated">Válogatott</string>
     <string name="follow_list_mine">Saját</string>
@@ -1523,8 +1823,15 @@
     <string name="app_notification_zaps_channel_message">%1$s satoshi</string>
     <string name="app_notification_zaps_channel_message_from">Tőle: %1$s</string>
     <string name="app_notification_zaps_channel_message_for">neki: %1$s</string>
+    <string name="app_notification_payments_channel_name">Beérkezett fizetések</string>
+    <string name="app_notification_payments_channel_description">Értesíti Önt, ha a kapcsolódó pénztárcájába olyan fizetés érkezik, amely nem Nostr zap</string>
+    <string name="app_notification_payments_channel_message">Érkezett %1$s satoshi</string>
+    <string name="app_notification_payments_summary">Új fizetések</string>
     <string name="app_notification_reply_label">Válasz</string>
     <string name="app_notification_mark_read_label">Megjelölés olvasottként</string>
+    <string name="app_notification_me">Én</string>
+    <string name="app_notification_new_message">Új üzenet</string>
+    <string name="app_notification_added_to_group">Önt hozzáadták ehhez: %1$s</string>
     <string name="app_notification_dms_summary">Új üzenetek</string>
     <string name="app_notification_zaps_summary">Új zapek</string>
     <string name="app_notification_reactions_channel_name">Reakciók</string>
@@ -1547,13 +1854,48 @@
     <string name="app_notification_mentions_channel_message">%1$s megemlítette Önt</string>
     <string name="app_notification_mentions_summary">Új említések</string>
     <!-- Notification channel groups (organize the per-kind channels in system settings) -->
+    <string name="app_notification_group_messages">Üzenetek</string>
+    <string name="app_notification_group_social">Közösségi</string>
+    <string name="app_notification_group_payments">Fizetések</string>
+    <string name="app_notification_group_content">Tartalom</string>
+    <string name="app_notification_group_developer">Fejlesztő</string>
+    <string name="app_notification_group_games">Játékok</string>
     <!-- Reposts -->
+    <string name="app_notification_reposts_channel_name">Továbbosztások</string>
+    <string name="app_notification_reposts_channel_description">Értesítés ha valaki megosztja az Ön bejegyzését</string>
+    <string name="app_notification_reposts_channel_message">%1$s megosztotta az Ön bejegyzését</string>
+    <string name="app_notification_reposts_summary">Új továbbosztások</string>
     <!-- Media (picture &amp; video posts that mention you) -->
+    <string name="app_notification_media_channel_name">Média</string>
+    <string name="app_notification_media_channel_description">Értesítés említésekről egy fényképen vagy videón</string>
+    <string name="app_notification_media_channel_message_photo">%1$s megosztott egy fényképet</string>
+    <string name="app_notification_media_channel_message_video">%1$s megosztott egy videót</string>
+    <string name="app_notification_media_summary">Új média</string>
     <!-- Articles &amp; highlights -->
+    <string name="app_notification_articles_channel_name">Cikkek és kiemelések</string>
+    <string name="app_notification_articles_channel_description">Értesítés említésekről vagy kiemelésekről egy cikkben</string>
+    <string name="app_notification_articles_channel_message">%1$s megemlítette Önt egy cikkben</string>
+    <string name="app_notification_articles_channel_message_highlight">%1$s kiemelte az Ön cikkét</string>
+    <string name="app_notification_articles_summary">Új cikkek</string>
     <!-- Code &amp; git -->
+    <string name="app_notification_code_channel_name">Kód és Git</string>
+    <string name="app_notification_code_channel_description">Értesítés a hibákról, javításokról és beolvasztási kérésekről</string>
+    <string name="app_notification_code_channel_message_issue">%1$s nyitott egy hibajegyet</string>
+    <string name="app_notification_code_channel_message_patch">%1$s küldött egy javítást</string>
+    <string name="app_notification_code_channel_message_pr">%1$s nyitott egy beolvasztási kérést</string>
+    <string name="app_notification_code_channel_message_pr_update">%1$s frissített egy beolvasztási kérést</string>
+    <string name="app_notification_code_summary">Új kódtevékenység</string>
     <!-- Badges -->
+    <string name="app_notification_badges_channel_name">Kitűzők</string>
+    <string name="app_notification_badges_channel_description">Értesítés kitűzőről</string>
+    <string name="app_notification_badges_channel_message">Ön kapott egy kitűzőt</string>
+    <string name="app_notification_badges_channel_message_from">Kiadta: %1$s</string>
+    <string name="app_notification_badges_summary">Új kitűzők</string>
     <!-- Nutzaps &amp; onchain zaps (rendered on the Zaps channel) -->
+    <string name="app_notification_nutzap_channel_message_from">Nutzap érkezett: %1$s</string>
+    <string name="app_notification_onchain_channel_message_from">Láncon belüli zap érkezett: %1$s</string>
     <!-- Poll mentions (rendered on the Mentions channel) -->
+    <string name="app_notification_poll_channel_message">%1$s feltett egy kérdést</string>
     <!-- Call notifications and UI -->
     <string name="app_notification_calls_channel_name">Bejövő hívások</string>
     <string name="app_notification_calls_channel_description">Értesítések a bejövő hang- és videóhívásokhoz</string>
@@ -1612,9 +1954,107 @@
         <item quantity="one">Kapcsolódva %1$d átjátszóhoz</item>
         <item quantity="other">Kapcsolódva %1$d átjátszóhoz</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d átjátszó</item>
+        <item quantity="other">%1$s \u00b7 %2$d átjátszó</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Böngészés</string>
+    <string name="relay_purpose_media">Média</string>
+    <string name="relay_purpose_tags">Kulcsszavak</string>
+    <string name="relay_purpose_topics">Témák</string>
+    <string name="relay_purpose_thread">Beszélgetés</string>
+    <string name="relay_purpose_search">Keresés</string>
+    <string name="relay_purpose_referenced">Hiányzó események keresése</string>
+    <string name="relay_purpose_engagement">Események figyelése</string>
+    <string name="relay_explain_referenced">Lekéri azokat az eseményeket azonosító alapján, amelyekre a képernyőn látható valami hivatkozik, de még nem rendelkezel velük – például egy idézet, egy válasz szülője vagy egy szál gyökere.</string>
+    <string name="relay_explain_engagement">Figyeli a jelenleg megjelenített eseményeket új válaszok, reakciók, továbbosztások, zap-ek és jelentések szempontjából, így a számlálók frissülnek olvasás közben.</string>
+    <string name="relay_purpose_add_ons">Kiegészítők</string>
+    <string name="relay_purpose_relay_info">Átjátszó információ</string>
+    <string name="relay_purpose_other">Egyéb</string>
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Átjátszólista-kereső</string>
+    <string name="relay_purpose_observing_profiles">Profilok figyelése</string>
+    <string name="relay_purpose_your_account">Fiók adatai</string>
+    <string name="relay_purpose_home_feed">Kezdőoldal hírfolyama</string>
+    <string name="relay_purpose_relay_groups">Átjátszó csoportok</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d csoport</item>
+        <item quantity="other">%1$d csoport</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">Ideiglenes csevegések</string>
+    <string name="relay_purpose_geohash_chats">Helyalapú csevegések</string>
+    <string name="relay_purpose_live_chat">Élő közvetítés csevegés</string>
+    <string name="relay_explain_relay_groups">A NIP-29 csoportok, amelyekhez csatlakozott. Minden csoport egy gazda-átjátszón létezik, így az alkalmazás minden olyan átjátszóhoz kapcsolódik, amely egy csoportját üzemelteti.</string>
+    <string name="relay_explain_ephemeral_chats">Csevegőszobák, amelyek nem őriznek előzményeket – az üzenetek csak a kapcsolódás ideje alatt léteznek, ezért ezek folyamatosan előfizetve maradnak, hogy bármit is fogadni tudjanak.</string>
+    <string name="relay_explain_geohash_chats">Helyalapú szobák azokhoz a területekhez, amelyeket követ, lekérdezve az azokat hordozó átjátszóktól.</string>
+    <string name="relay_explain_live_chat">Csevegés és zap-célok, amelyek a megnyitott vagy követett élő közvetítésekhez kapcsolódnak.</string>
+    <string name="relay_purpose_dm_inbox">Üzenetek</string>
+    <string name="relay_purpose_your_wallet">Pénztárca</string>
+    <string name="relay_purpose_nutzap_inbox">Beérkező nutzapek</string>
+    <string name="relay_purpose_mint_directory">Pénzverde-jegyzék</string>
+    <string name="relay_purpose_nwc">Pénztárca-kapcsolat</string>
+    <string name="relay_purpose_community_chats">Közösségi csevegések</string>
+    <string name="relay_purpose_community_feeds">Közösségi hírfolyamok</string>
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <string name="relay_explain_notifications">A beérkező üzenetek átjátszói, plusz egy kis, rotáló minta azokból az átjátszókból, ahová a követettjei posztolnak, arra az esetre, ha egy említés máshová került volna kézbesítésre.</string>
+    <string name="relay_explain_direct_messages">A közvetlen üzenetek beérkező átjátszói, ahol a becsomagolt üzenetek kézbesítésre kerülnek.</string>
+    <string name="relay_explain_public_chats">Az egyes megnyitott vagy csatlakozott csevegések gazda-átjátszója.</string>
+    <string name="relay_explain_community_chats">Azok az átjátszók, amelyekre az egyes közösségek közzéteszik a terveiket.</string>
+    <string name="relay_explain_encrypted_groups">Csoportüzenetek és kulcscsomagok az egyes csoportok átjátszóin.</string>
+    <string name="relay_explain_live_rooms">A szoba átjátszói, amíg az meg van nyitva.</string>
+    <string name="relay_explain_account_data">Saját profil, -beállítások és -piszkozatok a gazda-átjátszókon.</string>
+    <string name="relay_explain_profiles">A képernyőn jelenleg látható emberek profiljai.</string>
+    <string name="relay_explain_relay_lists">Megkeresi, hogy az egyes személyek mely átjátszókon teszik közzé a bejegyzéseiket, így azok a megfelelő helyről tölthetők le.</string>
+    <string name="relay_explain_follows">Követési listák, amelyek az Ön hírfolyama és a bizalmi hálójának felépítéséhez használatosak.</string>
+    <string name="relay_explain_moderation">Jelentések, amelyeket a követettjei írtak a képernyőn jelenleg látható profilokról, lekérdezve minden egyes átjátszótól, ahová ezek a követettek teszik közé a bejegyzéseiket.</string>
+    <string name="relay_purpose_reports_from_follows">Jelentések követettektől</string>
+    <string name="relay_explain_wallet">Saját pénztárca-események, visszaolvasva azokból az átjátszókból, ahová közzétette őket.</string>
+    <string name="relay_explain_nutzap_inbox">Figyeli a nutzap-átjátszókat, valamint a beérkező- és közvetlen üzenet-átjátszókat, így egy fizetés sem csúszhat el.</string>
+    <string name="relay_explain_mint_directory">Átjátszók között keres, hogy mely pénzverdék léteznek és melyeket ajánlják az emberek.</string>
+    <string name="relay_explain_nwc">Értesítések az összekapcsolt pénztárcáról.</string>
+    <string name="active_subs_title">Aktív átjátszó-előfizetések</string>
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d szűrő</item>
+        <item quantity="other">%1$d szűrő</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d átjátszó</item>
+        <item quantity="other">%1$d átjátszó</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d szűrő még nincs hozzárendelve</item>
+        <item quantity="other">%1$d szűrő még nincs hozzárendelve</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Nincs fiókhoz rendelve</string>
+    <string name="active_subs_no_entity">Összes</string>
+    <string name="active_subs_scope_global">Mindenki</string>
+    <string name="active_subs_scope_follows">Azok, akiket követ</string>
+    <string name="active_subs_scope_authors">Kiválasztott személyek listája</string>
+    <string name="active_subs_scope_muted">Némított személyek</string>
+    <string name="active_subs_scope_all_communities">Közösségeid</string>
+    <string name="active_subs_scope_algo">Kedvenc algoritmus-hírfolyam</string>
+    <string name="active_subs_share">%1$d%% az összesből</string>
+    <string name="active_subs_search_keywords">előfizetések, szűrők, átjátszók, kérések, kapcsolatok, miért diagnosztika</string>
+    <string name="relay_explain_home">Bejegyzések azoktól, akiket követ, beolvasva azokból az átjátszókból, ahová közzéteszik a bejegyzéseiket.</string>
     <string name="always_on_notif_connecting">Kapcsolódás a beérkező üzenetátjátszókhoz\u2026</string>
     <string name="always_on_notif_setting_title">Folyamatos értesítési szolgáltatás</string>
     <string name="always_on_notif_setting_description">Folyamatos kapcsolatot tart fenn a beérkező üzenetek átjátszóival az értesítések azonnali kézbesítése érdekében. Megjeleníti a folyamatban lévő értesítéseket. Több akkumulátort fogyaszt, de így biztosan nem marad le egyetlen üzenetről sem.</string>
+    <string name="always_on_notif_tile_label">Értesítési szolgáltatás</string>
+    <string name="always_on_notif_tile_subtitle_on">Be</string>
+    <string name="always_on_notif_tile_subtitle_off">Ki</string>
+    <string name="notification_service_master_title">Értesítési háttérszolgáltatás</string>
+    <string name="notification_service_master_description">Főkapcsoló a valós idejű háttérértesítésekhez. Kapcsolja ki az akkumulátor kímélése érdekében – olyan, mint a repülőgép-üzemmód. Ha ki van kapcsolva, egyetlen fiók sem marad kapcsolatban a háttérben, és kikapcsolva is marad (újraindítások után is), amíg Ön vissza nem kapcsolja.</string>
+    <string name="notification_service_accounts_title">Háttérben aktív fiókok</string>
+    <string name="notification_service_participation_title">Tartsa ezt a fiókot aktívan a háttérben</string>
     <string name="split_notifications_setting_title">Értesítések szétválasztása követések szerint</string>
     <string name="split_notifications_setting_description">Két értesítési fül megjelenítése — Követettek (akiket Ön követ) és Mindenki. Az olvasatlan jelző csak a követett személyek aktivitása esetén világít.</string>
     <string name="show_messages_in_notifications_setting_title">Üzenetek megjelenítése</string>
@@ -1780,16 +2220,52 @@
     <string name="connectivity_type_unmetered_wifi_only">Korlátlan Wi-Fi</string>
     <string name="connectivity_type_never">Soha</string>
     <!-- Compact label for the segmented control, where "Unmetered WiFi" does not fit. -->
+    <string name="connectivity_type_unmetered_wifi_only_short">Wi-Fi</string>
     <string name="ui_feature_set_type_complete">Teljes</string>
     <string name="ui_feature_set_type_simplified">Egyszerűsített</string>
     <string name="ui_feature_set_type_performance">Teljesítmény</string>
     <!-- Compact labels for the segmented control. -->
+    <string name="ui_feature_set_type_complete_short">Teljes</string>
+    <string name="ui_feature_set_type_simplified_short">Egyszerű</string>
+    <string name="ui_feature_set_type_performance_short">Gyors</string>
     <string name="gallery_type_classic">Klasszikus</string>
     <string name="gallery_type_modern">Modern</string>
     <string name="system">Rendszer</string>
     <string name="light">Világos</string>
     <string name="dark">Sötét</string>
     <string name="application_preferences">Alkalmazásbeállítások</string>
+    <string name="settings_section_appearance">Megjelenés</string>
+    <string name="settings_section_media">Média és adat</string>
+    <string name="settings_section_general">Általános</string>
+    <string name="settings_section_tor_engine">Kapcsolat</string>
+    <string name="settings_section_tor_routing">Útválasztás Tor-on keresztül</string>
+    <string name="settings_section_profile_sections">Szakaszok és hírfolyamok</string>
+    <string name="settings_section_home_tabs">Látható lapok</string>
+    <string name="settings_section_home_content_types">Tartalom a hírfolyamban</string>
+    <string name="home_content_type_text_notes">Szöveges jegyzetek</string>
+    <string name="home_content_type_reposts">Továbbosztások</string>
+    <string name="home_content_type_comments">Hozzászólások és válaszok</string>
+    <string name="home_content_type_pictures">Képek</string>
+    <string name="home_content_type_videos">Videók</string>
+    <string name="home_content_type_shorts">Rövid videók</string>
+    <string name="home_content_type_articles">Cikkek</string>
+    <string name="home_content_type_wiki">Wiki-oldalak</string>
+    <string name="home_content_type_highlights">Kiemelések</string>
+    <string name="home_content_type_polls">Szavazások</string>
+    <string name="home_content_type_classifieds">Apróhirdetések</string>
+    <string name="home_content_type_torrents">Torrentek</string>
+    <string name="home_content_type_voice">Hangüzenetek</string>
+    <string name="home_content_type_live_activities">Élő tevékenységek</string>
+    <string name="home_content_type_ephemeral_chat">Ideiglenes csevegések</string>
+    <string name="home_content_type_interactive_stories">Interaktív történetek</string>
+    <string name="home_content_type_chess">Sakkjátszmák</string>
+    <string name="home_content_type_birds">Madármegfigyelések</string>
+    <string name="home_content_type_attestations">Igazolások</string>
+    <string name="home_content_type_nips">NIP-tervezetek</string>
+    <string name="home_content_type_music">Zene és hang</string>
+    <string name="home_content_type_podcasts">Podcastok</string>
+    <string name="home_content_type_fundraisers">Gyűjtések</string>
+    <string name="settings_section_reminders">Emlékeztetők</string>
     <string name="wallet_connect">Kapcsolódás pénztárcához</string>
     <string name="language">Nyelv</string>
     <string name="theme">Téma</string>
@@ -1808,6 +2284,10 @@
     <string name="font_family_serif">Serif</string>
     <string name="font_family_monospace">Monospace</string>
     <!-- Compact labels for the segmented control, rendered in each option's own typeface. -->
+    <string name="font_family_system_short">Rendszer</string>
+    <string name="font_family_sans_serif_short">Sans</string>
+    <string name="font_family_serif_short">Serif</string>
+    <string name="font_family_monospace_short">Mono</string>
     <string name="font_size">Betűméret</string>
     <string name="font_size_description">A szövegméret méretezése az alkalmazásban</string>
     <string name="font_size_small">Kicsi</string>
@@ -1839,11 +2319,17 @@
     <string name="default_relays_longer">Visszaállítás alapértelmezettre</string>
     <string name="geohash_title">Helyszín megjelenítése mint </string>
     <string name="geohash_explainer">Hozzáadja a helyszínének geokivonatát a bejegyzéséhez. A nyilvánosság tudni fogja, hogy a jelenlegi helytől 5 km-en (3 mi) belül tertózkodik</string>
+    <string name="geohash_teleport_title">Teleportálás</string>
+    <string name="geohash_teleport_action">✈  Teleportálás ide</string>
+    <string name="location_pick_on_map">Válasszon egy helyet a térképen</string>
+    <string name="location_change_place">Helyszín módosítása a térképen</string>
     <string name="geohash_exclusive">Helyszín-alapú bejegyzés</string>
     <string name="geohash_exclusive_explainer">Csak a helyszín követői láthatják. Az általános követők nem fogják látni.</string>
     <string name="hashtag_exclusive">Kulcsszóexkluzív bejegyzés</string>
+    <string name="external_content_title">Külső tartalom</string>
     <string name="external_url_scope">Megjegyzés egy weboldalhoz</string>
     <string name="external_id_scope">Megjegyzés egy külső forráshoz</string>
+    <string name="url_preview_open_in_browser">Megnyitás böngészőben</string>
     <string name="long_form_reading_minutes">Olvasási idő: %1$d perc</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d szám</item>
@@ -1954,8 +2440,32 @@
     <string name="relay_group_server_label">Átjátszócsoportok</string>
     <string name="relay_groups_button">Csoportok</string>
     <string name="messages_settings">Üzenetek</string>
+    <string name="messages_load_types_title">Betöltendő beszélgetések</string>
+    <string name="messages_load_types_desc">Válassza ki, milyen csevegések jelenjenek meg a beérkező üzenetekben. Ha kikapcsol egyet, az itt elrejtődik, és az alkalmazás nem tölti le az átjátszóidról.</string>
+    <string name="chat_type_nip17_title">Privát üzenetek</string>
+    <string name="chat_type_nip17_desc">Végpontok között titkosított, becsomagolt közvetlen üzenetek (NIP-17).</string>
+    <string name="chat_type_nip04_title">Régi típusú üzenetek</string>
+    <string name="chat_type_nip04_desc">Régebbi, kevésbé privát titkosított közvetlen üzenetek (NIP-04).</string>
+    <string name="chat_type_nip28_title">Nyilvános csatornák</string>
+    <string name="chat_type_nip28_desc">Nyílt, nyilvános csevegőszobák, amelyeket bárki olvashat és csatlakozhat hozzájuk (NIP-28).</string>
+    <string name="chat_type_nip29_title">Átjátszó csoportok</string>
+    <string name="chat_type_nip29_desc">Átjátszó által kezelt csoportos csevegések taglistákkal és moderációval (NIP-29).</string>
+    <string name="chat_type_marmot_title">Titkosított csoportok</string>
+    <string name="chat_type_marmot_desc">MLS végpontok között titkosított csoportos csevegések (Marmot).</string>
+    <string name="chat_type_concord_title">Concord közösségek</string>
+    <string name="chat_type_concord_desc">Titkosított közösségek több csatornával (Concord).</string>
+    <string name="chat_type_geohash_title">Helyalapú csevegések</string>
+    <string name="chat_type_geohash_desc">Nyilvános, geohash-alapú csevegés egy helyszínhez (Geolocation).</string>
+    <string name="chat_type_ephemeral_title">Ideiglenes csevegések</string>
+    <string name="chat_type_ephemeral_desc">Könnyűsúlyú, átjátszóra korlátozott szobák, amelyek nem őrzik meg az előzményeket.</string>
     <string name="relay_group_create_title">Csoport létrehozása</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
+    <string name="buzz_channel_create_title">Új csatorna</string>
+    <string name="buzz_forum_create_title">Új fórum</string>
+    <string name="buzz_channel_flag_private">Privát csatorna</string>
+    <string name="buzz_channel_flag_private_desc">Rejtve van a csatornalistából és csak meghívásos. Kikapcsolva bárki ezen az átjátszón megtalálhatja és csatlakozhat hozzá.</string>
+    <string name="buzz_channel_flag_forum">Fórumcsatorna</string>
+    <string name="buzz_channel_flag_forum_desc">Szálazott bejegyzések a csevegés idővonal helyett. Ez később nem módosítható.</string>
     <string name="relay_group_relay_no_nip29">Ez az átjátszó nem hirdeti a NIP-29 átjátszócsoportok támogatását. Az itt létrehozott csoport nem fog működni. A nevét, a tagjait és az üzeneteit nem az átjátszó fogja kezelni. Válasszon egy olyan átjátszót, amely támogatja az átjátszóalapú csoportokat.</string>
     <string name="relay_group_create_name">Csoport neve</string>
     <string name="relay_group_create_topic">Téma (nem kötelező)</string>
@@ -1978,6 +2488,7 @@
     <string name="relay_group_members_title">Tagok</string>
     <string name="relay_group_make_admin">Kinevezés adminisztrátorrá</string>
     <string name="relay_group_make_moderator">Kinevezés moderátorrá</string>
+    <string name="relay_group_assign_role">Szerepkör hozzárendelése: %1$s</string>
     <string name="relay_group_demote_member">Szerepkör eltávolítása</string>
     <string name="relay_group_remove_user">Eltávolítás a csoportból</string>
     <string name="relay_group_remove_user_confirm">Eltávolítja őt: %1$s, ebből a csoportból? Elveszíti a hozzáférést, amíg újra hozzá nem adják vagy meg nem hívják.</string>
@@ -1989,6 +2500,12 @@
     <string name="relay_group_edit_confirm">Mentés</string>
     <string name="relay_group_menu_members">Tagok</string>
     <string name="relay_group_menu_edit">Csoport szerkesztése</string>
+    <string name="relay_group_delete">Csoport törlése</string>
+    <string name="relay_group_delete_confirm">Törli a(z) „%1$s” csoportot? Ez mindenki számára eltávolítja a csoportot és annak előzményeit, ez a művelet nem vonható vissza.</string>
+    <string name="buzz_channel_delete">Csatorna törlése</string>
+    <string name="buzz_channel_delete_confirm">Törli a(z) „%1$s” csatornát? Ez mindenki számára eltávolítja a csatornát és annak üzeneteit, ez a művelet nem vonható vissza.</string>
+    <string name="buzz_channel_archive">Csatorna archiválása</string>
+    <string name="buzz_channel_unarchive">Csatorna visszaállítása az archívumból</string>
     <string name="relay_group_threads_title">Szálak</string>
     <string name="relay_group_pin_message">Üzenet kitűzése</string>
     <string name="relay_group_unpin_message">Üzenet kitűzésének megszüntetése</string>
@@ -2001,6 +2518,8 @@
     <string name="relay_group_invite_preparing">Meghívó előkészítése…</string>
     <string name="relay_group_badge_private">Privát</string>
     <string name="relay_group_badge_invite_only">Csak meghívóval</string>
+    <string name="relay_group_badge_live">ÉLŐ</string>
+    <string name="relay_group_message_count_short_capped">%1$d+</string>
     <string name="relay_group_browse_invalid_url">Adjon meg egy érvényes átjátszó-webcímet (wss://…).</string>
     <string name="relay_group_field_name">Név</string>
     <string name="relay_group_field_about">Leírás</string>
@@ -2012,8 +2531,29 @@
     <string name="relay_group_field_topics">Témák</string>
     <string name="relay_group_field_topics_hint">bitcoin, nostr, művészet</string>
     <string name="relay_group_field_geohash">Helyszín (geo-kivonat)</string>
-    <string name="relay_group_field_geohash_hint">u0nd</string>
+    <string name="relay_group_field_geohash_hint">Érintse meg a térképikont a hely kiválasztásához</string>
+    <string name="relay_group_location_add">Helyszín hozzáadása</string>
+    <string name="relay_group_location_add_desc">Tűzze ki a csoportját egy térképen, hogy a környéken lévők felfedezhessék.</string>
+    <string name="relay_group_location_edit">Helyszín módosítása</string>
+    <string name="relay_group_location_clear">Helyszín eltávolítása</string>
+    <string name="relay_group_location_manual">Geohash kézi megadása</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
+    <string name="location_picker_title">Helyszín kiválasztása</string>
+    <string name="location_picker_hint">Mozgassa a térképet, keressen egy helyet, vagy használja a jelenlegi helyzetét.</string>
+    <string name="location_picker_search_hint">Keresés városra vagy címre</string>
+    <string name="location_picker_search_empty">Nem található egyező hely.</string>
+    <string name="location_picker_use_mine">Jelenlegi helyzetem használata</string>
+    <string name="location_picker_area">Terület mérete</string>
+    <string name="location_picker_confirm">Helyszín használata</string>
+    <string name="relay_group_section_structure">Struktúra</string>
+    <string name="relay_group_parent_desc">Helyezze ezt a csoportot egy szülő alá a hierarchia felépítéséhez.</string>
+    <string name="relay_group_parent_label">Szülőcsoport</string>
+    <string name="relay_group_parent_none">Legfelső szintű csoport</string>
+    <string name="relay_group_parent_pick_title">Válasszon egy szülőcsoportot</string>
+    <string name="relay_group_parent_search">Csoportok keresése</string>
+    <string name="relay_group_parent_top_level_option">Nincs szülő (legfelső szint)</string>
+    <string name="relay_group_parent_none_desc">Ez a csoport a legfelső szinten található</string>
+    <string name="relay_group_parent_empty">Még nincsenek más csoportok ezen az átjátszón</string>
     <string name="relay_group_section_permissions">Engedélyek</string>
     <string name="relay_group_flag_private">Privát</string>
     <string name="relay_group_flag_private_desc">Csak a tagok olvashatják az üzeneteket.</string>
@@ -2028,6 +2568,9 @@
     <string name="relay_group_favorite_relay">Átjátszó hozzáadása a kedvencekhez</string>
     <string name="relay_group_threads_empty">Még nincsenek szálak. Indítson egyet a + gombbal.</string>
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
+    <string name="relay_group_threads_empty_read_only">Még nincsenek szálak.</string>
+    <string name="relay_group_threads_loading_older">Régebbi szálak betöltése…</string>
+    <string name="relay_group_threads_all_caught_up">Nincsenek régebbi szálak</string>
     <string name="relay_group_thread_new">Új szál</string>
     <string name="relay_group_thread_untitled">Névtelen</string>
     <string name="relay_group_thread_title_label">Cím</string>
@@ -2037,9 +2580,16 @@
     <string name="relay_group_browse_description">Böngésszen az egy átjátszón tárolt csoportok között. Illesszen be egy átjátszócímet, vagy válasszon egyet alább.</string>
     <string name="relay_group_browse_relay_label">Átjátszó címe</string>
     <string name="relay_group_browse_go">Böngészés</string>
+    <string name="relay_tor_clearnet_title">Ez az átjátszó nem érhető el Tor-on keresztül</string>
+    <string name="relay_tor_clearnet_body">%1$s nem válaszol Tor-on keresztül – előfordulhat, hogy a gazdagép blokkolja a Tor kilépési csomópontokat. Kapcsolódik hozzá inkább a nyílt interneten keresztül?</string>
+    <string name="relay_tor_clearnet_action">Nyílt internet használata</string>
     <string name="relay_group_browse_your_relays">Átjátszók, amelyeken jelen van</string>
     <string name="relay_group_browse_popular">Népszerű átjátszók</string>
     <string name="relay_group_no_messages_yet">Még nincsenek üzenetek</string>
+    <string name="channel_invite_title">Hozzáadva ide: %1$s</string>
+    <string name="channel_invite_unknown_actor">Valaki</string>
+    <string name="channel_invite_ignore">Elvetés</string>
+    <string name="channel_invite_leave">Kilépés</string>
     <string name="relay_group_join_to_post">Csatlakozzon ehhez a csoporthoz az üzenetek küldéséhez.</string>
     <string name="relay_group_invite_only_to_post">Ez a csoport csak meghívóval érhető el. Meghívóra van szüksége a közzétételhez.</string>
     <plurals name="relay_group_member_count">
@@ -2057,6 +2607,10 @@
     <plurals name="relay_group_follows_participating">
         <item quantity="one">%1$d követett személy</item>
         <item quantity="other">%1$d Ön által követett személy</item>
+    </plurals>
+    <plurals name="relay_group_relay_group_count">
+        <item quantity="one">%1$d csoport</item>
+        <item quantity="other">%1$d csoport</item>
     </plurals>
     <string name="messages_new_message">Privát</string>
     <string name="messages_new_message_to">Neki:</string>
@@ -2094,6 +2648,17 @@
     <string name="share_target_as_dm">Küldés közvetlen üzenetként</string>
     <string name="share_to_dm_title">Küldés ide…</string>
     <string name="share_to_dm_start_new">Új üzenet</string>
+    <string name="share_target_as_highlight">Új kiemelés</string>
+    <string name="share_target_as_picture">Új kép</string>
+    <string name="share_target_as_short_video">Új rövid videó</string>
+    <string name="share_target_as_video">Új videó</string>
+    <string name="new_highlight_title">Új kiemelés</string>
+    <string name="new_highlight_passage_label">Kiemelt szöveg</string>
+    <string name="new_highlight_passage_placeholder">Mi volt az, ami megragadta a figyelmét?</string>
+    <string name="new_highlight_source_label">Forrás webcíme</string>
+    <string name="new_highlight_note_label">Saját jegyzet (nem kötelező)</string>
+    <string name="new_highlight_note_placeholder">Adja hozzá a gondolatait…</string>
+    <string name="highlight_action">Kiemelés</string>
     <string name="copy_url_to_clipboard">Webcím másolása a vágólapra</string>
     <string name="copy_the_note_id_to_the_clipboard">Bejegyzés-azonosító másolása a vágólapra</string>
     <string name="add_media_to_gallery">Média hozzáadása a galériához</string>
@@ -2142,6 +2707,8 @@
     <string name="error_dialog_pay_withdraw_error">Nem sikerült a pénzkivétel a pénztárcából</string>
     <string name="cashu_failed_redemption">Nem sikerült a Cashut beváltani</string>
     <string name="cashu_failed_redemption_explainer_error_msg">A pénzverde a következő hibaüzenetet küldte:%1$s</string>
+    <string name="cashu_unsafe_mint_url">Nem biztonságos Cashu pénzverde-cím</string>
+    <string name="cashu_unsafe_mint_url_explainer">Az Amethyst nem lépett kapcsolatba a token pénzverdéjével. %1$s</string>
     <string name="cashu_successful_redemption">Cashu megkapva</string>
     <string name="cashu_successful_redemption_explainer">%1$s satoshi érkezett a pénztárcájába. (Költség: %2$s satoshi)</string>
     <string name="cashu_no_wallet_found">A rendszeren nem található kompatibilis Cashu pénztárca</string>
@@ -2668,6 +3235,19 @@
     <string name="bottom_bar_category_feeds">Hírfolyamok</string>
     <string name="bottom_bar_category_apps">Alkalmazások és web</string>
     <string name="bottom_bar_category_other">Egyéb</string>
+    <string name="drawer_settings">Oldalsó menü</string>
+    <string name="drawer_settings_title">Saját oldalsó menü</string>
+    <string name="drawer_settings_description">Nyisson meg egy szakaszt, és kapcsolja ki azokat a sorokat, amelyeket soha nem használ. A beállítások mindig láthatók maradnak, így bármikor visszatérhet ide. A szakaszok sorrendje rögzített.</string>
+    <string name="drawer_settings_sections">Szakaszok</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d rejtett</item>
+        <item quantity="other">%1$d rejtett</item>
+    </plurals>
+    <string name="drawer_settings_visible">Látható</string>
+    <string name="drawer_settings_hidden">Rejtett</string>
+    <string name="drawer_settings_always_on">Mindig bekapcsolva</string>
+    <string name="drawer_settings_show_all">Összes megjelenítése</string>
+    <string name="drawer_settings_hide_all">Összes elrejtése</string>
     <string name="home_tabs_settings">Kezdőlap lapjai</string>
     <string name="home_tabs_settings_description">Válassza ki, mely lapok jelenjenek meg a kezdőlapon. Ha csak egy lap aktív, akkor a lapsáv rejtett.</string>
     <string name="home_tab_everything">Minden</string>
@@ -2725,6 +3305,7 @@
     <string name="audio_visualizer_static">Statikus kép</string>
     <string name="profile_image_of_user">%1$s profilképe</string>
     <string name="relay_info">%1$s átjátszó</string>
+    <string name="accepted_by_relays">Átjátszók által elfogadva</string>
     <string name="expand_relay_list">Átjátszólista kibontása</string>
     <string name="note_options">Bejegyzésbeállítások</string>
     <string name="poll">Szavazás</string>
@@ -2740,11 +3321,133 @@
     <string name="chat_system_created_channel">%1$s létrehozta a(z) %2$s nevű csatornát</string>
     <string name="chat_system_created_channel_unnamed">%1$s létrehozta a csatornát</string>
     <string name="chat_system_updated_channel">%1$s frissítette a csatorna profilját</string>
+    <string name="buzz_message_edited">(szerkesztve)</string>
+    <string name="buzz_diff_truncated">(különbség csonkítva)</string>
     <!-- Buzz kind-40099 system messages: relay-authored narration of a channel state change. -->
+    <string name="buzz_system_member_joined">%1$s csatlakozott</string>
+    <string name="buzz_system_member_added">%1$s hozzáadva: %2$s által</string>
+    <string name="buzz_system_member_left">%1$s kilépett</string>
+    <string name="buzz_system_member_removed">%1$s eltávolítva: %2$s által</string>
+    <string name="buzz_system_topic_changed">%1$s beállította a témát erre: „%2$s”</string>
+    <string name="buzz_system_topic_cleared">%1$s törölte a témát</string>
+    <string name="buzz_system_purpose_changed">%1$s beállította a célt erre: „%2$s”</string>
+    <string name="buzz_system_purpose_cleared">%1$s törölte a célt</string>
+    <string name="buzz_system_visibility_open">%1$s nyilvánossá tette ezt a csatornát – bárki megtalálhatja és csatlakozhat hozzá</string>
+    <string name="buzz_system_visibility_private">%1$s priváttá tette ezt a csatornát – csak meghívással</string>
+    <string name="buzz_system_visibility_other">%1$s módosította a láthatóságot erre: %2$s</string>
+    <string name="buzz_system_ttl_set">%1$s beállította, hogy az üzenetek %2$s után tűnjenek el</string>
+    <string name="buzz_system_ttl_cleared">%1$s kikapcsolta az eltűnő üzeneteket</string>
+    <string name="buzz_system_channel_archived">%1$s archiválta ezt a csatornát</string>
+    <string name="buzz_system_channel_unarchived">%1$s visszaállította ezt a csatornát</string>
+    <string name="buzz_system_channel_created">%1$s létrehozta ezt a csatornát</string>
+    <string name="buzz_system_channel_deleted">%1$s törölte ezt a csatornát</string>
+    <string name="buzz_system_message_deleted">%1$s törölt egy üzenetet</string>
+    <string name="buzz_system_message_deleted_reason">%1$s törölt egy üzenetet: %2$s</string>
+    <string name="buzz_system_dm_created">%1$s elindította ezt a beszélgetést</string>
     <!-- Fallback for a system message type this version does not know yet: "alice: some_new_type". -->
+    <string name="buzz_system_unknown">%1$s: %2$s</string>
     <!-- Buzz huddles (kind 481xx): live audio-room lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_huddle_started">🔊 %1$s elindított egy huddle-t</string>
+    <string name="buzz_huddle_joined">🔊 %1$s csatlakozott a huddle-höz</string>
+    <string name="buzz_huddle_left">🔊 %1$s kilépett a huddle-ből</string>
+    <string name="buzz_huddle_ended">🔊 A huddle véget ért</string>
     <!-- Buzz agent jobs (kind 43xxx): an agent task's lifecycle, narrated in the chat timeline. -->
+    <string name="buzz_job_requested">⚙ %1$s kért egy feladatot</string>
+    <string name="buzz_job_accepted">⚙ %1$s elfogadta a feladatot</string>
+    <string name="buzz_job_progress">⚙ Feladat előrehaladása</string>
+    <string name="buzz_job_result">⚙ Feladat eredménye</string>
+    <string name="buzz_job_cancelled">⚙ Feladat megszakítva</string>
+    <string name="buzz_job_error">⚠ Feladathiba</string>
     <!-- Buzz forum votes (kind 45002). -->
+    <string name="buzz_forum_upvoted">▲ %1$s felpontozott egy bejegyzést</string>
+    <string name="buzz_forum_downvoted">▼ %1$s lepontozott egy bejegyzést</string>
+    <string name="buzz_canvas_title">Vászon</string>
+    <string name="buzz_canvas_empty">Még nem osztottak meg vásznat ebben a csatornában.</string>
+    <string name="buzz_canvas_edit">Vászon szerkesztése</string>
+    <string name="buzz_canvas_save">Vászon mentése</string>
+    <string name="buzz_canvas_body_label">Vászon (Markdown)</string>
+    <string name="buzz_edit_message">Szerkesztés</string>
+    <string name="buzz_editing_banner">Üzenet szerkesztése</string>
+    <string name="edit_message">Szerkesztés</string>
+    <string name="message_edited">(szerkesztve)</string>
+    <string name="concord_editing_banner">Üzenet szerkesztése</string>
+    <string name="buzz_typing_one">%1$s ír…</string>
+    <string name="buzz_typing_two">%1$s és %2$s írnak…</string>
+    <string name="buzz_typing_many">Többen írnak…</string>
+    <string name="buzz_workspaces_title">Buzz-munkaterületek</string>
+    <string name="buzz_workspaces_hero_tagline">Ahol emberek és ügynökök együtt építenek</string>
+    <string name="buzz_workspaces_leave">Kilépés a munkaterületről</string>
+    <string name="buzz_workspaces_section">Sajtá munkaterületek</string>
+    <string name="buzz_workspaces_empty_title">Még nincsenek munkaterületek</string>
+    <string name="buzz_workspaces_empty_body">A Buzz-munkaterületek olyan átjátszók, ahol emberek és mesterséges intelligencia-ügynökök építenek együtt. Csatlakozzon egyhez, hogy itt is megjelenjen.</string>
+    <string name="buzz_workspaces_browse">Csoportok böngészése</string>
+    <string name="buzz_console_card_title">Ügynök-konzol</string>
+    <string name="buzz_console_card_subtitle">Költségek · Személyiségek · Élő megfigyelő</string>
+    <string name="buzz_forum_new_title">Új fórumtéma</string>
+    <string name="buzz_forum_body_label">Miről szeretne beszélgetni?</string>
+    <string name="buzz_forum_post_action">Téma közzététele</string>
+    <string name="buzz_forum_thread_title">Fórumtéma</string>
+    <string name="buzz_forum_no_replies">Még nincsenek válaszok. Legyen Ön az első, aki válaszol.</string>
+    <string name="buzz_dm_title">Közvetlen üzenetek</string>
+    <string name="buzz_dm_nav_label">Buzz-üzenetek</string>
+    <string name="buzz_dm_card_subtitle">Privát beszélgetések a munkaterületeken</string>
+    <string name="buzz_dm_new">Új üzenet</string>
+    <string name="buzz_dm_empty_title">Még nincsenek közvetlen üzenetek</string>
+    <string name="buzz_dm_empty_body">Indítson privát beszélgetést bárkivel egy Buzz-munkaterületen.</string>
+    <string name="buzz_dm_more">Több</string>
+    <string name="buzz_dm_add_member">Tag hozzáadása</string>
+    <string name="buzz_dm_add_member_title">Valaki hozzáadása ehhez a beszélgetéshez</string>
+    <string name="buzz_dm_add_member_invalid">Nem érvényes az npub vagy hexadecimális kulcs</string>
+    <string name="buzz_dm_just_you">Csak Ön</string>
+    <string name="buzz_dm_workspace">Munkaterület</string>
+    <string name="buzz_dm_recipients">Címzett</string>
+    <string name="buzz_dm_add_hint">Valaki hozzáadása (npub vagy hexadecimális)</string>
+    <string name="buzz_add_people_hint">Keresés név, NIP-05 vagy npub szerint</string>
+    <string name="buzz_add_people_empty">Nem található senki. Próbáljon másik nevet, NIP-05 címet, vagy illesszen be egy npub-ot.</string>
+    <string name="buzz_dm_start">Beszélgetés indítása</string>
+    <string name="buzz_dm_opening">Megnyitás…</string>
+    <string name="buzz_dm_remove">Eltávolítás</string>
+    <string name="buzz_invite_title">Munkaterület-meghívás</string>
+    <string name="buzz_invite_heading">Csatlakozás ehhez a munkaterülethez</string>
+    <string name="buzz_invite_workspace">Munkaterület</string>
+    <string name="buzz_invite_role">Szerepkör</string>
+    <string name="buzz_invite_body">A munkaterületet egy biztonságos beépített böngészőben nyitja meg, hogy átnézhesse a feltételeket és befejezze a csatlakozást. A saját Amethyst kulcsával jelentkezik be – jelszó nem szükséges.</string>
+    <string name="buzz_invite_continue">Folytatás a böngészőben</string>
+    <string name="buzz_invite_invalid">Ez nem tűnik érvényes Buzz-meghívó-hivatkozásnak.</string>
+    <string name="buzz_invite_expired">Ez a meghívó lejárt. Kérjen egy újat.</string>
+    <string name="buzz_invite_after_browser">Fejezze be a feltételek elfogadását a böngészőben, majd térjen vissza – a munkaterület várni fogja.</string>
+    <string name="buzz_invite_open_workspace">Saját munkaterületek megnyitása</string>
+    <string name="buzz_import_title">Munkaterület-csatornák importálása</string>
+    <string name="buzz_import_loading">Saját csatornák keresése…</string>
+    <string name="buzz_import_your_channels">Saját csatornák ezen a munkaterületen</string>
+    <string name="buzz_import_add">Hozzáadás</string>
+    <string name="buzz_import_add_all">Összes hozzáadása</string>
+    <string name="buzz_import_added">Hozzáadva</string>
+    <string name="buzz_import_empty_title">Nem találhatók csatornák</string>
+    <string name="buzz_import_empty_body">Úgy tűnik, még nem tagja egyetlen csatornának sem ezen az átjátszón. Először fogadja el a munkaterület-meghívót a böngészőben, majd próbálja újra.</string>
+    <string name="relay_group_section_channels">Csatornák</string>
+    <string name="relay_group_section_forums">Fórumok</string>
+    <string name="relay_group_section_archived">Archivált</string>
+    <string name="buzz_agent_working">Dolgozás…</string>
+    <string name="relay_group_add_member">Tag hozzáadása</string>
+    <string name="buzz_community_add_people">Emberek hozzáadása ehhez a munkaterülethez</string>
+    <string name="buzz_invite_create">Meghívási hivatkozás létrehozása</string>
+    <string name="buzz_invite_link_title">Meghívási hivatkozás</string>
+    <string name="buzz_invite_share">Megosztás</string>
+    <string name="buzz_invite_copy">Másolás</string>
+    <string name="buzz_invite_error_title">Nem sikerült létrehozni a meghívót</string>
+    <string name="buzz_invite_dismiss">OK</string>
+    <string name="buzz_pin">Csatorna rögzítése</string>
+    <string name="buzz_unpin">Csatorna rögzítésének megszüntetése</string>
+    <string name="buzz_dm_section_empty">Még nincsenek beszélgetések</string>
+    <plurals name="buzz_dm_hidden_count">
+        <item quantity="one">%1$d rejtett beszélgetés</item>
+        <item quantity="other">%1$d rejtett beszélgetés</item>
+    </plurals>
+    <plurals name="buzz_dm_see_all_count">
+        <item quantity="one">%1$d további beszélgetés megtekintése</item>
+        <item quantity="other">Mind a %1$d beszélgetés megtekintése</item>
+    </plurals>
     <string name="chat_delivery_details_title">Üzenet kézbesítése</string>
     <string name="close">Bezárás</string>
     <string name="chat_delivery_pending">Várakozás egy átjátszóra az üzenet elfogadásához</string>
@@ -2917,6 +3620,11 @@
     <string name="git_repo_settings_topics">Témák (vesszővel elválasztva)</string>
     <string name="git_repo_settings_save">Mentés</string>
     <string name="git_repositories">Git-tárolók</string>
+    <string name="highlights">Kiemelések</string>
+    <string name="git_repositories_search_open">Tárolók szűrése</string>
+    <string name="git_repositories_search_close">Szűrő bezárása</string>
+    <string name="git_repositories_search_placeholder">Szűrés név, téma, kiszolgáló, karbantartó szerint…</string>
+    <string name="git_repositories_search_no_results">A jelenlegi hírcsatornában nincs olyan tároló, amely megfelelne ennek a keresésnek.</string>
     <string name="nsite_title">nOldal: %1$s</string>
     <string name="napplet_card_title">nKisalkalmazás: %1$s</string>
     <string name="napplet_card_permissions">Engedélyek:</string>
@@ -3145,8 +3853,10 @@
     <string name="resource_usage_memory_chatrooms">Csevegőszoba-listák a memóriában</string>
     <string name="resource_usage_memory_device_class">Eszköz memóriájának osztálya</string>
     <string name="resource_usage_send_section">Megosztás a fejlesztőkkel</string>
-    <string name="resource_usage_send_explanation">Ha az Amethyst túl sok akkumulátort vagy adatot használna, elküldheti ezt a jelentést a fejlesztőknek egy titkosított közvetlen üzenetben (DM). Kizárólag a képernyőn látható számokat és az azok mögött álló technikai számlálókat tartalmazza \u2014 bejegyzéseket, névjegyeket vagy böngészési adatokat nem. Semmi sem kerül elküldésre addig, amíg az üzenetküldő képernyőn rá nem koppint a Küldés gombra.</string>
+    <string name="resource_usage_send_explanation">Ha úgy tűnik, hogy az Amethyst túlzottan meríti az akkumulátort vagy fogyasztja az adatkeretet, elküldheti ezt a jelentést a fejlesztőknek egy titkosított közvetlen üzenetben vagy lemásolhatja és megoszthatja saját maga. A jelentés kizárólag az ezen a képernyőn látható számokat és a mögöttük lévő technikai számlálókat tartalmazza – bejegyzéseket, névjegyeket, átjátszóneveket vagy böngészési adatokat nem. A jelentés csak akkor hagyja el ezt a képernyőt, ha Ön elküldi, lemásolja vagy megosztja azt.</string>
     <string name="resource_usage_send_button">Jelentés elküldése közvetlen üzenetben</string>
+    <string name="resource_usage_copy_button">Másolás</string>
+    <string name="resource_usage_share_button">Megosztás</string>
     <string name="resource_usage_alert_title">Magas erőforrás-használat észlelhető</string>
     <string name="resource_usage_alert_message">Az Amethyst a közelmúltban a vártnál többet fogyasztott: %1$s. Szeretne használati jelentést küldeni a fejlesztőknek egy titkosított közvetlen üzenetben? A küldés előtt megtekintheti a teljes jelentést.</string>
     <string name="resource_usage_reason_bg_data">%1$s mobiladat-forgalom a háttérben egyetlen nap alatt</string>
@@ -3760,6 +4470,11 @@
     <string name="pow_notification_channel_name">„Munkabizonyítás” bányászata</string>
     <string name="pow_notification_channel_description">Azokat a bejegyzéseket jeleníti meg, amelyek még mindig a NIP-13 szerinti munkabizonyítást végzik, így azok befejeződhetnek, miután kilép az alkalmazásból.</string>
     <string name="pow_notification_cancel_all">Mégse</string>
+    <string name="pow_notification_send_without_pow">Küldés most</string>
+    <string name="pow_cancel_dialog_title">Leállítja a bányászatot?</string>
+    <string name="pow_cancel_dialog_message">Ez a bejegyzés még bányászza a munkabizonyítást. Elküldheti most munkabizonyítás nélkül, vagy eldobhatja.</string>
+    <string name="pow_cancel_dialog_send_without_pow">Küldés munkabizonyítás nélkül</string>
+    <string name="pow_cancel_dialog_discard">Bejegyzés eldobása</string>
     <string name="pow_difficulty_estimate">≈ %1$s bejegyzésenként ezen az eszközön</string>
     <string name="pow_estimate_instant">&lt;1 mp</string>
     <plurals name="pow_estimate_seconds">
@@ -3936,7 +4651,113 @@
     <string name="error_parsing_json_from_lightning_address_s_invoice_fetch_check_the_user_s_lightning_setup_with_user">Hiba történt a JSON elemzésekor a(z) %1$s számlahívásából. Ellenőrizze a felhasználó lightning-beállításait</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user">Nem lehetett lightning-számlát létrehozni. Üzenet a következőtől: %1$s: %2$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nem sikerült Lightning-számlát létrehozni a következőből: %1$s:  A „PR” elem nem található a kapott JSON-ban.</string>
+    <string name="geohash_chat_open">Helyalapú csevegés megnyitása</string>
+    <string name="geohash_chat">Helyalapú csevegés</string>
+    <string name="new_conversation_location_title">Helyalapú csatorna</string>
+    <string name="new_conversation_location_tagline">Csevegjen azokkal, akik egy hely közelében vannak, geohash alapján.</string>
+    <string name="new_conversation_location_chip">Helyi</string>
+    <string name="new_conversation_location_best">Legjobb, ha fizikailag egy hely környékén – a saját környékén, városában vagy régiójában – lévő emberekkel szeretne beszélgetni.</string>
+    <string name="new_conversation_location_cta">Válasszon egy helyszínt</string>
+    <string name="new_conversation_location_pro_1">Névtelen – területenként eldobható identitás, sosem a saját npub.</string>
+    <string name="new_conversation_location_pro_2">Bitchat-kompatibilis; eléri a közeli felhasználókat ugyanazokon az átjátszókon.</string>
+    <string name="new_conversation_location_con_1">Nyilvános és ideiglenes – nincs előzmény, a cellában bárki olvashatja.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_job_board_title">Visszamaradó feladatok</string>
+    <string name="buzz_workflow_runs_title">Munkafolyamat-futtatások</string>
+    <string name="buzz_agent_work_title">Ügynökmunka</string>
+    <string name="buzz_workflow_new_run">Új futtatás</string>
+    <string name="buzz_workflow_section_awaiting">Jóváhagyásra vár</string>
+    <string name="buzz_workflow_section_active">Jelenleg dolgozik</string>
+    <string name="buzz_workflow_section_shipped">Kiszállítva</string>
+    <string name="buzz_workflow_section_closed">Lezárva</string>
+    <string name="buzz_workflow_gate_needs_you">Jóváhagyásra vár</string>
+    <string name="buzz_workflow_gate_awaiting">Jóváhagyásra vár</string>
+    <string name="buzz_workflow_no_description">(nincs leírás)</string>
+    <string name="buzz_workflow_id_prefix">Munkafolyamat: %1$s</string>
+    <string name="buzz_workflow_by">általa:</string>
+    <string name="buzz_workflow_waiting_on">vár rá:</string>
+    <string name="buzz_workflow_readonly_approver">Ön a jóváhagyó, de ez a bejelentkezés nem tud aláírni egy döntést.</string>
+    <string name="buzz_workflow_deny">Megtagadás</string>
+    <string name="buzz_workflow_approve_open_pr">Jóváhagyás és PR nyitása</string>
+    <string name="buzz_workflow_approve_title">Jóváhagyja ezt a futtatást?</string>
+    <string name="buzz_workflow_deny_title">Megtagadja ezt a futtatást?</string>
+    <string name="buzz_workflow_approve_body">A futtató leküldi az ágat és nyit egy beolvasztási kérést a következőhöz: „%1$s”. A jóváhagyás soha nem egyesít vagy telepít – az továbbra is GitHubon történik.</string>
+    <string name="buzz_workflow_deny_body">Az ügynök munkája a következőhöz: „%1$s” el fog veszni. Ez nem vonható vissza.</string>
+    <string name="buzz_workflow_this_run">ez a futtatás</string>
+    <string name="buzz_workflow_cancel">Mégse</string>
+    <string name="buzz_workflow_waiting_for_approval">Jóváhagyásra vár</string>
+    <string name="buzz_workflow_triggered_toast">Futtatás elindítva</string>
+    <string name="buzz_workflow_trigger_failed_toast">Nem sikerült futtatni – ellenőrizze, hogy tud-e bejegyzéseket közzétenni ezen a munkaterületen</string>
+    <string name="buzz_workflow_approved_toast">Jóváhagyva – a futtató megnyit egy beolvasztási kérést</string>
+    <string name="buzz_workflow_denied_toast">Megtagadva – a munka eldobásra került</string>
+    <string name="buzz_workflow_decision_failed_toast">Nem sikerült közzétenni a döntésedet – ellenőrizze, hogy tud-e bejegyzéseket közzétenni ezen a munkaterületen</string>
+    <string name="buzz_workflow_view_pr">PR megtekintése</string>
+    <string name="buzz_workflow_closed_denied">Megtagadva – munka eldobva</string>
+    <string name="buzz_workflow_closed_cancelled">Megszakítva</string>
+    <string name="buzz_workflow_closed_failed_prefix">Sikertelen: %1$s</string>
+    <string name="buzz_workflow_closed_failed">Sikertelen</string>
+    <string name="buzz_workflow_pill_queued">Sorban</string>
+    <string name="buzz_workflow_pill_working">Dolgozás</string>
+    <string name="buzz_workflow_pill_needs_approval">Jóváhagyásra vár</string>
+    <string name="buzz_workflow_pill_approved">Jóváhagyva</string>
+    <string name="buzz_workflow_pill_shipped">Kiszállítva</string>
+    <string name="buzz_workflow_pill_failed">Sikertelen</string>
+    <string name="buzz_workflow_pill_cancelled">Megszakítva</string>
+    <string name="buzz_workflow_pill_denied">Megtagadva</string>
+    <string name="buzz_workflow_trigger_title">Munkafolyamat elindítása</string>
+    <string name="buzz_workflow_trigger_desc">A futtató elvégzi a munkát, majd megáll, hogy egy ember jóváhagyja, mielőtt PR-t nyit. Az egész csatorna látja a futtatást.</string>
+    <string name="buzz_workflow_no_defs_hint">Még nincsenek munkafolyamatok. Nyissa meg a fenti menüt, és válassza az „Új definíció…” lehetőséget egy létrehozásához, majd indítsa el.</string>
+    <string name="buzz_workflow_task_label">Mit kellene csinálnia?</string>
+    <string name="buzz_workflow_trigger_run">Futtatás indítása</string>
+    <string name="buzz_workflow_picker_label">Munkafolyamat</string>
+    <string name="buzz_workflow_picker_empty">Még nincsenek munkafolyamatok definiálva</string>
+    <string name="buzz_workflow_picker_choose">Válasszon egy munkafolyamatot</string>
+    <string name="buzz_workflow_new_definition">Új definíció…</string>
+    <string name="buzz_workflow_def_title">Új munkafolyamat-definíció</string>
+    <string name="buzz_workflow_def_desc">Elnevezi a csatorna számára és közzéteszi a YAML receptjét (kind-30620). Egy valódi Buzz-átjátszó futtatja a YAML-t. Saját tárhely esetén a futtató a konfigurált parancsot futtatja – itt a definíció csak elnevezi és katalogizálja a futtatást.</string>
+    <string name="buzz_workflow_def_name">Név</string>
+    <string name="buzz_workflow_def_name_hint">összeállítás és tesztelés</string>
+    <string name="buzz_workflow_def_yaml">YAML-recept</string>
+    <string name="buzz_workflow_def_publish_failed">Nem sikerült közzétenni a definíciót –  ellenőrizze, hogy tud-e bejegyzéseket közzétenni ezen a munkaterületen</string>
+    <string name="buzz_workflow_publishing">Közzététel…</string>
+    <string name="buzz_workflow_create_definition">Definíció létrehozása</string>
+    <string name="buzz_workflow_empty_title">Még nincsenek futtatások</string>
+    <string name="buzz_workflow_empty_desc">Koppintson az „Futtatás indítása” gombra egy munkafolyamat elindításához. A futtató elvégzi a munkát, és megáll egy jóváhagyási pontnál – egy embernek kell engedélyeznie, mielőtt bármi kiszállításra kerülne.</string>
     <!-- Buzz agent attestation -->
+    <string name="buzz_attest_topbar">Igazolások</string>
+    <string name="buzz_attest_hold_title">Egy igazolás megtartása</string>
+    <string name="buzz_attest_holding">Egy igazolás megtartása ehhez a fiókhoz. Ez automatikusan csatolásra kerül, amikor hitelesít egy Buzz-átjátszón.</string>
+    <string name="buzz_attest_grants_prefix">Engedélyek: %1$s</string>
+    <string name="buzz_attest_grants_unrestricted">bármilyen típus, bármikor (korlátozás nélkül)</string>
+    <string name="buzz_attest_remove">Eltávolítás</string>
+    <string name="buzz_attest_hold_desc">Illesszen be egy tulajdonos által aláírt hitelesítési címkét, amelyet ennek a fióknak állítottak ki, hogy virtuális tagként hitelesítse magát a Buzz-munkaterületükön.</string>
+    <string name="buzz_attest_authtag_label">hitelesítési címke JSON</string>
+    <string name="buzz_attest_hold_button">Igazolás megtartása</string>
+    <string name="buzz_attest_readonly_title">Helyi kulcs szükséges</string>
+    <string name="buzz_attest_readonly_desc">A NIP-OA igazolás egy aláírás egy kötelezettségvállalás-kivonat felett, nem egy Nostr-esemény, így azt csak olyan aláíró állíthatja elő, amely az Ön nyers privát kulcsát birtokolja. Ez a fiók távoli (NIP-46 bunker) vagy külső (NIP-55) aláírót használ, amely nem tud igazolást aláírni.</string>
+    <string name="buzz_attest_form_desc">Engedélyezze egy ügynök nyilvános kulcsát, hogy az Ön munkaterületén tegyen közzé bejegyzést anélkül, hogy regisztrálná a kulcsát. Az ügynök az alábbi aláírt címkét csatolja az eseményeihez.</string>
+    <string name="buzz_attest_agent_label">Ügynök (keressen név szerint, vagy illesszen be egy npub / hexadecimális kulcsot)</string>
+    <string name="buzz_attest_agent_paste_error">Adjon meg egy npub-ot vagy 64 karakteres hexadecimális kulcsot.</string>
+    <string name="buzz_attest_change_agent">Ügynök módosítása</string>
+    <string name="buzz_attest_conditions_hint">Feltételek (nem kötelező) – hagyja üresen a korlátozás nélküli igazoláshoz.</string>
+    <string name="buzz_attest_kind_label">Korlátozás típusra (0–65535)</string>
+    <string name="buzz_attest_after_label">Csak ez utáni események (unix másodperc)</string>
+    <string name="buzz_attest_before_label">Csak ez előtti események (unix másodperc)</string>
+    <string name="buzz_attest_generate">Igazolás előállítása</string>
+    <string name="buzz_attest_signed_title">Aláírt igazolás</string>
+    <string name="buzz_attest_copy_tag">Címke másolása</string>
+    <string name="buzz_attest_warning">⚠ Csak az ügynök üzemeltetőjének adja oda. Amíg érvényes és Ön továbbra is tagja a munkaterületnek, az átjátszó lehetővé teszi, hogy ez az ügynök a fenti feltételek mellett tagként tegyen közzé bejegyzéseket.</string>
     <!-- Buzz agent persona editor -->
+    <string name="buzz_persona_new_title">Új személyiség</string>
+    <string name="buzz_persona_edit_title">Személyiség szerkesztése</string>
+    <string name="buzz_persona_slug">Azonosító (személyazonosító)</string>
+    <string name="buzz_persona_slug_help">a-z, 0-9, „-” vagy „_”. Létrehozás után nem módosítható.</string>
+    <string name="buzz_persona_display_name">Megjelenített név</string>
+    <string name="buzz_persona_system_prompt">Rendszer-utasítás</string>
+    <string name="buzz_persona_model">Modell (nem kötelező)</string>
+    <string name="buzz_persona_provider">Szolgáltató (nem kötelező)</string>
+    <string name="buzz_persona_runtime">Futtatókörnyezet (nem kötelező)</string>
+    <string name="buzz_persona_avatar">Avatar webcíme (nem kötelező)</string>
+    <string name="buzz_persona_publishing">Közzététel…</string>
+    <string name="buzz_persona_publish">Személyiség közzététele</string>
 </resources>

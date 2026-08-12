@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
 import com.vitorpamplona.quartz.concord.cord04Roles.EntityFloor
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.crypto.GroupKey
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -39,6 +40,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlin.concurrent.Volatile
 
 /**
  * A validated inner chat rumor emitted by a session: its parent [communityId] and
@@ -96,14 +98,33 @@ enum class ConcordIngestOutcome {
  * [ConcordActions]/[ConcordPlaneRegistry] helpers.
  */
 class ConcordCommunitySession(
-    val entry: ConcordCommunityListEntry,
+    entry: ConcordCommunityListEntry,
     val myPubKey: HexKey,
     private val onRumor: ConcordRumorSink = { _, _, _, _ -> },
 ) {
+    /**
+     * The joined-list entry this session projects. Replaced in place — only ever by
+     * [adoptControlMaterial], and only within one epoch — because the Control Plane
+     * write key can arrive long after the session was built (CORD-04 §3). A change
+     * that moves the *planes* (a Refounding) rebuilds the session instead.
+     *
+     * Volatile because the ingest path, the UI and the adopting drain are different
+     * threads: the write happens under [lock], but readers take it unsynchronized.
+     */
+    @Volatile
+    var entry: ConcordCommunityListEntry = entry
+        private set
+
     private val root = entry.root.hexToByteArray()
     private val communityIdBytes = entry.id.hexToByteArray()
 
-    private val controlPlaneKey: GroupKey = ConcordActions.controlPlane(root, communityIdBytes, entry.rootEpoch)
+    /**
+     * The Control Plane as this account holds it (CORD-02 §5): split when the entry
+     * carries a `control_pk` (plus the write key when this account is staff and
+     * holds the `control_root`), legacy single-key otherwise.
+     */
+    @Volatile
+    private var controlKeys: ControlPlaneKeys = ConcordActions.controlPlaneKeysFor(entry)
 
     /** The Guestbook Plane at this epoch — where member join/leave motions ride (CORD-02 §5). */
     private val guestbookKey: GroupKey = ConcordActions.guestbookPlane(root, communityIdBytes, entry.rootEpoch)
@@ -116,7 +137,7 @@ class ConcordCommunitySession(
     private val nextBaseRekeyKey: GroupKey = ConcordActions.nextBaseRekeyPlane(root, communityIdBytes, entry.rootEpoch)
 
     /** The Control Plane stream address to subscribe to (known from the entry alone). */
-    val controlPlaneAddress: HexKey get() = controlPlaneKey.publicKeyHex
+    val controlPlaneAddress: HexKey get() = controlKeys.address
 
     /** The Guestbook Plane stream address to subscribe to (known from the entry alone). */
     val guestbookAddress: HexKey get() = guestbookKey.publicKeyHex
@@ -136,14 +157,16 @@ class ConcordCommunitySession(
      * `heldRoots` is already persisted in the kind-13302 community list, that memory
      * survives a process restart without any new storage.
      */
-    private val historicalControlKeys: Map<HexKey, Pair<GroupKey, Long>> =
+    private val historicalControlKeys: Map<HexKey, Pair<ControlPlaneKeys, Long>> =
         entry.heldRoots
             .filter { it.epoch < entry.rootEpoch }
             .sortedByDescending { it.epoch }
             .take(ConcordActions.MAX_BACKFILL_EPOCHS)
             .mapNotNull { held ->
-                val key = runCatching { ConcordActions.controlPlane(held.key.hexToByteArray(), communityIdBytes, held.epoch) }.getOrNull() ?: return@mapNotNull null
-                key.publicKeyHex to (key to held.epoch)
+                // A held split epoch's address is the banked control_pk (held, never derivable);
+                // a held legacy epoch derives its address from the root as it always did.
+                val keys = runCatching { ConcordActions.controlPlaneKeys(held.key.hexToByteArray(), communityIdBytes, held.epoch, held.controlPk, held.controlRoot) }.getOrNull() ?: return@mapNotNull null
+                keys.address to (keys to held.epoch)
             }.toMap()
 
     /** The prior-epoch Control Plane addresses to subscribe to, so the rollback floor can be rebuilt. */
@@ -289,13 +312,19 @@ class ConcordCommunitySession(
      * NOT included here: mixing them into the shared control/channel AUTH set starved the
      * subscription on relays that gate a REQ on stream-key AUTH (control stopped folding,
      * channels went empty). They AUTH on their own isolated subscription instead.
+     *
+     * A **split** Control Plane epoch contributes a key only when this account is staff
+     * (CORD-02 §2): a regular member holds the `control_pk` but not the secret behind it,
+     * so it cannot answer an AUTH challenge as the plane — which is the write-restriction
+     * working as designed, not a gap to paper over. A legacy epoch still contributes, its
+     * member-held derivation being address and signer at once (CORD-02 §5).
      */
     fun streamKeys(): List<GroupKey> =
         lock.withLock {
-            listOf(controlPlaneKey) +
+            listOfNotNull(controlKeys.signer) +
                 // Prior-epoch Control Planes: the anti-rollback floor is folded from them, so the
                 // gated relays must serve their wraps too.
-                historicalControlKeys.values.map { it.first } +
+                historicalControlKeys.values.mapNotNull { it.first.signer } +
                 channelKeysByAddress.values.map { it.second } +
                 // Prior-epoch channel stream keys so the gated relays serve their older wraps too.
                 historicalChannelKeysByAddress.values.map { it.second }
@@ -305,13 +334,48 @@ class ConcordCommunitySession(
     fun auxStreamKeys(): List<GroupKey> = listOf(guestbookKey, nextBaseRekeyKey)
 
     /** The community's current Control Plane editions — the input a moderation edition chains onto. */
-    fun controlEditions(): List<ControlEdition> = lock.withLock { editionsLocked(controlWraps.values.toList(), controlPlaneKey) }
+    fun controlEditions(): List<ControlEdition> = lock.withLock { editionsLocked(controlWraps.values.toList(), controlKeys) }
 
     /** The raw Control Plane wraps buffered so far — the input a Refounding compacts (CORD-06 §3). */
     fun controlPlaneWraps(): List<Event> = lock.withLock { controlWraps.values.toList() }
 
-    /** The Control Plane key, for authoring moderation editions. */
-    fun controlPlaneKey(): GroupKey = controlPlaneKey
+    /**
+     * The Control Plane keys as this account holds them, for authoring moderation
+     * editions. [ControlPlaneKeys.canWrite] is false for a regular member on a split
+     * epoch (CORD-02 §2) — the caller must not attempt to publish an edition then.
+     */
+    fun controlPlaneKeys(): ControlPlaneKeys = lock.withLock { controlKeys }
+
+    /**
+     * Adopt Control Plane key material that arrived *after* this session was built, at
+     * the same epoch: the `control_root` a staff-making Grant delivers (CORD-04 §3), or
+     * a `control_pk` filled in by a same-epoch Community List merge (CORD-02 §8).
+     *
+     * Done in place rather than by rebuilding the session, because a rebuild would drop
+     * the buffered Control Plane wraps and leave the community folded empty until every
+     * wrap happened to be re-delivered. Nothing about the *plane* moves here: adoption is
+     * gated on the secret deriving to exactly the `control_pk` already held (CORD-02 §5),
+     * so the address, the read key, the buffered wraps and the subscription set are all
+     * invariant — only [ControlPlaneKeys.signer] appears, flipping
+     * [ControlPlaneKeys.canWrite] and adding the stream key to [streamKeys].
+     *
+     * Fails closed and returns false when [newEntry] is not the same community at the
+     * same root and epoch, or when the material it carries would move the plane's
+     * address — a caller must rebuild the session for that, never mutate it. Returns
+     * false too when nothing changed, so the caller can skip a needless revision bump.
+     */
+    fun adoptControlMaterial(newEntry: ConcordCommunityListEntry): Boolean =
+        lock.withLock {
+            if (newEntry.id != entry.id || newEntry.root != entry.root || newEntry.rootEpoch != entry.rootEpoch) return@withLock false
+            if (newEntry.controlPk == entry.controlPk && newEntry.controlRoot == entry.controlRoot) return@withLock false
+            val newKeys = ConcordActions.controlPlaneKeysFor(newEntry)
+            // The plane is where the buffered wraps already are. If the new material points
+            // somewhere else, this is not an adoption — refuse and let the caller rebuild.
+            if (newKeys.address != controlKeys.address) return@withLock false
+            entry = newEntry
+            controlKeys = newKeys
+            true
+        }
 
     /** This account's standing, from the current fold. */
     fun membership(): ConcordMembership {
@@ -422,6 +486,9 @@ class ConcordCommunitySession(
         if (!ChannelChat.isTyping(rumor) || !ChannelChat.isBoundTo(rumor, channelIdHex, epoch)) return
         val who = rumor.pubKey.lowercase()
         if (who == myPubKey.lowercase()) return // never show my own typing back to me
+        // A banned member's messages are dropped everywhere, so their typing heartbeat must be too —
+        // otherwise they sit in the "… is typing" row forever in a channel they cannot be heard in.
+        if (_state.value?.authority?.isBanned(who) == true) return
         val now = TimeUtils.now()
         // Update the map and publish inside the lock so a concurrent heartbeat on another
         // channel can't publish an older snapshot last and drop this channel's typers.
@@ -447,7 +514,7 @@ class ConcordCommunitySession(
                 val wraps = controlWraps.values.toList()
                 val folded =
                     ConcordCommunityState.fold(
-                        editionsLocked(wraps, controlPlaneKey),
+                        editionsLocked(wraps, controlKeys),
                         entry.owner,
                         controlFloorsLocked(),
                     )
@@ -486,13 +553,13 @@ class ConcordCommunitySession(
      */
     private fun editionsLocked(
         wraps: Collection<Event>,
-        planeKey: GroupKey,
+        planeKeys: ControlPlaneKeys,
     ): List<ControlEdition> =
         wraps.mapNotNull { wrap ->
             if (editionByWrapId.containsKey(wrap.id)) {
                 editionByWrapId[wrap.id]
             } else {
-                val edition = ConcordStreamEnvelope.openOrNull(wrap, planeKey)?.let { ControlEdition.fromRumor(it.rumor) }
+                val edition = ConcordStreamEnvelope.openOrNull(wrap, planeKeys)?.let { ControlEdition.fromRumor(it.rumor) }
                 editionByWrapId[wrap.id] = edition
                 edition
             }

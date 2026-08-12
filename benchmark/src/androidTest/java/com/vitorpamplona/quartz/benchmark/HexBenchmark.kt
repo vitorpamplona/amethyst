@@ -39,9 +39,13 @@ class HexBenchmark {
     @get:Rule val r = BenchmarkRule()
 
     val hex = "48a72b485d38338627ec9d427583551f9af4f016c739b8ec0d6313540a8b12cf"
+    val hex128 = hex + "b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc341b22650b07b9"
     val bytes =
         fr.acinq.secp256k1.Hex
             .decode(hex)
+    val bytes64 =
+        fr.acinq.secp256k1.Hex
+            .decode(hex128)
 
     @Test
     fun hexIsEqual() {
@@ -102,5 +106,41 @@ class HexBenchmark {
     @Test
     fun isHex64() {
         r.measureRepeated { Hex.isHex64(hex) }
+    }
+
+    @Test
+    fun hexDecode64() {
+        r.measureRepeated { Hex.decode64(hex) }
+    }
+
+    @Test
+    fun hexDecode64OrNull() {
+        r.measureRepeated { Hex.decode64OrNull(hex) }
+    }
+
+    @Test
+    fun hexEncode64() {
+        r.measureRepeated { Hex.encode64(bytes) }
+    }
+
+    @Test
+    fun hexDecode128() {
+        r.measureRepeated { Hex.decode128(hex128) }
+    }
+
+    @Test
+    fun hexEncode128() {
+        r.measureRepeated { Hex.encode128(bytes64) }
+    }
+
+    /** The pre-existing two-pass way to safely decode an id, for comparison with [hexDecode64OrNull]. */
+    @Test
+    fun hexIsHex64ThenDecode() {
+        r.measureRepeated { if (Hex.isHex64(hex)) Hex.decode(hex) else null }
+    }
+
+    @Test
+    fun hexToLong256() {
+        r.measureRepeated { Hex.toLong256(hex) }
     }
 }

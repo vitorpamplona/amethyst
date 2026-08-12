@@ -103,7 +103,7 @@ class PollNoteViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             totalZapped = totalZapped()
             wasZappedByLoggedInAccount = false
-            wasZappedByLoggedInAccount = account.calculateIfNoteWasZappedByAccount(pollNote, 0)
+            wasZappedByLoggedInAccount = account.zaps.calculateIfNoteWasZappedByAccount(pollNote, 0)
             canZap.value = checkIfCanZap()
 
             tallies.forEach {

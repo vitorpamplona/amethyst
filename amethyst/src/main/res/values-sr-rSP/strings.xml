@@ -1277,6 +1277,16 @@
         <item quantity="few">Povezan sa %1$d relay-a</item>
         <item quantity="other">Povezan sa %1$d relay-a</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
     <string name="always_on_notif_connecting">Povezivanje sa inbox relays…</string>
     <string name="always_on_notif_setting_title">Uvek aktivna usluga obaveštenja</string>
     <string name="always_on_notif_setting_description">Održava stalnu vezu sa vašim inbox relays za trenutnu isporuku obaveštenja. Prikazuje stalno obaveštenje. Troši više baterije, ali osigurava da nikada ne propustite poruku.</string>

@@ -46,6 +46,8 @@
     <string name="violence">Violence</string>
     <string name="unknown_author">Unknown Author</string>
     <string name="copy_text">Copy Text</string>
+    <string name="copy_text_original">Copy Original</string>
+    <string name="copy_text_translated">Copy Translated</string>
     <string name="copy_user_pubkey">Copy Author ID</string>
     <string name="copy_note_id">Copy Note ID</string>
     <string name="copy_raw_json">Copy raw JSON</string>
@@ -214,6 +216,7 @@
     <string name="connection_success_rate_description">Percentage of successful connections to the relay</string>
     <string name="search_and_add_a_user">Search and add user</string>
     <string name="add_a_relay">Add a Relay</string>
+    <string name="relay_url_not_valid">Not a valid relay address. Use a host name, or an IP address in brackets (for example [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">My @tag name</string>
     <string name="display_name">Display Name</string>
     <string name="my_display_name">My display name</string>
@@ -320,6 +323,18 @@
     <string name="concord_invite_failed_invalid">This invite link is invalid or can\'t be opened with this account.</string>
     <string name="concord_invite_failed_incompatible">This invite link can\'t be opened. It may be outdated or already replaced by a newer one, or created with a newer version of the app. Ask for a fresh invite link.</string>
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
+    <string name="concord_invite_failed_banned">This community has removed you. The link still works, but its member list does not admit you.</string>
+    <string name="concord_invite_links_title">Invite links</string>
+    <string name="concord_invite_links_action">Invite links…</string>
+    <string name="concord_invite_links_created">Created %1$s</string>
+    <string name="concord_invite_links_empty">You haven\'t created any invite links for this community yet. Links other admins created are managed on their own devices.</string>
+    <string name="concord_invite_links_unreadable">Your invite links couldn\'t be loaded, so none can be revoked right now. Check your connection and try again.</string>
+    <string name="concord_invite_revoke_action">Revoke link</string>
+    <string name="concord_invite_revoke_title">Revoke this link?</string>
+    <string name="concord_invite_revoke_explainer">Anyone still holding this link will no longer be able to join. People who already joined with it stay in the community. This can\'t be undone.</string>
+    <string name="concord_invite_revoke_confirm">Revoke</string>
+    <string name="concord_invite_revoked_ok">Invite link revoked.</string>
+    <string name="concord_invite_revoked_failed">The link couldn\'t be revoked. Check your connection and try again.</string>
     <string name="concord_invite_failed_expired">This invite link has expired and can no longer be used. Ask for a fresh link.</string>
     <string name="concord_invite_preview_unknown_name">Community name is only revealed after you join</string>
     <string name="concord_invite_preview_explainer">Joining connects to this invite\'s relays, publishes a join announcement signed by your account, and adds the community to your list. Nothing is sent until you tap Join.</string>
@@ -2112,6 +2127,97 @@
         <item quantity="one">Connected to %1$d relay</item>
         <item quantity="other">Connected to %1$d relays</item>
     </plurals>
+    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+         serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d relay</item>
+        <item quantity="other">%1$s \u00b7 %2$d relays</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Browsing</string>
+    <string name="relay_purpose_media">Media</string>
+    <string name="relay_purpose_tags">Hashtags</string>
+    <string name="relay_purpose_topics">Topics</string>
+    <string name="relay_purpose_thread">Conversation</string>
+    <string name="relay_purpose_search">Search</string>
+    <string name="relay_purpose_referenced">Finding Missing Events</string>
+    <string name="relay_purpose_engagement">Observing Events</string>
+    <string name="relay_explain_referenced">Fetches events by id that something on your screen refers to but you don\'t have yet — a quote, a reply\'s parent, a thread root.</string>
+    <string name="relay_explain_engagement">Watches the events currently rendered for new replies, reactions, reposts, zaps and reports, so counts update while you read.</string>
+    <string name="relay_purpose_add_ons">Add-ons</string>
+    <string name="relay_purpose_relay_info">Relay info</string>
+    <string name="relay_purpose_other">Other</string>
+    <!-- Activity labels, used where the app's own noun for the data type already means something
+         else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
+         their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Relay List Finder</string>
+    <string name="relay_purpose_observing_profiles">Observing Profiles</string>
+    <string name="relay_purpose_your_account">Account\'s data</string>
+    <string name="relay_purpose_home_feed">Home Feed</string>
+    <string name="relay_purpose_relay_groups">Relay Groups</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d group</item>
+        <item quantity="other">%1$d groups</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">Ephemeral Chats</string>
+    <string name="relay_purpose_geohash_chats">Location Chats</string>
+    <string name="relay_purpose_live_chat">Live Stream Chat</string>
+    <string name="relay_explain_relay_groups">NIP-29 groups you joined. Each group lives on one host relay, so the app connects to every relay that hosts a group of yours.</string>
+    <string name="relay_explain_ephemeral_chats">Chat rooms that keep no history — messages exist only while you are connected, so these stay subscribed to receive anything at all.</string>
+    <string name="relay_explain_geohash_chats">Location-based rooms for the areas you follow, asked of the relays that carry them.</string>
+    <string name="relay_explain_live_chat">Chat and zap goals attached to live streams you have open or follow.</string>
+    <string name="relay_purpose_dm_inbox">DM Inbox</string>
+    <string name="relay_purpose_your_wallet">Wallet</string>
+    <string name="relay_purpose_nutzap_inbox">Nutzap Inbox</string>
+    <string name="relay_purpose_mint_directory">Mint Directory</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
+    <string name="relay_purpose_community_chats">Community Chats</string>
+    <string name="relay_purpose_community_feeds">Community Feeds</string>
+    <!-- How each subscription actually works, shown on the Active Subscriptions screen.
+         Describe the real strategy, not the intent — these are read by people trying to explain
+         a relay count they think is too high. -->
+    <string name="relay_explain_notifications">Your inbox relays, plus a small rotating sample of the relays your follows post to, in case a mention was delivered somewhere else.</string>
+    <string name="relay_explain_direct_messages">Your DM inbox relays, where gift-wrapped messages are delivered.</string>
+    <string name="relay_explain_public_chats">The home relay of each chat you have open or joined.</string>
+    <string name="relay_explain_community_chats">The relays each community publishes its planes to.</string>
+    <string name="relay_explain_encrypted_groups">Group messages and key packages, on each group\'s relays.</string>
+    <string name="relay_explain_live_rooms">The room\'s relays, while it is open.</string>
+    <string name="relay_explain_account_data">Your own profile, settings and drafts, on your home relays.</string>
+    <string name="relay_explain_profiles">Profiles of the people currently on screen.</string>
+    <string name="relay_explain_relay_lists">Finds which relays each person publishes to, so their posts can be fetched from the right place.</string>
+    <string name="relay_explain_follows">Follow lists, used to build your feed and your web of trust.</string>
+    <string name="relay_explain_moderation">Reports your follows wrote about the profiles currently on your screen, asked of each relay those follows post to.</string>
+    <string name="relay_purpose_reports_from_follows">Reports from Follows</string>
+    <string name="relay_explain_wallet">Your own wallet events, read back from the relays you published them to.</string>
+    <string name="relay_explain_nutzap_inbox">Listens on your nutzap relays plus your inbox and DM relays, so a payment cannot slip past.</string>
+    <string name="relay_explain_mint_directory">Looks across relays for which mints exist and which ones people recommend.</string>
+    <string name="relay_explain_nwc">Notifications from your connected wallet.</string>
+    <string name="active_subs_title">Active Relay Subscriptions</string>
+    <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
+         two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d filter</item>
+        <item quantity="other">%1$d filters</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d filter is not attributed yet</item>
+        <item quantity="other">%1$d filters are not attributed yet</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Not attributed to an account</string>
+    <string name="active_subs_no_entity">All</string>
+    <string name="active_subs_scope_global">Everyone</string>
+    <string name="active_subs_scope_follows">People you follow</string>
+    <string name="active_subs_scope_authors">A chosen list of people</string>
+    <string name="active_subs_scope_muted">Muted people</string>
+    <string name="active_subs_scope_all_communities">Your communities</string>
+    <string name="active_subs_scope_algo">A favorite algo feed</string>
+    <string name="active_subs_share">%1$d%% of all</string>
+    <string name="active_subs_search_keywords">subscriptions filters relays requests reqs connections why diagnostics</string>
+    <string name="relay_explain_home">Posts by people you follow, read from the relays each of them publishes to.</string>
     <string name="always_on_notif_connecting">Connecting to inbox relays\u2026</string>
     <string name="always_on_notif_setting_title">Always-on notification service</string>
     <string name="always_on_notif_setting_description">Keeps a persistent connection to your inbox relays for instant notification delivery. Shows an ongoing notification. Uses more battery but ensures you never miss a message.</string>
@@ -2329,6 +2435,7 @@
     <string name="compose_search_keywords" translatable="false">draft, posting, editor, auto-save, signature, proof of work, pow, mining, nip-13</string>
     <string name="reactions_settings_search_keywords" translatable="false">emoji, reactions, like</string>
     <string name="bottom_bar_search_keywords" translatable="false">navigation, tabs, nav bar</string>
+    <string name="drawer_search_keywords" translatable="false">side menu, drawer, hamburger, sections, hide, show</string>
     <string name="home_tabs_search_keywords" translatable="false">tabs, feeds, threads, conversations</string>
     <string name="profile_ui_search_keywords" translatable="false">profile, layout</string>
     <string name="backup_keys_search_keywords" translatable="false">nsec, private key, seed, mnemonic, export</string>
@@ -3463,6 +3570,19 @@
     <string name="bottom_bar_category_feeds">Feeds</string>
     <string name="bottom_bar_category_apps">Apps &amp; Web</string>
     <string name="bottom_bar_category_other">Other</string>
+    <string name="drawer_settings">Side Menu</string>
+    <string name="drawer_settings_title">Your side menu</string>
+    <string name="drawer_settings_description">Open a section and switch off the rows you never use. Settings always stays visible, so you can always get back here. Section order is fixed.</string>
+    <string name="drawer_settings_sections">Sections</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d hidden</item>
+        <item quantity="other">%1$d hidden</item>
+    </plurals>
+    <string name="drawer_settings_visible">Visible</string>
+    <string name="drawer_settings_hidden">Hidden</string>
+    <string name="drawer_settings_always_on">Always on</string>
+    <string name="drawer_settings_show_all">Show all</string>
+    <string name="drawer_settings_hide_all">Hide all</string>
     <string name="home_tabs_settings">Home Tabs</string>
     <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
     <string name="home_tab_everything">Everything</string>
@@ -3870,6 +3990,10 @@
     <string name="git_repo_settings_save">Save</string>
     <string name="git_repositories">Git Repositories</string>
     <string name="highlights">Highlights</string>
+    <string name="git_repositories_search_open">Filter repositories</string>
+    <string name="git_repositories_search_close">Close filter</string>
+    <string name="git_repositories_search_placeholder">Filter by name, topic, host, maintainer…</string>
+    <string name="git_repositories_search_no_results">No repositories in the current feed match this search.</string>
     <string name="nsite_title">nSite: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Permissions:</string>
@@ -4121,8 +4245,10 @@
     <string name="resource_usage_memory_chatrooms">Chatroom lists in memory</string>
     <string name="resource_usage_memory_device_class">Device memory class</string>
     <string name="resource_usage_send_section">Share with the developers</string>
-    <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, or browsing details. Nothing is sent until you tap Send in the message screen.</string>
+    <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM, or copy it and share it yourself. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, relay names, or browsing details. The report leaves this screen only when you send, copy, or share it.</string>
     <string name="resource_usage_send_button">Send report via DM</string>
+    <string name="resource_usage_copy_button">Copy</string>
+    <string name="resource_usage_share_button">Share</string>
     <string name="resource_usage_alert_title">High resource usage detected</string>
     <string name="resource_usage_alert_message">Amethyst consumed more than expected recently: %1$s. Would you like to send a usage report to the developers in an encrypted DM? You will see the full report before anything is sent.</string>
     <string name="resource_usage_reason_bg_data">%1$s of cellular data in the background in one day</string>
@@ -4208,6 +4334,46 @@
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Submit</string>
     <string name="poll_view_results">View results</string>
+    <string name="poll_results_title">Poll results</string>
+    <string name="poll_results_loading">Loading poll…</string>
+    <string name="poll_results_open">Open</string>
+    <string name="poll_results_closes_in">Closes in %1$s</string>
+    <string name="poll_results_ended">Ended %1$s ago</string>
+    <string name="poll_results_all_options">All options</string>
+    <string name="poll_results_your_pick">Your vote</string>
+    <string name="poll_results_selections">· %1$d selections</string>
+    <string name="poll_results_no_votes">No votes yet</string>
+    <string name="poll_results_checking_completeness">Checking how many votes exist…</string>
+    <string name="poll_results_partial">%1$d of %2$d responses loaded from %3$d relays.</string>
+    <string name="poll_results_partial_approx">%1$d of about %2$d responses loaded from %3$d relays.</string>
+    <plurals name="poll_results_voters">
+        <item quantity="one">voter</item>
+        <item quantity="other">voters</item>
+    </plurals>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d vote ›</item>
+        <item quantity="other">%1$d votes ›</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d voter</item>
+        <item quantity="other">%1$d voters</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d vote arrived after the poll closed and is excluded.</item>
+        <item quantity="other">%1$d votes arrived after the poll closed and are excluded.</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d vote is dated before the poll was published and is excluded.</item>
+        <item quantity="other">%1$d votes are dated before the poll was published and are excluded.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d response did not pick a valid option and is excluded.</item>
+        <item quantity="other">%1$d responses did not pick a valid option and are excluded.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d voter is hidden by your mute list.</item>
+        <item quantity="other">%1$d voters are hidden by your mute list.</item>
+    </plurals>
     <string name="restart">Restart</string>
     <string name="chess_accept">Accept</string>
     <string name="chess_decline">Decline</string>

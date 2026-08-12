@@ -25,12 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
+import com.vitorpamplona.quartz.nip01Core.core.supersedes
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore
 import com.vitorpamplona.quartz.nip01Core.store.ObservableEventStore.StoreChange
+import com.vitorpamplona.quartz.nip01Core.store.owner
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.utils.SortedList
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -342,19 +343,14 @@ class EventStoreProjection<T : Event>(
         private fun supersedes(
             new: Event,
             existing: Event,
-        ): Boolean =
-            when {
-                new.createdAt > existing.createdAt -> true
-                new.createdAt < existing.createdAt -> false
-                else -> new.id < existing.id
-            }
+        ): Boolean = new.supersedes(existing)
 
         /**
          * Owner pubkey for ownership checks (NIP-09 author match,
          * NIP-62 vanish target). For GiftWrap the owner is the p-tag
          * recipient; for everything else it's `event.pubKey`.
          */
-        private fun ownerOf(event: Event): HexKey = (event as? GiftWrapEvent)?.recipientPubKey() ?: event.pubKey
+        private fun ownerOf(event: Event): HexKey = event.owner()
 
         /**
          * created_at DESC, id ASC. Sort keys are frozen at slot

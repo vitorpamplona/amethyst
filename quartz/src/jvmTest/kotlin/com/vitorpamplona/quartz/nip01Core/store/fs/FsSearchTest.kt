@@ -359,4 +359,45 @@ class FsSearchTest {
             // And a search no longer finds it.
             assertEquals(emptyList(), store.query<TextNoteEvent>(Filter(search = "zzz")).map { it.id })
         }
+
+    // ------------------------------------------------------------------
+    // NIP-50 extension tokens
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `extension tokens are ignored, not matched as literal AND terms`() =
+        runBlocking {
+            val n = note("bitcoin rocks", ts = 100)
+            store.insert(n)
+
+            // The store owns the extension decision: `include:spam` must be
+            // stripped at the store boundary, not required as the literal
+            // tokens `include` + `spam` (which would match nothing here).
+            assertEquals(
+                listOf(n.id),
+                store.query<TextNoteEvent>(Filter(search = "bitcoin include:spam")).map { it.id },
+            )
+            assertEquals(1, store.count(Filter(search = "bitcoin include:spam")))
+
+            // Extensions-only search collapses to an unconstrained query
+            // (NIP-50: unsupported extensions are ignored, not match-nothing).
+            assertEquals(
+                listOf(n.id),
+                store.query<TextNoteEvent>(Filter(search = "language:en")).map { it.id },
+            )
+        }
+
+    @Test
+    fun `delete with an extensions-only search deletes nothing`() =
+        runBlocking {
+            val n = note("bitcoin rocks", ts = 100)
+            store.insert(n)
+
+            // Stripped, `language:en` is an empty filter — and an empty
+            // filter must fall under delete's safe-by-default contract
+            // instead of matching (and wiping) the whole store.
+            store.delete(Filter(search = "language:en"))
+
+            assertEquals(1, store.count(Filter()))
+        }
 }

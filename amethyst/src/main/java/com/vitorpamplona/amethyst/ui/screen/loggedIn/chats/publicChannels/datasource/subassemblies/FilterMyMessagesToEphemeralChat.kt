@@ -21,11 +21,12 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 fun filterMyMessagesToEphemeralChat(
     channel: EphemeralChatChannel,
@@ -36,7 +37,8 @@ fun filterMyMessagesToEphemeralChat(
         RelayBasedFilter(
             relay = it,
             filter =
-                Filter(
+                ExplainedFilter(
+                    purpose = SubPurpose.EPHEMERAL_CHATS,
                     kinds = listOf(EphemeralChatEvent.KIND),
                     tags =
                         if (channel.roomId.id.isBlank()) {

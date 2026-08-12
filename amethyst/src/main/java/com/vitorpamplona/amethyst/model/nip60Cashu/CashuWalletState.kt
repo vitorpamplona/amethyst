@@ -28,8 +28,6 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.cashu.ops.SendTokenCompleted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
-import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler
-import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletQueryState
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -102,7 +100,6 @@ class CashuWalletState(
     private val signer: NostrSigner,
     private val cache: LocalCache,
     private val scope: CoroutineScope,
-    private val assembler: CashuWalletFilterAssembler,
     private val outboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
     private val inboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
     private val dmRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
@@ -391,7 +388,6 @@ class CashuWalletState(
     // Lifecycle
     // ============================================================
     private val jobs = mutableListOf<Job>()
-    private var currentSubscription: CashuWalletQueryState? = null
 
     @Volatile private var started = false
 
@@ -469,21 +465,11 @@ class CashuWalletState(
         //    our own kind:10019 — and another client may have published that
         //    with relays unrelated to our NIP-65 lists — so we listen on the
         //    union of those plus our NIP-65 inbox + DM relays.
-        jobs +=
-            scope.launch(Dispatchers.IO) {
-                combine(
-                    outboxRelaysFlow,
-                    inboxRelaysFlow,
-                    dmRelaysFlow,
-                    _nutzapInfoEvent,
-                ) { outbox, inbox, dm, info ->
-                    CashuWalletQueryState(
-                        pubkey = pubKey,
-                        ownEventRelays = outbox,
-                        inboxRelays = inbox + dm + (info?.relays() ?: emptyList()),
-                    )
-                }.collect { syncSubscription(it) }
-            }
+        // The relay subscription for this wallet is NOT here. It lives in
+        // CashuWalletEoseManager, inside the account-level assembler group, so it mounts and
+        // unmounts with every other account-level loader instead of running for the whole life of
+        // the Account object. What stays below is wallet *state*: indexing what arrives, and the
+        // local bookkeeping around it.
 
         // Reactive incremental update: any new event arrival that matches our
         // pubkey + the NIP-60/61 kinds we care about gets indexed.
@@ -538,25 +524,6 @@ class CashuWalletState(
     fun destroy() {
         jobs.forEach { it.cancel() }
         jobs.clear()
-        currentSubscription?.let { runCatching { assembler.unsubscribe(it) } }
-        currentSubscription = null
-    }
-
-    // ============================================================
-    // Subscription management
-    // ============================================================
-    private fun syncSubscription(next: CashuWalletQueryState) {
-        val previous = currentSubscription
-        if (next.ownEventRelays.isEmpty() && next.inboxRelays.isEmpty()) {
-            previous?.let { runCatching { assembler.unsubscribe(it) } }
-            currentSubscription = null
-            return
-        }
-        if (previous == next) return // unchanged
-
-        previous?.let { runCatching { assembler.unsubscribe(it) } }
-        currentSubscription = next
-        assembler.subscribe(next)
     }
 
     // ============================================================

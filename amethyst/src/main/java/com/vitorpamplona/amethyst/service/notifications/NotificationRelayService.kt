@@ -36,6 +36,7 @@ import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
@@ -79,6 +80,10 @@ class NotificationRelayService : Service() {
     companion object {
         private const val TAG = "NotificationRelayService"
         private const val CHANNEL_ID = "notification_relay_service"
+
+        /** Parsed back into `Route.ActiveSubscriptions` by `MainActivity.uriToRoute`. */
+        private const val ACTIVE_SUBSCRIPTIONS_URI = "activesubs"
+
         private const val NOTIFICATION_ID = 9832
 
         private const val ACTION_START = "com.vitorpamplona.amethyst.START_NOTIFICATION_SERVICE"
@@ -140,6 +145,9 @@ class NotificationRelayService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var relayServiceCollectorJob: Job? = null
     private var connectedRelayCount = 0
+
+    /** Last non-empty per-job breakdown, kept so a reconnect does not blank the expanded view. */
+    private var lastBreakdown: List<String> = emptyList()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -336,9 +344,12 @@ class NotificationRelayService : Service() {
                     pluralStringRes(this, R.plurals.always_on_notif_connected, connectedRelays, connectedRelays)
             }
 
+        // Tapping goes to the screen that answers the question the notification raises — "why is it
+        // connected to N relays" — rather than to whatever tab was last open.
         val openAppIntent =
             Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                data = ACTIVE_SUBSCRIPTIONS_URI.toUri()
             }
         val pendingIntent =
             PendingIntent.getActivity(
@@ -348,11 +359,44 @@ class NotificationRelayService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
+        // Expanded only. The collapsed line stays the bare count it has always been — that is all
+        // most people want from an ongoing notification — and the per-job breakdown appears solely
+        // when someone deliberately expands it to ask why the phone is talking to N relays.
+        //
+        // Held across reconnects rather than recomputed blindly: the breakdown is derived from the
+        // *connected* relays, so a drop to zero (the "connecting…" state) would otherwise empty it and
+        // the expanded view would collapse to a single line exactly when someone is most likely
+        // looking at it. What each connection is *for* does not change while it is re-establishing,
+        // so the last known answer is still the right one; only the count above it goes stale, and
+        // that count is already labelled "connecting".
+        val fresh = RelayPurposeSummary.lines(this)
+        if (fresh.isNotEmpty()) lastBreakdown = fresh
+        val breakdown = fresh.ifEmpty { lastBreakdown }.takeIf { it.isNotEmpty() }
+
+        // Deliberately left ungrouped. This notification is ongoing and IMPORTANCE_LOW, so it
+        // sits in the shade's Silent section next to the low-importance content kinds
+        // (reactions, reposts) — and Android 16 sweeps everything ungrouped in a section into
+        // one aggregate bundle whose summary inherits FLAG_ONGOING_EVENT from any child that
+        // has it, making the whole bundle un-swipeable. Giving this one a group of its own
+        // would not help: a group with a summary but no children, or a child with no summary,
+        // is force-grouped just the same. What keeps content notifications out of that bundle
+        // is that they always post their own group summary (see NotificationUtils), which
+        // leaves this the only ungrouped silent notification we post — one is below the
+        // threshold, so no bundle is formed and nothing gets stapled to it.
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.always_on_notif_title))
             .setContentText(contentText)
-            .setSmallIcon(R.drawable.amethyst_service)
+            .apply {
+                breakdown?.let {
+                    setStyle(
+                        NotificationCompat
+                            .BigTextStyle()
+                            .setBigContentTitle(getString(R.string.always_on_notif_title))
+                            .bigText(contentText + "\n\n" + it.joinToString("\n")),
+                    )
+                }
+            }.setSmallIcon(R.drawable.amethyst_service)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setSilent(true)

@@ -258,7 +258,7 @@ class LoadBenchmark {
                             "fanout-$i",
                             mapOf(relayUrl to listOf(Filter(kinds = listOf(1)))),
                             object : SubscriptionListener {
-                                override fun onEvent(
+                                override suspend fun onEvent(
                                     event: com.vitorpamplona.quartz.nip01Core.core.Event,
                                     isLive: Boolean,
                                     relay: NormalizedRelayUrl,
@@ -436,7 +436,7 @@ class LoadBenchmark {
                                 "fanout-$i",
                                 mapOf(relayUrl to listOf(Filter(kinds = listOf(1)))),
                                 object : SubscriptionListener {
-                                    override fun onEvent(
+                                    override suspend fun onEvent(
                                         event: com.vitorpamplona.quartz.nip01Core.core.Event,
                                         isLive: Boolean,
                                         relay: NormalizedRelayUrl,
@@ -568,7 +568,7 @@ class LoadBenchmark {
                                         ),
                                 ),
                                 object : SubscriptionListener {
-                                    override fun onEvent(
+                                    override suspend fun onEvent(
                                         event: com.vitorpamplona.quartz.nip01Core.core.Event,
                                         isLive: Boolean,
                                         relay: NormalizedRelayUrl,

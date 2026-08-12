@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 @StringRes
 fun NappletCapability.labelRes(): Int =
     when (this) {
-        NappletCapability.SHELL -> R.string.napplet_cap_shell
         NappletCapability.IDENTITY -> R.string.napplet_cap_identity
         NappletCapability.KEYS -> R.string.napplet_cap_keys
         NappletCapability.RELAY -> R.string.napplet_cap_relay
@@ -45,7 +44,6 @@ fun NappletCapability.labelRes(): Int =
 @StringRes
 fun NappletCapability.descriptionRes(): Int =
     when (this) {
-        NappletCapability.SHELL -> R.string.napplet_cap_shell_desc
         NappletCapability.IDENTITY -> R.string.napplet_cap_identity_desc
         NappletCapability.KEYS -> R.string.napplet_cap_keys_desc
         NappletCapability.RELAY -> R.string.napplet_cap_relay_desc

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -37,9 +38,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** One open NIP-29 group whose recent chat the screen wants live. */
 class RelayGroupOpenChatTailQueryState(
-    val account: Account,
+    override val account: Account,
     val groupId: GroupId,
-)
+) : AccountScopedQuery
 
 /**
  * Per-open-group **live tail**: the recent chat window of the *currently open* group, `#h`-scoped on

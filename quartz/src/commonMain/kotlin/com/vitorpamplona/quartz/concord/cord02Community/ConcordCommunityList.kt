@@ -44,6 +44,13 @@ val NoExtras: JsonObject = JsonObject(emptyMap())
 /**
  * A past root key for a specific epoch, kept so historical channel keys stay derivable.
  *
+ * [controlPk] is that epoch's Control Plane address (CORD-02 §5) when the epoch was
+ * split — a `control_pk` is held, never derivable from the root, so without keeping
+ * it a prior split epoch's Control Plane could not be re-subscribed for the
+ * anti-rollback floor. Null for a legacy (pre-split) epoch, whose address the root
+ * still derives. A client-extension field on the wire (`control_pk` inside the held
+ * root object), preserved verbatim by extras-honoring peers.
+ *
  * [extras] carries any key another client wrote inside this held root that we do not
  * model, so a read-modify-write does not delete it (see [ConcordCommunityList]).
  */
@@ -51,6 +58,15 @@ val NoExtras: JsonObject = JsonObject(emptyMap())
 class HeldRoot(
     val epoch: Long,
     val key: String,
+    val controlPk: String? = null,
+    /**
+     * That epoch's staff write key, banked only if we held it. It buys nothing on the
+     * wire — the epoch is frozen, so writing to it is pointless — but a relay that gates
+     * a plane's REQ on NIP-42 AUTH as the stream key will not serve the old Control Plane
+     * without it, and those wraps are what rebuild the anti-rollback floor. A member who
+     * was never staff simply has none, and reads the epoch wherever the relay allows.
+     */
+    val controlRoot: String? = null,
     val extras: JsonObject = NoExtras,
 )
 
@@ -148,6 +164,21 @@ class ConcordCommunityListEntry(
     val ownerSalt: String,
     val root: String,
     val rootEpoch: Long = 0,
+    /**
+     * The Control Plane signer's pubkey at [rootEpoch] (CORD-02 §2/§8): read
+     * access, never write. Null = a legacy, pre-split epoch — fold Control at the
+     * legacy address (CORD-06 §3).
+     */
+    val controlPk: String? = null,
+    /**
+     * The staff write key at [rootEpoch] (CORD-02 §2), when this account is staff
+     * and has adopted it (community creation, a Grant's `control_wrap`, or a
+     * 136-byte base rekey blob). Null for a plain member or a legacy epoch. Part
+     * of the join material since CORD-02 §8 ("plus `control_root` when the member
+     * holds it") — the List carries every private key its holder has, so a
+     * staffer's own devices can write.
+     */
+    val controlRoot: String? = null,
     val heldRoots: List<HeldRoot> = emptyList(),
     val privateChannels: List<PrivateChannelKey> = emptyList(),
     val relays: List<String> = emptyList(),
@@ -250,6 +281,8 @@ object ConcordCommunityList {
     private class WireHeldRoot(
         val epoch: Long,
         val key: String,
+        @SerialName("control_pk") val controlPk: String? = null,
+        @SerialName("control_root") val controlRoot: String? = null,
         @SerialName(EXTRAS) val extras: JsonObject = NoExtras,
     )
 
@@ -260,6 +293,8 @@ object ConcordCommunityList {
         @SerialName("owner_salt") val ownerSalt: String,
         @SerialName("community_root") val communityRoot: String,
         @SerialName("root_epoch") val rootEpoch: Long,
+        @SerialName("control_pk") val controlPk: String? = null,
+        @SerialName("control_root") val controlRoot: String? = null,
         val channels: List<
             @Serializable(WireChannelSerializer::class)
             WireChannel,
@@ -315,10 +350,12 @@ object ConcordCommunityList {
             ownerSalt = ownerSalt,
             communityRoot = root,
             rootEpoch = rootEpoch,
+            controlPk = controlPk,
+            controlRoot = controlRoot,
             channels = privateChannels.map { WireChannel(it.channelId, it.key, it.epoch, it.name, it.extras) },
             relays = relays,
             name = name,
-            heldRoots = heldRoots.map { WireHeldRoot(it.epoch, it.key, it.extras) },
+            heldRoots = heldRoots.map { WireHeldRoot(it.epoch, it.key, it.controlPk, it.controlRoot, it.extras) },
             extras = residue.currentExtras,
         )
 
@@ -333,7 +370,9 @@ object ConcordCommunityList {
         ownerSalt = ownerSalt,
         root = communityRoot,
         rootEpoch = rootEpoch,
-        heldRoots = heldRoots.map { HeldRoot(it.epoch, it.key, it.extras) },
+        controlPk = controlPk,
+        controlRoot = controlRoot,
+        heldRoots = heldRoots.map { HeldRoot(it.epoch, it.key, it.controlPk, it.controlRoot, it.extras) },
         privateChannels = channels.map { PrivateChannelKey(it.id, it.key, it.epoch, it.name, it.extras) },
         relays = relays,
         name = name,
@@ -499,18 +538,52 @@ object ConcordCommunityList {
         val byId = LinkedHashMap<String, ConcordCommunityListEntry>()
         for (e in a + b) {
             val existing = byId[e.id]
-            if (existing == null) {
-                byId[e.id] = e
-            } else if (e.rootEpoch > existing.rootEpoch) {
-                // A winner without an invite_ref inherits the loser's: that link is the only anchor
-                // stranded recovery has, and dropping it on a merge would disarm recovery forever.
-                byId[e.id] = if (e.inviteRef == null) e.withInviteRef(existing.inviteRef) else e
-            } else if (existing.inviteRef == null && e.inviteRef != null) {
-                byId[e.id] = existing.withInviteRef(e.inviteRef)
-            }
+            byId[e.id] =
+                when {
+                    existing == null -> e
+                    // A winner without an invite_ref inherits the loser's: that link is the only anchor
+                    // stranded recovery has, and dropping it on a merge would disarm recovery forever.
+                    // Control key material is NOT inherited across epochs — a lower epoch's
+                    // control_pk/control_root is stale for the winner's planes (CORD-06).
+                    e.rootEpoch > existing.rootEpoch -> e.copyWith(inviteRef = e.inviteRef ?: existing.inviteRef)
+                    e.rootEpoch < existing.rootEpoch -> existing.copyWith(inviteRef = existing.inviteRef ?: e.inviteRef)
+                    else ->
+                        // Same epoch: both sides describe the same planes, so fill whatever key
+                        // material either is missing — e.g. one device was promoted to staff
+                        // (control_root via a Grant's control_wrap) or joined through a newer
+                        // bundle (control_pk) while the other holds the invite anchor.
+                        existing.copyWith(
+                            controlPk = existing.controlPk ?: e.controlPk,
+                            controlRoot = existing.controlRoot ?: e.controlRoot,
+                            inviteRef = existing.inviteRef ?: e.inviteRef,
+                        )
+                }
         }
         return byId.values.toList()
     }
+
+    /** Field-selective copy (the entry is not a data class). Defaults keep every field. */
+    private fun ConcordCommunityListEntry.copyWith(
+        controlPk: String? = this.controlPk,
+        controlRoot: String? = this.controlRoot,
+        inviteRef: String? = this.inviteRef,
+    ) = ConcordCommunityListEntry(
+        id = id,
+        owner = owner,
+        ownerSalt = ownerSalt,
+        root = root,
+        rootEpoch = rootEpoch,
+        controlPk = controlPk,
+        controlRoot = controlRoot,
+        heldRoots = heldRoots,
+        privateChannels = privateChannels,
+        relays = relays,
+        name = name,
+        addedAt = addedAt,
+        inviteRef = inviteRef,
+        excludedAtEpoch = excludedAtEpoch,
+        residue = residue,
+    )
 
     /** Copy of this entry carrying [inviteRef]; every other field untouched. */
     fun ConcordCommunityListEntry.withInviteRef(inviteRef: String?) =
@@ -520,6 +593,32 @@ object ConcordCommunityList {
             ownerSalt = ownerSalt,
             root = root,
             rootEpoch = rootEpoch,
+            controlPk = controlPk,
+            controlRoot = controlRoot,
+            heldRoots = heldRoots,
+            privateChannels = privateChannels,
+            relays = relays,
+            name = name,
+            addedAt = addedAt,
+            inviteRef = inviteRef,
+            excludedAtEpoch = excludedAtEpoch,
+            residue = residue,
+        )
+
+    /**
+     * Copy of this entry holding [controlRoot] — the staff write key, adopted after a
+     * promotion delivered it (CORD-04 §3) or a base rotation carried it (CORD-06 §1).
+     * Every other field untouched.
+     */
+    fun ConcordCommunityListEntry.withControlRoot(controlRoot: String?) =
+        ConcordCommunityListEntry(
+            id = id,
+            owner = owner,
+            ownerSalt = ownerSalt,
+            root = root,
+            rootEpoch = rootEpoch,
+            controlPk = controlPk,
+            controlRoot = controlRoot,
             heldRoots = heldRoots,
             privateChannels = privateChannels,
             relays = relays,

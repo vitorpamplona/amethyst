@@ -120,6 +120,7 @@ class ConcurrentIngestLossTest {
 
             val accepted = ConcurrentHashMap.newKeySet<String>()
             val rejected = AtomicInteger()
+            val failed = AtomicInteger()
             val window = Semaphore(200)
             val done = CompletableDeferred<Unit>()
             val remaining = AtomicInteger(events.size)
@@ -130,6 +131,7 @@ class ConcurrentIngestLossTest {
                     when (outcome) {
                         is IEventStore.InsertOutcome.Accepted -> accepted.add(e.id)
                         is IEventStore.InsertOutcome.Rejected -> rejected.incrementAndGet()
+                        is IEventStore.InsertOutcome.Failed -> failed.incrementAndGet()
                     }
                     window.release()
                     if (remaining.decrementAndGet() == 0) done.complete(Unit)
@@ -154,7 +156,7 @@ class ConcurrentIngestLossTest {
                 }
             }
             val stored = store.count(Filter())
-            println("  submitted=${events.size} accepted=${accepted.size} rejected=${rejected.get()} stored=$stored lostAcceptedRegular=$lost")
+            println("  submitted=${events.size} accepted=${accepted.size} rejected=${rejected.get()} failed=${failed.get()} stored=$stored lostAcceptedRegular=$lost")
 
             ingest.close()
             queueJob.cancel()

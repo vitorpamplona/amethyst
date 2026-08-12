@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
@@ -39,12 +40,15 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
     trustedAccounts: List<HexKey>,
     relay: NormalizedRelayUrl,
     since: Long?,
+    accountPubKey: HexKey? = null,
 ): RelayBasedFilter? {
     if (targets.isEmpty() || trustedAccounts.isEmpty()) return null
     return RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.PROFILE_METADATA,
+                accountPubKeys = listOfNotNull(accountPubKey),
                 kinds = ContactCardKindList,
                 authors = trustedAccounts,
                 // kind:30382 addresses the target user in the d-tag
@@ -55,22 +59,30 @@ fun filterContactCardsToTargetKeysFromTrustedAccountsInTheRelay(
 }
 
 /**
- * Every kind:30382 card *written by* [author] — the account's own nicknames —
- * for the bulk download at login from the account's relays. Addressable events:
+ * Every kind:30382 card *written by* [authors] — the accounts' own nicknames —
+ * for the bulk download at login from the accounts' own relays. Addressable events:
  * one card per target user, hence the larger limit.
+ *
+ * [SubPurpose.ACCOUNT_DATA], not [SubPurpose.PROFILE_METADATA] like its sibling above: nobody has to
+ * be on screen for this to run. It is part of the login-time account load, so filing it under
+ * "Observing Profiles" — explained as *"profiles of the people currently on screen"* — made every
+ * logged-in account look like it was watching somebody.
  */
 fun filterContactCardsByAuthorInTheRelay(
     relay: NormalizedRelayUrl,
-    author: HexKey,
+    authors: List<HexKey>,
     since: Long?,
     limit: Int = 500,
 ): RelayBasedFilter =
     RelayBasedFilter(
         relay = relay,
         filter =
-            Filter(
+            ExplainedFilter(
+                purpose = SubPurpose.ACCOUNT_DATA,
+                // This variant fetches the accounts' OWN contact cards, so the authors are the owners.
+                accountPubKeys = authors,
                 kinds = ContactCardKindList,
-                authors = listOf(author),
+                authors = authors,
                 limit = limit,
                 since = since,
             ),

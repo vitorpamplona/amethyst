@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoor
 import com.vitorpamplona.amethyst.service.relayClient.diagnostics.BootRelayDiagnostics
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountSubscriptionRegistry
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
@@ -105,6 +106,7 @@ import com.vitorpamplona.amethyst.service.resourceusage.HttpUsageMeter
 import com.vitorpamplona.amethyst.service.resourceusage.MeteringNostrSigner
 import com.vitorpamplona.amethyst.service.resourceusage.ProcessCpuSampler
 import com.vitorpamplona.amethyst.service.resourceusage.RadioBurstEstimator
+import com.vitorpamplona.amethyst.service.resourceusage.RefCountedSession
 import com.vitorpamplona.amethyst.service.resourceusage.RelayConnectionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.RelayUsageListener
 import com.vitorpamplona.amethyst.service.resourceusage.ResourceUsageAccountant
@@ -246,10 +248,17 @@ class AppModules(
         OtsSharedPreferences(appContext, applicationIOScope)
     }
 
-    // App services that should be run as soon as there are subscribers to their flows
+    // App services that should be run as soon as there are subscribers to their
+    // flows. Location additionally releases its OS registration whenever no
+    // activity is started — see the foreground gate inside LocationState.
     val locationManager by lazy {
         Log.d("AppModules", "LocationManager Init")
-        LocationState(appContext, applicationIOScope, onListening = { locationSession.setActive(it) })
+        LocationState(
+            appContext,
+            applicationIOScope,
+            isForeground = foregroundTracker.isForeground,
+            onListening = { locationRefCount.setActive(it) },
+        )
     }
     val connManager = ConnectivityManager(appContext, applicationIOScope)
 
@@ -373,6 +382,11 @@ class AppModules(
     private val powSession = SessionTimeIntegrator(resourceUsage, UsageKeys.POW_MS, UsageKeys.POW_SESSIONS).also { it.registerFlushHook() }
     private val torSession = SessionTimeIntegrator(resourceUsage, UsageKeys.TOR_MS, UsageKeys.TOR_STARTS).also { it.registerFlushHook() }
     private val locationSession = SessionTimeIntegrator(resourceUsage, UsageKeys.LOCATION_MS).also { it.registerFlushHook() }
+
+    // LocationState exposes two independent flows that can both be listening at
+    // once (the "Around Me" feed plus an open geohash chat). Refcounting keeps
+    // either one stopping from closing the other's segment.
+    private val locationRefCount = RefCountedSession(locationSession::setActive)
 
     // Time-per-screen (route base names only — arguments never reach the
     // ledger). Fed by the navigation listener in AppNavigation; foreground
@@ -709,6 +723,7 @@ class AppModules(
             torManager.status,
             client,
             applicationIOScope,
+            onTrigger = { cause -> resourceUsage.add(UsageKeys.relayTrigger(cause), 1) },
         )
 
     // Verifies and inserts in the cache from all relays, all subscriptions
@@ -871,7 +886,6 @@ class AppModules(
         AccountCacheState(
             geolocationFlow = { locationManager.geohashStateFlow },
             nwcFilterAssembler = { sources.nwc },
-            cashuWalletFilterAssembler = { sources.cashuWallet },
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
             okHttpClientForMoney = roleBasedHttpClientBuilder::okHttpClientForMoney,
             contentResolverFn = { appContext.contentResolver },
@@ -957,6 +971,12 @@ class AppModules(
         )
     }
 
+    // Gives every account that opted into running in the background its own
+    // account-level subscriptions (notifications, DMs, gift wraps, wallet), with no
+    // AccountViewModel behind it. Driven by alwaysOnNotificationServiceManager below,
+    // which already tracks which accounts opted in.
+    val accountSubscriptions = AccountSubscriptionRegistry(sources.account)
+
     // Manages always-on notification service lifecycle. Preloads every saved
     // writable account while enabled so GiftWraps for non-active accounts still
     // get unwrapped by their owning account's newNotesPreProcessor.
@@ -966,6 +986,8 @@ class AppModules(
             scope = applicationIOScope,
             accountsCache = accountsCache,
             localPreferences = LocalPreferences,
+            subscriptions = accountSubscriptions,
+            isForeground = foregroundTracker.isForeground,
             activePubKeyProvider = { sessionManager.loggedInAccount()?.pubKey },
         )
 

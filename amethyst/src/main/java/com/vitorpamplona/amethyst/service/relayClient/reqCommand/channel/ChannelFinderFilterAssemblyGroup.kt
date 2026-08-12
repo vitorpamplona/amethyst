@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.mixChatsLive.ChannelMetadataAndLiveActivityWatcherSubAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats.ChannelLoaderSubAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -32,8 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 @Stable
 class ChannelFinderQueryState(
     val channel: Channel,
-    val account: Account,
-)
+    override val account: Account,
+) : AccountScopedQuery
 
 @Stable
 class ChannelFinderFilterAssemblyGroup(

@@ -567,7 +567,7 @@ open class ChannelNewMessageViewModel :
             val pk = user.pubkeyHex
             if (pk != me && channel.membershipOf(pk) == RelayGroupMembership.NONE) {
                 try {
-                    accountViewModel.account.putRelayGroupUser(channel, pk, emptyList())
+                    accountViewModel.account.relayGroups.putRelayGroupUser(channel, pk, emptyList())
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     Log.w("BuzzAutoInvite", "Failed to add mentioned member ${pk.take(8)}: ${e.message}")
