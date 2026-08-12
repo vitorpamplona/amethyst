@@ -94,6 +94,11 @@ class PollResultsUiState(
     val relaysAnswered: Int = 0,
     /** True while we are still asking the relays how many votes exist. */
     val isCheckingCompleteness: Boolean = false,
+    /**
+     * False only for the placeholder state handed out before the first tally is folded. Lets the UI
+     * tell "this poll has no votes" apart from "we have not looked yet" without flashing the former.
+     */
+    val hasTally: Boolean = false,
 ) {
     /** True only when we can actually show that responses are missing. */
     val isIncomplete get() = reportedResponses != null && reportedResponses > loadedResponses
@@ -176,11 +181,12 @@ class PollResultsViewModel(
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
-                // Built eagerly so the first frame already has the tally instead of flashing an
-                // empty poll. Only this one pass is on the caller's thread; every recomputation
-                // after it — including the flood of them as votes stream in, one per event —
-                // runs on Default via the flowOn above.
-                initialValue = build(pollNote.pollState().responses.value, emptySet(), null, CompletenessState()),
+                // A placeholder, not a tally: building the real one here would sort every voter on
+                // whatever thread constructs the ViewModel — the composition thread — which is the
+                // one poll where that hurts, the thousand-voter one this screen exists for. The
+                // combine above delivers the real state from Default, and `hasTally` keeps the UI
+                // from reading this placeholder as an empty poll.
+                initialValue = PollResultsUiState(),
             )
 
     fun selectOption(code: String?) {
@@ -276,6 +282,7 @@ class PollResultsViewModel(
             reportIsApproximate = load.report?.approximate ?: false,
             relaysAnswered = load.report?.relaysAnswered ?: 0,
             isCheckingCompleteness = load.running,
+            hasTally = true,
         )
     }
 
