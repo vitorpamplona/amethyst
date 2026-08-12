@@ -80,7 +80,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsViewM
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollVoterRow
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.LoadNote
-import com.vitorpamplona.amethyst.ui.layouts.listItem.SlimListItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -98,7 +97,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.datasources.P
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -576,18 +574,11 @@ private fun VoterRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // `UserLine` with its NIP-05 line dropped, built from the same `SlimListItem` primitive it uses.
-    //
-    // That line is not free: it opens a third per-row observer and a verified NIP-05 lookup for a
-    // list of people the reader has mostly never seen. Measured on a tablet, scrolling this screen,
-    // it was the single largest cost left after the summary was hoisted — 97ms to 38ms per frame
-    // without it, which is the difference between this list feeling heavy and feeling like the rest
-    // of the app. The vote is what a reader is here for, and it already occupies the trailing slot.
-    SlimListItem(
-        modifier = Modifier.fillMaxWidth().clickable { nav.nav(routeFor(voter.user)) },
-        leadingContent = { UserPicture(voter.user, Size55dp, accountViewModel = accountViewModel, nav = nav) },
-        headlineContent = { UsernameDisplay(voter.user, accountViewModel = accountViewModel) },
+    UserLine(
+        baseUser = voter.user,
+        accountViewModel = accountViewModel,
         trailingContent = { VoteChoice(voter) },
+        onClick = { nav.nav(routeFor(voter.user)) },
     )
 }
 
