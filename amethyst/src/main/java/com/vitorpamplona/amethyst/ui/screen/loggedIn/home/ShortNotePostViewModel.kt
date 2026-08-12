@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.draftTags.DraftTagState
 import com.vitorpamplona.amethyst.ui.note.creators.expiration.IExpiration
 import com.vitorpamplona.amethyst.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
+import com.vitorpamplona.amethyst.ui.note.creators.notify.IAudience
 import com.vitorpamplona.amethyst.ui.note.creators.previews.PreviewState
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.creators.zapraiser.IZapRaiser
@@ -190,7 +191,8 @@ open class ShortNotePostViewModel :
     IMessageField,
     IZapField,
     IZapRaiser,
-    IExpiration {
+    IExpiration,
+    IAudience {
     val draftTag = DraftTagState()
 
     // Strong reference to the live cache note for the current draft tag (derived from the
@@ -224,6 +226,16 @@ open class ShortNotePostViewModel :
 
     var pTags by mutableStateOf<List<User>?>(null)
     var eTags by mutableStateOf<List<Note>?>(null)
+
+    // IAudience maps onto pTags rather than replacing it: the field is read all
+    // over createTemplate and the draft loaders under that name.
+    override var audienceMembers: List<User>?
+        get() = pTags
+        set(value) {
+            pTags = value
+        }
+
+    override fun onAudienceChanged() = draftTag.newVersion()
 
     val iMetaAttachments = IMetaAttachments()
     var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
@@ -356,12 +368,13 @@ open class ShortNotePostViewModel :
     // Notify / Visible-to editor: lets the user p-tag people who aren't
     // cited in the message. For private notes the Notify list IS the
     // audience, so this is how receivers are picked.
-    var wantsToAddNotifyUser by mutableStateOf(false)
-    val notifyUserSearchText = TextFieldState()
+    override val audienceSearchText = TextFieldState()
+    override var wantsToManageAudience by mutableStateOf(false)
+    override var notifyProvenance by mutableStateOf<Map<HexKey, Set<String>>>(emptyMap())
 
-    fun onNotifyUserSearchTextChanged() {
-        if (notifyUserSearchText.selection.collapsed) {
-            val lastWord = notifyUserSearchText.text.toString()
+    fun onAudienceSearchTextChanged() {
+        if (audienceSearchText.selection.collapsed) {
+            val lastWord = audienceSearchText.text.toString()
             userSuggestionsMainMessage = UserSuggestionAnchor.NOTIFY
             userSuggestions?.processCurrentWord(lastWord)
         }
@@ -370,27 +383,7 @@ open class ShortNotePostViewModel :
     // Members of pTags whose bell is off: they keep their chip in the Notify
     // list (so they are one tap away from being added back) but are dropped
     // from the outgoing event's p tags.
-    var mutedNotifies by mutableStateOf<Set<HexKey>>(emptySet())
-
-    fun toggleNotify(user: User) {
-        mutedNotifies =
-            if (user.pubkeyHex in mutedNotifies) {
-                mutedNotifies - user.pubkeyHex
-            } else {
-                mutedNotifies + user.pubkeyHex
-            }
-        draftTag.newVersion()
-    }
-
-    // The users that will actually be p-tagged: the chip list minus the muted ones.
-    fun activeNotifies(): List<User>? = pTags?.filter { it.pubkeyHex !in mutedNotifies }
-
-    fun addToReplyList(user: User) {
-        if (pTags?.contains(user) != true) {
-            pTags = (pTags ?: emptyList()).plus(user)
-        }
-        mutedNotifies = mutedNotifies - user.pubkeyHex
-    }
+    override var mutedNotifies by mutableStateOf<Set<HexKey>>(emptySet())
 
     // A single ephemeral signer reused for the whole compose session so that media
     // uploads (Blossom/NIP-96 auth events) and the final anonymous post are all signed
@@ -589,6 +582,7 @@ open class ShortNotePostViewModel :
             privateNoteLocked = replyingTo?.isPrivateRumor() == true
             wantsPrivateNote = privateNoteLocked
             mutedNotifies = emptySet()
+            notifyProvenance = emptyMap()
             replyingTo?.let { replyNote ->
                 if (replyNote.event is BaseThreadedEvent) {
                     this.eTags = (replyNote.replyTo ?: emptyList()).plus(replyNote)
@@ -774,9 +768,13 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
-                LocalCache.checkGetOrCreateUser(it[1])
-            }
+            draftEvent.tags
+                .filter { it.size > 1 && it[0] == "p" }
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+                // A built event can legitimately repeat a p tag (the voice-reply
+                // branch notifies the parent author on top of the notify list), so
+                // the audience it round-trips through a draft has to be deduped.
+                .distinct()
 
         draftEvent.tags.filter { it.size > 3 && (it[0] == "e" || it[0] == "a") && it[3] == "fork" }.forEach {
             val note = LocalCache.checkGetOrCreateNote(it[1])
@@ -880,10 +878,15 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
-                LocalCache.checkGetOrCreateUser(it[1])
-            }
+            draftEvent.tags
+                .filter { it.size > 1 && it[0] == "p" }
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+                // A built event can legitimately repeat a p tag (the voice-reply
+                // branch notifies the parent author on top of the notify list), so
+                // the audience it round-trips through a draft has to be deduped.
+                .distinct()
         mutedNotifies = emptySet()
+        notifyProvenance = emptyMap()
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
@@ -954,10 +957,15 @@ open class ShortNotePostViewModel :
             }
 
         pTags =
-            draftEvent.tags.filter { it.size > 1 && it[0] == "p" }.mapNotNull {
-                LocalCache.checkGetOrCreateUser(it[1])
-            }
+            draftEvent.tags
+                .filter { it.size > 1 && it[0] == "p" }
+                .mapNotNull { LocalCache.checkGetOrCreateUser(it[1]) }
+                // A built event can legitimately repeat a p tag (the voice-reply
+                // branch notifies the parent author on top of the notify list), so
+                // the audience it round-trips through a draft has to be deduped.
+                .distinct()
         mutedNotifies = emptySet()
+        notifyProvenance = emptyMap()
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
@@ -1213,7 +1221,7 @@ open class ShortNotePostViewModel :
                         notify(replyingTo.toPTag())
                     }
                 }
-                activeNotifies()?.let { userList ->
+                activeAudience()?.let { userList ->
                     val tags =
                         userList.map {
                             val tag = it.toPTag()
@@ -1233,7 +1241,7 @@ open class ShortNotePostViewModel :
         val tagger =
             NewMessageTagger(
                 message.text.toString().trim(),
-                activeNotifies(),
+                activeAudience(),
                 eTags,
                 accountViewModel,
             )
@@ -1555,6 +1563,7 @@ open class ShortNotePostViewModel :
         voiceOrchestrator = null
         pTags = null
         mutedNotifies = emptySet()
+        notifyProvenance = emptyMap()
 
         wantsPoll = false
         pollOptions = newStateMapPollOptions()
@@ -1586,8 +1595,7 @@ open class ShortNotePostViewModel :
         powOverride = null
         wantsPrivateNote = false
         privateNoteLocked = false
-        wantsToAddNotifyUser = false
-        notifyUserSearchText.clearText()
+        resetAudienceEditor()
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.clearText()
@@ -1649,9 +1657,8 @@ open class ShortNotePostViewModel :
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.clearText()
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.NOTIFY) {
-                addToReplyList(item)
-                notifyUserSearchText.clearText()
-                wantsToAddNotifyUser = false
+                addAllToAudience(listOf(item))
+                audienceSearchText.clearText()
             }
 
             userSuggestionsMainMessage = null

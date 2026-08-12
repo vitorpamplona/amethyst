@@ -89,9 +89,12 @@ fun PostingTopBar(
     isActive: () -> Boolean = { true },
     onCancel: () -> Unit,
     onPost: () -> Unit,
+    // A private note is not posted, it is sealed and delivered to a named set of
+    // people. The button says which of the two is about to happen.
+    postRes: Int = R.string.post,
 ) = ActionTopBar(
     titleRes = titleRes,
-    postRes = R.string.post,
+    postRes = postRes,
     isActive = isActive,
     onCancel = onCancel,
     onPost = onPost,
