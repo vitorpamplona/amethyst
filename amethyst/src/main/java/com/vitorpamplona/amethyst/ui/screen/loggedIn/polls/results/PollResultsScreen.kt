@@ -55,7 +55,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -183,49 +182,54 @@ private fun PollResults(
     val selected by viewModel.selectedOption.collectAsStateWithLifecycle()
 
     PollResultsScaffold(nav) {
-        // The summary is not list content — it is one static block that happens to sit above a list.
-        // Inside the LazyColumn it was disposed and rebuilt every time it left and re-entered the
-        // viewport, re-subscribing an avatar per option and restarting both bar animations on every
-        // scroll. Pinned here it composes once and the scroll only pays for voter rows.
-        Column(modifier = Modifier.fillMaxSize()) {
-            PollHeader(note, state, accountViewModel, nav)
+        // The summary scrolls with the voters rather than being pinned: on a phone a pinned summary
+        // eats most of the screen and leaves a sliver of list to scroll. Its cost when it scrolls
+        // back into view is paid down in OptionBar instead — see the note on the bar animation.
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item("header") {
+                PollHeader(note, state, accountViewModel, nav)
+            }
 
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                state.options.forEach { option ->
-                    key(option.code) {
-                        OptionBar(
-                            option = option,
-                            isSelected = option.code == selected,
-                            isMyPick = option.code in state.myVote,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                            onClick = { viewModel.selectOption(option.code) },
-                        )
+            item("options") {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    state.options.forEach { option ->
+                        key(option.code) {
+                            OptionBar(
+                                option = option,
+                                isSelected = option.code == selected,
+                                isMyPick = option.code in state.myVote,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                                onClick = { viewModel.selectOption(option.code) },
+                            )
+                        }
                     }
                 }
             }
 
             if (state.options.size > 1) {
-                OptionFilterRow(state, selected, onSelect = viewModel::selectOption)
+                item("chips") {
+                    OptionFilterRow(state, selected, onSelect = viewModel::selectOption)
+                }
             }
 
-            HorizontalDivider(
-                modifier = Modifier.padding(top = 12.dp),
-                thickness = DividerThickness,
-            )
+            item("voters-divider") {
+                HorizontalDivider(
+                    modifier = Modifier.padding(top = 12.dp),
+                    thickness = DividerThickness,
+                )
+            }
 
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(state.voters, key = { it.user.pubkeyHex }) { voter ->
-                    VoterRow(voter, accountViewModel, nav)
-                    HorizontalDivider(thickness = DividerThickness)
-                }
+            items(state.voters, key = { it.user.pubkeyHex }) { voter ->
+                VoterRow(voter, accountViewModel, nav)
+                HorizontalDivider(thickness = DividerThickness)
+            }
 
-                item("footer") {
-                    ResultsFooter(state)
-                }
+            item("footer") {
+                ResultsFooter(state)
             }
         }
     }
@@ -405,13 +409,16 @@ private fun OptionBar(
         label = "pollOptionBorder",
     )
 
-    // Same 800ms tween the feed card uses, so a vote cast there and read here moves identically.
-    // animateFloatAsState starts *at* its target, so without stepping off zero the first frame the
-    // bars would simply appear at full length and only ever animate on later changes.
-    var target by remember(option.code) { mutableFloatStateOf(0f) }
-    LaunchedEffect(option.code, option.percent) { target = option.percent }
+    // Same 800ms tween the feed card uses, so a vote cast there and read here moves identically —
+    // but animating *to* the value rather than growing from zero on every composition.
+    //
+    // A LazyColumn drops an item's state when it scrolls out of view, so a zero-start meant the
+    // bars replayed their full 800ms every time the summary came back: 800ms of recomposition and
+    // redraw for a flourish nobody asked to see twice. Starting at the target costs the intro on
+    // first paint and keeps the animation for what it is actually for — a vote landing while you
+    // are reading.
     val progress by animateFloatAsState(
-        targetValue = target,
+        targetValue = option.percent,
         animationSpec = tween(durationMillis = 800),
         label = "pollOptionBar",
     )
