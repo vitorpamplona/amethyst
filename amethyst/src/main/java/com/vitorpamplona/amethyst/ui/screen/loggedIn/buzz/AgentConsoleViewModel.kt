@@ -109,9 +109,7 @@ class AgentConsoleViewModel : ViewModel() {
         relay?.let {
             val newlyJoined = BuzzWorkspaces.join(it)
             viewModelScope.launch { account.relayAuthLedger.setDecision(it.url, RelayAuthDecision.ALLOW) }
-            // A join makes the relay first-party; if the socket was already open its one-shot AUTH
-            // challenge was spent unauthenticated, so reconnect to re-challenge and authenticate.
-            if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
+            if (newlyJoined) reconnectPoolAfterJoin(account.client)
         }
         refresh()
     }

@@ -156,6 +156,17 @@ class NappletResource(
     val contentType: String,
 )
 
+sealed interface NappletResourceResult {
+    data class Success(
+        val resource: NappletResource,
+    ) : NappletResourceResult
+
+    data class Failure(
+        val error: String,
+        val message: String? = null,
+    ) : NappletResourceResult
+}
+
 /**
  * Bridges the broker to sandboxed resource fetching for [NappletCapability.RESOURCE]
  * (`resource.bytes`). The host fetches https/blossom/nostr/data URLs on the applet's behalf —
@@ -164,13 +175,14 @@ class NappletResource(
  *
  * [coordinate] is the calling applet's identity coordinate (`author:identifier`), so the host can
  * route the fetch the same way the applet's own page loads — through Tor or the open web — per that
- * applet's/site's network mode.
+ * applet's/site's network mode. Failures carry the stable NAP-RESOURCE error code rather than
+ * collapsing policy rejections and network failures into one nullable result.
  */
 fun interface NappletResourceGateway {
     suspend fun fetch(
         url: String,
         coordinate: String,
-    ): NappletResource?
+    ): NappletResourceResult
 }
 
 /** A completed upload: where the blob lives plus NIP-94-ish metadata. */

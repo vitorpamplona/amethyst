@@ -70,8 +70,16 @@ object NotificationUtils {
     const val PUBLIC_REPLY_ACTION = "com.vitorpamplona.amethyst.PUBLIC_REPLY_ACTION"
     const val MARMOT_REPLY_ACTION = "com.vitorpamplona.amethyst.MARMOT_REPLY_ACTION"
     const val MARK_READ_ACTION = "com.vitorpamplona.amethyst.MARK_READ_ACTION"
+    const val DISMISS_ACTION = "com.vitorpamplona.amethyst.DISMISS_ACTION"
     const val KEY_REPLY_TEXT = "key_reply_text"
     const val KEY_NOTIFICATION_ID = "key_notification_id"
+
+    /**
+     * Hex id of the event this notification was posted for, carried on every action
+     * and on the delete intent so the receiver can mark it dismissed. Distinct from
+     * [KEY_TARGET_EVENT_ID], which is the note an inline reply is addressed to.
+     */
+    const val KEY_EVENT_ID = "key_event_id"
     const val KEY_ACCOUNT_NPUB = "key_account_npub"
     const val KEY_CHATROOM_MEMBERS = "key_chatroom_members"
     const val KEY_TARGET_EVENT_ID = "key_target_event_id"
@@ -82,16 +90,27 @@ object NotificationUtils {
     const val REPLY_GROUP_KEY_PREFIX = "com.vitorpamplona.amethyst.REPLY_NOTIFICATION"
     private const val REPLY_SUMMARY_ID_BASE = 0x50000
 
-    // Event ids the user has just read/dismissed in-app. The enrichment path
-    // re-posts a notification as metadata arrives; without this guard a
-    // notification the user already dismissed would be resurrected seconds later
-    // when its author's kind:0 lands. Keyed by the event id string (not the
-    // hashCode) so distinct events can't collide. Entries self-expire after a
-    // window comfortably longer than the 25s enrichment window.
+    /**
+     * Every group key this object posts under starts with this. Used to tell our own
+     * summaries apart from the ones the system creates when it force-groups us (those
+     * live under `userId|pkg|g:Aggregate_…`), so the cleanup below never fights the
+     * platform over a bundle it owns.
+     */
+    private const val OWN_GROUP_PREFIX = "com.vitorpamplona.amethyst."
+
+    // Event ids the user is done with. The enrichment path re-posts a notification
+    // as metadata arrives; without this guard a notification the user already got
+    // rid of would be resurrected seconds later when its author's kind:0 lands, and
+    // the enricher would go on holding a relay window and a wakelock open for it.
+    // Every way a user can be done with a notification has to record here — reading
+    // the event in-app, swiping the notification away, "mark as read", and replying
+    // inline — or that path leaks the resurrection. Keyed by the event id string
+    // (not the hashCode) so distinct events can't collide. Entries self-expire after
+    // a window comfortably longer than the 25s enrichment window.
     private const val DISMISS_GUARD_MS = 90_000L
     private val recentlyDismissed = ConcurrentHashMap<String, Long>()
 
-    private fun markDismissed(eventId: String) {
+    fun markDismissed(eventId: String) {
         val now = SystemClock.elapsedRealtime()
         recentlyDismissed[eventId] = now + DISMISS_GUARD_MS
         if (recentlyDismissed.size > 256) {
@@ -218,6 +237,7 @@ object NotificationUtils {
                 .setPriority(category.priority())
                 .setCategory(NotificationCompat.CATEGORY_SOCIAL)
                 .setGroup(groupKey)
+                .setDeleteIntent(dismissIntent(applicationContext, notId, id))
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 .setWhen(time * 1000)
@@ -236,11 +256,11 @@ object NotificationUtils {
         }
 
         if (inlineReply != null) {
-            builder.addAction(publicReplyAction(applicationContext, notId, inlineReply))
+            builder.addAction(publicReplyAction(applicationContext, notId, id, inlineReply))
         }
 
         notify(notId, builder.build())
-        sendGroupSummary(category, groupKey, summaryId, applicationContext)
+        sendGroupSummary(category, groupKey, summaryId, time, applicationContext)
     }
 
     // ---------------------------------------------------------------------
@@ -335,20 +355,21 @@ object NotificationUtils {
                 .setPriority(category.priority())
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setGroup(groupKey)
+                .setDeleteIntent(dismissIntent(applicationContext, notId, id))
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 .setWhen(time * 1000)
 
         when (replyAction) {
-            is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, replyAction))
-            is ReplyAction.Marmot -> builder.addAction(marmotReplyAction(applicationContext, notId, replyAction))
-            null -> publicInlineReply?.let { builder.addAction(publicReplyAction(applicationContext, notId, it)) }
+            is ReplyAction.Dm -> builder.addAction(dmReplyAction(applicationContext, notId, id, replyAction))
+            is ReplyAction.Marmot -> builder.addAction(marmotReplyAction(applicationContext, notId, id, replyAction))
+            null -> publicInlineReply?.let { builder.addAction(publicReplyAction(applicationContext, notId, id, it)) }
         }
 
-        if (addMarkRead) builder.addAction(markReadAction(applicationContext, notId))
+        if (addMarkRead) builder.addAction(markReadAction(applicationContext, notId, id))
 
         notify(notId, builder.build())
-        sendGroupSummary(category, groupKey, summaryId, applicationContext)
+        sendGroupSummary(category, groupKey, summaryId, time, applicationContext)
     }
 
     // ---------------------------------------------------------------------
@@ -366,6 +387,38 @@ object NotificationUtils {
             applicationContext,
             notId,
             contentIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
+
+    /**
+     * Fires when the user swipes this notification away (or hits "Clear all"), so the
+     * group summary can follow its last child out.
+     *
+     * We can't rely on the shade to take the summary with it: SystemUI hides a group
+     * with a single child and renders that child at the top level
+     * (`ShadeListBuilder.MIN_CHILDREN_FOR_GROUP`), and once promoted the child no
+     * longer counts as "the only child in its group", so dismissing it leaves our
+     * summary behind. A childless summary is not harmless — SystemUI promotes it into
+     * the shade on its own, and the system force-groups it
+     * (`GroupHelper.isGroupSummaryWithoutChildren`) into the same aggregate bundle we
+     * post summaries to stay out of.
+     */
+    private fun dismissIntent(
+        applicationContext: Context,
+        notId: Int,
+        eventId: String,
+    ): PendingIntent {
+        val intent =
+            Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                action = DISMISS_ACTION
+                putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
+            }
+        return PendingIntent.getBroadcast(
+            applicationContext,
+            notId + 2,
+            intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }
@@ -399,12 +452,14 @@ object NotificationUtils {
     private fun dmReplyAction(
         applicationContext: Context,
         notId: Int,
+        eventId: String,
         action: ReplyAction.Dm,
     ): NotificationCompat.Action {
         val intent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 this.action = REPLY_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
                 putExtra(KEY_ACCOUNT_NPUB, action.accountNpub)
                 putExtra(KEY_CHATROOM_MEMBERS, action.chatroomMembers)
             }
@@ -414,12 +469,14 @@ object NotificationUtils {
     private fun marmotReplyAction(
         applicationContext: Context,
         notId: Int,
+        eventId: String,
         action: ReplyAction.Marmot,
     ): NotificationCompat.Action {
         val intent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 this.action = MARMOT_REPLY_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
                 putExtra(KEY_ACCOUNT_NPUB, action.accountNpub)
                 putExtra(KEY_MARMOT_GROUP_ID, action.nostrGroupId)
                 action.replyToInnerEventId?.let { putExtra(KEY_MARMOT_REPLY_TO_INNER_ID, it) }
@@ -431,12 +488,14 @@ object NotificationUtils {
     private fun publicReplyAction(
         applicationContext: Context,
         notId: Int,
+        eventId: String,
         target: InlineReplyTarget,
     ): NotificationCompat.Action {
         val intent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 action = PUBLIC_REPLY_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
                 putExtra(KEY_ACCOUNT_NPUB, target.accountNpub)
                 putExtra(KEY_TARGET_EVENT_ID, target.targetEventId)
             }
@@ -446,11 +505,13 @@ object NotificationUtils {
     private fun markReadAction(
         applicationContext: Context,
         notId: Int,
+        eventId: String,
     ): NotificationCompat.Action {
         val markReadIntent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 action = MARK_READ_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
+                putExtra(KEY_EVENT_ID, eventId)
             }
         val markReadPendingIntent =
             PendingIntent.getBroadcast(
@@ -549,16 +610,33 @@ object NotificationUtils {
     // Group summaries, dedup, dismissal
     // ---------------------------------------------------------------------
 
+    /**
+     * Posts (or refreshes) our own summary for [groupKey].
+     *
+     * The summary goes up with the **first** child, not once a second one shows up.
+     * Android 16 counts a group child whose summary is missing as ungrouped
+     * (`GroupHelper.isGroupChildWithoutSummary`) and force-groups it into the
+     * package's per-section aggregate bundle, next to every other ungrouped
+     * notification in the same shade section. The bar is low: `config_autoGroupAtCount`
+     * is 2, so a single summary-less child plus one other ungrouped notification is a
+     * bundle. The always-on relay service is exactly that other notification — ongoing
+     * and IMPORTANCE_LOW, it shares the Silent section with our two IMPORTANCE_LOW
+     * kinds (reactions and reposts), so one lone repost would end up bundled with it.
+     * The bundle then refuses to swipe away, because the system's aggregate summary
+     * inherits FLAG_ONGOING_EVENT from any child carrying it — and the service
+     * notification always does.
+     *
+     * Providing the summary from the start keeps the group ours and the system leaves
+     * it alone. It costs nothing visually: the shade hides any group with fewer than
+     * two children and shows the child on its own.
+     */
     private fun NotificationManager.sendGroupSummary(
         category: NotificationCategory,
         groupKey: String,
         summaryId: Int,
+        time: Long,
         applicationContext: Context,
     ) {
-        val activeCount = activeNotifications.count { it.notification.group == groupKey && it.id != summaryId }
-
-        if (activeCount < 2) return
-
         val summaryBuilder =
             NotificationCompat
                 .Builder(applicationContext, category.channelId(applicationContext))
@@ -566,8 +644,16 @@ object NotificationUtils {
                 .setColor(category.color)
                 .setGroup(groupKey)
                 .setGroupSummary(true)
+                // The children do the alerting. Without this the summary would buzz on
+                // its own the moment it starts going up alongside the first child.
+                .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN)
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
+                // Pinned to the child's event time rather than left to default to "now".
+                // The summary is re-posted on every one of the enrichment path's re-renders,
+                // and a fresh timestamp each time would keep re-sorting the group in the
+                // shade while the user is looking at it.
+                .setWhen(time * 1000)
                 .setStyle(
                     NotificationCompat
                         .InboxStyle()
@@ -604,17 +690,53 @@ object NotificationUtils {
         // items), so bail out before touching anything when nothing is posted for it.
         if (activeNotifications.none { it.id == notId }) return
 
-        cancel(notId)
-        cancelChildlessGroupSummaries()
+        cancelAndPrune(notId)
     }
 
-    private fun NotificationManager.cancelChildlessGroupSummaries() {
+    /**
+     * Cancels [notId] and drops the group summary it leaves behind, if it was the last
+     * child. Use this instead of a bare [NotificationManager.cancel] for anything we
+     * posted through [postStandard] / [postConversation] — every one of those is a
+     * group child with a summary above it.
+     */
+    fun NotificationManager.cancelAndPrune(notId: Int) {
+        cancel(notId)
+        cancelChildlessGroupSummaries(alreadyGone = notId)
+    }
+
+    /**
+     * Drops our summaries that no longer have any children.
+     *
+     * [alreadyGone] is the id of a notification cancelled moments ago: both
+     * [NotificationManager.cancel] and [NotificationManager.notify] are asynchronous,
+     * so [NotificationManager.activeNotifications] can still be listing it and would
+     * otherwise keep its summary alive forever.
+     *
+     * Only summaries under [OWN_GROUP_PREFIX] are touched. The system's own aggregate
+     * summaries also carry FLAG_GROUP_SUMMARY and show up in this list; cancelling one
+     * only makes the platform rebuild it.
+     */
+    fun NotificationManager.cancelChildlessGroupSummaries(alreadyGone: Int? = null) {
         val active: Array<StatusBarNotification> = activeNotifications
+
+        // Collect the groups that still have a child in one pass, then cancel the
+        // summaries not in that set. Every child now ships with a summary, so this list
+        // is about twice as long as it used to be and the pairwise scan it replaces grew
+        // four-fold. Membership is decided by the summary flag rather than by comparing
+        // ids, which is also what makes it correct when a child's id happens to equal the
+        // summary's.
+        val groupsWithChildren = HashSet<String>(active.size)
+        for (child in active) {
+            if (child.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) continue
+            if (child.id == alreadyGone) continue
+            child.notification.group?.let { groupsWithChildren.add(it) }
+        }
+
         for (summary in active) {
             if (summary.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0) continue
             val group = summary.notification.group ?: continue
-            val hasChildren = active.any { it.id != summary.id && it.notification.group == group }
-            if (!hasChildren) cancel(summary.id)
+            if (!group.startsWith(OWN_GROUP_PREFIX)) continue
+            if (group !in groupsWithChildren) cancel(summary.id)
         }
     }
 

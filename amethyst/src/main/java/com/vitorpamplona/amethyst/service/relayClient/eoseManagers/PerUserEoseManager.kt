@@ -77,7 +77,7 @@ abstract class PerUserEoseManager<T>(
                     newEose(key, relay, TimeUtils.now(), forFilters)
                 }
 
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

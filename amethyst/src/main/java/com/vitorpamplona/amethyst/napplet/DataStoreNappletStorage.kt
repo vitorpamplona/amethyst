@@ -57,7 +57,27 @@ class DataStoreNappletStorage(
         key: String,
         value: String,
     ) {
-        dataStore.edit { it[keyOf(coordinate, key)] = value }
+        dataStore.edit { preferences ->
+            val prefix = prefixOf(coordinate)
+            val target = keyOf(coordinate, key)
+            val currentBytes =
+                preferences
+                    .asMap()
+                    .entries
+                    .asSequence()
+                    .filter { it.key.name.startsWith(prefix) }
+                    .sumOf { (storedKey, storedValue) ->
+                        storedKey.name
+                            .removePrefix(prefix)
+                            .encodeToByteArray()
+                            .size +
+                            ((storedValue as? String)?.encodeToByteArray()?.size ?: 0)
+                    }
+            val replacedBytes = key.encodeToByteArray().size + (preferences[target]?.encodeToByteArray()?.size ?: 0)
+            val proposedBytes = currentBytes - replacedBytes + key.encodeToByteArray().size + value.encodeToByteArray().size
+            require(proposedBytes <= MAX_STORAGE_BYTES) { "Napplet storage quota exceeded." }
+            preferences[target] = value
+        }
     }
 
     override suspend fun remove(
@@ -87,4 +107,9 @@ class DataStoreNappletStorage(
         coordinate: String,
         key: String,
     ) = stringPreferencesKey(prefixOf(coordinate) + key)
+
+    companion object {
+        /** NAP-STORAGE's recommended per-napplet UTF-8 quota. */
+        const val MAX_STORAGE_BYTES = 512 * 1024
+    }
 }

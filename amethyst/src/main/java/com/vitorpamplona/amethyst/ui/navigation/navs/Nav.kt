@@ -44,6 +44,13 @@ import kotlin.reflect.KClass
 class Nav(
     val controller: NavHostController,
     override val navigationScope: CoroutineScope,
+    /**
+     * Awaited before every transition below. Leaving a screen while the soft keyboard is still
+     * animating strands `imePadding()` app-wide; see [ImeSettler]. Every in-app navigation goes
+     * through this class, so this is the one place that has to get it right — no screen, top bar
+     * or back handler needs to think about the keyboard on its way out.
+     */
+    private val ime: ImeSettler = ImeSettler.None,
 ) : INav {
     override val drawerState = DrawerState(DrawerValue.Closed)
 
@@ -63,6 +70,7 @@ class Nav(
 
     override fun nav(route: Route) {
         navigationScope.launch {
+            ime.settle()
             if (getRouteWithArguments(route::class, controller) != route) {
                 controller.navigate(route)
             }
@@ -71,6 +79,7 @@ class Nav(
 
     override fun nav(computeRoute: suspend () -> Route?) {
         navigationScope.launch {
+            ime.settle()
             val route = computeRoute()
             if (route != null && getRouteWithArguments(route::class, controller) != route) {
                 controller.navigate(route)
@@ -80,6 +89,7 @@ class Nav(
 
     override fun newStack(route: Route) {
         navigationScope.launch {
+            ime.settle()
             controller.navigate(route) {
                 popUpTo(route) {
                     inclusive = true
@@ -91,6 +101,7 @@ class Nav(
 
     override fun navBottomBar(route: Route) {
         navigationScope.launch {
+            ime.settle()
             controller.navigate(route) {
                 // Clear sibling bottom-nav entries but keep Home (the start
                 // destination) below, so back-swipe from any tab returns to
@@ -110,7 +121,28 @@ class Nav(
             }
             // Mark this entry as a tab root: hides the back arrow in canPop
             // and skips the horizontal slide in composableFromEnd.
-            controller.getBackStackEntry(route).savedStateHandle[BOTTOM_NAV_ROOT_KEY] = true
+            // saveState/restoreState are keyed by DESTINATION, and every pinned tab of one kind shares a
+            // single destination — all web apps are `Route.WebApp/{url}`, all pinned chats their own one
+            // pattern. So the restore above can hand back a *sibling* tab's saved entry: with two web apps
+            // pinned, tapping the second one landed on the first one's URL, and the lookup below then threw
+            // `No destination with route …WebApp/<url> is on the NavController's back stack`.
+            //
+            // When the entry we asked for isn't there, take the tab fresh (no restoreState, and no
+            // launchSingleTop — the top is the sibling we do not want to reuse). Its saved scroll/ViewModel
+            // state is not recoverable in that case, but the user lands on the tab they tapped. Tabs whose
+            // destination nothing else shares still restore normally, which is what this is here for.
+            val entry =
+                runCatching { controller.getBackStackEntry(route) }.getOrNull()
+                    ?: run {
+                        controller.navigate(route) {
+                            popUpTo(Route.Home) {
+                                inclusive = false
+                                saveState = true
+                            }
+                        }
+                        runCatching { controller.getBackStackEntry(route) }.getOrNull()
+                    }
+            entry?.savedStateHandle?.set(BOTTOM_NAV_ROOT_KEY, true)
         }
     }
 
@@ -149,6 +181,7 @@ class Nav(
 
     override fun popBack() {
         navigationScope.launch {
+            ime.settle()
             controller.navigateUp()
         }
     }
@@ -159,6 +192,7 @@ class Nav(
         klass: KClass<T>,
     ) {
         navigationScope.launch {
+            ime.settle()
             controller.navigate(route) {
                 popUpTo(klass) { inclusive = true }
             }

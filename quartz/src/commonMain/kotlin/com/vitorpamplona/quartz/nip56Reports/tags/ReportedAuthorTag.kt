@@ -23,16 +23,21 @@ package com.vitorpamplona.quartz.nip56Reports.tags
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 @Immutable
 class ReportedAuthorTag(
-    val pubkey: HexKey,
+    override val pubKey: HexKey,
+    override val relayHint: NormalizedRelayUrl? = null,
     override val type: ReportType? = null,
-) : BaseReportTag {
-    fun toTagArray() = assemble(pubkey, type)
+) : BaseReportTag,
+    PubKeyReferenceTag {
+    fun toTagArray() = assemble(pubKey, relayHint, type)
 
     companion object {
         const val TAG_NAME = "p"
@@ -45,21 +50,51 @@ class ReportedAuthorTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val type =
-                if (tag.size == 2) {
-                    defaultReportType
-                } else if (tag.size == 3) {
-                    ReportType.parseOrNull(tag[2], tag) ?: defaultReportType
-                } else {
-                    ReportType.parseOrNull(tag[3], tag) ?: defaultReportType
-                }
+            return ReportedAuthorTag(
+                tag[1],
+                ReportTagLayout.relayHint(tag),
+                ReportTagLayout.reportType(tag, defaultReportType),
+            )
+        }
 
-            return ReportedAuthorTag(tag[1], type)
+        fun parseKey(tag: Array<String>): HexKey? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+            return tag[1]
+        }
+
+        fun parseAsHint(tag: Array<String>): PubKeyHint? {
+            ensure(tag.has(2)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].length == 64) { return null }
+
+            val hint = ReportTagLayout.relayHint(tag)
+
+            ensure(hint != null) { return null }
+
+            return PubKeyHint(tag[1], hint)
+        }
+
+        /**
+         * Emits the legacy `[name, id, type]` layout unless a relay hint is
+         * supplied. Padding slot 2 with `""` to always reach the modern
+         * layout would be well-formed here but unreadable to the many
+         * clients that still read the report type out of slot 2.
+         */
+        fun assemble(
+            pubkey: HexKey,
+            relayHint: NormalizedRelayUrl?,
+            type: ReportType?,
+        ) = if (relayHint != null) {
+            arrayOfNotNull(TAG_NAME, pubkey, relayHint.url, type?.code)
+        } else {
+            arrayOfNotNull(TAG_NAME, pubkey, type?.code)
         }
 
         fun assemble(
             pubkey: HexKey,
             type: ReportType? = null,
-        ) = arrayOfNotNull(TAG_NAME, pubkey, type?.code)
+        ) = assemble(pubkey, null, type)
     }
 }

@@ -203,6 +203,7 @@
     <string name="connection_success_rate_description">Porcentagem de conexões bem-sucedidas ao relay</string>
     <string name="search_and_add_a_user">Pesquisar e adicionar usuário</string>
     <string name="add_a_relay">Adicionar um Relay</string>
+    <string name="relay_url_not_valid">Endereço de relay inválido. Use um nome de host ou um endereço IP entre colchetes (por exemplo [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Meu nome de @tag</string>
     <string name="display_name">Nome de Exibição</string>
     <string name="my_display_name">Meu nome de exibição</string>
@@ -1901,14 +1902,95 @@
     </plurals>
     <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d relé</item>
+        <item quantity="other">%1$s \u00b7 %2$d relés</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Navegação</string>
+    <string name="relay_purpose_media">Mídia</string>
+    <string name="relay_purpose_tags">Hashtags</string>
+    <string name="relay_purpose_topics">Tópicos</string>
+    <string name="relay_purpose_thread">Conversa</string>
+    <string name="relay_purpose_search">Pesquisa</string>
+    <string name="relay_purpose_referenced">Encontrando eventos faltantes</string>
+    <string name="relay_purpose_engagement">Observando eventos</string>
+    <string name="relay_explain_referenced">Busca por id os eventos a que algo na sua tela se refere, mas que você ainda não tem — uma citação, o pai de uma resposta, a raiz de uma conversa.</string>
+    <string name="relay_explain_engagement">Observa os eventos exibidos no momento em busca de novas respostas, reações, repostagens, zaps e denúncias, para que as contagens sejam atualizadas enquanto você lê.</string>
+    <string name="relay_purpose_add_ons">Complementos</string>
+    <string name="relay_purpose_relay_info">Informações do relay</string>
+    <string name="relay_purpose_other">Outros</string>
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
          their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Localizador de listas de relays</string>
+    <string name="relay_purpose_observing_profiles">Observando perfis</string>
+    <string name="relay_purpose_your_account">Dados da conta</string>
+    <string name="relay_purpose_home_feed">Feed inicial</string>
+    <string name="relay_purpose_relay_groups">Grupos de relay</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d grupo</item>
+        <item quantity="other">%1$d grupos</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">Chats efêmeros</string>
+    <string name="relay_purpose_geohash_chats">Chats por localização</string>
+    <string name="relay_purpose_live_chat">Chat de transmissão ao vivo</string>
+    <string name="relay_explain_relay_groups">Grupos NIP-29 dos quais você participa. Cada grupo vive em um relay hospedeiro, então o app se conecta a todo relay que hospeda um grupo seu.</string>
+    <string name="relay_explain_ephemeral_chats">Salas de chat que não guardam histórico — as mensagens existem apenas enquanto você está conectado, então elas continuam assinadas para que algo chegue.</string>
+    <string name="relay_explain_geohash_chats">Salas baseadas em localização para as áreas que você segue, consultadas nos relays que as hospedam.</string>
+    <string name="relay_explain_live_chat">Chat e metas de zap ligados às transmissões ao vivo que você tem abertas ou segue.</string>
+    <string name="relay_purpose_dm_inbox">Caixa de entrada de DM</string>
+    <string name="relay_purpose_your_wallet">Carteira</string>
+    <string name="relay_purpose_nutzap_inbox">Caixa de entrada de nutzaps</string>
+    <string name="relay_purpose_mint_directory">Diretório de mints</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
+    <string name="relay_purpose_community_chats">Chats de comunidades</string>
+    <string name="relay_purpose_community_feeds">Feeds de comunidades</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
+    <string name="relay_explain_notifications">Os relays da sua caixa de entrada, mais uma pequena amostra rotativa dos relays em que quem você segue publica, caso uma menção tenha sido entregue em outro lugar.</string>
+    <string name="relay_explain_direct_messages">Os relays da sua caixa de entrada de DM, para onde as mensagens em gift wrap são entregues.</string>
+    <string name="relay_explain_public_chats">O relay de origem de cada chat que você abriu ou do qual participa.</string>
+    <string name="relay_explain_community_chats">Os relays em que cada comunidade publica seus planos.</string>
+    <string name="relay_explain_encrypted_groups">Mensagens de grupo e pacotes de chaves, nos relays de cada grupo.</string>
+    <string name="relay_explain_live_rooms">Os relays da sala, enquanto ela estiver aberta.</string>
+    <string name="relay_explain_account_data">Seu próprio perfil, configurações e rascunhos, nos seus relays de origem.</string>
+    <string name="relay_explain_profiles">Perfis das pessoas atualmente na tela.</string>
+    <string name="relay_explain_relay_lists">Descobre em quais relays cada pessoa publica, para que as publicações dela possam ser buscadas no lugar certo.</string>
+    <string name="relay_explain_follows">Listas de seguindo, usadas para montar seu feed e sua rede de confiança.</string>
+    <string name="relay_explain_moderation">Denúncias que as pessoas que você segue escreveram sobre os perfis atualmente na sua tela, consultadas em cada relay em que essas pessoas publicam.</string>
+    <string name="relay_purpose_reports_from_follows">Denúncias de quem você segue</string>
+    <string name="relay_explain_wallet">Os eventos da sua própria carteira, lidos de volta dos relays em que você os publicou.</string>
+    <string name="relay_explain_nutzap_inbox">Escuta nos seus relays de nutzap, além dos relays da caixa de entrada e de DM, para que nenhum pagamento passe despercebido.</string>
+    <string name="relay_explain_mint_directory">Procura pelos relays quais mints existem e quais as pessoas recomendam.</string>
+    <string name="relay_explain_nwc">Notificações da sua carteira conectada.</string>
+    <string name="active_subs_title">Assinaturas de relay ativas</string>
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d filtro</item>
+        <item quantity="other">%1$d filtros</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d Relé</item>
+        <item quantity="other">%1$d Relés</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d filtro ainda não foi atribuído</item>
+        <item quantity="other">%1$d filtros ainda não foram atribuídos</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Não atribuído a nenhuma conta</string>
+    <string name="active_subs_no_entity">Tudo</string>
+    <string name="active_subs_scope_global">Todos</string>
+    <string name="active_subs_scope_follows">Pessoas que você segue</string>
+    <string name="active_subs_scope_authors">Uma lista escolhida de pessoas</string>
+    <string name="active_subs_scope_muted">Pessoas silenciadas</string>
+    <string name="active_subs_scope_all_communities">Suas comunidades</string>
+    <string name="active_subs_scope_algo">Um algoritmo de feed favorito</string>
+    <string name="active_subs_share">%1$d%% de todos</string>
+    <string name="active_subs_search_keywords">assinaturas subscriptions filtros relays requisições reqs conexões por que diagnóstico</string>
+    <string name="relay_explain_home">Publicações de pessoas que você segue, lidas dos relays em que cada uma delas publica.</string>
     <string name="always_on_notif_connecting">Conectando aos relays de caixa de entrada\u2026</string>
     <string name="always_on_notif_setting_title">Serviço de notificações sempre ativo</string>
     <string name="always_on_notif_setting_description">Mantém uma conexão persistente com seus relays de caixa de entrada para entrega instantânea de notificações. Mostra uma notificação contínua. Usa mais bateria, mas garante que você nunca perca uma mensagem.</string>
@@ -2117,6 +2199,7 @@
     <string name="home_content_type_highlights">Destaques</string>
     <string name="home_content_type_polls">Enquetes</string>
     <string name="home_content_type_classifieds">Classificados</string>
+    <string name="home_content_type_torrents">Torrents</string>
     <string name="home_content_type_voice">Mensagens de voz</string>
     <string name="home_content_type_live_activities">Atividades ao vivo</string>
     <string name="home_content_type_ephemeral_chat">Chats efêmeros</string>
@@ -2126,6 +2209,7 @@
     <string name="home_content_type_attestations">Atestações</string>
     <string name="home_content_type_nips">Rascunhos de NIP</string>
     <string name="home_content_type_music">Música e áudio</string>
+    <string name="home_content_type_podcasts">Podcasts</string>
     <string name="home_content_type_fundraisers">Arrecadações</string>
     <string name="settings_section_reminders">Lembretes</string>
     <string name="wallet_connect">Conectar Carteira</string>
@@ -3096,6 +3180,19 @@
     <string name="bottom_bar_category_feeds">Feeds</string>
     <string name="bottom_bar_category_apps">Apps e Web</string>
     <string name="bottom_bar_category_other">Outros</string>
+    <string name="drawer_settings">Menu lateral</string>
+    <string name="drawer_settings_title">Seu menu lateral</string>
+    <string name="drawer_settings_description">Abra uma seção e desligue as linhas que você nunca usa. Configurações permanece sempre visível, então você sempre pode voltar aqui. A ordem das seções é fixa.</string>
+    <string name="drawer_settings_sections">Seções</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d oculta</item>
+        <item quantity="other">%1$d ocultas</item>
+    </plurals>
+    <string name="drawer_settings_visible">Visíveis</string>
+    <string name="drawer_settings_hidden">Ocultas</string>
+    <string name="drawer_settings_always_on">Sempre ativo</string>
+    <string name="drawer_settings_show_all">Mostrar tudo</string>
+    <string name="drawer_settings_hide_all">Ocultar tudo</string>
     <string name="home_tabs_settings">Abas da Tela Inicial</string>
     <string name="home_tabs_settings_description">Escolha quais abas aparecem na Tela Inicial. Quando apenas uma aba está ativa, a barra de abas fica oculta.</string>
     <string name="home_tab_everything">Tudo</string>
@@ -3469,6 +3566,10 @@
     <string name="git_repo_settings_save">Salvar</string>
     <string name="git_repositories">Repositórios Git</string>
     <string name="highlights">Destaques</string>
+    <string name="git_repositories_search_open">Filtrar repositórios</string>
+    <string name="git_repositories_search_close">Fechar filtro</string>
+    <string name="git_repositories_search_placeholder">Filtrar por nome, tópico, host, mantenedor…</string>
+    <string name="git_repositories_search_no_results">Nenhum repositório no feed atual corresponde a esta pesquisa.</string>
     <string name="nsite_title">Site Estático: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Permissões:</string>
@@ -3699,6 +3800,8 @@
     <string name="resource_usage_send_section">Compartilhar com os desenvolvedores</string>
     <string name="resource_usage_send_explanation">Se o Amethyst parece consumir bateria ou dados, você pode enviar este relatório aos desenvolvedores em uma DM criptografada. Ele contém apenas os números desta tela e os contadores técnicos por trás deles — sem publicações, contatos ou detalhes de navegação. Nada é enviado até você tocar em Enviar na tela de mensagem.</string>
     <string name="resource_usage_send_button">Enviar relatório por DM</string>
+    <string name="resource_usage_copy_button">Copiar</string>
+    <string name="resource_usage_share_button">Compartilhar</string>
     <string name="resource_usage_alert_title">Alto uso de recursos detectado</string>
     <string name="resource_usage_alert_message">O Amethyst consumiu mais do que o esperado recentemente: %1$s. Deseja enviar um relatório de uso aos desenvolvedores em uma DM criptografada? Você verá o relatório completo antes de qualquer envio.</string>
     <string name="resource_usage_reason_bg_data">%1$s de dados de celular em segundo plano em um dia</string>
@@ -4504,6 +4607,7 @@
     <string name="new_conversation_location_pro_2">Compatível com Bitchat; alcança usuários próximos nos mesmos relays.</string>
     <string name="new_conversation_location_con_1">Público e efêmero — sem histórico, qualquer um na célula pode ler.</string>
     <!-- Buzz workflow run board -->
+    <string name="buzz_job_board_title">Backlog</string>
     <string name="buzz_workflow_runs_title">Execuções de fluxo de trabalho</string>
     <string name="buzz_agent_work_title">Trabalho do agente</string>
     <string name="buzz_workflow_new_run">Nova execução</string>

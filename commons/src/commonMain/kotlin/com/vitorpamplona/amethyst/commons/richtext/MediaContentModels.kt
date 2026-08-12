@@ -44,10 +44,18 @@ abstract class MediaUrlContent(
     dim: DimensionTag? = null,
     blurhash: String? = null,
     val uri: String? = null,
-    val mimeType: String? = null,
+    mimeType: String? = null,
     thumbhash: String? = null,
     val authorPubKey: String? = null,
-) : BaseMediaContent(description, dim, blurhash, thumbhash)
+) : BaseMediaContent(description, dim, blurhash, thumbhash) {
+    /**
+     * Repaired at construction rather than at each of the eight call sites that build a model from
+     * an author-supplied `m` tag — a bare subtype reaching this field is what puts `Intent.type =
+     * "jpeg"` on the share sheet (matching no `IntentFilter`) and what republishes the malformed
+     * tag under the user's own key when media is added to a gallery. See [normalizeMimeType].
+     */
+    val mimeType: String? = normalizeMimeType(mimeType)
+}
 
 @Immutable
 open class MediaUrlImage(

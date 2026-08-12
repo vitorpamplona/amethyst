@@ -162,4 +162,44 @@ class ShareHelperTest {
         file.writeBytes(bytes)
         return file
     }
+
+    // A slash-less Intent.type matches no IntentFilter, so the chooser opens with zero targets and
+    // the share silently fails. Author-supplied `m` tags can carry exactly that (Primal iOS emits
+    // `m jpeg`), so a bare subtype must be repaired rather than forwarded.
+    @Test
+    fun resolveShareMimeType_bareSubtype_isExpandedToFullMimeType() {
+        assertEquals("image/jpeg", ShareHelper.resolveShareMimeType("jpeg", "jpg"))
+        assertEquals("video/mp4", ShareHelper.resolveShareMimeType("mp4", "mp4"))
+        assertEquals("image/jpeg", ShareHelper.resolveShareMimeType("JPEG", "jpg"))
+    }
+
+    @Test
+    fun resolveShareMimeType_wellFormedDeclaration_isPreserved() {
+        assertEquals("image/png", ShareHelper.resolveShareMimeType("image/png", "png"))
+    }
+
+    // An unusable declaration falls back to the extension, which is sniffed from the file's magic
+    // numbers and so is not attacker-controlled.
+    @Test
+    fun resolveShareMimeType_unrecognizableDeclaration_fallsBackToSniffedExtension() {
+        assertEquals("image/png", ShareHelper.resolveShareMimeType("notatype", "png"))
+        assertEquals("image/png", ShareHelper.resolveShareMimeType("", "png"))
+    }
+
+    @Test
+    fun resolveShareMimeType_noDeclaration_usesCanonicalTypeForExtension() {
+        // Not "image/jpg" -- jpg is not a registered subtype.
+        assertEquals("image/jpeg", ShareHelper.resolveShareMimeType(null, "jpg"))
+        assertEquals("video/quicktime", ShareHelper.resolveShareMimeType(null, "mov"))
+    }
+
+    // The invariant the share sheet depends on, pinned across the whole set of extensions
+    // getMediaExtension can sniff: whatever the event declared, Intent.type stays matchable.
+    @Test
+    fun resolveShareMimeType_alwaysProducesASlashSeparatedType() {
+        listOf("jpg", "png", "gif", "webp", "webm", "avi", "mp4", "mov").forEach { extension ->
+            val resolved = ShareHelper.resolveShareMimeType("notatype", extension)
+            assertTrue("`$extension` resolved to un-matchable type `$resolved`", resolved.contains("/"))
+        }
+    }
 }

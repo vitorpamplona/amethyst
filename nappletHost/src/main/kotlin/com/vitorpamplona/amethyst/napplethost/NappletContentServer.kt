@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import android.util.Base64
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
@@ -60,6 +61,9 @@ class NappletContentServer(
     // The host posture: a WEBSITE nSite is a normal web app — NIP-07 window.nostr provider, normal
     // network (no app CSP; off-origin requests defer to the WebView), unlike a locked NAPPLET.
     private val profile: HostProfile = HostProfile.NAPPLET,
+    // Exact NAP domains the trusted main process authorized for this launch. The injected prelude
+    // projects only these objects; absence is the NIP-5D capability-availability signal.
+    private val declaredDomains: List<String> = emptyList(),
     // Embedded surfaces (a windowless Service) can't host the soft keyboard, so the shim installs the
     // IME proxy agent that relays the focused field to the host's keyboard. The full-screen Activity
     // host has a native keyboard and leaves this false.
@@ -130,15 +134,44 @@ class NappletContentServer(
     }
 
     private fun serveShell(): WebResourceResponse {
-        // The shell HTML carries an APP_ORIGIN_PLACEHOLDER for the iframe src; bind it to this applet's
-        // origin so the shell frames exactly this applet (and the CSP frame-src is pinned to it too).
-        val html = shellHtmlBytes.decodeToString().replace(NappletWebContract.APP_ORIGIN_PLACEHOLDER, appOrigin).encodeToByteArray()
+        val sandbox: String
+        val frameSource: String
+        val bootstrap: String
+
+        if (profile == HostProfile.NAPPLET) {
+            // NIP-5D identity is bound to the exact verified bytes that execute. Resolve the sole
+            // /index.html blob, inject host-owned policy/prelude outside its aggregate hash, then
+            // hand those bytes to the opaque-origin child via srcdoc (never a navigated src).
+            val resolution = resolveCacheFirst("/index.html")
+            if (resolution !is StaticSiteResolution.Resolved) return notFound()
+            val encoded = Base64.encodeToString(injectShim(resolution.bytes), Base64.NO_WRAP)
+            sandbox = "allow-scripts"
+            frameSource = "'self'"
+            bootstrap =
+                "var b=atob('$encoded'),u=new Uint8Array(b.length);" +
+                "for(var j=0;j<b.length;j++)u[j]=b.charCodeAt(j);" +
+                "iframe.srcdoc=new TextDecoder('utf-8').decode(u);"
+        } else {
+            // Amethyst's NIP-5A website posture is intentionally unchanged: a dedicated real origin,
+            // normal website storage/network, and NIP-07 behind the existing consent broker.
+            sandbox = "allow-scripts allow-same-origin"
+            frameSource = appOrigin
+            bootstrap = "iframe.src = '$appOrigin/';"
+        }
+
+        val html =
+            shellHtmlBytes
+                .decodeToString()
+                .replace(NappletWebContract.APP_ORIGIN_PLACEHOLDER, appOrigin)
+                .replace(NappletWebContract.APP_SANDBOX_PLACEHOLDER, sandbox)
+                .replace(NappletWebContract.APP_BOOTSTRAP_PLACEHOLDER, bootstrap)
+                .encodeToByteArray()
         return WebResourceResponse(
             MIME_HTML,
             "utf-8",
             200,
             "OK",
-            mapOf("Content-Security-Policy" to NappletWebContract.shellCsp(appOrigin)),
+            mapOf("Content-Security-Policy" to NappletWebContract.shellCsp(frameSource)),
             ByteArrayInputStream(html),
         )
     }
@@ -183,31 +216,16 @@ class NappletContentServer(
         )
     }
 
-    /** Inserts the `window.napplet` client shim into the applet's HTML document. */
-    private fun injectShim(html: ByteArray): ByteArray {
-        val text = html.decodeToString()
-        // Disable the document's overscroll affordance (the bounce/stretch): the Android-level
-        // WebView.overScrollMode only governs the outer frame, so an applet whose own root background is
-        // transparent stretched on over-scroll and exposed the shell's background behind it (a stray
-        // white band at the bottom). `overscroll-behavior: none` removes the stretch at the source,
-        // theme-independently. Allowed by the app CSP's `style-src 'unsafe-inline'`.
-        val style = "<style>html,body{overscroll-behavior:none !important}</style>"
-        // In website mode, set the NIP-07 flag synchronously *before* the shim so window.nostr installs.
-        val nip07Flag = if (profile.injectsNip07) "<script>window.__nappletNip07=true;</script>" else ""
-        // Embedded surface: turn on the IME proxy agent (set before the shim runs).
-        val imeFlag = if (imeProxy) "<script>window.__nappletImeProxy=true;</script>" else ""
-        val script = "$style$nip07Flag$imeFlag<script>$shimJs</script>"
-        val headIdx = text.indexOf("<head", ignoreCase = true)
-        val injected =
-            when {
-                headIdx >= 0 -> {
-                    val close = text.indexOf('>', headIdx)
-                    if (close >= 0) text.substring(0, close + 1) + script + text.substring(close + 1) else script + text
-                }
-                else -> script + text
-            }
-        return injected.encodeToByteArray()
-    }
+    /** Inserts host policy and the explicit-domain `window.napplet` prelude before authored code. */
+    private fun injectShim(html: ByteArray): ByteArray =
+        NappletWebContract.injectPrelude(
+            html = html,
+            shimJs = shimJs,
+            declaredDomains = declaredDomains,
+            locked = profile == HostProfile.NAPPLET,
+            injectNip07 = profile.injectsNip07,
+            imeProxy = imeProxy,
+        )
 
     private fun notFound(): WebResourceResponse = WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
 

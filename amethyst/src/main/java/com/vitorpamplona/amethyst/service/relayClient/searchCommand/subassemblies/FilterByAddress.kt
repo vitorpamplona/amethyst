@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassemblies
 
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.filterMissingAddressables
+import com.vitorpamplona.amethyst.commons.relayClient.event.loaders.potentialRelaysToFindAddress
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingAddressables
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindAddress
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -37,7 +37,7 @@ fun filterByAddress(
     val list =
         mapOfSet {
             if (note.event == null) {
-                potentialRelaysToFindAddress(note).ifEmpty { default }.forEach { relayUrl ->
+                potentialRelaysToFindAddress(LocalCache, note).ifEmpty { default }.forEach { relayUrl ->
                     add(relayUrl, note.address)
                 }
             }

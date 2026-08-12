@@ -66,12 +66,29 @@ import kotlin.math.min
  * @property downloaded distinct events actually delivered through `onEvent`.
  * @property windows    number of `created_at` windows the matched set was split
  *   into (`1` when the relay reconciled the whole filter in one shot).
+ * @property peerCap    the relay's own `max_sync_events`, when a refusal during
+ *   this sync stated one. Worth persisting per relay: it is the number that
+ *   sizes the first window of the NEXT sync, and it is not discoverable any
+ *   other way.
  */
 class NegentropySyncResult(
     val needCount: Int,
     val haveCount: Int,
     val downloaded: Int,
     val windows: Int,
+    val peerCap: Long? = null,
+    /**
+     * Ids the reconcile named that `wantId` declined, so no `REQ` was ever
+     * issued for them. Always `0` when no predicate was passed.
+     *
+     * Reported apart from [downloaded] and from [needCount] on purpose:
+     * [needCount] stays the honest protocol diff (what the relay has that the
+     * local set lacks) whether or not the caller chose to fetch it, and a
+     * skipped id was never a download. Folding either way would leave a caller
+     * unable to tell "my predicate is doing nothing" from "my predicate is
+     * eating everything" — and both are silent.
+     */
+    val skipped: Int = 0,
 )
 
 /**
@@ -146,6 +163,26 @@ class NegentropySyncResult(
  *   `limitation.max_subscriptions`; e.g. strfry defaults to 20) and exceeding the
  *   cap can wedge the connection, not just fail the extra REQ — size the two knobs
  *   to fit the target relay.
+ * @param wantId            optional gate consulted for every id the reconcile names,
+ *   BEFORE the `REQ` that would download it. Return `false` and the id is dropped
+ *   from the fetch queue and counted in [NegentropySyncResult.skipped]; the
+ *   reconcile itself is untouched, so [NegentropySyncResult.needCount] still
+ *   reports the true diff. Called from the reconciler coroutines (possibly
+ *   several at once when `reconcileConcurrency > 1`), so it must be cheap and
+ *   thread-safe — a membership test, not a query.
+ *
+ *   The case this exists for: a caller whose store will refuse an id no matter
+ *   how often it arrives. A mirror that keeps only the newest version of a
+ *   replaceable event is offered every relay's older copy on every sync, and
+ *   without a hook here the only place to decline is after the body is already
+ *   on the wire. `onEvent` is too late to save the bytes.
+ *
+ *   **It does not cover a window handed to [onUnreconcilableWindow].** That
+ *   window is drained by the caller over `REQ`, and a `REQ` names no ids before
+ *   it streams bodies, so declined events in such a window arrive anyway and are
+ *   not counted in [NegentropySyncResult.skipped]. Rare — it takes a single
+ *   second denser than the relay's cap — but a caller treating the gate as an
+ *   absolute bound on what it can receive would be wrong.
  * @param onProgress        optional `(needSoFar, downloaded)` ticks as work proceeds.
  * @param onEvent           called once per distinct event, serially, from the single
  *   delivery consumer coroutine (not the relay reader thread) — so it never overlaps
@@ -162,12 +199,18 @@ suspend fun INostrClient.negentropySync(
     reconcileConcurrency: Int = 1,
     idBufferBatches: Int = maxConcurrentReqs * 4,
     localEntries: List<IdAndTime> = emptyList(),
+    localIndex: NegentropyLocalIndex? = null,
+    targetWindow: Int = 0,
+    onUnreconcilableWindow: (suspend (Filter) -> Unit)? = null,
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropySyncResult {
     val need = AtomicInt(0)
+    val skipped = AtomicInt(0)
     val windows = AtomicInt(0)
     var downloaded = 0
+    var peerCap: Long? = null
 
     // Pin the relay in the pool's "desired" set for the whole sync. A NEG-OPEN is not
     // a REQ, so during a reconcile round (before that window's first download REQ
@@ -195,12 +238,17 @@ suspend fun INostrClient.negentropySync(
                             maxConcurrentReqs = maxConcurrentReqs,
                             reconcileConcurrency = reconcileConcurrency,
                             idBufferBatches = idBufferBatches,
-                            localEntries = localEntries,
+                            local = localIndex ?: NegentropyLocalIndex.of(localEntries),
+                            targetWindow = targetWindow,
+                            onUnreconcilableWindow = onUnreconcilableWindow,
                             onWindow = { windows.incrementAndFetch() },
+                            onPeerCap = { peerCap = it },
                             // Only accumulate here; progress is reported from the
                             // single consumer loop below so the user callback is never
                             // invoked from two coroutines at once.
                             onNeed = { need.addAndFetch(it) },
+                            onSkipped = { skipped.addAndFetch(it) },
+                            wantId = wantId,
                             deliver = { events.send(it) },
                         )
                     } finally {
@@ -228,6 +276,8 @@ suspend fun INostrClient.negentropySync(
         haveCount = 0,
         downloaded = downloaded,
         windows = windows.load(),
+        peerCap = peerCap,
+        skipped = skipped.load(),
     )
 }
 
@@ -241,8 +291,12 @@ suspend fun INostrClient.negentropySync(
     reconcileConcurrency: Int = 1,
     idBufferBatches: Int = maxConcurrentReqs * 4,
     localEntries: List<IdAndTime> = emptyList(),
+    localIndex: NegentropyLocalIndex? = null,
+    targetWindow: Int = 0,
+    onUnreconcilableWindow: (suspend (Filter) -> Unit)? = null,
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropySyncResult =
     negentropySync(
         relay = RelayUrlNormalizer.normalize(relay),
@@ -254,6 +308,10 @@ suspend fun INostrClient.negentropySync(
         reconcileConcurrency = reconcileConcurrency,
         idBufferBatches = idBufferBatches,
         localEntries = localEntries,
+        localIndex = localIndex,
+        targetWindow = targetWindow,
+        onUnreconcilableWindow = onUnreconcilableWindow,
+        wantId = wantId,
         onProgress = onProgress,
         onEvent = onEvent,
     )
@@ -263,16 +321,28 @@ suspend fun INostrClient.negentropySync(
  *
  * @property downloaded   distinct events delivered through `onEvent` (across whichever
  *   path ran).
- * @property pagedFallback `true` if negentropy could not reconcile and the events
- *   came from [fetchAllPages] instead.
+ * @property pagedFallback `true` if ANY part of the range came from
+ *   [fetchAllPages] rather than a reconcile — either the whole filter (the
+ *   relay could not reconcile at all) or the individual windows counted by
+ *   [pagedWindows]. Deliberately conservative: a caller recording what it has
+ *   covered must not book a paged walk as a completed reconcile, and one
+ *   un-reconcilable second in the range is enough to make that claim untrue.
  * @property negentropy    the negentropy outcome when it succeeded; `null` on fallback.
- * @property fallbackCause why negentropy was abandoned; `null` when it succeeded.
+ * @property fallbackCause why negentropy was abandoned for the WHOLE filter;
+ *   `null` when it was not — including when individual windows were paged, which
+ *   have no single cause between them.
+ * @property pagedWindows  how many individual `created_at` windows were paged
+ *   inside an otherwise-successful negentropy sync — seconds so dense the relay
+ *   would not reconcile them at any window size. `0` for almost every sync;
+ *   non-zero means part of the range came over REQ and is subject to a paged
+ *   walk's limits rather than a reconcile's guarantees.
  */
 class NegentropyOrFetchResult(
     val downloaded: Int,
     val pagedFallback: Boolean,
     val negentropy: NegentropySyncResult?,
     val fallbackCause: NegentropySyncException?,
+    val pagedWindows: Int = 0,
 )
 
 /**
@@ -298,6 +368,7 @@ class NegentropyOrFetchResult(
  * Use [negentropySync] directly if you want to decide the fallback yourself (try
  * another relay, narrow the filter, abort, …) instead of always paging.
  */
+@OptIn(ExperimentalAtomicApi::class)
 suspend fun INostrClient.negentropySyncOrFetch(
     relay: NormalizedRelayUrl,
     filter: Filter,
@@ -308,22 +379,44 @@ suspend fun INostrClient.negentropySyncOrFetch(
     reconcileConcurrency: Int = 1,
     idBufferBatches: Int = maxConcurrentReqs * 4,
     localEntries: List<IdAndTime> = emptyList(),
+    localIndex: NegentropyLocalIndex? = null,
+    targetWindow: Int = 0,
+    /**
+     * Passed straight to [negentropySync]. Note it does NOT apply to the paged
+     * fallback: a `REQ` names no ids before it streams bodies, so there is
+     * nothing to gate there. A caller relying on this to bound its downloads
+     * should read [NegentropyOrFetchResult.pagedFallback] and expect the
+     * suppressed ids to arrive after all when a window pages.
+     */
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropyOrFetchResult {
     val seen = HashSet<HexKey>()
     var delivered = 0
+    val pagedWindows = AtomicInt(0)
 
-    // Shared dedup + cap across both phases. Returns true if the event was new and
-    // delivered. Both phases run sequentially, so no concurrent access.
-    fun accept(event: Event): Boolean {
-        if ((maxEvents <= 0 || delivered < maxEvents) && seen.add(event.id)) {
-            delivered++
-            onEvent(event)
-            return true
+    // Shared dedup + cap across every path that delivers.
+    //
+    // The lock is not optional. The two phases used to run strictly one after
+    // the other, but a paged window now runs DURING the negentropy phase, on a
+    // reconciler coroutine, while the sync's own delivery consumer is calling
+    // this too — an unguarded HashSet between them can corrupt, and the count
+    // can lose updates. onEvent stays INSIDE the lock deliberately: callers are
+    // promised it never runs concurrently with itself, and some of them keep
+    // unsynchronised state in it.
+    val gate = Mutex()
+
+    suspend fun accept(event: Event): Boolean =
+        gate.withLock {
+            if ((maxEvents <= 0 || delivered < maxEvents) && seen.add(event.id)) {
+                delivered++
+                onEvent(event)
+                true
+            } else {
+                false
+            }
         }
-        return false
-    }
 
     return try {
         val result =
@@ -337,9 +430,33 @@ suspend fun INostrClient.negentropySyncOrFetch(
                 reconcileConcurrency = reconcileConcurrency,
                 idBufferBatches = idBufferBatches,
                 localEntries = localEntries,
+                localIndex = localIndex,
+                targetWindow = targetWindow,
+                // One second the relay will not reconcile at any size costs
+                // that second, not the sync. Without this the exception below
+                // catches it and re-pages the WHOLE filter — every window that
+                // already reconciled cleanly walked again over REQ, which on a
+                // large corpus is the entire cost negentropy was there to save.
+                onUnreconcilableWindow = { window ->
+                    pagedWindows.incrementAndFetch()
+                    val pageTimeoutMs = if (idleTimeoutMs > 0) idleTimeoutMs else DEFAULT_DOWNLOAD_IDLE_MS
+                    fetchAllPages(relay, listOf(window), pageTimeoutMs) { event ->
+                        if (accept(event)) onProgress?.invoke(delivered, delivered)
+                    }
+                },
+                wantId = wantId,
                 onProgress = onProgress,
             ) { accept(it) }
-        NegentropyOrFetchResult(delivered, pagedFallback = false, negentropy = result, fallbackCause = null)
+        NegentropyOrFetchResult(
+            delivered,
+            // Any paged window makes this not a clean reconcile — see the
+            // property doc: under-reporting it would let a caller record
+            // coverage it never compared.
+            pagedFallback = pagedWindows.load() > 0,
+            negentropy = result,
+            fallbackCause = null,
+            pagedWindows = pagedWindows.load(),
+        )
     } catch (e: NegentropySyncException) {
         // Negentropy couldn't enumerate the set — page the whole filter instead,
         // skipping anything the negentropy attempt already delivered. fetchAllPages
@@ -349,7 +466,13 @@ suspend fun INostrClient.negentropySyncOrFetch(
         fetchAllPages(relay, listOf(pageFilter), pageTimeoutMs) { event ->
             if (accept(event)) onProgress?.invoke(delivered, delivered)
         }
-        NegentropyOrFetchResult(delivered, pagedFallback = true, negentropy = null, fallbackCause = e)
+        NegentropyOrFetchResult(
+            delivered,
+            pagedFallback = true,
+            negentropy = null,
+            fallbackCause = e,
+            pagedWindows = pagedWindows.load(),
+        )
     }
 }
 
@@ -363,8 +486,11 @@ suspend fun INostrClient.negentropySyncOrFetch(
     reconcileConcurrency: Int = 1,
     idBufferBatches: Int = maxConcurrentReqs * 4,
     localEntries: List<IdAndTime> = emptyList(),
+    localIndex: NegentropyLocalIndex? = null,
+    targetWindow: Int = 0,
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropyOrFetchResult =
     negentropySyncOrFetch(
         relay = RelayUrlNormalizer.normalize(relay),
@@ -376,9 +502,54 @@ suspend fun INostrClient.negentropySyncOrFetch(
         reconcileConcurrency = reconcileConcurrency,
         idBufferBatches = idBufferBatches,
         localEntries = localEntries,
+        localIndex = localIndex,
+        targetWindow = targetWindow,
+        wantId = wantId,
         onProgress = onProgress,
         onEvent = onEvent,
     )
+
+/**
+ * Decides which of the ids a reconcile named are actually worth a `REQ`.
+ *
+ * Small and separate because it is the only place in the download path where
+ * an id can still be declined for free, and because the three things it does
+ * are each easy to get wrong in a lambda nobody can call from a test: apply
+ * the predicate, count what was dropped, and refuse to emit an empty batch.
+ *
+ * [keep] runs on the reconciler coroutines, so with `reconcileConcurrency > 1`
+ * it is called concurrently — hence the counting goes through [onSkipped],
+ * which the caller makes atomic, rather than a field here.
+ *
+ * **It is applied to a whole reconcile round's ids, before they are chunked
+ * into fetch batches.** Gating after the chunking instead would keep the batch
+ * COUNT and shrink every one of them: at the density this exists for (a mirror
+ * declining most of what it is offered) a `fetchBatch` of 500 would become a
+ * hundred `REQ`s of five ids apiece, each with its own EOSE round trip —
+ * turning a bandwidth saving into a latency regression.
+ */
+internal class NeedGate(
+    private val wantId: ((HexKey) -> Boolean)?,
+    private val onSkipped: (Int) -> Unit,
+) {
+    /**
+     * The subset of [batch] to download. Empty when everything was declined —
+     * deliberately NOT null: the caller's chunk loop already does nothing with
+     * an empty list, and a nullable return here invites
+     * `gate?.keep(ids) ?: ids`, which reads as "no gate, keep everything" and
+     * silently means "everything was declined, so send everything". That exact
+     * elvis collapsed the fully-declining case into a full download once.
+     *
+     * With no predicate this returns [batch] itself — the unfiltered sync is
+     * the common case and must not pay a copy for a feature it is not using.
+     */
+    fun keep(batch: List<HexKey>): List<HexKey> {
+        val wanted = if (wantId == null) batch else batch.filter(wantId)
+        val dropped = batch.size - wanted.size
+        if (dropped > 0) onSkipped(dropped)
+        return wanted
+    }
+}
 
 /**
  * The whole-sync pipeline: a single pool of [maxConcurrentReqs] download workers
@@ -411,9 +582,14 @@ private suspend fun INostrClient.syncPipeline(
     maxConcurrentReqs: Int,
     reconcileConcurrency: Int,
     idBufferBatches: Int,
-    localEntries: List<IdAndTime>,
+    local: NegentropyLocalIndex,
+    targetWindow: Int,
     onWindow: () -> Unit,
     onNeed: (Int) -> Unit,
+    onSkipped: (Int) -> Unit,
+    wantId: ((HexKey) -> Boolean)?,
+    onPeerCap: ((Long) -> Unit)?,
+    onUnreconcilableWindow: (suspend (Filter) -> Unit)?,
     deliver: suspend (Event) -> Unit,
 ) = coroutineScope {
     val idBatches = Channel<List<HexKey>>(idBufferBatches.coerceAtLeast(1))
@@ -430,21 +606,23 @@ private suspend fun INostrClient.syncPipeline(
             }
         }
 
-    // reconcileWindows needs the local set sorted by createdAt (it binary-searches
-    // each window's slice). Empty/singleton sets are already trivially sorted.
-    val sortedLocal = if (localEntries.size > 1) localEntries.sortedBy { it.createdAt } else localEntries
-
     reconcileWindows(
         clients = listOf(this@syncPipeline),
         relay = relay,
         filter = filter,
-        localEntries = sortedLocal,
+        local = local,
         idleTimeoutMs = idleTimeoutMs,
         batchSize = fetchBatch,
         reconcileConcurrency = reconcileConcurrency,
+        targetWindow = targetWindow,
         onWindow = onWindow,
         onNeed = onNeed,
         onHave = {},
+        onPeerCap = onPeerCap,
+        onUnreconcilableWindow = onUnreconcilableWindow,
+        // The gate is applied inside the reconcile, before these batches are
+        // cut — see NeedGate — so by here every id is one we want.
+        gate = NeedGate(wantId, onSkipped),
         sendNeedBatch = { batch -> idBatches.send(batch) },
         sendHaveBatch = null,
     )
@@ -455,16 +633,29 @@ private suspend fun INostrClient.syncPipeline(
 
 /**
  * The shared window engine behind [negentropySync] and [negentropyReconcile]:
- * reconciles [filter] against [localEntries], splitting into `created_at`
- * windows whenever the relay rejects the set as too large, with up to
- * [reconcileConcurrency] windows reconciling at once from a shared work
- * queue. Each window's local subset is sliced out of [localEntries] (which
- * MUST be sorted by `createdAt`) so both sides always reconcile the same
- * slice of the timeline.
+ * reconciles [filter] against [local], splitting into `created_at` windows,
+ * with up to [reconcileConcurrency] windows reconciling at once from a shared
+ * work queue. Each window reconciles against that window's slice of [local], so
+ * both sides always compare the same slice of the timeline.
+ *
+ * Two independent things split a window, and the same queue absorbs both:
+ *
+ *  - **The relay refuses it** (strfry's `max_sync_events`). Known only after a
+ *    round trip, and the only signal available about THEIR size.
+ *  - **We hold more than [targetWindow] in it**, per [NegentropyLocalIndex.count],
+ *    which is known before the round trip and is what bounds the entries this
+ *    engine asks [local] to materialise. Off when [targetWindow] is `0` (the
+ *    default), which is the pre-existing behaviour: one window until refused.
+ *
+ * Neither side can see the other's size, so [targetWindow] adapts within the
+ * sync: a refusal shrinks it — straight to the relay's own cap when the refusal
+ * states one ([NegErrMessage.statedCap]), halved when it does not — and windows
+ * that reconcile in one piece grow it back toward, never past, the caller's
+ * number.
  *
  * Throws [NegentropySyncException] for any window negentropy cannot reconcile
- * (a minimal window still over the cap, or an unavailable/erroring relay); the
- * failure cancels the whole scope.
+ * (a minimal window still over the cap with no [onUnreconcilableWindow] to hand
+ * it to, or an unavailable/erroring relay); the failure cancels the whole scope.
  */
 @OptIn(ExperimentalAtomicApi::class)
 internal suspend fun reconcileWindows(
@@ -474,13 +665,24 @@ internal suspend fun reconcileWindows(
     clients: List<INostrClient>,
     relay: NormalizedRelayUrl,
     filter: Filter,
-    localEntries: List<IdAndTime>,
+    local: NegentropyLocalIndex,
     idleTimeoutMs: Long,
     batchSize: Int,
     reconcileConcurrency: Int,
+    targetWindow: Int = 0,
     onWindow: () -> Unit,
     onNeed: (Int) -> Unit,
     onHave: (Int) -> Unit,
+    onPeerCap: ((Long) -> Unit)? = null,
+    // Given a minimal window the relay will not reconcile at any size, instead
+    // of throwing. The caller drains it however it can (paging it over REQ) and
+    // the sweep carries on with the rest of the filter. It runs ON the reconciler
+    // that hit the window, so a slow drain holds that reconciler — with
+    // reconcileConcurrency = 1 the rest of the sweep waits for it.
+    onUnreconcilableWindow: (suspend (Filter) -> Unit)? = null,
+    // Applied to each round's need ids before they are chunked. Null for the
+    // callers that hand the ids straight to their own consumer.
+    gate: NeedGate? = null,
     sendNeedBatch: suspend (List<HexKey>) -> Unit,
     sendHaveBatch: (suspend (List<HexKey>) -> Unit)?,
 ) = coroutineScope {
@@ -503,6 +705,65 @@ internal suspend fun reconcileWindows(
     // the tens–hundreds, so the cap is orders of magnitude above any real sync.
     val totalWindows = AtomicInt(1)
 
+    // The largest window this sync will ask for, in events. Shrinks on a
+    // refusal, recovers toward the caller's number on clean windows, and is
+    // read only where a local count exists to compare it against — with
+    // targetWindow at 0 nothing below this line does anything.
+    val budget = AtomicInt(targetWindow)
+
+    // Every budget move goes through here. With reconcileConcurrency > 1 two
+    // reconcilers adjust it at once, and read-then-store can drop one of them —
+    // a lost SHRINK being the one that costs something real, since the next
+    // window is then asked at a size the relay has already refused.
+    fun budgetTo(next: (Int) -> Int) {
+        while (true) {
+            val now = budget.load()
+            val want = next(now)
+            if (want == now || budget.compareAndSet(now, want)) return
+        }
+    }
+
+    /**
+     * Cuts `[lo, hi]` into [pieces] equal spans of time and queues them all. A
+     * window already at the floor is left alone — `created_at` is in seconds, so
+     * that is where splitting ends, not a tuning choice. Both callers check that
+     * themselves; the guard here is so a third one cannot silently lose a window.
+     *
+     * [pieces] > 2 exists for the count-driven split, where we know HOW FAR over
+     * the budget a window is and can land near the right size in one step.
+     * Halving instead costs a store count per level of a tree that can be ~15
+     * deep on a large corpus, and — since the queue is FIFO — every one of those
+     * counts happens before the first window is reconciled at all.
+     */
+    suspend fun splitInto(
+        pendingWindow: Filter,
+        lo: Long,
+        hi: Long,
+        pieces: Int = 2,
+    ) {
+        if (hi - lo <= MIN_WINDOW_SECONDS) return
+        val span = hi - lo + 1
+        // Never more pieces than there are seconds to give them.
+        val n = pieces.toLong().coerceIn(2L, minOf(span, MAX_SPLIT_FANOUT.toLong())).toInt()
+        val step = span / n
+        remaining.addAndFetch(n - 1)
+        var start = lo
+        repeat(n) { i ->
+            val last = i == n - 1
+            // The top piece KEEPS this window's original `until` (which may be
+            // null = unbounded). Replacing null with `now()` here would drop
+            // every event dated after now() (clock skew) once any split happens,
+            // while the un-split path would have included them.
+            if (last) {
+                pending.send(pendingWindow.copy(since = start, until = pendingWindow.until))
+            } else {
+                val end = start + step - 1
+                pending.send(pendingWindow.copy(since = start, until = end))
+                start = end + 1
+            }
+        }
+    }
+
     val reconcilers =
         List(reconcileConcurrency.coerceAtLeast(1)) { reconcilerIndex ->
             launch {
@@ -510,15 +771,39 @@ internal suspend fun reconcileWindows(
                 for (window in pending) {
                     coroutineContext.ensureActive()
 
+                    val lo = window.since ?: 0L
+                    val hi = window.until ?: TimeUtils.now()
+
+                    // Our own side, before the round trip. Deliberately NOT
+                    // counted against MAX_WINDOWS: that backstop guards against
+                    // an overflow loop that never converges, while this split is
+                    // driven by a number that provably halves with the range.
+                    val ceiling = budget.load()
+                    if (ceiling > 0 && hi - lo > MIN_WINDOW_SECONDS) {
+                        val mine = local.count(window)
+                        if (mine != null && mine > ceiling) {
+                            // How many windows this one is worth, not just "two":
+                            // the count says how far over budget we are, and
+                            // uneven density is corrected by the same check on
+                            // each piece.
+                            // Long arithmetic: `mine` can be near Int.MAX on a
+                            // corpus this size, and the +ceiling would wrap.
+                            val over = (mine.toLong() + ceiling - 1) / ceiling
+                            splitInto(window, lo, hi, pieces = over.coerceAtMost(MAX_SPLIT_FANOUT.toLong()).toInt())
+                            continue
+                        }
+                    }
+
                     val outcome =
                         client.reconcileStreaming(
                             relay = relay,
                             filter = window,
-                            localEntries = entriesForWindow(localEntries, window.since, window.until),
+                            localEntries = local.entriesFor(window),
                             idleTimeoutMs = idleTimeoutMs,
                             fetchBatch = batchSize,
                             onNeed = onNeed,
                             onHave = onHave,
+                            gate = gate,
                             sendNeedBatch = sendNeedBatch,
                             sendHaveBatch = sendHaveBatch,
                         )
@@ -526,21 +811,59 @@ internal suspend fun reconcileWindows(
                     when (outcome) {
                         is ReconcileOutcome.Complete -> {
                             onWindow()
+                            // A window that fitted is evidence the budget can
+                            // recover — gently, and never past what the caller
+                            // asked for, so a sync that met one dense stretch
+                            // does not stay small for the rest of the timeline.
+                            if (targetWindow > 0) {
+                                budgetTo { now ->
+                                    if (now >= targetWindow) {
+                                        now
+                                    } else {
+                                        minOf(targetWindow, (now * BUDGET_GROWTH).toInt().coerceAtLeast(now + 1))
+                                    }
+                                }
+                            }
                             if (remaining.decrementAndFetch() == 0) pending.close()
                         }
 
                         is ReconcileOutcome.Overflow -> {
-                            val lo = window.since ?: 0L
-                            val hi = window.until ?: TimeUtils.now()
+                            // What they will take, when they said so: one step
+                            // instead of a halving ladder, for this sync and —
+                            // via onPeerCap — for whatever the caller persists.
+                            outcome.cap?.let { cap ->
+                                onPeerCap?.invoke(cap)
+                                if (targetWindow > 0) {
+                                    val fitted =
+                                        (cap * CAP_MARGIN)
+                                            .coerceIn(1.0, Int.MAX_VALUE.toDouble())
+                                            .toInt()
+                                    budgetTo { now -> minOf(now, fitted) }
+                                }
+                            }
+                            if (outcome.cap == null && targetWindow > 0) {
+                                // No number to go on: halve and find out.
+                                budgetTo { now -> (now / 2).coerceAtLeast(1) }
+                            }
                             if (hi - lo <= MIN_WINDOW_SECONDS) {
-                                // A minimal window that still overflows: negentropy
-                                // genuinely can't enumerate this slice. Surface it —
-                                // paging is the caller's call.
+                                // A minimal window that still overflows:
+                                // negentropy genuinely can't enumerate this
+                                // slice. Hand it to the caller if it has a way
+                                // to drain it, otherwise surface it — paging is
+                                // the caller's call either way.
+                                val fallback = onUnreconcilableWindow
+                                if (fallback != null) {
+                                    fallback(window)
+                                    onWindow()
+                                    if (remaining.decrementAndFetch() == 0) pending.close()
+                                    continue
+                                }
                                 throw NegentropySyncException(
                                     relay = relay,
                                     window = window,
                                     reason = NegentropySyncException.Reason.OVER_MAX_SYNC_EVENTS,
                                     detail = "created_at window [$lo, $hi] still exceeds the relay's max_sync_events",
+                                    cap = outcome.cap,
                                 )
                             }
                             if (totalWindows.addAndFetch(2) > MAX_WINDOWS) {
@@ -554,15 +877,7 @@ internal suspend fun reconcileWindows(
                                     detail = "created_at window split exceeded $MAX_WINDOWS windows without converging; the relay likely rejects negentropy with an overflow-looking error",
                                 )
                             }
-                            val mid = lo + (hi - lo) / 2
-                            remaining.incrementAndFetch()
-                            // The lower child gets the finite midpoint; the upper child
-                            // KEEPS this window's original `until` (which may be null =
-                            // unbounded). Replacing null with `now()` here would drop
-                            // every event dated after now() (clock skew) once any split
-                            // happens, while the un-split path would have included them.
-                            pending.send(window.copy(since = lo, until = mid))
-                            pending.send(window.copy(since = mid + 1, until = window.until))
+                            splitInto(window, lo, hi)
                         }
 
                         is ReconcileOutcome.Failed ->
@@ -580,46 +895,17 @@ internal suspend fun reconcileWindows(
     reconcilers.joinAll()
 }
 
-/**
- * The `createdAt`-range slice of [sorted] (ascending by `createdAt`) that
- * belongs to the window `[since, until]` (both inclusive, NIP-01 semantics).
- * Binary-searched so window splits stay O(log n) over multi-million local sets.
- */
-private fun entriesForWindow(
-    sorted: List<IdAndTime>,
-    since: Long?,
-    until: Long?,
-): List<IdAndTime> {
-    if (sorted.isEmpty() || (since == null && until == null)) return sorted
-
-    val lo = since ?: 0L
-    val hi = until ?: Long.MAX_VALUE
-
-    // first index with createdAt >= lo
-    var start = 0
-    var e = sorted.size
-    while (start < e) {
-        val mid = (start + e) ushr 1
-        if (sorted[mid].createdAt < lo) start = mid + 1 else e = mid
-    }
-
-    // first index with createdAt > hi
-    var end = start
-    e = sorted.size
-    while (end < e) {
-        val mid = (end + e) ushr 1
-        if (sorted[mid].createdAt <= hi) end = mid + 1 else e = mid
-    }
-
-    return if (start >= end) emptyList() else sorted.subList(start, end)
-}
-
 private sealed interface ReconcileOutcome {
     /** Reconciliation completed; every id was streamed to the downloader. */
     object Complete : ReconcileOutcome
 
-    /** Relay rejected the set as too large (strfry `max_sync_events`). */
-    object Overflow : ReconcileOutcome
+    /**
+     * Relay rejected the set as too large (strfry `max_sync_events`).
+     * [cap] is the relay's own limit when the refusal stated one.
+     */
+    class Overflow(
+        val cap: Long?,
+    ) : ReconcileOutcome
 
     /** Reconciliation could not complete; [detail] says why. */
     class Failed(
@@ -633,11 +919,14 @@ private sealed interface ReconcileOutcome {
  * @property needCount ids the relay has that the local set lacks (streamed to `onNeedIds`).
  * @property haveCount ids the local set has that the relay lacks (streamed to `onHaveIds`).
  * @property windows   number of `created_at` windows the reconcile split into.
+ * @property peerCap   the relay's own `max_sync_events`, when a refusal during
+ *   this reconcile stated one.
  */
 class NegentropyReconcileResult(
     val needCount: Int,
     val haveCount: Int,
     val windows: Int,
+    val peerCap: Long? = null,
 )
 
 /**
@@ -682,15 +971,19 @@ suspend fun INostrClient.negentropyReconcile(
     relay: NormalizedRelayUrl,
     filter: Filter,
     localEntries: List<IdAndTime> = emptyList(),
+    localIndex: NegentropyLocalIndex? = null,
+    targetWindow: Int = 0,
     batchSize: Int = 500,
     idleTimeoutMs: Long = 120_000L,
     reconcileConcurrency: Int = 1,
+    onUnreconcilableWindow: (suspend (Filter) -> Unit)? = null,
     onHaveIds: (suspend (List<HexKey>) -> Unit)? = null,
     onNeedIds: suspend (List<HexKey>) -> Unit,
 ): NegentropyReconcileResult {
     val need = AtomicInt(0)
     val have = AtomicInt(0)
     val windows = AtomicInt(0)
+    var peerCap: Long? = null
 
     // Same connection-pinning trick as negentropySync: a NEG-OPEN is not a REQ,
     // so without a live subscription the pool would consider the relay unwanted
@@ -698,24 +991,20 @@ suspend fun INostrClient.negentropyReconcile(
     val keepAliveSubId = newSubId()
     subscribe(keepAliveSubId, mapOf(relay to listOf(Filter(ids = listOf(KEEP_ALIVE_ID)))), null)
     try {
-        val sorted =
-            if (localEntries.size > 1) {
-                localEntries.sortedBy { it.createdAt }
-            } else {
-                localEntries
-            }
-
         reconcileWindows(
             clients = listOf(this),
             relay = relay,
             filter = filter,
-            localEntries = sorted,
+            local = localIndex ?: NegentropyLocalIndex.of(localEntries),
             idleTimeoutMs = idleTimeoutMs,
             batchSize = batchSize,
             reconcileConcurrency = reconcileConcurrency,
+            targetWindow = targetWindow,
             onWindow = { windows.incrementAndFetch() },
             onNeed = { need.addAndFetch(it) },
             onHave = { have.addAndFetch(it) },
+            onPeerCap = { peerCap = it },
+            onUnreconcilableWindow = onUnreconcilableWindow,
             sendNeedBatch = onNeedIds,
             sendHaveBatch = onHaveIds,
         )
@@ -727,6 +1016,7 @@ suspend fun INostrClient.negentropyReconcile(
         needCount = need.load(),
         haveCount = have.load(),
         windows = windows.load(),
+        peerCap = peerCap,
     )
 }
 
@@ -734,9 +1024,12 @@ suspend fun INostrClient.negentropyReconcile(
     relay: String,
     filter: Filter,
     localEntries: List<IdAndTime> = emptyList(),
+    localIndex: NegentropyLocalIndex? = null,
+    targetWindow: Int = 0,
     batchSize: Int = 500,
     idleTimeoutMs: Long = 120_000L,
     reconcileConcurrency: Int = 1,
+    onUnreconcilableWindow: (suspend (Filter) -> Unit)? = null,
     onHaveIds: (suspend (List<HexKey>) -> Unit)? = null,
     onNeedIds: suspend (List<HexKey>) -> Unit,
 ): NegentropyReconcileResult =
@@ -744,9 +1037,12 @@ suspend fun INostrClient.negentropyReconcile(
         relay = RelayUrlNormalizer.normalize(relay),
         filter = filter,
         localEntries = localEntries,
+        localIndex = localIndex,
+        targetWindow = targetWindow,
         batchSize = batchSize,
         idleTimeoutMs = idleTimeoutMs,
         reconcileConcurrency = reconcileConcurrency,
+        onUnreconcilableWindow = onUnreconcilableWindow,
         onHaveIds = onHaveIds,
         onNeedIds = onNeedIds,
     )
@@ -837,6 +1133,7 @@ private suspend fun INostrClient.reconcileStreaming(
     fetchBatch: Int,
     onNeed: (Int) -> Unit,
     onHave: (Int) -> Unit,
+    gate: NeedGate? = null,
     sendNeedBatch: suspend (List<HexKey>) -> Unit,
     sendHaveBatch: (suspend (List<HexKey>) -> Unit)?,
 ): ReconcileOutcome {
@@ -876,7 +1173,7 @@ private suspend fun INostrClient.reconcileStreaming(
                 if (relay.url == targetUrl) clock.bump()
             }
 
-            override fun onIncomingMessage(
+            override suspend fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
                 msg: Message,
@@ -895,7 +1192,7 @@ private suspend fun INostrClient.reconcileStreaming(
                         clock.bump()
                         if (msg.subId == subId) {
                             sawNegFrame = true
-                            incoming.trySend(NegFrame.Err(msg.reason))
+                            incoming.trySend(NegFrame.Err(msg.reason, msg.statedCap))
                         }
                     }
 
@@ -965,19 +1262,29 @@ private suspend fun INostrClient.reconcileStreaming(
 
             when (frame) {
                 is NegFrame.Err ->
-                    return if (isOverflow(frame.reason)) ReconcileOutcome.Overflow else ReconcileOutcome.Failed(frame.reason)
+                    return if (isOverflow(frame.reason)) {
+                        ReconcileOutcome.Overflow(frame.cap)
+                    } else {
+                        ReconcileOutcome.Failed(frame.reason)
+                    }
 
                 is NegFrame.Msg -> {
                     val result = session.processMessage(frame.payload)
                     val needIds = result.needIds
                     if (needIds.isNotEmpty()) {
+                        // Counted before the gate: this is the protocol diff, and
+                        // it is true whether or not the caller wants to fetch it.
                         onNeed(needIds.size)
+                        // Gated before the chunking, so a selective predicate
+                        // yields FEWER full batches rather than the same number
+                        // of nearly-empty ones — see NeedGate.
+                        val wanted = if (gate == null) needIds else gate.keep(needIds)
                         var i = 0
-                        while (i < needIds.size) {
-                            val end = min(i + fetchBatch, needIds.size)
+                        while (i < wanted.size) {
+                            val end = min(i + fetchBatch, wanted.size)
                             // Copy each batch so the frame's full id list can be freed
                             // as soon as it is chunked; suspends under back-pressure.
-                            sendNeedBatch(ArrayList(needIds.subList(i, end)))
+                            sendNeedBatch(ArrayList(wanted.subList(i, end)))
                             i = end
                         }
                     }
@@ -1014,6 +1321,8 @@ private sealed interface NegFrame {
 
     class Err(
         val reason: String,
+        // The relay's own max_sync_events, when the refusal stated one.
+        val cap: Long? = null,
     ) : NegFrame
 }
 
@@ -1041,13 +1350,7 @@ private sealed interface NegFrame {
  * [reconcileWindows] also caps the total window count as a wording-independent
  * backstop, so a novel overflow-looking-but-not-shrinking error can never storm.
  */
-internal fun isOverflow(reason: String): Boolean =
-    reason.contains("too many records", ignoreCase = true) ||
-        reason.contains("too many results", ignoreCase = true) ||
-        reason.contains("too many query results", ignoreCase = true) ||
-        reason.contains("result set too large", ignoreCase = true) ||
-        reason.contains("results too large", ignoreCase = true) ||
-        reason.contains("max_sync_events", ignoreCase = true)
+internal fun isOverflow(reason: String): Boolean = NegErrMessage.isOverflow(reason)
 
 /**
  * A relay that advertises NIP-77 but refuses it at runtime signals the refusal with
@@ -1103,7 +1406,7 @@ internal suspend fun INostrClient.fetchByIds(
 
     val listener =
         object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,
@@ -1158,6 +1461,30 @@ private const val MIN_WINDOW_SECONDS = 1L
  * margin; crossing it fails the sync over to paging instead of storming the relay.
  */
 private const val MAX_WINDOWS = 100_000
+
+/**
+ * Most pieces one count-driven split may cut a window into. Bounds both the
+ * queue and the depth: with 32, a corpus 30,000 windows wide is reached in
+ * three levels instead of fifteen, and the pieces that guessed wrong are
+ * re-split by the same rule.
+ */
+private const val MAX_SPLIT_FANOUT = 32
+
+/**
+ * How much of a relay's stated `max_sync_events` a window actually aims for.
+ * The margin absorbs what the relay gains between stating that number and
+ * answering the next NEG-OPEN — asking for exactly the cap would be refused
+ * again by anything still being written to.
+ */
+private const val CAP_MARGIN = 0.8
+
+/**
+ * How fast a shrunk window grows back toward the caller's target, per window
+ * that reconciled in one piece. Multiplicative and gentle on purpose: too small
+ * costs an extra round trip, too big costs a refused NEG-OPEN plus the snapshot
+ * scan the relay did before refusing it.
+ */
+private const val BUDGET_GROWTH = 1.25
 
 /** Bounded buffer between the download workers and the single delivery consumer. */
 private const val DELIVERY_BUFFER = 256

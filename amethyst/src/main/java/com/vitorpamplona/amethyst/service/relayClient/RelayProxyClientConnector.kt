@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient
 import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
 import com.vitorpamplona.amethyst.model.torState.TorRelayEvaluation
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
+import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -49,6 +50,14 @@ class RelayProxyClientConnector(
     val torStatus: StateFlow<TorServiceStatus>,
     val client: INostrClient,
     val scope: CoroutineScope,
+    /**
+     * Called with the cause every time this connector *decides* to reconnect, so the
+     * usage ledger can attribute relay churn without this class knowing where the
+     * counters go. Causes are the `UsageKeys.TRIGGER_*` constants — see
+     * [UsageKeys.relayTrigger] for why these are an upper bound rather than a count
+     * of reconnects actually performed.
+     */
+    val onTrigger: (String) -> Unit = {},
 ) {
     data class RelayServiceInfra(
         val evaluator: TorRelayEvaluation,
@@ -138,6 +147,9 @@ class RelayProxyClientConnector(
             infra.connectivity is ConnectivityStatus.Off -> {
                 Log.d("ManageRelayServices") { "Connectivity Off: Pausing Relay Services ${infra.connectivity}" }
                 if (client.isActive()) {
+                    // Counted inside the guard: the upstream combine() re-emits Off
+                    // repeatedly and only this branch does any work.
+                    onTrigger(UsageKeys.TRIGGER_OFF)
                     client.disconnect()
                 }
                 if (infra.torStatus is TorServiceStatus.Active) {
@@ -156,6 +168,7 @@ class RelayProxyClientConnector(
                 }
 
                 // only calls this if the client is not active. Otherwise goes to the else below
+                onTrigger(UsageKeys.TRIGGER_COLD_START)
                 client.connect()
                 lastNetworkId = networkId
                 lastTorSettings = torSettings
@@ -211,10 +224,26 @@ class RelayProxyClientConnector(
                     Log.d("ManageRelayServices") {
                         "Network identity changed ($previousNetworkId -> $networkId), rebuilding every relay connection"
                     }
+                    // The expensive branch, and the one the churn investigation is
+                    // aimed at: a full teardown re-dials the whole pool and replays
+                    // every REQ.
+                    //
+                    // Only this cause is counted here, so a wifi<->cellular handoff —
+                    // which mints a new network handle AND rebuilds the OkHttp clients
+                    // off the metered bit — is booked as netid alone. relay.trigger.transport
+                    // therefore undercounts exactly the case one would most want it for;
+                    // read it as "transport changed WITHOUT the handle changing".
+                    onTrigger(UsageKeys.TRIGGER_NETID)
                     // Full teardown: disconnect() drops the dead sockets AND clears each
                     // relay's backoff, so the new network starts from a clean slate.
                     client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
                 } else {
+                    // Non-exclusive: count each independently so the report shows
+                    // which combination fired.
+                    if (transportChanged) onTrigger(UsageKeys.TRIGGER_TRANSPORT)
+                    if (torPolicyChanged) onTrigger(UsageKeys.TRIGGER_TOR_POLICY)
+                    if (classificationChanged) onTrigger(UsageKeys.TRIGGER_CLASSIFICATION)
+
                     val freshStart = transportChanged || torPolicyChanged
                     if (freshStart) {
                         // The failures behind the current backoffs were measured against a

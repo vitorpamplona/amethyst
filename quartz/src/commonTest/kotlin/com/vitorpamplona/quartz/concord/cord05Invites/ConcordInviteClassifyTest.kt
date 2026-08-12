@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -151,6 +152,40 @@ class ConcordInviteClassifyTest {
     fun emptyFetchIsAbsent() {
         assertEquals(InviteBundleStatus.Absent, ConcordInviteBundle.classify(emptyList(), ByteArray(16)))
     }
+
+    @Test
+    fun buildRevocationEmitsTheWireShapeArmadaEmits() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L, relays = listOf("wss://relay.example"))
+
+            val grave = ConcordInviteBundle.buildRevocation(minted.linkSignerPrivKey, createdAt = 2L)
+
+            // The interop contract, byte for byte: kind 33301 at the SAME addressable coordinate
+            // (same author, same empty d tag), empty content, vsk=9. Anything else here and a
+            // non-Amethyst client keeps serving a link its creator believes is dead.
+            assertEquals(ConcordInviteBundleEvent.KIND, grave.kind)
+            assertEquals(minted.linkSignerPubKey, grave.pubKey, "a tombstone at a different author retires nothing")
+            assertEquals("", grave.content, "the grave carries no keys — nothing to encrypt")
+            assertEquals(listOf(listOf("d", ""), listOf("vsk", "9")), grave.tags.map { it.toList() })
+            assertTrue(grave.verify(), "must be signed by the link signer the creator kept")
+        }
+
+    @Test
+    fun aBuiltRevocationRetiresItsOwnLink() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://relay.example"))
+            val minted = ConcordInviteBundle.mintLink("https://vector.chat", inviteFor(community), createdAt = 1L, relays = listOf("wss://relay.example"))
+
+            // End to end: what the creator publishes is what every redeemer then resolves.
+            val grave = ConcordInviteBundle.buildRevocation(minted.linkSignerPrivKey, createdAt = 2L)
+            assertEquals(InviteBundleStatus.Revoked, ConcordInviteBundle.classify(listOf(minted.bundleEvent, grave), minted.token))
+
+            // And a re-mint that lands AFTER the grave un-revokes the link, which is exactly why the
+            // refresh path must skip a coordinate it did not resolve Live first.
+            val remint = ConcordInviteBundle.build(minted.linkSignerPrivKey, minted.token, inviteFor(community), createdAt = 3L)
+            assertTrue(ConcordInviteBundle.classify(listOf(minted.bundleEvent, grave, remint), minted.token) is InviteBundleStatus.Live)
+        }
 
     @Test
     fun realRelayopBundleIsUnreadable() {

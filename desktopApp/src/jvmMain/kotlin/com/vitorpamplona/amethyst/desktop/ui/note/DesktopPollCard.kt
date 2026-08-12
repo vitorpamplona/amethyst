@@ -448,7 +448,7 @@ private fun PollResultRow(
         animated.animateTo(tally.percent)
     }
 
-    val isMyVote = forKey.isNotEmpty() && tally.users.any { it.pubkeyHex == forKey }
+    val isMyVote = forKey.isNotEmpty() && tally.contains(forKey)
     val winning = tally.isWinning
     val barColor = if (winning) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
     // Border marks YOUR choice (primary); the winner is conveyed by the bar fill color.
@@ -508,7 +508,7 @@ private fun PollResultRow(
             }
             Spacer(Modifier.width(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                VoterGallery(tally.users, forKey)
+                VoterGallery(tally.topUsers(4), forKey)
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = "${(tally.percent * 100).toInt()}%",

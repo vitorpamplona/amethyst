@@ -199,4 +199,148 @@ class SearchQueryTest {
         assertSame(plain, mixed[0])
         assertEquals("bitcoin", mixed[1].search)
     }
+
+    // ---- quoted phrases and -word exclusions --------------------------------
+
+    @Test
+    fun quotedSpanBecomesPhrase() {
+        val q = SearchQuery.parse("best \"nostr apps\" today")
+        assertEquals("best today", q.terms)
+        assertEquals(listOf("nostr apps"), q.phrases)
+        assertTrue(q.notPhrases.isEmpty())
+        assertTrue(q.hasText)
+    }
+
+    @Test
+    fun negatedQuotedSpanBecomesPhraseExclusion() {
+        val q = SearchQuery.parse("pizza -\"pineapple pizza\"")
+        assertEquals("pizza", q.terms)
+        assertEquals(listOf("pineapple pizza"), q.notPhrases)
+        assertTrue(q.phrases.isEmpty())
+    }
+
+    @Test
+    fun minusWordBecomesExclusion() {
+        val q = SearchQuery.parse("pizza -pineapple")
+        assertEquals("pizza", q.terms)
+        assertEquals(listOf("pineapple"), q.notTerms)
+        // Exclusions alone are not required text.
+        assertFalse(SearchQuery.parse("-pineapple").hasText)
+    }
+
+    @Test
+    fun loneMinusStaysATerm() {
+        val q = SearchQuery.parse("a - b")
+        assertEquals("a - b", q.terms)
+        assertTrue(q.notTerms.isEmpty())
+    }
+
+    @Test
+    fun allLeadingDashesAreStripped() {
+        assertEquals(listOf("word"), SearchQuery.parse("--word").notTerms)
+    }
+
+    @Test
+    fun quotesProtectExtensionShapedTokens() {
+        // The quote pass runs BEFORE the extension pass, so a quoted
+        // extension-shaped token is a phrase, not an extension.
+        val q = SearchQuery.parse("\"include:spam\"")
+        assertEquals(listOf("include:spam"), q.phrases)
+        assertFalse(q.includeSpam)
+        assertTrue(q.extensions.isEmpty())
+    }
+
+    @Test
+    fun spanEndingInExtensionKeepsTrailingExclusion() {
+        // Quote-blind extension parsing would eat the closing quote of
+        // "pizza include:spam" and swallow the trailing -word; the quote-first
+        // order keeps the exclusion an exclusion.
+        val q = SearchQuery.parse("\"pizza include:spam\" -pineapple")
+        assertEquals(listOf("pizza include:spam"), q.phrases)
+        assertEquals(listOf("pineapple"), q.notTerms)
+        assertTrue(q.extensions.isEmpty())
+    }
+
+    @Test
+    fun minusOnExtensionShapedTokenExcludesTheLiteral() {
+        // There is no `-extension` syntax: keys are strictly a-z, so the `-`
+        // makes the whole token an excluded literal.
+        val q = SearchQuery.parse("pizza -include:spam")
+        assertEquals(listOf("include:spam"), q.notTerms)
+        assertFalse(q.includeSpam)
+    }
+
+    @Test
+    fun unclosedQuoteRunsToEnd() {
+        val q = SearchQuery.parse("\"nostr apps today")
+        assertEquals(listOf("nostr apps today"), q.phrases)
+        assertEquals("", q.terms)
+    }
+
+    @Test
+    fun midTokenQuoteStaysOrdinary() {
+        val q = SearchQuery.parse("don\"t panic")
+        assertEquals("don\"t panic", q.terms)
+        assertTrue(q.phrases.isEmpty())
+    }
+
+    @Test
+    fun emptySpansAreDropped() {
+        val q = SearchQuery.parse("a \"\" b -\"\"")
+        assertEquals("a b", q.terms)
+        assertTrue(q.phrases.isEmpty())
+        assertTrue(q.notPhrases.isEmpty())
+    }
+
+    @Test
+    fun phrasesComposeWithExtensions() {
+        val q = SearchQuery.parse("\"nostr apps\" best domain:example.com -spam")
+        assertEquals("best", q.terms)
+        assertEquals(listOf("nostr apps"), q.phrases)
+        assertEquals(listOf("spam"), q.notTerms)
+        assertEquals("example.com", q.domain)
+    }
+
+    @Test
+    fun toSearchStringRoundTripsFullGrammar() {
+        val q = SearchQuery.parse("best \"nostr apps\" -spam -\"bad phrase\" domain:example.com")
+        assertEquals("best \"nostr apps\" -spam -\"bad phrase\" domain:example.com", q.toSearchString())
+    }
+
+    @Test
+    fun allDashTokensAreDroppedNotEmptied() {
+        // "--" strips to nothing; surfacing an empty exclusion would
+        // round-trip into a required "-" term.
+        val q = SearchQuery.parse("a --")
+        assertEquals("a", q.terms)
+        assertTrue(q.notTerms.isEmpty())
+        assertEquals("a", SearchQuery.parse(q.toSearchString()).terms)
+        assertEquals("", SearchQuery.stripExtensions("-- include:spam"))
+    }
+
+    @Test
+    fun consecutiveSpansEachLift() {
+        val q = SearchQuery.parse("\"a\"\"b\" -\"c\"")
+        assertEquals(listOf("a", "b"), q.phrases)
+        assertEquals(listOf("c"), q.notPhrases)
+        assertEquals("", q.terms)
+    }
+
+    @Test
+    fun textAfterClosingQuoteIsItsOwnTerm() {
+        // The lifted span's place stays a token boundary for what follows.
+        val q = SearchQuery.parse("\"a b\"c")
+        assertEquals(listOf("a b"), q.phrases)
+        assertEquals("c", q.terms)
+    }
+
+    @Test
+    fun stripExtensionsKeepsPhrasesAndExclusions() {
+        assertEquals(
+            "best \"nostr apps\" -spam",
+            SearchQuery.stripExtensions("best \"nostr apps\" -spam language:en"),
+        )
+        // No extensions -> the original string comes back untouched.
+        assertEquals("best \"nostr apps\" -spam", SearchQuery.stripExtensions("best \"nostr apps\" -spam"))
+    }
 }

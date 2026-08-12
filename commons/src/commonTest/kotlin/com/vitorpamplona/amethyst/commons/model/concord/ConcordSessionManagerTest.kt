@@ -47,6 +47,8 @@ class ConcordSessionManagerTest {
         ownerSalt = community.ownerSalt.toHexKey(),
         root = community.communityRoot.toHexKey(),
         rootEpoch = community.rootEpoch,
+        controlPk = community.controlPkHex,
+        controlRoot = community.controlRoot.toHexKey(),
         relays = listOf("wss://r.example"),
         name = name,
     )
@@ -61,7 +63,7 @@ class ConcordSessionManagerTest {
             testScheduler.runCurrent()
 
             // The joined community produced a session, and its control plane is in the subscribe set.
-            assertTrue(manager.subscribeAddresses().contains(alpha.controlPlane.publicKeyHex))
+            assertTrue(manager.subscribeAddresses().contains(alpha.controlPlane.address))
             val revAfterSync = manager.revision.value
             assertTrue(revAfterSync > 0)
 
@@ -87,7 +89,7 @@ class ConcordSessionManagerTest {
             val beta = ConcordCommunityFactory.create(owner, "Beta", createdAt = 1L, relays = listOf("wss://r.example"))
             communities.value = listOf(entryFor(alpha, "Alpha"), entryFor(beta, "Beta"))
             testScheduler.runCurrent()
-            assertTrue(manager.subscribeAddresses().contains(beta.controlPlane.publicKeyHex))
+            assertTrue(manager.subscribeAddresses().contains(beta.controlPlane.address))
             // Alpha's fold survived the re-sync.
             assertEquals(
                 "Alpha",
@@ -114,7 +116,13 @@ class ConcordSessionManagerTest {
 
             // Before any fold, only the control-plane key must AUTH — and only on the community's relay.
             val beforeFold = manager.streamAuthSecretsFor(hosted).map { it.toHexKey() }
-            assertTrue(beforeFold.contains(alpha.controlPlane.secretKey.toHexKey()))
+            assertTrue(
+                beforeFold.contains(
+                    alpha.controlPlane.signer!!
+                        .secretKey
+                        .toHexKey(),
+                ),
+            )
             assertTrue(manager.streamAuthSecretsFor(elsewhere).isEmpty()) // relay-scoped
 
             // After the Control Plane folds, the #general channel key joins the AUTH set.
@@ -122,7 +130,13 @@ class ConcordSessionManagerTest {
             testScheduler.runCurrent()
             val general = ConcordActions.publicChannel(alpha.communityRoot, alpha.generalChannelId, alpha.rootEpoch)
             val afterFold = manager.streamAuthSecretsFor(hosted).map { it.toHexKey() }
-            assertTrue(afterFold.contains(alpha.controlPlane.secretKey.toHexKey()))
+            assertTrue(
+                afterFold.contains(
+                    alpha.controlPlane.signer!!
+                        .secretKey
+                        .toHexKey(),
+                ),
+            )
             assertTrue(afterFold.contains(general.secretKey.toHexKey()))
             assertFalse(manager.streamAuthSecretsFor(elsewhere).any { it.toHexKey() == general.secretKey.toHexKey() })
         }

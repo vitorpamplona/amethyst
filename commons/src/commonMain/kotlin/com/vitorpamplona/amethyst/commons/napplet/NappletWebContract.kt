@@ -41,33 +41,19 @@ object NappletWebContract {
     const val SHELL_URL = "$ORIGIN/__shell__"
 
     /**
-     * The applet runs on its **own per-applet origin** — a unique subdomain of [HOST] — served at the
-     * origin root, NOT on the shell [ORIGIN]. Two reasons, both load-bearing:
-     *
-     *  1. **A real (non-opaque) origin is what gives the applet working, persistent storage.** An
-     *     `allow-scripts`-only opaque-origin iframe has no `localStorage`/`IndexedDB`/service worker
-     *     (reads throw `SecurityError`), which crash-loops essentially every SPA. A real origin with
-     *     `allow-same-origin` has them, scoped and isolated per applet (subdomains don't share
-     *     storage), so applets can't read each other's data.
-     *  2. **Keeping it on a DISTINCT origin from the shell is what preserves the trust boundary.** The
-     *     native bridge is origin-restricted to the shell [ORIGIN]; the applet, being cross-origin,
-     *     still can't reach it (nor read the shell DOM) — it talks only via `postMessage`, which the
-     *     shell relays. `allow-same-origin` is therefore safe here precisely because the applet is
-     *     same-origin only with *itself*, never with the shell.
-     *
-     * The applet is served at its origin root because SPA bundlers (Vite, CRA, webpack, nsyte, …) emit
-     * **absolute** asset URLs (`/assets/app.js`, `/fonts/x.woff2`) that resolve against the origin root.
-     *
-     * [appId] must be a stable, unique, DNS-label-safe token per applet (the host derives it from the
-     * applet's author + identifier), so the same applet keeps its storage across launches.
+     * Per-site origin retained for Amethyst's NIP-5A WEBSITE profile. NIP-5D napplets never navigate
+     * here: their verified, self-contained `/index.html` is assigned through `srcdoc` and therefore
+     * executes with an opaque origin in an `allow-scripts`-only sandbox.
      */
     fun appOrigin(appId: String): String = "https://$appId.$HOST"
 
     /** True for the shell host and any per-applet subdomain — i.e. everything we serve internally. */
     fun isInternalHost(host: String?): Boolean = host == HOST || (host != null && host.endsWith(".$HOST"))
 
-    /** Placeholder in [SHELL_HTML_PATH] the host replaces with the per-applet [appOrigin] before serving. */
+    /** Placeholders in [SHELL_HTML_PATH] replaced by the host before serving the trusted shell. */
     const val APP_ORIGIN_PLACEHOLDER = "__APP_ORIGIN__"
+    const val APP_SANDBOX_PLACEHOLDER = "__APP_SANDBOX__"
+    const val APP_BOOTSTRAP_PLACEHOLDER = "__APP_BOOTSTRAP__"
 
     /** Name of the origin-restricted native bridge the shell (and only the shell) can reach. */
     const val BRIDGE_NAME = "__nappletBridge"
@@ -76,24 +62,72 @@ object NappletWebContract {
      * CSP for the shell document: it may inline its own bridge script/style and frame **only this
      * applet's** origin, but has no network and cannot navigate or submit anywhere.
      */
-    fun shellCsp(appOrigin: String): String =
+    fun shellCsp(frameSource: String): String =
         "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
-            "frame-src $appOrigin; base-uri 'none'; form-action 'none'"
+            "frame-src $frameSource; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
     /**
-     * CSP for the applet document. The applet has a real origin now, so `'self'` resolves to its own
-     * per-applet origin and the shell origin is deliberately NOT granted. The key lever is
-     * `connect-src 'none'`: the applet gets **no** direct network — every fetch goes through the
-     * brokered, consent-gated `resource.bytes`.
+     * Conservative NIP-5D CSP injected as the first element of the verified napplet's `head` before
+     * the runtime prelude. A `srcdoc` napplet has an opaque origin, so self-hosted subresources are
+     * intentionally unavailable; a conforming napplet is one self-contained `/index.html`.
      */
     const val APP_CSP: String =
-        "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline'; " +
-            "style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data: blob:; " +
-            "font-src 'self' data:; " +
-            "media-src 'self' blob: data:; " +
-            "connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
+            "img-src data: blob:; font-src data:; connect-src 'none'; worker-src 'none'; " +
+            "child-src 'none'; frame-src 'none'; media-src 'none'; object-src 'none'; " +
+            "manifest-src 'none'; base-uri 'none'; form-action 'none'"
+
+    /**
+     * Injects host-owned policy and the runtime prelude before any authored element in `head`.
+     * [locked] is the NIP-5D posture; WEBSITE callers deliberately retain Amethyst's NIP-07 and
+     * normal-origin behavior. Only syntactically valid, explicitly authorized NAP domains are
+     * projected onto `window.napplet` by the trusted [shimJs].
+     */
+    fun injectPrelude(
+        html: ByteArray,
+        shimJs: String,
+        declaredDomains: List<String>,
+        locked: Boolean,
+        injectNip07: Boolean = false,
+        imeProxy: Boolean = false,
+    ): ByteArray {
+        val text = html.decodeToString()
+        val policy =
+            if (locked) {
+                "<meta http-equiv=\"Content-Security-Policy\" content=\"$APP_CSP\">"
+            } else {
+                ""
+            }
+        val style = "<style>html,body{overscroll-behavior:none !important}</style>"
+        val flags =
+            "<script>window.__nappletNip07=$injectNip07;" +
+                (if (imeProxy) "window.__nappletImeProxy=true;" else "") +
+                "</script>"
+        val safeDomains =
+            declaredDomains
+                .filter { it.matches(NAP_DOMAIN) && it in NappletCapability.supportedNapDomains }
+                .distinct()
+        val domainsJson = safeDomains.joinToString(prefix = "[", postfix = "]") { "\"$it\"" }
+        val prelude = "$policy$style$flags<script>window.__nappletDomains=$domainsJson;$shimJs</script>"
+        val headIdx = text.indexOf("<head", ignoreCase = true)
+        val injected =
+            when {
+                headIdx >= 0 -> {
+                    val close = text.indexOf('>', headIdx)
+                    if (close >= 0) text.substring(0, close + 1) + prelude + text.substring(close + 1) else prelude + text
+                }
+                else -> {
+                    val htmlIdx = text.indexOf("<html", ignoreCase = true)
+                    val htmlClose = if (htmlIdx >= 0) text.indexOf('>', htmlIdx) else -1
+                    if (htmlClose >= 0) {
+                        text.substring(0, htmlClose + 1) + "<head>$prelude</head>" + text.substring(htmlClose + 1)
+                    } else {
+                        "<head>$prelude</head>$text"
+                    }
+                }
+            }
+        return injected.encodeToByteArray()
+    }
 
     const val SHELL_HTML_PATH = "files/napplet/shell.html"
     const val SHIM_JS_PATH = "files/napplet/shim.js"
@@ -114,4 +148,6 @@ object NappletWebContract {
     /** The `window.napplet` client shim a host injects into the applet document. */
     @OptIn(ExperimentalResourceApi::class)
     suspend fun shimJs(): ByteArray = Res.readBytes(SHIM_JS_PATH)
+
+    private val NAP_DOMAIN = Regex("^[a-z][a-z0-9-]*$")
 }

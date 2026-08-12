@@ -177,7 +177,7 @@ class NegentropyMultiRelayLiveTest {
 
         val listener =
             object : RelayConnectionListener {
-                override fun onIncomingMessage(
+                override suspend fun onIncomingMessage(
                     relay: IRelayClient,
                     msgStr: String,
                     msg: Message,

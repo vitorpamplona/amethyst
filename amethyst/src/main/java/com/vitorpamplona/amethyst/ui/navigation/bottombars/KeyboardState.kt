@@ -20,13 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 
@@ -57,30 +55,4 @@ fun keyboardAsState(): State<KeyboardState> {
             if (imeInsets.getBottom(density) > 0) KeyboardState.Opened else KeyboardState.Closed
         }
     }
-}
-
-/**
- * A [BackHandler] that steps aside while the soft keyboard is on screen.
- *
- * Chat composers (and draft-saving editors) intercept back to flush a draft and pop the screen.
- * When that pop happens while the keyboard is still up, it races the predictive-back window
- * animation against the IME's close animation. On release builds — fast enough that the window
- * animation wins — the IME [WindowInsetsAnimationCompat][androidx.core.view.WindowInsetsAnimationCompat]
- * is cancelled before its terminal (zero) frame reaches Compose, so the shared `WindowInsets.ime`
- * holder stays "animating" and every `Modifier.imePadding()` in the app freezes at the keyboard
- * height until a later inset pass rebalances it (the "stuck IME padding" that survives leaving the
- * screen).
- *
- * Gating on [keyboardAsState] fixes it: while the keyboard is visible we do NOT consume back, so the
- * system dismisses the keyboard first with its own animation (which completes cleanly). The next
- * back — keyboard already down — runs [onBack] as before. The top bar's back arrow stays an
- * always-available exit, so this can never trap the user even if the inset reading were itself stale.
- */
-@Composable
-fun KeyboardAwareBackHandler(
-    enabled: Boolean = true,
-    onBack: () -> Unit,
-) {
-    val keyboardState by keyboardAsState()
-    BackHandler(enabled = enabled && keyboardState == KeyboardState.Closed, onBack = onBack)
 }

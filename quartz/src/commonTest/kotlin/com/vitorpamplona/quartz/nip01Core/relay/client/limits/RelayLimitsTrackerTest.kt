@@ -70,67 +70,72 @@ class RelayLimitsTrackerTest {
     }
 
     @Test
-    fun cachesLimitsPerRelay() {
-        val (limits, listener) = setup()
-        val relay = FakeRelayClient(NormalizedRelayUrl("wss://relay.example/"))
+    fun cachesLimitsPerRelay() =
+        kotlinx.coroutines.test.runTest {
+            val (limits, listener) = setup()
+            val relay = FakeRelayClient(NormalizedRelayUrl("wss://relay.example/"))
 
-        assertNull(limits.get(relay.url), "No limits before any LIMITS message")
+            assertNull(limits.get(relay.url), "No limits before any LIMITS message")
 
-        listener.onIncomingMessage(relay, "", LimitsMessage(canWrite = true, maxLimit = 200))
+            listener.onIncomingMessage(relay, "", LimitsMessage(canWrite = true, maxLimit = 200))
 
-        assertEquals(true, limits.get(relay.url)?.canWrite)
-        assertEquals(200, limits.get(relay.url)?.maxLimit)
-        assertEquals(limits.get(relay.url), limits.limitsFlow.value[relay.url])
-    }
-
-    @Test
-    fun laterLimitsReplaceEarlierOnes() {
-        val (limits, listener) = setup()
-        val relay = FakeRelayClient(NormalizedRelayUrl("wss://relay.example/"))
-
-        listener.onIncomingMessage(relay, "", LimitsMessage(canWrite = false, maxLimit = 200))
-        listener.onIncomingMessage(relay, "", LimitsMessage(canWrite = true, maxLimit = 500))
-
-        // A relay re-advertises LIMITS when rights change (e.g. after AUTH flips can_write).
-        assertEquals(true, limits.get(relay.url)?.canWrite)
-        assertEquals(500, limits.get(relay.url)?.maxLimit)
-    }
+            assertEquals(true, limits.get(relay.url)?.canWrite)
+            assertEquals(200, limits.get(relay.url)?.maxLimit)
+            assertEquals(limits.get(relay.url), limits.limitsFlow.value[relay.url])
+        }
 
     @Test
-    fun tracksLimitsForDistinctRelaysIndependently() {
-        val (limits, listener) = setup()
-        val relayA = FakeRelayClient(NormalizedRelayUrl("wss://a.example/"))
-        val relayB = FakeRelayClient(NormalizedRelayUrl("wss://b.example/"))
+    fun laterLimitsReplaceEarlierOnes() =
+        kotlinx.coroutines.test.runTest {
+            val (limits, listener) = setup()
+            val relay = FakeRelayClient(NormalizedRelayUrl("wss://relay.example/"))
 
-        listener.onIncomingMessage(relayA, "", LimitsMessage(maxLimit = 100))
-        listener.onIncomingMessage(relayB, "", LimitsMessage(maxLimit = 999))
+            listener.onIncomingMessage(relay, "", LimitsMessage(canWrite = false, maxLimit = 200))
+            listener.onIncomingMessage(relay, "", LimitsMessage(canWrite = true, maxLimit = 500))
 
-        assertEquals(100, limits.get(relayA.url)?.maxLimit)
-        assertEquals(999, limits.get(relayB.url)?.maxLimit)
-        assertEquals(2, limits.snapshot().size)
-    }
-
-    @Test
-    fun dropsCachedLimitsOnDisconnect() {
-        val (limits, listener) = setup()
-        val relay = FakeRelayClient(NormalizedRelayUrl("wss://relay.example/"))
-
-        listener.onIncomingMessage(relay, "", LimitsMessage(canRead = true))
-        assertTrue(limits.get(relay.url) != null)
-
-        listener.onDisconnected(relay)
-        assertNull(limits.get(relay.url), "Limits are connection-scoped and cleared on disconnect")
-        assertTrue(limits.snapshot().isEmpty())
-    }
+            // A relay re-advertises LIMITS when rights change (e.g. after AUTH flips can_write).
+            assertEquals(true, limits.get(relay.url)?.canWrite)
+            assertEquals(500, limits.get(relay.url)?.maxLimit)
+        }
 
     @Test
-    fun ignoresNonLimitsMessages() {
-        val (limits, listener) = setup()
-        val relay = FakeRelayClient(NormalizedRelayUrl("wss://relay.example/"))
+    fun tracksLimitsForDistinctRelaysIndependently() =
+        kotlinx.coroutines.test.runTest {
+            val (limits, listener) = setup()
+            val relayA = FakeRelayClient(NormalizedRelayUrl("wss://a.example/"))
+            val relayB = FakeRelayClient(NormalizedRelayUrl("wss://b.example/"))
 
-        listener.onIncomingMessage(relay, "", EoseMessage("sub1"))
+            listener.onIncomingMessage(relayA, "", LimitsMessage(maxLimit = 100))
+            listener.onIncomingMessage(relayB, "", LimitsMessage(maxLimit = 999))
 
-        assertNull(limits.get(relay.url))
-        assertTrue(limits.snapshot().isEmpty())
-    }
+            assertEquals(100, limits.get(relayA.url)?.maxLimit)
+            assertEquals(999, limits.get(relayB.url)?.maxLimit)
+            assertEquals(2, limits.snapshot().size)
+        }
+
+    @Test
+    fun dropsCachedLimitsOnDisconnect() =
+        kotlinx.coroutines.test.runTest {
+            val (limits, listener) = setup()
+            val relay = FakeRelayClient(NormalizedRelayUrl("wss://relay.example/"))
+
+            listener.onIncomingMessage(relay, "", LimitsMessage(canRead = true))
+            assertTrue(limits.get(relay.url) != null)
+
+            listener.onDisconnected(relay)
+            assertNull(limits.get(relay.url), "Limits are connection-scoped and cleared on disconnect")
+            assertTrue(limits.snapshot().isEmpty())
+        }
+
+    @Test
+    fun ignoresNonLimitsMessages() =
+        kotlinx.coroutines.test.runTest {
+            val (limits, listener) = setup()
+            val relay = FakeRelayClient(NormalizedRelayUrl("wss://relay.example/"))
+
+            listener.onIncomingMessage(relay, "", EoseMessage("sub1"))
+
+            assertNull(limits.get(relay.url))
+            assertTrue(limits.snapshot().isEmpty())
+        }
 }

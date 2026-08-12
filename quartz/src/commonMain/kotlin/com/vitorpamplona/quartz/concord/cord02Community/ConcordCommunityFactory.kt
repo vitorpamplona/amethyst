@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlEditionBuilder
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
 import com.vitorpamplona.quartz.concord.cord04Roles.MetadataEntity
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
-import com.vitorpamplona.quartz.concord.crypto.GroupKey
+import com.vitorpamplona.quartz.concord.crypto.ControlPlaneKeys
 import com.vitorpamplona.quartz.concord.envelope.ConcordStreamEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -45,9 +45,12 @@ class NewConcordCommunity(
     val ownerPubKey: String,
     val ownerSalt: ByteArray,
     val communityRoot: ByteArray,
+    /** The staff write key (CORD-02 §2): held by the owner and staff only, never members. */
+    val controlRoot: ByteArray,
     val rootEpoch: Long,
     val generalChannelId: ByteArray,
-    val controlPlane: GroupKey,
+    /** The split Control Plane keys (owner view: signer held, [ControlPlaneKeys.canWrite] true). */
+    val controlPlane: ControlPlaneKeys,
     /** The kind-1059 control-plane wraps to publish (metadata + #general). */
     val genesisWraps: List<Event>,
     /** The same editions as parsed [ControlEdition]s, for immediate local folding. */
@@ -55,6 +58,9 @@ class NewConcordCommunity(
 ) {
     val communityIdHex: String get() = communityId.toHexKey()
     val generalChannelIdHex: String get() = generalChannelId.toHexKey()
+
+    /** The Control Plane address (`control_pk`) members hold to subscribe/verify/read. */
+    val controlPkHex: String get() = controlPlane.address
 }
 
 /**
@@ -63,9 +69,11 @@ class NewConcordCommunity(
  * `create` mints a random `owner_salt`, derives the self-certifying
  * `community_id = sha256("concord/community" ‖ owner ‖ salt)`, generates an
  * independent random `community_root` (so access can rotate while identity stays
- * fixed), and emits exactly two owner-signed genesis editions — the community
- * metadata and a public `#general` channel — as plaintext-seal wraps on the
- * Control Plane at epoch 0.
+ * fixed) plus the staff-held `control_root` write key (CORD-02 §2), and emits
+ * exactly two owner-signed genesis editions — the community metadata and a public
+ * `#general` channel — as plaintext-seal wraps on the split Control Plane at
+ * epoch 0: signed by the `control_root`-derived signer, readable under the
+ * `community_root`-derived read key (CORD-02 §5).
  */
 object ConcordCommunityFactory {
     const val GENERAL_CHANNEL_NAME = "general"
@@ -82,9 +90,13 @@ object ConcordCommunityFactory {
         val ownerSalt = ConcordKeyDerivation.newOwnerSalt()
         val communityId = ConcordKeyDerivation.communityId(ownerXOnly, ownerSalt)
         val communityRoot = RandomInstance.bytes(32)
+        // The staff write key, minted alongside the community_root and kept deliberately
+        // apart from it (CORD-02 §2): members derive the Control read key from the root,
+        // but only control_root holders can mint a wrap at the plane's address.
+        val controlRoot = RandomInstance.bytes(32)
         val generalChannelId = RandomInstance.bytes(32)
         val rootEpoch = 0L
-        val controlPlane = ConcordKeyDerivation.controlPlaneKey(communityRoot, communityId, rootEpoch)
+        val controlPlane = ControlPlaneKeys.forStaff(communityRoot, communityId, rootEpoch, controlRoot)
 
         val metadataJson =
             ConcordJson.instance.encodeToString(
@@ -127,6 +139,7 @@ object ConcordCommunityFactory {
             ownerPubKey = ownerSigner.pubKey,
             ownerSalt = ownerSalt,
             communityRoot = communityRoot,
+            controlRoot = controlRoot,
             rootEpoch = rootEpoch,
             generalChannelId = generalChannelId,
             controlPlane = controlPlane,

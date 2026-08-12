@@ -66,6 +66,14 @@ class SelectionUiState {
     var fieldHasText by mutableStateOf(false)
         private set
 
+    /**
+     * The focused field is `readonly`. Its text can still be selected and copied — that is what native offers
+     * — but nothing can be placed or changed in it, so it gets no insertion caret handle and no editing
+     * actions in the toolbar.
+     */
+    var fieldReadOnly by mutableStateOf(false)
+        private set
+
     /** Plain page-text (non-editable) selection. */
     var pageSelection by mutableStateOf<ImeEvent.PageSelection?>(null)
         private set
@@ -86,7 +94,7 @@ class SelectionUiState {
     // ---- derived visibility (read in composition; track the backing state) ----
 
     val insertionHandle: SelectionGeometry?
-        get() = if (caretShown && fieldHasText && !fieldHasRange && !scrolling) insertionGeometry else null
+        get() = if (caretShown && fieldHasText && !fieldReadOnly && !fieldHasRange && !scrolling) insertionGeometry else null
 
     /** Geometry for the insertion-handle Paste/Select-All popup, or null when it shouldn't show. */
     val insertionPopupAt: SelectionGeometry?
@@ -165,8 +173,14 @@ class SelectionUiState {
         fieldRange = null
         fieldHasRange = false
         fieldHasText = false
+        fieldReadOnly = false
         caretShown = false
         insertionPopup = false
+    }
+
+    /** Records whether the newly focused field is `readonly` — see [fieldReadOnly]. */
+    fun onFieldReadOnly(readOnly: Boolean) {
+        fieldReadOnly = readOnly
     }
 
     fun onPageSelection(sel: ImeEvent.PageSelection?) {

@@ -36,4 +36,11 @@ class NegentropyFanOutResult(
     val downloaded: Int,
     val windows: Int,
     val connections: Int,
+    /**
+     * Ids `wantId` declined, so no `REQ` was ever issued for them. `0` when no
+     * predicate was passed. Same accounting as
+     * [NegentropySyncResult.skipped]: apart from [downloaded], and never folded
+     * into [needCount], which stays the honest protocol diff.
+     */
+    val skipped: Int = 0,
 )

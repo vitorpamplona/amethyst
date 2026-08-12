@@ -35,7 +35,7 @@ class StaticSubscription(
     SubscriptionHandle {
     val subId = RandomInstance.randomChars(10)
 
-    override fun onEvent(
+    override suspend fun onEvent(
         event: Event,
         isLive: Boolean,
         relay: NormalizedRelayUrl,

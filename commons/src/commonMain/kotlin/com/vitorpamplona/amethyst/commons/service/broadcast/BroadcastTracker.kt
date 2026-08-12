@@ -118,7 +118,7 @@ class BroadcastTracker {
                     }
                 }
 
-                override fun onIncomingMessage(
+                override suspend fun onIncomingMessage(
                     relay: IRelayClient,
                     msgStr: String,
                     msg: Message,
@@ -294,7 +294,7 @@ class BroadcastTracker {
                     }
                 }
 
-                override fun onIncomingMessage(
+                override suspend fun onIncomingMessage(
                     relay: IRelayClient,
                     msgStr: String,
                     msg: Message,

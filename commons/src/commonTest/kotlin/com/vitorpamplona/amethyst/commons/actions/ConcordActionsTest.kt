@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
@@ -63,6 +64,9 @@ class ConcordActionsTest {
                     rootEpoch = community.rootEpoch,
                     name = "Nostrichs",
                     relays = listOf("wss://r.example"),
+                    // Without this the joiner has no Control Plane address to fold at — the
+                    // bundle is the only place it can come from (CORD-05 §1).
+                    controlPk = community.controlPkHex,
                 )
             val minted = ConcordActions.mintInviteLink("https://vector.chat", invite, createdAt = 1L)
 
@@ -103,29 +107,48 @@ class ConcordActionsTest {
             val carol = NostrSignerInternal(KeyPair()) // removed
 
             val newRoot = ByteArray(32) { 0x33 }
+            // A fresh control_root is minted beside the new root at every Refounding (CORD-02 §2).
+            val newControlRoot = ByteArray(32) { 0x44 }
             val build =
                 ConcordActions.buildRefounding(
                     rotatorSigner = owner,
                     communityId = community.communityIdHex,
                     priorRoot = community.communityRoot,
                     newRoot = newRoot,
+                    newControlRoot = newControlRoot,
                     rootEpoch = community.rootEpoch,
                     priorControlWraps = community.genesisWraps,
-                    priorControlKey = community.controlPlane,
+                    priorControlKeys = community.controlPlane,
                     recipientsXOnly = listOf(owner.pubKey, alice.pubKey),
+                    // Only the owner is staff, so only the owner's blob carries the secret.
+                    staffXOnly = setOf(owner.pubKey),
                     createdAt = 5L,
+                    ownerPubKey = owner.pubKey,
                 )
 
             val baseRekey = ConcordActions.nextBaseRekeyPlane(community.communityRoot, community.communityId, community.rootEpoch)
 
-            val aliceGot = ConcordActions.openBaseRekey(build.rekeyWraps, baseRekey, alice, community.communityRoot, community.rootEpoch)
-            val carolGot = ConcordActions.openBaseRekey(build.rekeyWraps, baseRekey, carol, community.communityRoot, community.rootEpoch)
+            val aliceGot = ConcordActions.openBaseRekey(build.rekeyWraps, baseRekey, alice, community.communityIdHex, community.communityRoot, community.rootEpoch)
+            val carolGot = ConcordActions.openBaseRekey(build.rekeyWraps, baseRekey, carol, community.communityIdHex, community.communityRoot, community.rootEpoch)
             assertNotNull(aliceGot)
             assertEquals(community.rootEpoch + 1, aliceGot.newEpoch)
             assertTrue(carolGot == null)
 
-            // The compacted Control Plane folds identically under the new root.
-            val newControl = ConcordActions.controlPlane(aliceGot.newRoot, community.communityId, aliceGot.newEpoch)
+            // Alice is a plain member: her blob carries the new control_pk to read with, never the
+            // secret to write with (CORD-06 §1).
+            val deliveredControlPk = aliceGot.newControlPk
+            assertNotNull(deliveredControlPk)
+            assertTrue(aliceGot.newControlRoot == null, "a member's base blob must not carry the write key")
+
+            // The compacted Control Plane folds identically at the new epoch, opened the way a
+            // member does: the delivered address plus the derived read key.
+            val newControl =
+                ConcordActions.controlPlaneKeys(
+                    communityRoot = aliceGot.newRoot,
+                    communityId = community.communityId,
+                    rootEpoch = aliceGot.newEpoch,
+                    controlPk = deliveredControlPk.toHexKey(),
+                )
             val state = ConcordActions.foldCommunity(build.controlWraps, newControl, community.ownerPubKey)
             assertEquals("Test", state.metadata?.name)
             assertTrue(state.channels.isNotEmpty())

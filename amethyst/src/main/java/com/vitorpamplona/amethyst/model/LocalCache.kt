@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChann
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilter
@@ -479,7 +480,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
     @Volatile
     var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
-    val relayHints = HintIndexer()
+    override val relayHints = HintIndexer()
 
     /**
      * Cashu mint URL directory, populated passively as
@@ -679,18 +680,18 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
 
-    fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
+    override fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 
     fun load(keys: List<String>): List<User> = keys.mapNotNull(::checkGetOrCreateUser)
 
     fun load(keys: Set<String>): Set<User> = keys.mapNotNullTo(mutableSetOf(), ::checkGetOrCreateUser)
 
-    override fun getOrCreateUser(hex: HexKey): User {
-        require(isValidHex(key = hex)) { "$hex is not a valid hex" }
+    override fun getOrCreateUser(pubkey: HexKey): User {
+        require(isValidHex(key = pubkey)) { "$pubkey is not a valid hex" }
         // Pass `this` as the UserContext — User now resolves each pinned
         // addressable note (kind:10002 / 10050 / 10019) lazily on first
         // read, instead of all-or-nothing at construction time.
-        return users.getOrCreate(hex) { User(it, userContext) }
+        return users.getOrCreate(pubkey) { User(it, userContext) }
     }
 
     /** [UserContext] bridge to this cache's addressable lookup. */
@@ -1864,7 +1865,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         val new = consumeRegularEvent(event, relay, wasVerified)
 
         if (new) {
-            val authorsReported = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.pubkey) }
+            val authorsReported = event.reportedAuthor().mapNotNull { checkGetOrCreateUser(it.pubKey) }
             val eventsReported =
                 event.reportedPost().mapNotNull { checkGetOrCreateNote(it.eventId) } +
                     event.reportedAddresses().map { getOrCreateAddressableNote(it.address) }
@@ -1885,7 +1886,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 // report can `p`-tag an incidentally-mentioned third party with no type of its own,
                 // and there is no threshold here to absorb that noise the way
                 // `receivedReportsByAuthor`'s hide path does.
-                val explicitlyTyped = event.reportedAuthorsWithOwnType().mapTo(mutableSetOf()) { it.pubkey }
+                val explicitlyTyped = event.reportedAuthorsWithOwnType().mapTo(mutableSetOf()) { it.pubKey }
                 authorsReported.forEach { author ->
                     if (author.pubkeyHex in explicitlyTyped) author.reports().addReportNamingUser(note)
                 }
@@ -2946,11 +2947,31 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             val new = consumeRegularEvent(event, relay, wasVerified)
             if (new) {
                 pollNote.pollState().addResponse(responseNote)
+                // Responses and their poll race each other. If the poll is already here, hand the
+                // tally its rules now; if it isn't, consume(PollEvent) does it on arrival.
+                (pollNote.event as? PollEvent)?.let {
+                    pollNote.pollState().updatePolicy(PollTallyPolicy.from(it))
+                }
             }
             return new
         }
 
         return false
+    }
+
+    fun consume(
+        event: PollEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val new = consumeRegularEvent(event, relay, wasVerified)
+        attachToRelayGroupIfScoped(event, relay)
+
+        // Not gated on `new`: the tally may have been built from responses that arrived before this
+        // poll did, and updatePolicy is idempotent for the usual re-delivery from another relay.
+        getOrCreateNote(event.id).pollState().updatePolicy(PollTallyPolicy.from(event))
+
+        return new
     }
 
     fun consume(
@@ -3528,11 +3549,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                     }
                 }
 
-                is PollEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified).also {
-                        attachToRelayGroupIfScoped(event, relay)
-                    }
-                }
+                is PollEvent -> consume(event, relay, wasVerified)
 
                 is ThreadEvent -> {
                     consumeRegularEvent(event, relay, wasVerified).also {

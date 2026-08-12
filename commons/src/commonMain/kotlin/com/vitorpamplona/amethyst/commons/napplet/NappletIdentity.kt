@@ -41,7 +41,15 @@ data class NappletIdentity(
     val authorPubKey: HexKey,
     val identifier: String,
     val aggregateHash: HexKey? = null,
+    /** Opaque host-assigned lifetime id used only for NAP-STORAGE's instance scope. */
+    val instanceId: String? = null,
 ) {
     /** The ledger key: coordinate only, never the [aggregateHash], so grants survive updates. */
     val coordinate: String = "$authorPubKey:$identifier"
+
+    /** NAP-STORAGE shared namespace: exact publisher + dTag + verified artifact identity. */
+    val storageCoordinate: String = "$coordinate:${aggregateHash.orEmpty()}"
+
+    /** NAP-STORAGE instance namespace, stable for this host launch and isolated from sibling launches. */
+    val instanceStorageCoordinate: String = "$storageCoordinate:instance:${instanceId.orEmpty()}"
 }

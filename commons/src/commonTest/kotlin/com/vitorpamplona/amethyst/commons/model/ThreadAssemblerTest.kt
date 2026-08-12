@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
@@ -173,6 +174,8 @@ class ThreadAssemblerTest {
     ) : ICacheProvider {
         override fun getAnyChannel(note: Note): Channel? = null
 
+        override val relayHints = HintIndexer()
+
         override fun getUserIfExists(pubkey: HexKey): User? = null
 
         override fun countUsers(predicate: (String, User) -> Boolean): Int = 0
@@ -181,7 +184,7 @@ class ThreadAssemblerTest {
 
         override fun checkGetOrCreateNote(hexKey: HexKey): Note? = notesById[hexKey]
 
-        override fun getOrCreateAddressableNote(key: Address): AddressableNote = error("not used by ThreadAssembler in this test")
+        override fun getOrCreateAddressableNote(address: Address): AddressableNote = error("not used by ThreadAssembler in this test")
 
         override fun getEventStream(): ICacheEventStream = error("not used by ThreadAssembler in this test")
 

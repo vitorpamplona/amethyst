@@ -112,7 +112,7 @@ class DmRelayDiagnosticsLogger(
                 Log.d(TAG) { "[+${at()}ms] REQ -> ${relay.url.url} success=$success ${cmdStr.take(400)}" }
             }
 
-            override fun onIncomingMessage(
+            override suspend fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
                 msg: Message,

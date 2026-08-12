@@ -33,6 +33,80 @@ import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 
 /**
+ * Why ONE page stopped. The three terminal signals used to be indistinguishable —
+ * all of them put a bare `Unit` on the page's channel — and [fetchAllPages] only
+ * ever asked *whether* a page ended, never *how*. [PagedFetchResult] needs the
+ * difference: an empty page is proof the relay has nothing older only when the
+ * relay actually said so.
+ */
+private enum class PageSignal {
+    /** The relay finished serving its stored events for this REQ. */
+    EOSE,
+
+    /** The relay ended the subscription itself — auth required, rate limited, policy. */
+    CLOSED,
+
+    /** Never got to ask. */
+    CANNOT_CONNECT,
+}
+
+/**
+ * What a [fetchAllPages] walk delivered, and why it stopped.
+ *
+ * The count alone cannot answer the question that matters to anything recording
+ * coverage: is there nothing older, or did the relay simply stop giving us more?
+ * Those look identical from `downloaded`, and a caller that guesses wrong either
+ * re-walks a corpus forever or claims history it never read.
+ */
+data class PagedFetchResult(
+    /** Total number of distinct events delivered across all pages. */
+    val downloaded: Int,
+    val end: End,
+) {
+    enum class End {
+        /**
+         * A page came back empty and the relay EOSEd it: there is nothing at or
+         * below the last cursor. The only ending that proves ABSENCE, and so the
+         * only one a coverage claim may be built on.
+         */
+        DRAINED,
+
+        /**
+         * A [Filter.limit] was fulfilled. The caller bounded the download itself,
+         * so the walk stopped on its own instruction, not at the end of the
+         * corpus — nothing below the last event was ever asked for.
+         */
+        LIMIT_REACHED,
+
+        /**
+         * The relay went quiet for `idleTimeoutMs` without ending the page.
+         * Silence is not an answer; everything delivered so far is still good.
+         */
+        IDLE,
+
+        /** The relay ended the subscription — auth required, rate limited, policy. */
+        CLOSED,
+
+        /** Never got to ask. */
+        CANNOT_CONNECT,
+
+        /**
+         * The walk cannot advance its cursor: only `search` hits came back (NIP-50
+         * results are relevance-ranked, so they never page), or a first page
+         * delivered nothing any active filter matched.
+         */
+        UNPAGEABLE,
+    }
+
+    /**
+     * Shorthand for the one ending that licenses skipping work later. Read this
+     * rather than comparing to [End.DRAINED] by hand, so the meaning stays in one
+     * place if the enum grows.
+     */
+    val drained: Boolean get() = end == End.DRAINED
+}
+
+/**
  * Downloads all pages of events matching [filters] from a single [relay] using
  * paginated `until` cursors.
  *
@@ -59,6 +133,28 @@ import kotlin.coroutines.coroutineContext
  * the request `limit` is futile: while paging we already send one above the relay's
  * cap, so a larger value is clamped to the same page). Stepping past at least keeps
  * the download progressing to older events instead of stalling forever.
+ *
+ * **Two guards keep that step from becoming a walk that never ends**, both learned
+ * from a relay in production rather than from reasoning:
+ *
+ *  - **The cursor floors at zero.** `created_at` is an unsigned timestamp, so nothing
+ *    can exist below epoch 0: a cursor that would step under it has reached the bottom
+ *    of the time axis and the walk is [PagedFetchResult.End.DRAINED]. `until = 0`
+ *    itself is still asked — it is a legal query, and the boundary re-fetch for events
+ *    stamped at the epoch — it is only going *below* it that ends the walk. This also
+ *    keeps a negative `until` off the wire, which relays disagree violently about:
+ *    measured across five, one CLOSEs the subscription with a parse error, three
+ *    answer a `NOTICE` and then never EOSE, and one drops the bound and serves its
+ *    NEWEST events.
+ *  - **A relay that ignores the cursor is [PagedFetchResult.End.UNPAGEABLE].** If a
+ *    page delivered nothing and every event it received was NEWER than the `until` it
+ *    asked for, the relay is not paging at all, and stepping one second lower just
+ *    asks the same unanswered question again. That is exactly how the first guard's
+ *    relay behaves — it treats `until <= 0` as no `until` — and without this the walk
+ *    ran ~5.5 pages a second, 500 events fetched and discarded on each, EOSE on every
+ *    one, for as long as the process lived. UNPAGEABLE is deliberate and conservative:
+ *    it proves nothing about what the relay holds, so no coverage claim can be built
+ *    on a page the relay never really answered.
  *
  * A `search` ([Filter.search]) filter is the exception: NIP-50 results are ranked by
  * relevance, not `created_at`, so paging one by a `until` cursor is meaningless — it
@@ -87,17 +183,25 @@ import kotlin.coroutines.coroutineContext
  *   bounds this walk is a [Filter.limit] (the documented way to cap a download) or
  *   cancelling the caller, which the [ensureActive] at the top of each page honors.
  * @param onEvent     Called once for every distinct event delivered, in page order.
- * @return Total number of distinct events delivered across all pages.
+ * @return What was delivered and WHY the walk stopped — see [PagedFetchResult].
+ *   The reason is part of the answer, not a detail: `downloaded` cannot tell
+ *   "the relay has nothing older" from "the relay stopped answering", and a
+ *   caller recording sync coverage may only treat the range below the oldest
+ *   event it saw as verified-empty in the first case.
  */
 suspend fun INostrClient.fetchAllPages(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
-): Int {
+    onEvent: suspend (Event) -> Unit,
+): PagedFetchResult {
     var until: Long? = null
     var totalEvents = 0
+    // Overwritten by whichever break ends the loop. UNPAGEABLE is the honest
+    // default: the two breaks that leave it alone are both "the cursor cannot
+    // advance", and it is the reading that licenses the least.
+    var end = PagedFetchResult.End.UNPAGEABLE
 
     // Track how many matching events each filter has received so far.
     val matchCountPerFilter = IntArray(filters.size)
@@ -148,14 +252,25 @@ suspend fun INostrClient.fetchAllPages(
                 stillNeedsMore && pageableThisPage
             }
 
-        if (activeFilters.isEmpty()) break
+        if (activeFilters.isEmpty()) {
+            // Every filter either met its limit or is a search that has had its
+            // one page. The first is the caller stopping the walk; the second
+            // cannot page at all. Neither is the corpus ending.
+            end =
+                if (filters.any { it.limit != null }) {
+                    PagedFetchResult.End.LIMIT_REACHED
+                } else {
+                    PagedFetchResult.End.UNPAGEABLE
+                }
+            break
+        }
 
         // Announce the page only now that we know it will actually be fetched: a
         // search-only filter drops out of activeFilters above and breaks with no
         // REQ, so firing this earlier would report a page that never happens.
         if (until != null) onNewPage?.invoke(until)
 
-        val doneChannel = Channel<Unit>(Channel.CONFLATED)
+        val doneChannel = Channel<PageSignal>(Channel.CONFLATED)
 
         // Idle watchdog for this page: every arriving event bumps it, so the page's
         // timeout measures silence since the relay's most recent message (the same
@@ -166,13 +281,27 @@ suspend fun INostrClient.fetchAllPages(
         val boundary = until
         var received = 0
         var delivered = 0
+
+        /**
+         * Events that came back NEWER than the `until` this page asked for — which an
+         * honest relay never sends. Counted because it is the only way to tell a relay
+         * that ignored the cursor apart from a boundary second too dense to page: both
+         * deliver nothing, and only one of them can be fixed by stepping past.
+         */
+        var aboveBoundary = 0
         var pageMinTs = Long.MAX_VALUE
         val idsAtPageMin = HashSet<HexKey>()
+
+        // How this page ended, read after the wait: null for an idle timeout, which
+        // [receiveWithinIdle] reports by returning null. Only an EOSE can support a
+        // drain claim below — silence is not an answer, and a CLOSED is the relay
+        // declining to give one.
+        var pageEnd: PageSignal? = null
 
         try {
             val listener =
                 object : SubscriptionListener {
-                    override fun onEvent(
+                    override suspend fun onEvent(
                         event: Event,
                         isLive: Boolean,
                         relay: NormalizedRelayUrl,
@@ -190,6 +319,9 @@ suspend fun INostrClient.fetchAllPages(
                         // early) or an unsafely published `idsAtPageMin`.
                         try {
                             received++
+                            // Before the dedup return, so it is counted for every event
+                            // the page received, not just the ones that reach the match.
+                            if (boundary != null && event.createdAt > boundary) aboveBoundary++
                             // Drop a boundary-second event we already delivered on an
                             // earlier page (the inclusive re-fetch returns it again).
                             if (boundary != null && event.createdAt == boundary && event.id in seenAtBoundary) return
@@ -241,7 +373,7 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(Unit)
+                        doneChannel.trySend(PageSignal.EOSE)
                     }
 
                     override fun onClosed(
@@ -249,7 +381,7 @@ suspend fun INostrClient.fetchAllPages(
                         relay: NormalizedRelayUrl,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(Unit)
+                        doneChannel.trySend(PageSignal.CLOSED)
                     }
 
                     override fun onCannotConnect(
@@ -257,7 +389,7 @@ suspend fun INostrClient.fetchAllPages(
                         message: String,
                         forFilters: List<Filter>?,
                     ) {
-                        doneChannel.trySend(Unit)
+                        doneChannel.trySend(PageSignal.CANNOT_CONNECT)
                     }
                 }
 
@@ -266,7 +398,7 @@ suspend fun INostrClient.fetchAllPages(
             // Wait for the page's terminal signal (EOSE / CLOSED / cannot-connect),
             // giving up only after [idleTimeoutMs] of silence — the wait resets on every
             // arriving event, so an actively streaming page is never cut mid-delivery.
-            doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
+            pageEnd = doneChannel.receiveWithinIdle(clock, idleTimeoutMs)
 
             unsubscribe(subId)
             doneChannel.close()
@@ -277,8 +409,34 @@ suspend fun INostrClient.fetchAllPages(
 
         totalEvents += delivered
 
-        // The relay sent nothing at-or-below `until` → the whole set is drained.
-        if (received == 0) break
+        // The relay sent nothing at-or-below `until`. Whether that DRAINS the set
+        // depends on why the page ended and on what was asked:
+        //
+        //  - only an EOSE proves absence. An idle timeout (`pageEnd == null`) is
+        //    silence and a CLOSED is the relay declining to answer; reading either
+        //    as "nothing older exists" would durably record coverage the relay
+        //    never served, which is the one error a coverage claim must not make.
+        //  - a filter that reached its [Filter.limit] stopped early on the caller's
+        //    own instruction, so nothing below its last event was ever asked for.
+        //  - a `search` filter runs on the first page only, so every page after it
+        //    dropped out never carried it and cannot speak for it.
+        if (received == 0) {
+            val cappedByLimit =
+                filters.indices.any { i ->
+                    val limit = filters[i].limit
+                    limit != null && matchCountPerFilter[i] >= limit
+                }
+            end =
+                when {
+                    pageEnd == PageSignal.CLOSED -> PagedFetchResult.End.CLOSED
+                    pageEnd == PageSignal.CANNOT_CONNECT -> PagedFetchResult.End.CANNOT_CONNECT
+                    pageEnd == null -> PagedFetchResult.End.IDLE
+                    cappedByLimit -> PagedFetchResult.End.LIMIT_REACHED
+                    filters.any { it.search != null } -> PagedFetchResult.End.UNPAGEABLE
+                    else -> PagedFetchResult.End.DRAINED
+                }
+            break
+        }
 
         if (delivered == 0) {
             // Every event this page was a boundary-second duplicate; nothing older
@@ -288,14 +446,46 @@ suspend fun INostrClient.fetchAllPages(
             // recovers progress, dropping only the second's unreachable tail). Both
             // are resolved by stepping strictly past it. `boundary` is null only on
             // the first page, which has no dedup and so can't be all-duplicate.
-            val step = boundary ?: break
+            val step = boundary ?: break // first page, all-duplicate: impossible, and `end` stays UNPAGEABLE
+
+            // The relay is not honouring `until`: every event it sent was NEWER than
+            // the cursor this page asked for. Stepping past cannot help — the next
+            // page repeats the same ask one second lower and gets the same answer,
+            // forever. Measured on a live relay (purplepag.es, which treats
+            // `until <= 0` as no `until` and answers with its newest page): ~5.5
+            // pages a second, 500 events fetched and discarded on each, `until`
+            // marching one second further negative every time, an EOSE on every
+            // single page, for as long as the process ran. This is the ONE reading
+            // that ends it, and it is safely conservative — UNPAGEABLE proves
+            // nothing about what the relay holds, so no coverage claim is built on
+            // a page the relay never actually answered.
+            if (aboveBoundary == received) {
+                end = PagedFetchResult.End.UNPAGEABLE
+                break
+            }
+
+            // Below the boundary there is nothing left to ask for: `created_at` is an
+            // unsigned timestamp, so no event can exist under epoch 0 and a cursor
+            // stepping past it has reached the bottom of the time axis. Ending here
+            // rather than sending `until = -1` also keeps a value off the wire that
+            // relays disagree violently about — measured across five: one CLOSEs the
+            // subscription with a parse error, three answer a NOTICE and then never
+            // EOSE (so every page burns a whole idle timeout), one drops the bound
+            // and serves its newest events.
+            if (step <= 0L) {
+                end = PagedFetchResult.End.DRAINED
+                break
+            }
             until = step - 1
             seenAtBoundary = HashSet()
             continue
         }
 
         // Only search hits advanced nothing pageable → can't page further.
-        if (pageMinTs == Long.MAX_VALUE) break
+        if (pageMinTs == Long.MAX_VALUE) {
+            end = PagedFetchResult.End.UNPAGEABLE
+            break
+        }
 
         // Advance inclusively to the oldest second seen, carrying its dedup set:
         // still the same boundary → accumulate; a genuinely older one → replace.
@@ -304,6 +494,17 @@ suspend fun INostrClient.fetchAllPages(
         // termination both rely on `until` never increasing. Honest relays only
         // return events at-or-below `until`, so this is a no-op for them.
         val nextUntil = if (boundary != null) minOf(pageMinTs, boundary) else pageMinTs
+
+        // The same floor as the step above, on the other way the cursor moves. It is
+        // reachable here too, and not only through a bug: `pageMinTs` is an event's
+        // own `created_at`, so one relay serving a negative timestamp is enough to
+        // put the cursor under zero. Clamping to 0 instead of stopping would not
+        // help — such an event never equals the boundary, so it dodges the dedup and
+        // comes back on every page, pinning the walk there for good.
+        if (nextUntil < 0L) {
+            end = PagedFetchResult.End.DRAINED
+            break
+        }
         if (boundary != null && nextUntil == boundary) {
             seenAtBoundary.addAll(idsAtPageMin)
         } else {
@@ -312,7 +513,7 @@ suspend fun INostrClient.fetchAllPages(
         until = nextUntil
     }
 
-    return totalEvents
+    return PagedFetchResult(totalEvents, end)
 }
 
 suspend fun INostrClient.fetchAllPages(
@@ -320,8 +521,8 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
-): Int =
+    onEvent: suspend (Event) -> Unit,
+): PagedFetchResult =
     fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,

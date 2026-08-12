@@ -53,7 +53,7 @@ interface RelayConnectionListener {
     /**
      * New error
      */
-    fun onIncomingMessage(
+    suspend fun onIncomingMessage(
         relay: IRelayClient,
         msgStr: String,
         msg: Message,

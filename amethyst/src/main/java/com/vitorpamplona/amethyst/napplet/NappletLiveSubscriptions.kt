@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -44,7 +48,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * signatures still came from the old one. [open] is reached only after the broker authorized the
  * subscription (RELAY consent).
  */
-class NappletLiveSubscriptions {
+class NappletLiveSubscriptions(
+    private val scope: CoroutineScope,
+) {
     private val liveSubs = ConcurrentHashMap<String, LiveSub>()
     private val liveSeq = AtomicInteger(0)
 
@@ -53,6 +59,20 @@ class NappletLiveSubscriptions {
         val client: INostrClient,
     ) {
         val eoseSent = AtomicBoolean(false)
+        val deliveries = Channel<Delivery>(Channel.UNLIMITED)
+        var deliveryJob: Job? = null
+    }
+
+    private sealed interface Delivery {
+        data class RelayEvent(
+            val event: Event,
+        ) : Delivery
+
+        data object Eose : Delivery
+
+        data class Closed(
+            val reason: String,
+        ) : Delivery
     }
 
     /**
@@ -77,15 +97,31 @@ class NappletLiveSubscriptions {
         // can't collide with the subscription it's replacing.
         val sub = LiveSub("napplet-$nappletSubId-${liveSeq.incrementAndGet()}", account.client)
         liveSubs[nappletSubId] = sub
+        sub.deliveryJob =
+            scope.launch {
+                for (delivery in sub.deliveries) {
+                    if (liveSubs[nappletSubId] !== sub) break
+                    when (delivery) {
+                        is Delivery.RelayEvent ->
+                            NappletRelayCleartext.forDelivery(delivery.event, account.signer)?.let {
+                                push(NappletProtocolJson.encodeRelayEvent(nappletSubId, it))
+                            }
+                        Delivery.Eose -> push(NappletProtocolJson.encodeRelayEose(nappletSubId))
+                        is Delivery.Closed -> push(NappletProtocolJson.encodeRelayClosed(nappletSubId, delivery.reason))
+                    }
+                }
+            }
 
         val listener =
             object : SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
-                ) = push(NappletProtocolJson.encodeRelayEvent(nappletSubId, event))
+                ) {
+                    sub.deliveries.trySend(Delivery.RelayEvent(event))
+                }
 
                 // A subscription fans out to several relays; collapse their EOSEs into the single
                 // relay.eose the SDK expects (fired when the first relay finishes its stored events).
@@ -93,14 +129,16 @@ class NappletLiveSubscriptions {
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (sub.eoseSent.compareAndSet(false, true)) push(NappletProtocolJson.encodeRelayEose(nappletSubId))
+                    if (sub.eoseSent.compareAndSet(false, true)) sub.deliveries.trySend(Delivery.Eose)
                 }
 
                 override fun onClosed(
                     message: String,
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
-                ) = push(NappletProtocolJson.encodeRelayClosed(nappletSubId, message))
+                ) {
+                    sub.deliveries.trySend(Delivery.Closed(message))
+                }
             }
 
         runCatching { sub.client.subscribe(sub.clientSubId, relays.associateWith { filters }, listener) }
@@ -109,12 +147,18 @@ class NappletLiveSubscriptions {
     /** Stops the live subscription for [nappletSubId], unsubscribing from the client that opened it. */
     fun close(nappletSubId: String) {
         val sub = liveSubs.remove(nappletSubId) ?: return
+        sub.deliveries.close()
+        sub.deliveryJob?.cancel()
         runCatching { sub.client.unsubscribe(sub.clientSubId) }
     }
 
     /** Tears down every open subscription (service teardown). */
     fun closeAll() {
-        liveSubs.values.forEach { sub -> runCatching { sub.client.unsubscribe(sub.clientSubId) } }
+        liveSubs.values.forEach { sub ->
+            sub.deliveries.close()
+            sub.deliveryJob?.cancel()
+            runCatching { sub.client.unsubscribe(sub.clientSubId) }
+        }
         liveSubs.clear()
     }
 }

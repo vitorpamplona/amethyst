@@ -81,6 +81,16 @@ interface NotificationSettings {
 
     fun setEnabled(v: Boolean)
 
+    /**
+     * True iff the user has taken an explicit action to disable
+     * notifications (i.e. flipped the master switch OFF at some point).
+     * Used by the Settings screen to distinguish "master switch is off
+     * because it defaults to off on first launch" from "master switch
+     * is off because the user asked for it to be off". Only the former
+     * gets auto-enabled when the OS permission check passes.
+     */
+    fun wasExplicitlyDisabled(): Boolean
+
     fun setKindToggle(
         kind: NotifKind,
         v: Boolean,

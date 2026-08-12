@@ -28,18 +28,12 @@ import kotlin.test.assertTrue
 
 class NappletCapabilityTest {
     @Test
-    fun mapsKnownDomainsCaseInsensitively() {
-        assertEquals(NappletCapability.SHELL, NappletCapability.fromNapDomain("shell"))
+    fun mapsOnlyConformingDomainsExactly() {
         assertEquals(NappletCapability.IDENTITY, NappletCapability.fromNapDomain("identity"))
-        assertEquals(NappletCapability.KEYS, NappletCapability.fromNapDomain("keys"))
-        assertEquals(NappletCapability.RELAY, NappletCapability.fromNapDomain("Relay"))
-        assertEquals(NappletCapability.VALUE, NappletCapability.fromNapDomain("value"))
-        assertEquals(NappletCapability.STORAGE, NappletCapability.fromNapDomain("  STORAGE  "))
+        assertEquals(NappletCapability.RELAY, NappletCapability.fromNapDomain("relay"))
+        assertEquals(NappletCapability.STORAGE, NappletCapability.fromNapDomain("storage"))
         assertEquals(NappletCapability.RESOURCE, NappletCapability.fromNapDomain("resource"))
-        assertEquals(NappletCapability.UPLOAD, NappletCapability.fromNapDomain("upload"))
         assertEquals(NappletCapability.THEME, NappletCapability.fromNapDomain("theme"))
-        assertEquals(NappletCapability.NOTIFY, NappletCapability.fromNapDomain("notify"))
-        assertEquals(NappletCapability.INC, NappletCapability.fromNapDomain("inc"))
     }
 
     @Test
@@ -48,6 +42,14 @@ class NappletCapabilityTest {
         assertNull(NappletCapability.fromNapDomain("intent"))
         assertNull(NappletCapability.fromNapDomain("cvm"))
         assertNull(NappletCapability.fromNapDomain("filesystem"))
+        assertNull(NappletCapability.fromNapDomain("shell"))
+        assertNull(NappletCapability.fromNapDomain("keys"))
+        assertNull(NappletCapability.fromNapDomain("value"))
+        assertNull(NappletCapability.fromNapDomain("upload"))
+        assertNull(NappletCapability.fromNapDomain("notify"))
+        assertNull(NappletCapability.fromNapDomain("inc"))
+        assertNull(NappletCapability.fromNapDomain("Relay"))
+        assertNull(NappletCapability.fromNapDomain(" storage "))
         assertNull(NappletCapability.fromNapDomain(""))
     }
 
@@ -56,10 +58,10 @@ class NappletCapabilityTest {
         val resolved = resolveRequiredCapabilities(listOf("identity", "relay", "intent", "value"))
 
         assertEquals(
-            setOf(NappletCapability.IDENTITY, NappletCapability.RELAY, NappletCapability.VALUE),
+            setOf(NappletCapability.IDENTITY, NappletCapability.RELAY),
             resolved.capabilities,
         )
-        assertEquals(listOf(UnknownNapDomain("intent")), resolved.unknown)
+        assertEquals(listOf(UnknownNapDomain("intent"), UnknownNapDomain("value")), resolved.unknown)
         assertTrue(resolved.hasUnknown)
     }
 

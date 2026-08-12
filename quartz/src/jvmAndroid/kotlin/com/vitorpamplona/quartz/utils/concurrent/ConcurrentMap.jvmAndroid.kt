@@ -49,6 +49,8 @@ actual class ConcurrentMap<K : Any, V : Any> {
         remap: (old: V, new: V) -> V,
     ): V = map.merge(key, value) { old, new -> remap(old, new) }!!
 
+    actual fun remove(key: K): V? = map.remove(key)
+
     actual fun size(): Int = map.size
 
     actual fun snapshot(): Map<K, V> = HashMap(map)

@@ -69,6 +69,27 @@ enum class ReplyRenderType {
     NONE,
 }
 
+/**
+ * The text [RenderTextEvent] puts on screen for [note] given its decrypted [body]: a NIP-14
+ * subject the body doesn't already repeat is prepended to it.
+ *
+ * This is the exact string handed to `TranslatableRichTextViewer`, so it is also the key the
+ * translation cache stores the result under. The copy-text menus look their translation up by
+ * the same function — keying on the raw body instead would miss the entry for every
+ * subject-carrying note and silently copy the untranslated text.
+ */
+fun displayedNoteText(
+    note: Note,
+    body: String,
+): String {
+    val subject = (note.event as? TextNoteEvent)?.subject()?.ifBlank { null }
+    return if (subject != null && !body.contains(subject, ignoreCase = true)) {
+        "$subject\n\n$body"
+    } else {
+        body
+    }
+}
+
 @Composable
 fun RenderTextEvent(
     note: Note,
@@ -177,15 +198,7 @@ fun RenderTextEvent(
                 body
             }
 
-        val eventContent =
-            remember(newBody) {
-                val subject = (note.event as? TextNoteEvent)?.subject()?.ifBlank { null }
-                if (!subject.isNullOrBlank() && !newBody.contains(subject, ignoreCase = true)) {
-                    "$subject\n\n$newBody"
-                } else {
-                    newBody
-                }
-            }
+        val eventContent = remember(newBody) { displayedNoteText(note, newBody) }
 
         // A boosted note inside a zap/nutzap/onchain activity card is always shown as a
         // compact 2-line preview, even when the logged-in user is only a zap-split

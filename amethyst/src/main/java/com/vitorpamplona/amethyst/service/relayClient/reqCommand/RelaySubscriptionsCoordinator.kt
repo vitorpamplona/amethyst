@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.OnePodc
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastEpisodesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.datasources.PollResponsesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.PublicChatsFilterAssembler
@@ -167,6 +168,9 @@ class RelaySubscriptionsCoordinator(
     val chess = ChessFilterAssembler(client)
 
     val polls = PollsFilterAssembler(client)
+
+    // Votes for the poll whose results screen is open.
+    val pollResponses = PollResponsesFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
     val workouts = WorkoutsFilterAssembler(client)
     val gitRepositories = GitRepositoriesFilterAssembler(client)
@@ -229,6 +233,7 @@ class RelaySubscriptionsCoordinator(
             video,
             discovery,
             polls,
+            pollResponses,
             pictures,
             workouts,
             gitRepositories,

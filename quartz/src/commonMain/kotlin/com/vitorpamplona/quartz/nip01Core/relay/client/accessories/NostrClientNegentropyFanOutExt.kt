@@ -77,18 +77,28 @@ suspend fun negentropySyncFanOut(
     relay: NormalizedRelayUrl,
     filter: Filter,
     localEntries: List<IdAndTime> = emptyList(),
+    localIndex: NegentropyLocalIndex? = null,
+    targetWindow: Int = 0,
     maxEvents: Int = 0,
     reqsPerClient: Int = 10,
     fetchBatch: Int = 250,
     idleTimeoutMs: Long = 120_000L,
     reconcileConcurrency: Int = 2,
+    /**
+     * Same contract as [negentropySync]'s: consulted for every id the reconcile
+     * names, before the `REQ` that would fetch it. Declined ids are counted in
+     * [NegentropyFanOutResult.skipped]. Called from several reconciler
+     * coroutines at once, so it must be cheap and thread-safe.
+     */
+    wantId: ((HexKey) -> Boolean)? = null,
     onProgress: ((needSoFar: Int, downloaded: Int) -> Unit)? = null,
-    onEvent: (Event) -> Unit,
+    onEvent: suspend (Event) -> Unit,
 ): NegentropyFanOutResult {
     require(clients.isNotEmpty()) { "at least one client is required" }
 
     val need = AtomicInt(0)
     val have = AtomicInt(0)
+    val skipped = AtomicInt(0)
     val windows = AtomicInt(0)
     val used = AtomicInt(0)
     var downloaded = 0
@@ -135,8 +145,6 @@ suspend fun negentropySyncFanOut(
             val producer =
                 launch {
                     try {
-                        val sorted =
-                            if (localEntries.size > 1) localEntries.sortedBy { it.createdAt } else localEntries
                         // Windows reconcile round-robin ACROSS the clients so
                         // server-side snapshot builds parallelize per connection
                         // (a single connection produced ids at only ~9k/s and
@@ -145,17 +153,19 @@ suspend fun negentropySyncFanOut(
                             clients = clients,
                             relay = relay,
                             filter = filter,
-                            localEntries = sorted,
+                            local = localIndex ?: NegentropyLocalIndex.of(localEntries),
                             idleTimeoutMs = idleTimeoutMs,
                             batchSize = fetchBatch,
                             reconcileConcurrency = reconcileConcurrency,
+                            targetWindow = targetWindow,
                             onWindow = { windows.incrementAndFetch() },
                             onNeed = {
                                 need.addAndFetch(it)
                             },
                             onHave = { have.addAndFetch(it) },
+                            gate = NeedGate(wantId) { skipped.addAndFetch(it) },
                             sendNeedBatch = { batch -> idBatches.send(batch) },
-                            sendHaveBatch = if (localEntries.isEmpty()) null else { _ -> },
+                            sendHaveBatch = if (localEntries.isEmpty() && localIndex == null) null else { _ -> },
                         )
                     } finally {
                         idBatches.close()
@@ -191,6 +201,7 @@ suspend fun negentropySyncFanOut(
         downloaded = downloaded,
         windows = windows.load(),
         connections = used.load(),
+        skipped = skipped.load(),
     )
 }
 

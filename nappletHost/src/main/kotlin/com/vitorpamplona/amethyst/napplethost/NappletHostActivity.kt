@@ -67,7 +67,6 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
-import com.vitorpamplona.amethyst.commons.napplet.resolveRequiredCapabilities
 import com.vitorpamplona.amethyst.napplethost.R
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
@@ -243,7 +242,7 @@ class NappletHostActivity : ComponentActivity() {
         // "Open web" for a site makes everything direct — both its blob fetches (here) and its live
         // web traffic (the WebView proxy, below). Tor (the default) routes both through the SOCKS port.
         val effectiveProxy = if (useTor) proxyPort else -1
-        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, shellHtml, shim, appOrigin, profile)
+        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, shellHtml, shim, appOrigin, profile, declaredDomains)
 
         // Create + warm the WebView NOW so its (slow, first-in-process) Chromium init runs on the main
         // thread concurrently with the index probe below (which runs on IO) — instead of serially after
@@ -473,10 +472,10 @@ class NappletHostActivity : ComponentActivity() {
         webViewProfile = intent.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE)
 
         val requires = intent.getStringArrayListExtra(NappletHostContract.EXTRA_REQUIRES) ?: emptyList()
-        val resolved = resolveRequiredCapabilities(requires)
-        // shell is always available; the rest are the declared domains advertised to the applet in the
-        // handshake. (The broker enforces the authoritative set from the launch token, not this list.)
-        declaredDomains = (listOf("shell") + resolved.capabilities.map { it.name.lowercase() }).distinct()
+        val resolved = profile.declaredCapabilities(requires)
+        // Domain-object presence is the NIP-5D availability signal. The broker still enforces the
+        // authoritative set minted into the launch token in the main process.
+        declaredDomains = resolved.map { it.name.lowercase() }.distinct()
 
         return author.isNotEmpty() && launchToken.isNotEmpty()
     }
@@ -676,13 +675,6 @@ class NappletHostActivity : ComponentActivity() {
         // The applet sends a full upstream envelope {type, id, ...}; we forward it verbatim and
         // correlate on its id. The broker reads `type` to decode and to build the .result reply.
         val envelope = runCatching { JSONObject(raw) }.getOrNull() ?: return
-
-        // Shell handshake: the SDK posts `shell.ready` (no id) and answers shell.supports() locally
-        // from the `shell.init` environment we send back here.
-        if (envelope.optString("type") == "shell.ready") {
-            runCatching { replyProxy.postMessage(NappletProtocolJson.encodeShellInit(declaredDomains, declaredDomains)) }
-            return
-        }
 
         // Unbind a keyboard action as soon as the applet drops it (the broker's Done reply carries no
         // actionId, so the binding is removed here from the envelope itself).

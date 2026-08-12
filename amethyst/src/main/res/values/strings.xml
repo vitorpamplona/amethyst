@@ -46,6 +46,8 @@
     <string name="violence">Violence</string>
     <string name="unknown_author">Unknown Author</string>
     <string name="copy_text">Copy Text</string>
+    <string name="copy_text_original">Copy Original</string>
+    <string name="copy_text_translated">Copy Translated</string>
     <string name="copy_user_pubkey">Copy Author ID</string>
     <string name="copy_note_id">Copy Note ID</string>
     <string name="copy_raw_json">Copy raw JSON</string>
@@ -214,6 +216,7 @@
     <string name="connection_success_rate_description">Percentage of successful connections to the relay</string>
     <string name="search_and_add_a_user">Search and add user</string>
     <string name="add_a_relay">Add a Relay</string>
+    <string name="relay_url_not_valid">Not a valid relay address. Use a host name, or an IP address in brackets (for example [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">My @tag name</string>
     <string name="display_name">Display Name</string>
     <string name="my_display_name">My display name</string>
@@ -320,6 +323,18 @@
     <string name="concord_invite_failed_invalid">This invite link is invalid or can\'t be opened with this account.</string>
     <string name="concord_invite_failed_incompatible">This invite link can\'t be opened. It may be outdated or already replaced by a newer one, or created with a newer version of the app. Ask for a fresh invite link.</string>
     <string name="concord_invite_failed_revoked">This invite link has been revoked and can no longer be used. Ask for a new one.</string>
+    <string name="concord_invite_failed_banned">This community has removed you. The link still works, but its member list does not admit you.</string>
+    <string name="concord_invite_links_title">Invite links</string>
+    <string name="concord_invite_links_action">Invite links…</string>
+    <string name="concord_invite_links_created">Created %1$s</string>
+    <string name="concord_invite_links_empty">You haven\'t created any invite links for this community yet. Links other admins created are managed on their own devices.</string>
+    <string name="concord_invite_links_unreadable">Your invite links couldn\'t be loaded, so none can be revoked right now. Check your connection and try again.</string>
+    <string name="concord_invite_revoke_action">Revoke link</string>
+    <string name="concord_invite_revoke_title">Revoke this link?</string>
+    <string name="concord_invite_revoke_explainer">Anyone still holding this link will no longer be able to join. People who already joined with it stay in the community. This can\'t be undone.</string>
+    <string name="concord_invite_revoke_confirm">Revoke</string>
+    <string name="concord_invite_revoked_ok">Invite link revoked.</string>
+    <string name="concord_invite_revoked_failed">The link couldn\'t be revoked. Check your connection and try again.</string>
     <string name="concord_invite_failed_expired">This invite link has expired and can no longer be used. Ask for a fresh link.</string>
     <string name="concord_invite_preview_unknown_name">Community name is only revealed after you join</string>
     <string name="concord_invite_preview_explainer">Joining connects to this invite\'s relays, publishes a join announcement signed by your account, and adds the community to your list. Nothing is sent until you tap Join.</string>
@@ -2398,6 +2413,7 @@
     <string name="compose_search_keywords" translatable="false">draft, posting, editor, auto-save, signature, proof of work, pow, mining, nip-13</string>
     <string name="reactions_settings_search_keywords" translatable="false">emoji, reactions, like</string>
     <string name="bottom_bar_search_keywords" translatable="false">navigation, tabs, nav bar</string>
+    <string name="drawer_search_keywords" translatable="false">side menu, drawer, hamburger, sections, hide, show</string>
     <string name="home_tabs_search_keywords" translatable="false">tabs, feeds, threads, conversations</string>
     <string name="profile_ui_search_keywords" translatable="false">profile, layout</string>
     <string name="backup_keys_search_keywords" translatable="false">nsec, private key, seed, mnemonic, export</string>
@@ -3532,6 +3548,19 @@
     <string name="bottom_bar_category_feeds">Feeds</string>
     <string name="bottom_bar_category_apps">Apps &amp; Web</string>
     <string name="bottom_bar_category_other">Other</string>
+    <string name="drawer_settings">Side Menu</string>
+    <string name="drawer_settings_title">Your side menu</string>
+    <string name="drawer_settings_description">Open a section and switch off the rows you never use. Settings always stays visible, so you can always get back here. Section order is fixed.</string>
+    <string name="drawer_settings_sections">Sections</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d hidden</item>
+        <item quantity="other">%1$d hidden</item>
+    </plurals>
+    <string name="drawer_settings_visible">Visible</string>
+    <string name="drawer_settings_hidden">Hidden</string>
+    <string name="drawer_settings_always_on">Always on</string>
+    <string name="drawer_settings_show_all">Show all</string>
+    <string name="drawer_settings_hide_all">Hide all</string>
     <string name="home_tabs_settings">Home Tabs</string>
     <string name="home_tabs_settings_description">Pick which tabs appear on the Home screen. When only one tab is active the tab bar is hidden.</string>
     <string name="home_tab_everything">Everything</string>
@@ -3939,6 +3968,10 @@
     <string name="git_repo_settings_save">Save</string>
     <string name="git_repositories">Git Repositories</string>
     <string name="highlights">Highlights</string>
+    <string name="git_repositories_search_open">Filter repositories</string>
+    <string name="git_repositories_search_close">Close filter</string>
+    <string name="git_repositories_search_placeholder">Filter by name, topic, host, maintainer…</string>
+    <string name="git_repositories_search_no_results">No repositories in the current feed match this search.</string>
     <string name="nsite_title">nSite: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Permissions:</string>
@@ -4190,8 +4223,10 @@
     <string name="resource_usage_memory_chatrooms">Chatroom lists in memory</string>
     <string name="resource_usage_memory_device_class">Device memory class</string>
     <string name="resource_usage_send_section">Share with the developers</string>
-    <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, or browsing details. Nothing is sent until you tap Send in the message screen.</string>
+    <string name="resource_usage_send_explanation">If Amethyst seems to drain battery or data, you can send this report to the developers in an encrypted DM, or copy it and share it yourself. It contains only the numbers on this screen and the technical counters behind them \u2014 no posts, contacts, relay names, or browsing details. The report leaves this screen only when you send, copy, or share it.</string>
     <string name="resource_usage_send_button">Send report via DM</string>
+    <string name="resource_usage_copy_button">Copy</string>
+    <string name="resource_usage_share_button">Share</string>
     <string name="resource_usage_alert_title">High resource usage detected</string>
     <string name="resource_usage_alert_message">Amethyst consumed more than expected recently: %1$s. Would you like to send a usage report to the developers in an encrypted DM? You will see the full report before anything is sent.</string>
     <string name="resource_usage_reason_bg_data">%1$s of cellular data in the background in one day</string>
@@ -4277,6 +4312,46 @@
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Submit</string>
     <string name="poll_view_results">View results</string>
+    <string name="poll_results_title">Poll results</string>
+    <string name="poll_results_loading">Loading poll…</string>
+    <string name="poll_results_open">Open</string>
+    <string name="poll_results_closes_in">Closes in %1$s</string>
+    <string name="poll_results_ended">Ended %1$s ago</string>
+    <string name="poll_results_all_options">All options</string>
+    <string name="poll_results_your_pick">Your vote</string>
+    <string name="poll_results_selections">· %1$d selections</string>
+    <string name="poll_results_no_votes">No votes yet</string>
+    <string name="poll_results_checking_completeness">Checking how many votes exist…</string>
+    <string name="poll_results_partial">%1$d of %2$d responses loaded from %3$d relays.</string>
+    <string name="poll_results_partial_approx">%1$d of about %2$d responses loaded from %3$d relays.</string>
+    <plurals name="poll_results_voters">
+        <item quantity="one">voter</item>
+        <item quantity="other">voters</item>
+    </plurals>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d vote ›</item>
+        <item quantity="other">%1$d votes ›</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d voter</item>
+        <item quantity="other">%1$d voters</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d vote arrived after the poll closed and is excluded.</item>
+        <item quantity="other">%1$d votes arrived after the poll closed and are excluded.</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d vote is dated before the poll was published and is excluded.</item>
+        <item quantity="other">%1$d votes are dated before the poll was published and are excluded.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d response did not pick a valid option and is excluded.</item>
+        <item quantity="other">%1$d responses did not pick a valid option and are excluded.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d voter is hidden by your mute list.</item>
+        <item quantity="other">%1$d voters are hidden by your mute list.</item>
+    </plurals>
     <string name="restart">Restart</string>
     <string name="chess_accept">Accept</string>
     <string name="chess_decline">Decline</string>

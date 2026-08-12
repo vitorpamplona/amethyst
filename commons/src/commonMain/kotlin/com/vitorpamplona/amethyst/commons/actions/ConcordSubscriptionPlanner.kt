@@ -72,17 +72,20 @@ object ConcordSubscriptionPlanner {
         entries.flatMap { e ->
             val communityId = e.id.hexToByteArray()
             val relays = normalize(e.relays)
-            val cp = ConcordActions.controlPlane(e.root.hexToByteArray(), communityId, e.rootEpoch)
+            // The address is the held `control_pk` on a split epoch and the legacy derivation
+            // otherwise (CORD-02 §5) — a member can never derive the former, so it is read off
+            // the entry, per epoch, exactly as it was delivered.
+            val cp = ConcordActions.controlPlaneKeysFor(e)
             val historical =
                 e.heldRoots
                     .filter { it.epoch < e.rootEpoch }
                     .sortedByDescending { it.epoch }
                     .take(ConcordActions.MAX_BACKFILL_EPOCHS)
                     .mapNotNull { held ->
-                        val key = runCatching { ConcordActions.controlPlane(held.key.hexToByteArray(), communityId, held.epoch) }.getOrNull() ?: return@mapNotNull null
-                        ConcordPlaneSub(channelId = null, pubKeyHex = key.publicKeyHex, relays = relays)
+                        val keys = runCatching { ConcordActions.controlPlaneKeys(held.key.hexToByteArray(), communityId, held.epoch, held.controlPk, held.controlRoot) }.getOrNull() ?: return@mapNotNull null
+                        ConcordPlaneSub(channelId = null, pubKeyHex = keys.address, relays = relays)
                     }
-            listOf(ConcordPlaneSub(channelId = null, pubKeyHex = cp.publicKeyHex, relays = relays)) + historical
+            listOf(ConcordPlaneSub(channelId = null, pubKeyHex = cp.address, relays = relays)) + historical
         }
 
     /**

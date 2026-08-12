@@ -182,9 +182,18 @@ class NappletBrokerTest {
         relay: NappletRelayGateway? = null,
         storage: NappletStorage? = null,
         wallet: NappletWalletGateway? = null,
+        resource: NappletResourceGateway? = null,
         signer: NostrSigner = this.signer,
         ledger: NappletPermissionLedger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
-    ) = NappletBroker(signer, ledger, prompt, relay, storage, wallet)
+    ) = NappletBroker(
+        signer = signer,
+        ledger = ledger,
+        consentPrompt = prompt,
+        relay = relay,
+        storage = storage,
+        wallet = wallet,
+        resource = resource,
+    )
 
     @Test
     fun getPublicKeyReturnsTheUsersKeyWhenAllowed() =
@@ -545,8 +554,8 @@ class NappletBrokerTest {
             assertEquals(NappletResponse.Done, broker.handle(applet, NappletRequest.StorageSet("k", "v"), allDeclared))
             assertEquals(NappletResponse.StorageValue("v"), broker.handle(applet, NappletRequest.StorageGet("k"), allDeclared))
 
-            // Stored under the applet coordinate, never a shared namespace.
-            assertEquals("v", storage.data["${applet.coordinate}::k"])
+            // Shared storage is scoped to the verified artifact identity, not just the d-tag.
+            assertEquals("v", storage.data["${applet.storageCoordinate}::k"])
 
             assertEquals(NappletResponse.Done, broker.handle(applet, NappletRequest.StorageRemove("k"), allDeclared))
             assertEquals(NappletResponse.StorageValue(null), broker.handle(applet, NappletRequest.StorageGet("k"), allDeclared))
@@ -563,7 +572,7 @@ class NappletBrokerTest {
             broker.handle(applet, NappletRequest.StorageSet("b", "2"), allDeclared)
             broker.handle(other, NappletRequest.StorageSet("c", "3"), allDeclared)
 
-            val response = broker.handle(applet, NappletRequest.StorageKeys, allDeclared)
+            val response = broker.handle(applet, NappletRequest.StorageKeys(), allDeclared)
             assertIs<NappletResponse.Strings>(response)
             assertEquals(setOf("a", "b"), response.values.toSet()) // never sees the other applet's "c"
         }
@@ -644,19 +653,6 @@ class NappletBrokerTest {
         }
 
     @Test
-    fun shellSupportsReflectsDeclaredCapabilitiesWithoutConsent() =
-        runTest {
-            // The DENY prompt would block anything that reached consent; supports must not.
-            val broker = broker(ScriptedPrompt(GrantState.DENY))
-            val declared = setOf(NappletCapability.RELAY)
-
-            assertEquals(NappletResponse.Supported(true), broker.handle(applet, NappletRequest.ShellSupports("relay"), declared))
-            assertEquals(NappletResponse.Supported(false), broker.handle(applet, NappletRequest.ShellSupports("storage"), declared))
-            // Unknown/unbrokered domain.
-            assertEquals(NappletResponse.Supported(false), broker.handle(applet, NappletRequest.ShellSupports("cvm"), declared))
-        }
-
-    @Test
     fun identityReadReturnsGatewayJsonOrUnsupported() =
         runTest {
             val gateway =
@@ -692,5 +688,61 @@ class NappletBrokerTest {
             val broker = broker(ScriptedPrompt(GrantState.ALLOW_ONCE))
             assertIs<NappletResponse.Unsupported>(broker.handle(applet, NappletRequest.ResourceBytes("https://x"), allDeclared))
             assertIs<NappletResponse.Unsupported>(broker.handle(applet, NappletRequest.UploadBlob(ByteArray(0), "image/png"), allDeclared))
+        }
+
+    @Test
+    fun resourceInfoAndTypedFailuresFollowTheCurrentNapContract() =
+        runTest {
+            val resource =
+                NappletResourceGateway { _, _ ->
+                    NappletResourceResult.Failure("blocked-by-policy", "private target")
+                }
+            val broker = broker(ScriptedPrompt(GrantState.ALLOW_ALWAYS), resource = resource)
+
+            val info = broker.handle(applet, NappletRequest.ResourceInfo, allDeclared)
+            assertIs<NappletResponse.ResourceInfo>(info)
+            assertEquals(listOf("data", "https", "blossom", "nostr"), info.schemes)
+            assertEquals(10L * 1024L * 1024L, info.maxBytes)
+
+            assertEquals(
+                NappletResponse.ResourceFailure("blocked-by-policy", "private target"),
+                broker.handle(applet, NappletRequest.ResourceBytes("https://internal.example"), allDeclared),
+            )
+        }
+
+    @Test
+    fun resourceBytesManyPreservesOrderAndSiblingResults() =
+        runTest {
+            val resource =
+                NappletResourceGateway { url, _ ->
+                    if (url.endsWith("ok")) {
+                        NappletResourceResult.Success(NappletResource("ok".encodeToByteArray(), "text/plain"))
+                    } else {
+                        NappletResourceResult.Failure("not-found")
+                    }
+                }
+            val response =
+                broker(ScriptedPrompt(GrantState.ALLOW_ALWAYS), resource = resource)
+                    .handle(applet, NappletRequest.ResourceBytesMany(listOf("https://x/ok", "https://x/missing")), allDeclared)
+
+            assertIs<NappletResponse.ResourceItems>(response)
+            assertEquals(listOf("https://x/ok", "https://x/missing"), response.items.map { it.url })
+            assertIs<NappletResponse.Bytes>(response.items[0].resource)
+            assertEquals("not-found", response.items[1].error)
+        }
+
+    @Test
+    fun resourceBytesManyRejectsInvalidBulkSizesWithNapErrorCodes() =
+        runTest {
+            val resource = NappletResourceGateway { _, _ -> error("invalid bulk must not fetch") }
+            val broker = broker(ScriptedPrompt(GrantState.ALLOW_ALWAYS), resource = resource)
+
+            val empty = broker.handle(applet, NappletRequest.ResourceBytesMany(emptyList()), allDeclared)
+            val tooLarge = broker.handle(applet, NappletRequest.ResourceBytesMany(List(17) { "data:,x" }), allDeclared)
+
+            assertIs<NappletResponse.ResourceFailure>(empty)
+            assertEquals("invalid-request", empty.error)
+            assertIs<NappletResponse.ResourceFailure>(tooLarge)
+            assertEquals("too-large", tooLarge.error)
         }
 }

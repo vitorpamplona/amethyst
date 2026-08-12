@@ -53,6 +53,8 @@ class ConcordCommunitySessionTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     heldRoots = listOf(HeldRoot(priorEpoch, priorRoot.toHexKey())),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
@@ -98,13 +100,15 @@ class ConcordCommunitySessionTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )
 
             val captured = mutableListOf<Triple<String, String, com.vitorpamplona.quartz.nip01Core.core.Event>>()
             val session = ConcordCommunitySession(entry, owner.pubKey) { communityId, channelIdHex, rumor, _ -> captured += Triple(communityId, channelIdHex, rumor) }
-            assertEquals(community.controlPlane.publicKeyHex, session.controlPlaneAddress)
+            assertEquals(community.controlPlane.address, session.controlPlaneAddress)
 
             // Feed the genesis control wraps → state folds, channels + membership resolve. A fold is
             // STRUCTURAL (it moves the subscription set), so it's allowed to bump the revision.

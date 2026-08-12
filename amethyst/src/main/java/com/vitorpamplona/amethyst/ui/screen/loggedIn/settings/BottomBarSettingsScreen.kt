@@ -22,11 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -50,7 +45,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,7 +54,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,7 +90,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.Size22Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
@@ -115,11 +108,6 @@ private val ExpandableItems =
 
 /** Soft guidance, not a hard cap: a Material bottom bar reads best at ~5 tabs. */
 private const val RECOMMENDED_SLOTS = 5
-
-// Reveal expandable sections by unrolling straight down from the top edge (the default AnimatedVisibility
-// enter also expands horizontally from the bottom-end, which reads as a diagonal slide from the top-left).
-private val SectionExpand = expandVertically(expandFrom = Alignment.Top) + fadeIn()
-private val SectionCollapse = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
 
 @Composable
 @Preview(device = "spec:width=2100px,height=2340px,dpi=440")
@@ -157,14 +145,21 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
     // All pin/unpin/reorder logic lives in the holder (unit-tested); the composable only renders and
     // forwards events. Each persist republishes the account's NIP-78 settings event. syncFrom re-seeds
     // when the saved list changes elsewhere without clobbering a drag.
+    //
+    // Deliberately unkeyed. The holder captures this `accountViewModel` in its persist lambda, so a
+    // holder that outlived an account switch would write account A's edits to account B. It cannot:
+    // SetAccountCentricViewModelStore wraps the whole logged-in tree in `key(account.signer.pubKey)`,
+    // so a switch disposes this composable (and the NavController with it) and re-runs this remember
+    // against the new account's ViewModel. Keying on accountViewModel here would be a no-op that
+    // implies the subtree survives a switch — if that ever becomes true, this comment is the bug.
     val state = remember { BottomBarSettingsState(savedItems) { accountViewModel.changeBottomBarItems(it) } }
     LaunchedEffect(savedItems) { state.syncFrom(savedItems) }
 
     val pinned = state.pinned
     val pinnedKeys = remember(pinned) { state.pinnedKeys() }
 
-    val expandedCategories = remember { mutableStateMapOf<Int, Boolean>() }
-    val expandedItems = remember { mutableStateMapOf<NavBarItem, Boolean>() }
+    val expandedCategories = rememberExpandedKeys<Int>()
+    val expandedItems = rememberExpandedKeys<NavBarItem>()
 
     Column(
         modifier =
@@ -177,26 +172,19 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
         // --- The editable bar: a real preview you drag to reorder and tap ✕ to remove from. ---
         EditableBarCard(state, pinned, accountViewModel)
 
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = Size20dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            TextButton(onClick = { state.restoreDefault() }) {
-                Text(stringRes(R.string.bottom_bar_settings_restore_default))
-            }
-        }
+        RestoreDefaultRow(onClick = { state.restoreDefault() })
 
         Spacer(Modifier.height(4.dp))
 
         // --- Available catalogue, grouped into collapsible category cards. ---
-        SectionHeader(title = stringRes(R.string.bottom_bar_settings_available))
+        PickerSectionHeader(title = stringRes(R.string.bottom_bar_settings_available))
 
         BottomBarCategories.forEach { category ->
             CategoryCard(
                 category = category,
                 pinnedKeys = pinnedKeys,
-                expanded = expandedCategories[category.titleRes] ?: false,
-                onToggleExpand = { expandedCategories[category.titleRes] = !(expandedCategories[category.titleRes] ?: false) },
+                expanded = expandedCategories.isExpanded(category.titleRes),
+                onToggleExpand = { expandedCategories.toggle(category.titleRes) },
                 expandedItems = expandedItems,
                 accountViewModel = accountViewModel,
                 onTogglePin = state::togglePin,
@@ -217,60 +205,43 @@ private fun EditableBarCard(
     pinned: List<BottomBarEntry>,
     accountViewModel: AccountViewModel,
 ) {
-    val accent = MaterialTheme.colorScheme.primary
-    Surface(
-        shape = RoundedCornerShape(22.dp),
-        color = accent.copy(alpha = 0.07f),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.22f)),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Size20dp, vertical = 4.dp),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringRes(R.string.bottom_bar_settings_pinned),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = accent,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "${pinned.size} / $RECOMMENDED_SLOTS",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (pinned.size > RECOMMENDED_SLOTS) MaterialTheme.colorScheme.error else accent,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.background,
-                shadowElevation = 3.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (pinned.isEmpty()) {
-                    Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
-                        Text(
-                            stringRes(R.string.bottom_bar_settings_pinned_empty),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        )
-                    }
-                } else {
-                    EditableBar(state, pinned, accountViewModel)
-                }
-            }
-
+    PickerHeroCard(
+        title = stringRes(R.string.bottom_bar_settings_pinned),
+        trailing = {
             Text(
-                text = stringRes(R.string.bottom_bar_settings_reorder_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp),
+                text = "${pinned.size} / $RECOMMENDED_SLOTS",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (pinned.size > RECOMMENDED_SLOTS) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
             )
+        },
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.background,
+            shadowElevation = 3.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (pinned.isEmpty()) {
+                Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringRes(R.string.bottom_bar_settings_pinned_empty),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+            } else {
+                EditableBar(state, pinned, accountViewModel)
+            }
         }
+
+        Text(
+            text = stringRes(R.string.bottom_bar_settings_reorder_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
+        )
     }
 }
 
@@ -466,76 +437,37 @@ private fun CategoryCard(
     pinnedKeys: Set<String>,
     expanded: Boolean,
     onToggleExpand: () -> Unit,
-    expandedItems: SnapshotStateMap<NavBarItem, Boolean>,
+    expandedItems: ExpandedKeys<NavBarItem>,
     accountViewModel: AccountViewModel,
     onTogglePin: (BottomBarEntry) -> Unit,
 ) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Size20dp, vertical = 5.dp),
+    CatalogCard(
+        icon = category.icon,
+        title = stringRes(category.titleRes),
+        expanded = expanded,
+        onToggleExpand = onToggleExpand,
     ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleExpand).padding(13.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center,
+        category.items.forEach { item ->
+            val def = NavBarCatalog[item] ?: return@forEach
+            val entry = BottomBarEntry.BuiltIn(item)
+            if (item in ExpandableItems) {
+                ExpandableAvailableRow(
+                    icon = def.icon,
+                    label = stringRes(def.labelRes),
+                    pinned = entry.stableKey in pinnedKeys,
+                    expanded = expandedItems.isExpanded(item),
+                    onTogglePin = { onTogglePin(entry) },
+                    onToggleExpand = { expandedItems.toggle(item) },
                 ) {
-                    Icon(
-                        symbol = categoryIcon(category.titleRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    PickerChildren(item, pinnedKeys, accountViewModel, onTogglePin)
                 }
-                Text(
-                    text = stringRes(category.titleRes),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f),
+            } else {
+                AvailableRow(
+                    leading = { LeadingGlyph(def.icon) },
+                    label = stringRes(def.labelRes),
+                    pinned = entry.stableKey in pinnedKeys,
+                    onToggle = { onTogglePin(entry) },
                 )
-                Icon(
-                    symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            AnimatedVisibility(visible = expanded, enter = SectionExpand, exit = SectionCollapse) {
-                Column(Modifier.padding(bottom = 6.dp)) {
-                    category.items.forEach { item ->
-                        val def = NavBarCatalog[item] ?: return@forEach
-                        val entry = BottomBarEntry.BuiltIn(item)
-                        if (item in ExpandableItems) {
-                            ExpandableAvailableRow(
-                                icon = def.icon,
-                                label = stringRes(def.labelRes),
-                                pinned = entry.stableKey in pinnedKeys,
-                                expanded = expandedItems[item] ?: false,
-                                onTogglePin = { onTogglePin(entry) },
-                                onToggleExpand = { expandedItems[item] = !(expandedItems[item] ?: false) },
-                            ) {
-                                PickerChildren(item, pinnedKeys, accountViewModel, onTogglePin)
-                            }
-                        } else {
-                            AvailableRow(
-                                leading = { LeadingGlyph(def.icon) },
-                                label = stringRes(def.labelRes),
-                                pinned = entry.stableKey in pinnedKeys,
-                                onToggle = { onTogglePin(entry) },
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -757,18 +689,6 @@ private fun ConcordServerPickerGroup(
 // Rows & shared bits
 // ------------------------------------------------------------------------------------------------
 
-/**
- * Start padding per nesting depth: 0 = a top-level catalog row, 1 = an item under an expandable
- * category (a favorite, or a relay/community "server" row), 2 = a room nested under its server (a
- * NIP-29 group under its relay, or a Concord channel under its community).
- */
-private fun indentPadding(level: Int) =
-    when (level) {
-        0 -> 13.dp
-        1 -> 24.dp
-        else -> 40.dp
-    }
-
 @Composable
 private fun AvailableRow(
     leading: @Composable () -> Unit,
@@ -777,23 +697,12 @@ private fun AvailableRow(
     onToggle: () -> Unit,
     indentLevel: Int = 0,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggle)
-                .padding(start = indentPadding(indentLevel), end = 13.dp, top = 7.dp, bottom = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    CatalogRow(
+        leading = leading,
+        label = label,
+        onToggle = onToggle,
+        indentLevel = indentLevel,
     ) {
-        leading()
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
         AddPill(added = pinned, onClick = onToggle)
     }
 }
@@ -808,27 +717,15 @@ private fun ExpandableAvailableRow(
     onToggleExpand: () -> Unit,
     children: @Composable () -> Unit,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggleExpand)
-                .padding(start = 13.dp, end = 13.dp, top = 7.dp, bottom = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    CatalogRow(
+        leading = { LeadingGlyph(icon) },
+        label = label,
+        onToggle = onToggleExpand,
     ) {
-        LeadingGlyph(icon)
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
         Icon(
             symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
             contentDescription = stringRes(R.string.bottom_bar_settings_expand),
-            modifier = Modifier.size(22.dp),
+            modifier = Size22Modifier,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         AddPill(added = pinned, onClick = onTogglePin)
@@ -838,52 +735,18 @@ private fun ExpandableAvailableRow(
     }
 }
 
-/**
- * Outlined "Add" that fills to "Added" once pinned — states the action and its result. Both states
- * share one Row body (only color/border/tint differ) so the pill keeps a constant height and the rows
- * stay aligned whether an item is added or not.
- */
+/** Outlined "Add" that fills to "Added" once pinned — states the action and its result. */
 @Composable
 private fun AddPill(
     added: Boolean,
     onClick: () -> Unit,
 ) {
-    val accent = MaterialTheme.colorScheme.primary
-    val content = if (added) MaterialTheme.colorScheme.onPrimary else accent
-    Surface(
-        shape = CircleShape,
-        color = if (added) accent else Color.Transparent,
-        border = if (added) null else BorderStroke(1.dp, accent),
-    ) {
-        Row(
-            modifier = Modifier.clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Icon(
-                symbol = if (added) MaterialSymbols.Check else MaterialSymbols.Add,
-                contentDescription = null,
-                modifier = Modifier.size(15.dp),
-                tint = content,
-            )
-            Text(
-                text = stringRes(if (added) R.string.bottom_bar_settings_added else R.string.bottom_bar_settings_add),
-                style = MaterialTheme.typography.labelLarge,
-                color = content,
-            )
-        }
-    }
-}
-
-/** A category/destination glyph in a soft accent-tinted circle. */
-@Composable
-private fun LeadingGlyph(icon: MaterialSymbol) {
-    Box(
-        modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(symbol = icon, contentDescription = null, modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.primary)
-    }
+    TogglePill(
+        on = added,
+        label = stringRes(if (added) R.string.bottom_bar_settings_added else R.string.bottom_bar_settings_add),
+        icon = if (added) MaterialSymbols.Check else MaterialSymbols.Add,
+        onClick = onClick,
+    )
 }
 
 /** A favorite web-app / nsite / napplet's real favicon in a tinted circle (glyph fallback). */
@@ -901,40 +764,6 @@ private fun FavoriteLeading(app: FavoriteApp) {
         )
     }
 }
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = Size20dp, end = Size20dp, top = 18.dp, bottom = 6.dp),
-    )
-}
-
-@Composable
-private fun EmptyChildHint(
-    textRes: Int,
-    indentLevel: Int = 1,
-) {
-    Text(
-        text = stringRes(textRes),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = indentPadding(indentLevel), end = 13.dp, top = 6.dp, bottom = 6.dp),
-    )
-}
-
-private fun categoryIcon(titleRes: Int): MaterialSymbol =
-    when (titleRes) {
-        R.string.bottom_bar_category_main -> MaterialSymbols.Home
-        R.string.bottom_bar_category_chats -> MaterialSymbols.Group
-        R.string.bottom_bar_category_you -> MaterialSymbols.AccountCircle
-        R.string.bottom_bar_category_feeds -> MaterialSymbols.Subscriptions
-        R.string.bottom_bar_category_apps -> MaterialSymbols.Apps
-        else -> MaterialSymbols.Settings
-    }
 
 // ------------------------------------------------------------------------------------------------
 // Leading/label resolution for a pinned entry (built-in glyph, favorite icon, or group avatar).

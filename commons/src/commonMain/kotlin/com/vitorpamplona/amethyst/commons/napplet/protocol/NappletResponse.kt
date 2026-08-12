@@ -51,11 +51,6 @@ sealed interface NappletResponse {
         val events: List<Event>,
     ) : NappletResponse
 
-    /** Result of `shell.supports(domain)`. */
-    data class Supported(
-        val supported: Boolean,
-    ) : NappletResponse
-
     /** Result of `keys.registerAction`: the shell-assigned [actionId] and the [binding] it honored (e.g. `"Ctrl+S"`). */
     data class ActionRegistered(
         val actionId: String,
@@ -96,6 +91,28 @@ sealed interface NappletResponse {
 
         override fun hashCode(): Int = 31 * contentType.hashCode() + bytes.contentHashCode()
     }
+
+    data class ResourceInfo(
+        val schemes: List<String>,
+        val maxBytes: Long,
+        val maxUrls: Int,
+    ) : NappletResponse
+
+    data class ResourceItem(
+        val url: String,
+        val resource: Bytes? = null,
+        val error: String? = null,
+        val message: String? = null,
+    )
+
+    data class ResourceItems(
+        val items: List<ResourceItem>,
+    ) : NappletResponse
+
+    data class ResourceFailure(
+        val error: String,
+        val message: String? = null,
+    ) : NappletResponse
 
     /** Result of an `upload.upload`; [url] is where the blob can be fetched, plus NIP-94-ish metadata. */
     data class Uploaded(

@@ -68,5 +68,22 @@ class ConcordInviteBundleEvent(
             addUnique(VskTag.assemble(ControlEntityKind.INVITE_LIVE))
             initializer()
         }
+
+        /**
+         * Builds the revocation tombstone that retires a link: the **same** `["d",""]` coordinate,
+         * empty content, and `["vsk","9"]` ([ControlEntityKind.INVITE_REVOKED]).
+         *
+         * Empty content is the interop contract, not an omission — the spec's "a fetcher finds the
+         * grave instead of keys", and byte-for-byte what Armada's `buildRevocationEvent` emits.
+         * There is nothing to encrypt: the point is that no bundle key opens anything here.
+         */
+        fun buildRevocation(
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<ConcordInviteBundleEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            dTag("")
+            addUnique(VskTag.assemble(ControlEntityKind.INVITE_REVOKED))
+            initializer()
+        }
     }
 }

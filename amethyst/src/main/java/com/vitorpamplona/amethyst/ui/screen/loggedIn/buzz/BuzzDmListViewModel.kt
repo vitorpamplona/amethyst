@@ -130,9 +130,7 @@ class BuzzDmListViewModel : ViewModel() {
 
         val newlyJoined = BuzzWorkspaces.join(relay)
         viewModelScope.launch { account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
-        // A join makes the relay first-party; if the socket was already open its one-shot AUTH
-        // challenge was spent unauthenticated, so reconnect to re-challenge and authenticate.
-        if (newlyJoined) account.client.reconnect(onlyIfChanged = false, ignoreRetryDelays = true)
+        if (newlyJoined) reconnectPoolAfterJoin(account.client)
 
         // Paint from cache BEFORE any network work. [discoverMemberChannels] learns the channel ids
         // from a relay round-trip, so waiting on it left the Direct Messages section visibly empty

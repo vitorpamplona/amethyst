@@ -203,6 +203,7 @@
     <string name="connection_success_rate_description">Percentage succesvolle verbindingen met deze relay</string>
     <string name="search_and_add_a_user">Zoek en voeg gebruiker toe</string>
     <string name="add_a_relay">Relay toevoegen</string>
+    <string name="relay_url_not_valid">Geen geldig relay-adres. Gebruik een hostnaam, of een IP-adres tussen blokhaken (bijvoorbeeld [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Mijn @naam</string>
     <string name="display_name">Weergavenaam</string>
     <string name="my_display_name">Mijn weergavenaam</string>
@@ -1890,14 +1891,95 @@
     </plurals>
     <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d relay</item>
+        <item quantity="other">%1$s \u00b7 %2$d relays</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Bladeren</string>
+    <string name="relay_purpose_media">Media</string>
+    <string name="relay_purpose_tags">Hashtags</string>
+    <string name="relay_purpose_topics">Onderwerpen</string>
+    <string name="relay_purpose_thread">Gesprek</string>
+    <string name="relay_purpose_search">Zoeken</string>
+    <string name="relay_purpose_referenced">Ontbrekende events zoeken</string>
+    <string name="relay_purpose_engagement">Events observeren</string>
+    <string name="relay_explain_referenced">Haalt events op via hun id waar iets op je scherm naar verwijst maar die je nog niet hebt — een quote, de note waarop een reactie antwoordt, de start van een discussie.</string>
+    <string name="relay_explain_engagement">Houdt de events die nu in beeld staan in de gaten voor nieuwe antwoorden, reacties, reposts, zaps en rapportages, zodat de tellers bijwerken terwijl je leest.</string>
+    <string name="relay_purpose_add_ons">Add-ons</string>
+    <string name="relay_purpose_relay_info">Relay-info</string>
+    <string name="relay_purpose_other">Overig</string>
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
          their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Relaylijsten zoeken</string>
+    <string name="relay_purpose_observing_profiles">Profielen observeren</string>
+    <string name="relay_purpose_your_account">Accountgegevens</string>
+    <string name="relay_purpose_home_feed">Startfeed</string>
+    <string name="relay_purpose_relay_groups">Relay-groepen</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d groep</item>
+        <item quantity="other">%1$d groepen</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">Vluchtige chats</string>
+    <string name="relay_purpose_geohash_chats">Locatiechats</string>
+    <string name="relay_purpose_live_chat">Livestream-chat</string>
+    <string name="relay_explain_relay_groups">NIP-29-groepen waar je lid van bent. Elke groep staat op één host-relay, dus de app verbindt met elke relay die een groep van jou host.</string>
+    <string name="relay_explain_ephemeral_chats">Chatruimtes die geen geschiedenis bewaren — berichten bestaan alleen zolang je verbonden bent, dus deze blijven geabonneerd om überhaupt iets te ontvangen.</string>
+    <string name="relay_explain_geohash_chats">Locatiegebonden ruimtes voor de gebieden die je volgt, opgevraagd bij de relays die ze aanbieden.</string>
+    <string name="relay_explain_live_chat">Chat en zap-doelen die horen bij livestreams die je open hebt staan of volgt.</string>
+    <string name="relay_purpose_dm_inbox">DM-inbox</string>
+    <string name="relay_purpose_your_wallet">Wallet</string>
+    <string name="relay_purpose_nutzap_inbox">Nutzap-inbox</string>
+    <string name="relay_purpose_mint_directory">Mintoverzicht</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
+    <string name="relay_purpose_community_chats">Community-chats</string>
+    <string name="relay_purpose_community_feeds">Community-feeds</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
+    <string name="relay_explain_notifications">Je inbox-relays, plus een kleine wisselende steekproef van de relays waarop de mensen die je volgt plaatsen, voor het geval een vermelding ergens anders is afgeleverd.</string>
+    <string name="relay_explain_direct_messages">Je DM-inbox-relays, waar gift-wrapped berichten worden afgeleverd.</string>
+    <string name="relay_explain_public_chats">De thuisrelay van elke chat die je open hebt staan of waar je lid van bent.</string>
+    <string name="relay_explain_community_chats">De relays waarop elke community zijn planes publiceert.</string>
+    <string name="relay_explain_encrypted_groups">Groepsberichten en sleutelpakketten, op de relays van elke groep.</string>
+    <string name="relay_explain_live_rooms">De relays van de ruimte, zolang die open is.</string>
+    <string name="relay_explain_account_data">Je eigen profiel, instellingen en concepten, op je eigen relays.</string>
+    <string name="relay_explain_profiles">Profielen van de mensen die nu in beeld zijn.</string>
+    <string name="relay_explain_relay_lists">Zoekt uit naar welke relays iemand publiceert, zodat hun posts van de juiste plek kunnen worden opgehaald.</string>
+    <string name="relay_explain_follows">Volglijsten, gebruikt om je feed en je web-of-trust op te bouwen.</string>
+    <string name="relay_explain_moderation">Rapportages die de mensen die je volgt schreven over de profielen die nu in beeld zijn, opgevraagd bij elke relay waarop die mensen plaatsen.</string>
+    <string name="relay_purpose_reports_from_follows">Rapportages van wie je volgt</string>
+    <string name="relay_explain_wallet">Je eigen wallet-events, teruggelezen van de relays waarop je ze hebt gepubliceerd.</string>
+    <string name="relay_explain_nutzap_inbox">Luistert op je nutzap-relays plus je inbox- en DM-relays, zodat een betaling er niet langs kan glippen.</string>
+    <string name="relay_explain_mint_directory">Kijkt op alle relays welke mints er bestaan en welke door mensen worden aanbevolen.</string>
+    <string name="relay_explain_nwc">Meldingen van je verbonden wallet.</string>
+    <string name="active_subs_title">Actieve relay-abonnementen</string>
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d filter</item>
+        <item quantity="other">%1$d filters</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d filter is nog niet toegewezen</item>
+        <item quantity="other">%1$d filters zijn nog niet toegewezen</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Niet toegewezen aan een account</string>
+    <string name="active_subs_no_entity">Alles</string>
+    <string name="active_subs_scope_global">Iedereen</string>
+    <string name="active_subs_scope_follows">Mensen die je volgt</string>
+    <string name="active_subs_scope_authors">Een gekozen lijst mensen</string>
+    <string name="active_subs_scope_muted">Gedempte mensen</string>
+    <string name="active_subs_scope_all_communities">Jouw communities</string>
+    <string name="active_subs_scope_algo">Een favoriete algo-feed</string>
+    <string name="active_subs_share">%1$d%% van alles</string>
+    <string name="active_subs_search_keywords">abonnementen filters relays verzoeken reqs verbindingen waarom diagnostiek</string>
+    <string name="relay_explain_home">Posts van de mensen die je volgt, gelezen van de relays waarop ieder van hen publiceert.</string>
     <string name="always_on_notif_connecting">Verbinden met inbox-relays…</string>
     <string name="always_on_notif_setting_title">Altijd-aan meldingsdienst</string>
     <string name="always_on_notif_setting_description">Houdt een persistente verbinding met je inbox-relays voor directe melding. Toont een permanente notificatie. Gebruikt meer batterij maar zorgt dat je nooit een bericht mist.</string>
@@ -2179,8 +2261,10 @@
     <string name="geohash_exclusive">Alleen locatie-exclusief bericht</string>
     <string name="geohash_exclusive_explainer">Alleen volgers van de locatie zien dit bericht.</string>
     <string name="hashtag_exclusive">Alleen hashtag-exclusief bericht</string>
+    <string name="external_content_title">Externe inhoud</string>
     <string name="external_url_scope">Reageer op een website</string>
     <string name="external_id_scope">Reageer op een externe bron</string>
+    <string name="url_preview_open_in_browser">Openen in browser</string>
     <string name="long_form_reading_minutes">%1$d min lezen</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d nummer</item>
@@ -2492,6 +2576,9 @@
     <string name="share_to_dm_title">Verzenden naar…</string>
     <string name="share_to_dm_start_new">Nieuw bericht</string>
     <string name="share_target_as_highlight">Nieuwe Highlight</string>
+    <string name="share_target_as_picture">Nieuwe afbeelding</string>
+    <string name="share_target_as_short_video">Nieuwe Short</string>
+    <string name="share_target_as_video">Nieuwe video</string>
     <string name="new_highlight_title">Nieuwe Highlight</string>
     <string name="new_highlight_passage_label">Gemarkeerde tekst</string>
     <string name="new_highlight_passage_placeholder">Wat viel je op?</string>

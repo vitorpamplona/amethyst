@@ -81,7 +81,7 @@ fun rememberSubscription(
                     relays = cfg.relays,
                     listener =
                         object : SubscriptionListener {
-                            override fun onEvent(
+                            override suspend fun onEvent(
                                 event: Event,
                                 isLive: Boolean,
                                 relay: NormalizedRelayUrl,

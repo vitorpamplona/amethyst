@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.desktop.subscriptions
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.FeedMetadataCoordinator
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.preload.MetadataPreloader
 import com.vitorpamplona.amethyst.commons.relayClient.preload.MetadataRateLimiter
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.commons.wot.OutboxCacheGateway
 import com.vitorpamplona.amethyst.commons.wot.OutboxDispatcher
@@ -32,6 +34,7 @@ import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -83,6 +86,32 @@ class DesktopRelaySubscriptionsCoordinator(
     private val indexRelays: Set<NormalizedRelayUrl>,
     private val localCache: DesktopLocalCache,
 ) {
+    /**
+     * Tracks relays that refuse to connect, so the shared user-finder skips
+     * them when picking discovery relays. Self-registers as a client listener.
+     */
+    private val failureTracker = RelayOfflineTracker(client)
+
+    /**
+     * The shared, composition-scoped per-user metadata subscription assembler
+     * (moved to commons). Desktop composables reach it via [LocalUserFinder]
+     * (provided in Main.kt) and subscribe per visible user through
+     * `observeUserPicture(user)` / `observeUserInfo(user)`, so metadata loads
+     * only for on-screen users. Coalesces every subscribed user into batched
+     * REQs — no per-avatar REQ storm.
+     */
+    val userFinder = UserFinderFilterAssembler(client, localCache, failureTracker)
+
+    /**
+     * The shared, composition-scoped per-note event subscription assembler
+     * (reactions / zaps / reposts / replies, moved to commons). Desktop note
+     * rows reach it via [LocalEventFinder] (provided in Main.kt) and subscribe
+     * per visible note through `EventFinderFilterAssemblerSubscription(note)`, so
+     * interactions load only for on-screen notes. Composes [userFinder] to
+     * resolve authors of not-yet-cached addressable notes.
+     */
+    val eventFinder = EventFinderFilterAssembler(client, localCache, userFinder)
+
     // Rate limiter: 20 requests per second to avoid flooding relays
     private val rateLimiter = MetadataRateLimiter(maxRequestsPerSecond = 20, scope = scope)
 
@@ -303,7 +332,7 @@ class DesktopRelaySubscriptionsCoordinator(
 
         val listener =
             object : SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,
@@ -428,7 +457,7 @@ class DesktopRelaySubscriptionsCoordinator(
 
         val listener =
             object : SubscriptionListener {
-                override fun onEvent(
+                override suspend fun onEvent(
                     event: Event,
                     isLive: Boolean,
                     relay: NormalizedRelayUrl,

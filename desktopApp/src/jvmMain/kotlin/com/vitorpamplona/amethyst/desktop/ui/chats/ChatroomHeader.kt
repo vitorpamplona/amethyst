@@ -29,12 +29,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserPicture
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_user_avatar
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
@@ -59,6 +62,10 @@ fun ChatroomHeader(
     modifier: Modifier = ChatStdPadding,
     onClick: () -> Unit,
 ) {
+    // Load + observe the partner's metadata only while this header is composed.
+    val picture by observeUserPicture(user)
+    val name by observeUserName(user)
+
     Column(
         Modifier
             .fillMaxWidth()
@@ -68,14 +75,14 @@ fun ChatroomHeader(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 UserAvatar(
                     userHex = user.pubkeyHex,
-                    pictureUrl = user.profilePicture(),
+                    pictureUrl = picture,
                     size = ChatSize34dp,
                     contentDescription = stringResource(Res.string.accessibility_user_avatar),
                 )
 
                 Column(modifier = Modifier.padding(start = 10.dp)) {
                     Text(
-                        text = user.toBestDisplayName(),
+                        text = name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -107,7 +114,12 @@ fun GroupChatroomHeader(
     modifier: Modifier = ChatStdPadding,
     onClick: () -> Unit,
 ) {
-    val participants = users.joinToString(", ") { it.toBestDisplayName() }
+    // Load + observe each participant's metadata only while this header is
+    // composed, so names and the group-icon avatar update as kind-0 arrives.
+    // forEach is inline, so the @Composable observeUserName call is legal here.
+    val participantNames = mutableListOf<String>()
+    users.forEach { participantNames.add(observeUserName(it).value) }
+    val participants = participantNames.joinToString(", ")
     Column(
         modifier =
             Modifier
@@ -121,9 +133,10 @@ fun GroupChatroomHeader(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Show first user's avatar as the group icon
                 users.firstOrNull()?.let { firstUser ->
+                    val firstUserPicture by observeUserPicture(firstUser)
                     UserAvatar(
                         userHex = firstUser.pubkeyHex,
-                        pictureUrl = firstUser.profilePicture(),
+                        pictureUrl = firstUserPicture,
                         size = ChatSize34dp,
                         contentDescription = stringResource(Res.string.accessibility_user_avatar),
                     )

@@ -46,8 +46,8 @@
     <string name="violence">हिंसा</string>
     <string name="unknown_author">अज्ञात लेखक</string>
     <string name="copy_text">लेख की अनुकृति करें</string>
-    <string name="copy_user_pubkey">लेखक विभेदक की अनुकृति करें</string>
-    <string name="copy_note_id">टीका विभेदक की अनुकृति करें</string>
+    <string name="copy_user_pubkey">लेखक सूचक की अनुकृति करें</string>
+    <string name="copy_note_id">टीका सूचक की अनुकृति करें</string>
     <string name="copy_raw_json">कच्चा जेसोन॰ की अनुकृति करें</string>
     <string name="broadcast">प्रसारण</string>
     <string name="timestamp_it">समयांकन करें</string>
@@ -203,6 +203,7 @@
     <string name="connection_success_rate_description">सफल संयोजनों का प्रतिशत पुनःप्रसारक के साथ</string>
     <string name="search_and_add_a_user">ढूँढें तथा प्रयेक्ता जोडें</string>
     <string name="add_a_relay">पुनःप्रसारक जोडें</string>
+    <string name="relay_url_not_valid">मान्य पुनःप्रसारक पता नहीं। एक जालावास नाम का उपयोग करें। अथवा कोष्ठकों में एक अंकीय जालपता उदाहरण [201:d0e:9ba5:8bbc::1]:8080 के जैसे।</string>
     <string name="my_name">मेरा @सूचक नाम</string>
     <string name="display_name">प्रदर्शन नाम</string>
     <string name="my_display_name">मेरा प्रदर्शन नाम</string>
@@ -219,7 +220,7 @@
     <string name="download_to_phone">संचारयन्त्र में अभिलेखन करें</string>
     <string name="image_saved_to_the_gallery">चित्र का अभिलेखन किया गया चित्रालय क्रमक में</string>
     <string name="video_download_has_started_toast">चलचित्र अवरोहण आरम्भ हुआ …</string>
-    <string name="media_download_has_started_toast">अभिलेख अवरोहण आरम्भ हुआ …</string>
+    <string name="media_download_has_started_toast">श्रव्यदृश्याभिलेख अवरोहण आरम्भ हुआ …</string>
     <string name="pin_conversation">ऊपर टाँकें</string>
     <string name="unpin_conversation">टाँका हटाएँ</string>
     <string name="pinned_to_top">ऊपर टँकित</string>
@@ -270,7 +271,7 @@
     <string name="relays">" पुनःप्रसारक"</string>
     <string name="website">जालस्थान</string>
     <string name="lightning_address">लैटनिंग पता</string>
-    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">एनसेक॰ विभेदक (आपका गुप्त पारणशब्द) की अनुकृति करता है टाँकाफलक में सुरक्षित रखने के लिए</string>
+    <string name="copies_the_nsec_id_your_password_to_the_clipboard_for_backup">एनसेक॰ सूचक (आपका गुप्त पारणशब्द) की अनुकृति करता है टाँकाफलक में सुरक्षित रखने के लिए</string>
     <string name="show_private_key_qr_code">निजी कुंचिका क्यूआर॰ क्रमचित्र दिखाएँ।</string>
     <string name="show_encrypted_private_key_qr_code">रहस्यीकृत निजी कुंचिका क्यूआर॰ क्रमचित्र दिखाएँ।</string>
     <string name="send_a_direct_message">सीधा संदेश भेजें</string>
@@ -278,7 +279,7 @@
     <string name="follow">अनुचरण करें</string>
     <string name="follow_back">प्रत्यानुचरण करें</string>
     <string name="unblock">बाधा हटाएँ</string>
-    <string name="copy_user_id">उपयोगकर्ता विभेदक की अनुकृति</string>
+    <string name="copy_user_id">प्रयोक्ता सूचक की अनुकृति</string>
     <string name="unblock_user">उपयोगकर्ता बाधा हटाएँ</string>
     <string name="user_is_blocked_hidden">प्रयोक्ता बाधित अथवा मौनकृत। उनके पत्र छिपाए गए।</string>
     <string name="npub_hex_username">"एनपुब॰, उपयोगकर्ता नाम, लेख"</string>
@@ -309,6 +310,18 @@
     <string name="concord_invite_failed_invalid">यह आमन्त्रण योजक अमान्य है अथवा इस लेखा द्वारा खोला नहीं जा सकता।</string>
     <string name="concord_invite_failed_incompatible">इस आमन्त्रण को खोला नहीं जा सकता। सम्भावना है कि यह पुराना हो चुका है अथवा नवीनतर द्वारा प्रतिस्थापित अथवा एक नवीनतर क्रमक संस्करण द्वारा बनाया गया। एक नए आमन्त्रण योजक के लिए पूछें।</string>
     <string name="concord_invite_failed_revoked">यह आमन्त्रण योजक निराकृत है तथा अनुपयुक्तव्य। नए के लिए पूछें।</string>
+    <string name="concord_invite_failed_banned">इस समुदाय ने आपको हटा दिया। योजक अब भी कार्य करता है पर इसके सदस्यसूची में आप स्वीकृत नहीं।</string>
+    <string name="concord_invite_links_title">आमन्त्रण योजक</string>
+    <string name="concord_invite_links_action">आमन्त्रण योजक…</string>
+    <string name="concord_invite_links_created">बनाया गया %1$s</string>
+    <string name="concord_invite_links_empty">आपने इस समुदाय के लिए कोई आमन्त्रण योजक बनाया नहीं अब तक। अन्य प्रशासकों द्वारा बनाए गए योजक उनके यन्त्रों पर ही प्रबन्धित।</string>
+    <string name="concord_invite_links_unreadable">आपके आमन्त्रण योजकों का आवहन असफल। इसलिए किसी का भी निराकरण नहीं हो सकता इस समय। आपका संयोजन जाँचें तथा पुनःप्रयास करें।</string>
+    <string name="concord_invite_revoke_action">योजक निराकरण</string>
+    <string name="concord_invite_revoke_title">क्या इस योजक का निराकरण करें।</string>
+    <string name="concord_invite_revoke_explainer">इस योजक के जो भी धारक अब भी हैं आगे से जुड नहीं सकेंगे। जो लोग पहले से इसके द्वारा जुड चुके हैं समुदाय में रहेंगे। इसको पूर्ववत नही किया जा सकता।</string>
+    <string name="concord_invite_revoke_confirm">निराकरण</string>
+    <string name="concord_invite_revoked_ok">आमन्त्रण योजक निराकृत।</string>
+    <string name="concord_invite_revoked_failed">योजक निराकरण असफल। आपका संयोजन जाँचें तथा पुनःप्रयास करें।</string>
     <string name="concord_invite_failed_expired">यह आमन्त्रण योजक पुराना हो चुका है तथा अनुपयुक्तव्य। नए योजक के लिए पूछें।</string>
     <string name="concord_invite_preview_unknown_name">समुदाय नाम आप जुडने के पश्चात ही बताया जाएगा</string>
     <string name="concord_invite_preview_explainer">जुडने से इस आमन्त्रण के पुनःप्रसारकों से संयोजन किया जाएगा। तथा आपके लेखा से हस्ताक्षरित एक जोड घोषणा  प्रकाशित किया जाएगा। तथा समुदाय को आपकी सूची में जोडा जाएगा। कुछ नहीं भेजा जाएगा जुडें दबाने तक।</string>
@@ -326,13 +339,13 @@
     <string name="concord_channel_name_label">प्रणाली नाम</string>
     <string name="concord_channel_delete">प्रणाली मिटाएँ</string>
     <string name="concord_channel_delete_title">क्या प्रणाली मिटा दें।</string>
-    <string name="concord_channel_delete_message">क्या #%1$s को मिटा दें। इसको पूर्ववत नहीं किया जा सकता। तथा उसी विभेदक के साथ प्रणाली का पुनःउत्पादन नहीं किया जा सकता।</string>
+    <string name="concord_channel_delete_message">क्या #%1$s को मिटा दें। इसको पूर्ववत नहीं किया जा सकता। तथा उसी सूचक के साथ प्रणाली का पुनःउत्पादन नहीं किया जा सकता।</string>
     <string name="concord_channel_delete_confirm">मिटाएँ</string>
     <string name="concord_leave_community">समुदाय छोडें</string>
     <string name="concord_leave_title">क्या समुदाय छोडें।</string>
     <string name="concord_leave_message">क्या %1$s छोडें। इसे हटाया जाएगा इस लेखा की सूची से तथा आपके यन्त्रों पर समचरणीकरण रुक जाएगा। समुदाय को सूचित नहीं किया जाएगा। तथा आपको उसके सदस्य कार्यसूची से हटाया नहीं जाएगा। सन्देश जिनका आप अरहस्यीकरण नहीं कर सकेंगे सम्भाव्यतः पुनःप्राप्तव्य नहीं होंगे। तथा आप केवल नए आमन्त्रण के साथ लौट सकेंगे।</string>
     <string name="concord_leave_owner_warning">आपने इस समुदाय को बनाया। छोड जाने से यह मिटेगा नहीं। किसी अन्य के हाथ सौंपा नहीं जाएगा। परन्तु स्वत्वधारी कुंचिका जो आपकी सूची में हैं वह हटाया जाएगा। आप आगे से इसका प्रबन्धन नहीं कर पाएँगे।</string>
-    <string name="concord_edit_relays_desc">जहाँ इस समुदाय के रहस्यीकृत पत्रों का प्रकाशन तथा पठन किया जाता है।</string>
+    <string name="concord_edit_relays_desc">जहाँ इस समुदाय के रहस्यीकृत समतलों का प्रकाशन तथा पठन किया जाता है।</string>
     <string name="concord_dissolved_read_only">इस समुदाय को विघटित किया गया है तथा अब पठनेवशक्य है। आप इसका इतिहास पढ सकते हैं परन्तु कोई नए सन्देश नहीं भेज सकते।</string>
     <string name="concord_typing_one">%1$s टंकण मध्य…</string>
     <string name="concord_typing_two">%1$s तथा %2$s टंकण मध्य…</string>
@@ -509,7 +522,7 @@
     <string name="award_granted_to">पदक पुरस्कार इनको दिया गया</string>
     <string name="copied_note_text_to_clipboard">टीका लेख की अनुकृति की गई टाँकाफलक में</string>
     <string name="copied_user_id_to_clipboard" tools:ignore="Typos">लेखक के @npub की अनुकृति की गई टाँकाफलक में</string>
-    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">टीका विभेदक (@note1) की अनुकृति की गई टाँकाफलक में</string>
+    <string name="copied_note_id_to_clipboard" tools:ignore="Typos">टीका सूचक (@note1) की अनुकृति की गई टाँकाफलक में</string>
     <string name="private_conversation_notification">"&lt;निजी संदेश का अरहस्यीकरण असफल&gt;\n\nआप का उल्लेख किया गया एक निजी अथवा रहस्यीकृत संवाद में %1$s तथा %2$s के बीच।"</string>
     <string name="account_switch_add_account_dialog_title">नयी लेखा जोडें</string>
     <string name="drawer_accounts">लेखाएँ</string>
@@ -538,14 +551,14 @@
     <string name="share_as_qr_code_description_web">क्यूआर॰ चित्र जिसमें इस टीका का एक जाल योजक समाविष्ट है</string>
     <string name="share_as_qr_code_description_nostr">क्यूआर॰ चित्र जिसमें इस टीका का एक नोस्टर योजक समाविष्ट है</string>
     <string name="share_as_qr_thumbnail_hidden_sensitive">अंगुलचित्र छिपाया गया संवेदनशिल विषयवस्तु के कारण</string>
-    <string name="quick_action_copy_user_id">लेखक विभेदक</string>
-    <string name="quick_action_copy_note_id">टीका विभेदक</string>
+    <string name="quick_action_copy_user_id">लेखक सूचक</string>
+    <string name="quick_action_copy_note_id">टीका सूचक</string>
     <string name="quick_action_copy_text">लेख की अनुकृति करें</string>
     <string name="quick_action_delete">मिटाएँ</string>
     <string name="quick_action_unfollow">अनुचरण ना करें</string>
     <string name="quick_action_follow">अनुचरण करें</string>
     <string name="quick_action_request_deletion_gallery_title">चित्रालय से मिटाएँ</string>
-    <string name="quick_action_request_deletion_gallery_alert_body_v2">इस अभिलेख को आपके चित्रालय से हटाएँ।</string>
+    <string name="quick_action_request_deletion_gallery_alert_body_v2">इस श्रव्यदृश्याभिलेख को आपके चित्रालय से हटाएँ।</string>
     <string name="quick_action_request_deletion_alert_title">हटाने की याचना</string>
     <string name="quick_action_request_deletion_alert_body">अमेथिस्ट अनुरोध करेगा कि आपका टीका मिटा दिया जाए उन पुनःप्रसारकों से जिनके साथ आप अब जुडे हुए हैं। कोई आश्वासन नहीं कि आपका टीका सर्वदा के लिए मिटा दिया जाएगा उन पुनःप्रसारकों से, अथवा अन्य पुनःप्रसारकों में से जहाँ यह रखा गया हो।</string>
     <string name="quick_action_block_dialog_btn">बाधित करें</string>
@@ -637,7 +650,7 @@
         <item quantity="one">%d पुनःप्रसारक तक</item>
         <item quantity="other">%d पुनःप्रसारकों तक</item>
     </plurals>
-    <string name="scheduled_posts_event_id_copied">टीका विभेदक की अनुकृति की गई</string>
+    <string name="scheduled_posts_event_id_copied">टीका सूचक की अनुकृति की गई</string>
     <string name="polls">मतदान</string>
     <string name="open_polls">खुला</string>
     <string name="closed_polls">आवृत</string>
@@ -649,7 +662,7 @@
     <string name="new_community_description">विवरण</string>
     <string name="new_community_rules">नियम (विकल्पात्मक)</string>
     <string name="new_community_pick_cover">आवरण चित्र जोडें</string>
-    <string name="new_community_pick_cover_hint">चित्र चुनने के लिए दबाएँ। वह आपके प्रसारसंगणक तक आरोहित किया जाएगा।</string>
+    <string name="new_community_pick_cover_hint">चित्र चुनने के लिए दबाएँ। वह आपके श्रव्यदृश्याभिलेख सेवासंगणक तक आरोहित किया जाएगा।</string>
     <string name="new_community_moderators_section">नियामक</string>
     <string name="new_community_moderators_hint">नियामक अनुमति दे सकते हैं पत्र प्रकाशन के लिए। आप सदैव नियामक हैं।</string>
     <string name="new_community_add_moderator">नियामक जोडें</string>
@@ -845,7 +858,7 @@
     <string name="napplet_cap_storage_desc">उसका अपना निजी भण्डार</string>
     <string name="napplet_cap_value_desc">लैटनिंग चालान का भुगतान</string>
     <string name="napplet_cap_resource_desc">जाल तथा ब्लोस्सम॰ संसाधन ले आएँ</string>
-    <string name="napplet_cap_upload_desc">आपके प्रसारसंगणक तक अभिलेखों का आरोहण</string>
+    <string name="napplet_cap_upload_desc">आपके श्रव्यदृश्याभिलेख सेवासंगणक तक अभिलेखों का आरोहण</string>
     <string name="napplet_cap_theme">प्रदर्शनशैली</string>
     <string name="napplet_cap_notify">सूचनाएँ</string>
     <string name="napplet_cap_inc">सन्देश प्रेषण</string>
@@ -869,7 +882,7 @@
     <!-- An amountless BOLT11: the payee decides how much. Never render this as "0 sats". -->
     <string name="napplet_consent_pay_no_amount">सावधान। यह नोस्टरसंलग्नक्रमक एक लैटनिंग चालान का भुगतान करना चाहता है जिसमें कोई मात्रा स्पष्टीकृत नहीं। प्राप्तकर्ता निर्णय करेगा कितना लिया जाएगा। इसे तभी अनुमति दें यदि आप इस पर विश्वास करते हैं।</string>
     <string name="napplet_consent_resource">यह नोस्टर संलग्नक्रमक एक जाल संसाधन लाना चाहता है।</string>
-    <string name="napplet_consent_upload">यह नोस्टर संलग्नक्रमक एक अभिलेख को आपके प्रसारसंगणक तक आरोहण करना चाहता है।</string>
+    <string name="napplet_consent_upload">यह नोस्टर संलग्नक्रमक एक अभिलेख को आपके श्रव्यदृश्याभिलेख सेवासंगणक तक आरोहण करना चाहता है।</string>
     <string name="napplet_consent_notify">यह नोस्टर संलग्नक्रमक आपको सूचनाएँ दिखाना चाहता है।</string>
     <string name="napplet_consent_sign">यह स्थान आपकी नोस्टर कुंचिका के साथ एक %1$d प्रकार घटना का हस्ताक्षर करना चाहता है।</string>
     <plurals name="napplet_consent_pay_amount">
@@ -1194,7 +1207,7 @@
     <string name="nest_participant_unmute">मौन हटाएँ</string>
     <string name="nest_force_mute_note">सम्भाव्यतः उन ग्राहकों द्वारा उपेक्षित जो आज्ञा का सम्मान नहीं करते।</string>
     <string name="nest_confirm_kick_title">क्या शाला से निष्कासित करें।</string>
-    <string name="nest_confirm_kick_body">%1$s को ध्वनि तल से हटाए जाएँगे तथा सहभागी सूची से भी। वे पुनः जुड सकते हैं यदि वे शाला योजक प्राप्त कर लें।</string>
+    <string name="nest_confirm_kick_body">%1$s को ध्वनि समतल से हटाए जाएँगे तथा सहभागी सूची से भी। वे पुनः जुड सकते हैं यदि वे शाला योजक प्राप्त कर लें।</string>
     <string name="nest_confirm_kick_confirm">पदप्रहार</string>
     <string name="nest_confirm_force_mute_title">क्या वक्ता को मौन करें।</string>
     <string name="nest_confirm_force_mute_body">%1$s के ग्राहक को अपना ध्वनिग्राहक मौन करने का अनुरोध करता है। कुछ ग्राहक इस आदेश की उपेक्षा कर सकते हैं।</string>
@@ -1336,7 +1349,7 @@
     <string name="podcast_trailer_upload_cta">पूर्वावलोकन अम्श जोडें</string>
     <string name="podcast_trailer_upload_hint">लघु ध्वनि अथवा दृश्य पूर्वीक्षण</string>
     <string name="podcast_trailer_title_placeholder">पूर्वावलोकन शीर्षक</string>
-    <string name="podcast_trailer_url_label">अभिलेख जालपता</string>
+    <string name="podcast_trailer_url_label">श्रव्यदृश्याभिलेख जालपता</string>
     <string name="podcast_your_podcast">आपका पुटप्रसार</string>
     <string name="podcast_untitled">शीर्षकरहित</string>
     <string name="podcast_no_episodes_yet">कोई कडी नहीं अब तक। नयी कडी दबाएँ अपने प्रथम कडी प्रकाशित करने के लिए।</string>
@@ -1351,7 +1364,7 @@
     <string name="podcast_value_add_recipient">प्राप्तकर्ता जोडें</string>
     <string name="podcast_value_add_address">पता जोडें स्वयम हाथ से</string>
     <string name="podcast_value_search_user">नोस्टर प्रयोक्ता जोडें</string>
-    <string name="podcast_value_search_user_hint">नाम अथवा @विभेदक द्वारा ढूँढें</string>
+    <string name="podcast_value_search_user_hint">नाम अथवा @लेखासूचक द्वारा ढूँढें</string>
     <string name="podcast_value_user_no_lnaddress">इस प्रयोक्ता का कोई लैटनिंग॰ पता नहीं</string>
     <string name="podcast_value_remove_recipient">प्राप्तकर्ता हटाएँ</string>
     <string name="podcast_value_recipient_name">नाम (विकल्पात्मक)</string>
@@ -1524,7 +1537,7 @@
     <string name="hash_verification_info_title">इसका अर्थ क्या है?</string>
     <string name="hash_verification_passed">यह विषयवस्तु वैसे ही है जैसे पत्र प्रकाशन पर</string>
     <string name="hash_verification_failed">यह विषयवस्तु परिवर्तित हुआ है। हो सकता है लेखक ने परिवर्तन देखा नहीं अथवा अनुमति दिया नहीं।</string>
-    <string name="content_description_add_media">चित्र चलचित्र जोडें</string>
+    <string name="content_description_add_media">श्रव्यदृश्याभिलेख जोडें</string>
     <string name="content_description_add_image">चित्र जोडें</string>
     <string name="content_description_add_video">चलचित्र जोडें</string>
     <string name="content_description_add_document">पत्र जोडें</string>
@@ -1549,8 +1562,8 @@
     <string name="post_anonymously">नामरहित</string>
     <string name="file_server">अभिलेख सेवासंगणक</string>
     <string name="file_server_description">इस अभिलेख का आरोहण करने के लिए सेवासंगणक का चयन करें</string>
-    <string name="media_servers">प्रसारसंगणक</string>
-    <string name="set_preferred_media_servers">आपके प्रसारसंगणक आद्यताएँ स्थापित करें।</string>
+    <string name="media_servers">श्रव्यदृश्याभिलेख सेवासंगणक</string>
+    <string name="set_preferred_media_servers">आपके श्रव्यदृश्याभिलेख सेवासंगणक आद्यताएँ स्थापित करें।</string>
     <string name="use_local_blossom_cache">स्थानीय ब्लोस्सम॰ द्रुतस्मृति का प्रयोग करें</string>
     <string name="use_local_blossom_cache_caption">जब एक ब्लोस्सम॰ द्रुतस्मृति चल रही है इस यन्त्र पर (संयोजनद्वार २४२४२) तब चित्र चलचित्र अवरोहण उसके द्वारा करें।</string>
     <string name="local_blossom_cache_detected">स्थानीय द्रुतस्मृति का पता चला संयोजनद्वार २४२४२ पर।</string>
@@ -1561,7 +1574,7 @@
     <string name="media_servers_upload_section">आरोहण व्यवहार</string>
     <string name="blossom_mirror_uploads">प्रतिबिम्ब आरोहण</string>
     <string name="blossom_mirror_uploads_caption">आरोहण पश्चात अभिलेख की अनुकृति आपके अन्य ब्लोस्सम सेवासंगणकों में करें जिससे वह उपलब्ध रहेगा एक संगणक असंयोजित होने पर भी।</string>
-    <string name="blossom_optimize_media">सेवासंगणक पर अभिलेखों का अनुकूलन</string>
+    <string name="blossom_optimize_media">सेवासंगणक पर श्रव्यदृश्याभिलेखों का अनुकूलन</string>
     <string name="blossom_optimize_media_caption">आरोहण करें सेवासंगणक के /media अन्तबिन्दु द्वारा जिससे वह अभिलेख के उपतथ्य मिटा सके तथा संकुचित कर सके। रखा गया अभिलेख मूल से पृथक हो सकता है।</string>
     <string name="manage_stored_files">रखे गए अभिलेखों का प्रबन्धन</string>
     <string name="my_blossom_data">मेरे ब्लोस्सम॰ अभिलेख</string>
@@ -1622,11 +1635,11 @@
         <item quantity="one">%1$d अभिलेख का आयात</item>
         <item quantity="other">%1$d अभिलेखों का आयात</item>
     </plurals>
-    <string name="recommended_media_servers">अनुशम्सित प्रसारसंगणक</string>
+    <string name="recommended_media_servers">अनुशम्सित श्रव्यदृश्याभिलेख सेवासंगणक</string>
     <string name="built_in_servers_description">अमेथिस्त की मूलविकल्प सूची। आप एक एक करके जोड सकते हैं अथवा सूची जोड सकते हैं।</string>
     <string name="use_default_servers">मूलविकल्प सूची का प्रयोग करें</string>
-    <string name="add_media_server">प्रसारसंगणक जोडें</string>
-    <string name="delete_media_server">प्रसारसंगणक मिटाएँ</string>
+    <string name="add_media_server">श्रव्यदृश्याभिलेख सेवासंगणक जोडें</string>
+    <string name="delete_media_server">श्रव्यदृश्याभिलेख सेवासंगणक मिटाएँ</string>
     <string name="media_servers_reorder_hint">खींचे पुनःव्यवस्थित करने के लिए। आरोहण के लिए प्रत्येक सेवासंगणक के साथ प्रयास किया जाएगा ऊपर से नीचे।</string>
     <string name="media_servers_priority_section">आरोहण प्राथमिकता</string>
     <string name="media_servers_add_section">सेवासंगणक जोडें</string>
@@ -1747,14 +1760,14 @@
     <string name="tor_use_money_operations_explainer">ज्साप लैटनिंग तथा काशयू व्यापार के लिए टोर का प्रयोग अवश्य करें</string>
     <string name="tor_use_nip05_verification">नोस्ट्र पता सत्यापन</string>
     <string name="tor_use_nip05_verification_explainer">निप॰-०५ पता सत्यापन के लिए टोर का प्रयोग अवश्य करें</string>
-    <string name="tor_use_media_uploads">चित्र चलचित्र अभिलेख आरोहण</string>
-    <string name="tor_use_media_uploads_explainer">चित्र चलचित्र अभिलेख आरोहण के लिए टोर का प्रयोग अवश्य करें</string>
+    <string name="tor_use_media_uploads">श्रव्यदृश्याभिलेख आरोहण</string>
+    <string name="tor_use_media_uploads_explainer">विषयवस्तु आरोहण के लिए टोर का प्रयोग अवश्य करें</string>
     <string name="tor_internal">आन्तरीय</string>
     <string name="tor_external">ओर्बोट</string>
     <string name="tor_off">निष्क्रिय</string>
     <string name="tor_when_needed">मूलभूत</string>
     <string name="tor_default">मूलविकल्प</string>
-    <string name="tor_small_payloads">ध्वनिदृश्याभिलेख के अतिरिक्त सभी</string>
+    <string name="tor_small_payloads">श्रव्यदृश्याभिलेख के अतिरिक्त सभी</string>
     <string name="tor_full_privacy">सम्पूर्णतः गुप्त</string>
     <string name="tor_custom">विशिष्ट</string>
     <string name="tor_when_needed_explainer">सेवासंगणक की आवश्यकता होने पर टोर का प्रयोग करें</string>
@@ -1813,11 +1826,11 @@
     <string name="app_notification_reposts_channel_message">%1$s ने आपके पत्र को पुनःप्रकाशित किया</string>
     <string name="app_notification_reposts_summary">नए पुनःप्रकाशन</string>
     <!-- Media (picture &amp; video posts that mention you) -->
-    <string name="app_notification_media_channel_name">ध्वनिचित्राभिलेख</string>
+    <string name="app_notification_media_channel_name">श्रव्यदृश्याभिलेख</string>
     <string name="app_notification_media_channel_description">आपको सूचित करता है जब कोई आपका उल्लेख करते हैं चित्र अथवा चलचित्र में</string>
     <string name="app_notification_media_channel_message_photo">%1$s ने चित्र बाँटा</string>
     <string name="app_notification_media_channel_message_video">%1$s ने चलचित्र बाँटा</string>
-    <string name="app_notification_media_summary">नए ध्वनिचित्राभिलेख</string>
+    <string name="app_notification_media_summary">नए श्रव्यदृश्याभिलेख</string>
     <!-- Articles &amp; highlights -->
     <string name="app_notification_articles_channel_name">निबन्ध तथा उद्दीप्तव्य</string>
     <string name="app_notification_articles_channel_description">आपको सूचित करता है जब कोई आपका उल्लेख अथवा आपको उद्दीप्त करते हैं एक निबन्ध में</string>
@@ -1908,14 +1921,14 @@
         <item quantity="other">%1$s \u00b7 %2$d पुनःप्रसारक</item>
     </plurals>
     <string name="relay_purpose_browsing">जालभ्रमण</string>
-    <string name="relay_purpose_media">ध्वनिचित्राभिलेख</string>
+    <string name="relay_purpose_media">श्रव्यदृश्याभिलेख</string>
     <string name="relay_purpose_tags">विषयसूचक</string>
     <string name="relay_purpose_topics">विषय सूची</string>
     <string name="relay_purpose_thread">वार्तालाप</string>
     <string name="relay_purpose_search">खोज</string>
     <string name="relay_purpose_referenced">लुप्त घटनाओं को ढूँढें</string>
     <string name="relay_purpose_engagement">घटना अवलोकन</string>
-    <string name="relay_explain_referenced">घटनाओं को विभेदक अनुसार ले आता है जिसका उल्लेख आपके पटल पर अमुक करता है पर जिसकी प्राप्ती अभी नहीं हुई। एक उद्धरण अथवा एक प्रत्युत्तर का पूर्वपत्र अथवा एक सूत्र का मूल।</string>
+    <string name="relay_explain_referenced">घटनाओं को सूचक अनुसार ले आता है जिसका उल्लेख आपके पटल पर अमुक करता है पर जिसकी प्राप्ती अभी नहीं हुई। एक उद्धरण अथवा एक प्रत्युत्तर का पूर्वपत्र अथवा एक सूत्र का मूल।</string>
     <string name="relay_explain_engagement">घटनाओं का अवलोकन करता है जो वर्तमान में प्रदर्शित हो रहे हैं नए प्रत्युत्तर प्रतिक्रियाएँ उद्धरण ज्साप तथा वृत्तान्तों के लिए जिससे गिनतियों का नवीकरण होता है जब आप पढ रहे हैं।</string>
     <string name="relay_purpose_add_ons">संलग्न</string>
     <string name="relay_purpose_relay_info">पुनःप्रसारक जानकारी</string>
@@ -1952,7 +1965,7 @@
     <string name="relay_explain_notifications">आपके आगतपेटिका पुनःप्रसारक तथा कुछ अल्पमात्रा परिभ्रमणवर्ती दृष्टान्त पुनःप्रसारक जिनपर आपके अनुचरित पत्र प्रकाशित करते हैं। यदि कोई उल्लेख अन्यत्र भेजा गया।</string>
     <string name="relay_explain_direct_messages">आपके सीधासन्देश पुनःप्रसारक। जहाँ उपहारकोषयुक्त सन्देश भेजे जाते हैं।</string>
     <string name="relay_explain_public_chats">मुख्य पुनःप्रसारक प्रत्येक चर्चा का जिन्हें आप खोल रखे हैं अथवा जिनसे आप जुड चुके हैं।</string>
-    <string name="relay_explain_community_chats">पुनःप्रसारक जिनपर प्रत्येक समुदाय अपने पत्र प्रकाशित करते हैं।</string>
+    <string name="relay_explain_community_chats">पुनःप्रसारक जिनपर प्रत्येक समुदाय अपने समतलों को प्रकाशित करते हैं।</string>
     <string name="relay_explain_encrypted_groups">समूह सन्देश तथा कुंचिकापेटलियाँ। प्रत्येक समूह के पुनःप्रसारकों पर।</string>
     <string name="relay_explain_live_rooms">शाला के पुनःप्रसारक। जब वह खुला हो।</string>
     <string name="relay_explain_account_data">आपके अपने परिचय तथा स्थापना विकल्प तथा पाण्डुलिपियाँ। आपके मुख्य पुनःप्रसारकों पर।</string>
@@ -2084,7 +2097,7 @@
     <string name="relay_count_subscriptions">गणना ग्राहकताएँ (%1$d)</string>
     <string name="relay_outbox_events">निर्गतपेटिका घटनाएँ (%1$d)</string>
     <string name="relay_filter_authors">%1$d लेखक</string>
-    <string name="relay_filter_ids">%1$d विभेदक</string>
+    <string name="relay_filter_ids">%1$d सूचक</string>
     <string name="relay_filter_since">%1$s से</string>
     <string name="relay_filter_until">%1$s तक</string>
     <string name="relay_filter_limit">सीमा %1$d</string>
@@ -2107,7 +2120,7 @@
     <string name="max_subs">अधिकतम ग्राहकताएँ</string>
     <string name="max_filters_per_sub">अधिकतम छलनियाँ प्रति ग्राहकता</string>
     <string name="max_limit_events_returning">अधिकतम सीमा (घटनाएँ प्रतिफलित)</string>
-    <string name="max_subid_length">अधिकतम ग्राहकताविभेदक लम्बाई</string>
+    <string name="max_subid_length">अधिकतम ग्राहकतासूचक लम्बाई</string>
     <string name="cashu">काशयू अक्षरराशि</string>
     <string name="cashu_mint_label">टकसाल : %1$s</string>
     <string name="cashu_redeem">चुकाएँ</string>
@@ -2182,7 +2195,7 @@
     <string name="dark">अन्धकारमय</string>
     <string name="application_preferences">क्रमक आद्यताएँ</string>
     <string name="settings_section_appearance">स्वरूप</string>
-    <string name="settings_section_media">ध्वनिदृश्याभिलेख तथा जानकारी</string>
+    <string name="settings_section_media">श्रव्यदृश्याभिलेख तथा जानकारी</string>
     <string name="settings_section_general">सामान्य</string>
     <string name="settings_section_tor_engine">संयोजन</string>
     <string name="settings_section_tor_routing">टोर॰ के माध्यम से</string>
@@ -2293,7 +2306,7 @@
     <string name="music_track_cover_upload_cta">बाहरी चित्र आरोहण करें</string>
     <string name="music_track_cover_upload_hint">एक वर्गाकार चित्र का चयन करें इस अभिलेख की कलाकृती के रूप में।</string>
     <string name="music_track_audio_upload_cta">ध्वनि अभिलेख आरोहण</string>
-    <string name="music_track_audio_upload_hint">एक एमपीत्री॰ अथवा वेव॰ अथवा फ्लाक॰ का चयन करें। इसका आरोहण किया जाएगा आपके प्रसारसंगणक पर अभिलेखन करने पर।</string>
+    <string name="music_track_audio_upload_hint">एक एमपीत्री॰ अथवा वेव॰ अथवा फ्लाक॰ का चयन करें। इसका आरोहण किया जाएगा आपके श्रव्यदृश्याभिलेख सेवासंगणक पर अभिलेखन करने पर।</string>
     <string name="music_track_audio_picked">ध्वनि अभिलेख आरोहण के लिए तत्पर</string>
     <string name="music_track_uploading_banner">बाहरी चित्र तथा ध्वनि अभिलेख का आरोहण तथा प्रकाशन चालू। यह चलता रहेगा आप पटल से विगमन करें तो भी।</string>
     <string name="edit_music_playlist">संगीतसूची सम्पादन</string>
@@ -2589,7 +2602,7 @@
     <string name="copy_stack_to_clipboard">चिति की अनुकृति करें</string>
     <string name="copy_to_clipboard">टाँकाफलक में अनुकृति करें</string>
     <string name="copied_to_clipboard">टाँकाफलक में अनुकृत</string>
-    <string name="copy_nprofile_to_clipboard">टाँकाफलक में एन॰परिचय की अनुकृति करें</string>
+    <string name="copy_nprofile_to_clipboard">टाँकाफलक में एनप्रोफैल॰ की अनुकृति करें</string>
     <string name="copy_npub_to_clipboard">टाँकाफलक में एनपुब॰ की अनुकृति करें</string>
     <string name="share_or_save">बाँटें अथवा अभिलेखन करें</string>
     <string name="share_target_as_dm">सीधेसन्देश के रूप में भेजें</string>
@@ -2607,10 +2620,10 @@
     <string name="new_highlight_note_placeholder">आपके विचार जोडें…</string>
     <string name="highlight_action">उद्दीप्तव्य</string>
     <string name="copy_url_to_clipboard">टाँकाफलक में जालपता की अनुकृति करें</string>
-    <string name="copy_the_note_id_to_the_clipboard">टाँकाफलक में टीका विभेदक की अनुकृति करें</string>
-    <string name="add_media_to_gallery">अभिलेख को चित्रालय में जोडें</string>
-    <string name="media_added">अभिलेख जोडा गया</string>
-    <string name="media_added_to_profile_gallery">अभिलेख जोडा गया आपके परिचय चित्रालय में</string>
+    <string name="copy_the_note_id_to_the_clipboard">टाँकाफलक में टीका सूचक की अनुकृति करें</string>
+    <string name="add_media_to_gallery">श्रव्यदृश्याभिलेख को चित्रालय में जोडें</string>
+    <string name="media_added">श्रव्यदृश्याभिलेख जोडा गया</string>
+    <string name="media_added_to_profile_gallery">श्रव्यदृश्याभिलेख जोडा गया आपके परिचय चित्रालय में</string>
     <string name="created_at">तब बनाया गया</string>
     <string name="guidelines">दिशा निर्देश</string>
     <string name="moderators">नियामक</string>
@@ -2727,23 +2740,23 @@
     <string name="classifieds_category_food">आहार</string>
     <string name="classifieds_category_misc">विभिन्न</string>
     <string name="classifieds_category_other">अन्य</string>
-    <string name="failed_to_upload_media_no_details">चित्र चलचित्र आरोहण असफल</string>
+    <string name="failed_to_upload_media_no_details">श्रव्यदृश्याभिलेख आरोहण असफल</string>
     <string name="could_not_open_the_compressed_file">संकुचित अभिलेख को खोल नहीं पाए</string>
     <string name="failed_to_upload_media">आरोहण अपक्रम : %1$s</string>
     <string name="server_did_not_provide_a_url_after_uploading">सेवासंगणक ने आरोहण पश्चात जालपता नहीं दिया</string>
-    <string name="could_not_download_from_the_server">सेवासंगणक से आरोहणकृत चित्र चलचित्र का अवरोहण नहीं कर पाए</string>
+    <string name="could_not_download_from_the_server">सेवासंगणक से आरोहणकृत श्रव्यदृश्याभिलेख का अवरोहण नहीं कर पाए</string>
     <string name="could_not_check_downloaded_file">आरोहण पश्चात अवरोहित अभिलेख की जाँच नहीं हो सकी : %1$s</string>
     <string name="failed_to_upload_to_server_with_message">%1$s पर आरोहण असफल : %2$s</string>
     <string name="failed_to_delete_with_message">मिटाने में असफल : %1$s</string>
-    <string name="media_too_big_for_nip95">अभिलेख निप॰-९५ के लिए बहुत बडा है</string>
+    <string name="media_too_big_for_nip95">श्रव्यदृश्याभिलेख निप॰-९५ के लिए बहुत बडा है</string>
     <string name="encrypt_files_label">अभिलेख रहस्यीकरण</string>
     <string name="encrypt_files_description">गोपनीयता के लिए अभिलेखों का रहस्यीकरण करें। कुछ सेवासंगणक रहस्यीकृत अभिलेखों को सम्भाव्यतः अस्वीकार कर सकते हैं निःशुल्क लेखाओं के लिए।</string>
     <string name="failed_to_upload_encrypted_media_title">रहस्यीकृत आरोहण असफल</string>
     <string name="failed_to_upload_encrypted_media_message">अनेक सेवासंगणक रहस्यीकृत अभिलेखों को स्वीकार नहीं करते निःशुल्क लेखाओं के लिए। आप पुनःप्रयास कर सकते हैं रहस्यीकरण के बिना।</string>
     <string name="retry_without_encryption">रहस्यीकरण के बिना पुनःप्रयास</string>
     <string name="upload_without_encryption_warning">सावधान : रहस्यीकरण के बिना कोई भी विषयवस्तु देख सकेगा अभिलेख योजक के साथ।</string>
-    <string name="media_compression_quality_label">अभिलेख गुणस्तर</string>
-    <string name="media_compression_quality_explainer">निम्न गुणस्तर चुनें अपने अभिलेख को अल्प गुणवत्ता युक्त छोटे आकार अभिलेख तक संकुचित करने के लिए अथवा उच्च गुणस्तर चुनें उच्चतर गुणवत्ता युक्त बृहत्तर अभिलेख तक संकुचित करने के लिए।</string>
+    <string name="media_compression_quality_label">श्रव्यदृश्याभिलेख गुणस्तर</string>
+    <string name="media_compression_quality_explainer">निम्न गुणस्तर चुनें अपने श्रव्यदृश्याभिलेख को अल्प गुणवत्ता युक्त छोटे आकार अभिलेख तक संकुचित करने के लिए अथवा उच्च गुणस्तर चुनें उच्चतर गुणवत्ता युक्त बृहत्तर श्रव्यदृश्याभिलेख तक संकुचित करने के लिए।</string>
     <string name="media_compression_quality_low">निम्न</string>
     <string name="media_compression_quality_medium">मध्यम</string>
     <string name="media_compression_quality_high">उच्च</string>
@@ -2753,11 +2766,11 @@
     <string name="convert_gif_to_mp4_label">जिफ॰ से एमपी४॰ में परिवर्तित करें</string>
     <string name="convert_gif_to_mp4_description">चलन्त जिफ॰ से एमपी४॰ में परिवर्तित करता है सूक्ष्मतर अभिलेख आकार तथा अधिक चालन अनुकूलता के लिए।</string>
     <string name="strip_metadata_label">निजी परितथ्य हटाएँ</string>
-    <string name="strip_metadata_description">निजी परितथ्य हटाने का प्रयास करता है आलम्बित चित्रध्वनिदृश्य अभिलेखों से आरोहण पूर्व</string>
+    <string name="strip_metadata_description">निजी परितथ्य हटाने का प्रयास करता है आलम्बित श्रव्यदृश्याभिलेखों से आरोहण पूर्व</string>
     <string name="metadata_strip_failed_title">परितथ्य हटाने में असफल</string>
     <string name="metadata_strip_failed_body">यह अभिलेख प्रारूप परितथ्य हटाने का अवलम्बन नहीं करता। निजी जानकारी जैसे स्थान तथा यन्त्र विवरण समाविष्ट हो सकते हैं। क्या आरोहण करें।</string>
     <string name="metadata_strip_failed_upload">आरोहण करें</string>
-    <string name="metadata_strip_failed_upload_cancelled">अभिलेख से निजी परितथ्य हटाने में असफल। आरोहण निरस्त।</string>
+    <string name="metadata_strip_failed_upload_cancelled">श्रव्यदृश्याभिलेख से निजी परितथ्य हटाने में असफल। आरोहण निरस्त।</string>
     <string name="upload_cancelled">आरोहण निरस्त</string>
     <string name="avif_metadata_strip_failed">एविफ॰ से परितथ्य नहीं मिटा सके : %1$s</string>
     <string name="edit_draft">पाण्डुलिपि सम्पादन</string>
@@ -3182,6 +3195,19 @@
     <string name="bottom_bar_category_feeds">सूचनावलियाँ</string>
     <string name="bottom_bar_category_apps">क्रमक तथा जाल</string>
     <string name="bottom_bar_category_other">अन्य</string>
+    <string name="drawer_settings">पार्श्व विकल्पसूची</string>
+    <string name="drawer_settings_title">आपकी पार्श्व विकल्पसूची</string>
+    <string name="drawer_settings_description">एक विभाग खोलें तथा उन पंक्तियों को निष्क्रिय करें जिनका उपयोग आप कभी नहीं करते। स्थापना विकल्प सर्वदा दृश्यमान रहते हैं। जिससे कि आप यहाँ कभी भी लौट सकेंगे। विभाग क्रम स्थायी है।</string>
+    <string name="drawer_settings_sections">विभाग</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d छिपा हुआ</item>
+        <item quantity="other">%1$d छिपे हुए</item>
+    </plurals>
+    <string name="drawer_settings_visible">दृश्यमान</string>
+    <string name="drawer_settings_hidden">छिपे हुए</string>
+    <string name="drawer_settings_always_on">सर्वदा सक्रिय</string>
+    <string name="drawer_settings_show_all">सभी दिखाएँ</string>
+    <string name="drawer_settings_hide_all">सभी छिपाएँ</string>
     <string name="home_tabs_settings">मुख्यपटल पृष्ठसूचक</string>
     <string name="home_tabs_settings_description">चयन करें किन पृष्ठसूचक दिखने चाहिए मुख्यपटल पर। जब एक ही सक्रिय है तब पृष्ठसूचक पट्टी छुपाई जाएगी।</string>
     <string name="home_tab_everything">सभी</string>
@@ -3399,7 +3425,7 @@
     <string name="show_npub_as_a_qr_code">क्यूआर॰ क्रमचित्र के रूप में एनपुब॰ को दिखाएँ</string>
     <string name="show_nprofile_as_a_qr_code">क्यूआर॰ क्रमचित्र के रूप में एन॰परिचय को दिखाएँ</string>
     <string name="invalid_nip19_uri">अमान्य पता</string>
-    <string name="invalid_nip19_uri_description">अमेथिस्ट को एक वैश्विक वस्तु विभेदक प्राप्त हुआ खोलने के लिए परन्तु वह विभेदक अमान्य था : %1$s</string>
+    <string name="invalid_nip19_uri_description">अमेथिस्ट को एक वैश्विकवस्तुसूचक प्राप्त हुआ खोलने के लिए परन्तु वह सूचक अमान्य था : %1$s</string>
     <string name="dm_relays_title">सीधा संदेश आगतपेटिका पुनःप्रसारक</string>
     <string name="dm_relays_not_found">आपके निजी आगतपेटिका पुनःप्रसारकों की स्थापना करें</string>
     <string name="dm_relays_not_found_description">यह स्थापना विकल्प सब को सूचित करता है आपको सन्देश भेजने के लिए कौनसे पुनःप्रसारकों का प्रयोग करना चाहिए। इनके बिना आप कुछ सन्देश प्राप्त नहीं कर पाएँगे।</string>
@@ -3555,6 +3581,10 @@
     <string name="git_repo_settings_save">अभिलेखन</string>
     <string name="git_repositories">गिट क्रमलेखकोश</string>
     <string name="highlights">प्रमुखताएँ</string>
+    <string name="git_repositories_search_open">क्रमलेखकोश छलनी</string>
+    <string name="git_repositories_search_close">छलनी आवृत</string>
+    <string name="git_repositories_search_placeholder">छालन इनके अनुसार नाम विषय निमन्त्रक परिपालक…</string>
+    <string name="git_repositories_search_no_results">कोई क्रमलेखकोश वर्तमान सूचनावली में इस खोज के अनुकूल नहीं।</string>
     <string name="nsite_title">नोस्टरस्थान : %1$s</string>
     <string name="napplet_card_title">नोस्टर संलग्नक्रमक : %1$s</string>
     <string name="napplet_card_permissions">अनुमतियाँ :</string>
@@ -3605,7 +3635,7 @@
     <string name="http_status_412">पूर्वावस्था असफल - अनुरोध के शीर्षक प्रपत्रस्थानों में निर्दिष्ट पूर्वावस्थाओं की पूर्ति में सेवासंगणक असफल</string>
     <string name="http_status_413">भार अत्याधिक - अनुरोध सेवासंगणक के निरूपित सीमाएँ से बडा है, तथा सेवासंगणक ने इस पर काम करना नकार दिया</string>
     <string name="http_status_414">जालपता लम्बाई अत्याधिक - ग्राहक द्वारा अनुरोधित जालपता की लम्बाई सेवासंगणक के काम के लिए अत्याधिक है। </string>
-    <string name="http_status_415">अनावलम्बित माध्यम प्रकार - अनुरोध में प्रयुक्त माध्यम प्रकार सेवासंगणक द्वारा अवलम्बित नहीं</string>
+    <string name="http_status_415">अनावलम्बित श्रव्यदृश्याभिलेख प्रकार - अनुरोध में प्रयुक्त श्रव्यदृश्याभिलेख प्रकार सेवासंगणक द्वारा अवलम्बित नहीं</string>
     <string name="http_status_416">विस्तार असाध्य - अनुरोध के विस्तार शीर्षक प्रपत्रस्थान में सूचित मूल्य की पूर्ति सेवासंगणक द्वारा असाध्य। </string>
     <string name="http_status_417">अपेक्षा असफल - अनुरोध के अपेक्षा शीर्षक प्रपत्रस्थान में सूचित आवश्यकताओं की पूर्ति सेवासंगणक के लिए असाध्य</string>
     <string name="http_status_426">नवीकरण आवश्यक - ग्राहक वर्तमान से भिन्न संचारविधि तक नवीकरण नहीं करता तो सेवासंगणक इसके अनुरोध पर काम नहीं करेगा।</string>
@@ -3619,7 +3649,7 @@
     <string name="http_status_507">स्मृतिस्थान का अभाव - सेवासंगणक में पर्याप्त स्मृतिस्थान उपलब्ध नहीं अनुरोध पर सफलतापूर्वक काम करने के लिए</string>
     <string name="http_status_508">क्रमचक्र दृष्ट - सेवासंगणक को अनन्त क्रमचक्र का पता चला अनुरोध पर काम करते हुए</string>
     <string name="http_status_511">जाल प्रमाणीकरण आवश्यक - जाल उपलब्ध होने के लिए ग्राहक का प्रमाणीकरण अनिवार्य</string>
-    <string name="media_servers_blossom_section">ब्लोस्सम॰ प्रसारसंगणक</string>
+    <string name="media_servers_blossom_section">ब्लोस्सम॰ सेवासंगणक</string>
     <string name="media_servers_blossom_explainer">सेवासंगणक जितना चाहें जोडें। किस संगणक का उपयोग करना है उसका चयन कर सकते हैं चित्र का आरोहण करते समय</string>
     <string name="add_a_nip96_server">निप॰-९६ सेवासंगणक जोडें</string>
     <string name="add_a_blossom_server">ब्लोस्सम॰ प्रसारसंगणक जोडें</string>
@@ -3629,7 +3659,7 @@
     <string name="torrent_download">अवरोहण</string>
     <string name="torrent_failure">अभिलेख खोलने में असफल</string>
     <string name="torrent_no_apps">कोई अनेकत्रावरोहण क्रमक स्थापित नहीं अभिलेख खोलने तथा अवरोहण करने के लिए।</string>
-    <string name="torrent_no_info">अभिलेखविभेदक युक्त जालनिर्देशक बनाने के लिए पर्याप्त जानकारी नहीं है घटना में</string>
+    <string name="torrent_no_info">चुम्बकजाल योजक बनाने के लिए पर्याप्त जानकारी नहीं है घटना में</string>
     <string name="my_lists">मेरे सूचियाँ</string>
     <string name="select_list_to_filter">सूचनावली छानने के लिए सूची चुनें</string>
     <string name="feed_group_feeds">सूचनावली</string>
@@ -3729,7 +3759,7 @@
     <string name="resource_usage_http_requests">जाल अनुरोध</string>
     <string name="resource_usage_radio_bursts">विकिरणेन्द्रिय जाग उठना अवरोहणों के लिए (अनुमान)</string>
     <string name="resource_usage_http_active">सक्रिय स्थानान्तरण समय</string>
-    <string name="resource_usage_media_play">ध्वनिदृश्याभिलेख चलन समय</string>
+    <string name="resource_usage_media_play">श्रव्यदृश्याभिलेख चलन समय</string>
     <string name="resource_usage_verifies">हस्ताक्षर सत्यापित</string>
     <string name="resource_usage_cpu">क्रमवर्तक समय उपयुक्त</string>
     <string name="resource_usage_fg_time">क्रमकाभ्यन्तर समय</string>
@@ -3783,8 +3813,10 @@
     <string name="resource_usage_memory_chatrooms">चर्चाशाला सूचियाँ स्मृति में</string>
     <string name="resource_usage_memory_device_class">यन्त्र स्मृति वर्ग</string>
     <string name="resource_usage_send_section">क्रमलेखकों के साथ बाँटें</string>
-    <string name="resource_usage_send_explanation">यदि अमेथिस्ट द्वारा विद्युतकोष अथवा जानकारी यातायात का व्यय हो रहा है तो आप इस वृत्तान्त को क्रमलेखकों को भेज सकते हैं एक रहस्यीकृत सीधासन्देश में। इसमें केवल इस पटल पर दृश्यमान संख्याएँ हैं तथा इनके पीछे के तन्त्रविषयक संकलन \u2014 कोई पत्र सम्पर्क अथवा वीक्षण विवरण नहीं। कुछ भी नहीं भेजा जाएगा आपके द्वारा सन्देश पटल पर भेजें दबाने के पूर्व।</string>
+    <string name="resource_usage_send_explanation">यदि अमेथिस्ट द्वारा विद्युतकोष अथवा जानकारी यातायात का व्यय हो रहा है तो आप इस वृत्तान्त को क्रमलेखकों को भेज सकते हैं एक रहस्यीकृत सीधासन्देश में। अथवा इसकी अनुकृति करके स्वयम बाँटें। इसमें केवल इस पटल पर दृश्यमान संख्याएँ हैं तथा इनके पीछे के तन्त्रविषयक संकलनसूचक \u2014 कोई पत्र अथवा सम्पर्क अथवा पुनःप्रसारक नाम अथवा जालभ्रमण विवरण नहीं। वृत्तान्त इस पटल से केवल तब जाएगा जब आप इसे भेजेंगे अथवा इसकी अनुकृति बाँटेंगे।</string>
     <string name="resource_usage_send_button">सीधासन्देश द्वारा वृत्तान्त भेजें</string>
+    <string name="resource_usage_copy_button">अनुकृति</string>
+    <string name="resource_usage_share_button">बाँटें</string>
     <string name="resource_usage_alert_title">उच्च संसाधन उपयोग का बोध</string>
     <string name="resource_usage_alert_message">अमेथिस्ट द्वारा अपेक्षित से अधिक उपभोग हुआ निकटकाल में : %1$s। क्या आप एक उपयोग वृत्तान्त भेजना चाहते क्रमलेखकों को एक रहस्यीकृत सीधासन्देश में। आप सम्पूर्ण वृत्तान्त देखेंगे कुछ भी भेजने के पूर्व।</string>
     <string name="resource_usage_reason_bg_data">चलनशील जानकारी %1$s पृष्ठभूत एक दिन में</string>
@@ -3868,7 +3900,7 @@
     <string name="chess_loading_game">खेल आवहन चालू\u2026</string>
     <string name="chess_game_not_found">खेल अप्राप्त</string>
     <string name="chess_game_waiting">सम्भाव्यतः खेल समाप्त अथवा प्रतिपक्ष की प्रतीक्षा में।</string>
-    <string name="chess_game_id">खेल विभेदक : %1$s\u2026</string>
+    <string name="chess_game_id">खेल सूचक : %1$s\u2026</string>
     <string name="badge_and_n_others"> तथा %1$d अन्य</string>
     <string name="remove_language">%1$s हटाएँ</string>
     <!-- Kind display names for relay subscription filter chips -->
@@ -4027,7 +4059,7 @@
     <string name="skip_for_now">अभी के लिए छोडें</string>
     <string name="fetching_follow_list">अनुचरण सूची प्राप्त की जा रही है…</string>
     <string name="no_follows_found">कोई अनुचरित नहीं</string>
-    <string name="import_follows_tips">"किसी मित्र अथवा समूह नेता का परिचय प्रविष्ट करें। उनके एनपुब॰ अथवा निप॰०५ पता अथवा नामरूप्य नाम जैसे कि alice@example.com अथवा id/alice का उपयोग आप कर सकते हैं खण्डश्रृंखला सत्यापित विभेदकों के लिए।"</string>
+    <string name="import_follows_tips">"किसी मित्र अथवा समूह नेता का परिचय प्रविष्ट करें। उनके एनपुब॰ अथवा निप॰०५ पता अथवा नामरूप्य नाम जैसे कि alice@example.com अथवा id/alice का उपयोग आप कर सकते हैं खण्डश्रृंखला सत्यापित परिचयसूचकों के लिए।"</string>
     <string name="select_all">सभी चुनें</string>
     <string name="uptime">%1$d%% समय निरन्तर उपलब्ध</string>
     <string name="namecoin_settings">नामरूप्य स्थापना विकल्प</string>
@@ -4143,7 +4175,7 @@
     <string name="mark_as_read_dialog_title">पढा हुआ चिह्नित करें</string>
     <string name="note_actions_dialog_title">टीका कार्य</string>
     <string name="profile_actions_dialog_title">परिचय कार्य</string>
-    <string name="media_actions_dialog_title">अभिलेख कार्य</string>
+    <string name="media_actions_dialog_title">श्रव्यदृश्याभिलेख कार्य</string>
     <string name="playback_actions_dialog_title">चालन</string>
     <string name="video_quality_auto">स्वचालित</string>
     <!-- Nicknames (NIP-85 contact cards); the dialog strings live in commons -->
@@ -4302,7 +4334,7 @@
     <string name="relay_management_ban_event">घटना प्रतिबन्धित करें</string>
     <string name="relay_management_allow_kind">प्रकार को अनुमति दें</string>
     <string name="relay_management_block_ip">अंकीय जालपता बाधित करें</string>
-    <string name="relay_management_event_id_hex">घटना विभेदक (षोडशांक)</string>
+    <string name="relay_management_event_id_hex">घटना सूचक (षोडशांक)</string>
     <string name="relay_management_kind_number">प्रकार संख्या</string>
     <string name="relay_management_ip_address">अंकीय जालपता</string>
     <string name="relay_management_reason_optional">कारण (विकल्पात्मक)</string>
@@ -4678,7 +4710,7 @@
     <!-- Buzz agent persona editor -->
     <string name="buzz_persona_new_title">नयी व्यक्तिशैली</string>
     <string name="buzz_persona_edit_title">व्यक्तिशैली सम्पादन</string>
-    <string name="buzz_persona_slug">सूचकाम्श (व्यक्तिशैली विभेदक)</string>
+    <string name="buzz_persona_slug">सूचकाम्श (व्यक्तिशैली सूचक)</string>
     <string name="buzz_persona_slug_help">a-z तथा 0-9 तथा \'-\' तथा \'_\'। परिवर्तनीय नहीं बनाने के पश्चात।</string>
     <string name="buzz_persona_display_name">प्रदर्शन नाम</string>
     <string name="buzz_persona_system_prompt">यन्त्र प्रेरण</string>

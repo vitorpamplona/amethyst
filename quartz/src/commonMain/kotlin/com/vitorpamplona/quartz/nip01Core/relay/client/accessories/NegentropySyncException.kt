@@ -43,12 +43,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  * @property window the filter slice that failed.
  * @property reason machine-readable category — branch on this to recover.
  * @property detail the underlying specifics (a relay's `NEG-ERR` text, `timeout`, …).
+ * @property cap    the relay's own `max_sync_events` when its refusal stated one
+ *   (see [com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage.statedCap]).
+ *   Worth persisting per relay: it is what sizes the first window next time.
  */
 class NegentropySyncException(
     val relay: NormalizedRelayUrl,
     val window: Filter,
     val reason: Reason,
     val detail: String,
+    val cap: Long? = null,
 ) : Exception("NIP-77 sync of $relay failed ($reason): $detail") {
     enum class Reason {
         /**

@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
+import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -495,6 +497,18 @@ class AccountSettings(
     fun changeBottomBarItems(newItems: List<BottomBarEntry>): Boolean {
         if (syncedSettings.navigation.bottomBarItems.value != newItems) {
             syncedSettings.navigation.bottomBarItems.tryEmit(newItems)
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun changeHiddenDrawerItems(newItems: Set<NavBarItem>): Boolean {
+        // Sanitize on the way in as well as on the way out: a caller must never be able to persist
+        // Settings as hidden, which would leave no route back to the screen that hides rows.
+        val sanitized = DrawerItemVisibility.sanitize(newItems)
+        if (syncedSettings.navigation.hiddenDrawerItems.value != sanitized) {
+            syncedSettings.navigation.hiddenDrawerItems.tryEmit(sanitized)
             saveAccountSettings()
             return true
         }

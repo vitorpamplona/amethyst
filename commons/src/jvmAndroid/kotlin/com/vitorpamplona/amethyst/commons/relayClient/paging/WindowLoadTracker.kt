@@ -212,7 +212,7 @@ fun WindowLoadTracker.trackingListener(forward: (NormalizedRelayUrl, List<Filter
             forward(relay, forFilters)
         }
 
-        override fun onEvent(
+        override suspend fun onEvent(
             event: Event,
             isLive: Boolean,
             relay: NormalizedRelayUrl,

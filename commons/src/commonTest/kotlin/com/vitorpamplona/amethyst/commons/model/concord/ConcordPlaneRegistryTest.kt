@@ -48,6 +48,8 @@ class ConcordPlaneRegistryTest {
                     ownerSalt = community.ownerSalt.toHexKey(),
                     root = community.communityRoot.toHexKey(),
                     rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
                     relays = listOf("wss://r.example"),
                     name = "Nostrichs",
                 )

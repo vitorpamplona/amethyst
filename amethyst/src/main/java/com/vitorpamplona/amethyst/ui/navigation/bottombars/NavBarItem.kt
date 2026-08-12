@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
-import android.os.Build
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -29,8 +28,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.serialization.Serializable
 
 /**
- * Stable identifiers for every drawer destination that the user can pin to the bottom bar.
- * Order in this enum has no semantic meaning — the user picks a subset and an order at runtime.
+ * Stable identifiers for every destination the navigation surfaces can show — the bottom bar pins a
+ * subset in a user-chosen order, the drawer lists them under fixed headings (see DrawerSections).
+ * Order in this enum has no semantic meaning.
  */
 @Serializable
 enum class NavBarItem {
@@ -83,6 +83,18 @@ enum class NavBarItem {
     SETTINGS,
     FAVORITE_ALGO_FEEDS,
 }
+
+private val NavBarItemsByName = NavBarItem.entries.associateBy { it.name }
+
+/**
+ * Parses persisted [NavBarItem] names, silently dropping any this build doesn't know — a settings
+ * blob synced from a newer client can name a destination that doesn't exist here yet, and that must
+ * degrade to "ignore this one row" rather than failing the decode of the whole blob.
+ */
+fun navBarItemsFromNames(names: Collection<String>): Set<NavBarItem> = names.mapNotNullTo(mutableSetOf()) { NavBarItemsByName[it] }
+
+/** The inverse of [navBarItemsFromNames]; sorted so the serialized form is deterministic. */
+fun Set<NavBarItem>.toNames(): List<String> = map { it.name }.sorted()
 
 data class NavBarItemDef(
     val id: NavBarItem,
@@ -443,34 +455,6 @@ val DefaultBottomBarItems: List<NavBarItem> =
 /** The default bottom bar as unified entries (all built-in; favorites are added by the user). */
 val DefaultBottomBarEntries: List<BottomBarEntry> = DefaultBottomBarItems.map { BottomBarEntry.BuiltIn(it) }
 
-// Ordered membership lists for each drawer section. The drawer renders these by looking up
-// each id in NavBarCatalog, so adding a new screen only requires editing the catalog + the
-// matching section list below — not two separate files.
-val DrawerNavigateItems: List<NavBarItem> =
-    listOf(
-        NavBarItem.HOME,
-        NavBarItem.MESSAGES,
-        NavBarItem.VIDEO,
-        NavBarItem.BROWSER,
-        NavBarItem.DISCOVER,
-        NavBarItem.NOTIFICATIONS,
-    )
-
-val DrawerYouItems: List<NavBarItem> =
-    listOf(
-        NavBarItem.PROFILE,
-        NavBarItem.MY_LISTS,
-        NavBarItem.BOOKMARKS,
-        NavBarItem.WEB_BOOKMARKS,
-        NavBarItem.DRAFTS,
-        NavBarItem.SCHEDULED_POSTS,
-        NavBarItem.INTEREST_SETS,
-        NavBarItem.BLOSSOM_DATA,
-        NavBarItem.EMOJI_PACKS,
-        NavBarItem.WALLET,
-        NavBarItem.NOSTR_SIGNER,
-    )
-
 /**
  * A titled, collapsible group of selectable destinations in the bottom-bar settings picker. The
  * catalog's [linkedMapOf] insertion order is hand-maintained and reads as scattered in the flat
@@ -479,6 +463,7 @@ val DrawerYouItems: List<NavBarItem> =
  */
 data class NavBarCategory(
     val titleRes: Int,
+    val icon: MaterialSymbol,
     val items: List<NavBarItem>,
 )
 
@@ -491,6 +476,7 @@ val BottomBarCategories: List<NavBarCategory> =
     listOf(
         NavBarCategory(
             R.string.bottom_bar_category_main,
+            MaterialSymbols.Home,
             listOf(
                 NavBarItem.HOME,
                 NavBarItem.MESSAGES,
@@ -501,6 +487,7 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_chats,
+            MaterialSymbols.Group,
             listOf(
                 NavBarItem.PUBLIC_CHATS,
                 NavBarItem.RELAY_GROUPS,
@@ -510,6 +497,7 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_you,
+            MaterialSymbols.AccountCircle,
             listOf(
                 NavBarItem.PROFILE,
                 NavBarItem.MY_LISTS,
@@ -527,6 +515,7 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_feeds,
+            MaterialSymbols.Subscriptions,
             listOf(
                 NavBarItem.ARTICLES,
                 NavBarItem.LONGS,
@@ -553,6 +542,7 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_apps,
+            MaterialSymbols.Apps,
             listOf(
                 NavBarItem.BROWSER,
                 NavBarItem.FAVORITE_APPS,
@@ -563,43 +553,9 @@ val BottomBarCategories: List<NavBarCategory> =
         ),
         NavBarCategory(
             R.string.bottom_bar_category_other,
+            MaterialSymbols.Settings,
             listOf(
                 NavBarItem.SETTINGS,
             ),
         ),
-    )
-
-val DrawerFeedsItems: List<NavBarItem> =
-    listOfNotNull(
-        NavBarItem.ARTICLES,
-        NavBarItem.PICTURES,
-        NavBarItem.SHORTS,
-        NavBarItem.LONGS,
-        NavBarItem.PODCAST_EPISODES,
-        NavBarItem.PODCASTS,
-        NavBarItem.MUSIC_TRACKS,
-        NavBarItem.MUSIC_PLAYLISTS,
-        NavBarItem.POLLS,
-        NavBarItem.PRODUCTS,
-        NavBarItem.WORKOUTS,
-        NavBarItem.GIT_REPOSITORIES,
-        NavBarItem.HIGHLIGHTS,
-        NavBarItem.LIVE_STREAMS,
-        NavBarItem.NESTS,
-        NavBarItem.COMMUNITIES,
-        NavBarItem.PUBLIC_CHATS,
-        NavBarItem.RELAY_GROUPS,
-        NavBarItem.CONCORD,
-        NavBarItem.GEOHASH_CHATS,
-        NavBarItem.CALENDARS,
-        NavBarItem.CALENDAR_COLLECTIONS,
-        NavBarItem.SOFTWARE_APPS,
-        // Favorites can be pinned as inline tabs that render on a cross-process surface
-        // (SurfaceControlViewHost), which needs API 30+. Gate the whole grid on R+ for that reason.
-        NavBarItem.FAVORITE_APPS.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
-        NavBarItem.NAPPLETS,
-        NavBarItem.NSITES,
-        NavBarItem.FOLLOW_PACKS,
-        NavBarItem.BADGES,
-        NavBarItem.EMOJI_SETS,
     )

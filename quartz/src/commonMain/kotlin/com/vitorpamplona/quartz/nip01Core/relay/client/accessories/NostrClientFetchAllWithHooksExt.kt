@@ -79,6 +79,14 @@ suspend fun INostrClient.fetchAllWithHooks(
     subscriptionId: String = newSubId(),
     pendingOnAuthRequired: Boolean = false,
     deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
+    /**
+     * Receives the terminal reason per relay ("eose", "closed:…", "cannot:…"), so a caller can
+     * tell "a relay served us and had nothing" from "nobody served us". An empty result alone
+     * cannot: both look like zero events, and treating the second as the first is how a
+     * read-merge-write on a replaceable event destroys the entries it failed to read. See
+     * [anyRelayServed].
+     */
+    doneOut: MutableMap<NormalizedRelayUrl, String>? = null,
     onTimeout: ((stalled: Set<NormalizedRelayUrl>, doneReasons: Map<NormalizedRelayUrl, String>, collected: List<Pair<NormalizedRelayUrl, Event>>) -> Unit)? = null,
     /**
      * Hard wall-clock ceiling. The idle window alone is unbounded when a relay
@@ -102,7 +110,7 @@ suspend fun INostrClient.fetchAllWithHooks(
     val doneReasons = HashMap<NormalizedRelayUrl, String>()
     val listener =
         object : SubscriptionListener {
-            override fun onEvent(
+            override suspend fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,
@@ -237,8 +245,21 @@ suspend fun INostrClient.fetchAllWithHooks(
             classifyDrainFailure(reason)?.let { out[relay] = it }
         }
     }
+    doneOut?.putAll(doneReasons)
     return collected
 }
+
+/** The terminal reason recorded when a relay finished serving a subscription normally. */
+const val DONE_REASON_EOSE = "eose"
+
+/**
+ * True when at least one relay completed the fetch normally, i.e. answered and reached EOSE.
+ *
+ * Read against the map filled by `fetchAllWithHooks`'s `doneOut`. An empty event list means
+ * "nothing matched" only when this is true; otherwise it means "nobody told us", and a caller
+ * that overwrites a replaceable event on that basis deletes whatever it could not read.
+ */
+fun Map<NormalizedRelayUrl, String>.anyRelayServed(): Boolean = values.any { it == DONE_REASON_EOSE }
 
 /**
  * [fetchAllPagesFromPool] with a suspending per-event hook: paginates every relay

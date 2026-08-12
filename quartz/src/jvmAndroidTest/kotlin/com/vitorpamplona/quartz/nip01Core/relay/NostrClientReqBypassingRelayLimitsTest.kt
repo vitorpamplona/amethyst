@@ -67,7 +67,7 @@ class NostrClientReqBypassingRelayLimitsTest : RelayClientTest() {
                     events.add(event)
                 }
 
-            assertEquals(1000, totalFound)
+            assertEquals(1000, totalFound.downloaded)
             assertEquals(1000, events.size)
             events.forEach { event ->
                 assertEquals(MetadataEvent.KIND, event.kind)
@@ -115,7 +115,7 @@ class NostrClientReqBypassingRelayLimitsTest : RelayClientTest() {
                     }
                 }
 
-            assertEquals(2500, totalFound)
+            assertEquals(2500, totalFound.downloaded)
             assertEquals(1000, metadataEvents.size)
             assertEquals(1500, contactListEvents.size)
         }
@@ -165,7 +165,7 @@ class NostrClientReqBypassingRelayLimitsTest : RelayClientTest() {
                         filters = listOf(Filter(search = "kotlin")),
                         onNewPage = { searchPages++ },
                     ) { searchEvents.add(it) }
-                assertEquals(2, searchTotal, "a search filter must be fetched as a single page (the relay's cap)")
+                assertEquals(2, searchTotal.downloaded, "a search filter must be fetched as a single page (the relay's cap)")
                 assertEquals(2, searchEvents.size)
                 assertEquals(0, searchPages, "a search filter must never advance the until cursor")
             } finally {

@@ -203,6 +203,7 @@
     <string name="connection_success_rate_description">Andel lyckade anslutningar till reläet</string>
     <string name="search_and_add_a_user">Sök och lägg till användare</string>
     <string name="add_a_relay">Lägg till Relä</string>
+    <string name="relay_url_not_valid">Inte en giltig reläadress. Använd ett värdnamn eller en IP-adress inom hakparenteser (till exempel [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Mitt @tag-namn</string>
     <string name="display_name">Visningsnamn</string>
     <string name="my_display_name">Mitt visningsnamn</string>
@@ -1901,14 +1902,95 @@
     </plurals>
     <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d relä</item>
+        <item quantity="other">%1$s \u00b7 %2$d reläer</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Bläddring</string>
+    <string name="relay_purpose_media">Media</string>
+    <string name="relay_purpose_tags">Hashtaggar</string>
+    <string name="relay_purpose_topics">Ämnen</string>
+    <string name="relay_purpose_thread">Konversation</string>
+    <string name="relay_purpose_search">Sök</string>
+    <string name="relay_purpose_referenced">Hittar saknade händelser</string>
+    <string name="relay_purpose_engagement">Observerar händelser</string>
+    <string name="relay_explain_referenced">Hämtar händelser via id som något på din skärm hänvisar till men som du inte har ännu — ett citat, ett svars förälder, en trådrot.</string>
+    <string name="relay_explain_engagement">Bevakar de händelser som visas just nu efter nya svar, reaktioner, återinlägg, zaps och rapporter, så att räknarna uppdateras medan du läser.</string>
+    <string name="relay_purpose_add_ons">Tillägg</string>
+    <string name="relay_purpose_relay_info">Reläinfo</string>
+    <string name="relay_purpose_other">Övrigt</string>
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
          their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Relälistsökare</string>
+    <string name="relay_purpose_observing_profiles">Observerar profiler</string>
+    <string name="relay_purpose_your_account">Kontots data</string>
+    <string name="relay_purpose_home_feed">Hemflöde</string>
+    <string name="relay_purpose_relay_groups">Relägrupper</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d grupp</item>
+        <item quantity="other">%1$d grupper</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">Försvinnande chattar</string>
+    <string name="relay_purpose_geohash_chats">Platschattar</string>
+    <string name="relay_purpose_live_chat">Livesändningschatt</string>
+    <string name="relay_explain_relay_groups">NIP-29-grupper du gått med i. Varje grupp bor på ett värdrelä, så appen ansluter till varje relä som är värd för en av dina grupper.</string>
+    <string name="relay_explain_ephemeral_chats">Chattrum som inte sparar någon historik — meddelanden finns bara medan du är ansluten, så dessa förblir prenumererade för att något alls ska komma fram.</string>
+    <string name="relay_explain_geohash_chats">Platsbaserade rum för de områden du följer, efterfrågade från de reläer som bär dem.</string>
+    <string name="relay_explain_live_chat">Chatt och zap-mål kopplade till livesändningar du har öppna eller följer.</string>
+    <string name="relay_purpose_dm_inbox">DM-inkorg</string>
+    <string name="relay_purpose_your_wallet">Plånbok</string>
+    <string name="relay_purpose_nutzap_inbox">Nutzap-inkorg</string>
+    <string name="relay_purpose_mint_directory">Mint-katalog</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
+    <string name="relay_purpose_community_chats">Gemenskapschattar</string>
+    <string name="relay_purpose_community_feeds">Gemenskapsflöden</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
+    <string name="relay_explain_notifications">Dina inkorgsreläer, plus ett litet roterande urval av de reläer personer du följer publicerar till, ifall ett omnämnande levererades någon annanstans.</string>
+    <string name="relay_explain_direct_messages">Dina DM-inkorgsreläer, dit gift-wrap-meddelanden levereras.</string>
+    <string name="relay_explain_public_chats">Hemrelät för varje chatt du har öppen eller har gått med i.</string>
+    <string name="relay_explain_community_chats">Reläerna som varje gemenskap publicerar sina plan till.</string>
+    <string name="relay_explain_encrypted_groups">Gruppmeddelanden och nyckelpaket, på varje grupps reläer.</string>
+    <string name="relay_explain_live_rooms">Rummets reläer, medan det är öppet.</string>
+    <string name="relay_explain_account_data">Din egen profil, dina inställningar och utkast, på dina hemreläer.</string>
+    <string name="relay_explain_profiles">Profiler för personerna som just nu visas på skärmen.</string>
+    <string name="relay_explain_relay_lists">Hittar vilka reläer varje person publicerar till, så att deras inlägg kan hämtas från rätt ställe.</string>
+    <string name="relay_explain_follows">Följerlistor, som används för att bygga ditt flöde och ditt förtroendenät.</string>
+    <string name="relay_explain_moderation">Rapporter som personer du följer har skrivit om profilerna som just nu visas på skärmen, efterfrågade från varje relä dessa personer publicerar till.</string>
+    <string name="relay_purpose_reports_from_follows">Rapporter från personer du följer</string>
+    <string name="relay_explain_wallet">Dina egna plånbokshändelser, lästa tillbaka från de reläer du publicerade dem till.</string>
+    <string name="relay_explain_nutzap_inbox">Lyssnar på dina nutzap-reläer plus dina inkorgs- och DM-reläer, så att en betalning inte kan slinka förbi.</string>
+    <string name="relay_explain_mint_directory">Söker över reläer efter vilka mints som finns och vilka folk rekommenderar.</string>
+    <string name="relay_explain_nwc">Aviseringar från din anslutna plånbok.</string>
+    <string name="active_subs_title">Aktiva reläprenumerationer</string>
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d filter</item>
+        <item quantity="other">%1$d filter</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d relä</item>
+        <item quantity="other">%1$d reläer</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d filter är inte kopplat ännu</item>
+        <item quantity="other">%1$d filter är inte kopplade ännu</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Inte kopplat till något konto</string>
+    <string name="active_subs_no_entity">Allt</string>
+    <string name="active_subs_scope_global">Alla</string>
+    <string name="active_subs_scope_follows">Personer du följer</string>
+    <string name="active_subs_scope_authors">En vald lista med personer</string>
+    <string name="active_subs_scope_muted">Tystade personer</string>
+    <string name="active_subs_scope_all_communities">Dina gemenskaper</string>
+    <string name="active_subs_scope_algo">En favorit-flödesalgoritm</string>
+    <string name="active_subs_share">%1$d %% av alla</string>
+    <string name="active_subs_search_keywords">prenumerationer subscriptions filter reläer relay förfrågningar reqs anslutningar varför diagnostik</string>
+    <string name="relay_explain_home">Inlägg från personer du följer, lästa från de reläer var och en av dem publicerar till.</string>
     <string name="always_on_notif_connecting">Ansluter till inbox-relän\u2026</string>
     <string name="always_on_notif_setting_title">Alltid på-notifieringstjänst</string>
     <string name="always_on_notif_setting_description">Upprätthåller en konstant anslutning till dina inbox-relän för omedelbar leverans av notifieringar. Visar en pågående notifiering. Använder mer batteri men säkerställer att du aldrig missar ett meddelande.</string>
@@ -3098,6 +3180,19 @@
     <string name="bottom_bar_category_feeds">Flöden</string>
     <string name="bottom_bar_category_apps">Appar &amp; webb</string>
     <string name="bottom_bar_category_other">Övrigt</string>
+    <string name="drawer_settings">Sidomeny</string>
+    <string name="drawer_settings_title">Din sidomeny</string>
+    <string name="drawer_settings_description">Öppna en sektion och stäng av raderna du aldrig använder. Inställningar förblir alltid synligt, så du kan alltid ta dig tillbaka hit. Sektionernas ordning är fast.</string>
+    <string name="drawer_settings_sections">Sektioner</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d dold</item>
+        <item quantity="other">%1$d dolda</item>
+    </plurals>
+    <string name="drawer_settings_visible">Synliga</string>
+    <string name="drawer_settings_hidden">Dolda</string>
+    <string name="drawer_settings_always_on">Alltid på</string>
+    <string name="drawer_settings_show_all">Visa alla</string>
+    <string name="drawer_settings_hide_all">Dölj alla</string>
     <string name="home_tabs_settings">Hemflikar</string>
     <string name="home_tabs_settings_description">Välj vilka flikar som visas på startskärmen. När endast en flik är aktiv döljs flikraden.</string>
     <string name="home_tab_everything">Allt</string>
@@ -3471,6 +3566,10 @@
     <string name="git_repo_settings_save">Spara</string>
     <string name="git_repositories">Git-repositories</string>
     <string name="highlights">Höjdpunkter</string>
+    <string name="git_repositories_search_open">Filtrera repositories</string>
+    <string name="git_repositories_search_close">Stäng filter</string>
+    <string name="git_repositories_search_placeholder">Filtrera på namn, ämne, värd, underhållare…</string>
+    <string name="git_repositories_search_no_results">Inga repositories i det aktuella flödet matchar den här sökningen.</string>
     <string name="nsite_title">Statisk webbplats: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Behörigheter:</string>
@@ -3701,6 +3800,8 @@
     <string name="resource_usage_send_section">Dela med utvecklarna</string>
     <string name="resource_usage_send_explanation">Om Amethyst verkar dra batteri eller data kan du skicka den här rapporten till utvecklarna i ett krypterat DM. Den innehåller bara siffrorna på den här skärmen och de tekniska räknarna bakom dem — inga inlägg, kontakter eller surfdetaljer. Ingenting skickas förrän du trycker på Skicka i meddelandeskärmen.</string>
     <string name="resource_usage_send_button">Skicka rapport via DM</string>
+    <string name="resource_usage_copy_button">Kopiera</string>
+    <string name="resource_usage_share_button">Dela</string>
     <string name="resource_usage_alert_title">Hög resursanvändning upptäckt</string>
     <string name="resource_usage_alert_message">Amethyst förbrukade mer än väntat nyligen: %1$s. Vill du skicka en användningsrapport till utvecklarna i ett krypterat DM? Du får se hela rapporten innan något skickas.</string>
     <string name="resource_usage_reason_bg_data">%1$s mobildata i bakgrunden på en dag</string>

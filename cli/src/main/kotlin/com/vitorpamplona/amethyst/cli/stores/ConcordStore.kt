@@ -37,17 +37,36 @@ data class StoredCommunity(
     val ownerSalt: String = "",
     val root: String = "",
     val rootEpoch: Long = 0,
+    // The Control Plane signer's pubkey at [rootEpoch] (CORD-02 §2): read access, never write.
+    // Blank = a legacy, pre-split community, whose Control Plane is keyed the old way.
+    val controlPk: String = "",
+    // The staff write key at [rootEpoch], held only when this account is the owner or staff
+    // (CORD-02 §2). Blank for a regular member, who can read the plane but not publish to it.
+    val controlRoot: String = "",
     val generalChannelId: String = "",
     val relays: List<String> = emptyList(),
     // Past access roots kept per epoch (CORD-06 Refounding rotates the root). Lets `read --epoch <n>`
     // re-derive a prior epoch's Chat Plane to reach pre-refounding history. Populated by `import`.
     val heldRoots: List<StoredHeldRoot> = emptyList(),
+    // The bare `<naddr>#<fragment>` invite this membership was joined through — the stranded-recovery
+    // anchor (CORD-05/06). A Refounding carries no recipient list, so a member simply left out of the
+    // rekey has no message to miss: re-resolving this link is the only way back. Blank for a direct
+    // invite or a community joined before amy stored it.
+    val inviteRef: String = "",
 )
 
 /** A past community_root for a specific epoch, mirroring quartz `HeldRoot`. */
 data class StoredHeldRoot(
     val epoch: Long = 0,
     val root: String = "",
+    /** That epoch's Control Plane address; blank for a legacy, pre-split epoch (CORD-02 §5). */
+    val controlPk: String = "",
+    /**
+     * That epoch's staff write key, banked only if we held it. A relay that gates the prior epoch's
+     * Control Plane on NIP-42 AUTH as the stream key will not serve those wraps without it — and
+     * those wraps are what rebuild the anti-rollback floor.
+     */
+    val controlRoot: String = "",
 )
 
 /**

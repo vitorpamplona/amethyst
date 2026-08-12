@@ -48,7 +48,7 @@ open class RedirectConnectionListener(
         listener.onSent(relay, cmdStr, cmd, success)
     }
 
-    override fun onIncomingMessage(
+    override suspend fun onIncomingMessage(
         relay: IRelayClient,
         msgStr: String,
         msg: Message,

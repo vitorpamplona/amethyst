@@ -25,10 +25,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
@@ -46,8 +48,13 @@ class ChannelCreateEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = channelInfo().let { listOfNotNull(it.name, it.about, it.picture).joinToString(" ") }
+
+    override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
+
+    override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient

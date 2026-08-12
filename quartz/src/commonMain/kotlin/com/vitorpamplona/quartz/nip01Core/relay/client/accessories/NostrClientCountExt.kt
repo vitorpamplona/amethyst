@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip45Count.HyperLogLog
+import com.vitorpamplona.quartz.nip45Count.mergeCountResults
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.ensureActive
@@ -59,7 +59,7 @@ suspend fun INostrClient.count(
 
     val listener =
         object : RelayConnectionListener {
-            override fun onIncomingMessage(
+            override suspend fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
                 msg: Message,
@@ -117,7 +117,7 @@ suspend fun INostrClient.count(
 
     val listener =
         object : RelayConnectionListener {
-            override fun onIncomingMessage(
+            override suspend fun onIncomingMessage(
                 relay: IRelayClient,
                 msgStr: String,
                 msg: Message,
@@ -179,15 +179,9 @@ suspend fun INostrClient.count(
 }
 
 /**
- * Queries multiple relays for a COUNT and merges the HyperLogLog
- * registers from all responses to produce a single merged estimate.
+ * Queries multiple relays for a COUNT and combines the answers into one figure.
  *
- * If any relay returns HLL data, the results are merged by taking
- * the maximum register value across all relays, and the cardinality
- * is re-estimated from the merged registers.
- *
- * If no relay returns HLL data, falls back to the maximum count
- * reported by any relay.
+ * The combination rules — and why summing is never one of them — live in [mergeCountResults].
  *
  * @param relays List of relays to query.
  * @param filter The filter to count against.
@@ -207,20 +201,5 @@ suspend fun INostrClient.countMerged(
             idleTimeoutMs = idleTimeoutMs,
         )
 
-    if (results.isEmpty()) return null
-
-    val hlls = results.values.mapNotNull { it.hll }
-
-    return if (hlls.isNotEmpty()) {
-        val merged = HyperLogLog.merge(hlls)
-        val estimate = HyperLogLog.estimate(merged)
-        CountResult(
-            count = estimate.toInt(),
-            approximate = true,
-            hll = merged,
-        )
-    } else {
-        // No HLL data - use the maximum count from any relay
-        results.values.maxByOrNull { it.count }
-    }
+    return mergeCountResults(results.values)
 }

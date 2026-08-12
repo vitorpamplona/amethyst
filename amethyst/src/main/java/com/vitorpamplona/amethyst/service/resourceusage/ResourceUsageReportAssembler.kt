@@ -75,14 +75,47 @@ class ResourceUsageReportAssembler {
 
         sb.append("\nTechnical details (per epoch-day):\n")
         sb.append("```\n")
-        days.toSortedMap().forEach { (day, counters) ->
+        val sorted = days.toSortedMap()
+        val included = newestDaysWithin(sorted, MAX_DUMP_CHARS)
+        sorted.forEach { (day, counters) ->
+            if (day !in included) return@forEach
             sb.append("day $day (today=$today)\n")
             counters.toSortedMap().forEach { (key, value) ->
                 sb.append("    $key = $value\n")
             }
         }
+        val omitted = sorted.size - included.size
+        if (omitted > 0) {
+            sb.append("($omitted earlier day(s) omitted to keep this report sendable; ")
+            sb.append("the summary tables above still cover them)\n")
+        }
         sb.append("```\n")
         return sb.toString()
+    }
+
+    /**
+     * The most recent days whose dumps fit in [budget], newest first, always
+     * including at least the newest even if it alone exceeds it.
+     *
+     * Bounded by size rather than by a day count because the per-day size is not a
+     * constant: it tracks how many distinct counters the build emits, and that has
+     * grown by more than an order of magnitude. A fixed day count would have to be
+     * re-tuned every time a counter family is added, and would be wrong in the
+     * meantime.
+     */
+    private fun newestDaysWithin(
+        days: Map<Long, Map<String, Long>>,
+        budget: Int,
+    ): Set<Long> {
+        val included = mutableSetOf<Long>()
+        var left = budget
+        for (day in days.keys.sortedDescending()) {
+            val size = days.getValue(day).entries.sumOf { it.key.length + DUMP_LINE_OVERHEAD }
+            if (included.isNotEmpty() && size > left) break
+            included.add(day)
+            left -= size
+        }
+        return included
     }
 
     private fun summaryTable(s: UsageSummary): String =
@@ -131,6 +164,25 @@ class ResourceUsageReportAssembler {
     companion object {
         /** Markdown table header/body separator row. */
         private const val TABLE_SEPARATOR = "| --- | --- |\n"
+
+        /**
+         * Character budget for the raw per-day dump.
+         *
+         * This report exists to be sent to the developers as a NIP-17 DM, and relays
+         * commonly cap events between 64 and 256 KB — so an unbounded dump does not
+         * merely inconvenience, it makes the report unsendable by exactly the users
+         * whose ledgers are most worth seeing. It also travels through a ~1 MB Binder
+         * transaction when shared.
+         *
+         * The ledger keeps 30 days and a busy day now emits ~1,200 counters, which is
+         * ~52 KB of dump per day — so "every retained day" would be ~1.5 MB. This
+         * keeps the newest days and says how many it dropped; the summary tables
+         * above are unaffected and still cover the whole window.
+         */
+        private const val MAX_DUMP_CHARS = 64 * 1024
+
+        /** `    ` + ` = ` + the value, per dumped line. */
+        private const val DUMP_LINE_OVERHEAD = 24
 
         fun formatBytes(bytes: Long): String =
             when {
