@@ -149,7 +149,26 @@ private fun RelayAuthPromptDialog(
 
     // The purpose the user is most likely to recognize as "what I was just doing".
     val primary = remember(prompt) { prompt.purposes.primary() }
-    val faces = primary?.counterparties?.toList().orEmpty()
+
+    // A thread names nobody by itself, so the sentence used to say "the rest of this conversation"
+    // about something the reader may not have on screen — these prompts routinely surface over the
+    // home feed or the settings screen. Resolving the notes to their authors turns the vague
+    // reference into a person the reader recognizes.
+    val threadFaces =
+        remember(primary) {
+            if (primary?.kind == AuthPurposeKind.THREAD) {
+                primary.notes.mapNotNullTo(LinkedHashSet()) { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex }.toList()
+            } else {
+                emptyList()
+            }
+        }
+
+    val faces =
+        primary
+            ?.counterparties
+            ?.toList()
+            .orEmpty()
+            .ifEmpty { threadFaces }
     val who =
         when (primary?.kind) {
             AuthPurposeKind.POST_VENUE, AuthPurposeKind.READ_VENUE ->
@@ -380,7 +399,10 @@ private fun reasonFor(
         AuthPurposeKind.POST_VENUE -> stringRes(R.string.relay_auth_why_post_venue, who ?: "")
         AuthPurposeKind.READ_VENUE -> stringRes(R.string.relay_auth_why_read_venue, who ?: "")
         AuthPurposeKind.MY_INBOX -> stringRes(R.string.relay_auth_why_my_inbox)
-        AuthPurposeKind.THREAD -> stringRes(R.string.relay_auth_why_thread)
+        // Name the conversation by who is in it when we could resolve the notes; "this conversation"
+        // only survives as the fallback for a thread whose notes aren't in the cache yet.
+        AuthPurposeKind.THREAD ->
+            if (who.isNullOrBlank()) stringRes(R.string.relay_auth_why_thread) else stringRes(R.string.relay_auth_why_thread_with, who)
         // No attributable purpose. If it is the user's own relay we can at least say that much,
         // which is the only way MY_OWN_RELAY is ever reachable — the deriver is account-agnostic
         // (one shared socket, many accounts) so it cannot know whose relay this is.

@@ -89,6 +89,7 @@ object RelayAuthPurposeDeriver {
 
         val readAuthors = mutableSetOf<HexKey>()
         val readVenues = mutableSetOf<String>()
+        val readThreadNotes = mutableSetOf<String>()
         var readsMyInbox = false
         var readsThread = false
         var unattributedRead = false
@@ -99,7 +100,14 @@ object RelayAuthPurposeDeriver {
                     // Declared and self-contained: nobody else's identity is involved, so there is
                     // nothing to collect — the flag alone drives the wording.
                     AuthPurposeKind.MY_INBOX -> readsMyInbox = true
-                    AuthPurposeKind.THREAD -> readsThread = true
+                    // The notes are what makes the sentence nameable. The assembler either declares
+                    // them (entityIds) or, as ReactionsFilterAssembler does, only puts them in the
+                    // `e` tags — take whichever we get so the prompt can say whose conversation.
+                    AuthPurposeKind.THREAD -> {
+                        readsThread = true
+                        explained?.entityIds?.let(readThreadNotes::addAll)
+                        filter.tags?.get("e")?.let(readThreadNotes::addAll)
+                    }
                     // Declared, but the *who*/*what* still comes from the filter. Prefer the entity
                     // ids the assembler named over sniffing tags, and fall back when it named none.
                     AuthPurposeKind.READ_VENUE -> {
@@ -135,7 +143,7 @@ object RelayAuthPurposeDeriver {
             if (readAuthors.isNotEmpty()) add(AuthPurpose(AuthPurposeKind.READ_OUTBOX, readAuthors))
             if (readVenues.isNotEmpty()) add(AuthPurpose(AuthPurposeKind.READ_VENUE, venues = readVenues))
             if (readsMyInbox) add(AuthPurpose(AuthPurposeKind.MY_INBOX))
-            if (readsThread) add(AuthPurpose(AuthPurposeKind.THREAD))
+            if (readsThread) add(AuthPurpose(AuthPurposeKind.THREAD, notes = readThreadNotes))
             // Safety net: we're using this relay but couldn't say how — prompt rather than fail silently.
             if (isEmpty() && (unattributedWrite || unattributedRead)) add(AuthPurpose(AuthPurposeKind.OTHER))
         }

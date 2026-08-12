@@ -75,6 +75,13 @@ data class AuthPurpose(
     val kind: AuthPurposeKind,
     val counterparties: Set<String> = emptySet(),
     val venues: Set<String> = emptySet(),
+    /**
+     * Event ids of the conversation being read, for [AuthPurposeKind.THREAD]. Kept separate from
+     * [venues] because a thread is not a room: these are note ids, and the only use for them is to
+     * resolve *whose* conversation it is at render time, so the prompt can say "your conversation
+     * with Alice" instead of "this conversation" about something the user may not have on screen.
+     */
+    val notes: Set<String> = emptySet(),
 )
 
 /** The relay plus every live reason we currently have to auth with it. */
