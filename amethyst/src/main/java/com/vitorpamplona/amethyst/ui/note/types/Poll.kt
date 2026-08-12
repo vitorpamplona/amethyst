@@ -617,40 +617,53 @@ fun measure100PercentWidthModifier(textStyle: TextStyle): Modifier {
 }
 
 /** Faces drawn before the rest collapse into a "+N" chip. */
-private const val GALLERY_FACES = 4
+private const val GALLERY_FACES = PollResponsesCache.GALLERY_FACES
 
 @Composable
 fun UserGallery(
     tally: TallyResults,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
-) {
-    if (tally.size > 0) {
-        val shown = tally.topUsers(GALLERY_FACES)
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy((-10).dp),
-        ) {
-            shown.forEach {
-                key(it.pubkeyHex) {
-                    galleryUser(it)
-                }
-            }
+) = UserGallery(tally.topUsers(GALLERY_FACES), tally.size, galleryUser)
 
-            if (tally.size > shown.size) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier =
-                        Modifier
-                            .size(Size25dp)
-                            .clip(shape = CircleShape)
-                            .background(MaterialTheme.colorScheme.secondaryContainer),
-                ) {
-                    Text(
-                        text = "+" + showCount(tally.size - shown.size),
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+/**
+ * The faces behind a count: a few overlapping avatars, then "+N" for everyone who didn't fit.
+ *
+ * Takes the shown users and the true total rather than a tally, so the poll card and the poll
+ * results screen draw the same widget from their different sources instead of each owning a copy
+ * that can drift in size, spacing or cap.
+ */
+@Composable
+fun UserGallery(
+    shown: List<User>,
+    total: Int,
+    galleryUser: @Composable RowScope.(user: User) -> Unit,
+) {
+    if (total <= 0) return
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy((-10).dp),
+    ) {
+        shown.forEach {
+            key(it.pubkeyHex) {
+                galleryUser(it)
+            }
+        }
+
+        if (total > shown.size) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .size(Size25dp)
+                        .clip(shape = CircleShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+            ) {
+                Text(
+                    text = "+" + showCount(total - shown.size),
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
     }

@@ -24,7 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 /**
- * What the relays said about a poll's responses, after the backfill drained them into the cache.
+ * What the relays said about a poll's responses, against what the subscription actually delivered.
  *
  * [reported] is deliberately **not** a sum across relays. The same vote is usually stored on
  * several relays, so adding their counts would multiply the poll. NIP-45's optional HyperLogLog
@@ -50,11 +50,11 @@ class PollLoadReport(
 )
 
 /**
- * Drains every response for a poll into the cache and reports how many the relays believe exist.
+ * Reports how many responses the relays believe a poll has.
  *
- * The live subscription is capped and never pages, so a poll with more responses than the cap is
- * silently truncated — exactly the polls a results screen is opened for. Implementations page past
- * the cap once, on demand, rather than widening the always-on subscription.
+ * Loading the votes belongs to the screen's subscription, not here; this exists only so the screen
+ * can tell the difference between "these are all the votes" and "these are the votes we got". A
+ * COUNT is a one-shot question with no streaming form, which is why it is not a subscription.
  */
 fun interface PollResponseLoader {
     suspend fun load(poll: PollEvent): PollLoadReport

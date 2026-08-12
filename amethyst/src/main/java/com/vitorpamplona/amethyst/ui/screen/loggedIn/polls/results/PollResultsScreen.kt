@@ -92,7 +92,9 @@ import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
 import com.vitorpamplona.amethyst.ui.note.timeAheadNoDot
+import com.vitorpamplona.amethyst.ui.note.types.UserGallery
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.results.datasources.PollResponsesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
@@ -145,11 +147,12 @@ private fun PollResults(
 ) {
     val account = accountViewModel.account
 
-    // Subscribes for this poll while the screen is on top *and* observes what arrives. Without the
-    // subscription the only votes ever shown are the ones the one-shot backfill happened to catch —
-    // a vote cast while you are reading would never appear, because the feed card that used to
-    // carry it is disposed behind us. It also loads the kind-1068 event on a deep link.
+    // The poll's own event and engagement, exactly as any note on any screen gets them.
     val noteState by observeNote(note, accountViewModel)
+
+    // ...plus this screen's own claim: every vote, from the relays the poll nominates. Lifecycle-aware
+    // and deduplicated like every other current-screen data source, so leaving the screen closes it.
+    PollResponsesFilterAssemblerSubscription(note.idHex, accountViewModel)
 
     // Opening this screen is the opt-in, exactly like the card's "View results" link. Keyed on the
     // note state rather than the id: arriving by deep link, the poll event lands *after* the first
@@ -168,7 +171,7 @@ private fun PollResults(
                 isHidden = { account.isHidden(it) },
                 follows = account.allFollows.flow.map { it.authors },
                 hiddenChanges = account.hiddenUsers.flow,
-                loader = RelayPollResponseLoader(account.client, account.cache, note),
+                loader = RelayPollResponseLoader(account.client, note),
             )
         }
 
@@ -488,29 +491,8 @@ private fun AvatarStack(
 ) {
     if (option.topVoters.isEmpty()) return
 
-    Row(horizontalArrangement = Arrangement.spacedBy((-8).dp), verticalAlignment = Alignment.CenterVertically) {
-        option.topVoters.forEach { user ->
-            key(user.pubkeyHex) {
-                UserPicture(user, Size25dp, accountViewModel = accountViewModel, nav = nav)
-            }
-        }
-        val rest = option.voters - option.topVoters.size
-        if (rest > 0) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier =
-                    Modifier
-                        .size(Size25dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
-            ) {
-                Text(
-                    text = "+$rest",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            }
-        }
+    UserGallery(option.topVoters, option.voters) { user ->
+        UserPicture(user, Size25dp, accountViewModel = accountViewModel, nav = nav)
     }
 }
 
@@ -629,7 +611,7 @@ private fun ResultsFooter(state: PollResultsUiState) {
             }
         }
 
-    if (state.totalVoters == 0 && !state.isBackfilling) {
+    if (state.totalVoters == 0 && !state.isCheckingCompleteness) {
         Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = stringRes(R.string.poll_results_no_votes),
@@ -662,7 +644,7 @@ private fun ResultsFooter(state: PollResultsUiState) {
  */
 @Composable
 private fun Completeness(state: PollResultsUiState) {
-    if (state.isBackfilling) {
+    if (state.isCheckingCompleteness) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(
                 modifier = Modifier.size(12.dp),
@@ -671,7 +653,7 @@ private fun Completeness(state: PollResultsUiState) {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = stringRes(R.string.poll_results_loading_votes),
+                text = stringRes(R.string.poll_results_checking_completeness),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.placeholderText,
             )

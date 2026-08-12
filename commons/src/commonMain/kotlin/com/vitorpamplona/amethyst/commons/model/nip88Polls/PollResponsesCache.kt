@@ -40,6 +40,14 @@ import kotlinx.coroutines.flow.update
 @Stable
 class PollResponsesCache : UserDependencies {
     companion object {
+        /**
+         * Faces an avatar gallery shows before the rest collapse into "+N".
+         *
+         * Lives with the tally because both readers of a tally — the feed card and the results
+         * screen — draw the same gallery, and two copies of this number drift.
+         */
+        const val GALLERY_FACES = 4
+
         val DefaultFeedOrder: Comparator<PollResponseEvent> =
             compareByDescending<PollResponseEvent> { it.createdAt }.thenBy { it.id }
     }

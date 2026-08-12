@@ -28,6 +28,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache.ResponseTally
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -91,7 +92,8 @@ class PollResultsUiState(
     val reportedResponses: Int? = null,
     val reportIsApproximate: Boolean = false,
     val relaysAnswered: Int = 0,
-    val isBackfilling: Boolean = false,
+    /** True while we are still asking the relays how many votes exist. */
+    val isCheckingCompleteness: Boolean = false,
 ) {
     /** True only when we can actually show that responses are missing. */
     val isIncomplete get() = reportedResponses != null && reportedResponses > loadedResponses
@@ -102,8 +104,8 @@ class PollResultsUiState(
  *
  * Reads the live tally off the poll [Note] — no second cache — and turns it into rows the UI can
  * render without doing set arithmetic in composition. Every rebuild after the first runs on
- * [computeContext] (Default): a backfill emits one tally per consumed vote, and re-sorting thousands of
- * voters that many times on the UI thread would drop frames for the whole drain. The only
+ * [computeContext] (Default): a busy poll emits one tally per vote consumed, and re-sorting thousands
+ * of voters that many times on the UI thread would drop frames for the whole drain. The only
  * interactive state is [selectedOption], which scopes the voter list without touching the summary.
  *
  * Muting is applied here rather than in the tally: a muted voter still counts toward the totals
@@ -123,29 +125,30 @@ class PollResultsViewModel(
     private val loadContext: CoroutineContext = Dispatchers.IO,
 ) : ViewModel() {
     companion object {
-        /** Faces shown per option before collapsing into a "+N" chip, matching UserGallery. */
-        const val AVATAR_STACK = 4
+        /** Faces shown per option before collapsing into a "+N" chip. */
+        const val AVATAR_STACK = PollResponsesCache.GALLERY_FACES
     }
 
     private val _selectedOption = MutableStateFlow<String?>(null)
     val selectedOption = _selectedOption.asStateFlow()
 
-    private val backfill = MutableStateFlow(BackfillState())
+    private val completeness = MutableStateFlow(CompletenessState())
 
-    private class BackfillState(
+    private class CompletenessState(
         val running: Boolean = false,
         val report: PollLoadReport? = null,
     )
 
     init {
-        // Page past the subscription cap once, on open. Without this a poll with more responses
-        // than the live filter's limit shows a confidently wrong tally.
+        // The votes themselves arrive on the screen's subscription. This asks the one thing a
+        // subscription cannot answer — how many exist that we were not sent — so the page can say
+        // when it is showing fewer than the relays hold.
         if (loader != null) {
             viewModelScope.launch(loadContext) {
                 val poll = awaitPollEvent()
-                backfill.value = BackfillState(running = true)
+                completeness.value = CompletenessState(running = true)
                 val report = runCatching { loader.load(poll) }.getOrNull()
-                backfill.value = BackfillState(running = false, report = report)
+                completeness.value = CompletenessState(running = false, report = report)
             }
         }
     }
@@ -166,7 +169,7 @@ class PollResultsViewModel(
             follows,
             _selectedOption,
             hiddenChanges,
-            backfill,
+            completeness,
         ) { tally, followSet, selected, _, load ->
             build(tally, followSet, selected, load)
         }.flowOn(computeContext)
@@ -175,9 +178,9 @@ class PollResultsViewModel(
                 started = SharingStarted.WhileSubscribed(5_000),
                 // Built eagerly so the first frame already has the tally instead of flashing an
                 // empty poll. Only this one pass is on the caller's thread; every recomputation
-                // after it — including the flood of them during a backfill, one per consumed vote —
+                // after it — including the flood of them as votes stream in, one per event —
                 // runs on Default via the flowOn above.
-                initialValue = build(pollNote.pollState().responses.value, emptySet(), null, BackfillState()),
+                initialValue = build(pollNote.pollState().responses.value, emptySet(), null, CompletenessState()),
             )
 
     fun selectOption(code: String?) {
@@ -188,7 +191,7 @@ class PollResultsViewModel(
         tally: ResponseTally,
         follows: Set<HexKey>,
         selected: String?,
-        load: BackfillState,
+        load: CompletenessState,
     ): PollResultsUiState {
         val event = pollNote.event as? PollEvent
 
@@ -272,7 +275,7 @@ class PollResultsViewModel(
             reportedResponses = load.report?.reported?.coerceAtLeast(tally.allResponses.size),
             reportIsApproximate = load.report?.approximate ?: false,
             relaysAnswered = load.report?.relaysAnswered ?: 0,
-            isBackfilling = load.running,
+            isCheckingCompleteness = load.running,
         )
     }
 
