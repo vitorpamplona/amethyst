@@ -97,20 +97,13 @@ suspend fun INostrClient.fetchFirst(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     idleTimeoutMs: Long = 30_000L,
-    /**
-     * See [fetchAllWithHooks]. Defaults to whether this client has a NIP-42 responder
-     * attached: an `auth-required:` CLOSED then keeps the relay in play until the AUTH
-     * resolves, instead of counting as one more relay that had nothing.
-     *
-     * It matters more here than elsewhere. [fetchFirst] returns as soon as EVERY relay
-     * is accounted for, so on a single auth-gated relay the refusal *is* the answer, and
-     * the `null` it produced was indistinguishable from "no such event exists" — the
-     * reading that makes a caller create a duplicate of something it already has.
-     */
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
-    /** Stage-one grace handed to [awaitAuthOutcome]. */
-    authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
 ): Event? {
+    // An `auth-required:` CLOSED keeps the relay in play whenever something on this client
+    // will answer the challenge. It matters more here than elsewhere: [fetchFirst] returns as
+    // soon as every relay is accounted for, so on a single auth-gated relay the refusal IS the
+    // answer, and the `null` it produced was indistinguishable from "no such event exists" —
+    // the reading that makes a caller create a duplicate of something it already has.
+    val pendingOnAuthRequired = hasAuthResponder()
     val eventChannel = Channel<Event>(UNLIMITED)
     val doneChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
     val authRefusalChannel = Channel<NormalizedRelayUrl>(UNLIMITED)
@@ -177,7 +170,7 @@ suspend fun INostrClient.fetchFirst(
                         for (relay in authRefusalChannel) {
                             if (!resolving.add(relay)) continue
                             launch {
-                                if (awaitAuthOutcome(relay, authMarks[relay] ?: 0, authGraceMs, idleTimeoutMs) != AuthOutcome.AUTHENTICATED) {
+                                if (awaitAuthOutcome(relay, authMarks[relay] ?: 0, DEFAULT_AUTH_GRACE_MS, idleTimeoutMs) != AuthOutcome.AUTHENTICATED) {
                                     doneChannel.trySend(relay)
                                 }
                             }

@@ -22,8 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.auth.DEFAULT_AUTH_GRACE_MS
-import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.isActive
@@ -70,10 +68,6 @@ suspend fun INostrClient.fetchAllPagesFromPool(
     onNewPage: ((until: Long, relay: NormalizedRelayUrl) -> Unit)? = null,
     onRelayStart: ((relay: NormalizedRelayUrl) -> Unit)? = null,
     onRelayComplete: ((relay: NormalizedRelayUrl, totalEvents: Int) -> Unit)? = null,
-    /** Per-relay auth handling, forwarded verbatim to each [fetchAllPages]. */
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
-    /** Stage-one grace handed to each relay's [fetchAllPages]. */
-    authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
     onEvent: (event: Event, relay: NormalizedRelayUrl) -> Unit,
 ) {
     if (filters.isEmpty()) return
@@ -90,8 +84,6 @@ suspend fun INostrClient.fetchAllPagesFromPool(
                             relay = relay,
                             filters = filtersForRelay,
                             idleTimeoutMs = idleTimeoutMs,
-                            pendingOnAuthRequired = pendingOnAuthRequired,
-                            authGraceMs = authGraceMs,
                             onNewPage = onNewPage?.let { cb -> { until -> cb(until, relay) } },
                         ) { event -> onEvent(event, relay) }
                     onRelayComplete?.invoke(relay, result.downloaded)

@@ -71,9 +71,8 @@ suspend fun INostrClient.count(
     relay: NormalizedRelayUrl,
     filter: Filter,
     idleTimeoutMs: Long = 15_000,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
-    authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
 ): CountResult? {
+    val pendingOnAuthRequired = hasAuthResponder()
     val subId = newSubId()
     val resultChannel = Channel<CountResult>(UNLIMITED)
     val authRefusalChannel = Channel<Unit>(UNLIMITED)
@@ -111,7 +110,7 @@ suspend fun INostrClient.count(
             val authResolver =
                 launch {
                     for (ignored in authRefusalChannel) {
-                        if (awaitAuthOutcome(relay, authMark, authGraceMs, idleTimeoutMs) != AuthOutcome.AUTHENTICATED) {
+                        if (awaitAuthOutcome(relay, authMark, DEFAULT_AUTH_GRACE_MS, idleTimeoutMs) != AuthOutcome.AUTHENTICATED) {
                             gaveUpChannel.trySend(Unit)
                         }
                         // One resolution is enough: a second refusal after a successful AUTH
@@ -166,10 +165,9 @@ suspend fun INostrClient.count(
 suspend fun INostrClient.count(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     idleTimeoutMs: Long = 15_000,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
-    authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
 ): Map<NormalizedRelayUrl, CountResult> {
     if (filters.isEmpty()) return emptyMap()
+    val pendingOnAuthRequired = hasAuthResponder()
 
     val subIdToRelay = mutableMapOf<String, NormalizedRelayUrl>()
     val resultChannel = Channel<Pair<NormalizedRelayUrl, CountResult>>(UNLIMITED)
@@ -217,7 +215,7 @@ suspend fun INostrClient.count(
                     for (relay in authRefusalChannel) {
                         if (!resolving.add(relay)) continue
                         launch {
-                            if (awaitAuthOutcome(relay, authMarks[relay] ?: 0, authGraceMs, idleTimeoutMs) != AuthOutcome.AUTHENTICATED) {
+                            if (awaitAuthOutcome(relay, authMarks[relay] ?: 0, DEFAULT_AUTH_GRACE_MS, idleTimeoutMs) != AuthOutcome.AUTHENTICATED) {
                                 gaveUpChannel.trySend(relay)
                             }
                         }

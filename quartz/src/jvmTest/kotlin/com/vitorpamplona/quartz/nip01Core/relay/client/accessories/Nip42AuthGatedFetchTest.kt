@@ -122,6 +122,16 @@ class Nip42AuthGatedFetchTest {
                 h.preload(5)
                 val event = h.client.fetchFirst(filters = mapOf(relay to filter()), idleTimeoutMs = 4_000)
                 assertTrue(event != null, "an auth-gated relay's event must not read as absent")
+
+                // The single-relay shorthand does NOT forward pendingOnAuthRequired — it just calls
+                // the map form and lets its default evaluate. Pinned because it is the reason the
+                // plumbing is optional: a derived default evaluates against the receiver of the
+                // function that DECLARES it, so a wrapper that passes nothing still gets the right
+                // answer for the client it was called on.
+                assertTrue(
+                    h.client.fetchFirst(relay = relay, filter = filter().first()) != null,
+                    "a wrapper that forwards nothing still inherits the derived default",
+                )
             }
         }
 

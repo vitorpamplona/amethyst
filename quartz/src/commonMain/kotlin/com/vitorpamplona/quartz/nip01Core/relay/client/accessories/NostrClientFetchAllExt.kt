@@ -23,38 +23,29 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
-// The single-relay shorthands. Each carries [pendingOnAuthRequired] so the choice can be
-// made without dropping to the map form (and from there to fetchAllWithHooks) — which is
-// what a caller who wanted the correct behaviour on an auth-gated relay used to have to do.
-
 suspend fun INostrClient.fetchAll(
     relay: String,
     filter: Filter,
     idleTimeoutMs: Long = 30_000L,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
 ) = fetchAll(
     subscriptionId = newSubId(),
     filters = mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)),
     idleTimeoutMs = idleTimeoutMs,
-    pendingOnAuthRequired = pendingOnAuthRequired,
 )
 
 suspend fun INostrClient.fetchAll(
     relay: String,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
 ) = fetchAll(
     subscriptionId = newSubId(),
     filters = mapOf(RelayUrlNormalizer.normalize(relay) to filters),
     idleTimeoutMs = idleTimeoutMs,
-    pendingOnAuthRequired = pendingOnAuthRequired,
 )
 
 suspend fun INostrClient.fetchAll(
@@ -62,36 +53,30 @@ suspend fun INostrClient.fetchAll(
     relay: String,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
 ) = fetchAll(
     subscriptionId = subscriptionId,
     filters = mapOf(RelayUrlNormalizer.normalize(relay) to filters),
     idleTimeoutMs = idleTimeoutMs,
-    pendingOnAuthRequired = pendingOnAuthRequired,
 )
 
 suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filter: Filter,
     idleTimeoutMs: Long = 30_000L,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
 ) = fetchAll(
     subscriptionId = newSubId(),
     filters = mapOf(relay to listOf(filter)),
     idleTimeoutMs = idleTimeoutMs,
-    pendingOnAuthRequired = pendingOnAuthRequired,
 )
 
 suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
 ) = fetchAll(
     subscriptionId = newSubId(),
     filters = mapOf(relay to filters),
     idleTimeoutMs = idleTimeoutMs,
-    pendingOnAuthRequired = pendingOnAuthRequired,
 )
 
 suspend fun INostrClient.fetchAll(
@@ -99,12 +84,10 @@ suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
 ) = fetchAll(
     subscriptionId = subscriptionId,
     filters = mapOf(relay to filters),
     idleTimeoutMs = idleTimeoutMs,
-    pendingOnAuthRequired = pendingOnAuthRequired,
 )
 
 /**
@@ -132,7 +115,6 @@ suspend fun INostrClient.fetchAll(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     idleTimeoutMs: Long = 30_000L,
     maxTotalMs: Long = idleTimeoutMs * 10,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
 ): List<Event> {
     val seenIds = mutableSetOf<HexKey>()
     return fetchAllWithHooks(
@@ -140,7 +122,6 @@ suspend fun INostrClient.fetchAll(
         idleTimeoutMs = idleTimeoutMs,
         subscriptionId = subscriptionId,
         maxTotalMs = maxTotalMs,
-        pendingOnAuthRequired = pendingOnAuthRequired,
     ) { _, event -> seenIds.add(event.id) }
         .map { it.second }
         .sortedWith(DefaultFeedOrderEvent)

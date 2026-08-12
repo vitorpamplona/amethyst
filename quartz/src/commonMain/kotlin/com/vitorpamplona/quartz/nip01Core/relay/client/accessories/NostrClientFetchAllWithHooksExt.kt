@@ -90,20 +90,23 @@ suspend fun INostrClient.fetchAllWithHooks(
     /**
      * Whether an `auth-required:` CLOSED keeps the relay pending instead of ending it.
      *
-     * Defaults to **whether this client has a NIP-42 responder attached**
-     * ([hasAuthResponder]) rather than to a constant, because that is the fact the
-     * answer actually turns on: waiting for a challenge to be answered is right when
-     * something is going to answer it and dead time when nothing is. A client with no
-     * responder keeps the pre-existing behaviour (the refusal is terminal); a client
-     * holding a signer stops reading every auth-gated relay it owns as an empty one.
+     * Defaults to **whether this client has a NIP-42 responder attached** ([hasAuthResponder]),
+     * because that is the fact the answer turns on: a challenge is worth waiting for when
+     * something is going to answer it and is dead time when nothing is. The sibling accessories
+     * take no such parameter at all — they simply do this — and neither should most callers.
+     * It survives here only because this is the option-rich form and the flag predates the
+     * derived default.
      *
-     * The default is only safe because the wait is bounded by the AUTH outcome
-     * ([awaitAuthOutcome]): a challenge nobody picks up ends the relay in [authGraceMs],
-     * one the relay rejects ends it on the `OK false`, and even a signer prompt nobody
-     * ever answers is capped at [idleTimeoutMs]. So **an auth-gated relay costs at most
-     * what a silent relay already cost** — never the [maxTotalMs] multiple of it. Pass
-     * `false` to force the old behaviour, `true` to wait even where the responder is
-     * registered elsewhere.
+     * There is almost nothing left to decide. With no responder, `true` and `false` produce the
+     * same outcome, since [awaitAuthOutcome] returns [AuthOutcome.NO_RESPONDER] without waiting.
+     * With one attached, waiting is what makes the relay readable at all, and it is bounded:
+     * a challenge nobody picks up ends in [authGraceMs], one the relay rejects ends on its
+     * `OK false`, and a signer prompt nobody answers is capped at [idleTimeoutMs] — so **an
+     * auth-gated relay costs at most what a silent relay already cost**, never the [maxTotalMs]
+     * multiple of it. Pass `false` only to force the pre-existing give-up-immediately behaviour.
+     *
+     * Either way the refusal is REPORTED as [DONE_REASON_AUTH_REFUSED]; this only decides
+     * whether we wait for the challenge before recording it.
      */
     pendingOnAuthRequired: Boolean = hasAuthResponder(),
     deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
@@ -388,8 +391,6 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     idleTimeoutMs: Long = 30_000L,
     maxConcurrentRelays: Int = 8,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
-    authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
 ): List<Pair<NormalizedRelayUrl, Event>> {
     if (filters.isEmpty()) return emptyList()
@@ -421,8 +422,6 @@ suspend fun INostrClient.fetchAllPagesFromPoolWithHooks(
                 filters = filters,
                 idleTimeoutMs = idleTimeoutMs,
                 maxConcurrentRelays = maxConcurrentRelays,
-                pendingOnAuthRequired = pendingOnAuthRequired,
-                authGraceMs = authGraceMs,
             ) { event, relay -> eventChannel.trySend(relay to event) }
         } finally {
             eventChannel.close()

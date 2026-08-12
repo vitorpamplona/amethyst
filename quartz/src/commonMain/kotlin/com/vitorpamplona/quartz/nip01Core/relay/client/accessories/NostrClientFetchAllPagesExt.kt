@@ -219,26 +219,14 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    /**
-     * Whether an `auth-required:` page refusal is waited out rather than ending the walk.
-     * Defaults to whether this client has a NIP-42 responder attached — see
-     * [fetchAllWithHooks] for why the default is derived rather than constant.
-     *
-     * Waiting is what makes the page recoverable: the AUTH's `OK` drives
-     * [INostrClient.syncFilters], which re-sends this very REQ (same subscription id, same
-     * filters — an `auth-required:` refusal is deliberately not recorded as structural, so
-     * the pool keeps them), and the page then answers normally. The walk is retried at most
-     * ONCE for auth across its whole length, so a relay that alternates refusal and
-     * acceptance cannot spin it.
-     *
-     * Regardless of this flag the refusal is reported as [PagedFetchResult.End.AUTH_REQUIRED]
-     * rather than [PagedFetchResult.End.CLOSED]; the flag only decides whether we wait first.
-     */
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
-    /** Stage-one grace handed to [awaitAuthOutcome]. */
-    authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult {
+    // Waiting out an `auth-required:` page refusal is worth something only when this client has
+    // a NIP-42 responder to answer with. When it does, the AUTH's OK drives syncFilters, which
+    // re-sends this very REQ (same subscription id, same filters — an `auth-required:` refusal
+    // is deliberately not recorded as structural, so the pool keeps them) and the page answers
+    // normally. Either way the refusal is REPORTED as End.AUTH_REQUIRED, never as CLOSED.
+    val pendingOnAuthRequired = hasAuthResponder()
     var until: Long? = null
     var totalEvents = 0
     // At most one auth retry per walk. The AUTH is per-connection, so one success covers
@@ -460,7 +448,7 @@ suspend fun INostrClient.fetchAllPages(
             // would leave the post-auth REQ with nothing to refill.
             if (pageEnd == PageSignal.AUTH_REQUIRED && pendingOnAuthRequired && !authRetried) {
                 authRetried = true
-                if (awaitAuthOutcome(relay, authMark, authGraceMs, idleTimeoutMs) == AuthOutcome.AUTHENTICATED) {
+                if (awaitAuthOutcome(relay, authMark, DEFAULT_AUTH_GRACE_MS, idleTimeoutMs) == AuthOutcome.AUTHENTICATED) {
                     // Silence so far was the AUTH round-trip, not the relay stalling, so the
                     // idle window starts over for the re-served page.
                     clock.bump()
@@ -590,16 +578,12 @@ suspend fun INostrClient.fetchAllPages(
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
     onNewPage: ((Long) -> Unit)? = null,
-    pendingOnAuthRequired: Boolean = hasAuthResponder(),
-    authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
     onEvent: suspend (Event) -> Unit,
 ): PagedFetchResult =
     fetchAllPages(
         relay = RelayUrlNormalizer.normalize(relay),
         filters = filters,
         idleTimeoutMs = idleTimeoutMs,
-        pendingOnAuthRequired = pendingOnAuthRequired,
-        authGraceMs = authGraceMs,
         onNewPage = onNewPage,
         onEvent = onEvent,
     )
