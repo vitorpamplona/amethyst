@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.AuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.DEFAULT_AUTH_GRACE_MS
-import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMark
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMarks
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.awaitAuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -160,7 +160,7 @@ suspend fun INostrClient.fetchFirst(
         }
 
     // Read before the REQ goes out — see [awaitAuthOutcome]'s `since`.
-    val authMarks = if (pendingOnAuthRequired) filters.keys.associateWith { authSuccessMark(it) } else emptyMap()
+    val authMarks = if (pendingOnAuthRequired) authSuccessMarks(filters.keys) else emptyMap()
 
     var result: Event? = null
     try {

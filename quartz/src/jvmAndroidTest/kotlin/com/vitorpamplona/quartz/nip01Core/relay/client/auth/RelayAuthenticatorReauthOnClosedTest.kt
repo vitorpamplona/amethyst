@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -269,5 +270,63 @@ class RelayAuthenticatorReauthOnClosedTest {
 
             assertTrue(relay.sent.isEmpty(), "Without a stored challenge there is nothing to re-auth with")
             assertFalse(relay.sent.any { it is AuthCmd })
+        }
+
+    /**
+     * A signature is not instantaneous, and the coalescing guard used to be blind to that.
+     *
+     * The relay challenges at connect and refuses the first REQ with `auth-required:` before
+     * the signature comes back — the ordinary case, not a corner one. [reauthenticateIfAuthRequired]
+     * checks [RelayAuthStatus.hasFinishedAllAuths], which only knows about AUTHs already SENT, so
+     * while the first signature is still being produced the watcher is empty, the guard passes,
+     * and a second signing pass starts for the very same challenge.
+     *
+     * That is the thing the guard's own comment says it exists to prevent — "Re-signing on each
+     * would re-hit an external (NIP-55) signer" — and for a NIP-55 or NIP-46 signer the whole gap
+     * is a user-facing prompt, so the cost is a SECOND prompt for one connection. It also puts two
+     * threads into [RelayAuthStatus.saveAuthSubmission]'s non-atomic check-then-put at once, which
+     * can let both AUTHs onto the wire.
+     *
+     * Runs on a real dispatcher with a signer that takes time; the sibling tests use
+     * [Dispatchers.Unconfined], which completes the signature inline and hides this entirely.
+     */
+    @Test
+    fun aSlowSignatureIsNotSignedTwiceForOneChallenge() =
+        runBlocking {
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val signer = NostrSignerInternal(KeyPair())
+            val signCalls =
+                java.util.concurrent.atomic
+                    .AtomicInteger(0)
+
+            val client = CapturingClient()
+            RelayAuthenticator(
+                client = client,
+                scope = scope,
+                signWithAllLoggedInUsers = { _, template, _ ->
+                    signCalls.incrementAndGet()
+                    // Stands in for the signer round-trip — a NIP-55 prompt, a bunker hop.
+                    kotlinx.coroutines.delay(300)
+                    listOf(signer.sign(template))
+                },
+            )
+            val listener = client.captured ?: error("RelayAuthenticator did not register a listener")
+            val relay = FakeRelayClient(NormalizedRelayUrl("wss://relay.example/"))
+
+            listener.onConnecting(relay)
+            listener.onIncomingMessage(relay, "", AuthMessage("chal-1"))
+            // The REQ we already had open is refused while that signature is still being produced.
+            listener.onIncomingMessage(
+                relay,
+                "",
+                ClosedMessage("sub", MachineReadablePrefix.AUTH_REQUIRED.format("authenticate first")),
+            )
+
+            // Let both signing passes finish, whether one or two were started.
+            kotlinx.coroutines.delay(1_000)
+
+            assertEquals(1, signCalls.get(), "one challenge must cost exactly one signature, not one per refusal")
+            assertEquals(1, authedPubKeys(relay).size, "and exactly one AUTH reaches the wire")
+            scope.cancel()
         }
 }

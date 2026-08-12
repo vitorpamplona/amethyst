@@ -69,6 +69,30 @@ fun INostrClient.hasAuthResponder(): Boolean = authResponders().isNotEmpty()
 fun INostrClient.authSuccessMark(relay: NormalizedRelayUrl): Int = authResponders().successMark(relay)
 
 /**
+ * The marks for a whole fan-out, as a map to be read with `marks[relay] ?: 0`.
+ *
+ * Only relays that have ALREADY authenticated get an entry: a relay whose mark is zero is
+ * indistinguishable from an absent one, and at fan-out sizes where this matters (a router
+ * sweeping thousands of urls per fetch) nearly every relay is at zero when the REQ goes out.
+ * Building the full map instead would allocate one entry per relay on every fetch, auth-gated
+ * or not, to record a value the lookup already defaults to.
+ *
+ * Returns an empty map when nothing answers AUTH here, so a caller pays nothing at all.
+ */
+fun INostrClient.authSuccessMarks(relays: Collection<NormalizedRelayUrl>): Map<NormalizedRelayUrl, Int> {
+    val responders = authResponders()
+    if (responders.isEmpty()) return emptyMap()
+    var marks: MutableMap<NormalizedRelayUrl, Int>? = null
+    for (relay in relays) {
+        val mark = responders.successMark(relay)
+        if (mark != 0) {
+            (marks ?: HashMap<NormalizedRelayUrl, Int>().also { marks = it })[relay] = mark
+        }
+    }
+    return marks ?: emptyMap()
+}
+
+/**
  * Suspends until this relay's NIP-42 challenge resolves one way or the other, for a
  * caller whose REQ (or COUNT) just came back `CLOSED auth-required:`.
  *

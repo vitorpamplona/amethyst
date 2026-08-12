@@ -80,7 +80,7 @@ interface IAuthStatus {
          * Shared so the default [authStateFlow] getter allocates nothing — it is read on
          * every fetch that touches an auth-gated relay.
          */
-        val NO_AUTH_STATE: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>> = MutableStateFlow(persistentMapOf())
+        val NO_AUTH_STATE: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>> = MutableStateFlow(persistentMapOf<NormalizedRelayUrl, RelayAuthSnapshot>()).asStateFlow()
     }
 }
 
@@ -228,7 +228,15 @@ class RelayAuthenticator(
         // re-hit an external (NIP-55) signer for every ledger-ALLOW account. Skip while an AUTH is
         // still in flight — the OK of the one we already sent runs [checkAuthResults] → syncFilters,
         // which re-drives the refused REQ; if it's still refused, that fresh CLOSED re-auths then.
-        if (!status.hasFinishedAllAuths()) return
+        //
+        // BOTH halves of "in flight" have to be checked. [hasFinishedAllAuths] only knows about AUTHs
+        // already SENT, and a signature is not instantaneous: the relay challenges at connect and
+        // refuses the first REQ before the signature comes back, so during that window the watcher is
+        // empty, this guard used to pass, and a second signing pass started for the same challenge —
+        // a second user-facing prompt on a NIP-55/NIP-46 signer, and two threads racing
+        // [RelayAuthStatus.saveAuthSubmission]'s check-then-put. See
+        // RelayAuthenticatorReauthOnClosedTest.aSlowSignatureIsNotSignedTwiceForOneChallenge.
+        if (!status.hasFinishedAllAuths() || status.isSigning()) return
         val challenge = status.lastChallenge() ?: return
         authenticate(relay, challenge, interactive = false)
     }

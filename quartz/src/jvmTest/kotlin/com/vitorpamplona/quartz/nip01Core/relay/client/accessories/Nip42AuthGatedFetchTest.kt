@@ -171,7 +171,10 @@ class Nip42AuthGatedFetchTest {
                     }
 
                 assertEquals(0, collected.size)
-                assertTrue(doneOut[relay]?.startsWith("closed:") == true, "was ${doneOut[relay]}")
+                // Named even though we never waited: what the relay said does not depend on whether
+                // anyone was there to answer it, so `authRefusedRelays()` sees a no-responder client
+                // exactly as it sees a declining one.
+                assertEquals(setOf(relay), doneOut.authRefusedRelays(), "was ${doneOut[relay]}")
                 assertTrue(elapsed.inWholeMilliseconds < 1_000, "no waiting when nobody can answer; was $elapsed")
             }
         }
@@ -200,9 +203,10 @@ class Nip42AuthGatedFetchTest {
                     doneOut = doneOut,
                 ) { _, _ -> true }
 
-                assertTrue(
-                    doneOut[relay]?.startsWith("closed:") == true,
-                    "opting out must end the relay on the CLOSED itself; was ${doneOut[relay]}",
+                assertEquals(
+                    setOf(relay),
+                    doneOut.authRefusedRelays(),
+                    "opting out ends the relay on the CLOSED itself, but still names the wall; was ${doneOut[relay]}",
                 )
             }
         }

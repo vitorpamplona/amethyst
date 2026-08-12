@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.AuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.DEFAULT_AUTH_GRACE_MS
-import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMark
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMarks
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.awaitAuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -169,12 +169,22 @@ suspend fun INostrClient.fetchAllWithHooks(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                // Keep the relay pending on an auth-required refusal: the authenticator answers the
-                // challenge and re-fires this subscription, so the post-auth events still arrive.
-                // Hand it to the resolver, which ends the relay as auth-refused if the challenge
-                // does not work out — the refusal stays bounded by the AUTH, not by the timeout.
-                if (pendingOnAuthRequired && MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED) {
-                    authRefusalChannel.trySend(relay to message)
+                if (MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED) {
+                    // Keep the relay pending: the authenticator answers the challenge and re-fires
+                    // this subscription, so the post-auth events still arrive. The resolver ends it
+                    // as auth-refused if the challenge does not work out — bounded by the AUTH, not
+                    // by the timeout.
+                    if (pendingOnAuthRequired) {
+                        authRefusalChannel.trySend(relay to message)
+                        return
+                    }
+                    // Not waiting — but still NAME the wall. What the relay said does not depend on
+                    // whether we chose to answer it, and a caller reading `doneOut` wants to know it
+                    // gave up on an auth wall rather than on a policy refusal it can do nothing
+                    // about. This is what [fetchAllPages] already does with End.AUTH_REQUIRED, and
+                    // leaving it as a plain `closed:` here is what would make
+                    // [authRefusedRelays] silently miss every no-responder client.
+                    doneChannel.trySend(relay to "$DONE_REASON_AUTH_REFUSED:$message")
                     return
                 }
                 doneChannel.trySend(relay to "closed:$message")
@@ -192,7 +202,7 @@ suspend fun INostrClient.fetchAllWithHooks(
     // resolver compares against these: an AUTH that lands after this point is one that
     // re-sent our subscription, whereas a connection that was already authenticated and
     // still refused us is being gated for a reason no further waiting fixes.
-    val authMarks = if (pendingOnAuthRequired) filters.keys.associateWith { authSuccessMark(it) } else emptyMap()
+    val authMarks = if (pendingOnAuthRequired) authSuccessMarks(filters.keys) else emptyMap()
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
     // One conflated token, armed by a delay()-based watchdog, ends the fetch
     // at the wall-clock ceiling. delay() keeps the cap on the coroutine clock

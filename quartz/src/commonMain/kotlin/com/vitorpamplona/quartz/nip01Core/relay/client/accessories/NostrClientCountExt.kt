@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.AuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.DEFAULT_AUTH_GRACE_MS
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMark
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.authSuccessMarks
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.awaitAuthOutcome
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
@@ -202,7 +203,7 @@ suspend fun INostrClient.count(
     try {
         addConnectionListener(listener)
 
-        val authMarks = if (pendingOnAuthRequired) filters.keys.associateWith { authSuccessMark(it) } else emptyMap()
+        val authMarks = if (pendingOnAuthRequired) authSuccessMarks(filters.keys) else emptyMap()
         filters.forEach { (relay, filterList) ->
             val subId = newSubId()
             subIdToRelay[subId] = relay
