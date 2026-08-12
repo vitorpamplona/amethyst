@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 
 /**
  * The INostrClient manages Nostr relay operations, subscriptions, and event delivery. It maintains:
@@ -107,6 +108,10 @@ class NostrClient(
 
     // Copy-on-write, same as [listeners]: registration happens a handful of times at
     // wiring, while reads happen on every fetch that meets an auth-gated relay.
+    //
+    // Note the explicit `kotlin.concurrent.Volatile` import this needs. On JVM
+    // `kotlin.jvm.Volatile` is a default import, so an unimported `@Volatile` compiles
+    // there and fails only on Kotlin/Native — which is how it reached CI.
     @Volatile
     private var authResponders = setOf<IAuthStatus>()
 
