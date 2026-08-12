@@ -1159,7 +1159,7 @@
     <string name="relay_auth_why_read_outbox">It won\'t serve posts from %1$s unless you log in.</string>
     <string name="relay_auth_why_post_venue">It won\'t accept your post in %1$s unless you log in.</string>
     <string name="relay_auth_why_read_venue">It won\'t serve %1$s unless you log in.</string>
-    <string name="relay_auth_why_my_inbox">It won\'t serve your incoming replies, zaps and messages unless you log in.</string>
+    <string name="relay_auth_why_my_inbox">It won\'t serve replies, zaps and messages sent to you unless you log in.</string>
     <string name="relay_auth_why_thread">It won\'t serve the rest of this conversation unless you log in.</string>
     <string name="relay_auth_why_thread_with">It won\'t serve the rest of your conversation with %1$s unless you log in.</string>
     <string name="relay_auth_why_my_own_relay">This is one of your own relays, and it asks everyone to log in.</string>

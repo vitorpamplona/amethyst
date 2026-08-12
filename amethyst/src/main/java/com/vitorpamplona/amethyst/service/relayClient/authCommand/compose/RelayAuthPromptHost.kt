@@ -157,7 +157,12 @@ private fun RelayAuthPromptDialog(
     val threadFaces =
         remember(primary) {
             if (primary?.kind == AuthPurposeKind.THREAD) {
-                primary.notes.mapNotNullTo(LinkedHashSet()) { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex }.toList()
+                // Participants we can actually name come first. The label renders the *first* face, so
+                // taking them in note order let one unloaded author send the whole sentence to the
+                // generic fallback even when someone else in the same thread was perfectly nameable.
+                primary.notes
+                    .mapNotNullTo(LinkedHashSet()) { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex }
+                    .sortedByDescending { LocalCache.getUserIfExists(it)?.metadataOrNull()?.bestName() != null }
             } else {
                 emptyList()
             }
