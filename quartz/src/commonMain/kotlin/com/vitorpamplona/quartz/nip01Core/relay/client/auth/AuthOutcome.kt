@@ -118,9 +118,8 @@ fun INostrClient.authSuccessMarks(relays: Collection<NormalizedRelayUrl>): Map<N
  *     prompt in front of a human: cutting that short would fail an AUTH the user is in the
  *     middle of approving. Callers pass their own idle window here, which yields the
  *     guarantee that keeps this safe to turn on by default — **an auth-gated relay costs
- *     at most what a silent one already cost**, never the multiple of it a
- *     `maxTotalMs`-bounded fetch would otherwise have paid waiting on a prompt nobody
- *     answers.
+ *     at most what a silent one already cost**, never a multiple of it spent waiting on
+ *     a prompt nobody answers.
  *
  * Responders are polled as a set: the relay is still working while *any* of them is in
  * flight, and authenticated as soon as *any* of them succeeds — one client can hold an

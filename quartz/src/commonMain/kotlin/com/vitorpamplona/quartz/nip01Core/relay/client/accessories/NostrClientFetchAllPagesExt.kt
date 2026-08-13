@@ -197,7 +197,7 @@ data class PagedFetchResult(
  *   event resets it, so a slow relay actively streaming a large page is never cropped
  *   mid-delivery. A page only gives up after this much silence without an EOSE.
  *
- *   Deliberately no wall-clock ceiling here, unlike [fetchAll]'s `maxTotalMs`. A ceiling
+ *   Deliberately no wall-clock ceiling here — no accessory has one. A ceiling
  *   would bound one *page*, not this call: the loop below reacts to a page ending by
  *   advancing the cursor and issuing the next REQ, so a relay trickling events forever
  *   against an unbounded filter would just be re-paged forever — measurably so (see

@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
@@ -563,11 +563,11 @@ class Context(
      * Thin adapter over the shared [fetchAllWithHooks] accessory: every arriving
      * event is verified + persisted via [verifyAndStore] before it is surfaced.
      *
-     * When [deadOut] is provided, every relay that reported it could not be
-     * connected to (`onCannotConnect`) is added to it, so callers can prune
-     * proven-dead relays from future routing instead of paying the full
-     * [idleTimeoutMs] on them again. Slow-but-connected relays are NOT reported —
-     * only hard connect failures, so a temporarily-busy relay isn't discarded.
+     * Returns the events only. Use [drainResult] when the per-relay outcome matters:
+     * it carries `FetchAllResult.dead` (relays that reported they could not be
+     * connected to, so callers can prune them from future routing instead of paying
+     * the full [idleTimeoutMs] on them again — slow-but-connected relays and 429s are
+     * deliberately absent) and `FetchAllResult.anyRelayServed`.
      *
      * With [pendingOnAuthRequired], a relay that refuses the REQ with an
      * `auth-required` CLOSED is kept pending rather than treated as terminal: the
@@ -580,50 +580,31 @@ class Context(
     suspend fun drain(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 8_000,
-        diagnoseSlow: Boolean = false,
-        deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
         pendingOnAuthRequired: Boolean = false,
-        /** Per-relay terminal reason, so a caller can tell an empty answer from no answer. */
-        doneOut: MutableMap<NormalizedRelayUrl, String>? = null,
-    ): List<Pair<NormalizedRelayUrl, Event>> =
+    ): List<Pair<NormalizedRelayUrl, Event>> = drainResult(filters, idleTimeoutMs, pendingOnAuthRequired).events
+
+    /**
+     * [drain] keeping the whole [FetchAllResult] rather than just its events, for the
+     * callers that must tell "a relay answered and had nothing" from "nobody answered"
+     * — see [FetchAllResult.anyRelayServed]. Reach for this before a read-merge-write
+     * on a replaceable event.
+     *
+     * This is also where a stall diagnostic belongs, should one be wanted again: the
+     * result names every relay that never answered ([FetchAllResult.stalled]) and why
+     * each of the rest stopped ([FetchAllResult.doneReasons]). The previous
+     * `diagnoseSlow` flag printed exactly that to stderr but no caller ever set it, so
+     * it only ever ran as dead code.
+     */
+    suspend fun drainResult(
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+        idleTimeoutMs: Long = 8_000,
+        pendingOnAuthRequired: Boolean = false,
+    ): FetchAllResult =
         client.fetchAllWithHooks(
             filters = filters,
             idleTimeoutMs = idleTimeoutMs,
             pendingOnAuthRequired = pendingOnAuthRequired,
-            deadOut = deadOut,
-            doneOut = doneOut,
-            onTimeout =
-                if (diagnoseSlow) {
-                    { stalled, doneReasons, collected -> logSlowDrain(idleTimeoutMs, stalled, doneReasons, collected) }
-                } else {
-                    null
-                },
         ) { _, event -> verifyAndStore(event) }
-
-    /**
-     * On a [drain] timeout, report which relays stalled and why — a relay that
-     * never sent EOSE (slow, possibly still streaming) vs one that couldn't be
-     * reached (CANNOT-CONNECT, which points at our side / the network) vs one
-     * that CLOSED the sub. Includes how many events each slow relay did send, so
-     * "relay is slow" and "we never connected" are easy to tell apart.
-     */
-    private fun logSlowDrain(
-        idleTimeoutMs: Long,
-        stalled: Set<NormalizedRelayUrl>,
-        doneReasons: Map<NormalizedRelayUrl, String>,
-        collected: List<Pair<NormalizedRelayUrl, Event>>,
-    ) {
-        val eventsPer = collected.groupingBy { it.first }.eachCount()
-        val cannot = doneReasons.filterValues { it.startsWith("cannot") }
-        val closed = doneReasons.filterValues { it.startsWith("closed") }
-        val slowDetail = stalled.take(12).joinToString(", ") { "${it.url}(${eventsPer[it] ?: 0}ev)" }
-        val cannotDetail = cannot.entries.take(8).joinToString(", ") { "${it.key.url}=${it.value.removePrefix("cannot:").take(40)}" }
-        System.err.println(
-            "[drain] timeout ${idleTimeoutMs}ms: ${stalled.size} slow(no EOSE), ${cannot.size} cannot-connect, ${closed.size} closed" +
-                (if (slowDetail.isNotEmpty()) " | slow: $slowDetail" else "") +
-                (if (cannotDetail.isNotEmpty()) " | cannot: $cannotDetail" else ""),
-        )
-    }
 
     /**
      * Like [drain], but paginates every relay to completion via

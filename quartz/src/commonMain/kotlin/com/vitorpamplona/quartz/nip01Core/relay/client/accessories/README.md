@@ -46,10 +46,24 @@ knowing:
   which only preserves the set if the relay streams strictly newest-first, which
   NIP-01 recommends but does not require. Bound a paged download with the filter's
   `limit`, or by cancelling.
-- `fetchAll` / `fetchAllWithHooks` keep a pre-existing `maxTotalMs`, and it earns
-  its place: an endless *event* trickle there is genuine progress, so the call never
-  self-terminates, and the internal cap returns the events collected so far where an
-  external `withTimeoutOrNull` would discard them.
+- `fetchAll` / `fetchAllWithHooks` used to carry a `maxTotalMs` ceiling; it was
+  removed. It could not tell a relay legitimately streaming a large backlog from a
+  never-terminal trickle — both look like steady arrival — so in practice it cut
+  healthy fetches at a fixed multiple of the idle window. These are suspending
+  functions: a caller that wants a hard deadline wraps the call.
+
+  Two things that ceiling was quietly providing had to be replaced deliberately.
+  First, **the drain loop must observe cancellation**: its `tryReceive` fast path
+  has no suspension point, and a suspend hook that returns without suspending is
+  not a cancellation check either, so a relay feeding faster than we drain used to
+  spin there forever — the cap's per-iteration `capChannel.tryReceive()` was the
+  only escape. An explicit `ensureActive()` now plays that role (as it already did
+  per-page in `fetchAllPages`), and `FetchAllCancellationTest` pins it. Second,
+  **cancelling discards more than the cap did**: the cap returned the events
+  collected so far and its terminal-reason maps on its way out, whereas
+  cancellation unwinds the stack — cleanup still runs, but the whole
+  `FetchAllResult` is lost. Accumulate inside `onEvent` when the partial results
+  matter.
 
 The write side is its own case: `publishAndConfirm`'s `timeoutInSeconds` is a fixed
 window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
@@ -78,16 +92,16 @@ user is approving, but bounded by the caller's own `idleTimeoutMs`. That yields 
 guarantee that makes the derived default safe: **an auth-gated relay costs at most what
 a silent relay already cost.** A challenge nobody picks up ends in the grace; one the
 relay rejects ends on the `OK false`; only a prompt nobody ever answers reaches the
-window, and it can never reach the `maxTotalMs` multiple of it.
+window.
 
 **An unsatisfied wall is visible, and it is not a dead relay.** It gets its own
-terminal reason (`auth-refused:<msg>` — read it with `doneOut.authRefusedRelays()`),
+terminal reason (`auth-refused:<msg>` — read it with `FetchAllResult.authRefused`),
 its own `PagedFetchResult.End.AUTH_REQUIRED`, and its own
 `DrainFailure.AUTH_REQUIRED`, which reports `dropFromRouting = false`: the relay
 answered, and serves the same query to a connection carrying an identity it accepts.
 Test `dropFromRouting` rather than comparing to `DEAD`, so a reader written today
-survives the enum growing. An absent `doneOut` entry still means only one thing —
-nobody told us — and never "auth-gated".
+survives the enum growing. An absent `doneReasons` entry still means only one thing —
+nobody told us (the relay is in `stalled`) — and never "auth-gated".
 
 **AUTH is per-connection, so do not write a retry loop.** Once a socket has
 authenticated, later `REQ`s on it are simply served (`aSecondFetchOnAnAuthenticated…`
@@ -102,7 +116,7 @@ pins this). The accessories already wait for the first challenge to resolve, so
 | `fetchFirst(relay, filter, idleTimeoutMs)` | `NostrClientFetchFirstExt` | Get the first matching event and stop (returns `null` on none/timeout — or on an auth wall it could not get over; see NIP-42 above). |
 | `fetchAllPages(relay, filters, idleTimeoutMs)` | `NostrClientFetchAllPagesExt` | Fully retrieve a result set larger than the relay's per-REQ cap (strfry `limit`, ~500) by walking a `created_at` cursor. Bound it with the filter's `limit`. Reports **why** the walk stopped via `PagedFetchResult.End` — only `DRAINED` proves absence. |
 | `fetchAllPagesFromPool(filters, ...)` | `NostrClientFetchAllPagesPoolExt` | Same paging, across several relays at once. No cross-relay dedup — the `WithHooks` variant below dedups. |
-| `fetchAllWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAll` with a suspending per-`(relay, event)` accept hook (verify+store as events arrive), per-relay terminal-reason tracking, optional dead-relay collection (`deadOut` + `classifyDrainFailure`), keep-pending-on-`auth-required` CLOSED bounded by the AUTH's own outcome (NIP-42, above), and a timeout diagnostic hook. |
+| `fetchAllWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAll` with a suspending per-`(relay, event)` accept hook (verify+store as events arrive), returning a `FetchAllResult` — events plus per-relay terminal reasons, the stalled set, and derived `dead` / `anyRelayServed` / `authRefused` views. Also keeps a relay pending on an `auth-required` CLOSED, bounded by the AUTH's own outcome (NIP-42, above). |
 | `fetchAllPagesFromPoolWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAllPagesFromPool` with the same suspending accept hook, run single-threaded in one consumer; deduped across relays by `SeenIds` before the hook. |
 
 ## Streaming (`Flow`)

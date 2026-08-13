@@ -36,7 +36,7 @@ import com.vitorpamplona.quartz.utils.SeenIds
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
@@ -44,9 +44,16 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * Option-rich sibling of [fetchAll]: subscribe [filters] across their relays,
  * funnel every arriving event through the suspending [onEvent] hook (verify /
- * persist / filter — return `true` to keep it in the result), and return the
- * accepted `(relay, event)` pairs once every relay reached a terminal state
- * (EOSE, CLOSED, or cannot-connect) or the line went quiet for [idleTimeoutMs].
+ * persist / filter — return `true` to keep it in the result), and return a
+ * [FetchAllResult] once every relay reached a terminal state (EOSE, CLOSED, or
+ * cannot-connect) or the line went quiet for [idleTimeoutMs].
+ *
+ * The result carries what each relay *did* alongside the events
+ * ([FetchAllResult.doneReasons], [FetchAllResult.stalled], and the derived
+ * [FetchAllResult.dead] / [FetchAllResult.anyRelayServed]), because an empty event
+ * list is ambiguous on its own — "a relay answered and had nothing" and "nobody
+ * answered" are the same zero events, and a read-merge-write that confuses them
+ * deletes what it could not read.
  *
  * [idleTimeoutMs] is an **idle window, not a hard cap**: the clock only runs while
  * the relays are silent, and every arriving event or terminal signal resets
@@ -54,34 +61,34 @@ import kotlinx.coroutines.withTimeoutOrNull
  * cropped mid-delivery — the fetch ends when the work is done or when nothing
  * has arrived for [idleTimeoutMs] (a stall). The terminal conditions (EOSE /
  * CLOSED / cannot-connect per relay) are what bound the fetch; the timeout's
- * only job is detecting relays that will never reach one. [maxTotalMs]
- * (default 10x the idle window) is the wall-clock ceiling that keeps a
- * trickling relay from pinning the caller forever.
+ * only job is detecting relays that will never reach one.
+ *
+ * There is no wall-clock ceiling parameter, in line with every other accessory:
+ * a hard deadline composes at the call site — `withTimeoutOrNull(ms) { fetchAllWithHooks(…) }`
+ * — and an internal one cannot tell a relay legitimately streaming a large
+ * backlog from a misbehaving one, so it cuts both.
+ *
+ * **Cancellation is therefore the bound, and it is abrupt.** The subscription is
+ * still closed and the channels released (that cleanup does not suspend, so it
+ * survives cancellation), but a cancelled fetch returns nothing: the collected
+ * events and the whole [FetchAllResult] are discarded with the stack, and a
+ * suspending [onEvent] can be cancelled mid-write — the rule that keeps the hook
+ * out of the *internal* idle window's timeout scope cannot protect it from the
+ * caller's. A caller that needs the partial results, or needs the hook to finish
+ * what it started, should accumulate into its own list from inside [onEvent] (it
+ * runs single-threaded) rather than reading the return value.
  *
  * Extras over [fetchAll]:
  *  - **[onEvent] hook** — suspending per-event callback, invoked single-threaded
  *    in arrival order, so callers can serialize verify+store work. Only events it
  *    accepts (`true`) are collected. No cross-relay dedup is applied here — the
  *    hook sees every copy.
- *  - **[deadOut]** — when provided, every relay whose terminal reason classifies
- *    as a hard failure via [classifyDrainFailure] (connect refused / DNS / TLS /
- *    dead HTTP upgrade — NOT slow relays or 429s) is recorded, so callers can
- *    prune proven-dead relays from future routing instead of paying the full
- *    [idleTimeoutMs] on them again. An unsatisfied NIP-42 wall lands here too, as
- *    [DrainFailure.AUTH_REQUIRED] — recorded because the caller deserves to know
- *    why it got nothing, but flagged [DrainFailure.dropFromRouting] `false`, since
- *    the relay is alive and serves an identity it accepts. Test that property
- *    rather than the enum value before dropping anything.
  *  - **[pendingOnAuthRequired]** — a relay that refuses the REQ with an
  *    `auth-required:` CLOSED is kept pending rather than treated as terminal:
  *    the caller's NIP-42 responder answers the challenge and the client re-fires
  *    this same subscription, so the post-auth events are collected instead of
  *    returning empty. The wait is bounded by the AUTH's own outcome, not by the
  *    idle window — see [awaitAuthOutcome].
- *  - **[onTimeout]** — diagnostic hook fired when the idle window elapsed with
- *    relays still pending: receives the stalled set, the terminal reasons seen so
- *    far (`"eose"` / `"closed:<msg>"` / `"cannot:<msg>"` / `"auth-refused:<msg>"`),
- *    and what was collected.
  */
 suspend fun INostrClient.fetchAllWithHooks(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
@@ -102,43 +109,18 @@ suspend fun INostrClient.fetchAllWithHooks(
      * With one attached, waiting is what makes the relay readable at all, and it is bounded:
      * a challenge nobody picks up ends in [authGraceMs], one the relay rejects ends on its
      * `OK false`, and a signer prompt nobody answers is capped at [idleTimeoutMs] — so **an
-     * auth-gated relay costs at most what a silent relay already cost**, never the [maxTotalMs]
-     * multiple of it. Pass `false` only to force the pre-existing give-up-immediately behaviour.
+     * auth-gated relay costs at most what a silent relay already cost**. Pass `false` only to
+     * force the pre-existing give-up-immediately behaviour.
      *
      * Either way the refusal is REPORTED as [DONE_REASON_AUTH_REFUSED]; this only decides
      * whether we wait for the challenge before recording it.
      */
     pendingOnAuthRequired: Boolean = hasAuthResponder(),
-    deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
-    /**
-     * Receives the terminal reason per relay ("eose", "closed:…", "cannot:…",
-     * "auth-refused:…"), so a caller can tell "a relay served us and had nothing" from
-     * "nobody served us". An empty result alone cannot: both look like zero events, and
-     * treating the second as the first is how a read-merge-write on a replaceable event
-     * destroys the entries it failed to read. See [anyRelayServed] and, for the NIP-42
-     * wall specifically, [authRefusedRelays].
-     *
-     * A relay with NO entry here is still exactly one thing — nobody told us — and never
-     * "auth-gated": that case now has a reason of its own.
-     */
-    doneOut: MutableMap<NormalizedRelayUrl, String>? = null,
-    onTimeout: ((stalled: Set<NormalizedRelayUrl>, doneReasons: Map<NormalizedRelayUrl, String>, collected: List<Pair<NormalizedRelayUrl, Event>>) -> Unit)? = null,
-    /**
-     * Hard wall-clock ceiling. The idle window alone is unbounded when a relay
-     * keeps trickling events without ever reaching a terminal state — an
-     * adversarial or misbehaving relay could pin the caller forever. The cap
-     * restores an upper bound while staying far above the idle window, so a
-     * legitimately streaming relay still finishes its backlog. Pass
-     * [Long.MAX_VALUE] for a deliberately uncapped drain; a non-positive value
-     * also uncaps (absorbing an `idleTimeoutMs * 10` overflow from an
-     * effectively-infinite idle window).
-     */
-    maxTotalMs: Long = idleTimeoutMs * 10,
     /** Stage-one grace handed to [awaitAuthOutcome] — how long a responder has to pick a challenge up. */
     authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
-): List<Pair<NormalizedRelayUrl, Event>> {
-    if (filters.isEmpty()) return emptyList()
+): FetchAllResult {
+    if (filters.isEmpty()) return FetchAllResult(emptyList(), emptyMap(), emptySet())
     val eventChannel = Channel<Pair<NormalizedRelayUrl, Event>>(UNLIMITED)
     // Carries the terminal reason per relay so a timeout can distinguish a slow
     // relay (never terminal) from a connect failure / CLOSED.
@@ -182,7 +164,7 @@ suspend fun INostrClient.fetchAllWithHooks(
                         return
                     }
                     // Not waiting — but still NAME the wall. What the relay said does not depend on
-                    // whether we chose to answer it, and a caller reading `doneOut` wants to know it
+                    // whether we chose to answer it, and a caller reading the reasons wants to know it
                     // gave up on an auth wall rather than on a policy refusal it can do nothing
                     // about. This is what [fetchAllPages] already does with End.AUTH_REQUIRED, and
                     // leaving it as a plain `closed:` here is what would make
@@ -207,22 +189,9 @@ suspend fun INostrClient.fetchAllWithHooks(
     // still refused us is being gated for a reason no further waiting fixes.
     val authMarks = if (pendingOnAuthRequired) authSuccessMarks(filters.keys) else emptyMap()
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
-    // One conflated token, armed by a delay()-based watchdog, ends the fetch
-    // at the wall-clock ceiling. delay() keeps the cap on the coroutine clock
-    // (cancellable, virtual-time-testable) instead of sampling a wall clock.
-    val capChannel = Channel<Unit>(Channel.CONFLATED)
     try {
         coroutineScope {
             subscribe(subscriptionId, filters, listener)
-            val watchdog =
-                if (maxTotalMs <= 0 || maxTotalMs == Long.MAX_VALUE) {
-                    null
-                } else {
-                    launch {
-                        delay(maxTotalMs)
-                        capChannel.trySend(Unit)
-                    }
-                }
             // Turns each `auth-required:` refusal into a terminal reason as soon as the
             // AUTH resolves against us, so an auth wall costs a grace window instead of a
             // full idle window — and, unlike the timeout, says what it hit.
@@ -247,7 +216,7 @@ suspend fun INostrClient.fetchAllWithHooks(
                 } else {
                     null
                 }
-            // Idle-window wait with a wall-clock ceiling. Two structural rules:
+            // Idle-window wait. Two structural rules:
             //
             //  1. The suspending [onEvent] hook NEVER runs inside a timeout
             //     scope. Cancellation only lands at suspension points, so a
@@ -262,16 +231,18 @@ suspend fun INostrClient.fetchAllWithHooks(
             //     with zero timeout-job churn — under burst arrival a
             //     per-message withTimeoutOrNull would pay one
             //     scheduled+cancelled cancellation task per event for nothing.
-            var stalled = false
-            var capped = false
-            while (remaining.isNotEmpty() && !capped) {
+            while (remaining.isNotEmpty()) {
+                // The caller's deadline is the only wall-clock bound on this fetch, so
+                // the loop has to be able to observe it. Nothing on the fast path below
+                // suspends — tryReceive never does, and a suspend hook that completes
+                // without suspending performs no cancellation check — so a relay feeding
+                // faster than we drain would spin here forever, deaf to an enclosing
+                // withTimeout. This is the check that makes `cancel the caller` work, the
+                // same role [fetchAllPages] gives its per-page ensureActive.
+                ensureActive()
                 var pending: Pair<NormalizedRelayUrl, Event>? = null
 
                 // Fast path: consume whatever is already buffered.
-                if (capChannel.tryReceive().isSuccess) {
-                    capped = true
-                    break
-                }
                 val bufferedDone = doneChannel.tryReceive().getOrNull()
                 if (bufferedDone != null) {
                     remaining.remove(bufferedDone.first)
@@ -290,14 +261,9 @@ suspend fun INostrClient.fetchAllWithHooks(
                                     remaining.remove(relay)
                                     doneReasons[relay] = reason
                                 }
-                                capChannel.onReceive { capped = true }
                             }
                         }
-                    if (progressed == null) {
-                        stalled = true
-                        break
-                    }
-                    if (capped) break
+                    if (progressed == null) break
                 }
 
                 pending?.let { pair ->
@@ -305,22 +271,15 @@ suspend fun INostrClient.fetchAllWithHooks(
                 }
             }
             // Drain any events that landed after the last terminal signal (or
-            // during the final window) but before unsubscribe. Skipped when
-            // the ceiling fired — the cap must actually stop the work.
-            if (!capped) {
-                while (true) {
-                    val r = eventChannel.tryReceive()
-                    if (!r.isSuccess) break
-                    val pair = r.getOrThrow()
-                    if (onEvent(pair.first, pair.second)) collected.add(pair)
-                }
+            // during the final window) but before unsubscribe.
+            while (true) {
+                val r = eventChannel.tryReceive()
+                if (!r.isSuccess) break
+                val pair = r.getOrThrow()
+                if (onEvent(pair.first, pair.second)) collected.add(pair)
             }
-            if ((stalled || capped) && remaining.isNotEmpty()) {
-                onTimeout?.invoke(remaining, doneReasons, collected)
-            }
-            // Both outlive the loop by design (one sleeps to the ceiling, the other parks on
-            // an AUTH that may never settle), so the scope only completes if we end them.
-            watchdog?.cancel()
+            // Outlives the loop by design (it parks on an AUTH that may never settle), so
+            // the scope only completes if we end it.
             authResolver?.cancel()
         }
     } finally {
@@ -329,13 +288,9 @@ suspend fun INostrClient.fetchAllWithHooks(
         doneChannel.close()
         authRefusalChannel.close()
     }
-    deadOut?.let { out ->
-        for ((relay, reason) in doneReasons) {
-            classifyDrainFailure(reason)?.let { out[relay] = it }
-        }
-    }
-    doneOut?.putAll(doneReasons)
-    return collected
+    // `remaining` is empty unless the idle window elapsed with relays still pending, so
+    // it IS the stalled set — the loop only leaves entries behind when it gives up on them.
+    return FetchAllResult(collected, doneReasons, remaining.toSet())
 }
 
 /** The terminal reason recorded when a relay finished serving a subscription normally. */
@@ -357,7 +312,8 @@ const val DONE_REASON_AUTH_REFUSED = "auth-refused"
 /**
  * True when at least one relay completed the fetch normally, i.e. answered and reached EOSE.
  *
- * Read against the map filled by `fetchAllWithHooks`'s `doneOut`. An empty event list means
+ * Read against [FetchAllResult.doneReasons] (or via [FetchAllResult.anyRelayServed], which is
+ * exactly this). An empty event list means
  * "nothing matched" only when this is true; otherwise it means "nobody told us", and a caller
  * that overwrites a replaceable event on that basis deletes whatever it could not read.
  */
@@ -366,7 +322,8 @@ fun Map<NormalizedRelayUrl, String>.anyRelayServed(): Boolean = values.any { it 
 /**
  * The relays that turned us away at a NIP-42 wall — see [DONE_REASON_AUTH_REFUSED].
  *
- * Read against `doneOut`. These are emphatically *not* dead relays: they answered, and they
+ * Read against [FetchAllResult.doneReasons] (or via [FetchAllResult.authRefused], which is
+ * exactly this). These are emphatically *not* dead relays: they answered, and they
  * will serve the same query on a connection carrying an identity they accept. A caller
  * recording coverage should mark them unmeasured-and-fixable rather than empty, and one
  * routing reads should keep them for a session that holds the right signer.

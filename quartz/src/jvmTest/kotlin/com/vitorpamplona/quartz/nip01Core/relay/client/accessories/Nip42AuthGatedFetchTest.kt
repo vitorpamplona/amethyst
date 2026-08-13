@@ -99,19 +99,17 @@ class Nip42AuthGatedFetchTest {
         runBlocking {
             workingSigner().use { h ->
                 h.preload(5)
-                val doneOut = mutableMapOf<NormalizedRelayUrl, String>()
 
-                val collected =
+                val result =
                     h.client.fetchAllWithHooks(
                         filters = mapOf(relay to filter()),
                         idleTimeoutMs = 4_000,
-                        doneOut = doneOut,
                     ) { _, _ -> true }
 
-                assertEquals(5, collected.size)
-                assertEquals(DONE_REASON_EOSE, doneOut[relay], "the relay served us after AUTH")
-                assertTrue(doneOut.anyRelayServed())
-                assertTrue(doneOut.authRefusedRelays().isEmpty())
+                assertEquals(5, result.events.size)
+                assertEquals(DONE_REASON_EOSE, result.doneReasons[relay], "the relay served us after AUTH")
+                assertTrue(result.anyRelayServed)
+                assertTrue(result.authRefused.isEmpty())
             }
         }
 
@@ -170,21 +168,19 @@ class Nip42AuthGatedFetchTest {
                 h.preload(5)
                 assertFalse(h.client.hasAuthResponder())
 
-                val doneOut = mutableMapOf<NormalizedRelayUrl, String>()
-                val (collected, elapsed) =
+                val (result, elapsed) =
                     measureTimedValue {
                         h.client.fetchAllWithHooks(
                             filters = mapOf(relay to filter()),
                             idleTimeoutMs = 4_000,
-                            doneOut = doneOut,
                         ) { _, _ -> true }
                     }
 
-                assertEquals(0, collected.size)
+                assertEquals(0, result.events.size)
                 // Named even though we never waited: what the relay said does not depend on whether
                 // anyone was there to answer it, so `authRefusedRelays()` sees a no-responder client
                 // exactly as it sees a declining one.
-                assertEquals(setOf(relay), doneOut.authRefusedRelays(), "was ${doneOut[relay]}")
+                assertEquals(setOf(relay), result.authRefused, "was ${result.doneReasons[relay]}")
                 assertTrue(elapsed.inWholeMilliseconds < 1_000, "no waiting when nobody can answer; was $elapsed")
             }
         }
@@ -205,18 +201,17 @@ class Nip42AuthGatedFetchTest {
         runBlocking {
             workingSigner().use { h ->
                 h.preload(5)
-                val doneOut = mutableMapOf<NormalizedRelayUrl, String>()
-                h.client.fetchAllWithHooks(
-                    filters = mapOf(relay to filter()),
-                    idleTimeoutMs = 4_000,
-                    pendingOnAuthRequired = false,
-                    doneOut = doneOut,
-                ) { _, _ -> true }
+                val result =
+                    h.client.fetchAllWithHooks(
+                        filters = mapOf(relay to filter()),
+                        idleTimeoutMs = 4_000,
+                        pendingOnAuthRequired = false,
+                    ) { _, _ -> true }
 
                 assertEquals(
                     setOf(relay),
-                    doneOut.authRefusedRelays(),
-                    "opting out ends the relay on the CLOSED itself, but still names the wall; was ${doneOut[relay]}",
+                    result.authRefused,
+                    "opting out ends the relay on the CLOSED itself, but still names the wall; was ${result.doneReasons[relay]}",
                 )
             }
         }
@@ -234,28 +229,24 @@ class Nip42AuthGatedFetchTest {
         runBlocking {
             decliningSigner().use { h ->
                 h.preload(5)
-                val doneOut = mutableMapOf<NormalizedRelayUrl, String>()
-                val deadOut = mutableMapOf<NormalizedRelayUrl, DrainFailure>()
 
-                val (collected, elapsed) =
+                val (result, elapsed) =
                     measureTimedValue {
                         h.client.fetchAllWithHooks(
                             filters = mapOf(relay to filter()),
                             idleTimeoutMs = 8_000,
-                            doneOut = doneOut,
-                            deadOut = deadOut,
                         ) { _, _ -> true }
                     }
 
-                assertEquals(0, collected.size)
+                assertEquals(0, result.events.size)
                 assertTrue(
-                    doneOut[relay]?.startsWith(DONE_REASON_AUTH_REFUSED) == true,
-                    "the relay must leave a terminal reason naming the auth wall; was ${doneOut[relay]}",
+                    result.doneReasons[relay]?.startsWith(DONE_REASON_AUTH_REFUSED) == true,
+                    "the relay must leave a terminal reason naming the auth wall; was ${result.doneReasons[relay]}",
                 )
-                assertEquals(setOf(relay), doneOut.authRefusedRelays())
-                assertFalse(doneOut.anyRelayServed(), "an auth wall is not a relay that served us")
-                assertEquals(DrainFailure.AUTH_REQUIRED, deadOut[relay])
-                assertFalse(deadOut[relay]!!.dropFromRouting, "auth-gated is fixable by a signer, not by dropping the relay")
+                assertEquals(setOf(relay), result.authRefused)
+                assertFalse(result.anyRelayServed, "an auth wall is not a relay that served us")
+                assertEquals(DrainFailure.AUTH_REQUIRED, result.dead[relay])
+                assertFalse(result.dead[relay]!!.dropFromRouting, "auth-gated is fixable by a signer, not by dropping the relay")
                 assertTrue(
                     elapsed.inWholeMilliseconds < 4_000,
                     "must end on the AUTH's verdict, not the 8 s idle window; was $elapsed",
@@ -319,18 +310,16 @@ class Nip42AuthGatedFetchTest {
                 val afterFirst = h.client.authSuccessMark(relay)
                 assertTrue(afterFirst >= 1, "the first fetch got in, so an AUTH must have been accepted")
 
-                val doneOut = mutableMapOf<NormalizedRelayUrl, String>()
                 val second =
                     h.client.fetchAllWithHooks(
                         filters = mapOf(relay to filter()),
                         idleTimeoutMs = 4_000,
-                        doneOut = doneOut,
                     ) { _, _ -> true }
 
-                assertEquals(5, second.size)
+                assertEquals(5, second.events.size)
                 assertEquals(
                     DONE_REASON_EOSE,
-                    doneOut[relay],
+                    second.doneReasons[relay],
                     "the second REQ is served outright — no auth-required, so nothing for a caller to retry",
                 )
                 // The point of (e): the SECOND fetch cost no authentication at all. Asserted as

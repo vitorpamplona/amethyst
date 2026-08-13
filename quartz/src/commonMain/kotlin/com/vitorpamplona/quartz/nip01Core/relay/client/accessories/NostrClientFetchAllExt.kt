@@ -98,31 +98,30 @@ suspend fun INostrClient.fetchAll(
  * [idleTimeoutMs] is an **idle window, not a hard cap**: every arriving event or
  * terminal signal resets it, so a slow relay actively streaming a large
  * backlog is never cropped mid-delivery. The fetch only gives up after a full
- * window of silence — or at the [maxTotalMs] wall-clock ceiling (default 10x
- * the idle window), which keeps a trickling never-terminal relay from pinning
- * the caller forever.
+ * window of silence.
+ *
+ * There is no wall-clock ceiling parameter. Like every other accessory, a hard
+ * deadline belongs at the call site — this is a suspending function, so
+ * `withTimeoutOrNull(ms) { fetchAll(…) }` bounds it — and an internal ceiling
+ * cannot distinguish a relay legitimately streaming a large backlog from one
+ * that will never finish, so it cuts both.
  *
  * Thin projection over [fetchAllWithHooks] — one shared loop implementation,
  * with dedup done in the (single-threaded) hook so no shared collection is
  * ever touched from socket callback threads.
- *
- * @param pendingOnAuthRequired see [fetchAllWithHooks]. Defaults to whether this
- *   client has a NIP-42 responder attached, so a relay that gates reads behind AUTH
- *   is read for what it holds instead of as an empty one.
  */
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     filters: Map<NormalizedRelayUrl, List<Filter>>,
     idleTimeoutMs: Long = 30_000L,
-    maxTotalMs: Long = idleTimeoutMs * 10,
 ): List<Event> {
     val seenIds = mutableSetOf<HexKey>()
     return fetchAllWithHooks(
         filters = filters,
         idleTimeoutMs = idleTimeoutMs,
         subscriptionId = subscriptionId,
-        maxTotalMs = maxTotalMs,
     ) { _, event -> seenIds.add(event.id) }
+        .events
         .map { it.second }
         .sortedWith(DefaultFeedOrderEvent)
 }

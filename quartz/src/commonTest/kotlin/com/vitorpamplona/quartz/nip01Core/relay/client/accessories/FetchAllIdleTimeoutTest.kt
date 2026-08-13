@@ -32,15 +32,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Pins the idle-window timeout semantics of the fetchAll family: [timeoutMs]
+ * Pins the idle-window timeout semantics of the fetchAll family: `idleTimeoutMs`
  * is the maximum SILENCE between messages, not an absolute deadline — a relay
  * that keeps streaming is never cropped, and a stalled fetch ends one idle
- * window after its last message.
+ * window after its last message. There is no internal wall-clock ceiling; a hard
+ * deadline is the caller's to compose.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FetchAllIdleTimeoutTest {
@@ -86,20 +89,19 @@ class FetchAllIdleTimeoutTest {
                     delay(100)
                     client.listener!!.onEose(relay, null)
                 }
-            val collected =
+            val result =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
                     idleTimeoutMs = 300,
                 ) { _, _ -> true }
             feeder.join()
-            assertEquals(10, collected.size, "an actively streaming relay must never be cropped")
+            assertEquals(10, result.events.size, "an actively streaming relay must never be cropped")
         }
 
     @Test
     fun silenceEndsTheFetchAfterOneIdleWindow() =
         runTest {
             val client = ScriptedClient()
-            var stalledRelays: Set<NormalizedRelayUrl>? = null
             launch {
                 delay(100)
                 client.listener!!.onEvent(event(1), false, relay, null)
@@ -108,14 +110,13 @@ class FetchAllIdleTimeoutTest {
                 // …then the relay goes quiet without ever sending EOSE.
             }
             val start = currentTime
-            val collected =
+            val result =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
                     idleTimeoutMs = 300,
-                    onTimeout = { stalled, _, _ -> stalledRelays = stalled },
                 ) { _, _ -> true }
-            assertEquals(2, collected.size, "events before the stall are kept")
-            assertEquals(setOf(relay), stalledRelays, "the stalled relay is reported")
+            assertEquals(2, result.events.size, "events before the stall are kept")
+            assertEquals(setOf(relay), result.stalled, "the stalled relay is reported")
             // Ended ~one idle window after the LAST message (200 + 300), not the start.
             assertEquals(500L, currentTime - start, "the window restarts on every message")
         }
@@ -143,15 +144,16 @@ class FetchAllIdleTimeoutTest {
         }
 
     @Test
-    fun wallClockCapStopsAnEndlessTrickle() =
+    fun anEndlessTrickleIsBoundedByTheCaller() =
         runTest {
             val client = ScriptedClient()
-            var stalledRelays: Set<NormalizedRelayUrl>? = null
             val feeder =
                 launch {
-                    // A relay that trickles forever, always inside the idle
-                    // window, never reaching a terminal state — without the cap
-                    // this fetch would never return.
+                    // A relay that trickles forever, always inside the idle window,
+                    // never reaching a terminal state. The accessory has no internal
+                    // wall-clock ceiling — by design, since it cannot tell this from a
+                    // relay legitimately streaming a large backlog. It is a suspending
+                    // function, so the caller composes the hard deadline.
                     var i = 0
                     while (true) {
                         delay(200)
@@ -160,17 +162,15 @@ class FetchAllIdleTimeoutTest {
                 }
             val start = currentTime
             val collected =
-                client.fetchAllWithHooks(
-                    filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
-                    idleTimeoutMs = 300,
-                    maxTotalMs = 1_000,
-                    onTimeout = { stalled, _, _ -> stalledRelays = stalled },
-                ) { _, _ -> true }
+                withTimeoutOrNull(1_000) {
+                    client.fetchAllWithHooks(
+                        filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
+                        idleTimeoutMs = 300,
+                    ) { _, _ -> true }
+                }
             feeder.cancel()
-            val elapsed = currentTime - start
-            assertTrue(elapsed in 1_000..1_300, "the cap must stop the fetch near maxTotalMs, took $elapsed")
-            assertTrue(collected.size in 4..6, "events before the cap are kept, got ${collected.size}")
-            assertEquals(setOf(relay), stalledRelays, "the capped relay is reported to onTimeout")
+            assertNull(collected, "the caller's withTimeoutOrNull is what stops an endless trickle")
+            assertEquals(1_000L, currentTime - start, "and it stops at the caller's deadline")
         }
 
     @Test
@@ -183,12 +183,54 @@ class FetchAllIdleTimeoutTest {
                 client.listener!!.onEose(relay, null)
             }
             val start = currentTime
-            val collected =
+            val result =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
                     idleTimeoutMs = 300,
                 ) { _, _ -> true }
-            assertEquals(1, collected.size)
+            assertEquals(1, result.events.size)
             assertTrue(currentTime - start < 300, "a terminal EOSE must not wait out the window")
+            assertEquals(mapOf(relay to DONE_REASON_EOSE), result.doneReasons)
+            assertTrue(result.stalled.isEmpty(), "a relay that reached EOSE never counts as stalled")
+            assertTrue(result.anyRelayServed)
+        }
+
+    /**
+     * The partition [FetchAllResult] exists to express: every relay lands in exactly one
+     * of served / failed / stalled, and `dead` is derived from the reasons rather than
+     * tracked separately. Pins that a relay which ANSWERED is never reported as stalled —
+     * the confusion that makes an empty result look like an absence and lets a
+     * read-merge-write delete what it could not read.
+     */
+    @Test
+    fun aMixedFetchPartitionsRelaysByWhatEachOneDid() =
+        runTest {
+            val served = RelayUrlNormalizer.normalize("wss://served.example.com")
+            val broken = RelayUrlNormalizer.normalize("wss://broken.example.com")
+            val silent = RelayUrlNormalizer.normalize("wss://silent.example.com")
+            val client = ScriptedClient()
+            launch {
+                delay(50)
+                client.listener!!.onEvent(event(1), false, served, null)
+                client.listener!!.onEose(served, null)
+                client.listener!!.onCannotConnect(broken, "Connection refused", null)
+                // `silent` never reports anything, so only IT should time out.
+            }
+            val result =
+                client.fetchAllWithHooks(
+                    filters = listOf(served, broken, silent).associateWith { listOf(Filter(kinds = listOf(1))) },
+                    idleTimeoutMs = 300,
+                ) { _, _ -> true }
+
+            assertEquals(listOf(served), result.events.map { it.first })
+            assertEquals(DONE_REASON_EOSE, result.doneReasons[served])
+            assertTrue(result.doneReasons[broken]?.startsWith("cannot") == true)
+            assertNull(result.doneReasons[silent], "nobody told us anything about a stalled relay")
+            assertEquals(setOf(silent), result.stalled, "only the relay that never answered stalls")
+            // Derived, not tracked: a refused connection is DEAD, and the two relays that
+            // did answer (or never spoke) contribute nothing.
+            assertEquals(mapOf(broken to DrainFailure.DEAD), result.dead)
+            assertTrue(result.anyRelayServed, "one relay reached EOSE, so an empty result would mean absence")
+            assertTrue(result.authRefused.isEmpty())
         }
 }
