@@ -396,6 +396,12 @@ dependencies {
     // instead of duplicating the key in the Android res tree.
     implementation(libs.jetbrains.compose.components.resources)
     implementation(libs.androidx.core.ktx)
+
+    // Installs assets/dexopt/baseline.prof on first run. Play applies the profile at
+    // install time via the .dm, but F-Droid builds have no store-side profile delivery
+    // and no Cloud Profiles at all — there, this library is the only thing that gets
+    // the shipped baseline profile into ART.
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.androidx.activity.compose)
 
     // Hardened WebView host for sandboxed napplet/nsite rendering (origin-restricted message bridge).
