@@ -356,7 +356,12 @@ private fun PollTypeChip(state: PollResultsUiState) {
         Text(
             // Selections only differ from voters when people can tick more than one box, and this
             // chip is what explains why the bars below may sum past 100% — so it carries the count.
-            text = if (state.totalSelections != state.totalVoters) type + " " + stringRes(R.string.poll_results_selections, state.totalSelections) else type,
+            text =
+                if (state.totalSelections != state.totalVoters) {
+                    type + " " + pluralStringResource(R.plurals.poll_results_selections, state.totalSelections, state.totalSelections)
+                } else {
+                    type
+                },
             style = MaterialTheme.typography.labelMedium,
             color = gray,
         )
