@@ -201,20 +201,19 @@ class AccountConcordActions(
         // served us and had nothing AND when nothing answered at all (cannot-connect, CLOSED, idle
         // timeout). Treating the second as "no list yet" is precisely how a read-merge-write wipes
         // the signer_sk of every link it failed to read, so the two must be told apart.
-        val reasons = mutableMapOf<NormalizedRelayUrl, String>()
-        val events =
+        val result =
             account.client.fetchAllWithHooks(
                 filters = relays.associateWith { listOf(filter) },
-                doneOut = reasons,
             ) { _, _ -> true }
 
         val newest =
-            events
+            result
+                .events
                 .mapNotNull { it.second as? ConcordInviteListEvent }
                 // Filter by kind BEFORE picking the newest: taking the newest of anything and then
                 // casting means one stray event at this coordinate reads as "unreadable" forever.
                 .maxByOrNull { it.createdAt }
-                ?: return if (reasons.anyRelayServed()) {
+                ?: return if (result.anyRelayServed) {
                     ConcordInviteListDocument.EMPTY // a relay answered and had nothing — safe to start one
                 } else {
                     null // nobody answered; we know nothing about what is published

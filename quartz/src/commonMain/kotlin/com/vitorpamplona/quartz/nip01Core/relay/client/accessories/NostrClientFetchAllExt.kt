@@ -121,6 +121,7 @@ suspend fun INostrClient.fetchAll(
         idleTimeoutMs = idleTimeoutMs,
         subscriptionId = subscriptionId,
     ) { _, event -> seenIds.add(event.id) }
+        .events
         .map { it.second }
         .sortedWith(DefaultFeedOrderEvent)
 }

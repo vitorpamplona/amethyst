@@ -728,15 +728,15 @@ object ConcordCommands {
         // Terminal reasons, not just events: a drain returns nothing both when a relay served us and
         // had nothing AND when nobody answered. Reading the second as "no list yet" is how the
         // read-merge-write below wipes the signer_sk of every link it failed to read.
-        val reasons = mutableMapOf<NormalizedRelayUrl, String>()
+        val result = ctx.drainResult(relays.associateWith { listOf(filter) })
         val newest =
-            ctx
-                .drain(relays.associateWith { listOf(filter) }, doneOut = reasons)
+            result
+                .events
                 // Filter by kind BEFORE picking the newest — a stray event at this coordinate would
                 // otherwise make the list read as unreadable and refuse every later write.
                 .mapNotNull { it.second as? ConcordInviteListEvent }
                 .maxByOrNull { it.createdAt }
-                ?: return if (reasons.anyRelayServed()) ConcordInviteListDocument.EMPTY else null
+                ?: return if (result.anyRelayServed) ConcordInviteListDocument.EMPTY else null
         return newest.decrypt(ctx.signer)
     }
 

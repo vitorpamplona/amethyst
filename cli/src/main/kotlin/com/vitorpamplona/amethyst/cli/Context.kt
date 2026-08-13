@@ -38,7 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.AdaptiveRelayLimiter
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DrainFailure
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.FetchAllResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PublishResult
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPoolWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
@@ -581,24 +581,30 @@ class Context(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         idleTimeoutMs: Long = 8_000,
         diagnoseSlow: Boolean = false,
-        deadOut: MutableMap<NormalizedRelayUrl, DrainFailure>? = null,
         pendingOnAuthRequired: Boolean = false,
-        /** Per-relay terminal reason, so a caller can tell an empty answer from no answer. */
-        doneOut: MutableMap<NormalizedRelayUrl, String>? = null,
-    ): List<Pair<NormalizedRelayUrl, Event>> =
-        client.fetchAllWithHooks(
-            filters = filters,
-            idleTimeoutMs = idleTimeoutMs,
-            pendingOnAuthRequired = pendingOnAuthRequired,
-            deadOut = deadOut,
-            doneOut = doneOut,
-            onTimeout =
-                if (diagnoseSlow) {
-                    { stalled, doneReasons, collected -> logSlowDrain(idleTimeoutMs, stalled, doneReasons, collected) }
-                } else {
-                    null
-                },
-        ) { _, event -> verifyAndStore(event) }
+    ): List<Pair<NormalizedRelayUrl, Event>> = drainResult(filters, idleTimeoutMs, diagnoseSlow, pendingOnAuthRequired).events
+
+    /**
+     * [drain] keeping the whole [FetchAllResult] rather than just its events, for the
+     * callers that must tell "a relay answered and had nothing" from "nobody answered"
+     * — see [FetchAllResult.anyRelayServed]. Reach for this before a read-merge-write
+     * on a replaceable event.
+     */
+    suspend fun drainResult(
+        filters: Map<NormalizedRelayUrl, List<Filter>>,
+        idleTimeoutMs: Long = 8_000,
+        diagnoseSlow: Boolean = false,
+        pendingOnAuthRequired: Boolean = false,
+    ): FetchAllResult {
+        val result =
+            client.fetchAllWithHooks(
+                filters = filters,
+                idleTimeoutMs = idleTimeoutMs,
+                pendingOnAuthRequired = pendingOnAuthRequired,
+            ) { _, event -> verifyAndStore(event) }
+        if (diagnoseSlow && result.stalled.isNotEmpty()) logSlowDrain(idleTimeoutMs, result)
+        return result
+    }
 
     /**
      * On a [drain] timeout, report which relays stalled and why — a relay that
@@ -609,11 +615,11 @@ class Context(
      */
     private fun logSlowDrain(
         idleTimeoutMs: Long,
-        stalled: Set<NormalizedRelayUrl>,
-        doneReasons: Map<NormalizedRelayUrl, String>,
-        collected: List<Pair<NormalizedRelayUrl, Event>>,
+        result: FetchAllResult,
     ) {
-        val eventsPer = collected.groupingBy { it.first }.eachCount()
+        val stalled = result.stalled
+        val doneReasons = result.doneReasons
+        val eventsPer = result.events.groupingBy { it.first }.eachCount()
         val cannot = doneReasons.filterValues { it.startsWith("cannot") }
         val closed = doneReasons.filterValues { it.startsWith("closed") }
         val slowDetail = stalled.take(12).joinToString(", ") { "${it.url}(${eventsPer[it] ?: 0}ev)" }

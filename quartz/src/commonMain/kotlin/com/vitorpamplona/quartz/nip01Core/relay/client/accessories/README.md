@@ -60,10 +60,10 @@ knowing:
   only escape. An explicit `ensureActive()` now plays that role (as it already did
   per-page in `fetchAllPages`), and `FetchAllCancellationTest` pins it. Second,
   **cancelling discards more than the cap did**: the cap returned the events
-  collected so far and filled `doneOut` / `deadOut` on its way out, whereas
-  cancellation unwinds the stack — cleanup still runs, but the results, the
-  terminal-reason maps, and `onTimeout` are all lost. Accumulate inside `onEvent`
-  when the partial results matter.
+  collected so far and its terminal-reason maps on its way out, whereas
+  cancellation unwinds the stack — cleanup still runs, but the whole
+  `FetchAllResult` is lost. Accumulate inside `onEvent` when the partial results
+  matter.
 
 The write side is its own case: `publishAndConfirm`'s `timeoutInSeconds` is a fixed
 window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
@@ -95,13 +95,13 @@ relay rejects ends on the `OK false`; only a prompt nobody ever answers reaches 
 window.
 
 **An unsatisfied wall is visible, and it is not a dead relay.** It gets its own
-terminal reason (`auth-refused:<msg>` — read it with `doneOut.authRefusedRelays()`),
+terminal reason (`auth-refused:<msg>` — read it with `FetchAllResult.authRefused`),
 its own `PagedFetchResult.End.AUTH_REQUIRED`, and its own
 `DrainFailure.AUTH_REQUIRED`, which reports `dropFromRouting = false`: the relay
 answered, and serves the same query to a connection carrying an identity it accepts.
 Test `dropFromRouting` rather than comparing to `DEAD`, so a reader written today
-survives the enum growing. An absent `doneOut` entry still means only one thing —
-nobody told us — and never "auth-gated".
+survives the enum growing. An absent `doneReasons` entry still means only one thing —
+nobody told us (the relay is in `stalled`) — and never "auth-gated".
 
 **AUTH is per-connection, so do not write a retry loop.** Once a socket has
 authenticated, later `REQ`s on it are simply served (`aSecondFetchOnAnAuthenticated…`
@@ -116,7 +116,7 @@ pins this). The accessories already wait for the first challenge to resolve, so
 | `fetchFirst(relay, filter, idleTimeoutMs)` | `NostrClientFetchFirstExt` | Get the first matching event and stop (returns `null` on none/timeout — or on an auth wall it could not get over; see NIP-42 above). |
 | `fetchAllPages(relay, filters, idleTimeoutMs)` | `NostrClientFetchAllPagesExt` | Fully retrieve a result set larger than the relay's per-REQ cap (strfry `limit`, ~500) by walking a `created_at` cursor. Bound it with the filter's `limit`. Reports **why** the walk stopped via `PagedFetchResult.End` — only `DRAINED` proves absence. |
 | `fetchAllPagesFromPool(filters, ...)` | `NostrClientFetchAllPagesPoolExt` | Same paging, across several relays at once. No cross-relay dedup — the `WithHooks` variant below dedups. |
-| `fetchAllWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAll` with a suspending per-`(relay, event)` accept hook (verify+store as events arrive), per-relay terminal-reason tracking, optional dead-relay collection (`deadOut` + `classifyDrainFailure`), keep-pending-on-`auth-required` CLOSED bounded by the AUTH's own outcome (NIP-42, above), and a timeout diagnostic hook. |
+| `fetchAllWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAll` with a suspending per-`(relay, event)` accept hook (verify+store as events arrive), returning a `FetchAllResult` — events plus per-relay terminal reasons, the stalled set, and derived `dead` / `anyRelayServed` / `authRefused` views. Also keeps a relay pending on an `auth-required` CLOSED, bounded by the AUTH's own outcome (NIP-42, above). |
 | `fetchAllPagesFromPoolWithHooks(filters, ...)` | `NostrClientFetchAllWithHooksExt` | `fetchAllPagesFromPool` with the same suspending accept hook, run single-threaded in one consumer; deduped across relays by `SeenIds` before the hook. |
 
 ## Streaming (`Flow`)

@@ -89,20 +89,19 @@ class FetchAllIdleTimeoutTest {
                     delay(100)
                     client.listener!!.onEose(relay, null)
                 }
-            val collected =
+            val result =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
                     idleTimeoutMs = 300,
                 ) { _, _ -> true }
             feeder.join()
-            assertEquals(10, collected.size, "an actively streaming relay must never be cropped")
+            assertEquals(10, result.events.size, "an actively streaming relay must never be cropped")
         }
 
     @Test
     fun silenceEndsTheFetchAfterOneIdleWindow() =
         runTest {
             val client = ScriptedClient()
-            var stalledRelays: Set<NormalizedRelayUrl>? = null
             launch {
                 delay(100)
                 client.listener!!.onEvent(event(1), false, relay, null)
@@ -111,14 +110,13 @@ class FetchAllIdleTimeoutTest {
                 // …then the relay goes quiet without ever sending EOSE.
             }
             val start = currentTime
-            val collected =
+            val result =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
                     idleTimeoutMs = 300,
-                    onTimeout = { stalled, _, _ -> stalledRelays = stalled },
                 ) { _, _ -> true }
-            assertEquals(2, collected.size, "events before the stall are kept")
-            assertEquals(setOf(relay), stalledRelays, "the stalled relay is reported")
+            assertEquals(2, result.events.size, "events before the stall are kept")
+            assertEquals(setOf(relay), result.stalled, "the stalled relay is reported")
             // Ended ~one idle window after the LAST message (200 + 300), not the start.
             assertEquals(500L, currentTime - start, "the window restarts on every message")
         }
@@ -185,12 +183,12 @@ class FetchAllIdleTimeoutTest {
                 client.listener!!.onEose(relay, null)
             }
             val start = currentTime
-            val collected =
+            val result =
                 client.fetchAllWithHooks(
                     filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
                     idleTimeoutMs = 300,
                 ) { _, _ -> true }
-            assertEquals(1, collected.size)
+            assertEquals(1, result.events.size)
             assertTrue(currentTime - start < 300, "a terminal EOSE must not wait out the window")
         }
 }
