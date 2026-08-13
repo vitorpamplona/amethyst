@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip94FileMetadata.tags
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -76,14 +77,55 @@ class DimensionTagTest {
 
     /**
      * [rejectsZeroByZero] passes by comparing the string, so the float path of the Primal
-     * tolerance above reaches the same 0x0 value by truncation and is kept.
+     * tolerance above reaches the same 0x0 pixel counts by truncation and is kept.
      */
     @Test
-    fun zeroSizedFloatsSlipPastTheZeroByZeroRejection() {
+    fun subPixelFloatsTruncateToNoPixels() {
         val tag = DimensionTag.parse("0.4x0.4")
         assertNotNull(tag)
         assertEquals(0, tag.width)
         assertEquals(0, tag.height)
+        assertFalse(tag.hasSize())
+    }
+
+    /**
+     * ...but the shape the author declared survives that truncation. A square is a square whether
+     * it was declared as "0.4x0.4" or "400x400"; only the pixel counts are unusable.
+     */
+    @Test
+    fun subPixelFloatsKeepTheDeclaredShape() {
+        assertEquals(1f, DimensionTag.parse("0.4x0.4")?.aspectRatioOrNull())
+        assertEquals(0.75f, DimensionTag.parse("0.75x1")?.aspectRatioOrNull())
+        assertEquals(2f, DimensionTag.parse("0.5x0.25")?.aspectRatioOrNull())
+    }
+
+    /**
+     * The declared ratio wins over the truncated one wherever they differ, being the more faithful
+     * of the two. They differ only for fractional dims — for whole numbers it is the same number.
+     */
+    @Test
+    fun declaredRatioBeatsTheTruncatedOne() {
+        val tag = DimensionTag.parse("317.9x498.4")
+        assertNotNull(tag)
+        assertEquals((317.9 / 498.4).toFloat(), tag.aspectRatioOrNull())
+        assertEquals(317f / 498f, tag.aspectRatio())
+    }
+
+    @Test
+    fun wholeNumberDimsAreUnaffected() {
+        val tag = DimensionTag.parse("1920x1080")
+        assertNotNull(tag)
+        assertEquals(tag.aspectRatio(), tag.aspectRatioOrNull())
+    }
+
+    /**
+     * The declared ratio is derived from the tag text, so it is not serialized — a tag rebuilt
+     * from its width and height falls back to the pixel counts rather than carrying a stale one.
+     */
+    @Test
+    fun aDirectlyConstructedTagFallsBackToPixelCounts() {
+        assertEquals(1920f / 1080f, DimensionTag(1920, 1080).aspectRatioOrNull())
+        assertNull(DimensionTag(0, 0).aspectRatioOrNull())
     }
 
     /**
@@ -96,9 +138,15 @@ class DimensionTagTest {
         assertEquals(0f, DimensionTag(0, 100).aspectRatio())
     }
 
+    /**
+     * A fractional dim keeps its shape (see [subPixelFloatsKeepTheDeclaredShape]); one that
+     * declares no shape at all still has to come back null, since `Modifier.aspectRatio` throws on
+     * everything this would otherwise produce.
+     */
     @Test
-    fun aspectRatioOrNullRefusesEverySizeALayoutCannotUse() {
-        assertNull(DimensionTag.parse("0.4x0.4")?.aspectRatioOrNull())
+    fun aspectRatioOrNullRefusesEveryShapeALayoutCannotUse() {
+        assertNull(DimensionTag.parse("0x5")?.aspectRatioOrNull())
+        assertNull(DimensionTag.parse("-3x4")?.aspectRatioOrNull())
         assertNull(DimensionTag(0, 0).aspectRatioOrNull())
         assertNull(DimensionTag(100, 0).aspectRatioOrNull())
         assertNull(DimensionTag(0, 100).aspectRatioOrNull())
