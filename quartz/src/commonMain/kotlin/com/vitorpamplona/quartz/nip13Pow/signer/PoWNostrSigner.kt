@@ -41,6 +41,11 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
  *
  * [workers] parallel searches race over disjoint nonce slices (see
  * [PoWMiner.mine]); 1 keeps the historical single-threaded behavior.
+ *
+ * [refreshCreatedAt] keeps the timestamp current while mining, as NIP-13
+ * recommends; null (the default) mines against the createdAt the caller passed
+ * to [sign]. Only the mined kinds are affected — pass-through kinds always keep
+ * their original timestamp.
  */
 class PoWNostrSigner(
     val signer: NostrSigner,
@@ -48,6 +53,7 @@ class PoWNostrSigner(
     val kindsToMine: Set<Int>,
     val isActive: () -> Boolean = { true },
     val workers: Int = 1,
+    val refreshCreatedAt: (() -> Long)? = null,
 ) : NostrSigner(signer.pubKey) {
     override fun isWriteable(): Boolean = signer.isWriteable()
 
@@ -65,6 +71,7 @@ class PoWNostrSigner(
                     desiredPoW = desiredPoW,
                     workers = workers,
                     isActive = isActive,
+                    refreshCreatedAt = refreshCreatedAt,
                 )
             signer.sign(mined.createdAt, mined.kind, mined.tags, mined.content)
         } else {

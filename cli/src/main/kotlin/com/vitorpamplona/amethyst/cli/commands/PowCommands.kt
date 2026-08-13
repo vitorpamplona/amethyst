@@ -168,9 +168,9 @@ object PowCommands {
         val mined =
             try {
                 withContext(Dispatchers.Default) {
-                    PoWMiner.mine(template, pubKey, target, threads) {
+                    PoWMiner.mine(template, pubKey, target, threads, isActive = {
                         deadlineNanos == null || System.nanoTime() < deadlineNanos
-                    }
+                    })
                 }
             } catch (e: CancellationException) {
                 Output.error("timeout", "pow: did not reach $target bits within ${timeoutSec}s")

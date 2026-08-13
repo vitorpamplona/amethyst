@@ -191,45 +191,51 @@ class PoWPublishQueue(
      * id. Re-enqueueing an id already in the queue is a no-op — that makes
      * restore-on-login idempotent.
      *
-     * [refreshCreatedAtOnStart] re-stamps the template's created_at to "now"
-     * when a worker picks the job up — NIP-13 recommends updating created_at
-     * while mining, and a job that waited in the queue (or was restored after
-     * a process death) would otherwise publish visibly in the past. Must stay
-     * false for scheduled posts, whose future created_at is intentional.
+     * [refreshCreatedAt] keeps the template's created_at current — re-stamped to
+     * "now" when a worker picks the job up, and again roughly once a second for
+     * as long as the miner runs. NIP-13 recommends updating created_at while
+     * mining, and a job that waited in the queue (or was restored after a
+     * process death, or simply mined for two minutes) would otherwise publish
+     * visibly in the past. Must stay false for scheduled posts, whose future
+     * created_at is intentional.
      */
     fun <T : Event> enqueue(
         template: EventTemplate<T>,
         pubKey: HexKey,
         difficulty: Int,
         persistAs: PersistedPoWJob? = null,
-        refreshCreatedAtOnStart: Boolean = false,
+        refreshCreatedAt: Boolean = false,
         onMined: suspend (EventTemplate<T>) -> Unit,
-    ) = enqueueStaged(
-        kind = template.kind,
-        difficulty = difficulty,
-        persistAs = persistAs,
-        owner = pubKey,
-        mine = { isActive ->
-            val toMine =
-                if (refreshCreatedAtOnStart) {
-                    EventTemplate<T>(TimeUtils.now(), template.kind, template.tags, template.content)
+    ) {
+        val clock = if (refreshCreatedAt) TimeUtils::now else null
+
+        enqueueStaged(
+            kind = template.kind,
+            difficulty = difficulty,
+            persistAs = persistAs,
+            owner = pubKey,
+            mine = { isActive ->
+                val toMine =
+                    if (clock != null) {
+                        EventTemplate<T>(clock(), template.kind, template.tags, template.content)
+                    } else {
+                        template
+                    }
+                PoWMiner.mine(toMine, pubKey, difficulty, minerThreads, isActive, clock)
+            },
+            publish = onMined,
+            // send-now fallback: the same template, minus the nonce the miner would
+            // have added. created_at follows the mined path — refreshed to "now" for
+            // ordinary posts, left intact for scheduled ones.
+            sendWithoutPow = {
+                if (clock != null) {
+                    EventTemplate<T>(clock(), template.kind, template.tags, template.content)
                 } else {
                     template
                 }
-            PoWMiner.mine(toMine, pubKey, difficulty, minerThreads, isActive)
-        },
-        publish = onMined,
-        // send-now fallback: the same template, minus the nonce the miner would
-        // have added. created_at follows the mined path — refreshed to "now" for
-        // ordinary posts, left intact for scheduled ones.
-        sendWithoutPow = {
-            if (refreshCreatedAtOnStart) {
-                EventTemplate<T>(TimeUtils.now(), template.kind, template.tags, template.content)
-            } else {
-                template
-            }
-        },
-    )
+            },
+        )
+    }
 
     /**
      * The staged primitive behind [enqueue]: [mine] runs on the capped worker

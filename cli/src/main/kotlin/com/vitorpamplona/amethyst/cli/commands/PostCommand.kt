@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.pow
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -89,9 +90,14 @@ object PostCommand {
                     val mined =
                         try {
                             withContext(Dispatchers.Default) {
-                                PoWMiner.mine(template, ctx.signer.pubKey, powTarget, threads) {
-                                    deadlineNanos == null || System.nanoTime() < deadlineNanos
-                                }
+                                PoWMiner.mine(
+                                    template,
+                                    ctx.signer.pubKey,
+                                    powTarget,
+                                    threads,
+                                    isActive = { deadlineNanos == null || System.nanoTime() < deadlineNanos },
+                                    refreshCreatedAt = TimeUtils::now,
+                                )
                             }
                         } catch (e: CancellationException) {
                             Output.error("timeout", "pow: did not reach $powTarget bits within ${powTimeoutSec}s; nothing was published")

@@ -204,7 +204,7 @@ object GeochatCommands {
             val deadline = System.nanoTime() + args.longFlag("pow-timeout", DEFAULT_POW_TIMEOUT_SECS) * 1_000_000_000L
             template =
                 withContext(Dispatchers.Default) {
-                    PoWMiner.mine(template, keyPair.pubKey.toHexKey(), powBits, defaultThreads()) { System.nanoTime() < deadline }
+                    PoWMiner.mine(template, keyPair.pubKey.toHexKey(), powBits, defaultThreads(), isActive = { System.nanoTime() < deadline })
                 }
         }
         val event = signer.sign(template)

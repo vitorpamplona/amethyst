@@ -1105,7 +1105,7 @@ open class ShortNotePostViewModel :
                         // fresh created_at at mining start (NIP-13 recommendation):
                         // the job may have waited in the queue behind other posts.
                         val fresh = EventTemplate<Event>(TimeUtils.now(), template.kind, template.tags, template.content)
-                        val mined = PoWMiner.mine(fresh, anonSigner.pubKey, powDifficulty, accountViewModel.account.powMinerWorkers(), isActive)
+                        val mined = PoWMiner.mine(fresh, anonSigner.pubKey, powDifficulty, accountViewModel.account.powMinerWorkers(), isActive, TimeUtils::now)
                         accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
                         accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
                     }
