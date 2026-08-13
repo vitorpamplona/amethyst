@@ -157,4 +157,19 @@ class DimensionTagTest {
     fun aspectRatioOrNullKeepsUsableSizes() {
         assertEquals(317f / 498f, DimensionTag(317, 498).aspectRatioOrNull())
     }
+
+    /**
+     * `"NaN"` and `"Infinity"` are legal input to Kotlin's `String.toDouble()` and a relay can
+     * carry either, so both reach the ratio maths. The `<= 0.0` rejection cannot stop `NaN` —
+     * every comparison against it is false — which is why the finite check is the one holding the
+     * line. Whatever comes out, it is never a shape a layout would throw on.
+     */
+    @Test
+    fun nonNumericDoublesNeverProduceAnUnusableShape() {
+        assertNull(DimensionTag.parse("NaNxNaN")?.aspectRatioOrNull())
+        assertNull(DimensionTag.parse("0.4xNaN")?.aspectRatioOrNull())
+
+        // Infinity saturates to Int.MAX_VALUE on both axes: garbage in, square out, never a throw.
+        assertEquals(1f, DimensionTag.parse("InfinityxInfinity")?.aspectRatioOrNull())
+    }
 }
