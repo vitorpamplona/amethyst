@@ -164,7 +164,7 @@ suspend fun INostrClient.fetchAllWithHooks(
                         return
                     }
                     // Not waiting — but still NAME the wall. What the relay said does not depend on
-                    // whether we chose to answer it, and a caller reading `doneOut` wants to know it
+                    // whether we chose to answer it, and a caller reading the reasons wants to know it
                     // gave up on an auth wall rather than on a policy refusal it can do nothing
                     // about. This is what [fetchAllPages] already does with End.AUTH_REQUIRED, and
                     // leaving it as a plain `closed:` here is what would make
@@ -312,7 +312,8 @@ const val DONE_REASON_AUTH_REFUSED = "auth-refused"
 /**
  * True when at least one relay completed the fetch normally, i.e. answered and reached EOSE.
  *
- * Read against the map filled by `fetchAllWithHooks`'s `doneOut`. An empty event list means
+ * Read against [FetchAllResult.doneReasons] (or via [FetchAllResult.anyRelayServed], which is
+ * exactly this). An empty event list means
  * "nothing matched" only when this is true; otherwise it means "nobody told us", and a caller
  * that overwrites a replaceable event on that basis deletes whatever it could not read.
  */
@@ -321,7 +322,8 @@ fun Map<NormalizedRelayUrl, String>.anyRelayServed(): Boolean = values.any { it 
 /**
  * The relays that turned us away at a NIP-42 wall — see [DONE_REASON_AUTH_REFUSED].
  *
- * Read against `doneOut`. These are emphatically *not* dead relays: they answered, and they
+ * Read against [FetchAllResult.doneReasons] (or via [FetchAllResult.authRefused], which is
+ * exactly this). These are emphatically *not* dead relays: they answered, and they
  * will serve the same query on a connection carrying an identity they accept. A caller
  * recording coverage should mark them unmeasured-and-fixable rather than empty, and one
  * routing reads should keep them for a session that holds the right signer.

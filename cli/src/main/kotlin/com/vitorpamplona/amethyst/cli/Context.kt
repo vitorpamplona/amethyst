@@ -563,11 +563,11 @@ class Context(
      * Thin adapter over the shared [fetchAllWithHooks] accessory: every arriving
      * event is verified + persisted via [verifyAndStore] before it is surfaced.
      *
-     * When [deadOut] is provided, every relay that reported it could not be
-     * connected to (`onCannotConnect`) is added to it, so callers can prune
-     * proven-dead relays from future routing instead of paying the full
-     * [idleTimeoutMs] on them again. Slow-but-connected relays are NOT reported —
-     * only hard connect failures, so a temporarily-busy relay isn't discarded.
+     * Returns the events only. Use [drainResult] when the per-relay outcome matters:
+     * it carries `FetchAllResult.dead` (relays that reported they could not be
+     * connected to, so callers can prune them from future routing instead of paying
+     * the full [idleTimeoutMs] on them again — slow-but-connected relays and 429s are
+     * deliberately absent) and `FetchAllResult.anyRelayServed`.
      *
      * With [pendingOnAuthRequired], a relay that refuses the REQ with an
      * `auth-required` CLOSED is kept pending rather than treated as terminal: the

@@ -89,6 +89,10 @@ class FetchAllResult(
      * True when at least one relay completed normally, i.e. answered and reached EOSE.
      * An empty [events] means "nothing matched" only when this is true; otherwise it
      * means "nobody told us".
+     *
+     * Computed per access rather than cached: it short-circuits on the first EOSE and
+     * allocates nothing, so a `lazy` holder would cost more than the scan it saves.
+     * The two views that DO allocate ([dead], [authRefused]) are cached instead.
      */
     val anyRelayServed: Boolean get() = doneReasons.anyRelayServed()
 
@@ -97,5 +101,5 @@ class FetchAllResult(
      * Emphatically not dead relays: they answered, and will serve the same query on a
      * connection carrying an identity they accept.
      */
-    val authRefused: Set<NormalizedRelayUrl> get() = doneReasons.authRefusedRelays()
+    val authRefused: Set<NormalizedRelayUrl> by lazy { doneReasons.authRefusedRelays() }
 }

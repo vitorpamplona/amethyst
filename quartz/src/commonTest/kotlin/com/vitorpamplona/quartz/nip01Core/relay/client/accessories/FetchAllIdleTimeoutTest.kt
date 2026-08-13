@@ -190,5 +190,47 @@ class FetchAllIdleTimeoutTest {
                 ) { _, _ -> true }
             assertEquals(1, result.events.size)
             assertTrue(currentTime - start < 300, "a terminal EOSE must not wait out the window")
+            assertEquals(mapOf(relay to DONE_REASON_EOSE), result.doneReasons)
+            assertTrue(result.stalled.isEmpty(), "a relay that reached EOSE never counts as stalled")
+            assertTrue(result.anyRelayServed)
+        }
+
+    /**
+     * The partition [FetchAllResult] exists to express: every relay lands in exactly one
+     * of served / failed / stalled, and `dead` is derived from the reasons rather than
+     * tracked separately. Pins that a relay which ANSWERED is never reported as stalled —
+     * the confusion that makes an empty result look like an absence and lets a
+     * read-merge-write delete what it could not read.
+     */
+    @Test
+    fun aMixedFetchPartitionsRelaysByWhatEachOneDid() =
+        runTest {
+            val served = RelayUrlNormalizer.normalize("wss://served.example.com")
+            val broken = RelayUrlNormalizer.normalize("wss://broken.example.com")
+            val silent = RelayUrlNormalizer.normalize("wss://silent.example.com")
+            val client = ScriptedClient()
+            launch {
+                delay(50)
+                client.listener!!.onEvent(event(1), false, served, null)
+                client.listener!!.onEose(served, null)
+                client.listener!!.onCannotConnect(broken, "Connection refused", null)
+                // `silent` never reports anything, so only IT should time out.
+            }
+            val result =
+                client.fetchAllWithHooks(
+                    filters = listOf(served, broken, silent).associateWith { listOf(Filter(kinds = listOf(1))) },
+                    idleTimeoutMs = 300,
+                ) { _, _ -> true }
+
+            assertEquals(listOf(served), result.events.map { it.first })
+            assertEquals(DONE_REASON_EOSE, result.doneReasons[served])
+            assertTrue(result.doneReasons[broken]?.startsWith("cannot") == true)
+            assertNull(result.doneReasons[silent], "nobody told us anything about a stalled relay")
+            assertEquals(setOf(silent), result.stalled, "only the relay that never answered stalls")
+            // Derived, not tracked: a refused connection is DEAD, and the two relays that
+            // did answer (or never spoke) contribute nothing.
+            assertEquals(mapOf(broken to DrainFailure.DEAD), result.dead)
+            assertTrue(result.anyRelayServed, "one relay reached EOSE, so an empty result would mean absence")
+            assertTrue(result.authRefused.isEmpty())
         }
 }
