@@ -33,6 +33,7 @@ rootProject.name = "Amethyst"
 include(":amethyst")
 include(":nappletHost")
 include(":benchmark")
+include(":baselineprofile")
 include(":quartz")
 include(":geode")
 include(":commons")
