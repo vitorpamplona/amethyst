@@ -448,7 +448,7 @@ open class ChannelNewMessageViewModel :
                 val deadline = System.nanoTime() + 2_000_000_000L
                 val threads = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
                 runCatching {
-                    PoWMiner.mine(template, pubKeyHex, 8, threads) { System.nanoTime() < deadline }
+                    PoWMiner.mine(template, pubKeyHex, 8, threads, isActive = { System.nanoTime() < deadline })
                 }.getOrDefault(template)
             }
 

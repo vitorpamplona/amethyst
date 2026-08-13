@@ -617,10 +617,10 @@ open class CommentPostViewModel :
             val enqueued =
                 powDifficulty != null &&
                     accountViewModel.account.mineInBackground(template.kind, powDifficulty) { isActive ->
-                        // fresh created_at at mining start (NIP-13 recommendation):
-                        // the job may have waited in the queue behind other posts.
-                        val fresh = EventTemplate<Event>(TimeUtils.now(), template.kind, template.tags, template.content)
-                        val mined = PoWMiner.mine(fresh, anonSigner.pubKey, powDifficulty, accountViewModel.account.powMinerWorkers(), isActive)
+                        // the clock keeps created_at current for the whole run
+                        // (NIP-13 recommendation), starting from the moment a worker
+                        // picks the job up rather than when it was queued.
+                        val mined = PoWMiner.mine(template, anonSigner.pubKey, powDifficulty, accountViewModel.account.powMinerWorkers(), isActive, TimeUtils::now)
                         accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
                         accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
                     }

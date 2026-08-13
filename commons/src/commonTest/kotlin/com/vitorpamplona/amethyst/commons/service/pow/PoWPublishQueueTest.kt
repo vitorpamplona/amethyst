@@ -244,7 +244,7 @@ class PoWPublishQueueTest {
             val mined = CompletableDeferred<EventTemplate<TextNoteEvent>>()
 
             // template stamped in 2023; refresh must bring it to "now"
-            queue.enqueue(template, pubKey, difficulty = 10, refreshCreatedAtOnStart = true) { mined.complete(it) }
+            queue.enqueue(template, pubKey, difficulty = 10, refreshCreatedAt = true) { mined.complete(it) }
 
             val result = withContext(Dispatchers.Default) { withTimeout(60_000) { mined.await() } }
             assertTrue(

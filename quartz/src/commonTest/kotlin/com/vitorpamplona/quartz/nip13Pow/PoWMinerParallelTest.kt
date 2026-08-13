@@ -79,9 +79,9 @@ class PoWMinerParallelTest {
             val start = TimeSource.Monotonic.markNow()
             // 256 bits never completes; only the isActive deadline can end the run.
             assertFailsWith<CancellationException> {
-                PoWMiner.mine(baseTemplate, pubKey, 256, workers = 4) {
+                PoWMiner.mine(baseTemplate, pubKey, 256, workers = 4, isActive = {
                     start.elapsedNow() < 150.milliseconds
-                }
+                })
             }
             assertTrue(
                 start.elapsedNow() < 5_000.milliseconds,

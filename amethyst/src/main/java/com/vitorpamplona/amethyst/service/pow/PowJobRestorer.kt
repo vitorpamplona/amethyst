@@ -77,7 +77,7 @@ class PowJobRestorer(
                 // a restored job may be hours old; publish with a fresh
                 // created_at (NIP-13 recommendation) — except scheduled posts,
                 // whose future created_at is the point.
-                refreshCreatedAtOnStart = record.replayType != PersistedPoWJob.REPLAY_SCHEDULE,
+                refreshCreatedAt = record.replayType != PersistedPoWJob.REPLAY_SCHEDULE,
             ) { mined ->
                 replay(account, record, mined)
             }

@@ -49,9 +49,9 @@ class PoWMinerCancellationTest {
         var polls = 0
         // 256 bits of PoW never completes; only the isActive check can end the run.
         assertFailsWith<CancellationException> {
-            PoWMiner.run(baseTemplate, pubKey, 256) {
+            PoWMiner.run(baseTemplate, pubKey, 256, isActive = {
                 polls++ < 3
-            }
+            })
         }
         assertTrue(polls in 4..10, "expected the miner to stop right after isActive flipped, polled $polls times")
     }
@@ -59,7 +59,7 @@ class PoWMinerCancellationTest {
     @Test
     fun activeMinerStillFindsPoW() {
         val desiredPoW = 12
-        val mined = PoWMiner.run(baseTemplate, pubKey, desiredPoW) { true }
+        val mined = PoWMiner.run(baseTemplate, pubKey, desiredPoW, isActive = { true })
 
         val powTag = mined.tags.firstNotNullOfOrNull { PoWTag.parse(it) }
         assertNotNull(powTag, "mined template must carry a nonce tag")

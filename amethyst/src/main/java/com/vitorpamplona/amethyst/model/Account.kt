@@ -1168,7 +1168,7 @@ class Account(
             persistAs = record,
             // NIP-13 recommends refreshing created_at while mining; scheduled
             // posts keep their intentional future timestamp.
-            refreshCreatedAtOnStart = replay !is PoWReplay.Schedule,
+            refreshCreatedAt = replay !is PoWReplay.Schedule,
             onMined = onMined,
         )
         return true
@@ -1272,12 +1272,12 @@ class Account(
         val workers = powMinerWorkers()
         return if (currentSigner is NostrSignerWithClientTag) {
             NostrSignerWithClientTag(
-                inner = PoWNostrSigner(currentSigner.inner, difficulty, kindsToMine, isActive, workers),
+                inner = PoWNostrSigner(currentSigner.inner, difficulty, kindsToMine, isActive, workers, TimeUtils::now),
                 clientTag = currentSigner.clientTag,
                 disabled = currentSigner.disabled,
             )
         } else {
-            PoWNostrSigner(currentSigner, difficulty, kindsToMine, isActive, workers)
+            PoWNostrSigner(currentSigner, difficulty, kindsToMine, isActive, workers, TimeUtils::now)
         }
     }
 

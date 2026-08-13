@@ -31,6 +31,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
 class PoWMiner(
     val buffer: MiningBuffer,
@@ -39,6 +41,9 @@ class PoWMiner(
     // first nonce byte the search is allowed to change; bytes between
     // nonceStarts and this index stay fixed (a parallel worker's prefix).
     val searchFrom: Int = buffer.nonceStarts,
+    // ends the current pass without cancelling it, so the caller can restamp
+    // created_at and search a brand-new space. Polled alongside [isActive].
+    val isPassOver: () -> Boolean = { false },
 ) {
     val emptyBytesForDesiredPoW = desiredPoW / 8
 
@@ -46,15 +51,31 @@ class PoWMiner(
     // 32-byte array per hash, keeping the hot loop allocation-free.
     private val hashOut = ByteArray(32)
 
+    /**
+     * True when the last [run] stopped because [isPassOver] flipped rather than
+     * because the nonce space ran out — the space is still unexplored, so the
+     * caller should retry it under a new created_at instead of widening it.
+     */
+    var passedOver = false
+        private set
+
     fun reachedDesiredPoW(byteArray: ByteArray) = PoWRankEvaluator.atLeastPowRank(sha256Into(hashOut, byteArray, byteArray.size), desiredPoW, emptyBytesForDesiredPoW)
 
-    fun run() = runDigit(searchFrom)
+    fun run(): Boolean {
+        passedOver = false
+        return runDigit(searchFrom)
+    }
 
     private fun runDigit(index: Int): Boolean {
         // checks once every VALID_BYTES.size^2 hashes: cheap enough to not slow
         // mining down, frequent enough for cancellation to feel immediate.
-        if (index + 2 <= buffer.nonceEnds && !isActive()) {
-            throw CancellationException("PoW mining was cancelled")
+        if (index + 2 <= buffer.nonceEnds) {
+            if (!isActive()) throw CancellationException("PoW mining was cancelled")
+
+            if (isPassOver()) {
+                passedOver = true
+                return false
+            }
         }
 
         for (testByte in VALID_BYTES) {
@@ -63,6 +84,9 @@ class PoWMiner(
 
             if (index + 1 < buffer.nonceEnds) {
                 if (runDigit(index + 1)) return true
+                // unwind the whole recursion rather than stepping to the next
+                // byte: the pass is over, not just this branch.
+                if (passedOver) return false
             } else {
                 if (reachedDesiredPoW(buffer.bytes)) return true
             }
@@ -72,6 +96,14 @@ class PoWMiner(
 
     companion object {
         private const val STARTING_NONCE_SIZE = 5
+
+        /**
+         * How long one pass searches before it stops to restamp created_at.
+         * created_at has one-second resolution, so a shorter pass would rebuild
+         * the payload for the same timestamp and a longer one would let the
+         * post go stale. Only applies when a clock is supplied.
+         */
+        private val PASS_BUDGET = 1.seconds
 
         // make sure these chars are not escaped by the JSON stringifier
         private val VALID_CHARS: List<Char> =
@@ -91,13 +123,23 @@ class PoWMiner(
          *
          * [isActive] is polled while mining; returning false aborts the search with a
          * [CancellationException] so callers can cancel long-running jobs cooperatively.
+         *
+         * [refreshCreatedAt] opts into NIP-13's *"it is recommended to update the
+         * `created_at` as well during this process"*: the search restamps the
+         * template from that clock roughly once a second, so a post that mines for
+         * minutes does not publish minutes in the past. The returned template
+         * carries the timestamp the nonce actually commits to. Leave it null
+         * wherever created_at is meaningful — scheduled posts, NIP-59 wraps with
+         * deliberately randomized timestamps — and the search stays frozen exactly
+         * as before.
          */
         fun <T : Event> run(
             template: EventTemplate<T>,
             pubKey: HexKey,
             desiredPoW: Int,
             isActive: () -> Boolean = { true },
-        ): EventTemplate<T> = search(template, pubKey, desiredPoW, isActive, "")
+            refreshCreatedAt: (() -> Long)? = null,
+        ): EventTemplate<T> = search(template, pubKey, desiredPoW, isActive, "", refreshCreatedAt)
 
         /**
          * [noncePrefix] is kept verbatim at the front of the nonce while only the
@@ -110,21 +152,27 @@ class PoWMiner(
             desiredPoW: Int,
             isActive: () -> Boolean,
             noncePrefix: String,
+            refreshCreatedAt: (() -> Long)?,
         ): EventTemplate<T> {
             // sha256 ids have 256 bits; anything outside would index past the
             // hash (or never terminate) deep inside the hot loop.
             require(desiredPoW in 1..256) { "desiredPoW must be in 1..256, was $desiredPoW" }
 
             var nextSize = STARTING_NONCE_SIZE
+            var createdAt = template.createdAt
 
             do {
+                // never backwards: a wall clock that steps back (or a template
+                // deliberately stamped ahead) must not drag the post into the past.
+                if (refreshCreatedAt != null) createdAt = maxOf(createdAt, refreshCreatedAt())
+
                 val initialNonce = noncePrefix + randomBase(nextSize)
 
                 val bytes =
                     EventHasherSerializer
                         .fastMakeJsonForId(
                             pubKey = pubKey,
-                            createdAt = template.createdAt,
+                            createdAt = createdAt,
                             kind = template.kind,
                             tags = template.tags + PoWTag.assemble(initialNonce, desiredPoW),
                             content = template.content,
@@ -134,17 +182,44 @@ class PoWMiner(
 
                 val buffer = MiningBuffer(bytes, startIndex, startIndex + initialNonce.length)
 
-                if (PoWMiner(buffer, desiredPoW, isActive, startIndex + noncePrefix.length).run()) {
+                val passStart = TimeSource.Monotonic.markNow()
+                val passCreatedAt = createdAt
+                val isPassOver: () -> Boolean =
+                    if (refreshCreatedAt != null) {
+                        // Both halves are load-bearing. The elapsed check keeps the
+                        // clock out of the hot loop for the first second and caps
+                        // restamping at created_at's one-second resolution. The
+                        // comparison is the progress guarantee: the enumeration is
+                        // deterministic and the random base is fully overwritten by
+                        // it (see PoWMinerDeterminismTest), so created_at is the only
+                        // thing that makes a new pass search anywhere new. Ending a
+                        // pass while the clock is pinned — a backwards step, or a
+                        // template stamped ahead of this device — would restart the
+                        // identical search forever. Staying in the pass instead falls
+                        // back to exhaust-then-widen, exactly as with no clock at all.
+                        { passStart.elapsedNow() >= PASS_BUDGET && refreshCreatedAt() > passCreatedAt }
+                    } else {
+                        { false }
+                    }
+
+                val miner = PoWMiner(buffer, desiredPoW, isActive, startIndex + noncePrefix.length, isPassOver)
+
+                if (miner.run()) {
                     return EventTemplate(
-                        template.createdAt,
+                        createdAt,
                         template.kind,
                         template.tags + PoWTag.assemble(buffer.nonce(), desiredPoW),
                         template.content,
                     )
-                } else {
+                } else if (!miner.passedOver) {
+                    // only an exhausted space needs a wider nonce; a pass that
+                    // stopped on the clock still has all of its own left to try
+                    // under the next timestamp.
                     nextSize += STARTING_NONCE_SIZE
                 }
-            } while (nextSize < 50)
+                // with a clock the search never runs out of space — every restamp
+                // opens a fresh one — so only isActive ends it.
+            } while (refreshCreatedAt != null || nextSize < 50)
 
             throw RuntimeException("Could not find PoW")
         }
@@ -183,6 +258,10 @@ class PoWMiner(
          *
          * Throws the same [CancellationException] as [run] when [isActive] flips
          * false before a nonce is found.
+         *
+         * [refreshCreatedAt] behaves as in [run]. Workers restamp independently,
+         * so the winner's template carries its own timestamp — which is the one
+         * its nonce commits to.
          */
         suspend fun <T : Event> mine(
             template: EventTemplate<T>,
@@ -190,9 +269,10 @@ class PoWMiner(
             desiredPoW: Int,
             workers: Int = 1,
             isActive: () -> Boolean = { true },
+            refreshCreatedAt: (() -> Long)? = null,
         ): EventTemplate<T> {
             require(workers >= 1) { "workers must be >= 1, was $workers" }
-            if (workers == 1) return run(template, pubKey, desiredPoW, isActive)
+            if (workers == 1) return run(template, pubKey, desiredPoW, isActive, refreshCreatedAt)
 
             return coroutineScope {
                 val winner = CompletableDeferred<EventTemplate<T>>()
@@ -203,7 +283,7 @@ class PoWMiner(
                                 winner.complete(
                                     search(template, pubKey, desiredPoW, {
                                         isActive() && !winner.isCompleted
-                                    }, workerPrefix(worker, workers)),
+                                    }, workerPrefix(worker, workers), refreshCreatedAt),
                                 )
                             }
                         }
