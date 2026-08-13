@@ -32,15 +32,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Pins the idle-window timeout semantics of the fetchAll family: [timeoutMs]
+ * Pins the idle-window timeout semantics of the fetchAll family: `idleTimeoutMs`
  * is the maximum SILENCE between messages, not an absolute deadline — a relay
  * that keeps streaming is never cropped, and a stalled fetch ends one idle
- * window after its last message.
+ * window after its last message. There is no internal wall-clock ceiling; a hard
+ * deadline is the caller's to compose.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FetchAllIdleTimeoutTest {
@@ -143,15 +146,16 @@ class FetchAllIdleTimeoutTest {
         }
 
     @Test
-    fun wallClockCapStopsAnEndlessTrickle() =
+    fun anEndlessTrickleIsBoundedByTheCaller() =
         runTest {
             val client = ScriptedClient()
-            var stalledRelays: Set<NormalizedRelayUrl>? = null
             val feeder =
                 launch {
-                    // A relay that trickles forever, always inside the idle
-                    // window, never reaching a terminal state — without the cap
-                    // this fetch would never return.
+                    // A relay that trickles forever, always inside the idle window,
+                    // never reaching a terminal state. The accessory has no internal
+                    // wall-clock ceiling — by design, since it cannot tell this from a
+                    // relay legitimately streaming a large backlog. It is a suspending
+                    // function, so the caller composes the hard deadline.
                     var i = 0
                     while (true) {
                         delay(200)
@@ -160,17 +164,15 @@ class FetchAllIdleTimeoutTest {
                 }
             val start = currentTime
             val collected =
-                client.fetchAllWithHooks(
-                    filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
-                    idleTimeoutMs = 300,
-                    maxTotalMs = 1_000,
-                    onTimeout = { stalled, _, _ -> stalledRelays = stalled },
-                ) { _, _ -> true }
+                withTimeoutOrNull(1_000) {
+                    client.fetchAllWithHooks(
+                        filters = mapOf(relay to listOf(Filter(kinds = listOf(1)))),
+                        idleTimeoutMs = 300,
+                    ) { _, _ -> true }
+                }
             feeder.cancel()
-            val elapsed = currentTime - start
-            assertTrue(elapsed in 1_000..1_300, "the cap must stop the fetch near maxTotalMs, took $elapsed")
-            assertTrue(collected.size in 4..6, "events before the cap are kept, got ${collected.size}")
-            assertEquals(setOf(relay), stalledRelays, "the capped relay is reported to onTimeout")
+            assertNull(collected, "the caller's withTimeoutOrNull is what stops an endless trickle")
+            assertEquals(1_000L, currentTime - start, "and it stops at the caller's deadline")
         }
 
     @Test

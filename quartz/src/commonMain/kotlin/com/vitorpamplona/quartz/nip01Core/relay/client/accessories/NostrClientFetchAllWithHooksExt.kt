@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.utils.SeenIds
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
@@ -54,9 +53,12 @@ import kotlinx.coroutines.withTimeoutOrNull
  * cropped mid-delivery — the fetch ends when the work is done or when nothing
  * has arrived for [idleTimeoutMs] (a stall). The terminal conditions (EOSE /
  * CLOSED / cannot-connect per relay) are what bound the fetch; the timeout's
- * only job is detecting relays that will never reach one. [maxTotalMs]
- * (default 10x the idle window) is the wall-clock ceiling that keeps a
- * trickling relay from pinning the caller forever.
+ * only job is detecting relays that will never reach one.
+ *
+ * There is no wall-clock ceiling parameter, in line with every other accessory:
+ * a hard deadline composes at the call site — `withTimeoutOrNull(ms) { fetchAllWithHooks(…) }`
+ * — and an internal one cannot tell a relay legitimately streaming a large
+ * backlog from a misbehaving one, so it cuts both.
  *
  * Extras over [fetchAll]:
  *  - **[onEvent] hook** — suspending per-event callback, invoked single-threaded
@@ -102,8 +104,8 @@ suspend fun INostrClient.fetchAllWithHooks(
      * With one attached, waiting is what makes the relay readable at all, and it is bounded:
      * a challenge nobody picks up ends in [authGraceMs], one the relay rejects ends on its
      * `OK false`, and a signer prompt nobody answers is capped at [idleTimeoutMs] — so **an
-     * auth-gated relay costs at most what a silent relay already cost**, never the [maxTotalMs]
-     * multiple of it. Pass `false` only to force the pre-existing give-up-immediately behaviour.
+     * auth-gated relay costs at most what a silent relay already cost**. Pass `false` only to
+     * force the pre-existing give-up-immediately behaviour.
      *
      * Either way the refusal is REPORTED as [DONE_REASON_AUTH_REFUSED]; this only decides
      * whether we wait for the challenge before recording it.
@@ -123,17 +125,6 @@ suspend fun INostrClient.fetchAllWithHooks(
      */
     doneOut: MutableMap<NormalizedRelayUrl, String>? = null,
     onTimeout: ((stalled: Set<NormalizedRelayUrl>, doneReasons: Map<NormalizedRelayUrl, String>, collected: List<Pair<NormalizedRelayUrl, Event>>) -> Unit)? = null,
-    /**
-     * Hard wall-clock ceiling. The idle window alone is unbounded when a relay
-     * keeps trickling events without ever reaching a terminal state — an
-     * adversarial or misbehaving relay could pin the caller forever. The cap
-     * restores an upper bound while staying far above the idle window, so a
-     * legitimately streaming relay still finishes its backlog. Pass
-     * [Long.MAX_VALUE] for a deliberately uncapped drain; a non-positive value
-     * also uncaps (absorbing an `idleTimeoutMs * 10` overflow from an
-     * effectively-infinite idle window).
-     */
-    maxTotalMs: Long = idleTimeoutMs * 10,
     /** Stage-one grace handed to [awaitAuthOutcome] — how long a responder has to pick a challenge up. */
     authGraceMs: Long = DEFAULT_AUTH_GRACE_MS,
     onEvent: suspend (relay: NormalizedRelayUrl, event: Event) -> Boolean,
@@ -207,22 +198,9 @@ suspend fun INostrClient.fetchAllWithHooks(
     // still refused us is being gated for a reason no further waiting fixes.
     val authMarks = if (pendingOnAuthRequired) authSuccessMarks(filters.keys) else emptyMap()
     val collected = mutableListOf<Pair<NormalizedRelayUrl, Event>>()
-    // One conflated token, armed by a delay()-based watchdog, ends the fetch
-    // at the wall-clock ceiling. delay() keeps the cap on the coroutine clock
-    // (cancellable, virtual-time-testable) instead of sampling a wall clock.
-    val capChannel = Channel<Unit>(Channel.CONFLATED)
     try {
         coroutineScope {
             subscribe(subscriptionId, filters, listener)
-            val watchdog =
-                if (maxTotalMs <= 0 || maxTotalMs == Long.MAX_VALUE) {
-                    null
-                } else {
-                    launch {
-                        delay(maxTotalMs)
-                        capChannel.trySend(Unit)
-                    }
-                }
             // Turns each `auth-required:` refusal into a terminal reason as soon as the
             // AUTH resolves against us, so an auth wall costs a grace window instead of a
             // full idle window — and, unlike the timeout, says what it hit.
@@ -247,7 +225,7 @@ suspend fun INostrClient.fetchAllWithHooks(
                 } else {
                     null
                 }
-            // Idle-window wait with a wall-clock ceiling. Two structural rules:
+            // Idle-window wait. Two structural rules:
             //
             //  1. The suspending [onEvent] hook NEVER runs inside a timeout
             //     scope. Cancellation only lands at suspension points, so a
@@ -263,15 +241,10 @@ suspend fun INostrClient.fetchAllWithHooks(
             //     per-message withTimeoutOrNull would pay one
             //     scheduled+cancelled cancellation task per event for nothing.
             var stalled = false
-            var capped = false
-            while (remaining.isNotEmpty() && !capped) {
+            while (remaining.isNotEmpty()) {
                 var pending: Pair<NormalizedRelayUrl, Event>? = null
 
                 // Fast path: consume whatever is already buffered.
-                if (capChannel.tryReceive().isSuccess) {
-                    capped = true
-                    break
-                }
                 val bufferedDone = doneChannel.tryReceive().getOrNull()
                 if (bufferedDone != null) {
                     remaining.remove(bufferedDone.first)
@@ -290,14 +263,12 @@ suspend fun INostrClient.fetchAllWithHooks(
                                     remaining.remove(relay)
                                     doneReasons[relay] = reason
                                 }
-                                capChannel.onReceive { capped = true }
                             }
                         }
                     if (progressed == null) {
                         stalled = true
                         break
                     }
-                    if (capped) break
                 }
 
                 pending?.let { pair ->
@@ -305,22 +276,18 @@ suspend fun INostrClient.fetchAllWithHooks(
                 }
             }
             // Drain any events that landed after the last terminal signal (or
-            // during the final window) but before unsubscribe. Skipped when
-            // the ceiling fired — the cap must actually stop the work.
-            if (!capped) {
-                while (true) {
-                    val r = eventChannel.tryReceive()
-                    if (!r.isSuccess) break
-                    val pair = r.getOrThrow()
-                    if (onEvent(pair.first, pair.second)) collected.add(pair)
-                }
+            // during the final window) but before unsubscribe.
+            while (true) {
+                val r = eventChannel.tryReceive()
+                if (!r.isSuccess) break
+                val pair = r.getOrThrow()
+                if (onEvent(pair.first, pair.second)) collected.add(pair)
             }
-            if ((stalled || capped) && remaining.isNotEmpty()) {
+            if (stalled && remaining.isNotEmpty()) {
                 onTimeout?.invoke(remaining, doneReasons, collected)
             }
-            // Both outlive the loop by design (one sleeps to the ceiling, the other parks on
-            // an AUTH that may never settle), so the scope only completes if we end them.
-            watchdog?.cancel()
+            // Outlives the loop by design (it parks on an AUTH that may never settle), so
+            // the scope only completes if we end it.
             authResolver?.cancel()
         }
     } finally {

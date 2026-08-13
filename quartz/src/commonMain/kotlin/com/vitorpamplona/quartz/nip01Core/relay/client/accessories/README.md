@@ -46,10 +46,11 @@ knowing:
   which only preserves the set if the relay streams strictly newest-first, which
   NIP-01 recommends but does not require. Bound a paged download with the filter's
   `limit`, or by cancelling.
-- `fetchAll` / `fetchAllWithHooks` keep a pre-existing `maxTotalMs`, and it earns
-  its place: an endless *event* trickle there is genuine progress, so the call never
-  self-terminates, and the internal cap returns the events collected so far where an
-  external `withTimeoutOrNull` would discard them.
+- `fetchAll` / `fetchAllWithHooks` used to carry a `maxTotalMs` ceiling; it was
+  removed. It could not tell a relay legitimately streaming a large backlog from a
+  never-terminal trickle — both look like steady arrival — so in practice it cut
+  healthy fetches at a fixed multiple of the idle window. These are suspending
+  functions: a caller that wants a hard deadline wraps the call.
 
 The write side is its own case: `publishAndConfirm`'s `timeoutInSeconds` is a fixed
 window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
@@ -78,7 +79,7 @@ user is approving, but bounded by the caller's own `idleTimeoutMs`. That yields 
 guarantee that makes the derived default safe: **an auth-gated relay costs at most what
 a silent relay already cost.** A challenge nobody picks up ends in the grace; one the
 relay rejects ends on the `OK false`; only a prompt nobody ever answers reaches the
-window, and it can never reach the `maxTotalMs` multiple of it.
+window.
 
 **An unsatisfied wall is visible, and it is not a dead relay.** It gets its own
 terminal reason (`auth-refused:<msg>` — read it with `doneOut.authRefusedRelays()`),
