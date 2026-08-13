@@ -21,13 +21,16 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
 
 /**
- * A drain per-relay failure worth acting on: the relay will not serve us THIS run,
- * so drop it from further routing on the first occurrence. There is only one such
- * verdict — [DEAD] — because re-probing hop-8's failed relays fresh, outside the
- * crawl, showed the old "might clear, retry a few times" (TRANSIENT) bucket almost
+ * A drain per-relay failure worth acting on: the relay will not serve us THIS run.
+ * Whether that also means "drop it from routing" is [dropFromRouting], and only
+ * [DEAD] says yes — re-probing hop-8's failed relays fresh, outside the crawl,
+ * showed the old "might clear, retry a few times" (TRANSIENT) bucket almost
  * never clears: 503 Service Unavailable was 0/12 reachable, 502 Bad Gateway 3/15,
  * connection-establishment failures 0/30, and the codes that WERE alive (403/402)
  * are gated and will never hand us events. Spending extra dials on them was waste.
+ *
+ * [AUTH_REQUIRED] is the deliberate exception: a relay behind a NIP-42 wall is not a
+ * failed relay, it is one we turned up to without an identity it accepts.
  *
  * The only two connect failures that genuinely recover are kept OUT of this verdict
  * by [classifyDrainFailure] returning null (retry, never dead):
@@ -37,7 +40,34 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.accessories
  *  - an HTTP **429 / too many requests** — alive and rate-limiting; 4/4 reachable
  *    fresh. Retrying (spaced by the rate limiter) is how we eventually get its data.
  */
-enum class DrainFailure { DEAD, }
+enum class DrainFailure {
+    DEAD,
+
+    /**
+     * The relay answered, and answered with a NIP-42 wall we could not get over: no
+     * responder, a responder that declined, a signer that never came back, or an AUTH
+     * the relay rejected. See [DONE_REASON_AUTH_REFUSED].
+     *
+     * The opposite of [DEAD] in the only way that matters for routing. A dead relay is
+     * a property of the relay; this is a property of *this connection's identity*, and
+     * the very same query succeeds on a socket carrying a key the relay accepts — which
+     * is why [dropFromRouting] is false for it and why it must not be folded into DEAD.
+     * A caller that drops these keeps re-learning nothing about a set of relays that were
+     * never broken.
+     */
+    AUTH_REQUIRED,
+    ;
+
+    /**
+     * Whether this verdict justifies pruning the relay from future routing.
+     *
+     * True for [DEAD] (measured overwhelmingly non-recovering — see the class KDoc) and
+     * false for [AUTH_REQUIRED], which is fixed by an identity rather than by time.
+     * Read this instead of testing for a specific value, so a caller written today keeps
+     * behaving when the enum grows.
+     */
+    val dropFromRouting: Boolean get() = this == DEAD
+}
 
 /**
  * Classify a drain per-relay terminal reason. Returns null when the relay should be
@@ -45,8 +75,13 @@ enum class DrainFailure { DEAD, }
  * a non-failure like eose/closed. Any other `cannot:<message>` (see
  * `BasicRelayClient.onCannotConnect`) is [DrainFailure.DEAD]: it will not serve us
  * this run, so drop it now instead of paying repeated connect attempts.
+ *
+ * An `auth-refused:<message>` is [DrainFailure.AUTH_REQUIRED] — recorded so the caller
+ * learns *why* it got nothing, but flagged [DrainFailure.dropFromRouting] `false` because
+ * the relay is alive and serves the same query to an accepted identity.
  */
 fun classifyDrainFailure(reason: String): DrainFailure? {
+    if (reason.startsWith(DONE_REASON_AUTH_REFUSED)) return DrainFailure.AUTH_REQUIRED
     if (!reason.startsWith("cannot")) return null
     val m = reason.removePrefix("cannot:").lowercase()
     // Alive, only asking us to slow down: an HTTP 429 / "too many requests" reliably

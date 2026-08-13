@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolCounts
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolEventOutbox
@@ -53,6 +54,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 
 /**
  * The INostrClient manages Nostr relay operations, subscriptions, and event delivery. It maintains:
@@ -103,6 +105,15 @@ class NostrClient(
     private val eventOutbox: PoolEventOutbox = PoolEventOutbox()
 
     private var listeners = setOf<RelayConnectionListener>()
+
+    // Copy-on-write, same as [listeners]: registration happens a handful of times at
+    // wiring, while reads happen on every fetch that meets an auth-gated relay.
+    //
+    // Note the explicit `kotlin.concurrent.Volatile` import this needs. On JVM
+    // `kotlin.jvm.Volatile` is a default import, so an unimported `@Volatile` compiles
+    // there and fails only on Kotlin/Native — which is how it reached CI.
+    @Volatile
+    private var authResponders = setOf<IAuthStatus>()
 
     // controls the state of the client in such a way that if it is active
     // new filters will be sent to the relays and a potential reconnect can
@@ -373,6 +384,16 @@ class NostrClient(
     }
 
     override fun getOrCreateRelay(url: NormalizedRelayUrl): IRelayClient = relayPool.getOrCreateRelay(url)
+
+    override fun authResponders(): Set<IAuthStatus> = authResponders
+
+    override fun addAuthResponder(responder: IAuthStatus) {
+        authResponders = authResponders.plus(responder)
+    }
+
+    override fun removeAuthResponder(responder: IAuthStatus) {
+        authResponders = authResponders.minus(responder)
+    }
 
     override fun addConnectionListener(listener: RelayConnectionListener) {
         listeners = listeners.plus(listener)

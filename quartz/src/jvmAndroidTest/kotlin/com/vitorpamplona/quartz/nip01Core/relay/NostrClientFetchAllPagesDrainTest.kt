@@ -163,10 +163,10 @@ class NostrClientFetchAllPagesDrainTest {
                     client.listener!!.onEvent(event(1000), false, relay, null)
                     client.listener!!.onEose(relay, null)
                     // Page two: the relay ends the subscription instead of serving
-                    // it — auth-required, rate limit, policy. It declined to answer,
-                    // which is not the same as answering "nothing".
+                    // it — a rate limit, a policy, an unsupported filter. It declined
+                    // to answer, which is not the same as answering "nothing".
                     client.awaitPage(2)
-                    client.listener!!.onClosed("auth-required: we don't serve that", relay, null)
+                    client.listener!!.onClosed("rate-limited: slow down", relay, null)
                 }
 
             val result =
@@ -179,6 +179,35 @@ class NostrClientFetchAllPagesDrainTest {
 
             assertEquals(PagedFetchResult.End.CLOSED, result.end, "a CLOSED is the relay declining, not an empty corpus")
             assertFalse(result.drained)
+        }
+
+    /**
+     * An `auth-required:` CLOSED is a refusal too, but its own kind: the caller can fix it
+     * with a signer the relay accepts, which is true of none of the others [End.CLOSED]
+     * covers. It is reported separately even here, where the client has no NIP-42 responder
+     * attached and so does not wait for anything — the verdict is about what the relay said,
+     * not about whether we chose to answer it.
+     */
+    @Test
+    fun anAuthRequiredCloseIsItsOwnEnding() =
+        runBlocking {
+            val client = ScriptedClient()
+            val feeder =
+                launch {
+                    client.awaitPage(1)
+                    client.listener!!.onClosed("auth-required: we only serve authenticated users", relay, null)
+                }
+
+            val result =
+                client.fetchAllPages(
+                    relay = relay,
+                    filters = listOf(Filter(kinds = listOf(1))),
+                    idleTimeoutMs = 2_000,
+                ) { }
+            feeder.join()
+
+            assertEquals(PagedFetchResult.End.AUTH_REQUIRED, result.end, "an auth wall must not read as a policy refusal")
+            assertFalse(result.drained, "nothing was proven about what the relay holds")
         }
 
     @Test

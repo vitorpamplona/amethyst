@@ -32,39 +32,63 @@ suspend fun INostrClient.fetchAll(
     relay: String,
     filter: Filter,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)), idleTimeoutMs)
+) = fetchAll(
+    subscriptionId = newSubId(),
+    filters = mapOf(RelayUrlNormalizer.normalize(relay) to listOf(filter)),
+    idleTimeoutMs = idleTimeoutMs,
+)
 
 suspend fun INostrClient.fetchAll(
     relay: String,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(RelayUrlNormalizer.normalize(relay) to filters), idleTimeoutMs)
+) = fetchAll(
+    subscriptionId = newSubId(),
+    filters = mapOf(RelayUrlNormalizer.normalize(relay) to filters),
+    idleTimeoutMs = idleTimeoutMs,
+)
 
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: String,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(subscriptionId, mapOf(RelayUrlNormalizer.normalize(relay) to filters), idleTimeoutMs)
+) = fetchAll(
+    subscriptionId = subscriptionId,
+    filters = mapOf(RelayUrlNormalizer.normalize(relay) to filters),
+    idleTimeoutMs = idleTimeoutMs,
+)
 
 suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filter: Filter,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(relay to listOf(filter)), idleTimeoutMs)
+) = fetchAll(
+    subscriptionId = newSubId(),
+    filters = mapOf(relay to listOf(filter)),
+    idleTimeoutMs = idleTimeoutMs,
+)
 
 suspend fun INostrClient.fetchAll(
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(newSubId(), mapOf(relay to filters), idleTimeoutMs)
+) = fetchAll(
+    subscriptionId = newSubId(),
+    filters = mapOf(relay to filters),
+    idleTimeoutMs = idleTimeoutMs,
+)
 
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
     relay: NormalizedRelayUrl,
     filters: List<Filter>,
     idleTimeoutMs: Long = 30_000L,
-) = fetchAll(subscriptionId, mapOf(relay to filters), idleTimeoutMs)
+) = fetchAll(
+    subscriptionId = subscriptionId,
+    filters = mapOf(relay to filters),
+    idleTimeoutMs = idleTimeoutMs,
+)
 
 /**
  * Subscribe [filters], collect every (deduped) event, and return once every
@@ -81,6 +105,10 @@ suspend fun INostrClient.fetchAll(
  * Thin projection over [fetchAllWithHooks] — one shared loop implementation,
  * with dedup done in the (single-threaded) hook so no shared collection is
  * ever touched from socket callback threads.
+ *
+ * @param pendingOnAuthRequired see [fetchAllWithHooks]. Defaults to whether this
+ *   client has a NIP-42 responder attached, so a relay that gates reads behind AUTH
+ *   is read for what it holds instead of as an empty one.
  */
 suspend fun INostrClient.fetchAll(
     subscriptionId: String = newSubId(),
