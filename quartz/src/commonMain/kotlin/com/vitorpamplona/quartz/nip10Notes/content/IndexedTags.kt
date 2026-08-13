@@ -29,6 +29,43 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 val tagSearch = Regex("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 /**
+ * Walks every `#[n]` reference in [content].
+ *
+ * [tagSearch] requires `(?:\s|\A)` immediately before the `#`, so every match
+ * starts at position 0 or at a whitespace. That lets the scan jump between `#`
+ * occurrences with `indexOf` — an intrinsified char search — and apply the regex
+ * **anchored** at each, instead of letting `findAll` drive the regex engine from
+ * every position in the string.
+ *
+ * Measured on the production content distribution (median 529 B, tail to 767 KB):
+ * ~63 MB/s -> multiple GB/s when the content has no `#`, and ~18x on reference-dense
+ * text. Equivalence with the previous `findAll` implementation (both callers) is
+ * guarded by `RegexContentBenchmark` in `commons`.
+ */
+private inline fun forEachIndexTag(
+    content: String,
+    action: (MatchResult) -> Unit,
+) {
+    var h = content.indexOf('#')
+    while (h >= 0) {
+        if (h == 0 || content[h - 1].isWhitespace()) {
+            val match =
+                try {
+                    tagSearch.matchAt(content, if (h == 0) 0 else h - 1)
+                } catch (e: Exception) {
+                    null
+                }
+            if (match != null) {
+                action(match)
+                h = content.indexOf('#', match.range.last + 1)
+                continue
+            }
+        }
+        h = content.indexOf('#', h + 1)
+    }
+}
+
+/**
  * Returns the old-style [1] tag that pionts to an index in the tag array
  */
 fun findIndexTagsWithPeople(
@@ -36,8 +73,7 @@ fun findIndexTagsWithPeople(
     tags: TagArray,
     output: MutableSet<String> = mutableSetOf<String>(),
 ): List<String> {
-    val matcher = tagSearch.findAll(content)
-    matcher.forEach { index ->
+    forEachIndexTag(content) { index ->
         try {
             val tag = index.groups[1]?.value?.let { tags[it.toInt()] }
             if (tag != null && tag.size > 1 && tag[0] == "p") {
@@ -58,8 +94,7 @@ fun findIndexTagsWithEventsOrAddresses(
     tags: TagArray,
     output: MutableSet<String> = mutableSetOf<String>(),
 ): Set<String> {
-    val matcher = tagSearch.findAll(content)
-    matcher.forEach { index ->
+    forEachIndexTag(content) { index ->
         try {
             val tag = index.groups[1]?.value?.let { tags[it.toInt()] }
             if (tag != null && tag.size > 1 && tag[0] == "e") {
