@@ -52,6 +52,19 @@ knowing:
   healthy fetches at a fixed multiple of the idle window. These are suspending
   functions: a caller that wants a hard deadline wraps the call.
 
+  Two things that ceiling was quietly providing had to be replaced deliberately.
+  First, **the drain loop must observe cancellation**: its `tryReceive` fast path
+  has no suspension point, and a suspend hook that returns without suspending is
+  not a cancellation check either, so a relay feeding faster than we drain used to
+  spin there forever — the cap's per-iteration `capChannel.tryReceive()` was the
+  only escape. An explicit `ensureActive()` now plays that role (as it already did
+  per-page in `fetchAllPages`), and `FetchAllCancellationTest` pins it. Second,
+  **cancelling discards more than the cap did**: the cap returned the events
+  collected so far and filled `doneOut` / `deadOut` on its way out, whereas
+  cancellation unwinds the stack — cleanup still runs, but the results, the
+  terminal-reason maps, and `onTimeout` are all lost. Accumulate inside `onEvent`
+  when the partial results matter.
+
 The write side is its own case: `publishAndConfirm`'s `timeoutInSeconds` is a fixed
 window to collect the `OK`s — a bounded confirmation round-trip, not a stream.
 

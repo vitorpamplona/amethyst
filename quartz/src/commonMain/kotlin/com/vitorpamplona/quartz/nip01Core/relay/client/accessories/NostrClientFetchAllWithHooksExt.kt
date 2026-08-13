@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.utils.SeenIds
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
@@ -59,6 +60,17 @@ import kotlinx.coroutines.withTimeoutOrNull
  * a hard deadline composes at the call site — `withTimeoutOrNull(ms) { fetchAllWithHooks(…) }`
  * — and an internal one cannot tell a relay legitimately streaming a large
  * backlog from a misbehaving one, so it cuts both.
+ *
+ * **Cancellation is therefore the bound, and it is abrupt.** The subscription is
+ * still closed and the channels released (that cleanup does not suspend, so it
+ * survives cancellation), but a cancelled fetch returns nothing: the collected
+ * events are discarded with the stack, [deadOut] / [doneOut] are never filled,
+ * [onTimeout] does not fire, and a suspending [onEvent] can be cancelled
+ * mid-write — the rule that keeps the hook out of the *internal* idle window's
+ * timeout scope cannot protect it from the caller's. A caller that needs the
+ * partial results, or needs the hook to finish what it started, should
+ * accumulate into its own list from inside [onEvent] (it runs single-threaded)
+ * rather than reading the return value.
  *
  * Extras over [fetchAll]:
  *  - **[onEvent] hook** — suspending per-event callback, invoked single-threaded
@@ -242,6 +254,14 @@ suspend fun INostrClient.fetchAllWithHooks(
             //     scheduled+cancelled cancellation task per event for nothing.
             var stalled = false
             while (remaining.isNotEmpty()) {
+                // The caller's deadline is the only wall-clock bound on this fetch, so
+                // the loop has to be able to observe it. Nothing on the fast path below
+                // suspends — tryReceive never does, and a suspend hook that completes
+                // without suspending performs no cancellation check — so a relay feeding
+                // faster than we drain would spin here forever, deaf to an enclosing
+                // withTimeout. This is the check that makes `cancel the caller` work, the
+                // same role [fetchAllPages] gives its per-page ensureActive.
+                ensureActive()
                 var pending: Pair<NormalizedRelayUrl, Event>? = null
 
                 // Fast path: consume whatever is already buffered.
