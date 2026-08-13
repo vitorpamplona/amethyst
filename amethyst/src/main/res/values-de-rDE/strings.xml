@@ -4017,10 +4017,6 @@
     <string name="poll_results_checking_completeness">Es wird geprüft, wie viele Stimmen existieren…</string>
     <string name="poll_results_partial">%1$d von %2$d Antworten von %3$d Relays geladen.</string>
     <string name="poll_results_partial_approx">%1$d von etwa %2$d Antworten von %3$d Relays geladen.</string>
-    <plurals name="poll_results_voters">
-        <item quantity="one">abstimmende Person</item>
-        <item quantity="other">abstimmende Personen</item>
-    </plurals>
     <plurals name="poll_results_vote_count_link">
         <item quantity="one">%1$d Stimme ›</item>
         <item quantity="other">%1$d Stimmen ›</item>

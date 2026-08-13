@@ -1247,7 +1247,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <plurals name="nest_listener_count">
         <item quantity="one">%1$d słuchacz</item>
         <item quantity="few">%1$d słuchaczy</item>
-        <item quantity="many"></item>
+        <item quantity="many">%1$d słuchaczy</item>
         <item quantity="other">%1$d słuchacze</item>
     </plurals>
     <string name="nest_live_chip">NA ŻYWO</string>
@@ -4061,12 +4061,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="poll_results_checking_completeness">Sprawdzanie liczby oddanych głosów…</string>
     <string name="poll_results_partial">%1$d z %2$d odpowiedzi załadowanych z %3$d transmiterów.</string>
     <string name="poll_results_partial_approx">%1$d z około %2$d odpowiedzi załadowanych z %3$d transmiterów.</string>
-    <plurals name="poll_results_voters">
-        <item quantity="one">głosujący</item>
-        <item quantity="few">głosujących</item>
-        <item quantity="many">głosujących</item>
-        <item quantity="other">głosujący</item>
-    </plurals>
     <plurals name="poll_results_vote_count_link">
         <item quantity="one">%1$d głos &lt;unk&gt;</item>
         <item quantity="few">%1$d głosów &lt;unk&gt;</item>
@@ -4683,7 +4677,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     </plurals>
     <plurals name="pow_estimate_minutes">
         <item quantity="one">%1$d minutę</item>
-        <item quantity="few">%1$s minut</item>
+        <item quantity="few">%1$d minut</item>
         <item quantity="many">%1$d minut</item>
         <item quantity="other">%1$d minut</item>
     </plurals>

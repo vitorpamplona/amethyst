@@ -4381,10 +4381,6 @@
     <string name="poll_results_checking_completeness">Checking how many votes exist…</string>
     <string name="poll_results_partial">%1$d of %2$d responses loaded from %3$d relays.</string>
     <string name="poll_results_partial_approx">%1$d of about %2$d responses loaded from %3$d relays.</string>
-    <plurals name="poll_results_voters">
-        <item quantity="one">voter</item>
-        <item quantity="other">voters</item>
-    </plurals>
     <plurals name="poll_results_vote_count_link">
         <item quantity="one">%1$d vote ›</item>
         <item quantity="other">%1$d votes ›</item>

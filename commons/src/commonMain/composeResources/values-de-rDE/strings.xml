@@ -131,8 +131,8 @@
     <string name="git_status_draft">Entwurf</string>
     <string name="git_diff_binary">Binärdatei wird nicht angezeigt.</string>
     <plurals name="git_diff_files_changed">
-        <item quantity="one">Datei geändert</item>
-        <item quantity="other">Dateien geändert</item>
+        <item quantity="one">%1$d Datei geändert</item>
+        <item quantity="other">%1$d Dateien geändert</item>
     </plurals>
     <string name="bird_detection_title">Vogelerkennung</string>
     <plurals name="birdex_species_count">

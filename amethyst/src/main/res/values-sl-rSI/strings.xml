@@ -1060,7 +1060,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         <item quantity="few">Poslušanje na %1$d vhodnih relejih, vsi povezani</item>
         <item quantity="other">Poslušanje na %1$d vhodnih relejih, vsi povezani</item>
     </plurals>
-    <string name="nip46_signer_relays_some_down">Povezan na %1$d od \%2$d relejev</string>
+    <string name="nip46_signer_relays_some_down">Povezan na %1$d od %2$d relejev</string>
     <string name="nip46_signer_bunker_uri_label">Vaš bunker naslov</string>
     <string name="nip46_signer_bunker_uri_hint">Prilepite to v drugo aplikacijo, da jo povežete s svojim ključem.</string>
     <string name="nip46_signer_copy">Kopiraj</string>
