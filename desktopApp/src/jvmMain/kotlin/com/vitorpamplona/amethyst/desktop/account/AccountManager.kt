@@ -554,20 +554,66 @@ class AccountManager internal constructor(
         return Result.success(Unit)
     }
 
-    fun generateNewAccount(): AccountState.LoggedIn {
+    /**
+     * Builds a fresh keypair account WITHOUT activating it — leaves [_accountState]
+     * untouched so the caller can show a "save your keys" backup step first. Call
+     * [activateAccount] once the user has acknowledged the backup.
+     *
+     * Flipping the account state immediately (as [generateNewAccount] does) tears
+     * down whatever screen triggered generation — the login screen or the add-account
+     * dialog — before the backup card can render, which is why generation and
+     * activation are split here.
+     */
+    fun buildNewAccount(): AccountState.LoggedIn {
         val keyPair = KeyPair()
         val signer = NostrSignerInternal(keyPair)
 
-        val state =
-            AccountState.LoggedIn(
-                signer = signer,
-                pubKeyHex = keyPair.pubKey.toHexKey(),
-                npub = keyPair.pubKey.toNpub(),
-                nsec = keyPair.privKey?.toNsec(),
-                isReadOnly = false,
-            )
+        return AccountState.LoggedIn(
+            signer = signer,
+            pubKeyHex = keyPair.pubKey.toHexKey(),
+            npub = keyPair.pubKey.toNpub(),
+            nsec = keyPair.privKey?.toNsec(),
+            isReadOnly = false,
+        )
+    }
+
+    /** Activates a previously-[buildNewAccount]-ed (or any) state as the current account. */
+    fun activateAccount(state: AccountState.LoggedIn) {
         _accountState.value = state
-        return state
+    }
+
+    fun generateNewAccount(): AccountState.LoggedIn = buildNewAccount().also { _accountState.value = it }
+
+    // --- First-run key-backup onboarding ---
+    //
+    // A freshly-generated account is held here (NOT activated) while the user is
+    // walked through the "save your keys" onboarding screen. Activation is deferred
+    // to [finishNewAccountOnboarding] so the onboarding UI can render before the
+    // account-state flip swaps the current screen out.
+
+    private val _pendingNewAccount = MutableStateFlow<AccountState.LoggedIn?>(null)
+    val pendingNewAccount: StateFlow<AccountState.LoggedIn?> = _pendingNewAccount.asStateFlow()
+
+    /** Begins onboarding: builds a fresh key WITHOUT activating it. */
+    fun beginNewAccountOnboarding() {
+        _pendingNewAccount.value = buildNewAccount()
+    }
+
+    /** User backed out of onboarding — discard the un-activated key. */
+    fun cancelNewAccountOnboarding() {
+        _pendingNewAccount.value = null
+    }
+
+    /**
+     * User finished onboarding — activate the pending account and clear it.
+     * Returns the now-active account, or null if there was none pending.
+     * The caller is responsible for persistence ([saveCurrentAccount] etc.).
+     */
+    fun finishNewAccountOnboarding(): AccountState.LoggedIn? {
+        val pending = _pendingNewAccount.value ?: return null
+        _accountState.value = pending
+        _pendingNewAccount.value = null
+        return pending
     }
 
     fun loginWithKey(keyInput: String): Result<AccountState.LoggedIn> {

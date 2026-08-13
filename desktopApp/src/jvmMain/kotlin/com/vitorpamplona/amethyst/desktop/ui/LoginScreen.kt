@@ -39,9 +39,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -52,10 +49,8 @@ import com.vitorpamplona.amethyst.commons.resources.login_subtitle_desktop
 import com.vitorpamplona.amethyst.commons.resources.login_title
 import com.vitorpamplona.amethyst.commons.ui.theme.StatusGreen
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
-import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.RelayStatus
 import com.vitorpamplona.amethyst.desktop.ui.auth.LoginCard
-import com.vitorpamplona.amethyst.desktop.ui.auth.NewKeyWarningCard
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -63,9 +58,6 @@ fun LoginScreen(
     accountManager: AccountManager,
     onLoginSuccess: () -> Unit,
 ) {
-    var showNewKeyDialog by remember { mutableStateOf(false) }
-    var generatedAccount by remember { mutableStateOf<AccountState.LoggedIn?>(null) }
-
     val loginProgress by accountManager.loginProgress.collectAsState()
     val keychainUnavailable by accountManager.keychainUnavailable.collectAsState()
 
@@ -108,8 +100,10 @@ fun LoginScreen(
                 }
             },
             onGenerateNew = {
-                generatedAccount = accountManager.generateNewAccount()
-                showNewKeyDialog = true
+                // Hand off to the first-run onboarding screen (hoisted above the
+                // account-state switch in Main): builds the key, walks the user
+                // through backup, then activates + persists on finish.
+                accountManager.beginNewAccountOnboarding()
             },
             onLoginBunker = { bunkerUri ->
                 accountManager.loginWithBunker(bunkerUri).map {
@@ -125,19 +119,6 @@ fun LoginScreen(
             },
             loginProgress = loginProgress,
         )
-
-        val account = generatedAccount
-        if (showNewKeyDialog && account != null) {
-            Spacer(Modifier.height(24.dp))
-            NewKeyWarningCard(
-                npub = account.npub,
-                nsec = account.nsec,
-                onContinue = {
-                    showNewKeyDialog = false
-                    onLoginSuccess()
-                },
-            )
-        }
     }
 }
 

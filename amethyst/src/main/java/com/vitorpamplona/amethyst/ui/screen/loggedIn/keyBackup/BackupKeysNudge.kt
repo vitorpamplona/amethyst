@@ -1,0 +1,177 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+
+/**
+ * Soft, dismissible "back up your keys" nudge shown on the home feed for freshly
+ * generated accounts that haven't saved their secret key yet. It never blocks
+ * navigation: the user either backs up (navigates to [Route.AccountBackup]) or
+ * confirms they already saved the key. Both actions flip the per-account
+ * [LocalPreferences.setHasBackedUpKeys] flag so the nudge stops appearing.
+ */
+@Composable
+fun BackupKeysNudge(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    modifier: Modifier = Modifier,
+) {
+    val npub =
+        accountViewModel.account.signer.pubKey
+            .hexToByteArray()
+            .toNpub()
+
+    // Seed the reactive flag off a background read. Rendering only proceeds once the
+    // flow resolves, so the observing composable never conditionally calls hooks.
+    val flow by produceState<MutableStateFlow<Boolean>?>(initialValue = null, key1 = npub) {
+        value = LocalPreferences.hasBackedUpKeys(npub)
+    }
+
+    flow?.let { stateFlow ->
+        WatchBackupKeysNudge(stateFlow, npub, nav, modifier)
+    }
+}
+
+@Composable
+private fun WatchBackupKeysNudge(
+    stateFlow: MutableStateFlow<Boolean>,
+    npub: String,
+    nav: INav,
+    modifier: Modifier,
+) {
+    val scope = rememberCoroutineScope()
+    val hasBackedUp by stateFlow.collectAsStateWithLifecycle()
+    if (hasBackedUp) return
+
+    BackupKeysNudgeCard(
+        modifier = modifier,
+        onBackupNow = {
+            // Best-effort: opening the backup screen counts as backing up so the
+            // nudge doesn't linger after the user follows through.
+            scope.launch { LocalPreferences.setHasBackedUpKeys(true, npub) }
+            nav.nav(Route.AccountBackup)
+        },
+        onAlreadySaved = {
+            scope.launch { LocalPreferences.setHasBackedUpKeys(true, npub) }
+        },
+    )
+}
+
+@Composable
+private fun BackupKeysNudgeCard(
+    modifier: Modifier = Modifier,
+    onBackupNow: () -> Unit,
+    onAlreadySaved: () -> Unit,
+) {
+    Surface(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    symbol = MaterialSymbols.Key,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = StdHorzSpacer)
+                Text(
+                    text = stringRes(R.string.backup_keys_nudge_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onAlreadySaved) {
+                    Icon(
+                        symbol = MaterialSymbols.Close,
+                        contentDescription = stringRes(R.string.backup_keys_nudge_dismiss),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+
+            Spacer(modifier = StdVertSpacer)
+
+            Text(
+                text = stringRes(R.string.backup_keys_nudge_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            Spacer(modifier = StdVertSpacer)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedButton(onClick = onAlreadySaved) {
+                    Text(stringRes(R.string.backup_keys_nudge_already_saved))
+                }
+                Spacer(modifier = StdHorzSpacer)
+                Button(onClick = onBackupNow) {
+                    Text(stringRes(R.string.backup_keys_nudge_backup_now))
+                }
+            }
+        }
+    }
+}

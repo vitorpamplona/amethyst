@@ -279,6 +279,12 @@ class AccountSessionManager(
 
             localPreferences.setDefaultAccount(accountSettings)
 
+            // Freshly-generated key: mark it as not-yet-backed-up so the home screen
+            // nudges the user to save their secret key. Accounts logged in via an
+            // existing nsec/bunker/external signer never get this false flag (the
+            // pref defaults to true), so only brand-new accounts are nudged.
+            localPreferences.setHasBackedUpKeys(false, accountSettings.keyPair.pubKey.toNpub())
+
             startUI(accountSettings, routeBuilder = { Route.ImportFollowsSelectUser })
 
             scope.launch(Dispatchers.IO) {
