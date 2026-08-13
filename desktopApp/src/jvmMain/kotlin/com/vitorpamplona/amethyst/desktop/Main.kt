@@ -35,9 +35,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -58,11 +61,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.KeyShortcut
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
@@ -2421,6 +2431,16 @@ fun SettingsScreen(
     val expandedIds = remember { mutableStateMapOf<String, Boolean>() }
     val logoutScope = rememberCoroutineScope()
 
+    var query by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    val listState = rememberLazyListState()
+    // Tiny list; a plain filter is cheaper than derivedStateOf here.
+    val visible = if (query.isBlank()) entries else entries.filter { it.meta.matches(query) }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    // A non-blank query reveals matches at the top of the list.
+    LaunchedEffect(query) { if (query.isNotBlank()) listState.animateScrollToItem(0) }
+
     com.vitorpamplona.amethyst.desktop.ui.ReadingColumn {
         val sidePadding =
             com.vitorpamplona.amethyst.desktop.ui
@@ -2462,15 +2482,56 @@ fun SettingsScreen(
                 }
             }
 
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown &&
+                                event.key == Key.Escape &&
+                                query.isNotEmpty()
+                            ) {
+                                query = ""
+                                expandedIds.clear()
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                placeholder = { Text("Search settings…") },
+                leadingIcon = { Icon(MaterialSymbols.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                query = ""
+                                expandedIds.clear()
+                            },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(MaterialSymbols.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                singleLine = true,
+            )
+
             Spacer(Modifier.height(12.dp))
 
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(entries, key = { it.meta.id }) { entry ->
+                items(visible, key = { it.meta.id }) { entry ->
                     SettingsAccordionCard(
-                        expanded = expandedIds[entry.meta.id] == true,
+                        // A non-blank query force-expands matches to reveal them.
+                        expanded = if (query.isBlank()) expandedIds[entry.meta.id] == true else true,
                         onToggle = {
                             expandedIds[entry.meta.id] = !(expandedIds[entry.meta.id] ?: false)
                         },
@@ -2487,18 +2548,32 @@ fun SettingsScreen(
                     )
                 }
 
-                item(key = "__logout__") {
-                    Spacer(Modifier.height(4.dp))
-                    OutlinedButton(
-                        onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error,
-                            ),
-                    ) {
-                        Text("Logout")
+                if (query.isNotBlank() && visible.isEmpty()) {
+                    item(key = "__empty__") {
+                        Text(
+                            "No settings match \"$query\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                        )
                     }
-                    Spacer(Modifier.height(24.dp))
+                }
+
+                if (query.isBlank()) {
+                    item(key = "__logout__") {
+                        Spacer(Modifier.height(4.dp))
+                        OutlinedButton(
+                            onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                ),
+                        ) {
+                            Text("Logout")
+                        }
+                        Spacer(Modifier.height(24.dp))
+                    }
                 }
             }
         }
