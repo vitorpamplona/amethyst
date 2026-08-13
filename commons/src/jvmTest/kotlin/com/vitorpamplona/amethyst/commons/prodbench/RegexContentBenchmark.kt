@@ -369,6 +369,15 @@ class RegexContentBenchmark {
             bench("uriToRoute ${uri.take(18)}", uri, reps) { if (Nip19Parser.uriToRoute(it) != null) 1 else 0 }
         }
 
+        println("\n=== tryParseAndClean (short strings, like uriToRoute) ===")
+        listOf(
+            "nostr:$NPUB" to 200_000,
+            NPUB to 200_000,
+            "not an entity at all" to 200_000,
+        ).forEach { (uri, reps) ->
+            bench("tryParseAndClean ${uri.take(14)}", uri, reps) { if (Nip19Parser.tryParseAndClean(it) != null) 1 else 0 }
+        }
+
         println("\n=== RENDER PATH: RichTextParser.parseText (per note, per render) ===")
         val rtTags = tagArray(30).toImmutableListOfLists()
         val rtCorpus =
