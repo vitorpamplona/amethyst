@@ -416,8 +416,12 @@ class RichTextParser {
         tags: ImmutableListOfLists<String>,
     ): Segment {
         // First #[n]
+        // [tagIndex] requires the literal "#[", so a word without it can never match.
+        // Every plain "#hashtag" reaches this function, and the regex scan is far more
+        // expensive than the substring check that rules it out — so gate on the literal.
+        // Uses contains(), not startsWith(), because find() also matches "#[n]" mid-word.
         try {
-            val matcher = tagIndex.find(word)
+            val matcher = if (word.contains("#[")) tagIndex.find(word) else null
             if (matcher != null) {
                 val index = matcher.groups[1]?.value?.toInt()
                 val suffix = matcher.groups[2]?.value

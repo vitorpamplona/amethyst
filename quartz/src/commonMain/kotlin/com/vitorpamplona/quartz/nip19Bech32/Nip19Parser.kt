@@ -133,39 +133,103 @@ object Nip19Parser {
 
     fun hasAny(content: String): Boolean = nip19regex.matches(content)
 
+    /**
+     * True when one of the NIP-19 entity prefixes starts at [i].
+     *
+     * Every prefix begins with `n`, and English prose is ~7% `n`, so testing all
+     * eight prefixes at each `n` is the bulk of the scan's cost. Dispatching on the
+     * second character first narrows it to at most two candidates — most `n`s are
+     * rejected by a single char compare.
+     */
+    private fun isCandidateAt(
+        content: String,
+        i: Int,
+    ): Boolean {
+        val c = content[i]
+        if (c != 'n' && c != 'N') return false
+        if (i + 1 >= content.length) return false
+        return when (content[i + 1]) {
+            'p', 'P' ->
+                content.regionMatches(i, "npub1", 0, 5, ignoreCase = true) ||
+                    content.regionMatches(i, "nprofile1", 0, 9, ignoreCase = true)
+            's', 'S' -> content.regionMatches(i, "nsec1", 0, 5, ignoreCase = true)
+            'o', 'O' -> content.regionMatches(i, "note1", 0, 5, ignoreCase = true)
+            'e', 'E' ->
+                content.regionMatches(i, "nevent1", 0, 7, ignoreCase = true) ||
+                    content.regionMatches(i, "nembed1", 0, 7, ignoreCase = true)
+            'a', 'A' -> content.regionMatches(i, "naddr1", 0, 6, ignoreCase = true)
+            'r', 'R' -> content.regionMatches(i, "nrelay1", 0, 7, ignoreCase = true)
+            'c', 'C' -> content.regionMatches(i, "ncryptsec1", 0, 10, ignoreCase = true)
+            else -> false
+        }
+    }
+
+    /**
+     * Applies [regex] anchored at every NIP-19 candidate position in [content].
+     *
+     * [isCandidateAt] covers the union of the prefixes across the three NIP-19
+     * regexes, so a narrower [regex] simply fails `matchAt` on a prefix it does
+     * not accept — still far cheaper than `findAll` restarting the engine at
+     * every position in the string.
+     */
+    private inline fun forEachNip19Match(
+        content: String,
+        regex: Regex,
+        action: (MatchResult) -> Unit,
+    ) {
+        var i = 0
+        val len = content.length
+        while (i < len) {
+            if (isCandidateAt(content, i)) {
+                val match = regex.matchAt(content, i)
+                if (match != null) {
+                    action(match)
+                    i = match.range.last + 1
+                    continue
+                }
+            }
+            i++
+        }
+    }
+
+    /**
+     * Scans [content] for NIP-19 entities.
+     *
+     * Walks to each candidate position with cheap char compares and applies
+     * [nip19regex] **anchored** there, instead of letting `findAll` drive the
+     * regex engine from every position in the string. `(nostr:)?@?` are optional,
+     * so anchoring at the entity's own `n` matches the same entities and captures
+     * the same type/key/trailing groups this function reads.
+     *
+     * Measured 9–23x faster across the production content distribution (median
+     * 529 B, tail to 767 KB): ~19 MB/s -> 170–445 MB/s. Equivalence and speed are
+     * guarded by `RegexContentBenchmark` in `commons`. Motivation: on an SM-T220
+     * heap dump, 2,541 of 4,573 live Matchers were running this regex.
+     */
     fun parseAll(content: String): List<Entity> {
-        val matchSequence = nip19regex.findAll(content)
         val returningList = mutableListOf<Entity>()
-        matchSequence.forEach { matcher ->
+        forEachNip19Match(content, nip19regex) { matcher ->
             val type = matcher.groups[3]?.value ?: matcher.groups[5]?.value // npub1
             val key = matcher.groups[4]?.value ?: matcher.groups[6]?.value // bech32
             val additionalChars = matcher.groups[7]?.value // additional chars
 
             if (type != null) {
-                val parsed = parseComponents(type, key, additionalChars)?.entity
-
-                if (parsed != null) {
-                    returningList.add(parsed)
-                }
+                parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
             }
         }
         return returningList
     }
 
+    /** Same scan as [parseAll], restricted to the event-ish entities. */
     fun parseAllEvents(content: String): List<Entity> {
-        val matchSequence = nip19regexEvents.findAll(content)
         val returningList = mutableListOf<Entity>()
-        matchSequence.forEach { matcher ->
-            val type = matcher.groups[2]?.value // npub1
+        forEachNip19Match(content, nip19regexEvents) { matcher ->
+            val type = matcher.groups[2]?.value // nevent1
             val key = matcher.groups[3]?.value // bech32
             val additionalChars = matcher.groups[4]?.value // additional chars
 
             if (type != null) {
-                val parsed = parseComponents(type, key, additionalChars)?.entity
-
-                if (parsed != null) {
-                    returningList.add(parsed)
-                }
+                parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
             }
         }
         return returningList
