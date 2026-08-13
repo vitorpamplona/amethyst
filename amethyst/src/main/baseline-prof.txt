@@ -24,39 +24,48 @@
 # strictly better — it would carry call counts and startup/post-startup flags
 # that reflect real behaviour instead of whole-package guesses.
 #
-# Flags: H = hot, S = startup, P = post-startup.
+# Flags: HP = hot + post-startup, deliberately WITHOUT S (startup).
+#
+# S drives DEX layout: startup-flagged classes are grouped into classes.dex for
+# locality, and Android's docs warn that if startup code does not fit there it
+# "will overflow into the next DEX files". These are whole-package wildcards for
+# ingest, which runs AFTER startup — flagging them S would claim thousands of
+# methods are startup-critical and could push genuinely startup-critical code out
+# of the first DEX, hurting the thing it is meant to help. For comparison, the
+# generated profile marks 32 of its 31,497 rules HSPL; this file should not claim
+# more than that about startup. Startup layout is left to the generated profile.
 
 # --- Quartz: protocol core, relay client, crypto, event kinds ---
-HSPLcom/vitorpamplona/quartz/nip01Core/**->**(**)**
-HSPLcom/vitorpamplona/quartz/nip10Notes/**->**(**)**
-HSPLcom/vitorpamplona/quartz/nip19Bech32/**->**(**)**
-HSPLcom/vitorpamplona/quartz/nip17Dm/**->**(**)**
-HSPLcom/vitorpamplona/quartz/nip22Comments/**->**(**)**
-HSPLcom/vitorpamplona/quartz/nip25Reactions/**->**(**)**
-HSPLcom/vitorpamplona/quartz/nip18Reposts/**->**(**)**
-HSPLcom/vitorpamplona/quartz/nip57Zaps/**->**(**)**
-HSPLcom/vitorpamplona/quartz/nip65RelayList/**->**(**)**
-HSPLcom/vitorpamplona/quartz/utils/**->**(**)**
-HSPLcom/vitorpamplona/quartz/experimental/**->**(**)**
+HPLcom/vitorpamplona/quartz/nip01Core/**->**(**)**
+HPLcom/vitorpamplona/quartz/nip10Notes/**->**(**)**
+HPLcom/vitorpamplona/quartz/nip19Bech32/**->**(**)**
+HPLcom/vitorpamplona/quartz/nip17Dm/**->**(**)**
+HPLcom/vitorpamplona/quartz/nip22Comments/**->**(**)**
+HPLcom/vitorpamplona/quartz/nip25Reactions/**->**(**)**
+HPLcom/vitorpamplona/quartz/nip18Reposts/**->**(**)**
+HPLcom/vitorpamplona/quartz/nip57Zaps/**->**(**)**
+HPLcom/vitorpamplona/quartz/nip65RelayList/**->**(**)**
+HPLcom/vitorpamplona/quartz/utils/**->**(**)**
+HPLcom/vitorpamplona/quartz/experimental/**->**(**)**
 
 # --- Amethyst: the in-memory store and the relay wiring around it ---
-HSPLcom/vitorpamplona/amethyst/model/**->**(**)**
-HSPLcom/vitorpamplona/amethyst/service/relayClient/**->**(**)**
-HSPLcom/vitorpamplona/amethyst/service/okhttp/**->**(**)**
-HSPLcom/vitorpamplona/amethyst/commons/model/**->**(**)**
-HSPLcom/vitorpamplona/amethyst/commons/richtext/**->**(**)**
+HPLcom/vitorpamplona/amethyst/model/**->**(**)**
+HPLcom/vitorpamplona/amethyst/service/relayClient/**->**(**)**
+HPLcom/vitorpamplona/amethyst/service/okhttp/**->**(**)**
+HPLcom/vitorpamplona/amethyst/commons/model/**->**(**)**
+HPLcom/vitorpamplona/amethyst/commons/richtext/**->**(**)**
 
 # --- JSON: every frame is parsed through Jackson ---
-HSPLcom/fasterxml/jackson/core/**->**(**)**
-HSPLcom/fasterxml/jackson/databind/**->**(**)**
-HSPLcom/fasterxml/jackson/module/kotlin/**->**(**)**
+HPLcom/fasterxml/jackson/core/**->**(**)**
+HPLcom/fasterxml/jackson/databind/**->**(**)**
+HPLcom/fasterxml/jackson/module/kotlin/**->**(**)**
 
 # --- Transport: the socket read path under the relay client ---
-HSPLokhttp3/internal/ws/**->**(**)**
-HSPLokhttp3/internal/connection/**->**(**)**
-HSPLokio/**->**(**)**
+HPLokhttp3/internal/ws/**->**(**)**
+HPLokhttp3/internal/connection/**->**(**)**
+HPLokio/**->**(**)**
 
 # --- Coroutines: every ingested event crosses the dispatcher ---
-HSPLkotlinx/coroutines/scheduling/**->**(**)**
-HSPLkotlinx/coroutines/channels/**->**(**)**
-HSPLkotlinx/coroutines/flow/**->**(**)**
+HPLkotlinx/coroutines/scheduling/**->**(**)**
+HPLkotlinx/coroutines/channels/**->**(**)**
+HPLkotlinx/coroutines/flow/**->**(**)**
