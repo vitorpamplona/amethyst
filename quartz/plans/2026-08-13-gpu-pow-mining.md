@@ -4,7 +4,11 @@
 **Status:** analysis + measurements; recommendation is **NOT to build a GPU miner**
 **Verdict:** a flagship phone GPU lands at roughly the same SHA-256 throughput as the
 CPU cores the miner already uses, because ARMv8 CPUs have SHA-256 **in silicon** and
-mobile GPUs do not. The unclaimed 2–4x is on the CPU side (midstate), not the GPU.
+mobile GPUs do not. The unclaimed speedup is on the CPU side — and on Android it is
+batching attempts under one JNI call, not the midstate (see the two regimes below).
+
+Also specifies advancing `created_at` while mining, which shares the same pass
+structure a midstate would need.
 
 ## The question
 
@@ -66,9 +70,28 @@ That is a clean straight line: **cost ≈ 76 ns fixed + 172 ns per 64-byte block
 `MessageDigest` call overhead (JNI + digest setup); the slope is the compression
 function.
 
-These absolute numbers are x86 without a SHA-NI intrinsic and say nothing about a
-phone. What transfers is the *shape*: per-attempt cost is dominated by block count,
-with a fixed per-call floor that becomes significant once block count drops.
+What transfers to a phone is the *shape*: per-attempt cost is dominated by block
+count, with a fixed per-call floor that becomes significant once block count drops.
+
+### 3. Two regimes, and the JVM is in the slow one
+
+The size of every optimization below depends on whether SHA-256 runs on dedicated
+silicon or in software, because that moves the 172 ns slope but not the 76 ns floor.
+Both regimes, measured on the same container CPU (Xeon @ 2.1 GHz):
+
+| Path | ns per block |
+| ---- | ------------ |
+| `sha256Into` → `MessageDigest` (JDK 21) | **172** |
+| `openssl speed -evp sha256`, SHA-NI, 8 KB asymptote (1,357 MB/s) | **47** |
+
+The JVM is **3.7x off hardware SHA-256 on the same CPU**, despite `sha_ni` in
+`/proc/cpuinfo` and `UseSHA256Intrinsics = true`. I could not explain the gap and did
+not chase it, but it deserves its own investigation: it would speed up event
+*verification*, which is far hotter than mining.
+
+ARMv8 crypto extensions land near the hardware number (~2 GB/s per core ≈ 32 ns per
+block), so **Android is in the fast regime and JVM targets are in the slow one** —
+which is exactly what decides the value of a midstate.
 
 ## What GPU APIs are actually reachable
 
@@ -129,19 +152,42 @@ from the midstate optimization, so the ratio does not improve.
 
 ## What to do instead
 
-**1. Midstate (recommended, ~100 lines in `quartz`, every platform).**
-Absorb the constant prefix once, re-hash only the tail. On the measured cost model
-that is **3.5x** for a short note (1,452 ns → 420 ns) and **2.1x** for a long one
-(1,968 ns → 936 ns) — larger than the flagship-only 1.4x the GPU would buy, on every
-device including desktop and `amy`. Needs a SHA-256 that exposes its state; `MessageDigest`
-does not, so this means a small Kotlin compression function in `commonMain` (which
-gives up the ARM hardware instruction) or `clone()`-ing a pre-absorbed Conscrypt
-digest per attempt (which keeps it — worth measuring both on-device).
+**1. Midstate — big on JVM targets, probably a no-op on Android.**
+SHA-256 is `state ← compress(state, block)` over 64-byte blocks, strictly sequential.
+Every block before the one containing the nonce is identical on every attempt, so it
+can be absorbed **once** into 8 uint32 words and restored per attempt. The boundary is
+`(searchFrom / 64) * 64` — `searchFrom`, not `nonceStarts`, because a parallel
+worker's fixed prefix is constant too. This is legal only because the payload length
+is constant within one `search()` pass (the nonce only grows on exhaustion, which
+restarts the pass), so the padding and length suffix don't move.
 
-**2. Kill the per-call floor.** Once the tail is 2 blocks, the ~76 ns (x86) /
-~100–200 ns (JNI on ART) fixed cost per `MessageDigest` call is a third of the
-attempt. A batched or state-reusing hasher matters more than raw compression speed at
-that point.
+The win depends entirely on which regime the device is in:
+
+| | now | with midstate | speedup |
+| --- | --- | --- | --- |
+| Slow regime — measured `76 + 172n` (JVM targets) | 1,452 ns | 420 ns | **3.5x** |
+| Fast regime — ARMv8 crypto ext, `~200 + 47n` (Android) | 576 ns | ~494 ns via `clone()` | **~1.2x** |
+
+In the fast regime the JNI floor, not the compression, is the cost — and midstate
+does nothing about it. Worse, the two ways to get a midstate both make it back:
+`MessageDigest` doesn't expose state, so it is either `clone()`-ing a pre-absorbed
+Conscrypt digest (keeps the ARM instruction, but adds a *second* JNI call, hence the
+1.2x) or a Kotlin compression function in `commonMain` (one JNI call becomes zero, but
+gives up the hardware instruction — at ~300–500 ns/block on ART that is *slower than
+today*). Whether Conscrypt's digest is even `Cloneable` is unverified.
+
+So: worth doing for `desktopApp`/`cli`/`geode`, not obviously worth doing for the
+phone. Settle it with an on-device measurement before writing it.
+
+**2. Kill the per-call floor — this is the real Android win.**
+The fast regime is JNI-bound: ~200 ns of call overhead against ~376 ns of hashing.
+The only way past it is to run many attempts *below* the JNI boundary — one native
+call that restores the midstate, walks N nonces, and returns a winner. That keeps the
+ARMv8 instruction *and* pays the JNI cost once per million attempts instead of once
+per attempt. It needs an NDK toolchain, which `amethyst` does not have today
+(`nestsClient` builds native code, so it is not unprecedented). Ironically this is the
+same batching structure the GPU path needs — and it beats the GPU by keeping the
+hardware SHA-256.
 
 **3. `PoWMiner` only uses half the cores.** `minerWorkers = cores / 2` is right while
 the user is composing, but a job that has been handed to the foreground service and
@@ -150,6 +196,53 @@ is no longer blocking any UI could use more.
 **4. Delegate off-device.** `quartz/…/nip90Dvms/eventPowDelegation/` already models
 NIP-90 kinds 5970/6970 — hand the template to a DVM with real hardware. That beats
 every on-device option and is already specced.
+
+## Advancing `created_at` while mining
+
+Not a speedup — a correctness fix that this analysis is a prerequisite for, because
+it interacts with the midstate.
+
+NIP-13: *"It is recommended to update the `created_at` as well during this process."*
+We do half of it. `PoWPublishQueue.enqueue(refreshCreatedAtOnStart = …)` and the
+anonymous path in `ShortNotePostViewModel` both stamp a fresh `TimeUtils.now()` at
+mining **start**, because "a job that waited in the queue (or was restored after a
+process death) would otherwise publish visibly in the past". But the mining run itself
+is the same problem: 28 bits at a few M h/s is ~a minute, 30 bits several — and
+`PoWPolicy.MAX_DIFFICULTY` is 40. A post can still land in the feed minutes stale.
+
+**Where it goes.** `search()` already re-serializes per pass in its
+`do { … } while (nextSize < 50)` loop; today a pass only ends on nonce-space
+exhaustion. Bound a pass by *either* exhaustion *or* a wall-clock budget (~1 s), and
+re-stamp `createdAt` at the top of each pass. PoW search is memoryless, so restarting
+a pass throws away no progress.
+
+**API shape.** Don't make `EventTemplate.createdAt` lazy — it is `@Immutable`,
+`@Serializable`, and persisted by `PoWJobPersistence`; a field that changes on read
+breaks value semantics and the checkpoint format. Pass the miner a clock instead:
+`PoWMiner.mine(…, refreshCreatedAt: (() -> Long)? = null)`, null meaning today's
+frozen behaviour. The consumers are already correct — `PoWNostrSigner` forwards
+`mined.createdAt` to `signer.sign(…)`, and the queue publishes the mined template — so
+this is contained inside `PoWMiner` plus one flag at the call sites.
+
+**"When we can" is already modelled.** Reuse `refreshCreatedAtOnStart`'s predicate
+rather than inventing a second one; its comment already states the exclusion —
+*"Must stay false for scheduled posts, whose future created_at is intentional."*
+Replaceable/addressable kinds (created_at is their conflict-resolution key) and NIP-59
+seals/gift wraps (deliberately randomized timestamps) are already excluded upstream by
+`PoWPolicy.neverMine` and `kindsToMine`. Clamp with `maxOf(previous, now())` so a
+wall-clock step backwards cannot move a post into the past.
+
+**Interaction with the midstate.** `created_at` sits *before* the tags in
+`[0,pubkey,created_at,kind,tags,content]`, so every bump invalidates the whole
+midstate. That costs one prefix re-absorb (~1 µs) per bump against millions of
+attempts between bumps — irrelevant, and it happens at the pass boundary where the
+payload is being rebuilt anyway. The digit count of `created_at` is stable (10 digits
+until 2286), but re-serializing per pass sidesteps that question entirely.
+
+**Bonus.** A fresh `created_at` is a fresh search space, which makes the
+`nextSize += STARTING_NONCE_SIZE` growth loop and its `RuntimeException("Could not
+find PoW")` escape hatch effectively dead: one pass over a 5-char nonce is 73⁵ ≈ 2.1e9
+candidates, and each bump grants another 2.1e9.
 
 ## If we want the GPU experiment anyway
 

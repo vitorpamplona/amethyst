@@ -9,7 +9,7 @@ _Audited 2026-06-30. 11 plans: 7 shipped (archived), 0 in-progress, 3 queued, 1 
 | [2026-06-12-giftwrap-deletion-requests.md](2026-06-12-giftwrap-deletion-requests.md) | Let a recipient-authored kind-5 delete/block a gift wrap (kind 1059) addressed to them. |
 | [2026-07-03-incremental-negentropy-storage.md](2026-07-03-incremental-negentropy-storage.md) | Always-current (created_at, id) index so cold NEG-OPENs stop paying a full scan + seal (~340 ms at 50k vs strfry's ~21 ms). |
 | [2026-07-04-small-req-floor.md](2026-07-04-small-req-floor.md) | Small-REQ dispatch floor: decomposed, inline fast path tried and reverted (no wire-level win); floor is transport-side. |
-| [2026-08-13-gpu-pow-mining.md](2026-08-13-gpu-pow-mining.md) | GPU NIP-13 mining: analysed and declined — ARMv8 has SHA-256 in silicon, mobile GPUs don't, so a flagship GPU is only ~1.4x; the win is CPU midstate (2–4x). |
+| [2026-08-13-gpu-pow-mining.md](2026-08-13-gpu-pow-mining.md) | GPU NIP-13 mining declined (ARMv8 has SHA-256 in silicon, mobile GPUs do not); the Android win is batching attempts under one JNI call. Also specs advancing `created_at` while mining. |
 
 ## Archived (shipped)
 | Plan | Summary |
