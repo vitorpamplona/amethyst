@@ -240,13 +240,23 @@ fun BlurhashGridBackdrop(media: List<MediaUrlImage>) {
     }
 }
 
+/**
+ * Sizes a media container from a reported width/height ratio, falling back to width-only when
+ * there is no usable one.
+ *
+ * A ratio that is not finite and positive counts as no ratio: `Modifier.aspectRatio` throws
+ * `IllegalArgumentException` on `0f` and on `NaN`, which would take down the composition around
+ * the media rather than just mis-sizing it. Callers are expected to hand over a clean value
+ * (`DimensionTag.aspectRatioOrNull`, `MediaAspectRatioCache`), so this is the backstop for the one
+ * that forgets, not the primary guard.
+ */
 fun mediaSizingModifier(
     ratio: Float?,
     contentScale: ContentScale,
 ): Modifier =
     when {
         contentScale == ContentScale.Crop -> Modifier.fillMaxSize()
-        ratio != null -> Modifier.fillMaxWidth().aspectRatio(ratio)
+        ratio != null && ratio > 0f && ratio.isFinite() -> Modifier.fillMaxWidth().aspectRatio(ratio)
         else -> Modifier.fillMaxWidth()
     }
 

@@ -125,7 +125,7 @@ private fun PictureCardImage(
 
     if (images.size == 1) {
         val single = images.first()
-        val ratio = single.dim?.aspectRatio() ?: MediaAspectRatioCache.get(single.url)
+        val ratio = single.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(single.url)
         ContentWarningGate(
             isSensitive = isSensitive,
             reasons = reasons,
