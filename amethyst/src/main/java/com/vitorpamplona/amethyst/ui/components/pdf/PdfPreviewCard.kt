@@ -148,7 +148,10 @@ private fun LoadedPdfPreviewCard(
     // The cache is consulted ahead of the imeta `dim` because it holds the page size this card
     // measured itself: an author-supplied `dim` that disagrees would guarantee the jump on every
     // single visit, which is exactly what this is here to stop.
-    val knownAspectRatio = MediaAspectRatioCache.get(content.url) ?: content.dim?.aspectRatio()
+    // hasSize() before aspectRatio(), the same guard ImageGallery applies: DimensionTag.parse only
+    // rejects the literal "0x0", so a `dim` like "0.4x0.4" truncates to 0x0 and would otherwise
+    // reserve a box off a 0/0 ratio. Reserving nothing is the honest answer for a size we don't have.
+    val knownAspectRatio = MediaAspectRatioCache.get(content.url) ?: content.dim?.takeIf { it.hasSize() }?.aspectRatio()
 
     @Suppress("ProduceStateDoesNotAssignValue")
     val state by produceState<PdfLoadState>(initialValue = PdfLoadState.Loading, key1 = content.url, key2 = targetWidthPx) {
