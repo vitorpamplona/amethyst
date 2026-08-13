@@ -21,6 +21,7 @@
     <string name="new_key_public_label">公钥(可分享)：</string>
     <string name="new_key_secret_label">密钥 (绝对不要共享这个!)：</string>
     <string name="new_key_continue_button">我已保存我的密钥，继续</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">复制</string>
     <string name="action_paste">粘贴</string>

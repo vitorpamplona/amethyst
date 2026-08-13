@@ -21,6 +21,7 @@
     <string name="new_key_public_label">Javni ključ (za deljenje):</string>
     <string name="new_key_secret_label">Zasebni ključ (NIKOLI ne deli!)</string>
     <string name="new_key_continue_button">Shranil sem moje ključe, nadaljuj</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">Kopiraj</string>
     <string name="action_paste">Prilepi</string>

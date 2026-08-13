@@ -21,6 +21,7 @@
     <string name="new_key_public_label">Öffentlicher Schlüssel (teilbar):</string>
     <string name="new_key_secret_label">Geheimer Schlüssel (NIEMALS teilen!):</string>
     <string name="new_key_continue_button">Ich habe meine Schlüssel gespeichert, weiter</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">Kopieren</string>
     <string name="action_paste">Einfügen</string>

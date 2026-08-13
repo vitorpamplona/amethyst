@@ -21,6 +21,7 @@
     <string name="new_key_public_label">Nyilvános kulcs (megosztható):</string>
     <string name="new_key_secret_label">Titkos kulcs (SOHA ne ossza meg!):</string>
     <string name="new_key_continue_button">Elmentettem a kulcsaimat, folytatás</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">Másolás</string>
     <string name="action_paste">Beillesztés</string>

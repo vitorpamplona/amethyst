@@ -21,6 +21,7 @@
     <string name="new_key_public_label">ख्याप्य कुंचिका (वितरणशक्य):</string>
     <string name="new_key_secret_label">गुप्त कुंचिका (इसे कभी ना बाँटें):</string>
     <string name="new_key_continue_button">मेरे कुंचिकाओं को सुरक्षित रख लिया। आगे</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">अनुकृति</string>
     <string name="action_paste">चिपकाएँ</string>

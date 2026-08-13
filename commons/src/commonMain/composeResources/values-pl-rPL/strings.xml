@@ -21,6 +21,7 @@
     <string name="new_key_public_label">Klucz publiczny (udostępnialny):</string>
     <string name="new_key_secret_label">Tajny klucz (NIGDY go nie ujawniaj!):</string>
     <string name="new_key_continue_button">Zapisałem klucze, kontynuuj</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">Kopiuj</string>
     <string name="action_paste">Wklej</string>
