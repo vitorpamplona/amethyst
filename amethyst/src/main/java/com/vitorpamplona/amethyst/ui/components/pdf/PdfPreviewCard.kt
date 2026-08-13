@@ -26,6 +26,7 @@ import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -36,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
@@ -44,11 +46,15 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.core.graphics.createBitmap
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
+import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.FileAttachmentRow
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
+import com.vitorpamplona.amethyst.ui.theme.Size6dp
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -58,11 +64,26 @@ import kotlinx.coroutines.withContext
 // Hard ceiling on the inline thumbnail bitmap, in pixels. Prevents OOM on very tall/large pages.
 private const val THUMBNAIL_MAX_DIM_PX = 1600
 
+// Floor for the width/height ratio the card lays out with. A pathologically tall page (a receipt,
+// a single-column banner) would otherwise reserve a screenful of height for a sliver of content.
+private const val MIN_PREVIEW_ASPECT_RATIO = 0.2f
+
+/**
+ * The ratio the card actually lays out with, given a page's natural width/height. The placeholder
+ * and the loaded thumbnail both go through here so the box reserved while loading is the exact box
+ * the rendered page lands in — the clamp has to be applied on both sides or the reservation is
+ * wrong for the very pages it exists to protect.
+ */
+internal fun previewAspectRatio(pageAspectRatio: Float): Float = pageAspectRatio.coerceAtLeast(MIN_PREVIEW_ASPECT_RATIO)
+
 data class PdfPreview(
     val thumbnail: Bitmap,
     val pageCount: Int,
-    val aspectRatio: Float,
-)
+    val pageWidth: Int,
+    val pageHeight: Int,
+) {
+    val aspectRatio: Float = pageWidth.toFloat() / pageHeight.toFloat()
+}
 
 private sealed class PdfLoadState {
     data object Loading : PdfLoadState()
@@ -104,6 +125,14 @@ private fun LoadedPdfPreviewCard(
             containerWidthPx.coerceAtMost(THUMBNAIL_MAX_DIM_PX).coerceAtLeast(1)
         }
 
+    // Read in composition — never inside a remember — so this recomposes the moment the render
+    // below fills the entry in. On a revisit the entry is already there and the placeholder can
+    // reserve the right box from the first frame, which is the whole point of caching it.
+    // The cache is consulted ahead of the imeta `dim` because it holds the page size this card
+    // measured itself: an author-supplied `dim` that disagrees would guarantee the jump on every
+    // single visit, which is exactly what this is here to stop.
+    val knownAspectRatio = MediaAspectRatioCache.get(content.url) ?: content.dim?.aspectRatio()
+
     @Suppress("ProduceStateDoesNotAssignValue")
     val state by produceState<PdfLoadState>(initialValue = PdfLoadState.Loading, key1 = content.url, key2 = targetWidthPx) {
         value =
@@ -114,6 +143,13 @@ private fun LoadedPdfPreviewCard(
                     }.use { snapshot ->
                         withContext(Dispatchers.IO) {
                             renderFirstPage(snapshot.data.toFile(), targetWidthPx)
+                        }
+                    }.also { result ->
+                        // Same cache the image and video paths use, so a PDF that has been rendered
+                        // once lays out at its real shape on every later visit instead of growing
+                        // from a bare filename row into a full page.
+                        if (result is PdfLoadState.Ready) {
+                            MediaAspectRatioCache.add(content.url, result.preview.pageWidth, result.preview.pageHeight)
                         }
                     }
             } catch (e: Exception) {
@@ -134,7 +170,7 @@ private fun LoadedPdfPreviewCard(
 
     when (val current = state) {
         is PdfLoadState.Loading -> {
-            PdfSkeletonCard(filename)
+            PdfSkeletonCard(filename, knownAspectRatio)
         }
 
         is PdfLoadState.Failed -> {
@@ -158,7 +194,7 @@ private fun LoadedPdfPreviewCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .aspectRatio(current.preview.aspectRatio.coerceAtLeast(0.2f)),
+                            .aspectRatio(previewAspectRatio(current.preview.aspectRatio)),
                 )
 
                 FilenameRow(filename = filename, subtitle = pageCountLabel(current.preview.pageCount))
@@ -187,8 +223,26 @@ private fun PlaceholderPdfCard(
 }
 
 @Composable
-private fun PdfSkeletonCard(filename: String) {
+private fun PdfSkeletonCard(
+    filename: String,
+    aspectRatio: Float?,
+) {
     Column(modifier = MaterialTheme.colorScheme.innerPostModifier.fillMaxWidth()) {
+        // Only known on a revisit — the first render is what fills the cache — so the first sight of
+        // a PDF still grows into place. From then on the page's box is held open while it renders
+        // and the feed stays put.
+        if (aspectRatio != null) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(previewAspectRatio(aspectRatio)),
+                contentAlignment = Alignment.Center,
+            ) {
+                LoadingAnimation(Size40dp, Size6dp)
+            }
+        }
+
         FilenameRow(filename = filename, subtitle = "Loading…")
         Spacer(modifier = DoubleVertSpacer)
     }
@@ -223,7 +277,8 @@ private fun renderFirstPage(
                     PdfPreview(
                         thumbnail = bitmap,
                         pageCount = pageCount,
-                        aspectRatio = page.width.toFloat() / page.height.toFloat(),
+                        pageWidth = page.width,
+                        pageHeight = page.height,
                     ),
                 )
             }
