@@ -21,6 +21,7 @@
     <string name="new_key_public_label">Chave pública (compartilhável):</string>
     <string name="new_key_secret_label">Chave secreta (NUNCA compartilhe isto!):</string>
     <string name="new_key_continue_button">Salvei minhas chaves, continuar</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">Copiar</string>
     <string name="action_paste">Colar</string>

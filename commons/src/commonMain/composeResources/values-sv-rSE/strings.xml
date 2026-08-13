@@ -21,6 +21,7 @@
     <string name="new_key_public_label">Publik nyckel (delbar):</string>
     <string name="new_key_secret_label">Hemlig nyckel (dela ALDRIG denna!):</string>
     <string name="new_key_continue_button">Jag har sparat mina nycklar, fortsätt</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">Kopiera</string>
     <string name="action_paste">Klistra in</string>

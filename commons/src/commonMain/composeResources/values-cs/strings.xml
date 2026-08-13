@@ -21,6 +21,7 @@
     <string name="new_key_public_label">Veřejný klíč (lze sdílet):</string>
     <string name="new_key_secret_label">Tajný klíč (NIKDY jej nesdílejte!):</string>
     <string name="new_key_continue_button">Uložil jsem si klíče, pokračovat</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">Kopírovat</string>
     <string name="action_paste">Vložit</string>

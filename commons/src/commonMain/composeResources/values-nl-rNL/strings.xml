@@ -21,6 +21,7 @@
     <string name="new_key_public_label">Openbare sleutel (deelbaar):</string>
     <string name="new_key_secret_label">Geheime sleutel (deel dit NOOIT!):</string>
     <string name="new_key_continue_button">Ik heb mijn sleutels bewaard, doorgaan</string>
+    <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">Kopiëren</string>
     <string name="action_paste">Plakken</string>

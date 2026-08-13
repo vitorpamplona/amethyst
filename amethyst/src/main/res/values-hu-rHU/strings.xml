@@ -46,6 +46,8 @@
     <string name="violence">Erőszak</string>
     <string name="unknown_author">Ismeretlen szerző</string>
     <string name="copy_text">Szöveg másolása</string>
+    <string name="copy_text_original">Eredeti szöveg másolása</string>
+    <string name="copy_text_translated">Lefordított szöveg másolása</string>
     <string name="copy_user_pubkey">Szerző azonosítójának másolása</string>
     <string name="copy_note_id">Bejegyzés azonosítójának másolása</string>
     <string name="copy_raw_json">Nyers JSON másolása</string>
@@ -1103,12 +1105,67 @@
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
+    <string name="relay_auth_auto_login_when">Jelentkezzen be kérdés nélkül, ha\u2026</string>
+    <string name="relay_auth_auto_my_relays">\u2026ez a saját átjátszóm, vagy egy szoba, amihez csatlakozott</string>
+    <string name="relay_auth_auto_read_follows">\u2026olyan valakit olvasok, akit követek</string>
+    <string name="relay_auth_auto_message_follows">\u2026olyan valakinek írok, akit követek</string>
+    <string name="relay_auth_auto_message_strangers">\u2026bárki másnak írok</string>
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <string name="relay_auth_login_as">Bejelentkezik mint %1$s?</string>
+    <string name="relay_auth_relay_asks">megkérdezi, hogy Ön kicsoda</string>
+    <string name="relay_auth_why_send_dm">Nem fogadja el az Ön üzenetét %1$s számára, hacsak nem jelentkezik be.</string>
+    <string name="relay_auth_why_notify_inbox">%1$s nem fog értesülni a válaszáról, hacsak nem jelentkezik be.</string>
+    <string name="relay_auth_why_read_outbox">Nem fogja kiszolgálni %1$s bejegyzéseit, hacsak nem jelentkezik be.</string>
+    <string name="relay_auth_why_post_venue">Nem fogadja el az Ön üzenetét %1$s számára, hacsak nem jelentkezik be.</string>
+    <string name="relay_auth_why_read_venue">Nem fogja kiszolgálni a következőt: %1$s, hacsak nem jelentkezik be.</string>
+    <string name="relay_auth_why_my_inbox">Nem fogja kiszolgálni az Önnek küldött válaszokat, zapeket és üzeneteket, hacsak nem jelentkezik be.</string>
+    <string name="relay_auth_why_thread">Nem fogja kiszolgálni a beszélgetés hátralévő részét, hacsak nem jelentkezik be.</string>
+    <string name="relay_auth_why_thread_with">Nem fogja kiszolgálni a(z) %1$s nevű felhasználóval folytatott beszélgetése hátralévő részét, hacsak nem jelentkezik be.</string>
+    <string name="relay_auth_why_my_own_relay">Ez az egyik saját átjátszója, és mindenkitől bejelentkezést kér.</string>
+    <string name="relay_auth_why_other">Mindenkitől bejelentkezést kér. Az Amethyst nem tudja megmondani, hogy mit tart vissza.</string>
+    <string name="relay_auth_someone_unloaded">valaki, akit még nem töltött be</string>
+    <plurals name="relay_auth_name_and_n_others">
+        <item quantity="one">%1$s és %2$d további</item>
+        <item quantity="other">%1$s és %2$d további</item>
+    </plurals>
+    <plurals name="relay_auth_also_holding_back">
+        <item quantity="one">Visszatart továbbá %1$d másik dolgot is.</item>
+        <item quantity="other">Visszatart továbbá %1$d másik dolgot is.</item>
+    </plurals>
+    <string name="relay_auth_remember_relay">Emlékezzen erre ennél az átjátszónál</string>
+    <string name="relay_auth_log_in">Bejelentkezés</string>
+    <string name="relay_auth_not_now">Most nem</string>
+    <string name="relay_auth_never_allow">Soha nem engedélyezem</string>
+    <string name="relay_auth_how_we_decide">Hogyan dönt az Amethyst</string>
     <!-- Settings: three lists that each hold what their header says. -->
+    <string name="relay_auth_exceptions">Kivételek</string>
+    <string name="relay_auth_no_exceptions">Még nincsenek kivételek. Minden átjátszó a fenti szabályokat követi.</string>
+    <string name="relay_auth_exception_always">Mindig, Ön által beállítva</string>
+    <string name="relay_auth_exception_never">Soha, Ön által beállítva</string>
+    <string name="relay_auth_segment_always">Mindig</string>
+    <string name="relay_auth_segment_never">Soha</string>
+    <string name="relay_auth_remove_exception">Kivétel eltávolítása</string>
+    <string name="relay_auth_exception_removed_undo">Kivétel eltávolítva. %1$s ismét az Ön szabályait követi.</string>
+    <string name="relay_auth_undo">Visszavonás</string>
+    <string name="relay_auth_blocked_section">Letiltva az Ön tiltólistája alapján</string>
+    <string name="relay_auth_blocked_row_desc">Az Amethyst soha nem jelentkezik be a letiltott átjátszókra.</string>
+    <string name="relay_auth_no_blocked">Semmi sincs letiltva. Az Ön által blokkolt átjátszókra soha nem fog bejelentkezni, függetlenül attól, hogy mit állít be itt.</string>
+    <string name="relay_auth_recent_section">Legutóbbi bejelentkezések</string>
+    <string name="relay_auth_no_recent">Még egyetlen átjátszó sem kérte a bejelentkezését.</string>
+    <string name="relay_auth_ago">%1$s ezelőtt</string>
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
+    <string name="relay_auth_purpose_send_dm">saját üzenetek</string>
+    <string name="relay_auth_purpose_notify_inbox">saját válaszok</string>
+    <string name="relay_auth_purpose_read_outbox">emberek, akiket olvasok</string>
+    <string name="relay_auth_purpose_post_venue">egy szoba, ahová Ön bejegyzést küldött</string>
+    <string name="relay_auth_purpose_read_venue">egy szoba, amit olvasok</string>
+    <string name="relay_auth_purpose_my_inbox">saját beérkező üzenetek</string>
+    <string name="relay_auth_purpose_thread">egy beszélgetés</string>
+    <string name="relay_auth_purpose_my_own_relay">saját tulajdonú átjátszó</string>
+    <string name="relay_auth_purpose_other">ez az átjátszó</string>
     <string name="nip82_repository_label">Forrás: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Letöltés</string>
@@ -1477,6 +1534,46 @@
     <string name="private_note_visible_to">Látható a számára:</string>
     <string name="private_note_no_receivers">Még nincsenek címzettek: csak Ön fogja látni ezt a jegyzetet. Adjon hozzá embereket, akikkel megosztaná.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
+    <string name="audience_manage">Kezelje, hogy kik láthatják ezt</string>
+    <string name="audience_empty_private">Csak Ön \u2014 választhat valakit, mindenki más csak láthatja ezt</string>
+    <string name="audience_empty_public">Adjon hozzá embereket az értesítéshez</string>
+    <string name="audience_summary_two">%1$s és %2$s</string>
+    <string name="audience_group_chip">%1$s \u00b7 %2$s</string>
+    <string name="audience_group_remove">Mindenki eltávolítása, aki innen lett hozzáadva: %1$s</string>
+    <string name="audience_send_privately">Küldés privátban</string>
+    <string name="audience_sheet_title">Emberek hozzáadása</string>
+    <string name="audience_sheet_search">Emberek és listák keresése</string>
+    <string name="audience_sheet_no_lists">Még nincsenek személylistái vagy követési csomagjai. Keressen fent, hogy valakit közvetlenül hozzáadjon.</string>
+    <string name="audience_count_with_private">%1$d \u00b7 %2$d privát</string>
+    <string name="audience_over_limit">Korlát felett</string>
+    <string name="audience_badge_already_added">Már hozzá van adva</string>
+    <string name="audience_badge_muted">Némítva</string>
+    <string name="audience_badge_private_member">Privát tag</string>
+    <string name="audience_recipients_are_visible">Mindenki, aki szerepel a jegyzetben láthatja a teljes címzettlistát.</string>
+    <plurals name="audience_summary_others">
+        <item quantity="one">%1$s, %2$s és %3$d további</item>
+        <item quantity="other">%1$s, %2$s és %3$d további</item>
+    </plurals>
+    <plurals name="audience_soft_cap_private">
+        <item quantity="one">Ez a jegyzet titkosítva lesz, és %1$d külön alkalommal lesz kézbesítve, személyenként egyszer. Külső aláíró esetén ez egy-egy jóváhagyást jelent.</item>
+        <item quantity="other">Ez a jegyzet titkosítva lesz, és %1$d külön alkalommal lesz kézbesítve, személyenként egyszer. Külső aláíró esetén ez egy-egy jóváhagyást jelent.</item>
+    </plurals>
+    <plurals name="audience_soft_cap_public">
+        <item quantity="one">%1$d személy kap értesítést erről a bejegyzésről.</item>
+        <item quantity="other">%1$d személy kap értesítést erről a bejegyzésről.</item>
+    </plurals>
+    <plurals name="audience_hard_cap">
+        <item quantity="one">Ez %1$d személy lenne. Az Amethyst egyszerre legfeljebb %2$d személyt ad hozzá \u2014 töröljön néhány kiválasztottat.</item>
+        <item quantity="other">Ez %1$d személy lenne. Az Amethyst egyszerre legfeljebb %2$d személyt ad hozzá \u2014 töröljön néhány kiválasztottat.</item>
+    </plurals>
+    <plurals name="audience_add_people">
+        <item quantity="one">%1$d személy hozzáadása</item>
+        <item quantity="other">%1$d személy hozzáadása</item>
+    </plurals>
+    <plurals name="audience_add_anyway">
+        <item quantity="one">%1$d személy hozzáadása mindenképpen</item>
+        <item quantity="other">%1$d személy hozzáadása mindenképpen</item>
+    </plurals>
     <string name="notify_add_user">Hozzáadás</string>
     <string name="notify_remove_user">Felhaszáló eltávolítása az értesítésekből</string>
     <string name="notify_mute_user">Értesítés küldése folyamatban. Koppintson a felhasználó értesítéseinek némításához</string>
@@ -3902,6 +3999,46 @@
     <string name="social_proof">Közösségi megerősítés</string>
     <string name="poll_submit">Beküldés</string>
     <string name="poll_view_results">Eredmények megtekintése</string>
+    <string name="poll_results_title">Szavazás állása</string>
+    <string name="poll_results_loading">Szavazás betöltése…</string>
+    <string name="poll_results_open">Nyitva</string>
+    <string name="poll_results_closes_in">Bezáródik ekkor: %1$s</string>
+    <string name="poll_results_ended">Véget ért ekkor: %1$s</string>
+    <string name="poll_results_all_options">Összes beállítás</string>
+    <string name="poll_results_your_pick">Saját szavazat</string>
+    <string name="poll_results_selections">· %1$d kiválasztva</string>
+    <string name="poll_results_no_votes">Még nincsenek szavazatok</string>
+    <string name="poll_results_checking_completeness">Szavazatok számának ellenőrzése…</string>
+    <string name="poll_results_partial">%1$d válasz betöltve az %2$d közül, %3$d átjátszóról.</string>
+    <string name="poll_results_partial_approx">%1$d válasz betöltve a körülbelül %2$d közül, %3$d átjátszóról.</string>
+    <plurals name="poll_results_voters">
+        <item quantity="one">szavazó</item>
+        <item quantity="other">szavazó</item>
+    </plurals>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d szavazó</item>
+        <item quantity="other">%1$d szavazó</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d szavazó</item>
+        <item quantity="other">%1$d szavazó</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d szavazat a szavazás lezárása után érkezett, így ki lett zárva.</item>
+        <item quantity="other">%1$d szavazat a szavazás lezárása után érkezett, így ki lettek zárva.</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d szavazat a szavazás közzététele előtti dátummal rendelkezik, így ki lett zárva.</item>
+        <item quantity="other">%1$d szavazat a szavazás közzététele előtti dátummal rendelkezik, így ki lettek zárva.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d érvénytelen válaszlehetőséget választott, így ki lett zárva.</item>
+        <item quantity="other">%1$d érvénytelen válaszlehetőséget választott, így ki lett zárva.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d szavazó rejtve van a némítási listán.</item>
+        <item quantity="other">%1$d szavazó rejtve van a némítási listán.</item>
+    </plurals>
     <string name="restart">Újraindítás</string>
     <string name="chess_accept">Elfogadás</string>
     <string name="chess_decline">Elutasítás</string>
