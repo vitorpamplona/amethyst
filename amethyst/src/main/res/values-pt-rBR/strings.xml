@@ -46,6 +46,8 @@
     <string name="violence">Violência</string>
     <string name="unknown_author">Autor desconhecido</string>
     <string name="copy_text">Copiar texto</string>
+    <string name="copy_text_original">Copiar original</string>
+    <string name="copy_text_translated">Copiar tradução</string>
     <string name="copy_user_pubkey">Copiar PubKey do usuário</string>
     <string name="copy_note_id">Copiar ID da Nota</string>
     <string name="copy_raw_json">Copiar JSON bruto</string>
@@ -310,6 +312,18 @@
     <string name="concord_invite_failed_invalid">Este link de convite é inválido ou não pode ser aberto com esta conta.</string>
     <string name="concord_invite_failed_incompatible">Não é possível abrir este link de convite. Ele pode estar desatualizado ou já ter sido substituído por um mais recente, ou ter sido criado com uma versão mais nova do app. Peça um novo link de convite.</string>
     <string name="concord_invite_failed_revoked">Este link de convite foi revogado e não pode mais ser usado. Peça um novo.</string>
+    <string name="concord_invite_failed_banned">Esta comunidade removeu você. O link ainda funciona, mas a lista de membros dela não permite sua entrada.</string>
+    <string name="concord_invite_links_title">Links de convite</string>
+    <string name="concord_invite_links_action">Links de convite…</string>
+    <string name="concord_invite_links_created">Criado %1$s</string>
+    <string name="concord_invite_links_empty">Você ainda não criou nenhum link de convite para esta comunidade. Os links criados por outros administradores são gerenciados nos dispositivos deles.</string>
+    <string name="concord_invite_links_unreadable">Não foi possível carregar seus links de convite, então nenhum pode ser revogado agora. Verifique sua conexão e tente novamente.</string>
+    <string name="concord_invite_revoke_action">Revogar link</string>
+    <string name="concord_invite_revoke_title">Revogar este link?</string>
+    <string name="concord_invite_revoke_explainer">Quem ainda tiver este link não conseguirá mais entrar. As pessoas que já entraram com ele permanecem na comunidade. Isso não pode ser desfeito.</string>
+    <string name="concord_invite_revoke_confirm">Revogar</string>
+    <string name="concord_invite_revoked_ok">Link de convite revogado.</string>
+    <string name="concord_invite_revoked_failed">Não foi possível revogar o link. Verifique sua conexão e tente novamente.</string>
     <string name="concord_invite_failed_expired">Este link de convite expirou e não pode mais ser usado. Peça um link novo.</string>
     <string name="concord_invite_preview_unknown_name">O nome da comunidade só é revelado depois que você entra</string>
     <string name="concord_invite_preview_explainer">Entrar conecta aos relays deste convite, publica um anúncio de entrada assinado pela sua conta e adiciona a comunidade à sua lista. Nada é enviado até você tocar em Entrar.</string>
@@ -495,6 +509,11 @@
     \n- **Mantenha** uma cópia de segurança segura de sua chave secreta para recuperação da conta. Recomendamos o uso de um gerenciador de senhas.</string>
     <string name="account_backup_tips3_md" tools:ignore="Typos">    Para segurança adicional, você pode criptografar sua chave com uma senha. Esta chave começa com **ncryptsec1** e não pode ser usada sem sua senha.
     \n\nSe você perder sua senha, não será possível recuperar sua chave.</string>
+    <string name="backup_keys_nudge_title">Faça backup das suas chaves</string>
+    <string name="backup_keys_nudge_body">Sua chave secreta é a única forma de acessar esta conta. Se você perdê-la, ela nunca poderá ser recuperada. Guarde-a em um lugar seguro agora.</string>
+    <string name="backup_keys_nudge_backup_now">Fazer backup agora</string>
+    <string name="backup_keys_nudge_already_saved">Já salvei</string>
+    <string name="backup_keys_nudge_dismiss">Dispensar</string>
     <string name="failed_to_encrypt_key">Falha ao criptografar sua chave privada</string>
     <string name="secret_key_copied_to_clipboard">Chave secreta (nsec) copiada</string>
     <string name="copy_my_secret_key">Copiar minha chave secreta</string>
@@ -1088,12 +1107,67 @@
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
+    <string name="relay_auth_auto_login_when">Entrar sem perguntar quando…</string>
+    <string name="relay_auth_auto_my_relays">…for o meu relay, ou uma sala em que entrei</string>
+    <string name="relay_auth_auto_read_follows">…eu estiver lendo alguém que sigo</string>
+    <string name="relay_auth_auto_message_follows">…eu estiver enviando mensagem para alguém que sigo</string>
+    <string name="relay_auth_auto_message_strangers">…eu estiver enviando mensagem para qualquer outra pessoa</string>
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <string name="relay_auth_login_as">Entrar como %1$s?</string>
+    <string name="relay_auth_relay_asks">pergunta quem é você</string>
+    <string name="relay_auth_why_send_dm">Ele não aceitará sua mensagem para %1$s a menos que você entre.</string>
+    <string name="relay_auth_why_notify_inbox">%1$s não ficará sabendo da sua resposta a menos que você entre.</string>
+    <string name="relay_auth_why_read_outbox">Ele não entregará publicações de %1$s a menos que você entre.</string>
+    <string name="relay_auth_why_post_venue">Ele não aceitará sua publicação em %1$s a menos que você entre.</string>
+    <string name="relay_auth_why_read_venue">Ele não entregará %1$s a menos que você entre.</string>
+    <string name="relay_auth_why_my_inbox">Ele não entregará respostas, zaps e mensagens enviadas a você a menos que você entre.</string>
+    <string name="relay_auth_why_thread">Ele não entregará o restante desta conversa a menos que você entre.</string>
+    <string name="relay_auth_why_thread_with">Ele não entregará o restante da sua conversa com %1$s a menos que você entre.</string>
+    <string name="relay_auth_why_my_own_relay">Este é um dos seus próprios relays, e ele pede que todos entrem.</string>
+    <string name="relay_auth_why_other">Ele pede que todos entrem. O Amethyst não consegue saber o que ele está retendo.</string>
+    <string name="relay_auth_someone_unloaded">alguém que você ainda não carregou</string>
+    <plurals name="relay_auth_name_and_n_others">
+        <item quantity="one">%1$s e mais %2$d</item>
+        <item quantity="other">%1$s e mais %2$d</item>
+    </plurals>
+    <plurals name="relay_auth_also_holding_back">
+        <item quantity="one">Ele também está retendo mais %1$d coisa.</item>
+        <item quantity="other">Ele também está retendo mais %1$d coisas.</item>
+    </plurals>
+    <string name="relay_auth_remember_relay">Lembrar para este relay</string>
+    <string name="relay_auth_log_in">Entrar</string>
+    <string name="relay_auth_not_now">Agora não</string>
+    <string name="relay_auth_never_allow">Nunca permitir</string>
+    <string name="relay_auth_how_we_decide">Como o Amethyst decide</string>
     <!-- Settings: three lists that each hold what their header says. -->
+    <string name="relay_auth_exceptions">Exceções</string>
+    <string name="relay_auth_no_exceptions">Nenhuma exceção ainda. Todo relay segue as regras acima.</string>
+    <string name="relay_auth_exception_always">Sempre, definido por você</string>
+    <string name="relay_auth_exception_never">Nunca, definido por você</string>
+    <string name="relay_auth_segment_always">Sempre</string>
+    <string name="relay_auth_segment_never">Nunca</string>
+    <string name="relay_auth_remove_exception">Remover exceção</string>
+    <string name="relay_auth_exception_removed_undo">Exceção removida. %1$s volta a seguir suas regras.</string>
+    <string name="relay_auth_undo">Desfazer</string>
+    <string name="relay_auth_blocked_section">Bloqueado pela sua lista de bloqueios</string>
+    <string name="relay_auth_blocked_row_desc">O Amethyst nunca entra em relays bloqueados.</string>
+    <string name="relay_auth_no_blocked">Nada bloqueado. O Amethyst nunca entrará em relays que você bloquear, seja qual for a configuração aqui.</string>
+    <string name="relay_auth_recent_section">Entradas recentes</string>
+    <string name="relay_auth_no_recent">Nenhum relay pediu que você entrasse ainda.</string>
+    <string name="relay_auth_ago">há %1$s</string>
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
+    <string name="relay_auth_purpose_send_dm">suas mensagens</string>
+    <string name="relay_auth_purpose_notify_inbox">suas respostas</string>
+    <string name="relay_auth_purpose_read_outbox">pessoas que você lê</string>
+    <string name="relay_auth_purpose_post_venue">uma sala em que você publica</string>
+    <string name="relay_auth_purpose_read_venue">uma sala que você lê</string>
+    <string name="relay_auth_purpose_my_inbox">sua caixa de entrada</string>
+    <string name="relay_auth_purpose_thread">uma conversa</string>
+    <string name="relay_auth_purpose_my_own_relay">seu próprio relay</string>
+    <string name="relay_auth_purpose_other">este relay</string>
     <string name="nip82_repository_label">Fonte: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Baixar</string>
@@ -1462,6 +1536,46 @@
     <string name="private_note_visible_to">Visível para</string>
     <string name="private_note_no_receivers">Nenhum destinatário ainda: apenas você poderá ver esta nota. Adicione pessoas para compartilhá-la.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
+    <string name="audience_manage">Gerenciar quem vê isto</string>
+    <string name="audience_empty_private">Somente você — escolha quem mais pode ver isto</string>
+    <string name="audience_empty_public">Adicione pessoas para notificar</string>
+    <string name="audience_summary_two">%1$s e %2$s</string>
+    <string name="audience_group_chip">%1$s · %2$s</string>
+    <string name="audience_group_remove">Remover todos que foram adicionados de %1$s</string>
+    <string name="audience_send_privately">Enviar de forma privada</string>
+    <string name="audience_sheet_title">Adicionar pessoas</string>
+    <string name="audience_sheet_search">Buscar pessoas e listas</string>
+    <string name="audience_sheet_no_lists">Você ainda não tem listas de pessoas nem pacotes de seguidos. Use a busca acima para adicionar alguém diretamente.</string>
+    <string name="audience_count_with_private">%1$d · %2$d privados</string>
+    <string name="audience_over_limit">Acima do limite</string>
+    <string name="audience_badge_already_added">Já adicionado</string>
+    <string name="audience_badge_muted">Silenciado</string>
+    <string name="audience_badge_private_member">Membro privado</string>
+    <string name="audience_recipients_are_visible">Todos nesta nota podem ver a lista completa de destinatários.</string>
+    <plurals name="audience_summary_others">
+        <item quantity="one">%1$s, %2$s e mais %3$d</item>
+        <item quantity="other">%1$s, %2$s e mais %3$d</item>
+    </plurals>
+    <plurals name="audience_soft_cap_private">
+        <item quantity="one">Esta nota será criptografada e entregue %1$d vez separada, uma por pessoa. Com um assinador externo, isso significa uma aprovação para cada.</item>
+        <item quantity="other">Esta nota será criptografada e entregue %1$d vezes separadas, uma por pessoa. Com um assinador externo, isso significa uma aprovação para cada.</item>
+    </plurals>
+    <plurals name="audience_soft_cap_public">
+        <item quantity="one">%1$d pessoa receberá uma notificação sobre esta publicação.</item>
+        <item quantity="other">%1$d pessoas receberão uma notificação sobre esta publicação.</item>
+    </plurals>
+    <plurals name="audience_hard_cap">
+        <item quantity="one">Isso daria %1$d pessoa. O Amethyst adiciona no máximo %2$d por vez — desmarque algumas.</item>
+        <item quantity="other">Isso daria %1$d pessoas. O Amethyst adiciona no máximo %2$d por vez — desmarque algumas.</item>
+    </plurals>
+    <plurals name="audience_add_people">
+        <item quantity="one">Adicionar %1$d pessoa</item>
+        <item quantity="other">Adicionar %1$d pessoas</item>
+    </plurals>
+    <plurals name="audience_add_anyway">
+        <item quantity="one">Adicionar %1$d pessoa mesmo assim</item>
+        <item quantity="other">Adicionar %1$d pessoas mesmo assim</item>
+    </plurals>
     <string name="notify_add_user">Adicionar</string>
     <string name="notify_remove_user">Remover usuário das notificações</string>
     <string name="notify_mute_user">Notificando. Toque para silenciar a notificação deste usuário</string>
@@ -3886,6 +4000,49 @@
     <string name="social_proof">Prova social</string>
     <string name="poll_submit">Enviar</string>
     <string name="poll_view_results">Ver resultados</string>
+    <string name="poll_results_title">Resultados da enquete</string>
+    <string name="poll_results_loading">Carregando enquete…</string>
+    <string name="poll_results_open">Aberta</string>
+    <string name="poll_results_closes_in">Encerra em %1$s</string>
+    <string name="poll_results_ended">Encerrada há %1$s</string>
+    <string name="poll_results_all_options">Todas as opções</string>
+    <string name="poll_results_your_pick">Seu voto</string>
+    <plurals name="poll_results_selections">
+        <item quantity="one">· %1$d seleção</item>
+        <item quantity="other">· %1$d seleções</item>
+    </plurals>
+    <string name="poll_results_no_votes">Nenhum voto ainda</string>
+    <string name="poll_results_checking_completeness">Verificando quantos votos existem…</string>
+    <string name="poll_results_partial">%1$d de %2$d respostas carregadas de %3$d relays.</string>
+    <string name="poll_results_partial_approx">%1$d de cerca de %2$d respostas carregadas de %3$d relays.</string>
+    <plurals name="poll_results_voters">
+        <item quantity="one">votante</item>
+        <item quantity="other">votantes</item>
+    </plurals>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d voto ›</item>
+        <item quantity="other">%1$d votos ›</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d votante</item>
+        <item quantity="other">%1$d votantes</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d voto chegou depois do encerramento da enquete e foi excluído.</item>
+        <item quantity="other">%1$d votos chegaram depois do encerramento da enquete e foram excluídos.</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d voto tem data anterior à publicação da enquete e foi excluído.</item>
+        <item quantity="other">%1$d votos têm data anterior à publicação da enquete e foram excluídos.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d resposta não escolheu uma opção válida e foi excluída.</item>
+        <item quantity="other">%1$d respostas não escolheram uma opção válida e foram excluídas.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d votante está oculto pela sua lista de silenciados.</item>
+        <item quantity="other">%1$d votantes estão ocultos pela sua lista de silenciados.</item>
+    </plurals>
     <string name="restart">Reiniciar</string>
     <string name="chess_accept">Aceitar</string>
     <string name="chess_decline">Recusar</string>
@@ -4713,161 +4870,4 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
-    <string name="audience_badge_already_added">Já adicionado</string>
-    <string name="audience_badge_muted">Silenciado</string>
-    <string name="audience_badge_private_member">Membro privado</string>
-    <string name="audience_count_with_private">%1$d · %2$d privados</string>
-    <string name="audience_empty_private">Somente você — escolha quem mais pode ver isto</string>
-    <string name="audience_empty_public">Adicione pessoas para notificar</string>
-    <string name="audience_group_chip">%1$s · %2$s</string>
-    <string name="audience_group_remove">Remover todos que foram adicionados de %1$s</string>
-    <string name="audience_manage">Gerenciar quem vê isto</string>
-    <string name="audience_over_limit">Acima do limite</string>
-    <string name="audience_recipients_are_visible">Todos nesta nota podem ver a lista completa de destinatários.</string>
-    <string name="audience_send_privately">Enviar de forma privada</string>
-    <string name="audience_sheet_no_lists">Você ainda não tem listas de pessoas nem pacotes de seguidos. Use a busca acima para adicionar alguém diretamente.</string>
-    <string name="audience_sheet_search">Buscar pessoas e listas</string>
-    <string name="audience_sheet_title">Adicionar pessoas</string>
-    <string name="audience_summary_two">%1$s e %2$s</string>
-    <string name="backup_keys_nudge_already_saved">Já salvei</string>
-    <string name="backup_keys_nudge_backup_now">Fazer backup agora</string>
-    <string name="backup_keys_nudge_body">Sua chave secreta é a única forma de acessar esta conta. Se você perdê-la, ela nunca poderá ser recuperada. Guarde-a em um lugar seguro agora.</string>
-    <string name="backup_keys_nudge_dismiss">Dispensar</string>
-    <string name="backup_keys_nudge_title">Faça backup das suas chaves</string>
-    <string name="concord_invite_failed_banned">Esta comunidade removeu você. O link ainda funciona, mas a lista de membros dela não permite sua entrada.</string>
-    <string name="concord_invite_links_action">Links de convite…</string>
-    <string name="concord_invite_links_created">Criado %1$s</string>
-    <string name="concord_invite_links_empty">Você ainda não criou nenhum link de convite para esta comunidade. Os links criados por outros administradores são gerenciados nos dispositivos deles.</string>
-    <string name="concord_invite_links_title">Links de convite</string>
-    <string name="concord_invite_links_unreadable">Não foi possível carregar seus links de convite, então nenhum pode ser revogado agora. Verifique sua conexão e tente novamente.</string>
-    <string name="concord_invite_revoke_action">Revogar link</string>
-    <string name="concord_invite_revoke_confirm">Revogar</string>
-    <string name="concord_invite_revoke_explainer">Quem ainda tiver este link não conseguirá mais entrar. As pessoas que já entraram com ele permanecem na comunidade. Isso não pode ser desfeito.</string>
-    <string name="concord_invite_revoke_title">Revogar este link?</string>
-    <string name="concord_invite_revoked_failed">Não foi possível revogar o link. Verifique sua conexão e tente novamente.</string>
-    <string name="concord_invite_revoked_ok">Link de convite revogado.</string>
-    <string name="copy_text_original">Copiar original</string>
-    <string name="copy_text_translated">Copiar tradução</string>
-    <string name="poll_results_all_options">Todas as opções</string>
-    <string name="poll_results_checking_completeness">Verificando quantos votos existem…</string>
-    <string name="poll_results_closes_in">Encerra em %1$s</string>
-    <string name="poll_results_ended">Encerrada há %1$s</string>
-    <string name="poll_results_loading">Carregando enquete…</string>
-    <string name="poll_results_no_votes">Nenhum voto ainda</string>
-    <string name="poll_results_open">Aberta</string>
-    <string name="poll_results_partial">%1$d de %2$d respostas carregadas de %3$d relays.</string>
-    <string name="poll_results_partial_approx">%1$d de cerca de %2$d respostas carregadas de %3$d relays.</string>
-    <string name="poll_results_title">Resultados da enquete</string>
-    <string name="poll_results_your_pick">Seu voto</string>
-    <string name="relay_auth_ago">há %1$s</string>
-    <string name="relay_auth_auto_login_when">Entrar sem perguntar quando…</string>
-    <string name="relay_auth_auto_message_follows">…eu estiver enviando mensagem para alguém que sigo</string>
-    <string name="relay_auth_auto_message_strangers">…eu estiver enviando mensagem para qualquer outra pessoa</string>
-    <string name="relay_auth_auto_my_relays">…for o meu relay, ou uma sala em que entrei</string>
-    <string name="relay_auth_auto_read_follows">…eu estiver lendo alguém que sigo</string>
-    <string name="relay_auth_blocked_row_desc">O Amethyst nunca entra em relays bloqueados.</string>
-    <string name="relay_auth_blocked_section">Bloqueado pela sua lista de bloqueios</string>
-    <string name="relay_auth_exception_always">Sempre, definido por você</string>
-    <string name="relay_auth_exception_never">Nunca, definido por você</string>
-    <string name="relay_auth_exception_removed_undo">Exceção removida. %1$s volta a seguir suas regras.</string>
-    <string name="relay_auth_exceptions">Exceções</string>
-    <string name="relay_auth_how_we_decide">Como o Amethyst decide</string>
-    <string name="relay_auth_log_in">Entrar</string>
-    <string name="relay_auth_login_as">Entrar como %1$s?</string>
-    <string name="relay_auth_never_allow">Nunca permitir</string>
-    <string name="relay_auth_no_blocked">Nada bloqueado. O Amethyst nunca entrará em relays que você bloquear, seja qual for a configuração aqui.</string>
-    <string name="relay_auth_no_exceptions">Nenhuma exceção ainda. Todo relay segue as regras acima.</string>
-    <string name="relay_auth_no_recent">Nenhum relay pediu que você entrasse ainda.</string>
-    <string name="relay_auth_not_now">Agora não</string>
-    <string name="relay_auth_purpose_my_inbox">sua caixa de entrada</string>
-    <string name="relay_auth_purpose_my_own_relay">seu próprio relay</string>
-    <string name="relay_auth_purpose_notify_inbox">suas respostas</string>
-    <string name="relay_auth_purpose_other">este relay</string>
-    <string name="relay_auth_purpose_post_venue">uma sala em que você publica</string>
-    <string name="relay_auth_purpose_read_outbox">pessoas que você lê</string>
-    <string name="relay_auth_purpose_read_venue">uma sala que você lê</string>
-    <string name="relay_auth_purpose_send_dm">suas mensagens</string>
-    <string name="relay_auth_purpose_thread">uma conversa</string>
-    <string name="relay_auth_recent_section">Entradas recentes</string>
-    <string name="relay_auth_relay_asks">pergunta quem é você</string>
-    <string name="relay_auth_remember_relay">Lembrar para este relay</string>
-    <string name="relay_auth_remove_exception">Remover exceção</string>
-    <string name="relay_auth_segment_always">Sempre</string>
-    <string name="relay_auth_segment_never">Nunca</string>
-    <string name="relay_auth_someone_unloaded">alguém que você ainda não carregou</string>
-    <string name="relay_auth_undo">Desfazer</string>
-    <string name="relay_auth_why_my_inbox">Ele não entregará respostas, zaps e mensagens enviadas a você a menos que você entre.</string>
-    <string name="relay_auth_why_my_own_relay">Este é um dos seus próprios relays, e ele pede que todos entrem.</string>
-    <string name="relay_auth_why_notify_inbox">%1$s não ficará sabendo da sua resposta a menos que você entre.</string>
-    <string name="relay_auth_why_other">Ele pede que todos entrem. O Amethyst não consegue saber o que ele está retendo.</string>
-    <string name="relay_auth_why_post_venue">Ele não aceitará sua publicação em %1$s a menos que você entre.</string>
-    <string name="relay_auth_why_read_outbox">Ele não entregará publicações de %1$s a menos que você entre.</string>
-    <string name="relay_auth_why_read_venue">Ele não entregará %1$s a menos que você entre.</string>
-    <string name="relay_auth_why_send_dm">Ele não aceitará sua mensagem para %1$s a menos que você entre.</string>
-    <string name="relay_auth_why_thread">Ele não entregará o restante desta conversa a menos que você entre.</string>
-    <string name="relay_auth_why_thread_with">Ele não entregará o restante da sua conversa com %1$s a menos que você entre.</string>
-    <plurals name="audience_add_anyway">
-        <item quantity="one">Adicionar %1$d pessoa mesmo assim</item>
-        <item quantity="other">Adicionar %1$d pessoas mesmo assim</item>
-    </plurals>
-    <plurals name="audience_add_people">
-        <item quantity="one">Adicionar %1$d pessoa</item>
-        <item quantity="other">Adicionar %1$d pessoas</item>
-    </plurals>
-    <plurals name="audience_hard_cap">
-        <item quantity="one">Isso daria %1$d pessoa. O Amethyst adiciona no máximo %2$d por vez — desmarque algumas.</item>
-        <item quantity="other">Isso daria %1$d pessoas. O Amethyst adiciona no máximo %2$d por vez — desmarque algumas.</item>
-    </plurals>
-    <plurals name="audience_soft_cap_private">
-        <item quantity="one">Esta nota será criptografada e entregue %1$d vez separada, uma por pessoa. Com um assinador externo, isso significa uma aprovação para cada.</item>
-        <item quantity="other">Esta nota será criptografada e entregue %1$d vezes separadas, uma por pessoa. Com um assinador externo, isso significa uma aprovação para cada.</item>
-    </plurals>
-    <plurals name="audience_soft_cap_public">
-        <item quantity="one">%1$d pessoa receberá uma notificação sobre esta publicação.</item>
-        <item quantity="other">%1$d pessoas receberão uma notificação sobre esta publicação.</item>
-    </plurals>
-    <plurals name="audience_summary_others">
-        <item quantity="one">%1$s, %2$s e mais %3$d</item>
-        <item quantity="other">%1$s, %2$s e mais %3$d</item>
-    </plurals>
-    <plurals name="poll_results_backdated_votes">
-        <item quantity="one">%1$d voto tem data anterior à publicação da enquete e foi excluído.</item>
-        <item quantity="other">%1$d votos têm data anterior à publicação da enquete e foram excluídos.</item>
-    </plurals>
-    <plurals name="poll_results_hidden_voters">
-        <item quantity="one">%1$d votante está oculto pela sua lista de silenciados.</item>
-        <item quantity="other">%1$d votantes estão ocultos pela sua lista de silenciados.</item>
-    </plurals>
-    <plurals name="poll_results_ignored_votes">
-        <item quantity="one">%1$d resposta não escolheu uma opção válida e foi excluída.</item>
-        <item quantity="other">%1$d respostas não escolheram uma opção válida e foram excluídas.</item>
-    </plurals>
-    <plurals name="poll_results_late_votes">
-        <item quantity="one">%1$d voto chegou depois do encerramento da enquete e foi excluído.</item>
-        <item quantity="other">%1$d votos chegaram depois do encerramento da enquete e foram excluídos.</item>
-    </plurals>
-    <plurals name="poll_results_option_count">
-        <item quantity="one">%1$d votante</item>
-        <item quantity="other">%1$d votantes</item>
-    </plurals>
-    <plurals name="poll_results_selections">
-        <item quantity="one">· %1$d seleção</item>
-        <item quantity="other">· %1$d seleções</item>
-    </plurals>
-    <plurals name="poll_results_vote_count_link">
-        <item quantity="one">%1$d voto ›</item>
-        <item quantity="other">%1$d votos ›</item>
-    </plurals>
-    <plurals name="poll_results_voters" tools:ignore="ImpliedQuantity">
-        <item quantity="one">votante</item>
-        <item quantity="other">votantes</item>
-    </plurals>
-    <plurals name="relay_auth_also_holding_back">
-        <item quantity="one">Ele também está retendo mais %1$d coisa.</item>
-        <item quantity="other">Ele também está retendo mais %1$d coisas.</item>
-    </plurals>
-    <plurals name="relay_auth_name_and_n_others">
-        <item quantity="one">%1$s e mais %2$d</item>
-        <item quantity="other">%1$s e mais %2$d</item>
-    </plurals>
 </resources>

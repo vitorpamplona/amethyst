@@ -628,7 +628,7 @@ private fun RenderImageOrVideo(
                         Modifier.fillMaxWidth()
                     }
 
-                val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+                val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
                 val useLocalBlossomBridge by accountViewModel.useLocalBlossomBridge.collectAsStateWithLifecycle()
                 val bridgedUrl =
                     remember(content.url, useLocalBlossomBridge) {
@@ -694,7 +694,7 @@ private fun RenderImageOrVideo(
                     }
 
                 content.localFile?.let {
-                    val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(it.toUri().toString())
+                    val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(it.toUri().toString())
 
                     val modifier =
                         if (ratio != null) {

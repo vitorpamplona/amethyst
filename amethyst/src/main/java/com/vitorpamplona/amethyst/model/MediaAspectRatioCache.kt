@@ -56,12 +56,16 @@ object MediaAspectRatioCache : MutableMediaAspectRatioCache {
 
     override fun get(url: String): Float? = entry(url).value
 
+    // Both sides are checked, not just the divisor: a zero width divides cleanly to 0f, and 0f is
+    // just as unusable downstream as a division by zero — `Modifier.aspectRatio` throws on it. A
+    // reported size that cannot be laid out is stored as no size at all, leaving the entry empty
+    // for a later, better report to fill.
     override fun add(
         url: String,
         width: Int,
         height: Int,
     ) {
-        if (height > 1) {
+        if (width > 0 && height > 1) {
             entry(url).value = width.toFloat() / height.toFloat()
         }
     }
