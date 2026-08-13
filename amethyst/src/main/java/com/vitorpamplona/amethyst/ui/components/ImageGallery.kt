@@ -62,11 +62,7 @@ private data class FirstImageOrientation(
     val isLandscape: Boolean,
 )
 
-private fun MediaUrlImage.resolvedAspectRatio(): Float? =
-    dim
-        ?.takeIf { it.hasSize() }
-        ?.aspectRatio()
-        ?: MediaAspectRatioCache.get(url)
+private fun MediaUrlImage.resolvedAspectRatio(): Float? = dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(url)
 
 private fun MediaUrlImage?.resolveOrientation(
     landscapeDefaultAspectRatio: Float,

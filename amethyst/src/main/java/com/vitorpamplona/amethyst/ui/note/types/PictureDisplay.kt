@@ -107,7 +107,7 @@ fun PictureDisplay(
             }
 
             if (images.size == 1) {
-                val ratio = first.dim?.aspectRatio() ?: MediaAspectRatioCache.get(first.url)
+                val ratio = first.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(first.url)
                 ContentWarningGate(
                     isSensitive = isSensitive,
                     reasons = reasons,

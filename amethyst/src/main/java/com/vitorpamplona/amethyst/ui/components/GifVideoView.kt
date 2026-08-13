@@ -66,11 +66,11 @@ fun GifVideoView(
     accountViewModel: AccountViewModel,
     thumbhash: String? = null,
 ) {
-    // Pure read path — DimensionTag.aspectRatio() is a one-line int division and
+    // Pure read path — DimensionTag.aspectRatioOrNull() is a one-line int division and
     // MediaAspectRatioCache.get() is a synchronized LruCache lookup. Wrapping this in
     // remember() to avoid the recompute would cost more (slot read + N equality checks)
     // than the work it saves; that's why this stays as a plain expression.
-    val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(videoUri)
+    val ratio = dimensions?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(videoUri)
     val autoPlay = accountViewModel.settings.autoPlayVideos()
     val borderModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier
     val context = LocalContext.current

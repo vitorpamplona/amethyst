@@ -24,6 +24,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DimensionTagTest {
     @Test
@@ -71,5 +72,41 @@ class DimensionTagTest {
         val tag = DimensionTag.parse("317.0x498.0")
         assertNotNull(tag)
         assertEquals(317f / 498f, tag.aspectRatio())
+    }
+
+    /**
+     * [rejectsZeroByZero] passes by comparing the string, so the float path of the Primal
+     * tolerance above reaches the same 0x0 value by truncation and is kept.
+     */
+    @Test
+    fun zeroSizedFloatsSlipPastTheZeroByZeroRejection() {
+        val tag = DimensionTag.parse("0.4x0.4")
+        assertNotNull(tag)
+        assertEquals(0, tag.width)
+        assertEquals(0, tag.height)
+    }
+
+    /**
+     * Why [DimensionTag.aspectRatioOrNull] exists: `Modifier.aspectRatio` throws on both of these,
+     * so a tag that reaches a layout through the raw accessor crashes the composition around it.
+     */
+    @Test
+    fun rawAspectRatioOfAZeroSizedTagIsNotLayoutSafe() {
+        assertTrue(DimensionTag(0, 0).aspectRatio().isNaN())
+        assertEquals(0f, DimensionTag(0, 100).aspectRatio())
+    }
+
+    @Test
+    fun aspectRatioOrNullRefusesEverySizeALayoutCannotUse() {
+        assertNull(DimensionTag.parse("0.4x0.4")?.aspectRatioOrNull())
+        assertNull(DimensionTag(0, 0).aspectRatioOrNull())
+        assertNull(DimensionTag(100, 0).aspectRatioOrNull())
+        assertNull(DimensionTag(0, 100).aspectRatioOrNull())
+        assertNull(DimensionTag(-1, 10).aspectRatioOrNull())
+    }
+
+    @Test
+    fun aspectRatioOrNullKeepsUsableSizes() {
+        assertEquals(317f / 498f, DimensionTag(317, 498).aspectRatioOrNull())
     }
 }

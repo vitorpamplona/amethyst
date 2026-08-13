@@ -141,7 +141,7 @@ private fun VideoCardImage(
             )
         }
 
-    val ratio = imeta.dimension?.aspectRatio() ?: MediaAspectRatioCache.get(imeta.url)
+    val ratio = imeta.dimension?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(imeta.url)
 
     ContentWarningGate(
         isSensitive = isSensitive,

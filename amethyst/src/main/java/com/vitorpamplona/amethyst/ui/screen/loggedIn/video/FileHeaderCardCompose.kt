@@ -125,7 +125,7 @@ private fun FileHeaderCardImage(
     }
 
     val isImage = content is MediaUrlImage
-    val ratio = dimensions?.aspectRatio() ?: MediaAspectRatioCache.get(fullUrl)
+    val ratio = dimensions?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(fullUrl)
 
     ContentWarningGate(
         isSensitive = isSensitive,

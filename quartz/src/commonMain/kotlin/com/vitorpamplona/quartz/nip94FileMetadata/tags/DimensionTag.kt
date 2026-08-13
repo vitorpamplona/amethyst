@@ -31,7 +31,22 @@ class DimensionTag(
     val width: Int,
     val height: Int,
 ) {
+    /**
+     * The raw width/height ratio, which is only meaningful when [hasSize] is true. Anywhere the
+     * result reaches a layout, use [aspectRatioOrNull] instead.
+     */
     fun aspectRatio() = width.toFloat() / height.toFloat()
+
+    /**
+     * The ratio to lay out with, or null when the tag carries no usable size.
+     *
+     * [parse] only rejects the literal string `"0x0"`, so an author-supplied `"0.4x0.4"` truncates
+     * to 0x0 and slips through — and [aspectRatio] then returns `0/0`, which is `NaN`. Compose's
+     * `Modifier.aspectRatio` throws `IllegalArgumentException` on `NaN` and on `0f`, and clamping
+     * does not rescue either: every comparison against `NaN` is false, so `coerceAtLeast` returns
+     * it unchanged. A tag any relay can carry would otherwise crash the composition around it.
+     */
+    fun aspectRatioOrNull(): Float? = if (hasSize()) aspectRatio() else null
 
     fun hasSize() = width > 0 && height > 0
 

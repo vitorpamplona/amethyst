@@ -181,7 +181,7 @@ fun ZoomableContentView(
 
     when (content) {
         is MediaUrlImage -> {
-            val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+            val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
             val bridgedUrl =
                 remember(content.url, useLocalBlossomBridge) {
                     content.toCoilModel(useLocalBlossomBridge)
@@ -228,7 +228,7 @@ fun ZoomableContentView(
                     unknownMediaAspectRatio(content.mimeType, content.url)
                 }
             val ratio =
-                content.dim?.aspectRatio()
+                content.dim?.aspectRatioOrNull()
                     ?: MediaAspectRatioCache.get(content.url)
                     ?: fallbackRatio
             val bridgedUrl =
@@ -386,7 +386,7 @@ fun LocalImageView(
                 )
             }
 
-        val ratio = remember(content) { content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.localFile.toString()) }
+        val ratio = remember(content) { content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.localFile.toString()) }
         val context = LocalContext.current
         val imageModel =
             if (fullResolution) {
@@ -510,7 +510,7 @@ fun UrlImageView(
     alwayShowImage: Boolean = false,
     fullResolution: Boolean = false,
 ) {
-    val ratio = content.dim?.aspectRatio() ?: MediaAspectRatioCache.get(content.url)
+    val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
 
     val showImage =
         remember {
