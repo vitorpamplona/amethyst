@@ -85,6 +85,7 @@ windowCoreAndroid = "1.5.1"
 workRuntime = "2.11.2"
 androidxCamera = "1.6.1"
 androidxCollection = "1.6.0"
+androidxProfileinstaller = "1.4.1"
 androidxExifinterface = "1.4.2"
 kotlinTest = "2.4.10"
 core = "1.7.0"
@@ -122,6 +123,7 @@ androidx-compose-runtime-annotation = { group = "androidx.compose.runtime", name
 androidx-collection = { group = "androidx.collection", name = "collection", version.ref = "androidxCollection" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "androidxExifinterface" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "androidxProfileinstaller" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
