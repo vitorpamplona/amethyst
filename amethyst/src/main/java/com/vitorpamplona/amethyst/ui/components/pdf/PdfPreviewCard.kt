@@ -68,13 +68,30 @@ private const val THUMBNAIL_MAX_DIM_PX = 1600
 // a single-column banner) would otherwise reserve a screenful of height for a sliver of content.
 private const val MIN_PREVIEW_ASPECT_RATIO = 0.2f
 
+// Shape to assume when the page reports no usable size at all. US Letter portrait — the
+// overwhelmingly common page shape, and the least surprising box to hold open for an unknown one.
+private const val DEFAULT_PAGE_ASPECT_RATIO = 612f / 792f
+
 /**
  * The ratio the card actually lays out with, given a page's natural width/height. The placeholder
  * and the loaded thumbnail both go through here so the box reserved while loading is the exact box
  * the rendered page lands in — the clamp has to be applied on both sides or the reservation is
  * wrong for the very pages it exists to protect.
+ *
+ * This is also the one place that guarantees `Modifier.aspectRatio` is handed a finite, positive
+ * number. It throws `IllegalArgumentException` on `0f` and on `NaN`, and the clamp below does not
+ * catch either: `NaN.coerceAtLeast(x)` is `NaN`, because every comparison against `NaN` is false.
+ * Both are reachable from real input — a malformed PDF whose first page measures 0x0, or an imeta
+ * `dim` that survives DimensionTag.parse's only-rejects-literal-"0x0" check as 0x0 anyway
+ * (`"0.4x0.4"` truncates to it). Without this guard either one takes down the whole feed's
+ * composition, from a tag any relay can carry.
  */
-internal fun previewAspectRatio(pageAspectRatio: Float): Float = pageAspectRatio.coerceAtLeast(MIN_PREVIEW_ASPECT_RATIO)
+internal fun previewAspectRatio(pageAspectRatio: Float): Float =
+    if (!pageAspectRatio.isFinite() || pageAspectRatio <= 0f) {
+        DEFAULT_PAGE_ASPECT_RATIO
+    } else {
+        pageAspectRatio.coerceAtLeast(MIN_PREVIEW_ASPECT_RATIO)
+    }
 
 data class PdfPreview(
     val thumbnail: Bitmap,
@@ -186,8 +203,13 @@ private fun LoadedPdfPreviewCard(
                             onLongClick = { sharePopupExpanded.value = true },
                         ),
             ) {
+                // asImageBitmap() allocates a fresh wrapper on every call and the wrapper compares
+                // by identity, so calling it inline would defeat the remember(bitmap) that Image
+                // uses to hold its BitmapPainter — every recomposition would rebuild the painter.
+                val thumbnail = remember(current.preview.thumbnail) { current.preview.thumbnail.asImageBitmap() }
+
                 Image(
-                    bitmap = current.preview.thumbnail.asImageBitmap(),
+                    bitmap = thumbnail,
                     contentDescription = content.description ?: filename,
                     contentScale = ContentScale.FillWidth,
                     filterQuality = FilterQuality.High,
