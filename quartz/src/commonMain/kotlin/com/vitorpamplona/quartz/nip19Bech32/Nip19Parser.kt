@@ -134,7 +134,7 @@ object Nip19Parser {
     fun hasAny(content: String): Boolean = nip19regex.matches(content)
 
     /**
-     * True when one of [nip19regex]'s entity prefixes starts at [i].
+     * True when one of the NIP-19 entity prefixes starts at [i].
      *
      * Every prefix begins with `n`, and English prose is ~7% `n`, so testing all
      * eight prefixes at each `n` is the bulk of the scan's cost. Dispatching on the
@@ -159,7 +159,36 @@ object Nip19Parser {
                     content.regionMatches(i, "nembed1", 0, 7, ignoreCase = true)
             'a', 'A' -> content.regionMatches(i, "naddr1", 0, 6, ignoreCase = true)
             'r', 'R' -> content.regionMatches(i, "nrelay1", 0, 7, ignoreCase = true)
+            'c', 'C' -> content.regionMatches(i, "ncryptsec1", 0, 10, ignoreCase = true)
             else -> false
+        }
+    }
+
+    /**
+     * Applies [regex] anchored at every NIP-19 candidate position in [content].
+     *
+     * [isCandidateAt] covers the union of the prefixes across the three NIP-19
+     * regexes, so a narrower [regex] simply fails `matchAt` on a prefix it does
+     * not accept — still far cheaper than `findAll` restarting the engine at
+     * every position in the string.
+     */
+    private inline fun forEachNip19Match(
+        content: String,
+        regex: Regex,
+        action: (MatchResult) -> Unit,
+    ) {
+        var i = 0
+        val len = content.length
+        while (i < len) {
+            if (isCandidateAt(content, i)) {
+                val match = regex.matchAt(content, i)
+                if (match != null) {
+                    action(match)
+                    i = match.range.last + 1
+                    continue
+                }
+            }
+            i++
         }
     }
 
@@ -179,43 +208,28 @@ object Nip19Parser {
      */
     fun parseAll(content: String): List<Entity> {
         val returningList = mutableListOf<Entity>()
-        var i = 0
-        val len = content.length
-        while (i < len) {
-            if (isCandidateAt(content, i)) {
-                val matcher = nip19regex.matchAt(content, i)
-                if (matcher != null) {
-                    val type = matcher.groups[3]?.value ?: matcher.groups[5]?.value // npub1
-                    val key = matcher.groups[4]?.value ?: matcher.groups[6]?.value // bech32
-                    val additionalChars = matcher.groups[7]?.value // additional chars
+        forEachNip19Match(content, nip19regex) { matcher ->
+            val type = matcher.groups[3]?.value ?: matcher.groups[5]?.value // npub1
+            val key = matcher.groups[4]?.value ?: matcher.groups[6]?.value // bech32
+            val additionalChars = matcher.groups[7]?.value // additional chars
 
-                    if (type != null) {
-                        parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
-                    }
-
-                    i = matcher.range.last + 1
-                    continue
-                }
+            if (type != null) {
+                parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
             }
-            i++
         }
         return returningList
     }
 
+    /** Same scan as [parseAll], restricted to the event-ish entities. */
     fun parseAllEvents(content: String): List<Entity> {
-        val matchSequence = nip19regexEvents.findAll(content)
         val returningList = mutableListOf<Entity>()
-        matchSequence.forEach { matcher ->
-            val type = matcher.groups[2]?.value // npub1
+        forEachNip19Match(content, nip19regexEvents) { matcher ->
+            val type = matcher.groups[2]?.value // nevent1
             val key = matcher.groups[3]?.value // bech32
             val additionalChars = matcher.groups[4]?.value // additional chars
 
             if (type != null) {
-                val parsed = parseComponents(type, key, additionalChars)?.entity
-
-                if (parsed != null) {
-                    returningList.add(parsed)
-                }
+                parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
             }
         }
         return returningList

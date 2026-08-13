@@ -350,6 +350,25 @@ class RegexContentBenchmark {
             bench("idxTags refs=$m", indexNote(n, m, 30), r) { findIndexTagsWithPeople(it, tags).size }
         }
 
+        println("\n=== parseAllEvents (composer: findNostrEventUris) ===")
+        corpus.forEach { (n, _, r) ->
+            bench("parseAllEvents 0 mentions", note(n, 0), r) { Nip19Parser.parseAllEvents(it).size }
+        }
+        corpus.forEach { (n, m, r) ->
+            bench("parseAllEvents m=$m", note(n, m), r) { Nip19Parser.parseAllEvents(it).size }
+        }
+
+        println("\n=== uriToRoute (short strings: one URI / id per call) ===")
+        listOf(
+            "nostr:$NPUB" to 200_000,
+            NPUB to 200_000,
+            "nostr:$NEVENT" to 200_000,
+            "30023:abc:slug" to 200_000,
+            "not an entity at all" to 200_000,
+        ).forEach { (uri, reps) ->
+            bench("uriToRoute ${uri.take(18)}", uri, reps) { if (Nip19Parser.uriToRoute(it) != null) 1 else 0 }
+        }
+
         println("\n=== RENDER PATH: RichTextParser.parseText (per note, per render) ===")
         val rtTags = tagArray(30).toImmutableListOfLists()
         val rtCorpus =

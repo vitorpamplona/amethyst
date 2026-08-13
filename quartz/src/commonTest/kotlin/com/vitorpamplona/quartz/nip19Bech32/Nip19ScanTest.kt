@@ -162,6 +162,50 @@ class Nip19ScanTest {
         assertEquals(1, Nip19Parser.parseAll("nostrich nevermind nap $NPUB").size)
     }
 
+    // ---------- parseAllEvents: same scan, event-ish entities only ----------
+
+    @Test
+    fun parseAllEventsFindsEventEntities() {
+        assertEquals(1, Nip19Parser.parseAllEvents("see nostr:$NEVENT").size)
+        assertEquals(1, Nip19Parser.parseAllEvents("see $NOTE").size)
+    }
+
+    @Test
+    fun parseAllEventsIgnoresProfileEntities() {
+        // npub1/nsec1/nprofile1 are not in nip19regexEvents
+        assertEquals(emptyList(), Nip19Parser.parseAllEvents(NPUB))
+        assertEquals(emptyList(), Nip19Parser.parseAllEvents("hello nostr:$NPUB there"))
+    }
+
+    @Test
+    fun parseAllEventsSkipsProfilesButStillFindsLaterEvents() {
+        // an npub is a candidate position that must not stop the scan
+        val found = Nip19Parser.parseAllEvents("$NPUB then nostr:$NEVENT")
+        assertEquals(1, found.size)
+        assertTrue(found[0] is NEvent)
+    }
+
+    @Test
+    fun parseAllEventsHandlesEdgesLikeParseAll() {
+        assertEquals(emptyList(), Nip19Parser.parseAllEvents(""))
+        assertEquals(emptyList(), Nip19Parser.parseAllEvents("n"))
+        assertEquals(emptyList(), Nip19Parser.parseAllEvents("ends with n"))
+        assertEquals(emptyList(), Nip19Parser.parseAllEvents("no entities here"))
+        assertEquals(2, Nip19Parser.parseAllEvents("$NOTE $NEVENT").size)
+    }
+
+    // ---------- uriToRoute: unchanged, pinned against the shared candidate scan ----------
+
+    @Test
+    fun uriToRouteStillResolvesEachForm() {
+        assertTrue(Nip19Parser.uriToRoute("nostr:$NPUB")?.entity is NPub)
+        assertTrue(Nip19Parser.uriToRoute(NPUB)?.entity is NPub)
+        assertTrue(Nip19Parser.uriToRoute("nostr:$NEVENT")?.entity is NEvent)
+        assertEquals(null, Nip19Parser.uriToRoute(null))
+        assertEquals(null, Nip19Parser.uriToRoute("not an entity"))
+        assertEquals(null, Nip19Parser.uriToRoute(""))
+    }
+
     @Test
     fun longProseWithNoEntitiesTerminates() {
         val prose = "the nimble nocturnal nightingale never naps near noon ".repeat(2_000)
