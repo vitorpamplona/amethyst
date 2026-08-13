@@ -4015,10 +4015,6 @@
     <string name="poll_results_checking_completeness">Kontrollerar hur många röster som finns…</string>
     <string name="poll_results_partial">%1$d av %2$d svar inlästa från %3$d reläer.</string>
     <string name="poll_results_partial_approx">%1$d av ungefär %2$d svar inlästa från %3$d reläer.</string>
-    <plurals name="poll_results_voters">
-        <item quantity="one">röstande</item>
-        <item quantity="other">röstande</item>
-    </plurals>
     <plurals name="poll_results_vote_count_link">
         <item quantity="one">%1$d röst ›</item>
         <item quantity="other">%1$d röster ›</item>

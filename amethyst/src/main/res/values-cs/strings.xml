@@ -4175,12 +4175,6 @@
     <string name="poll_results_checking_completeness">Zjišťuje se, kolik hlasů existuje…</string>
     <string name="poll_results_partial">Načteno %1$d z %2$d odpovědí z %3$d relé.</string>
     <string name="poll_results_partial_approx">Načteno %1$d z přibližně %2$d odpovědí z %3$d relé.</string>
-    <plurals name="poll_results_voters">
-        <item quantity="one">hlasující</item>
-        <item quantity="few">hlasující</item>
-        <item quantity="many">hlasujícího</item>
-        <item quantity="other">hlasujících</item>
-    </plurals>
     <plurals name="poll_results_vote_count_link">
         <item quantity="one">%1$d hlas ›</item>
         <item quantity="few">%1$d hlasy ›</item>
