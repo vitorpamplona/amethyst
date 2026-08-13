@@ -54,6 +54,8 @@
     <string name="violence">Násilí</string>
     <string name="unknown_author">Neznámý autor</string>
     <string name="copy_text">Kopírovat text</string>
+    <string name="copy_text_original">Kopírovat originál</string>
+    <string name="copy_text_translated">Kopírovat překlad</string>
     <string name="copy_user_pubkey">Kopírovat ID autora</string>
     <string name="copy_note_id">Kopírovat ID poznámky</string>
     <string name="copy_raw_json">Kopírovat surový JSON</string>
@@ -318,6 +320,18 @@
     <string name="concord_invite_failed_invalid">Tento zvací odkaz je neplatný nebo jej nelze otevřít tímto účtem.</string>
     <string name="concord_invite_failed_incompatible">Tento zvací odkaz nelze otevřít. Může být zastaralý nebo již nahrazený novějším, případně vytvořený novější verzí aplikace. Vyžádejte si nový zvací odkaz.</string>
     <string name="concord_invite_failed_revoked">Tento zvací odkaz byl zrušen a již jej nelze použít. Vyžádejte si nový.</string>
+    <string name="concord_invite_failed_banned">Tato komunita vás odebrala. Odkaz stále funguje, ale její seznam členů vás nevpustí.</string>
+    <string name="concord_invite_links_title">Odkazy pro pozvání</string>
+    <string name="concord_invite_links_action">Odkazy pro pozvání…</string>
+    <string name="concord_invite_links_created">Vytvořeno %1$s</string>
+    <string name="concord_invite_links_empty">Pro tuto komunitu jste zatím nevytvořil žádné odkazy pro pozvání. Odkazy vytvořené jinými správci se spravují na jejich vlastních zařízeních.</string>
+    <string name="concord_invite_links_unreadable">Vaše odkazy pro pozvání se nepodařilo načíst, takže žádný z nich nyní nelze zrušit. Zkontrolujte připojení a zkuste to znovu.</string>
+    <string name="concord_invite_revoke_action">Zrušit odkaz</string>
+    <string name="concord_invite_revoke_title">Zrušit tento odkaz?</string>
+    <string name="concord_invite_revoke_explainer">Kdokoli, kdo tento odkaz stále má, se už nebude moci připojit. Lidé, kteří se přes něj již připojili, v komunitě zůstávají. Tuto akci nelze vzít zpět.</string>
+    <string name="concord_invite_revoke_confirm">Zrušit</string>
+    <string name="concord_invite_revoked_ok">Odkaz pro pozvání byl zrušen.</string>
+    <string name="concord_invite_revoked_failed">Odkaz se nepodařilo zrušit. Zkontrolujte připojení a zkuste to znovu.</string>
     <string name="concord_invite_failed_expired">Platnost tohoto pozvánkového odkazu vypršela a nelze jej již použít. Vyžádejte si nový odkaz.</string>
     <string name="concord_invite_preview_unknown_name">Název komunity se zobrazí až po připojení</string>
     <string name="concord_invite_preview_explainer">Připojením se spojíte s relayi této pozvánky, zveřejníte oznámení o připojení podepsané vaším účtem a přidáte komunitu do svého seznamu. Dokud nestisknete Připojit se, nic se neodešle.</string>
@@ -515,6 +529,11 @@
     \n- **Udržujte** bezpečnou zálohu vašeho tajného klíče pro obnovení účtu. Doporučujeme použití správce hesel.</string>
     <string name="account_backup_tips3_md" tools:ignore="Typos">    Pro další zabezpečení můžete svůj klíč zašifrovat heslem. Tento klíč začíná s **ncryptsec1** a nelze ho použít bez vašeho hesla.
     \n\nPokud zapomenete heslo, nebudete moci obnovit svůj klíč.</string>
+    <string name="backup_keys_nudge_title">Zálohujte si klíče</string>
+    <string name="backup_keys_nudge_body">Váš tajný klíč je jediný způsob, jak se k tomuto účtu dostat. Pokud ho ztratíte, nelze ho už nikdy obnovit. Uložte si ho někam do bezpečí.</string>
+    <string name="backup_keys_nudge_backup_now">Zálohovat nyní</string>
+    <string name="backup_keys_nudge_already_saved">Uložil jsem si je</string>
+    <string name="backup_keys_nudge_dismiss">Zavřít</string>
     <string name="failed_to_encrypt_key">Nepodařilo se zašifrovat váš privátní klíč</string>
     <string name="secret_key_copied_to_clipboard">Tajný klíč (nsec) zkopírován do schránky</string>
     <string name="copy_my_secret_key">Zkopírovat můj tajný klíč</string>
@@ -1150,12 +1169,71 @@
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
+    <string name="relay_auth_auto_login_when">Přihlásit se bez ptaní, když…</string>
+    <string name="relay_auth_auto_my_relays">…jde o mé relé nebo o místnost, do které jsem vstoupil</string>
+    <string name="relay_auth_auto_read_follows">…čtu někoho, koho sleduji</string>
+    <string name="relay_auth_auto_message_follows">…píšu někomu, koho sleduji</string>
+    <string name="relay_auth_auto_message_strangers">…píšu komukoli jinému</string>
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <string name="relay_auth_login_as">Přihlásit se jako %1$s?</string>
+    <string name="relay_auth_relay_asks">se ptá, kdo jste</string>
+    <string name="relay_auth_why_send_dm">Dokud se nepřihlásíte, nepřijme vaši zprávu pro %1$s.</string>
+    <string name="relay_auth_why_notify_inbox">%1$s se o vaší odpovědi nedozví, dokud se nepřihlásíte.</string>
+    <string name="relay_auth_why_read_outbox">Dokud se nepřihlásíte, nebude vydávat příspěvky od %1$s.</string>
+    <string name="relay_auth_why_post_venue">Dokud se nepřihlásíte, nepřijme váš příspěvek v %1$s.</string>
+    <string name="relay_auth_why_read_venue">Dokud se nepřihlásíte, nebude vydávat %1$s.</string>
+    <string name="relay_auth_why_my_inbox">Dokud se nepřihlásíte, nebude vydávat odpovědi, zapy ani zprávy poslané vám.</string>
+    <string name="relay_auth_why_thread">Dokud se nepřihlásíte, nebude vydávat zbytek této konverzace.</string>
+    <string name="relay_auth_why_thread_with">Dokud se nepřihlásíte, nebude vydávat zbytek vaší konverzace s %1$s.</string>
+    <string name="relay_auth_why_my_own_relay">Toto je jedno z vašich vlastních relé a žádá o přihlášení každého.</string>
+    <string name="relay_auth_why_other">Žádá o přihlášení každého. Amethyst nedokáže zjistit, co zadržuje.</string>
+    <string name="relay_auth_someone_unloaded">někdo, koho jste ještě nenačetl</string>
+    <plurals name="relay_auth_name_and_n_others">
+        <item quantity="one">%1$s a %2$d další</item>
+        <item quantity="few">%1$s a %2$d další</item>
+        <item quantity="many">%1$s a %2$d dalšího</item>
+        <item quantity="other">%1$s a %2$d dalších</item>
+    </plurals>
+    <plurals name="relay_auth_also_holding_back">
+        <item quantity="one">Zadržuje také %1$d další věc.</item>
+        <item quantity="few">Zadržuje také %1$d další věci.</item>
+        <item quantity="many">Zadržuje také %1$d další věci.</item>
+        <item quantity="other">Zadržuje také %1$d dalších věcí.</item>
+    </plurals>
+    <string name="relay_auth_remember_relay">Zapamatovat pro toto relé</string>
+    <string name="relay_auth_log_in">Přihlásit se</string>
+    <string name="relay_auth_not_now">Teď ne</string>
+    <string name="relay_auth_never_allow">Nikdy nepovolovat</string>
+    <string name="relay_auth_how_we_decide">Jak se Amethyst rozhoduje</string>
     <!-- Settings: three lists that each hold what their header says. -->
+    <string name="relay_auth_exceptions">Výjimky</string>
+    <string name="relay_auth_no_exceptions">Zatím žádné výjimky. Všechna relé se řídí pravidly výše.</string>
+    <string name="relay_auth_exception_always">Vždy, nastaveno vámi</string>
+    <string name="relay_auth_exception_never">Nikdy, nastaveno vámi</string>
+    <string name="relay_auth_segment_always">Vždy</string>
+    <string name="relay_auth_segment_never">Nikdy</string>
+    <string name="relay_auth_remove_exception">Odebrat výjimku</string>
+    <string name="relay_auth_exception_removed_undo">Výjimka odebrána. %1$s se opět řídí vašimi pravidly.</string>
+    <string name="relay_auth_undo">Zpět</string>
+    <string name="relay_auth_blocked_section">Blokováno vaším seznamem blokovaných</string>
+    <string name="relay_auth_blocked_row_desc">Amethyst se k blokovaným relé nikdy nepřihlašuje.</string>
+    <string name="relay_auth_no_blocked">Nic není blokováno. K relé, která zablokujete, se Amethyst nikdy nepřihlásí, ať zde nastavíte cokoli.</string>
+    <string name="relay_auth_recent_section">Nedávná přihlášení</string>
+    <string name="relay_auth_no_recent">Zatím vás o přihlášení nepožádalo žádné relé.</string>
+    <string name="relay_auth_ago">před %1$s</string>
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
+    <string name="relay_auth_purpose_send_dm">vaše zprávy</string>
+    <string name="relay_auth_purpose_notify_inbox">vaše odpovědi</string>
+    <string name="relay_auth_purpose_read_outbox">lidé, které čtete</string>
+    <string name="relay_auth_purpose_post_venue">místnost, do které přispíváte</string>
+    <string name="relay_auth_purpose_read_venue">místnost, kterou čtete</string>
+    <string name="relay_auth_purpose_my_inbox">vaše doručená pošta</string>
+    <string name="relay_auth_purpose_thread">konverzace</string>
+    <string name="relay_auth_purpose_my_own_relay">vaše vlastní relé</string>
+    <string name="relay_auth_purpose_other">toto relé</string>
     <string name="nip82_repository_label">Zdroj: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Stáhnout</string>
@@ -1534,6 +1612,58 @@
     <string name="private_note_visible_to">Viditelné pro</string>
     <string name="private_note_no_receivers">Zatím žádní příjemci: tuto poznámku uvidíš jen ty. Přidej lidi, se kterými ji chceš sdílet.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
+    <string name="audience_manage">Spravovat, kdo to uvidí</string>
+    <string name="audience_empty_private">Jen vy — vyberte, kdo další to uvidí</string>
+    <string name="audience_empty_public">Přidejte lidi, kterým přijde upozornění</string>
+    <string name="audience_summary_two">%1$s a %2$s</string>
+    <string name="audience_group_chip">%1$s · %2$s</string>
+    <string name="audience_group_remove">Odebrat všechny přidané ze seznamu %1$s</string>
+    <string name="audience_send_privately">Poslat soukromě</string>
+    <string name="audience_sheet_title">Přidat lidi</string>
+    <string name="audience_sheet_search">Hledat lidi a seznamy</string>
+    <string name="audience_sheet_no_lists">Zatím nemáte žádné seznamy lidí ani balíčky sledování. Vyhledáváním výše můžete někoho přidat přímo.</string>
+    <string name="audience_count_with_private">%1$d · %2$d soukromě</string>
+    <string name="audience_over_limit">Překročen limit</string>
+    <string name="audience_badge_already_added">Již přidáno</string>
+    <string name="audience_badge_muted">Ztlumeno</string>
+    <string name="audience_badge_private_member">Soukromý člen</string>
+    <string name="audience_recipients_are_visible">Každý, kdo je v této poznámce, vidí celý seznam příjemců.</string>
+    <plurals name="audience_summary_others">
+        <item quantity="one">%1$s, %2$s a %3$d další</item>
+        <item quantity="few">%1$s, %2$s a %3$d další</item>
+        <item quantity="many">%1$s, %2$s a %3$d dalšího</item>
+        <item quantity="other">%1$s, %2$s a %3$d dalších</item>
+    </plurals>
+    <plurals name="audience_soft_cap_private">
+        <item quantity="one">Tato poznámka bude zašifrována a doručena jako %1$d samostatná zpráva, jedna pro každou osobu. S externím podepisovačem to znamená jedno schválení za každou.</item>
+        <item quantity="few">Tato poznámka bude zašifrována a doručena jako %1$d samostatné zprávy, jedna pro každou osobu. S externím podepisovačem to znamená jedno schválení za každou.</item>
+        <item quantity="many">Tato poznámka bude zašifrována a doručena jako %1$d samostatné zprávy, jedna pro každou osobu. S externím podepisovačem to znamená jedno schválení za každou.</item>
+        <item quantity="other">Tato poznámka bude zašifrována a doručena jako %1$d samostatných zpráv, jedna pro každou osobu. S externím podepisovačem to znamená jedno schválení za každou.</item>
+    </plurals>
+    <plurals name="audience_soft_cap_public">
+        <item quantity="one">Upozornění na tento příspěvek dostane %1$d osoba.</item>
+        <item quantity="few">Upozornění na tento příspěvek dostanou %1$d osoby.</item>
+        <item quantity="many">Upozornění na tento příspěvek dostane %1$d osoby.</item>
+        <item quantity="other">Upozornění na tento příspěvek dostane %1$d osob.</item>
+    </plurals>
+    <plurals name="audience_hard_cap">
+        <item quantity="one">To by byla %1$d osoba. Amethyst přidá najednou nejvýše %2$d — několik jich odznačte.</item>
+        <item quantity="few">To by byly %1$d osoby. Amethyst přidá najednou nejvýše %2$d — několik jich odznačte.</item>
+        <item quantity="many">To by bylo %1$d osoby. Amethyst přidá najednou nejvýše %2$d — několik jich odznačte.</item>
+        <item quantity="other">To by bylo %1$d osob. Amethyst přidá najednou nejvýše %2$d — několik jich odznačte.</item>
+    </plurals>
+    <plurals name="audience_add_people">
+        <item quantity="one">Přidat %1$d osobu</item>
+        <item quantity="few">Přidat %1$d osoby</item>
+        <item quantity="many">Přidat %1$d osoby</item>
+        <item quantity="other">Přidat %1$d osob</item>
+    </plurals>
+    <plurals name="audience_add_anyway">
+        <item quantity="one">Přesto přidat %1$d osobu</item>
+        <item quantity="few">Přesto přidat %1$d osoby</item>
+        <item quantity="many">Přesto přidat %1$d osoby</item>
+        <item quantity="other">Přesto přidat %1$d osob</item>
+    </plurals>
     <string name="notify_add_user">Přidat</string>
     <string name="notify_remove_user">Odebrat uživatele z oznámení</string>
     <string name="notify_mute_user">Upozorňování zapnuto. Klepnutím ztlumíte upozornění pro tohoto uživatele</string>
@@ -4028,6 +4158,65 @@
     <string name="social_proof">Sociální důkaz</string>
     <string name="poll_submit">Odeslat</string>
     <string name="poll_view_results">Zobrazit výsledky</string>
+    <string name="poll_results_title">Výsledky ankety</string>
+    <string name="poll_results_loading">Načítá se anketa…</string>
+    <string name="poll_results_open">Otevřená</string>
+    <string name="poll_results_closes_in">Končí za %1$s</string>
+    <string name="poll_results_ended">Skončila před %1$s</string>
+    <string name="poll_results_all_options">Všechny možnosti</string>
+    <string name="poll_results_your_pick">Váš hlas</string>
+    <plurals name="poll_results_selections">
+        <item quantity="one">· %1$d výběr</item>
+        <item quantity="few">· %1$d výběry</item>
+        <item quantity="many">· %1$d výběru</item>
+        <item quantity="other">· %1$d výběrů</item>
+    </plurals>
+    <string name="poll_results_no_votes">Zatím žádné hlasy</string>
+    <string name="poll_results_checking_completeness">Zjišťuje se, kolik hlasů existuje…</string>
+    <string name="poll_results_partial">Načteno %1$d z %2$d odpovědí z %3$d relé.</string>
+    <string name="poll_results_partial_approx">Načteno %1$d z přibližně %2$d odpovědí z %3$d relé.</string>
+    <plurals name="poll_results_voters">
+        <item quantity="one">hlasující</item>
+        <item quantity="few">hlasující</item>
+        <item quantity="many">hlasujícího</item>
+        <item quantity="other">hlasujících</item>
+    </plurals>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d hlas ›</item>
+        <item quantity="few">%1$d hlasy ›</item>
+        <item quantity="many">%1$d hlasu ›</item>
+        <item quantity="other">%1$d hlasů ›</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d hlasující</item>
+        <item quantity="few">%1$d hlasující</item>
+        <item quantity="many">%1$d hlasujícího</item>
+        <item quantity="other">%1$d hlasujících</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d hlas dorazil po uzavření ankety a je vyloučen.</item>
+        <item quantity="few">%1$d hlasy dorazily po uzavření ankety a jsou vyloučeny.</item>
+        <item quantity="many">%1$d hlasu dorazilo po uzavření ankety a je vyloučeno.</item>
+        <item quantity="other">%1$d hlasů dorazilo po uzavření ankety a je vyloučeno.</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d hlas má datum před zveřejněním ankety a je vyloučen.</item>
+        <item quantity="few">%1$d hlasy mají datum před zveřejněním ankety a jsou vyloučeny.</item>
+        <item quantity="many">%1$d hlasu má datum před zveřejněním ankety a je vyloučeno.</item>
+        <item quantity="other">%1$d hlasů má datum před zveřejněním ankety a je vyloučeno.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d odpověď nevybrala platnou možnost a je vyloučena.</item>
+        <item quantity="few">%1$d odpovědi nevybraly platnou možnost a jsou vyloučeny.</item>
+        <item quantity="many">%1$d odpovědi nevybralo platnou možnost a je vyloučeno.</item>
+        <item quantity="other">%1$d odpovědí nevybralo platnou možnost a je vyloučeno.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d hlasující je skryt vaším seznamem ztlumených.</item>
+        <item quantity="few">%1$d hlasující jsou skryti vaším seznamem ztlumených.</item>
+        <item quantity="many">%1$d hlasujícího je skryto vaším seznamem ztlumených.</item>
+        <item quantity="other">%1$d hlasujících je skryto vaším seznamem ztlumených.</item>
+    </plurals>
     <string name="restart">Restartovat</string>
     <string name="chess_accept">Přijmout</string>
     <string name="chess_decline">Odmítnout</string>
@@ -4895,193 +5084,4 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
-    <string name="audience_badge_already_added">Již přidáno</string>
-    <string name="audience_badge_muted">Ztlumeno</string>
-    <string name="audience_badge_private_member">Soukromý člen</string>
-    <string name="audience_count_with_private">%1$d · %2$d soukromě</string>
-    <string name="audience_empty_private">Jen vy — vyberte, kdo další to uvidí</string>
-    <string name="audience_empty_public">Přidejte lidi, kterým přijde upozornění</string>
-    <string name="audience_group_chip">%1$s · %2$s</string>
-    <string name="audience_group_remove">Odebrat všechny přidané ze seznamu %1$s</string>
-    <string name="audience_manage">Spravovat, kdo to uvidí</string>
-    <string name="audience_over_limit">Překročen limit</string>
-    <string name="audience_recipients_are_visible">Každý, kdo je v této poznámce, vidí celý seznam příjemců.</string>
-    <string name="audience_send_privately">Poslat soukromě</string>
-    <string name="audience_sheet_no_lists">Zatím nemáte žádné seznamy lidí ani balíčky sledování. Vyhledáváním výše můžete někoho přidat přímo.</string>
-    <string name="audience_sheet_search">Hledat lidi a seznamy</string>
-    <string name="audience_sheet_title">Přidat lidi</string>
-    <string name="audience_summary_two">%1$s a %2$s</string>
-    <string name="backup_keys_nudge_already_saved">Uložil jsem si je</string>
-    <string name="backup_keys_nudge_backup_now">Zálohovat nyní</string>
-    <string name="backup_keys_nudge_body">Váš tajný klíč je jediný způsob, jak se k tomuto účtu dostat. Pokud ho ztratíte, nelze ho už nikdy obnovit. Uložte si ho někam do bezpečí.</string>
-    <string name="backup_keys_nudge_dismiss">Zavřít</string>
-    <string name="backup_keys_nudge_title">Zálohujte si klíče</string>
-    <string name="concord_invite_failed_banned">Tato komunita vás odebrala. Odkaz stále funguje, ale její seznam členů vás nevpustí.</string>
-    <string name="concord_invite_links_action">Odkazy pro pozvání…</string>
-    <string name="concord_invite_links_created">Vytvořeno %1$s</string>
-    <string name="concord_invite_links_empty">Pro tuto komunitu jste zatím nevytvořil žádné odkazy pro pozvání. Odkazy vytvořené jinými správci se spravují na jejich vlastních zařízeních.</string>
-    <string name="concord_invite_links_title">Odkazy pro pozvání</string>
-    <string name="concord_invite_links_unreadable">Vaše odkazy pro pozvání se nepodařilo načíst, takže žádný z nich nyní nelze zrušit. Zkontrolujte připojení a zkuste to znovu.</string>
-    <string name="concord_invite_revoke_action">Zrušit odkaz</string>
-    <string name="concord_invite_revoke_confirm">Zrušit</string>
-    <string name="concord_invite_revoke_explainer">Kdokoli, kdo tento odkaz stále má, se už nebude moci připojit. Lidé, kteří se přes něj již připojili, v komunitě zůstávají. Tuto akci nelze vzít zpět.</string>
-    <string name="concord_invite_revoke_title">Zrušit tento odkaz?</string>
-    <string name="concord_invite_revoked_failed">Odkaz se nepodařilo zrušit. Zkontrolujte připojení a zkuste to znovu.</string>
-    <string name="concord_invite_revoked_ok">Odkaz pro pozvání byl zrušen.</string>
-    <string name="copy_text_original">Kopírovat originál</string>
-    <string name="copy_text_translated">Kopírovat překlad</string>
-    <string name="poll_results_all_options">Všechny možnosti</string>
-    <string name="poll_results_checking_completeness">Zjišťuje se, kolik hlasů existuje…</string>
-    <string name="poll_results_closes_in">Končí za %1$s</string>
-    <string name="poll_results_ended">Skončila před %1$s</string>
-    <string name="poll_results_loading">Načítá se anketa…</string>
-    <string name="poll_results_no_votes">Zatím žádné hlasy</string>
-    <string name="poll_results_open">Otevřená</string>
-    <string name="poll_results_partial">Načteno %1$d z %2$d odpovědí z %3$d relé.</string>
-    <string name="poll_results_partial_approx">Načteno %1$d z přibližně %2$d odpovědí z %3$d relé.</string>
-    <string name="poll_results_title">Výsledky ankety</string>
-    <string name="poll_results_your_pick">Váš hlas</string>
-    <string name="relay_auth_ago">před %1$s</string>
-    <string name="relay_auth_auto_login_when">Přihlásit se bez ptaní, když…</string>
-    <string name="relay_auth_auto_message_follows">…píšu někomu, koho sleduji</string>
-    <string name="relay_auth_auto_message_strangers">…píšu komukoli jinému</string>
-    <string name="relay_auth_auto_my_relays">…jde o mé relé nebo o místnost, do které jsem vstoupil</string>
-    <string name="relay_auth_auto_read_follows">…čtu někoho, koho sleduji</string>
-    <string name="relay_auth_blocked_row_desc">Amethyst se k blokovaným relé nikdy nepřihlašuje.</string>
-    <string name="relay_auth_blocked_section">Blokováno vaším seznamem blokovaných</string>
-    <string name="relay_auth_exception_always">Vždy, nastaveno vámi</string>
-    <string name="relay_auth_exception_never">Nikdy, nastaveno vámi</string>
-    <string name="relay_auth_exception_removed_undo">Výjimka odebrána. %1$s se opět řídí vašimi pravidly.</string>
-    <string name="relay_auth_exceptions">Výjimky</string>
-    <string name="relay_auth_how_we_decide">Jak se Amethyst rozhoduje</string>
-    <string name="relay_auth_log_in">Přihlásit se</string>
-    <string name="relay_auth_login_as">Přihlásit se jako %1$s?</string>
-    <string name="relay_auth_never_allow">Nikdy nepovolovat</string>
-    <string name="relay_auth_no_blocked">Nic není blokováno. K relé, která zablokujete, se Amethyst nikdy nepřihlásí, ať zde nastavíte cokoli.</string>
-    <string name="relay_auth_no_exceptions">Zatím žádné výjimky. Všechna relé se řídí pravidly výše.</string>
-    <string name="relay_auth_no_recent">Zatím vás o přihlášení nepožádalo žádné relé.</string>
-    <string name="relay_auth_not_now">Teď ne</string>
-    <string name="relay_auth_purpose_my_inbox">vaše doručená pošta</string>
-    <string name="relay_auth_purpose_my_own_relay">vaše vlastní relé</string>
-    <string name="relay_auth_purpose_notify_inbox">vaše odpovědi</string>
-    <string name="relay_auth_purpose_other">toto relé</string>
-    <string name="relay_auth_purpose_post_venue">místnost, do které přispíváte</string>
-    <string name="relay_auth_purpose_read_outbox">lidé, které čtete</string>
-    <string name="relay_auth_purpose_read_venue">místnost, kterou čtete</string>
-    <string name="relay_auth_purpose_send_dm">vaše zprávy</string>
-    <string name="relay_auth_purpose_thread">konverzace</string>
-    <string name="relay_auth_recent_section">Nedávná přihlášení</string>
-    <string name="relay_auth_relay_asks">se ptá, kdo jste</string>
-    <string name="relay_auth_remember_relay">Zapamatovat pro toto relé</string>
-    <string name="relay_auth_remove_exception">Odebrat výjimku</string>
-    <string name="relay_auth_segment_always">Vždy</string>
-    <string name="relay_auth_segment_never">Nikdy</string>
-    <string name="relay_auth_someone_unloaded">někdo, koho jste ještě nenačetl</string>
-    <string name="relay_auth_undo">Zpět</string>
-    <string name="relay_auth_why_my_inbox">Dokud se nepřihlásíte, nebude vydávat odpovědi, zapy ani zprávy poslané vám.</string>
-    <string name="relay_auth_why_my_own_relay">Toto je jedno z vašich vlastních relé a žádá o přihlášení každého.</string>
-    <string name="relay_auth_why_notify_inbox">%1$s se o vaší odpovědi nedozví, dokud se nepřihlásíte.</string>
-    <string name="relay_auth_why_other">Žádá o přihlášení každého. Amethyst nedokáže zjistit, co zadržuje.</string>
-    <string name="relay_auth_why_post_venue">Dokud se nepřihlásíte, nepřijme váš příspěvek v %1$s.</string>
-    <string name="relay_auth_why_read_outbox">Dokud se nepřihlásíte, nebude vydávat příspěvky od %1$s.</string>
-    <string name="relay_auth_why_read_venue">Dokud se nepřihlásíte, nebude vydávat %1$s.</string>
-    <string name="relay_auth_why_send_dm">Dokud se nepřihlásíte, nepřijme vaši zprávu pro %1$s.</string>
-    <string name="relay_auth_why_thread">Dokud se nepřihlásíte, nebude vydávat zbytek této konverzace.</string>
-    <string name="relay_auth_why_thread_with">Dokud se nepřihlásíte, nebude vydávat zbytek vaší konverzace s %1$s.</string>
-    <plurals name="audience_add_anyway">
-        <item quantity="one">Přesto přidat %1$d osobu</item>
-        <item quantity="few">Přesto přidat %1$d osoby</item>
-        <item quantity="many">Přesto přidat %1$d osoby</item>
-        <item quantity="other">Přesto přidat %1$d osob</item>
-    </plurals>
-    <plurals name="audience_add_people">
-        <item quantity="one">Přidat %1$d osobu</item>
-        <item quantity="few">Přidat %1$d osoby</item>
-        <item quantity="many">Přidat %1$d osoby</item>
-        <item quantity="other">Přidat %1$d osob</item>
-    </plurals>
-    <plurals name="audience_hard_cap">
-        <item quantity="one">To by byla %1$d osoba. Amethyst přidá najednou nejvýše %2$d — několik jich odznačte.</item>
-        <item quantity="few">To by byly %1$d osoby. Amethyst přidá najednou nejvýše %2$d — několik jich odznačte.</item>
-        <item quantity="many">To by bylo %1$d osoby. Amethyst přidá najednou nejvýše %2$d — několik jich odznačte.</item>
-        <item quantity="other">To by bylo %1$d osob. Amethyst přidá najednou nejvýše %2$d — několik jich odznačte.</item>
-    </plurals>
-    <plurals name="audience_soft_cap_private">
-        <item quantity="one">Tato poznámka bude zašifrována a doručena jako %1$d samostatná zpráva, jedna pro každou osobu. S externím podepisovačem to znamená jedno schválení za každou.</item>
-        <item quantity="few">Tato poznámka bude zašifrována a doručena jako %1$d samostatné zprávy, jedna pro každou osobu. S externím podepisovačem to znamená jedno schválení za každou.</item>
-        <item quantity="many">Tato poznámka bude zašifrována a doručena jako %1$d samostatné zprávy, jedna pro každou osobu. S externím podepisovačem to znamená jedno schválení za každou.</item>
-        <item quantity="other">Tato poznámka bude zašifrována a doručena jako %1$d samostatných zpráv, jedna pro každou osobu. S externím podepisovačem to znamená jedno schválení za každou.</item>
-    </plurals>
-    <plurals name="audience_soft_cap_public">
-        <item quantity="one">Upozornění na tento příspěvek dostane %1$d osoba.</item>
-        <item quantity="few">Upozornění na tento příspěvek dostanou %1$d osoby.</item>
-        <item quantity="many">Upozornění na tento příspěvek dostane %1$d osoby.</item>
-        <item quantity="other">Upozornění na tento příspěvek dostane %1$d osob.</item>
-    </plurals>
-    <plurals name="audience_summary_others">
-        <item quantity="one">%1$s, %2$s a %3$d další</item>
-        <item quantity="few">%1$s, %2$s a %3$d další</item>
-        <item quantity="many">%1$s, %2$s a %3$d dalšího</item>
-        <item quantity="other">%1$s, %2$s a %3$d dalších</item>
-    </plurals>
-    <plurals name="poll_results_backdated_votes">
-        <item quantity="one">%1$d hlas má datum před zveřejněním ankety a je vyloučen.</item>
-        <item quantity="few">%1$d hlasy mají datum před zveřejněním ankety a jsou vyloučeny.</item>
-        <item quantity="many">%1$d hlasu má datum před zveřejněním ankety a je vyloučeno.</item>
-        <item quantity="other">%1$d hlasů má datum před zveřejněním ankety a je vyloučeno.</item>
-    </plurals>
-    <plurals name="poll_results_hidden_voters">
-        <item quantity="one">%1$d hlasující je skryt vaším seznamem ztlumených.</item>
-        <item quantity="few">%1$d hlasující jsou skryti vaším seznamem ztlumených.</item>
-        <item quantity="many">%1$d hlasujícího je skryto vaším seznamem ztlumených.</item>
-        <item quantity="other">%1$d hlasujících je skryto vaším seznamem ztlumených.</item>
-    </plurals>
-    <plurals name="poll_results_ignored_votes">
-        <item quantity="one">%1$d odpověď nevybrala platnou možnost a je vyloučena.</item>
-        <item quantity="few">%1$d odpovědi nevybraly platnou možnost a jsou vyloučeny.</item>
-        <item quantity="many">%1$d odpovědi nevybralo platnou možnost a je vyloučeno.</item>
-        <item quantity="other">%1$d odpovědí nevybralo platnou možnost a je vyloučeno.</item>
-    </plurals>
-    <plurals name="poll_results_late_votes">
-        <item quantity="one">%1$d hlas dorazil po uzavření ankety a je vyloučen.</item>
-        <item quantity="few">%1$d hlasy dorazily po uzavření ankety a jsou vyloučeny.</item>
-        <item quantity="many">%1$d hlasu dorazilo po uzavření ankety a je vyloučeno.</item>
-        <item quantity="other">%1$d hlasů dorazilo po uzavření ankety a je vyloučeno.</item>
-    </plurals>
-    <plurals name="poll_results_option_count">
-        <item quantity="one">%1$d hlasující</item>
-        <item quantity="few">%1$d hlasující</item>
-        <item quantity="many">%1$d hlasujícího</item>
-        <item quantity="other">%1$d hlasujících</item>
-    </plurals>
-    <plurals name="poll_results_selections">
-        <item quantity="one">· %1$d výběr</item>
-        <item quantity="few">· %1$d výběry</item>
-        <item quantity="many">· %1$d výběru</item>
-        <item quantity="other">· %1$d výběrů</item>
-    </plurals>
-    <plurals name="poll_results_vote_count_link">
-        <item quantity="one">%1$d hlas ›</item>
-        <item quantity="few">%1$d hlasy ›</item>
-        <item quantity="many">%1$d hlasu ›</item>
-        <item quantity="other">%1$d hlasů ›</item>
-    </plurals>
-    <plurals name="poll_results_voters">
-        <item quantity="one">hlasující</item>
-        <item quantity="few">hlasující</item>
-        <item quantity="many">hlasujícího</item>
-        <item quantity="other">hlasujících</item>
-    </plurals>
-    <plurals name="relay_auth_also_holding_back">
-        <item quantity="one">Zadržuje také %1$d další věc.</item>
-        <item quantity="few">Zadržuje také %1$d další věci.</item>
-        <item quantity="many">Zadržuje také %1$d další věci.</item>
-        <item quantity="other">Zadržuje také %1$d dalších věcí.</item>
-    </plurals>
-    <plurals name="relay_auth_name_and_n_others">
-        <item quantity="one">%1$s a %2$d další</item>
-        <item quantity="few">%1$s a %2$d další</item>
-        <item quantity="many">%1$s a %2$d dalšího</item>
-        <item quantity="other">%1$s a %2$d dalších</item>
-    </plurals>
 </resources>

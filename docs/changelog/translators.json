@@ -79,18 +79,6 @@
     "since": "2026-07-28T23:17:02-04:00",
     "translators": [
       {
-        "user": "Bardesss",
-        "languages": [
-          "Dutch"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
         "user": "vitorpamplona",
         "languages": [
           "Chinese Simplified",
@@ -103,6 +91,18 @@
           "Portuguese, Brazilian",
           "Slovenian",
           "Swedish"
+        ]
+      },
+      {
+        "user": "Bardesss",
+        "languages": [
+          "Dutch"
+        ]
+      },
+      {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
         ]
       },
       {
