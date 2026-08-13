@@ -224,7 +224,9 @@ class PoWPublishQueue(
             // ordinary posts, left intact for scheduled ones.
             sendWithoutPow = {
                 if (clock != null) {
-                    EventTemplate<T>(clock(), template.kind, template.tags, template.content)
+                    // same clamp the miner applies, so abandoning the nonce search
+                    // can never stamp a template further back than mining would have.
+                    EventTemplate<T>(maxOf(template.createdAt, clock()), template.kind, template.tags, template.content)
                 } else {
                     template
                 }

@@ -183,9 +183,21 @@ class PoWMiner(
                 val buffer = MiningBuffer(bytes, startIndex, startIndex + initialNonce.length)
 
                 val passStart = TimeSource.Monotonic.markNow()
+                val passCreatedAt = createdAt
                 val isPassOver: () -> Boolean =
                     if (refreshCreatedAt != null) {
-                        { passStart.elapsedNow() >= PASS_BUDGET }
+                        // Both halves are load-bearing. The elapsed check keeps the
+                        // clock out of the hot loop for the first second and caps
+                        // restamping at created_at's one-second resolution. The
+                        // comparison is the progress guarantee: the enumeration is
+                        // deterministic and the random base is fully overwritten by
+                        // it (see PoWMinerDeterminismTest), so created_at is the only
+                        // thing that makes a new pass search anywhere new. Ending a
+                        // pass while the clock is pinned — a backwards step, or a
+                        // template stamped ahead of this device — would restart the
+                        // identical search forever. Staying in the pass instead falls
+                        // back to exhaust-then-widen, exactly as with no clock at all.
+                        { passStart.elapsedNow() >= PASS_BUDGET && refreshCreatedAt() > passCreatedAt }
                     } else {
                         { false }
                     }

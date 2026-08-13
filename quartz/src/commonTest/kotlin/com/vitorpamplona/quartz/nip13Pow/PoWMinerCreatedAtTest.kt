@@ -35,6 +35,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.TimeSource
 
 /**
  * NIP-13: "It is recommended to update the `created_at` as well during this
@@ -106,26 +107,39 @@ class PoWMinerCreatedAtTest {
 
     @Test
     fun aLongSearchRestampsOncePerPass() {
-        // 256 bits never completes, so every pass ends on the one-second budget
-        // rather than on a win — which is exactly the case NIP-13 is about.
-        val handedOut = mutableListOf<Long>()
-        var tick = originalCreatedAt
+        // 256 bits never completes, so every pass ends on the pass budget rather
+        // than on a win — which is exactly the case NIP-13 is about. The clock has
+        // to behave like a real one (same value within a second, advancing with
+        // wall time); a counter that ticks on every read would hide the guard that
+        // keeps a pinned clock from restarting the same pass.
+        val start = TimeSource.Monotonic.markNow()
+        val stamps = linkedSetOf<Long>()
+        val clock = { (originalCreatedAt + start.elapsedNow().inWholeSeconds).also { stamps.add(it) } }
 
         assertFailsWith<CancellationException> {
-            PoWMiner.run(
-                baseTemplate,
-                pubKey,
-                256,
-                isActive = { handedOut.size < 3 },
-                refreshCreatedAt = {
-                    tick += 1
-                    tick.also { handedOut.add(it) }
-                },
-            )
+            PoWMiner.run(baseTemplate, pubKey, 256, isActive = { stamps.size < 3 }, refreshCreatedAt = clock)
         }
 
-        assertTrue(handedOut.size >= 2, "a multi-second search must restamp more than once, got ${handedOut.size}")
-        assertEquals(handedOut.sorted(), handedOut, "restamps must be non-decreasing")
+        assertTrue(stamps.size >= 2, "a multi-second search must restamp more than once, got $stamps")
+        assertEquals(stamps.toList().sorted(), stamps.toList(), "restamps must be non-decreasing")
+    }
+
+    @Test
+    fun aPinnedClockLeavesTheTimestampAloneAndStillMines() {
+        // A clock stuck at or behind the template's timestamp gives a restarted
+        // pass nothing new to search: the enumeration is deterministic and the
+        // random base is overwritten by it (see PoWMinerDeterminismTest), so the
+        // miner must stay inside the pass and fall back to exhaust-then-widen.
+        var reads = 0
+        val mined =
+            PoWMiner.run(baseTemplate, pubKey, 12, refreshCreatedAt = {
+                reads++
+                originalCreatedAt - 3600
+            })
+
+        assertEquals(originalCreatedAt, mined.createdAt)
+        assertCommitsTo(mined, 12)
+        assertTrue(reads >= 1, "the clock is still consulted")
     }
 
     @Test
