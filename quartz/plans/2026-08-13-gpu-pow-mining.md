@@ -4,8 +4,9 @@
 **Status:** analysis + measurements; recommendation is **NOT to build a GPU miner**
 **Verdict:** a flagship phone GPU lands at roughly the same SHA-256 throughput as the
 CPU cores the miner already uses, because ARMv8 CPUs have SHA-256 **in silicon** and
-mobile GPUs do not. The unclaimed speedup is on the CPU side — and on Android it is
-batching attempts under one JNI call, not the midstate (see the two regimes below).
+mobile GPUs do not. The unclaimed speedup is on the CPU side: a midstate is ~3x on
+JVM targets, and on Android it hinges on Conscrypt's per-digest JNI cost, which is
+still unmeasured.
 
 Also specifies advancing `created_at` while mining, which shares the same pass
 structure a midstate would need.
@@ -65,33 +66,46 @@ to 4 KB:
 | 1024 B | 17 | 329,215 | 3.038 |
 | 4096 B | 65 | 88,845 | 11.256 |
 
-That is a clean straight line: **cost ≈ 76 ns fixed + 172 ns per 64-byte block**
-(predicts 3.00 µs at 17 blocks vs 3.04 µs measured). The fixed part is the
-`MessageDigest` call overhead (JNI + digest setup); the slope is the compression
-function.
+**Those numbers were wrong — about 3.3x pessimistic — and are kept here only because
+the first two revisions of this plan reasoned from them.** See the correction below;
+everything downstream uses the corrected model.
 
-What transfers to a phone is the *shape*: per-attempt cost is dominated by block
-count, with a fixed per-call floor that becomes significant once block count drops.
+### 3. Correction: the JVM already runs SHA-256 at hardware speed
 
-### 3. Two regimes, and the JVM is in the slow one
+The table above suggested `cost ≈ 76 ns + 172 ns/block`, which made the JVM look 3.7x
+slower than `openssl speed -evp sha256` (1,357 MB/s ⇒ 47 ns/block) on the same CPU.
+That gap does not exist. Re-measured with a best-of-5 loop:
 
-The size of every optimization below depends on whether SHA-256 runs on dedicated
-silicon or in software, because that moves the 172 ns slope but not the 76 ns floor.
-Both regimes, measured on the same container CPU (Xeon @ 2.1 GHz):
+| bytes | blocks | ns/hash | marginal ns/block |
+| ----- | ------ | ------- | ----------------- |
+| 64 | 2 | 134 | — |
+| 256 | 5 | 270 | 45 |
+| 512 | 9 | 455 | 46 |
+| 1,024 | 17 | 846 | 48 |
+| 4,096 | 65 | 3,143 | 47 |
+| 65,536 | 1,025 | 47,395 | 46 |
 
-| Path | ns per block |
-| ---- | ------------ |
-| `sha256Into` → `MessageDigest` (JDK 21) | **172** |
-| `openssl speed -evp sha256`, SHA-NI, 8 KB asymptote (1,357 MB/s) | **47** |
+**Corrected model: `cost ≈ 42 ns fixed + 46 ns per 64-byte block`** — the marginal
+cost is flat at every size and equals OpenSSL's 47 ns/block. The HotSpot intrinsic is
+doing the work: `-XX:-UseSHA256Intrinsics` gives 390 ns/block (8x worse) and
+`-XX:TieredStopAtLevel=1` gives 583 ns/block.
 
-The JVM is **3.7x off hardware SHA-256 on the same CPU**, despite `sha_ni` in
-`/proc/cpuinfo` and `UseSHA256Intrinsics = true`. I could not explain the gap and did
-not chase it, but it deserves its own investigation: it would speed up event
-*verification*, which is far hotter than mining.
+The original figure was a single unguarded 500 ms sample with no best-of-N, taken in
+the same Gradle invocation as the module's first full compile (4-core container, 6 GB
+Gradle daemon + 8 GB Kotlin daemon). Every controlled repetition since lands at
+46–48 ns/block: standalone `java` and inside a Gradle test worker; the original
+timing method and a best-of-5; with and without four CPU hogs; and immediately after
+a forced recompile. Compilation shape was ruled out too — an OSR-compiled loop in
+`main` and a hot C2-compiled method differ by 1.02x.
 
-ARMv8 crypto extensions land near the hardware number (~2 GB/s per core ≈ 32 ns per
-block), so **Android is in the fast regime and JVM targets are in the slow one** —
-which is exactly what decides the value of a midstate.
+**There is therefore no "slow regime".** OpenJDK reaches hardware SHA-256 with an
+intrinsic over pure-Java code — no JNI at all — and ARMv8 crypto extensions land in
+the same place (~2 GB/s per core ≈ 32 ns/block). Android is the one platform whose
+per-call cost is unmeasured, because Conscrypt makes a real JNI call per digest where
+OpenJDK makes none.
+
+**Lesson for the next measurement:** take best-of-N, never a single wall-clock window,
+and never in the same Gradle invocation that compiled the code.
 
 ## What GPU APIs are actually reachable
 
@@ -152,7 +166,7 @@ from the midstate optimization, so the ratio does not improve.
 
 ## What to do instead
 
-**1. Midstate — big on JVM targets, probably a no-op on Android.**
+**1. Midstate — ~3x on JVM targets, unknown on Android.**
 SHA-256 is `state ← compress(state, block)` over 64-byte blocks, strictly sequential.
 Every block before the one containing the nonce is identical on every attempt, so it
 can be absorbed **once** into 8 uint32 words and restored per attempt. The boundary is
@@ -161,33 +175,37 @@ worker's fixed prefix is constant too. This is legal only because the payload le
 is constant within one `search()` pass (the nonce only grows on exhaustion, which
 restarts the pass), so the padding and length suffix don't move.
 
-The win depends entirely on which regime the device is in:
+On the corrected model (`42 + 46n`), for a JVM target:
 
 | | now | with midstate | speedup |
 | --- | --- | --- | --- |
-| Slow regime — measured `76 + 172n` (JVM targets) | 1,452 ns | 420 ns | **3.5x** |
-| Fast regime — ARMv8 crypto ext, `~200 + 47n` (Android) | 576 ns | ~494 ns via `clone()` | **~1.2x** |
+| Short note, 8 blocks → 2 | 410 ns | 134 ns | **3.1x** |
+| Long note, 11 blocks → 5 | 548 ns | 272 ns | **2.0x** |
 
-In the fast regime the JNI floor, not the compression, is the cost — and midstate
-does nothing about it. Worse, the two ways to get a midstate both make it back:
-`MessageDigest` doesn't expose state, so it is either `clone()`-ing a pre-absorbed
-Conscrypt digest (keeps the ARM instruction, but adds a *second* JNI call, hence the
-1.2x) or a Kotlin compression function in `commonMain` (one JNI call becomes zero, but
-gives up the hardware instruction — at ~300–500 ns/block on ART that is *slower than
-today*). Whether Conscrypt's digest is even `Cloneable` is unverified.
+The fixed cost is only 42 ns there, so cutting block count is nearly a pure win. That
+is the case for doing it in `desktopApp`/`cli`/`geode`.
 
-So: worth doing for `desktopApp`/`cli`/`geode`, not obviously worth doing for the
-phone. Settle it with an on-device measurement before writing it.
+**Android is the open question, and it turns on one unmeasured number:** Conscrypt's
+per-digest JNI cost. OpenJDK pays none (intrinsic over pure Java); Conscrypt pays a
+real call. If that overhead is ~200 ns against ~32 ns/block on ARMv8, an 8-block
+attempt is 456 ns and a 2-block one is 264 ns — and neither route to a midstate keeps
+that win. `MessageDigest` doesn't expose state, so it is either `clone()`-ing a
+pre-absorbed digest (keeps the ARM instruction but adds a *second* JNI call) or a
+Kotlin compression function in `commonMain` (drops to zero JNI but forfeits the
+hardware instruction, at maybe 300–500 ns/block on ART). Whether Conscrypt's digest is
+even `Cloneable` is also unverified.
 
-**2. Kill the per-call floor — this is the real Android win.**
-The fast regime is JNI-bound: ~200 ns of call overhead against ~376 ns of hashing.
-The only way past it is to run many attempts *below* the JNI boundary — one native
-call that restores the midstate, walks N nonces, and returns a winner. That keeps the
-ARMv8 instruction *and* pays the JNI cost once per million attempts instead of once
-per attempt. It needs an NDK toolchain, which `amethyst` does not have today
-(`nestsClient` builds native code, so it is not unprecedented). Ironically this is the
-same batching structure the GPU path needs — and it beats the GPU by keeping the
-hardware SHA-256.
+So: measure Conscrypt's fixed per-digest cost on a real device first. That single
+number decides whether Android gets the JVM's 3x, roughly nothing, or a regression.
+
+**2. Kill the per-call floor, if there is one.**
+If Android does turn out to be JNI-bound, the way past it is to run many attempts
+*below* the JNI boundary — one native call that restores the midstate, walks N nonces
+and returns a winner. That keeps the ARMv8 instruction *and* pays the call cost once
+per million attempts. It needs an NDK toolchain, which `amethyst` does not have today
+(`nestsClient` builds native code, so it is not unprecedented). It is the same
+batching structure the GPU path needs — and it beats the GPU by keeping the hardware
+SHA-256. Conditional on the measurement above; do not build it on the estimate.
 
 **3. `PoWMiner` only uses half the cores.** `minerWorkers = cores / 2` is right while
 the user is composing, but a job that has been handed to the foreground service and
@@ -268,9 +286,14 @@ settles it, and it cannot be taken in this container (no GPU, no device).
 
 ## Reproducing the measurements
 
-The layout table and the cost sweep came from a throwaway `quartz` JVM test that
-serialized templates via `EventHasherSerializer.fastMakeJsonForId`, located the nonce
-with `ByteArray.indexOf`, and timed `sha256Into` at each payload size after a
-200k-iteration warmup (`./gradlew :quartz:jvmTest`). It was not kept — it printed
-rather than asserted. A permanent version belongs in `benchmark/` so the numbers can
-be taken on-device, where they actually matter.
+The layout table came from a throwaway `quartz` JVM test that serialized templates via
+`EventHasherSerializer.fastMakeJsonForId` and located the nonce with
+`ByteArray.indexOf`. The corrected cost sweep timed `sha256Into` per size with a
+300k-iteration warmup and best-of-5 timing, cross-checked against standalone Java
+(`java Sweep.java`) and `openssl speed -evp sha256`. Neither probe was kept — they
+printed rather than asserted.
+
+A permanent version belongs in `benchmark/`, where it can be taken on-device. The one
+number worth having there is Conscrypt's fixed per-digest cost: subtract the fitted
+slope from a 1-block hash, exactly as the `42 + 46n` fit above does. Everything the
+Android side of this plan is still undecided about follows from it.
