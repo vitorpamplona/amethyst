@@ -85,86 +85,6 @@ class RegexContentBenchmark {
             return sb.toString()
         }
 
-        private val PREFIXES =
-            arrayOf("npub1", "nsec1", "note1", "nevent1", "naddr1", "nprofile1", "nrelay1", "nembed1")
-
-        /**
-         * One O(n) pass over the chars: stop at every 'n'/'N' and test the 8 entity
-         * prefixes with regionMatches(ignoreCase). Cheap char compares instead of
-         * driving the regex NFA from every position in the string.
-         */
-        fun hasNip19Candidate(content: String): Boolean {
-            var i = 0
-            val n = content.length
-            while (i < n) {
-                val c = content[i]
-                if (c == 'n' || c == 'N') {
-                    for (p in PREFIXES) {
-                        if (content.regionMatches(i, p, 0, p.length, ignoreCase = true)) return true
-                    }
-                }
-                i++
-            }
-            return false
-        }
-
-        /**
-         * Variant 2: never let the NFA scan. Walk to each candidate position with
-         * cheap char compares, then apply the regex ANCHORED there via matchAt.
-         * `(nostr:)?@?` are optional, so anchoring at the entity's 'n' still matches
-         * and still captures the type/key/trailing groups parseAll uses.
-         */
-        fun anchoredNip19(content: String): Int {
-            var i = 0
-            var hits = 0
-            val n = content.length
-            while (i < n) {
-                val c = content[i]
-                if (c == 'n' || c == 'N') {
-                    var candidate = false
-                    for (p in PREFIXES) {
-                        if (content.regionMatches(i, p, 0, p.length, ignoreCase = true)) {
-                            candidate = true
-                            break
-                        }
-                    }
-                    if (candidate) {
-                        val m = Nip19Parser.nip19regex.matchAt(content, i)
-                        if (m != null) {
-                            hits++
-                            i = m.range.last + 1
-                            continue
-                        }
-                    }
-                }
-                i++
-            }
-            return hits
-        }
-
-        /**
-         * Candidate: the regex requires `(?:\s|\A)` immediately before the `#`, so
-         * every match starts at a whitespace (or at position 0). Jump between '#'
-         * occurrences with indexOf and anchor the regex there.
-         */
-        fun fastFindHashtags(content: String): List<String> {
-            if (content.isBlank()) return emptyList()
-            val out = mutableSetOf<String>()
-            var h = content.indexOf('#')
-            while (h >= 0) {
-                if (h == 0 || content[h - 1].isWhitespace()) {
-                    val m = hashtagSearch.matchAt(content, if (h == 0) 0 else h - 1)
-                    if (m != null) {
-                        m.groups[1]?.value?.let { if (it.isNotBlank()) out.add(it) }
-                        h = content.indexOf('#', m.range.last + 1)
-                        continue
-                    }
-                }
-                h = content.indexOf('#', h + 1)
-            }
-            return out.toList()
-        }
-
         /**
          * REFERENCE: the pre-optimization `findHashtags`, verbatim. Production is
          * compared against this so the guard can never become a tautology.
@@ -321,26 +241,6 @@ class RegexContentBenchmark {
             bench("hashtags m=$m", note(n, m), r) { findHashtags(it).size }
         }
 
-        println("\n=== OPTIMIZED: literal pre-scan, then regex only if a candidate exists ===")
-        corpus.forEach { (n, _, r) ->
-            bench("opt nip19 0 mentions", note(n, 0), r) { if (hasNip19Candidate(it)) findNostrUris(it).size else 0 }
-        }
-        corpus.forEach { (n, m, r) ->
-            bench("opt nip19 m=$m", note(n, m), r) { if (hasNip19Candidate(it)) findNostrUris(it).size else 0 }
-        }
-
-        println("\n=== findHashtags — content with NO '#' ===")
-        corpus.forEach { (n, _, r) ->
-            bench("hashtags none", note(n, 0, hashtags = false), r) { findHashtags(it).size }
-        }
-        println("\n=== findHashtags OPTIMIZED (indexOf('#') + anchored) ===")
-        corpus.forEach { (n, _, r) ->
-            bench("opt hashtags none", note(n, 0, hashtags = false), r) { fastFindHashtags(it).size }
-        }
-        corpus.forEach { (n, m, r) ->
-            bench("opt hashtags dense", note(n, m), r) { fastFindHashtags(it).size }
-        }
-
         println("\n=== IndexedTags findIndexTagsWithPeople ===")
         val tags = tagArray(30)
         corpus.forEach { (n, _, r) ->
@@ -402,42 +302,18 @@ class RegexContentBenchmark {
                 RichTextParser().parseText(it, rtTags, null).paragraphs.size
             }
         }
-
-        println("\n=== OPTIMIZED v2: anchored matchAt at candidate positions (no NFA scan) ===")
-        corpus.forEach { (n, _, r) ->
-            bench("v2 nip19 0 mentions", note(n, 0), r) { anchoredNip19(it) }
-        }
-        corpus.forEach { (n, m, r) ->
-            bench("v2 nip19 m=$m", note(n, m), r) { anchoredNip19(it) }
-        }
     }
 
-    /** The fast hashtag scan must return exactly what the production scan returns. */
+    /**
+     * Fuzz `findHashtags` against a verbatim copy of the implementation it replaced.
+     *
+     * The explicit behavioural cases live in quartz's `ContentScanTest` (commonTest,
+     * so they run on every target). What is kept here is the randomised half: text
+     * peppered with `#` in awkward positions, which is where an anchored scan can
+     * disagree with the original `findAll`.
+     */
     @Test
-    fun fastHashtagsMatchesProduction() {
-        val cases =
-            listOf(
-                "#one #two #three",
-                "no hashtags here",
-                "#start of line",
-                "mid #tag then more",
-                "email a@b.com and #tag",
-                "punct #tag, #tag2. #tag3!",
-                "nospace#nottag should not match",
-                "\n#afterNewline",
-                "",
-                "   ",
-                note(4_000, 0),
-                note(20_000, 3),
-                note(4_000, 0, hashtags = false),
-            )
-        cases.forEach { c ->
-            val ref = referenceFindHashtags(c).sorted()
-            val prod = findHashtags(c).sorted()
-            check(ref == prod) { "mismatch on ${c.take(40).replace("\n", "\\n")}: reference=$ref production=$prod" }
-        }
-
-        // fuzz: random text peppered with '#' in awkward positions
+    fun hashtagsMatchReferenceUnderFuzz() {
         val rnd = kotlin.random.Random(20260813)
         val alphabet = " \n\t#abcXYZ.,!@\u00a0-_0123"
         repeat(3_000) {
@@ -637,43 +513,5 @@ class RegexContentBenchmark {
             val prod = Nip19Parser.parseAll(c).size
             check(ref.size == prod) { "nip19 mismatch on ${c.take(50)}: reference=${ref.size} production=$prod" }
         }
-    }
-
-    /** v2 must find exactly the same number of entities as the production scan. */
-    @Test
-    fun anchoredMatchesProductionCount() {
-        listOf(0, 1, 2, 5, 40).forEach { m ->
-            listOf(200, 4_000, 68_000).forEach { size ->
-                val c = note(size, m)
-                val real = Nip19Parser.nip19regex.findAll(c).count()
-                val fast = anchoredNip19(c)
-                check(real == fast) { "size=$size m=$m: production found $real, anchored found $fast" }
-            }
-        }
-    }
-
-    /**
-     * Correctness gate for the pre-scan: it must never hide a real match.
-     * Anything the regex finds must also be reported as a candidate.
-     */
-    @Test
-    fun preScanNeverMissesAMatch() {
-        val cases =
-            listOf(
-                "nostr:$NPUB",
-                "@$NPUB",
-                NPUB,
-                "text before nostr:$NEVENT and after",
-                "UPPER ${NPUB.uppercase()} case",
-                "no entities here at all, just prose about nostr and npubs",
-                "npub1tooshort",
-                "",
-            )
-        cases.forEach { c ->
-            val real = Nip19Parser.parseAll(c).isNotEmpty()
-            if (real) check(hasNip19Candidate(c)) { "pre-scan missed a real match in: ${c.take(40)}" }
-        }
-        // and it must actually filter the common case
-        check(!hasNip19Candidate(note(4_000, 0))) { "pre-scan failed to reject prose with no entities" }
     }
 }
