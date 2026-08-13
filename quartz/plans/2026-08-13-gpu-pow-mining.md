@@ -197,10 +197,12 @@ is no longer blocking any UI could use more.
 NIP-90 kinds 5970/6970 — hand the template to a DVM with real hardware. That beats
 every on-device option and is already specced.
 
-## Advancing `created_at` while mining
+## Advancing `created_at` while mining — SHIPPED
 
 Not a speedup — a correctness fix that this analysis is a prerequisite for, because
-it interacts with the midstate.
+it interacts with the midstate. Implemented as described below; `PoWMiner.run/mine`
+take an optional `refreshCreatedAt: (() -> Long)?`, covered by
+`quartz/…/PoWMinerCreatedAtTest.kt`.
 
 NIP-13: *"It is recommended to update the `created_at` as well during this process."*
 We do half of it. `PoWPublishQueue.enqueue(refreshCreatedAtOnStart = …)` and the
@@ -223,6 +225,11 @@ breaks value semantics and the checkpoint format. Pass the miner a clock instead
 frozen behaviour. The consumers are already correct — `PoWNostrSigner` forwards
 `mined.createdAt` to `signer.sign(…)`, and the queue publishes the mined template — so
 this is contained inside `PoWMiner` plus one flag at the call sites.
+
+The new parameter goes **last**, after `isActive`, so the trailing-lambda call sites
+keep binding their lambda to `isActive`. Kotlin would otherwise silently retarget them
+at `refreshCreatedAt`; the `Boolean`/`Long` mismatch makes that a compile error rather
+than a bug, but those sites were rewritten to a named `isActive = { … }` anyway.
 
 **"When we can" is already modelled.** Reuse `refreshCreatedAtOnStart`'s predicate
 rather than inventing a second one; its comment already states the exclusion —

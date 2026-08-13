@@ -214,15 +214,10 @@ class PoWPublishQueue(
             difficulty = difficulty,
             persistAs = persistAs,
             owner = pubKey,
-            mine = { isActive ->
-                val toMine =
-                    if (clock != null) {
-                        EventTemplate<T>(clock(), template.kind, template.tags, template.content)
-                    } else {
-                        template
-                    }
-                PoWMiner.mine(toMine, pubKey, difficulty, minerThreads, isActive, clock)
-            },
+            // the miner stamps the first pass from the same clock, so the job
+            // picks up "now" whether it waited in the queue or was restored
+            // from disk — no need to re-wrap the template here.
+            mine = { isActive -> PoWMiner.mine(template, pubKey, difficulty, minerThreads, isActive, clock) },
             publish = onMined,
             // send-now fallback: the same template, minus the nonce the miner would
             // have added. created_at follows the mined path — refreshed to "now" for
