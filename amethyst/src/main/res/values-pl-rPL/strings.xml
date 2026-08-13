@@ -4051,7 +4051,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="poll_results_ended">Zakończono %1$s temu</string>
     <string name="poll_results_all_options">Wszystkie opcje</string>
     <string name="poll_results_your_pick">Twój głos</string>
-    <string name="poll_results_selections">· %1$d odpowiedzi</string>
+    <plurals name="poll_results_selections">
+        <item quantity="one">· %1$d odpowiedź</item>
+        <item quantity="few">· %1$d odpowiedzi</item>
+        <item quantity="many">· %1$d odpowiedzi</item>
+        <item quantity="other">· %1$d odpowiedzi</item>
+    </plurals>
     <string name="poll_results_no_votes">Brak głosów</string>
     <string name="poll_results_checking_completeness">Sprawdzanie liczby oddanych głosów…</string>
     <string name="poll_results_partial">%1$d z %2$d odpowiedzi załadowanych z %3$d transmiterów.</string>

@@ -4713,4 +4713,161 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
+    <string name="audience_badge_already_added">Redan tillagd</string>
+    <string name="audience_badge_muted">Tystad</string>
+    <string name="audience_badge_private_member">Privat medlem</string>
+    <string name="audience_count_with_private">%1$d · %2$d privata</string>
+    <string name="audience_empty_private">Bara du — välj vem mer som får se detta</string>
+    <string name="audience_empty_public">Lägg till personer att avisera</string>
+    <string name="audience_group_chip">%1$s · %2$s</string>
+    <string name="audience_group_remove">Ta bort alla som lagts till från %1$s</string>
+    <string name="audience_manage">Hantera vem som ser detta</string>
+    <string name="audience_over_limit">Över gränsen</string>
+    <string name="audience_recipients_are_visible">Alla i den här anteckningen kan se hela mottagarlistan.</string>
+    <string name="audience_send_privately">Skicka privat</string>
+    <string name="audience_sheet_no_lists">Du har inga personlistor eller följpaket än. Sök ovan för att lägga till någon direkt.</string>
+    <string name="audience_sheet_search">Sök personer och listor</string>
+    <string name="audience_sheet_title">Lägg till personer</string>
+    <string name="audience_summary_two">%1$s och %2$s</string>
+    <string name="backup_keys_nudge_already_saved">Jag har sparat dem</string>
+    <string name="backup_keys_nudge_backup_now">Säkerhetskopiera nu</string>
+    <string name="backup_keys_nudge_body">Din hemliga nyckel är enda sättet att komma åt det här kontot. Om du förlorar den kan den aldrig återskapas. Spara den på ett säkert ställe nu.</string>
+    <string name="backup_keys_nudge_dismiss">Avfärda</string>
+    <string name="backup_keys_nudge_title">Säkerhetskopiera dina nycklar</string>
+    <string name="concord_invite_failed_banned">Den här gemenskapen har tagit bort dig. Länken fungerar fortfarande, men dess medlemslista släpper inte in dig.</string>
+    <string name="concord_invite_links_action">Inbjudningslänkar…</string>
+    <string name="concord_invite_links_created">Skapad %1$s</string>
+    <string name="concord_invite_links_empty">Du har inte skapat några inbjudningslänkar för den här gemenskapen än. Länkar som andra administratörer skapat hanteras på deras egna enheter.</string>
+    <string name="concord_invite_links_title">Inbjudningslänkar</string>
+    <string name="concord_invite_links_unreadable">Dina inbjudningslänkar kunde inte läsas in, så ingen kan återkallas just nu. Kontrollera din anslutning och försök igen.</string>
+    <string name="concord_invite_revoke_action">Återkalla länk</string>
+    <string name="concord_invite_revoke_confirm">Återkalla</string>
+    <string name="concord_invite_revoke_explainer">Den som fortfarande har den här länken kommer inte längre att kunna gå med. Personer som redan gått med via den stannar kvar i gemenskapen. Detta kan inte ångras.</string>
+    <string name="concord_invite_revoke_title">Återkalla den här länken?</string>
+    <string name="concord_invite_revoked_failed">Länken kunde inte återkallas. Kontrollera din anslutning och försök igen.</string>
+    <string name="concord_invite_revoked_ok">Inbjudningslänken har återkallats.</string>
+    <string name="copy_text_original">Kopiera originalet</string>
+    <string name="copy_text_translated">Kopiera översättningen</string>
+    <string name="poll_results_all_options">Alla alternativ</string>
+    <string name="poll_results_checking_completeness">Kontrollerar hur många röster som finns…</string>
+    <string name="poll_results_closes_in">Stänger om %1$s</string>
+    <string name="poll_results_ended">Avslutades för %1$s sedan</string>
+    <string name="poll_results_loading">Läser in omröstning…</string>
+    <string name="poll_results_no_votes">Inga röster än</string>
+    <string name="poll_results_open">Öppen</string>
+    <string name="poll_results_partial">%1$d av %2$d svar inlästa från %3$d reläer.</string>
+    <string name="poll_results_partial_approx">%1$d av ungefär %2$d svar inlästa från %3$d reläer.</string>
+    <string name="poll_results_title">Omröstningsresultat</string>
+    <string name="poll_results_your_pick">Din röst</string>
+    <string name="relay_auth_ago">för %1$s sedan</string>
+    <string name="relay_auth_auto_login_when">Logga in utan att fråga när…</string>
+    <string name="relay_auth_auto_message_follows">…jag skriver till någon jag följer</string>
+    <string name="relay_auth_auto_message_strangers">…jag skriver till någon annan</string>
+    <string name="relay_auth_auto_my_relays">…det är mitt relä, eller ett rum jag gått med i</string>
+    <string name="relay_auth_auto_read_follows">…jag läser någon jag följer</string>
+    <string name="relay_auth_blocked_row_desc">Amethyst loggar aldrig in på blockerade reläer.</string>
+    <string name="relay_auth_blocked_section">Blockerat av din blockeringslista</string>
+    <string name="relay_auth_exception_always">Alltid, inställt av dig</string>
+    <string name="relay_auth_exception_never">Aldrig, inställt av dig</string>
+    <string name="relay_auth_exception_removed_undo">Undantaget togs bort. %1$s följer dina regler igen.</string>
+    <string name="relay_auth_exceptions">Undantag</string>
+    <string name="relay_auth_how_we_decide">Så avgör Amethyst</string>
+    <string name="relay_auth_log_in">Logga in</string>
+    <string name="relay_auth_login_as">Logga in som %1$s?</string>
+    <string name="relay_auth_never_allow">Tillåt aldrig</string>
+    <string name="relay_auth_no_blocked">Inget blockerat. Reläer du blockerar loggas aldrig in på, oavsett vad du ställer in här.</string>
+    <string name="relay_auth_no_exceptions">Inga undantag än. Varje relä följer reglerna ovan.</string>
+    <string name="relay_auth_no_recent">Inget relä har bett dig logga in än.</string>
+    <string name="relay_auth_not_now">Inte nu</string>
+    <string name="relay_auth_purpose_my_inbox">din inkorg</string>
+    <string name="relay_auth_purpose_my_own_relay">ditt eget relä</string>
+    <string name="relay_auth_purpose_notify_inbox">dina svar</string>
+    <string name="relay_auth_purpose_other">det här reläet</string>
+    <string name="relay_auth_purpose_post_venue">ett rum du postar i</string>
+    <string name="relay_auth_purpose_read_outbox">personer du läser</string>
+    <string name="relay_auth_purpose_read_venue">ett rum du läser</string>
+    <string name="relay_auth_purpose_send_dm">dina meddelanden</string>
+    <string name="relay_auth_purpose_thread">en konversation</string>
+    <string name="relay_auth_recent_section">Senaste inloggningar</string>
+    <string name="relay_auth_relay_asks">frågar vem du är</string>
+    <string name="relay_auth_remember_relay">Kom ihåg för det här reläet</string>
+    <string name="relay_auth_remove_exception">Ta bort undantag</string>
+    <string name="relay_auth_segment_always">Alltid</string>
+    <string name="relay_auth_segment_never">Aldrig</string>
+    <string name="relay_auth_someone_unloaded">någon du inte laddat in än</string>
+    <string name="relay_auth_undo">Ångra</string>
+    <string name="relay_auth_why_my_inbox">Det levererar inte svar, zaps och meddelanden som skickats till dig om du inte loggar in.</string>
+    <string name="relay_auth_why_my_own_relay">Det här är ett av dina egna reläer, och det ber alla att logga in.</string>
+    <string name="relay_auth_why_notify_inbox">%1$s får inte veta om ditt svar om du inte loggar in.</string>
+    <string name="relay_auth_why_other">Det ber alla att logga in. Amethyst kan inte avgöra vad det håller inne med.</string>
+    <string name="relay_auth_why_post_venue">Det tar inte emot ditt inlägg i %1$s om du inte loggar in.</string>
+    <string name="relay_auth_why_read_outbox">Det levererar inte inlägg från %1$s om du inte loggar in.</string>
+    <string name="relay_auth_why_read_venue">Det levererar inte %1$s om du inte loggar in.</string>
+    <string name="relay_auth_why_send_dm">Det tar inte emot ditt meddelande till %1$s om du inte loggar in.</string>
+    <string name="relay_auth_why_thread">Det levererar inte resten av den här konversationen om du inte loggar in.</string>
+    <string name="relay_auth_why_thread_with">Det levererar inte resten av din konversation med %1$s om du inte loggar in.</string>
+    <plurals name="audience_add_anyway">
+        <item quantity="one">Lägg till %1$d person ändå</item>
+        <item quantity="other">Lägg till %1$d personer ändå</item>
+    </plurals>
+    <plurals name="audience_add_people">
+        <item quantity="one">Lägg till %1$d person</item>
+        <item quantity="other">Lägg till %1$d personer</item>
+    </plurals>
+    <plurals name="audience_hard_cap">
+        <item quantity="one">Det skulle bli %1$d person. Amethyst lägger till högst %2$d åt gången — avmarkera några.</item>
+        <item quantity="other">Det skulle bli %1$d personer. Amethyst lägger till högst %2$d åt gången — avmarkera några.</item>
+    </plurals>
+    <plurals name="audience_soft_cap_private">
+        <item quantity="one">Den här anteckningen krypteras och levereras %1$d separat gång, en gång per person. Med en extern signerare innebär det ett godkännande var.</item>
+        <item quantity="other">Den här anteckningen krypteras och levereras %1$d separata gånger, en gång per person. Med en extern signerare innebär det ett godkännande var.</item>
+    </plurals>
+    <plurals name="audience_soft_cap_public">
+        <item quantity="one">%1$d person får en avisering om det här inlägget.</item>
+        <item quantity="other">%1$d personer får en avisering om det här inlägget.</item>
+    </plurals>
+    <plurals name="audience_summary_others">
+        <item quantity="one">%1$s, %2$s och %3$d till</item>
+        <item quantity="other">%1$s, %2$s och %3$d till</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d röst är daterad före omröstningen publicerades och utesluts.</item>
+        <item quantity="other">%1$d röster är daterade före omröstningen publicerades och utesluts.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d röstande döljs av din tystningslista.</item>
+        <item quantity="other">%1$d röstande döljs av din tystningslista.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d svar valde inget giltigt alternativ och utesluts.</item>
+        <item quantity="other">%1$d svar valde inget giltigt alternativ och utesluts.</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d röst kom in efter att omröstningen stängde och utesluts.</item>
+        <item quantity="other">%1$d röster kom in efter att omröstningen stängde och utesluts.</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d röstande</item>
+        <item quantity="other">%1$d röstande</item>
+    </plurals>
+    <plurals name="poll_results_selections">
+        <item quantity="one">· %1$d val</item>
+        <item quantity="other">· %1$d val</item>
+    </plurals>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d röst ›</item>
+        <item quantity="other">%1$d röster ›</item>
+    </plurals>
+    <plurals name="poll_results_voters">
+        <item quantity="one">röstande</item>
+        <item quantity="other">röstande</item>
+    </plurals>
+    <plurals name="relay_auth_also_holding_back">
+        <item quantity="one">Det håller också inne med %1$d annan sak.</item>
+        <item quantity="other">Det håller också inne med %1$d andra saker.</item>
+    </plurals>
+    <plurals name="relay_auth_name_and_n_others">
+        <item quantity="one">%1$s och %2$d till</item>
+        <item quantity="other">%1$s och %2$d till</item>
+    </plurals>
 </resources>

@@ -4373,7 +4373,10 @@
     <string name="poll_results_ended">Ended %1$s ago</string>
     <string name="poll_results_all_options">All options</string>
     <string name="poll_results_your_pick">Your vote</string>
-    <string name="poll_results_selections">· %1$d selections</string>
+    <plurals name="poll_results_selections">
+        <item quantity="one">· %1$d selection</item>
+        <item quantity="other">· %1$d selections</item>
+    </plurals>
     <string name="poll_results_no_votes">No votes yet</string>
     <string name="poll_results_checking_completeness">Checking how many votes exist…</string>
     <string name="poll_results_partial">%1$d of %2$d responses loaded from %3$d relays.</string>

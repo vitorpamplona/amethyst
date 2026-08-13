@@ -4006,7 +4006,10 @@
     <string name="poll_results_ended">Véget ért ekkor: %1$s</string>
     <string name="poll_results_all_options">Összes beállítás</string>
     <string name="poll_results_your_pick">Saját szavazat</string>
-    <string name="poll_results_selections">· %1$d kiválasztva</string>
+    <plurals name="poll_results_selections">
+        <item quantity="one">· %1$d kiválasztva</item>
+        <item quantity="other">· %1$d kiválasztva</item>
+    </plurals>
     <string name="poll_results_no_votes">Még nincsenek szavazatok</string>
     <string name="poll_results_checking_completeness">Szavazatok számának ellenőrzése…</string>
     <string name="poll_results_partial">%1$d válasz betöltve az %2$d közül, %3$d átjátszóról.</string>
