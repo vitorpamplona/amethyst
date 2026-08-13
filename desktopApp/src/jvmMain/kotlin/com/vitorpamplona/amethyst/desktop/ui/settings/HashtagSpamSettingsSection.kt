@@ -62,12 +62,6 @@ fun HashtagSpamSettingsSection(
     LaunchedEffect(committed) { live = committed.toFloat() }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "Hashtag-spam filter",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Switch(checked = enabled, onCheckedChange = settings::setEnabled)
             Spacer(Modifier.width(8.dp))

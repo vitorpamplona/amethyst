@@ -37,7 +37,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
 import com.vitorpamplona.amethyst.desktop.ImageCompressionStore
@@ -57,13 +56,6 @@ fun ImageCompressionSettings(modifier: Modifier = Modifier) {
     val stripExif by ImageCompressionStore.stripExif.collectAsState()
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            "Image Compression",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(12.dp))
-
         Text(
             "Default quality",
             style = MaterialTheme.typography.bodyMedium,

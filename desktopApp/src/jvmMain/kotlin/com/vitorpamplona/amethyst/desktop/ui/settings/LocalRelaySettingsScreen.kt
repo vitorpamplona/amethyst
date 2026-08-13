@@ -77,14 +77,6 @@ fun LocalRelaySettingsScreen(
     val dbSizeBytes by localRelayStore.dbSizeBytes.collectAsState()
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "Local Relay",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         // Status section
         StatusSection(
             enabled = enabled,
