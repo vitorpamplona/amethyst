@@ -21,6 +21,9 @@
     <string name="new_key_public_label">ख्याप्य कुंचिका (वितरणशक्य):</string>
     <string name="new_key_secret_label">गुप्त कुंचिका (इसे कभी ना बाँटें):</string>
     <string name="new_key_continue_button">मेरे कुंचिकाओं को सुरक्षित रख लिया। आगे</string>
+    <string name="new_key_saved_checkbox">मैंने मेरे कुंचिकाओं को कहीं सुरक्षित रखा है</string>
+    <string name="new_key_copy_encrypted_button">अनुकृति रहस्यीकृत (अनुशम्सित)</string>
+    <string name="new_key_encrypt_password_label">पारणशब्द रहस्यीकृत सुरक्षित अनुकृति के लिए</string>
     <!-- Key Backup (Desktop settings) -->
     <!-- Common Actions -->
     <string name="action_copy">अनुकृति</string>

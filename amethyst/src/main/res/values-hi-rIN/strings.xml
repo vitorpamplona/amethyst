@@ -46,6 +46,8 @@
     <string name="violence">हिंसा</string>
     <string name="unknown_author">अज्ञात लेखक</string>
     <string name="copy_text">लेख की अनुकृति करें</string>
+    <string name="copy_text_original">मूल की अनुकृति</string>
+    <string name="copy_text_translated">अनुवाद की अनुकृति</string>
     <string name="copy_user_pubkey">लेखक सूचक की अनुकृति करें</string>
     <string name="copy_note_id">टीका सूचक की अनुकृति करें</string>
     <string name="copy_raw_json">कच्चा जेसोन॰ की अनुकृति करें</string>
@@ -509,6 +511,11 @@
     <string name="account_backup_tips3_md" tools:ignore="Typos">        अधिक सुरक्षा के लिए आप अपनी कुंचिका का रहस्यीकरण कर सकते हैं एक पारणशब्द के साथ। यह कुंचिका आरम्भ होगी **ncryptsec1** से तथा पारणशब्द के बिना प्रयोग साध्य नहीं।
         \n\n यदि आप अपना पारणशब्द खो देते हैं, तो आप अपनी कुंचिका को पुनः प्राप्त नहीं कर सकते।
     </string>
+    <string name="backup_keys_nudge_title">अपने कुंचिकाओं को सुरक्षित रखें</string>
+    <string name="backup_keys_nudge_body">आपकी गुप्त कुंचिका एकमात्र विधि है इस लेखा का अभिगमन के लिए। यदि आप इसे खो देते हैं तो इसे कभी भी पुनःप्राप्त नहीं कर सकते। इसे कहीं सुरक्षित रखें अभी इस समय।</string>
+    <string name="backup_keys_nudge_backup_now">अभी सुरक्षित अनुकृति बनाएँ</string>
+    <string name="backup_keys_nudge_already_saved">उनका अभिलेखन मैंने कर लिया</string>
+    <string name="backup_keys_nudge_dismiss">हटाएँ</string>
     <string name="failed_to_encrypt_key">आपकी निजी कुंचिका का रहस्यीकरण असफल</string>
     <string name="secret_key_copied_to_clipboard">गुप्त कुंचिका (एनसेक॰) की अनुकृति टाँकाफलक में की गई</string>
     <string name="copy_my_secret_key">मेरी गुप्त कुंचिका की अनुकृति करें</string>
@@ -1102,12 +1109,67 @@
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
+    <string name="relay_auth_auto_login_when">कब पूछे बिना प्रवेशांकन करें\u2026</string>
+    <string name="relay_auth_auto_my_relays">\u2026यह मेरा पुनःप्रसारक है। अथवा एक शाला जिससे मैं जुड चुका</string>
+    <string name="relay_auth_auto_read_follows">\u2026मैं पढ रहा हूँ किसी को जिसका अनुगमन करता हूँ</string>
+    <string name="relay_auth_auto_message_follows">\u2026मैं सन्देश भेज रहा हूँ किसी को जिसका अनुगमन करता हूँ</string>
+    <string name="relay_auth_auto_message_strangers">\u2026मैं किसी अन्य को सन्देश भेज रहा हूँ</string>
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <string name="relay_auth_login_as">क्या %1$s के रूप में प्रवेशांकन करें।</string>
+    <string name="relay_auth_relay_asks">पूछता है आप कौन हैं</string>
+    <string name="relay_auth_why_send_dm">प्रवेशांकन बिना स्वीकार नहीं करेगा आपका सन्देश %1$s के प्रति।</string>
+    <string name="relay_auth_why_notify_inbox">%1$s को आपका प्रत्युत्तर प्राप्त नहीं होगा जबतक आप प्रवेशांकन नहीं करते।</string>
+    <string name="relay_auth_why_read_outbox">%1$s से पत्र प्राप्त नहीं होंगे जबतक आप प्रवेशांकन नहीं करते।</string>
+    <string name="relay_auth_why_post_venue">प्रवेशांकन बिना आपका पत्र स्वीकार नहीं करेगा %1$s में।</string>
+    <string name="relay_auth_why_read_venue">%1$s प्राप्त नहीं होगा जबतक आप प्रवेशांकन नहीं करते।</string>
+    <string name="relay_auth_why_my_inbox">आपको भेजे गए प्रत्युत्तर तथा ज्साप तथा सन्देश इससे प्राप्त नहीं होंगे जबतक आप प्रवेशांकन नहीं करते।</string>
+    <string name="relay_auth_why_thread">शेष वार्तालाप इससे प्राप्त नहीं होगा जबतक आप प्रवेशांकन नहीं करते।</string>
+    <string name="relay_auth_why_thread_with">%1$s के साथ शेष वार्तालाप इससे प्राप्त नहीं होगा जबतक आप प्रवेशांकन नहीं करते।</string>
+    <string name="relay_auth_why_my_own_relay">यह आपके पुनःप्रसारकों में से एक है। तथा सबको प्रवेशांकन करने को कहता है।</string>
+    <string name="relay_auth_why_other">यह सबको प्रवेशांकन करने को कहता है। अमेथिस्ट अनुमान नहीं कर सकता कि इसे क्या रोक रहा है।</string>
+    <string name="relay_auth_someone_unloaded">कोई जिसका आवहन आपने नहीं किया अब तक</string>
+    <plurals name="relay_auth_name_and_n_others">
+        <item quantity="one">%1$s तथा %2$d अन्य</item>
+        <item quantity="other">%1$s तथा %2$d अन्य</item>
+    </plurals>
+    <plurals name="relay_auth_also_holding_back">
+        <item quantity="one">यह %1$d अन्य वस्तु को भी रोक रहा है।</item>
+        <item quantity="other">यह %1$d अन्य वस्तुओं को भी रोक रहा है।</item>
+    </plurals>
+    <string name="relay_auth_remember_relay">इस पुनःप्रसारक के लिए स्मृत रखें</string>
+    <string name="relay_auth_log_in">प्रवेशांकन</string>
+    <string name="relay_auth_not_now">अभी नहीं</string>
+    <string name="relay_auth_never_allow">कभी अनुमत नहीं</string>
+    <string name="relay_auth_how_we_decide">अमेथिस्ट कैसे निर्णय लेता है</string>
     <!-- Settings: three lists that each hold what their header says. -->
+    <string name="relay_auth_exceptions">अपवर्ग</string>
+    <string name="relay_auth_no_exceptions">कोई अपवर्ग नहीं अब तक। सभी पुनःप्रसारक ऊपर के नियमों का पालन करते हैं।</string>
+    <string name="relay_auth_exception_always">सर्वदा। आपके द्वारा स्थापित</string>
+    <string name="relay_auth_exception_never">कभी नहीं। आपके द्वारा स्थापित</string>
+    <string name="relay_auth_segment_always">सर्वदा</string>
+    <string name="relay_auth_segment_never">कभी नहीं</string>
+    <string name="relay_auth_remove_exception">अपवर्ग हटाएँ</string>
+    <string name="relay_auth_exception_removed_undo">अपवर्ग हटाया गया। %1$s पुनः आपके नियमों का पालन कर रहा है।</string>
+    <string name="relay_auth_undo">पूर्ववत</string>
+    <string name="relay_auth_blocked_section">आपकी अवरोधनसूची द्वारा अवरोधित</string>
+    <string name="relay_auth_blocked_row_desc">अमेथिस्ट कभी भी प्रवेशांकन नहीं करता अवरोधित पुनःप्रसारकों में।</string>
+    <string name="relay_auth_no_blocked">कुछ भी अवरोधित नहीं। आप यहाँ जो भी स्थापित करें पुनःप्रसारक जिनको आप अवरोधित करते हैं उनमें प्रवेशांकन कभी नहीं होगा।</string>
+    <string name="relay_auth_recent_section">निकटकाल प्रवेशांकन</string>
+    <string name="relay_auth_no_recent">कोई भी पुनःप्रसारक आपको प्रवेशांकन करने को नहीं कहा अब तक।</string>
+    <string name="relay_auth_ago">%1$s पूर्व</string>
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
+    <string name="relay_auth_purpose_send_dm">आपके सन्देश</string>
+    <string name="relay_auth_purpose_notify_inbox">आपके प्रत्युत्तर</string>
+    <string name="relay_auth_purpose_read_outbox">लोग जिन्हें आप पढते हैं</string>
+    <string name="relay_auth_purpose_post_venue">एक शाला जिसमें आप पत्र प्रकाशित करते हैं</string>
+    <string name="relay_auth_purpose_read_venue">एक शाला जिसमे से आप पढते हैं</string>
+    <string name="relay_auth_purpose_my_inbox">आपकी आगतपेटिका</string>
+    <string name="relay_auth_purpose_thread">एक वार्तालाप</string>
+    <string name="relay_auth_purpose_my_own_relay">आपका अपना पुनःप्रसारक</string>
+    <string name="relay_auth_purpose_other">इस पुनःप्रसारक</string>
     <string name="nip82_repository_label">स्रोत : %1$s</string>
     <string name="nip82_version_label">संस्करण %1$s</string>
     <string name="nip82_download">अवरोहण</string>
@@ -1476,6 +1538,46 @@
     <string name="private_note_visible_to">को दृश्य</string>
     <string name="private_note_no_receivers">कोई प्राप्तकर्ता नहीं अब तक। केवल आप इस टीका को देख सकेंगे। लोगों को जोडें इसे बाँटने के लिए।</string>
     <!-- Composer audience control (Notify / "Visible to") -->
+    <string name="audience_manage">प्रबन्धन करें कि कौन इसे देख सकता है</string>
+    <string name="audience_empty_private">केवल आप \u2014 चयन कर सकते हैं कि अन्य कौन इसे देख सकते हैं</string>
+    <string name="audience_empty_public">लोग जोडें सूचित करने के लिए</string>
+    <string name="audience_summary_two">%1$s तथा %2$s</string>
+    <string name="audience_group_chip">%1$s \u00b7 %2$s</string>
+    <string name="audience_group_remove">%1$s से जोडे गए सभी को हटाएँ</string>
+    <string name="audience_send_privately">निजी रूप से भेजें</string>
+    <string name="audience_sheet_title">लोग जोडें</string>
+    <string name="audience_sheet_search">लोग तथा सूचियों को खोजें</string>
+    <string name="audience_sheet_no_lists">आपका कोई व्यक्ति सूचियाँ अथवा अनुगमन पोटलियाँ नहीं अब तक। ऊपर खोजें किसी को सीधे जोडने के लिए।</string>
+    <string name="audience_count_with_private">%1$d \u00b7 %2$d निजी</string>
+    <string name="audience_over_limit">सीमा पार</string>
+    <string name="audience_badge_already_added">पहले ही जोडा गया</string>
+    <string name="audience_badge_muted">मौनकृत</string>
+    <string name="audience_badge_private_member">निजी सदस्य</string>
+    <string name="audience_recipients_are_visible">इस टीका में सभी देख सकेंगे पूर्ण प्राप्तकर्ता सूची को।</string>
+    <plurals name="audience_summary_others">
+        <item quantity="one">%1$s तथा %2$s तथा %3$d अन्य</item>
+        <item quantity="other">%1$s तथा %2$s तथा %3$d अन्य</item>
+    </plurals>
+    <plurals name="audience_soft_cap_private">
+        <item quantity="one">इस टीका को रहस्यीकृत किया जाएगा तथा भेजा जाएगा %1$d पृथक बार। एक बार प्रति व्यक्ति। बाहरी हस्ताक्षरकर्ता के साथ यह प्रत्येक के लिए एक अनुमति होगी।</item>
+        <item quantity="other">इस टीका को रहस्यीकृत किया जाएगा तथा भेजा जाएगा %1$d पृथक बार। एक बार प्रति व्यक्ति। बाहरी हस्ताक्षरकर्ता के साथ यह प्रत्येक के लिए एक अनुमति होगी।</item>
+    </plurals>
+    <plurals name="audience_soft_cap_public">
+        <item quantity="one">%1$d व्यक्ति इस पत्र के लिए सूचना प्राप्त करेगा।</item>
+        <item quantity="other">%1$d व्यक्ति इस पत्र के लिए सूचना प्राप्त करेंगे।</item>
+    </plurals>
+    <plurals name="audience_hard_cap">
+        <item quantity="one">%1$d व्यक्ति होगा। अमेथिस्ट प्रति बार अधिकतम %2$d जोडेगा \u2014 कुछ का अचयन करें।</item>
+        <item quantity="other">%1$d व्यक्ति होंगे। अमेथिस्ट प्रति बार अधिकतम %2$d जोडेगा \u2014 कुछ का अचयन करें।</item>
+    </plurals>
+    <plurals name="audience_add_people">
+        <item quantity="one">%1$d व्यक्ति जोडें</item>
+        <item quantity="other">%1$d व्यक्ति जोडें</item>
+    </plurals>
+    <plurals name="audience_add_anyway">
+        <item quantity="one">तो भी %1$d व्यक्ति जोडें</item>
+        <item quantity="other">तो भी %1$d व्यक्ति जोडें</item>
+    </plurals>
     <string name="notify_add_user">जोडें</string>
     <string name="notify_remove_user">प्रयोक्ता हटाएँ सूचनाओं से</string>
     <string name="notify_mute_user">सूचित किया जा रहा है। दबाएँ सूचना को मौन करने के लिए इस प्रयोक्ता के लिए</string>
@@ -3901,6 +4003,45 @@
     <string name="social_proof">सामूहिक प्रमाण</string>
     <string name="poll_submit">उपस्थापन</string>
     <string name="poll_view_results">परिणाम देखें</string>
+    <string name="poll_results_title">मतदान परिणाम</string>
+    <string name="poll_results_loading">मतदान आवहन…</string>
+    <string name="poll_results_open">खुला</string>
+    <string name="poll_results_closes_in">आवृत %1$s पश्चात</string>
+    <string name="poll_results_ended">समाप्त %1$s पूर्व</string>
+    <string name="poll_results_all_options">सभी विकल्प</string>
+    <string name="poll_results_your_pick">आपका मत</string>
+    <plurals name="poll_results_selections">
+        <item quantity="one">%1$d चयन</item>
+        <item quantity="other">%1$d चयन</item>
+    </plurals>
+    <string name="poll_results_no_votes">कोई मत नहीं अब तक</string>
+    <string name="poll_results_checking_completeness">जाँच चालू कि कितने मत हैं…</string>
+    <string name="poll_results_partial">%2$d में से %1$d प्रत्युत्तरों का आवहन हो गया %3$d पुनःप्रसारकों से।</string>
+    <string name="poll_results_partial_approx">लगभग %2$d में से %1$d प्रत्युत्तरों का आवहन हो गया %3$d पुनःप्रसारकों से।</string>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d मत</item>
+        <item quantity="other">%1$d मत</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d मतदाता</item>
+        <item quantity="other">%1$d मतदाता</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d मत आया मतदान समाप्त होने के पश्चात तथा बहिष्कृत है।</item>
+        <item quantity="other">%1$d मत आए मतदान समाप्त होने के पश्चात तथा बहिष्कृत हैं।</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d मत समयांकित है मतदान प्रकाशन के पूर्व तथा बहिष्कृत है।</item>
+        <item quantity="other">%1$d मत समयांकित हैं मतदान प्रकाशन के पूर्व तथा बहिष्कृत हैं।</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d प्रत्युत्तर मान्य विकल्प का चयन नहीं किया तथा बहिष्कृत है।</item>
+        <item quantity="other">%1$d प्रत्युत्तर मान्य विकल्प का चयन नहीं किए तथा बहिष्कृत हैं।</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d मतदाता आपकी मौनसूची द्वारा अदृश्यकृत।</item>
+        <item quantity="other">%1$d मतदाता आपकी मौनसूची द्वारा अदृश्यकृत।</item>
+    </plurals>
     <string name="restart">पुनःआरम्भ</string>
     <string name="chess_accept">स्वीकार</string>
     <string name="chess_decline">अस्वीकार</string>
