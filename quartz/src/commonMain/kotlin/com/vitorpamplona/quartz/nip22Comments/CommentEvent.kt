@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -148,7 +149,13 @@ class CommentEvent(
 
     fun directReplies() = tags.filter { ReplyIdentifierTag.match(it) || ReplyAddressTag.match(it) || ReplyEventTag.match(it) }
 
+    /** Whether a parent is named at all, without materialising [directReplies]. */
+    fun hasDirectReplies() = tags.fastAny { ReplyIdentifierTag.match(it) || ReplyAddressTag.match(it) || ReplyEventTag.match(it) }
+
     fun directKinds() = tags.filter(ReplyKindTag::match)
+
+    /** Whether a parent kind (`k`) is declared at all, without materialising [directKinds]. */
+    fun hasDirectKinds() = tags.fastAny(ReplyKindTag::match)
 
     fun rootAuthor() = tags.firstNotNullOfOrNull(RootAuthorTag::parse)
 

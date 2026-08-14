@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
+import com.vitorpamplona.amethyst.commons.ui.note.replyingDirectlyTo
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -46,8 +47,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
-import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
-import com.vitorpamplona.amethyst.ui.note.nip22Comments.LocalCurrentExternalScope
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayCommentScope
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
@@ -60,8 +60,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
-import com.vitorpamplona.quartz.nip73ExternalIds.scope
 
 enum class ReplyRenderType {
     FULL,
@@ -117,29 +115,12 @@ fun RenderTextEvent(
                 }
             }
 
-        val replyingDirectlyTo =
-            remember(note) {
-                if (noteEvent is BaseThreadedEvent) {
-                    val replyingTo = noteEvent.replyingToAddressOrEvent()
-                    if (replyingTo != null) {
-                        val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                        if (newNote != null && LocalCache.getAnyChannel(newNote) == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
-                            newNote
-                        } else {
-                            note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                        }
-                    } else {
-                        note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                    }
-                } else {
-                    note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                }
-            }
+        val parentNote = remember(note) { replyingDirectlyTo(note, LocalCache) }
 
-        if (replyingDirectlyTo != null && canShowReply) {
+        if (parentNote != null && canShowReply) {
             when (unPackReply) {
                 ReplyRenderType.FULL -> {
-                    ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
+                    ReplyNoteComposition(parentNote, backgroundColor, accountViewModel, nav)
                     Spacer(modifier = StdVertSpacer)
                 }
 
@@ -147,12 +128,12 @@ fun RenderTextEvent(
                     // Zap receipts are signed by the recipient's lightning provider;
                     // label the reply with the zap sender instead of the service key.
                     val zapSender =
-                        if (replyingDirectlyTo.event is LnZapEvent) {
-                            observeZapSender(replyingDirectlyTo, accountViewModel).value
+                        if (parentNote.event is LnZapEvent) {
+                            observeZapSender(parentNote, accountViewModel).value
                         } else {
                             null
                         }
-                    val parentAuthor = zapSender ?: replyingDirectlyTo.author
+                    val parentAuthor = zapSender ?: parentNote.author
                     if (parentAuthor != null) {
                         ReplyToLabel(
                             parentAuthorDisplay = parentAuthor.toBestDisplayName(),
@@ -163,15 +144,8 @@ fun RenderTextEvent(
                 }
             }
         } else if (!makeItShort && noteEvent is CommentEvent) {
-            // A comment scoped to an external identifier (`I` tag) has no in-cache parent
-            // note. Show the scope itself as the reply context -- unless the screen we're
-            // in is already dedicated to this exact scope (e.g. the URL thread screen),
-            // in which case every row would otherwise redundantly repeat the same preview.
-            val scope = remember(note) { noteEvent.scope() }
-            if (scope != null && scope.toScope() != LocalCurrentExternalScope.current) {
-                DisplayExternalId(scope, accountViewModel, nav)
-                Spacer(modifier = StdVertSpacer)
-            }
+            // No in-cache parent note: this comment answers a scope rather than a note.
+            DisplayCommentScope(noteEvent, accountViewModel, nav)
         }
     }
 

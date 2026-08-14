@@ -35,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.LocalCurrentExternalScope
 import com.vitorpamplona.amethyst.ui.note.types.LongCommunityHeader
 import com.vitorpamplona.amethyst.ui.note.types.ShortCommunityActionOptions
 import com.vitorpamplona.amethyst.ui.note.types.ShortCommunityHeaderNoActions
@@ -193,26 +195,31 @@ fun CommunityScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(
-            state = pagerState,
-        ) { page ->
-            when (page) {
-                0 -> {
-                    RefresheableFeedView(
-                        feedViewModel,
-                        null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+        // Every row here is a post in this one community, which the top bar already names. Telling
+        // the rows which scope they are inside stops each of them from repeating the same
+        // community card as its parent context.
+        CompositionLocalProvider(LocalCurrentExternalScope provides note.idHex) {
+            HorizontalPager(
+                state = pagerState,
+            ) { page ->
+                when (page) {
+                    0 -> {
+                        RefresheableFeedView(
+                            feedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
 
-                1 -> {
-                    RefresheableFeedView(
-                        modFeedViewModel,
-                        null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                    1 -> {
+                        RefresheableFeedView(
+                            modFeedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             }
         }

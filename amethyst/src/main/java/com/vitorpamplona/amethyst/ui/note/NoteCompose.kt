@@ -67,6 +67,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
 import com.vitorpamplona.amethyst.commons.ui.note.RenderCashuMint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderFedimint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
+import com.vitorpamplona.amethyst.commons.ui.note.isCommunityDefinition
+import com.vitorpamplona.amethyst.commons.ui.note.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -1707,7 +1709,7 @@ fun RenderRepost(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    note.replyTo?.lastOrNull { it.event !is CommunityDefinitionEvent }?.let {
+    note.replyTo?.lastOrNull { !it.isCommunityDefinition() }?.let {
         NoteCompose(
             it,
             modifier = Modifier,
@@ -1995,14 +1997,7 @@ fun JumpToParentReplyButton(
 
     val parentNote =
         remember(baseNote) {
-            val noteEvent = baseNote.event as? BaseThreadedEvent ?: return@remember null
-            val direct =
-                noteEvent
-                    .replyingToAddressOrEvent()
-                    ?.let { accountViewModel.getNoteIfExists(it) }
-                    ?.takeIf { it.event !is CommunityDefinitionEvent && LocalCache.getAnyChannel(it) == null }
-            val resolved = direct ?: baseNote.replyTo?.lastOrNull { it.event !is CommunityDefinitionEvent }
-            resolved?.takeIf { LocalCache.getAnyChannel(it) == null }
+            replyingDirectlyTo(baseNote, LocalCache)?.takeIf { LocalCache.getAnyChannel(it) == null }
         } ?: return
 
     ClickableBox(

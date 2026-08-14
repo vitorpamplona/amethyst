@@ -57,10 +57,10 @@ import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 
 /**
- * The normalized scope (e.g. [ExternalId.toScope]) of the external content a screen is
- * currently dedicated to, if any. A screen built entirely around one external scope (e.g.
- * the URL thread screen) provides this so nested comments sharing that same scope don't
- * redundantly repeat the preview the screen itself already shows.
+ * The scope a screen is currently dedicated to, if any: a normalized external id
+ * (e.g. [ExternalId.toScope]) for the URL thread screen, or a community address value for the
+ * community screen. A screen built entirely around one scope provides this so comments sharing
+ * that same scope don't redundantly repeat the preview the screen itself already shows.
  */
 val LocalCurrentExternalScope = staticCompositionLocalOf<String?> { null }
 

@@ -133,7 +133,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
-import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayCommentScope
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
@@ -333,7 +333,6 @@ import com.vitorpamplona.quartz.nip71Video.VideoEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
-import com.vitorpamplona.quartz.nip73ExternalIds.scope
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
@@ -1137,15 +1136,11 @@ private fun FullBleedNoteCompose(
                         nav,
                     )
                 } else if (noteEvent is CommentEvent) {
-                    // A comment scoped to external content (NIP-73 `I` tag, e.g. a URL) has no
-                    // in-cache parent note, so it surfaces here as the thread's own "master" note.
-                    // Show its external scope for context, same as the reply-context branch in
-                    // RenderTextEvent does for non-root occurrences of the same comment.
-                    val scope = remember(baseNote) { noteEvent.scope() }
-                    if (scope != null) {
-                        DisplayExternalId(scope, accountViewModel, nav)
-                        Spacer(modifier = StdVertSpacer)
-                    }
+                    // A comment that answers a scope rather than a note has no in-cache parent, so
+                    // it surfaces here as the thread's own "master" note. Show that scope for
+                    // context, same as the reply-context branch in RenderTextEvent does for
+                    // non-root occurrences of the same comment.
+                    DisplayCommentScope(noteEvent, accountViewModel, nav)
                     RenderTextEvent(
                         baseNote,
                         false,

@@ -368,10 +368,11 @@ fun ShortCommunityHeaderNoActions(
     baseNote: AddressableNote,
     accountViewModel: AccountViewModel,
     nav: INav,
+    modifier: Modifier = Modifier,
 ) {
     val noteEvent by observeNoteEvent<CommunityDefinitionEvent>(baseNote, accountViewModel)
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         noteEvent?.image()?.let {
             RobohashFallbackAsyncImage(
                 robot = baseNote.idHex,
