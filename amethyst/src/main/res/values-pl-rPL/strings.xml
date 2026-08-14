@@ -1247,7 +1247,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <plurals name="nest_listener_count">
         <item quantity="one">%1$d słuchacz</item>
         <item quantity="few">%1$d słuchaczy</item>
-        <item quantity="many">%1$d słuchaczy</item>
+        <item quantity="many"></item>
         <item quantity="other">%1$d słuchacze</item>
     </plurals>
     <string name="nest_live_chip">NA ŻYWO</string>
