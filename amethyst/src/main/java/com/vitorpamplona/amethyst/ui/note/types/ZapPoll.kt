@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.note.replyingDirectlyTo
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -48,7 +49,6 @@ import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 
 @Composable
 fun RenderZapPoll(
@@ -73,20 +73,7 @@ fun RenderZapPoll(
         }
 
     if (showReply) {
-        val replyingDirectlyTo =
-            remember(note) {
-                val replyingTo = noteEvent.replyingToAddressOrEvent()
-                if (replyingTo != null) {
-                    val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                    if (newNote != null && LocalCache.getAnyChannel(newNote) == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
-                        newNote
-                    } else {
-                        note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                    }
-                } else {
-                    note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                }
-            }
+        val replyingDirectlyTo = remember(note) { replyingDirectlyTo(note, LocalCache) }
         if (replyingDirectlyTo != null) {
             ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
             Spacer(modifier = StdVertSpacer)

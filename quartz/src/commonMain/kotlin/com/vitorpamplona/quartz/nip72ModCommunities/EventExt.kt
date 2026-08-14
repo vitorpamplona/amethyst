@@ -53,6 +53,23 @@ fun Event.communityAddress(): Address? =
 
 fun CommentEvent.isCommunityScoped() = hasRootScopeKind(CommunityDefinitionEvent.KIND_STR)
 
+/**
+ * True when this comment answers the community itself -- a top-level post in the community --
+ * as opposed to a nested reply to another post inside it.
+ *
+ * NIP-22 keeps the uppercase root tags (`A`/`E`/`K`) identical all the way down a thread, so
+ * [isCommunityScoped] is true for every comment in a community, however deep. What separates a
+ * top-level post from a reply is the lowercase parent kind (`k`): 34550 for the former, the
+ * parent post's kind for the latter. Bridges (e.g. mostr) sometimes emit only the uppercase set,
+ * hence the fallback to the root kind when no `k` is present.
+ */
+fun CommentEvent.isTopLevelCommunityPost() =
+    if (directKinds().isEmpty()) {
+        hasRootScopeKind(CommunityDefinitionEvent.KIND_STR)
+    } else {
+        hasReplyScopeKind(CommunityDefinitionEvent.KIND_STR)
+    }
+
 fun CommentEvent.communityScope() = this.tags.fastFirstNotNullOfOrNull(CommunityTag::parseAddress)
 
 fun CommentEvent.communityScopes() = this.tags.mapNotNull(CommunityTag::parseAddress)

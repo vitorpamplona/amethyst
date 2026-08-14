@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +36,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.LocalCurrentExternalScope
 import com.vitorpamplona.amethyst.ui.note.types.LongCommunityHeader
 import com.vitorpamplona.amethyst.ui.note.types.ShortCommunityActionOptions
 import com.vitorpamplona.amethyst.ui.note.types.ShortCommunityHeaderNoActions
@@ -130,6 +134,25 @@ fun CommunityScreen(
     val pagerState = rememberForeverPagerState(note.idHex + "CommunityScreenPagerState") { 2 }
     val expanded = remember { mutableStateOf(false) }
 
+    // This whole screen is dedicated to one community, and its header already shows it. Telling
+    // the rows which scope they are inside stops every post from repeating the same community
+    // card as its parent context.
+    CompositionLocalProvider(LocalCurrentExternalScope provides note.address.toValue()) {
+        CommunityScaffold(note, pagerState, expanded, feedViewModel, modFeedViewModel, accountViewModel, nav)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CommunityScaffold(
+    note: AddressableNote,
+    pagerState: PagerState,
+    expanded: MutableState<Boolean>,
+    feedViewModel: CommunityFeedViewModel,
+    modFeedViewModel: CommunityModerationFeedViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     DisappearingScaffold(
         isInvertedLayout = false,
         isActive = { !expanded.value },

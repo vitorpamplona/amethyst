@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
+import com.vitorpamplona.amethyst.commons.ui.note.replyingDirectlyTo
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
@@ -46,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayCommunityScope
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.LocalCurrentExternalScope
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -60,7 +62,8 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
+import com.vitorpamplona.quartz.nip72ModCommunities.isTopLevelCommunityPost
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
 
 enum class ReplyRenderType {
@@ -117,24 +120,7 @@ fun RenderTextEvent(
                 }
             }
 
-        val replyingDirectlyTo =
-            remember(note) {
-                if (noteEvent is BaseThreadedEvent) {
-                    val replyingTo = noteEvent.replyingToAddressOrEvent()
-                    if (replyingTo != null) {
-                        val newNote = accountViewModel.getNoteIfExists(replyingTo)
-                        if (newNote != null && LocalCache.getAnyChannel(newNote) == null && newNote.event?.kind != CommunityDefinitionEvent.KIND) {
-                            newNote
-                        } else {
-                            note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                        }
-                    } else {
-                        note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                    }
-                } else {
-                    note.replyTo?.lastOrNull { it.event?.kind != CommunityDefinitionEvent.KIND }
-                }
-            }
+        val replyingDirectlyTo = remember(note) { replyingDirectlyTo(note, LocalCache) }
 
         if (replyingDirectlyTo != null && canShowReply) {
             when (unPackReply) {
@@ -163,12 +149,20 @@ fun RenderTextEvent(
                 }
             }
         } else if (!makeItShort && noteEvent is CommentEvent) {
-            // A comment scoped to an external identifier (`I` tag) has no in-cache parent
-            // note. Show the scope itself as the reply context -- unless the screen we're
-            // in is already dedicated to this exact scope (e.g. the URL thread screen),
-            // in which case every row would otherwise redundantly repeat the same preview.
+            // A comment with no in-cache parent note is scoped to something that isn't a note:
+            // an external identifier (`I` tag) or, for a top-level community post, the community
+            // itself. Show that scope as the reply context -- unless the screen we're in is
+            // already dedicated to this exact scope (e.g. the URL or community screen), in which
+            // case every row would otherwise redundantly repeat the same preview.
+            val community = remember(note) { noteEvent.communityAddress()?.takeIf { noteEvent.isTopLevelCommunityPost() } }
             val scope = remember(note) { noteEvent.scope() }
-            if (scope != null && scope.toScope() != LocalCurrentExternalScope.current) {
+
+            if (community != null) {
+                if (community.toValue() != LocalCurrentExternalScope.current) {
+                    DisplayCommunityScope(community, accountViewModel, nav)
+                    Spacer(modifier = StdVertSpacer)
+                }
+            } else if (scope != null && scope.toScope() != LocalCurrentExternalScope.current) {
                 DisplayExternalId(scope, accountViewModel, nav)
                 Spacer(modifier = StdVertSpacer)
             }
