@@ -71,7 +71,22 @@ import kotlin.concurrent.atomics.incrementAndFetch
  */
 @OptIn(ExperimentalAtomicApi::class)
 class CachingEventDecoder(
-    private val capacity: Int = 2048,
+    /**
+     * Ids kept per generation, so up to `2 * capacity` are addressable.
+     *
+     * Sized from the measured *reuse distance* — how many frames separate two
+     * deliveries of the same event — because a duplicate is only caught when its
+     * reuse distance still fits in the cache. Against the recorded multi-relay
+     * startup capture (150k frames, 82% duplicates, median reuse distance 1,430),
+     * the old 2048 caught just 58.3% of duplicates; 8192 catches 80.5% and halves
+     * decode time (354ms -> 169ms). Beyond 8192 the curve flattens (32768 buys
+     * 96.5% for 4x the entries), so this trades the last 16% for memory the
+     * client would otherwise hold on top of `LocalCache`.
+     *
+     * See `DedupCapacityBenchmark`. Re-measure it before changing this: the right
+     * value follows the duplication of real traffic, not intuition.
+     */
+    private val capacity: Int = 8192,
     private val fullParser: MessageDecoder = MessageDecoder.Default,
 ) : MessageDecoder {
     @Volatile private var live = ConcurrentHashCache<HexKey, Event>()
