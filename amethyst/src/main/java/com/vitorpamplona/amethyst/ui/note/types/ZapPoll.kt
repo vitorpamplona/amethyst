@@ -73,9 +73,9 @@ fun RenderZapPoll(
         }
 
     if (showReply) {
-        val replyingDirectlyTo = remember(note) { replyingDirectlyTo(note, LocalCache) }
-        if (replyingDirectlyTo != null) {
-            ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
+        val parentNote = remember(note) { replyingDirectlyTo(note, LocalCache) }
+        if (parentNote != null) {
+            ReplyNoteComposition(parentNote, backgroundColor, accountViewModel, nav)
             Spacer(modifier = StdVertSpacer)
         }
     }

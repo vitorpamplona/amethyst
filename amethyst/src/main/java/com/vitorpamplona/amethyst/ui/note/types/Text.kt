@@ -115,12 +115,12 @@ fun RenderTextEvent(
                 }
             }
 
-        val replyingDirectlyTo = remember(note) { replyingDirectlyTo(note, LocalCache) }
+        val parentNote = remember(note) { replyingDirectlyTo(note, LocalCache) }
 
-        if (replyingDirectlyTo != null && canShowReply) {
+        if (parentNote != null && canShowReply) {
             when (unPackReply) {
                 ReplyRenderType.FULL -> {
-                    ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
+                    ReplyNoteComposition(parentNote, backgroundColor, accountViewModel, nav)
                     Spacer(modifier = StdVertSpacer)
                 }
 
@@ -128,12 +128,12 @@ fun RenderTextEvent(
                     // Zap receipts are signed by the recipient's lightning provider;
                     // label the reply with the zap sender instead of the service key.
                     val zapSender =
-                        if (replyingDirectlyTo.event is LnZapEvent) {
-                            observeZapSender(replyingDirectlyTo, accountViewModel).value
+                        if (parentNote.event is LnZapEvent) {
+                            observeZapSender(parentNote, accountViewModel).value
                         } else {
                             null
                         }
-                    val parentAuthor = zapSender ?: replyingDirectlyTo.author
+                    val parentAuthor = zapSender ?: parentNote.author
                     if (parentAuthor != null) {
                         ReplyToLabel(
                             parentAuthorDisplay = parentAuthor.toBestDisplayName(),
