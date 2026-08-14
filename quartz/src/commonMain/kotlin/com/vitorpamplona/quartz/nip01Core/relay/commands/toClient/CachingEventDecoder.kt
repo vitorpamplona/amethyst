@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.ConcurrentHashCache
 import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicLong
@@ -94,16 +93,6 @@ class CachingEventDecoder(
 
     @Volatile private var previous = ConcurrentHashCache<HexKey, Event>()
 
-    /**
-     * When an EVENT frame was last seen, for [trimIfIdle].
-     *
-     * Written on every EVENT frame — hit or miss — so a cache that is actively
-     * serving duplicates counts as busy and is never trimmed out from under the
-     * traffic it is helping. One relaxed volatile store per frame; at observed
-     * rates (~400 frames/s) that is not measurable.
-     */
-    @Volatile private var lastActivityAt: Long = TimeUtils.nowMillis()
-
     // Observability + benchmark hooks.
     private val parsed = AtomicLong(0)
     private val reused = AtomicLong(0)
@@ -117,7 +106,6 @@ class CachingEventDecoder(
             val cached = live.get(scanned.eventId) ?: previous.get(scanned.eventId)
             if (cached != null) {
                 reused.incrementAndFetch()
-                lastActivityAt = TimeUtils.nowMillis()
                 return EventMessage(scanned.subId, cached)
             }
         }
@@ -125,7 +113,6 @@ class CachingEventDecoder(
         val msg = fullParser.decode(text)
         if (msg is EventMessage) {
             parsed.incrementAndFetch()
-            lastActivityAt = TimeUtils.nowMillis()
             if (live.size() >= capacity) {
                 // Benign-race rotation: see class kdoc.
                 previous = live
@@ -137,28 +124,34 @@ class CachingEventDecoder(
     }
 
     /**
-     * Drops both generations once no EVENT frame has arrived for [idleMillis].
+     * Retires the live generation, so entries age out on the caller's clock instead of
+     * only when the cache fills.
      *
-     * [capacity] bounds what the cache costs *during* a burst; this bounds how long
-     * it costs anything *after* one. Without it the maps only ever rotate inside an
-     * insert, so a client that goes quiet pins up to `2 * capacity` events for the
-     * rest of the process's life — memory whose dedup value has already decayed to
-     * zero.
+     * [capacity] bounds what the cache costs *during* a burst; this bounds how long it
+     * costs anything *after* one. Without it the maps only rotate inside an insert, so
+     * a client receiving a slow trickle keeps everything it saw during the initial
+     * burst forever — memory whose dedup value is long gone.
      *
-     * Racy by the same design as rotation (see class kdoc): clearing concurrently
-     * with an insert can only lose an id, and losing an id costs a re-parse, never
-     * a wrong message. [nowMillis] is injectable so tests need no clock.
+     * An id survives one call and dies on the next, so ticking every 30s keeps nothing
+     * older than ~60s. Two consecutive calls with no traffic in between leave the cache
+     * empty, which is what releases memory when the client really does go quiet.
+     *
+     * Racy by the same design as capacity rotation (see class kdoc): retiring a
+     * generation concurrently with an insert can only lose an id, and a lost id costs a
+     * re-parse, never a wrong message.
      */
-    override fun trimIfIdle(
-        idleMillis: Long,
-        nowMillis: Long,
-    ): Boolean {
-        if (nowMillis - lastActivityAt < idleMillis) return false
-        if (live.size() == 0 && previous.size() == 0) return false
+    override fun ageOutCache() {
+        previous = live
+        live = ConcurrentHashCache()
+    }
+
+    override fun clearCache() {
         previous = ConcurrentHashCache()
         live = ConcurrentHashCache()
-        return true
     }
+
+    /** Ids currently addressable across both generations. Observability + tests. */
+    val cachedCount: Int get() = live.size() + previous.size()
 
     private class ScannedEvent(
         val subId: String,

@@ -160,7 +160,7 @@ class NostrClient(
         // decoder cached has no dedup value left across that gap, but it would keep
         // costing memory for the whole background stretch, so release it now rather
         // than leaving a timer running to do it later.
-        decoder.trimIfIdle(idleMillis = 0)
+        decoder.clearCache()
     }
 
     override fun isActive() = isActiveFlow.value
@@ -214,30 +214,33 @@ class NostrClient(
         }
 
     /**
-     * Releases the decoder's cache after a quiet stretch.
+     * Ages out the decoder's cache on a clock.
      *
-     * A caching decoder bounds what it holds by capacity, which caps the cost during
-     * a burst but never ends it: its generations only rotate inside an insert, so a
-     * client that goes quiet pins every cached event indefinitely. Dedup value decays
-     * within seconds (duplicates are the same event arriving from other relays), so
-     * anything still held after [DECODER_IDLE_MS] is pure cost.
+     * A caching decoder bounds what it holds by capacity, which caps the cost during a
+     * burst but never ends it: its generations only rotate inside an insert, so a
+     * client that drops to a trickle keeps everything from the initial burst forever.
      *
-     * Suspends on [isActiveFlow] like [keepAliveJob], so no timer fires while the
-     * client is down — [disconnect] already trims eagerly on the way there.
+     * Deliberately NOT idle-triggered. Measured on device: relays keep pushing events
+     * down open subscriptions indefinitely, so the decoder is never idle in the sense
+     * of "saw no frames" — an idle check returned false on every tick across 240s of
+     * a flat heap. Aging unconditionally is what actually releases the memory.
+     *
+     * Ids survive one tick and die on the next, so [DECODER_AGE_OUT_MS] bounds their
+     * lifetime at ~2x that. Suspends on [isActiveFlow] like [keepAliveJob], so no timer
+     * fires while the client is down — [disconnect] clears outright on the way there.
      */
     private val decoderTrimJob =
         scope.launch {
             while (true) {
                 isActiveFlow.first { it }
-                delay(DECODER_TRIM_INTERVAL_MS)
-                decoder.trimIfIdle(DECODER_IDLE_MS)
+                delay(DECODER_AGE_OUT_MS)
+                decoder.ageOutCache()
             }
         }
 
     companion object {
         private const val KEEP_ALIVE_INTERVAL_MS = 60_000L
-        private const val DECODER_TRIM_INTERVAL_MS = 30_000L
-        private const val DECODER_IDLE_MS = 60_000L
+        private const val DECODER_AGE_OUT_MS = 30_000L
     }
 
     override fun reconnect(

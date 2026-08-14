@@ -21,25 +21,24 @@
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * [CachingEventDecoder.trimIfIdle] bounds how long the cache costs memory, which
- * [CachingEventDecoder.capacity] does not: the generations only rotate inside an
- * insert, so without a trim a client that goes quiet pins every cached event for
- * the rest of the process's life.
+ * [CachingEventDecoder.ageOutCache] bounds how long the cache costs memory, which
+ * [CachingEventDecoder.capacity] does not: the generations otherwise only rotate
+ * inside an insert, so a client that drops to a trickle keeps everything from its
+ * initial burst forever.
  *
- * The rules that matter here are "release when genuinely idle", "do NOT release
- * out from under live traffic" — including traffic that is *only* cache hits,
- * which is exactly when the cache is earning its keep — and "releasing never
- * changes what a decode returns, only whether it re-parsed".
+ * Aging is on a clock, not on idleness, and that distinction is load-bearing —
+ * measured on device, relays keep pushing events down open subscriptions
+ * indefinitely, so an idle-triggered release returned false on every tick across
+ * 240s of a flat heap. The rules pinned here are the lifetime guarantee ("an entry
+ * survives one call and dies on the next"), that traffic between calls is kept, and
+ * that aging only ever costs a re-parse — never a different message.
  *
- * In `commonTest`: this is `commonMain` logic with no platform surface, and the
- * clock is injected so no target needs a real one.
+ * In `commonTest`: `commonMain` logic, no platform surface, no clock.
  */
 class CachingEventDecoderTrimTest {
     private fun hexId(seed: Int) = seed.toString(16).padStart(64, '0')
@@ -60,78 +59,84 @@ class CachingEventDecoderTrimTest {
         subId: String = "s",
     ) = """["EVENT","$subId",${event(seed).toJson()}]"""
 
-    private val minute = 60_000L
-
     @Test
-    fun releasesTheCacheOnceIdle() {
+    fun entriesSurviveExactlyOneAgeOut() {
         val decoder = CachingEventDecoder(capacity = 1_000)
-        (1..50).forEach { decoder.decode(frame(it)) }
-        assertEquals(50, decoder.parsedCount.toInt())
-
-        // read the clock AFTER the decodes: they set the idle clock as they run, so a
-        // cutoff measured from before them is only a full minute later while the
-        // parsing itself takes under a millisecond
-        val quietSince = TimeUtils.nowMillis()
-        assertTrue(decoder.trimIfIdle(minute, quietSince + minute), "should trim after a quiet minute")
-
-        // the ids are gone, so a repeat of a previously cached frame parses again
         decoder.decode(frame(1))
-        assertEquals(51, decoder.parsedCount.toInt())
-        assertEquals(0, decoder.reusedCount.toInt())
-    }
+        assertEquals(1, decoder.parsedCount.toInt())
 
-    @Test
-    fun keepsTheCacheWhileTrafficIsFlowing() {
-        val decoder = CachingEventDecoder(capacity = 1_000)
-        val t0 = TimeUtils.nowMillis()
-        (1..50).forEach { decoder.decode(frame(it)) }
-
-        assertFalse(decoder.trimIfIdle(minute, t0 + 1_000), "1s of quiet is not idle")
-
+        // first tick: retired into `previous`, still addressable
+        decoder.ageOutCache()
         decoder.decode(frame(1))
-        assertEquals(50, decoder.parsedCount.toInt(), "cached ids must survive")
+        assertEquals(1, decoder.parsedCount.toInt(), "one age-out must not drop the id")
         assertEquals(1, decoder.reusedCount.toInt())
     }
 
     @Test
-    fun cacheHitsCountAsActivity() {
-        // A stream of pure duplicates inserts nothing, but it is precisely when the
-        // cache is most valuable. Keying idleness off inserts alone would trim it away
-        // under the traffic it is serving.
+    fun twoAgeOutsWithNoTrafficEmptyTheCache() {
+        val decoder = CachingEventDecoder(capacity = 1_000)
+        (1..50).forEach { decoder.decode(frame(it)) }
+        assertEquals(50, decoder.cachedCount)
+
+        decoder.ageOutCache()
+        decoder.ageOutCache()
+
+        assertEquals(0, decoder.cachedCount, "nothing survives two ticks without traffic")
+        decoder.decode(frame(1))
+        assertEquals(51, decoder.parsedCount.toInt(), "the id is gone, so it re-parses")
+        assertEquals(0, decoder.reusedCount.toInt())
+    }
+
+    @Test
+    fun trafficBetweenTicksIsKept() {
+        // the trickle case: events keep arriving, so the cache must keep serving them
         val decoder = CachingEventDecoder(capacity = 1_000)
         decoder.decode(frame(1))
+        decoder.ageOutCache()
+        decoder.decode(frame(2))
+        decoder.ageOutCache()
 
-        val muchLater = TimeUtils.nowMillis() + 10 * minute
-        repeat(5) { decoder.decode(frame(1, subId = "sub$it")) }
+        // 1 was inserted two ticks ago -> gone; 2 was inserted one tick ago -> kept
+        decoder.decode(frame(2))
+        assertEquals(2, decoder.parsedCount.toInt())
+        assertEquals(1, decoder.reusedCount.toInt(), "the recent event is still cached")
 
-        assertEquals(5, decoder.reusedCount.toInt())
-        assertFalse(
-            decoder.trimIfIdle(minute, TimeUtils.nowMillis() + 1_000),
-            "hits must refresh the idle clock",
-        )
-        // ...but a genuinely quiet stretch after those hits still trims
-        assertTrue(decoder.trimIfIdle(minute, muchLater))
+        decoder.decode(frame(1))
+        assertEquals(3, decoder.parsedCount.toInt(), "the older event aged out")
     }
 
     @Test
-    fun trimmingAnEmptyCacheDoesNothing() {
-        val decoder = CachingEventDecoder(capacity = 1_000)
-        assertFalse(decoder.trimIfIdle(0, TimeUtils.nowMillis() + minute), "nothing to release")
+    fun agingABusyCacheKeepsItSmallInsteadOfUnbounded() {
+        // what the device measurement is about: a burst, then a trickle. Without aging
+        // the burst's ids stay resident forever.
+        val decoder = CachingEventDecoder(capacity = 100_000)
+        (1..5_000).forEach { decoder.decode(frame(it)) }
+        assertEquals(5_000, decoder.cachedCount)
+
+        decoder.ageOutCache()
+        (5_001..5_010).forEach { decoder.decode(frame(it)) } // the trickle
+        decoder.ageOutCache()
+
+        assertEquals(10, decoder.cachedCount, "only the trickle survives, not the burst")
     }
 
     @Test
-    fun zeroIdleReleasesImmediately() {
+    fun clearCacheReleasesEverythingAtOnce() {
         // what NostrClient.disconnect() uses when the host backgrounds the app
         val decoder = CachingEventDecoder(capacity = 1_000)
         (1..10).forEach { decoder.decode(frame(it)) }
-        assertTrue(decoder.trimIfIdle(idleMillis = 0, nowMillis = TimeUtils.nowMillis()))
+        assertTrue(decoder.cachedCount > 0)
+
+        decoder.clearCache()
+        assertEquals(0, decoder.cachedCount)
     }
 
     @Test
-    fun aTrimNeverChangesWhatADecodeReturns() {
+    fun agingNeverChangesWhatADecodeReturns() {
         val decoder = CachingEventDecoder(capacity = 1_000)
         val before = decoder.decode(frame(7, subId = "a")) as EventMessage
-        decoder.trimIfIdle(0, TimeUtils.nowMillis())
+        decoder.ageOutCache()
+        decoder.ageOutCache()
         val after = decoder.decode(frame(7, subId = "a")) as EventMessage
 
         assertEquals(before.subId, after.subId)
@@ -139,12 +144,14 @@ class CachingEventDecoderTrimTest {
         assertEquals(before.event.pubKey, after.event.pubKey)
         assertEquals(before.event.content, after.event.content)
         assertEquals(before.event.createdAt, after.event.createdAt)
-        // only the parse count differs: the trim cost one re-parse, nothing else
+        // only the parse count differs: aging cost one re-parse, nothing else
         assertEquals(2, decoder.parsedCount.toInt())
     }
 
     @Test
-    fun theDefaultDecoderIgnoresTrim() {
-        assertFalse(MessageDecoder.Default.trimIfIdle(0, TimeUtils.nowMillis()), "stateless: nothing to release")
+    fun theDefaultDecoderIgnoresBoth() {
+        // stateless: nothing to age or release, and neither call may throw
+        MessageDecoder.Default.ageOutCache()
+        MessageDecoder.Default.clearCache()
     }
 }

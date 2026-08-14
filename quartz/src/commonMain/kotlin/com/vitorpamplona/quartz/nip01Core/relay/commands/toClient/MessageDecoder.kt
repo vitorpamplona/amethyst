@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Turns one raw relay frame into a [Message]. The strategy the relay client
@@ -35,20 +34,21 @@ fun interface MessageDecoder {
     fun decode(text: String): Message
 
     /**
-     * Releases whatever the decoder is holding if it has seen no frames for
-     * [idleMillis]. Returns true when something was released.
+     * Ages out whatever the decoder is holding. Call periodically: an entry must
+     * survive at most two calls, so a 30s tick keeps nothing older than ~60s.
      *
-     * A caching decoder's value decays with time — a duplicate that has not
-     * arrived in a minute is not going to — but its memory does not, so the
-     * owner ticks this to let a quiet decoder drop what it cached. Stateless
-     * decoders keep the no-op default.
+     * A caching decoder's value decays with time — a duplicate that has not arrived
+     * within seconds is not going to — while its memory does not decay at all. Aging
+     * on a clock rather than on idleness is deliberate: relays keep pushing a trickle
+     * of events down open subscriptions forever, so a decoder is never idle in the
+     * sense of "saw no frames", and an idle-triggered release would never fire.
      *
-     * Never affects correctness: releasing a cache can only cost a re-parse.
+     * Never affects correctness: dropping a cached id can only cost a re-parse.
      */
-    fun trimIfIdle(
-        idleMillis: Long,
-        nowMillis: Long = TimeUtils.nowMillis(),
-    ): Boolean = false
+    fun ageOutCache() = Unit
+
+    /** Releases everything cached, e.g. when the host is shutting the client down. */
+    fun clearCache() = Unit
 
     companion object {
         /** Plain full-JSON parse of every frame. */
