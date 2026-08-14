@@ -1254,6 +1254,8 @@ private class InboxPrefs(
 
 private fun SharedPreferences.readInboxPrefs() =
     InboxPrefs(
+        // Missing key = an account saved before this setting existed. Those keep CUSTOM; only
+        // brand-new logins get the ALWAYS default from AccountSettings' constructor.
         defaultRelayAuthPolicy =
             getString(PrefKeys.DEFAULT_RELAY_AUTH_POLICY, null)
                 ?.let { runCatching { RelayAuthPolicy.valueOf(it) }.getOrNull() }
