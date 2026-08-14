@@ -77,6 +77,25 @@ What this means for this skill:
 2. **Source-identical entries are a small, recognizable minority.** Brand terms (`Nowhere X`), single-word loanwords (`Apps` / `Feed` / `Issues`), and bare version/format strings (`v%1$s`) are the usual cases. Skip these by inspection rather than translating them to something identical.
 3. **Don't add source-identical fallbacks.** Android falls back to `values/strings.xml` at runtime, so a key intentionally kept as English already renders correctly, and Crowdin's next sync would strip a local duplicate anyway.
 
+4. **A repo-side edit to a translated value only sticks where Crowdin's database
+   doesn't contradict it.** Download replaces file content with Crowdin's current
+   export; it does not diff or merge. So a hand fix to a locale file survives only
+   if Crowdin happens to hold the same value (or holds nothing for that key). If
+   Crowdin holds a *different* value — including an **empty** one — the next sync
+   silently reverts you.
+
+   Observed 2026-08-13/14 in one pass, which is what makes the rule concrete:
+   `pow_estimate_minutes[few]` (pl) **survived** the sync because Crowdin's
+   approved value matched the fix, while `nest_listener_count[many]` (pl) was
+   **reverted to empty** two commits later because Crowdin stores an empty string
+   there. Same file, same commit, opposite outcomes.
+
+   Consequences: fixing a *value* durably means entering it in the Crowdin web UI
+   — no repo commit will hold it. Changes to the **source** file are different and
+   do stick, because that file is Crowdin's input, not its output: deleting a key
+   from `values/strings.xml` removes it project-wide, and attributes declared
+   there propagate into every export.
+
 > **Historical note:** an earlier version of this skill tried to auto-filter the
 > candidate list with a git "sync-timestamp" heuristic (skip any key added before
 > the last `New Crowdin translations` commit). It was **dropped** because it
@@ -280,6 +299,64 @@ done
 
 For each hit, warn the user that the entry is unreachable in that locale. The fix is to **remove the `<item quantity="zero">`** and, if the UX wanted distinct wording for count=0, add a separate `<string>` plus an `if (count == 0)` branch at the call site (see "Plurals: handle with care" below).
 
+Also audit **format-specifier parity and empty items** across the locales you
+touched. These are a different defect class from a missing key — the key is
+present and looks translated, but the placeholder was dropped, escaped, or the
+item left blank, so the number never reaches the user:
+
+```bash
+python3 - <<'PY'
+import re, io, glob
+keyre = re.compile(r'<string name="([^"]+)"[^>]*>(.*?)</string>', re.S)
+plre  = re.compile(r'<plurals name="([^"]+)"[^>]*>(.*?)</plurals>', re.S)
+itre  = re.compile(r'<item quantity="([^"]+)"[^>]*>(.*?)</item>', re.S)
+# (?<!\\) is REQUIRED: \%2$d is an escaped literal, not a placeholder.
+phre  = re.compile(r'(?<!\\)%(?:(\d+)\$)?([sdf])')
+sig = lambda t: sorted(m.group(0) for m in phre.finditer(t))
+for base in ['amethyst/src/main/res', 'commons/src/commonMain/composeResources']:
+    d = io.open(f'{base}/values/strings.xml', encoding='utf-8').read()
+    dstr = {m.group(1): sig(m.group(2)) for m in keyre.finditer(d)}
+    dpl  = {}
+    for m in plre.finditer(d):
+        s = set()
+        for it in itre.finditer(m.group(2)): s.update(sig(it.group(2)))
+        dpl[m.group(1)] = sorted(s)
+    for p in sorted(glob.glob(f'{base}/values-*/strings.xml')):
+        if '/values-ar' in p: continue   # see caveat below
+        s = io.open(p, encoding='utf-8').read()
+        for m in keyre.finditer(s):
+            k, v = m.group(1), m.group(2)
+            if k in dstr and sig(v) != dstr[k]:
+                print(f'{p}\n    {k}  base={dstr[k]}  loc={sig(v)}')
+        for m in plre.finditer(s):
+            k = m.group(1)
+            if k not in dpl: continue
+            for it in itre.finditer(m.group(2)):
+                if sig(it.group(2)) != dpl[k]:
+                    print(f'{p}\n    {k}[{it.group(1)}]  base={dpl[k]}  loc={sig(it.group(2))}')
+PY
+
+# Empty plural items render as nothing at runtime — always a bug.
+grep -rn '<item quantity="[a-z]*"></item>' \
+  amethyst/src/main/res/values*/strings.xml \
+  commons/src/commonMain/composeResources/values*/strings.xml
+```
+
+Three things this scan taught us, all of which it now encodes:
+
+- **The `(?<!\\)` lookbehind is not optional.** Without it the scan matches
+  `%2$d` *inside* `\%2$d` and scores a broken string clean. `\%` is not a
+  recognised Android escape, but lint reads it as one, so the placeholder is
+  reported missing. (2026-08-13: `nip46_signer_relays_some_down` in sl-rSI
+  survived a "clean" sweep exactly this way.)
+- **Skip Arabic.** Its `zero`/`one`/`two` forms omit the numeral idiomatically
+  ("دقيقتان" = "two minutes"), so ~30 hits there are correct translations, not
+  defects. Everything else is worth reading.
+- **Repeated indices are legitimate.** `%1$s` appearing twice in a translation
+  where the base uses it once is normal — German repeats the name where English
+  says "They". Compare *sets*, and treat an arity difference as a question, not
+  a verdict.
+
 Quick scan over the missing keys:
 
 ```bash
@@ -340,6 +417,37 @@ When adding or proposing **`<plurals>`** entries, follow these rules:
       pluralStringResource(R.plurals.foo_items, count, dateLabel, count)
   }
   ```
+- **Converting an existing `<string>` to `<plurals>`: give every locale its FULL
+  category set, not just `other`.** You must convert it in every locale that
+  already had the `<string>` (aapt2 rejects a resource-type mismatch across
+  locales, and an orphaned locale `<string>` trips `ExtraTranslation`) — but
+  carrying the old text across as an `other`-only block, on the theory that
+  Crowdin backfills the rest, **fails `MissingQuantity` and breaks CI before
+  Crowdin ever gets a turn.** Supply `one`/`few`/`many` for pl, `one` for hu, and
+  so on, at conversion time.
+
+  Note this contradicts `amethyst/src/main/res/CLAUDE.md` step 3, which still
+  advises the `other`-only shortcut. That advice is wrong; prefer this.
+
+  Watch the declension when you do it: the retained text is usually the *plural*
+  form, so reusing it verbatim for `one` produces "1 odpowiedzi". (2026-08-13:
+  converting `poll_results_selections` with `other` only errored on both hu and
+  pl, and the retained pl text was the few/many form.)
+
+- **A `tools:ignore` suppression must go on the SOURCE entry in
+  `values/strings.xml`, never on a locale file.** Crowdin propagates attributes
+  declared on the source into every translation it exports; an attribute you add
+  to `values-xx/strings.xml` alone is simply absent from the next export. That is
+  why the existing `tools:ignore="Typos"` entries survive — they are declared on
+  the source, and the copies in cs/de/ar/eo/bn are the *result* of propagation,
+  not evidence that locale-file attributes stick. (2026-08-13: an
+  `ImpliedQuantity` suppression added only to `values-pt-rBR` was stripped by the
+  next sync and took `main`'s CI red.)
+
+  Before reaching for a suppression at all, check whether the key is even used —
+  a `grep -rn "<key>" --include='*.kt'` that returns nothing means deleting the
+  key is the better fix than muting the rule that objects to it.
+
 - Reference: [Android `<plurals>` docs](https://developer.android.com/guide/topics/resources/string-resource#Plurals) and [CLDR plural rules](https://unicode-org.github.io/cldr-staging/charts/latest/supplemental/language_plural_rules.html).
 
 **Then ask the user:** "Would you like me to translate these missing strings into [list of target locales]?"
@@ -380,6 +488,44 @@ When adding translated strings to locale files:
   #   ./gradlew :commons:convertXmlValueResourcesForCommonMain
   ```
 
+- **Then run Android lint. This is the gate that actually matches CI, and the
+  checks above do NOT substitute for it.** Duplicate-key + well-formedness +
+  `convertXmlValueResourcesForCommonMain` can all pass on a change that still
+  takes CI red, because the plural rules live in lint, not in the resource
+  compiler:
+
+  ```bash
+  ./gradlew :amethyst:lintPlayBenchmark     # the task CI runs (.github/workflows/build.yml)
+  ```
+
+  There is no `lint-baseline.xml` in this repo and only `MissingTranslation` is
+  disabled (`amethyst/build.gradle.kts`), so `abortOnError` bites on the first
+  error. Three rules matter for a translation pass:
+
+  | Rule | Fires when | Severity |
+  |------|-----------|----------|
+  | `MissingQuantity` | a locale's `<plurals>` omits a CLDR category that locale uses | **error** for core categories — gates CI |
+  | `ImpliedQuantity` | a `quantity` item has no format argument in a locale where that category spans more than one number | **error** — gates CI |
+  | `StringFormatCount` / `StringFormatMatches` | a translation's placeholder count/type disagrees with the base entry | warning |
+
+  (2026-08-13: a pass that cleared the duplicate/XML gate above still failed
+  `lintPlayBenchmark` with 3 errors. Compiling is not evidence — `compileDebugKotlin`
+  passed on the same change.)
+
+- **Confirm the report says zero errors, don't just trust BUILD SUCCESSFUL** of a
+  wider invocation:
+
+  ```bash
+  python3 -c "
+  import json,io,collections
+  d=json.load(io.open('amethyst/build/reports/lint-results-playBenchmark.sarif',encoding='utf-8'))
+  r=d['runs'][0]['results']
+  print(dict(collections.Counter(x.get('level','warning') for x in r)))
+  for x in r:
+      if x.get('level')=='error': print('ERROR', x['ruleId'], x['locations'][0]['physicalLocation']['artifactLocation']['uri'])
+  "
+  ```
+
 ## Common Mistakes
 
 - **Scanning only the amethyst tree** — there are now **two** Crowdin-managed `strings.xml` trees (`amethyst/src/main/res` and `commons/src/commonMain/composeResources`). A key extracted into `commons/` will never show up in the amethyst diff. Run the whole technique once per tree (see "Resource trees") and report each separately.
@@ -392,6 +538,12 @@ When adding translated strings to locale files:
 - **Adding source-identical fallbacks locally** — they get overwritten on the next Crowdin sync. Android falls back to `values/strings.xml` at runtime anyway, so a key intentionally kept as English already renders correctly. Skip these by inspection (brand terms, loanwords, `v%1$s`-style strings); don't translate them to an identical value.
 - **Skipping per-locale diffs when only diffing cs** — Crowdin can strip different keys in different locales (each translator's choice), so cs is not a reliable upper bound. Diff each target locale and union the results.
 - **Pasting the union set of missing keys into every locale → duplicate keys** — the union is the right set to *translate*, but the wrong set to *insert*. A key missing in only some locales, inserted into all of them, duplicates in the ones that already had it. Drive each file's insertion off its own per-locale diff (see Step 6). In `commons`, a duplicate key is build-breaking: `convertXmlValueResourcesForCommonMain` fails with `Duplicated key '…'`. **Always run the post-insertion duplicate + XML-wellformedness gate in Step 6 before declaring done.** (Happened 2026-07-21 with `ps1_save_block` / `podcast_value_for_value` / `chats_history_relays`.)
+- **Declaring the pass done without running `:amethyst:lintPlayBenchmark`** — the duplicate-key + XML + `convertXmlValueResourcesForCommonMain` gate is necessary but nowhere near sufficient. `MissingQuantity` and `ImpliedQuantity` are errors, there is no lint baseline, and `abortOnError` is on, so a change that compiles and passes every check in Step 6's first half can still take CI red. Compiling is not evidence. (Happened 2026-08-13: 3 lint errors after a clean duplicate/XML gate and a green `compileFdroidDebugKotlin`.)
+- **Converting a `<string>` to `<plurals>` with `other` only** — "Crowdin fills the rest" is false; `MissingQuantity` errors immediately and CI fails before any sync. Supply every category the locale uses at conversion time, and re-check the declension rather than reusing the old text for `one`.
+- **Putting `tools:ignore` on a locale file** — Crowdin strips it on the next export. Suppressions belong on the source entry in `values/strings.xml`, which propagates. The `tools:ignore="Typos"` copies visible in cs/de/ar/eo/bn are the *result* of that propagation, not proof that locale-file attributes survive. (Happened 2026-08-13; it broke `main`.)
+- **Suppressing a lint rule on a key nothing references** — check `grep -rn "<key>" --include='*.kt'` first. `poll_results_voters` was a bare noun with no count, zero call sites, and an unlocalizable shape; deleting it retired the problem outright where a suppression would only have muted it.
+- **Comparing placeholders without a `(?<!\\)` guard** — `\%2$d` is an escaped literal to lint, but a naive `%\d+\$[sd]` regex matches the placeholder inside it and reports the string clean. A parity sweep missing this guard will certify a broken translation. Also treat a *repeated* index (`%1$s` twice where the base has it once) as legitimate — German does this where English says "They".
+- **Reading an empty `<item quantity="…"></item>` as merely "untranslated"** — it renders as nothing at runtime, and for a category like Polish `many` (5–21, 25–31, …) that is the common case, not an edge case. Grep for them explicitly; the missing-key diff will never surface one because the key is present.
 - **Inserting strings in a specific position** — always append at the bottom; ordering is handled separately
 - **Hardcoding `"1"` in a `<plurals>` `quantity="one"` item** — always use the count placeholder; otherwise non-English `one` categories produce wrong text
 - **Copying English's `one`/`other` set into every locale** — each language must include all CLDR plural categories it uses (e.g. Czech needs `one`, `few`, `many`, `other`)
