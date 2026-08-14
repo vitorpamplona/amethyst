@@ -24,7 +24,29 @@
     <string name="new_key_saved_checkbox">मैंने मेरे कुंचिकाओं को कहीं सुरक्षित रखा है</string>
     <string name="new_key_copy_encrypted_button">अनुकृति रहस्यीकृत (अनुशम्सित)</string>
     <string name="new_key_encrypt_password_label">पारणशब्द रहस्यीकृत सुरक्षित अनुकृति के लिए</string>
+    <string name="new_key_step_indicator">%2$d में से %1$d चरण</string>
+    <string name="new_key_next">आगे</string>
+    <string name="new_key_back">पीछे</string>
+    <string name="new_key_cancel">निरस्त</string>
+    <string name="new_key_step_intro_title">अपने कुंचिकाओं को सुरक्षित रखें आगे बढने से पहले</string>
+    <string name="new_key_keys_title">आपके कुंचिकाएँ</string>
+    <string name="new_key_confirm_title">एक अन्तिम बात</string>
     <!-- Key Backup (Desktop settings) -->
+    <string name="backup_keys_title">कुंचिकाएँ सुरक्षित रखें</string>
+    <string name="backup_keys_public_label">ख्याप्य कुंचिका (एनपुब॰)</string>
+    <string name="backup_keys_show_qr">क्यूआर॰ चित्र दिखाएँ</string>
+    <string name="backup_keys_hide_qr">क्यूआर॰ चित्र छिपाएँ</string>
+    <string name="backup_keys_secret_label">गुप्त कुंचिका (एनसेक॰)</string>
+    <string name="backup_keys_secret_hidden">गुप्त कुंचिका छिपाई गई</string>
+    <string name="backup_keys_reveal">गुप्त कुंचिका अनावरण</string>
+    <string name="backup_keys_hide">गुप्त कुंचिका छिपाएँ</string>
+    <string name="backup_keys_copy_plain">गुप्त कुंचिका की अनुकृति</string>
+    <string name="backup_keys_copy_encrypted">अनुकृति रहस्यीकृत (अनुशम्सित)</string>
+    <string name="backup_keys_encrypt_password_label">पारणशब्द रहस्यीकृत सुरक्षित अनुकृति के लिए</string>
+    <string name="backup_keys_encrypt_failed">कुंचिका रहस्यीकरण असफल। पुनःप्रयास करें।</string>
+    <string name="backup_keys_copied">अनुकृत।</string>
+    <string name="backup_keys_copy">अनुकृति</string>
+    <string name="backup_keys_unlock_title">गुप्त कुंचिका अनावरण</string>
     <!-- Common Actions -->
     <string name="action_copy">अनुकृति</string>
     <string name="action_paste">चिपकाएँ</string>
