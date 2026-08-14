@@ -45,18 +45,31 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
+ * Master switch for the automatic high-usage prompt. Turned off: the app never
+ * interrupts the user with it, no matter what the ledger records. Everything
+ * else stays in place — the ledger keeps counting, and Settings > App resource
+ * usage still shows the numbers and offers the same review-and-send report — so
+ * flipping this back to true is all it takes to bring the prompt back.
+ */
+private const val HIGH_USAGE_ALERT_ENABLED = false
+
+/**
  * On app open, checks the resource-usage ledger against the
  * [ResourceUsageAlerts] thresholds and — at most once per week, unless the
  * user opted out — asks whether they'd like to review + send a usage report
  * to the developers. Confirming only PREFILLS the NIP-17 DM composer (crash
  * report pattern): the full report text is visible there and nothing is sent
  * until the user taps Send.
+ *
+ * Currently disabled by [HIGH_USAGE_ALERT_ENABLED].
  */
 @Composable
 fun DisplayResourceUsageAlert(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    if (!HIGH_USAGE_ALERT_ENABLED) return
+
     val context = LocalContext.current
     val alert = remember { mutableStateOf<ResourceUsageAlerts.Alert?>(null) }
 
