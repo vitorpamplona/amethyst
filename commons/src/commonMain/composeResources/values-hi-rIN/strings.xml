@@ -29,14 +29,20 @@
     <string name="new_key_back">पीछे</string>
     <string name="new_key_cancel">निरस्त</string>
     <string name="new_key_step_intro_title">अपने कुंचिकाओं को सुरक्षित रखें आगे बढने से पहले</string>
+    <string name="new_key_step_intro_npub">आपकी ख्याप्य कुंचिका (एनपुब॰) आपका वितरणशक्य पता है। इसे निःसंकोच अन्यों को दें जिससे लोग आपको ढूँढ पाएँ तथा अनुगमन कर सकें।</string>
+    <string name="new_key_step_intro_nsec">आपकी गुप्त कुंचिका (एनसेक॰) एक पारणशब्द है जिसे कभी भी पुनःस्थापित नहीं किया जा सकता। यह एकमात्र बार दिखाई जाएगी। इसे सुरक्षित रखें अभी इसी समय। अथवा आप इस लेखा का अभिगमन सर्वदा के लिए खो देंगे।</string>
     <string name="new_key_keys_title">आपके कुंचिकाएँ</string>
     <string name="new_key_confirm_title">एक अन्तिम बात</string>
+    <string name="new_key_confirm_recap">अपने गुप्त कुंचिका को एक पारणशब्द प्रबन्धक में रखें। यदि आप इसे खो देते हैं तो कोई भी आपके लिए इसे पुनःप्राप्त नहीं कर सकेगा।</string>
+    <string name="new_key_readonly_info">यह एक पठनेवशक्य लेखा है। कोई गुप्त कुंचिका का उत्पादन नहीं हआ। इसलिए सुरक्षित रखने के लिए कुछ नहीं।</string>
     <!-- Key Backup (Desktop settings) -->
     <string name="backup_keys_title">कुंचिकाएँ सुरक्षित रखें</string>
     <string name="backup_keys_public_label">ख्याप्य कुंचिका (एनपुब॰)</string>
+    <string name="backup_keys_public_help">आपकी ख्याप्य कुंचिका को बाँटना हानिरहित है। इसे लोगों को दें जिससे कि वे आपको ढूँढ पाएँ तथा अनुगमन कर सकें।</string>
     <string name="backup_keys_show_qr">क्यूआर॰ चित्र दिखाएँ</string>
     <string name="backup_keys_hide_qr">क्यूआर॰ चित्र छिपाएँ</string>
     <string name="backup_keys_secret_label">गुप्त कुंचिका (एनसेक॰)</string>
+    <string name="backup_keys_secret_warning">आपकी गुप्त कुंचिका एक पारणशब्द के जैसा है जिसे कभी भी पुनःस्थापित नहीं किया जा सकता। पुनःप्राप्त भी नहीं हो सकता। जिस किसी के पास यह है आपकी लेखा का नियन्त्रण करेगा सर्वदा के लिए। इसे कभी भी बाँटना नहीं। एक पारणशब्द प्रबन्धक में इसे रखें।</string>
     <string name="backup_keys_secret_hidden">गुप्त कुंचिका छिपाई गई</string>
     <string name="backup_keys_reveal">गुप्त कुंचिका अनावरण</string>
     <string name="backup_keys_hide">गुप्त कुंचिका छिपाएँ</string>
