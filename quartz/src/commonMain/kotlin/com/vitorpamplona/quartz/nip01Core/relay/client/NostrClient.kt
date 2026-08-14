@@ -91,7 +91,7 @@ class NostrClient(
      * another subscription or another relay reuses the already-parsed Event;
      * dispatch semantics are unchanged).
      */
-    decoder: MessageDecoder = MessageDecoder.Default,
+    private val decoder: MessageDecoder = MessageDecoder.Default,
 ) : INostrClient,
     RelayConnectionListener,
     AutoCloseable {
@@ -156,6 +156,11 @@ class NostrClient(
     override fun disconnect() {
         isActiveFlow.value = false
         relayPool.disconnect()
+        // The host is putting us down (typically the app backgrounding). Whatever the
+        // decoder cached has no dedup value left across that gap, but it would keep
+        // costing memory for the whole background stretch, so release it now rather
+        // than leaving a timer running to do it later.
+        decoder.clearCache()
     }
 
     override fun isActive() = isActiveFlow.value
@@ -208,8 +213,52 @@ class NostrClient(
             }
         }
 
+    /**
+     * Ages out the decoder's cache on a clock.
+     *
+     * A caching decoder bounds what it holds by capacity, which caps the cost during a
+     * burst but never ends it: its generations only rotate inside an insert, so a
+     * client that drops to a trickle keeps everything from the initial burst forever.
+     *
+     * Deliberately NOT idle-triggered. Measured on device: relays keep pushing events
+     * down open subscriptions indefinitely, so the decoder is never idle in the sense
+     * of "saw no frames" — an idle check returned false on every tick across 240s of
+     * a flat heap. Aging unconditionally is what actually releases the memory.
+     *
+     * Ids survive one tick and die on the next, so [DECODER_AGE_OUT_MS] bounds their
+     * lifetime at ~2x that. Suspends on [isActiveFlow] like [keepAliveJob], so no timer
+     * fires while the client is down — [disconnect] clears outright on the way there.
+     *
+     * 30s is measured, not guessed. Sweeping the interval on device and comparing hit
+     * rate at a matched ~19k frames (runs pull different volumes, so raw endpoints are
+     * not comparable):
+     *
+     * ```
+     *   tick    hit rate   parses   ids still cached at rest
+     *    10s      44.9%    10,663      ~2
+     *    30s      58.5%     7,569      ~2
+     *    60s      60.4%     7,520      ~3
+     *   120s      60.6%     7,555     7,438  (one tick in 3 min -> never releases)
+     * ```
+     *
+     * Hit rate saturates by 30s, so a shorter tick only buys re-parses (10s costs 41%
+     * more), and a longer one only holds memory. The knee is where the tick stops being
+     * the binding constraint and [CachingEventDecoder.capacity] takes over: at the
+     * observed ~400 frames/s that crossover is 8192/400 ~= 20s, so 30s sits just past
+     * it. Re-measure if capacity or typical frame rates change.
+     */
+    private val decoderTrimJob =
+        scope.launch {
+            while (true) {
+                isActiveFlow.first { it }
+                delay(DECODER_AGE_OUT_MS)
+                decoder.ageOutCache()
+            }
+        }
+
     companion object {
         private const val KEEP_ALIVE_INTERVAL_MS = 60_000L
+        private const val DECODER_AGE_OUT_MS = 30_000L
     }
 
     override fun reconnect(

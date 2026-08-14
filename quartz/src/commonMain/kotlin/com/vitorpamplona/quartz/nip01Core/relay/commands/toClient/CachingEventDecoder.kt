@@ -71,7 +71,22 @@ import kotlin.concurrent.atomics.incrementAndFetch
  */
 @OptIn(ExperimentalAtomicApi::class)
 class CachingEventDecoder(
-    private val capacity: Int = 2048,
+    /**
+     * Ids kept per generation, so up to `2 * capacity` are addressable.
+     *
+     * Sized from the measured *reuse distance* — how many frames separate two
+     * deliveries of the same event — because a duplicate is only caught when its
+     * reuse distance still fits in the cache. Against the recorded multi-relay
+     * startup capture (150k frames, 82% duplicates, median reuse distance 1,430),
+     * the old 2048 caught just 58.3% of duplicates; 8192 catches 80.5% and halves
+     * decode time (354ms -> 169ms). Beyond 8192 the curve flattens (32768 buys
+     * 96.5% for 4x the entries), so this trades the last 16% for memory the
+     * client would otherwise hold on top of `LocalCache`.
+     *
+     * See `DedupCapacityBenchmark`. Re-measure it before changing this: the right
+     * value follows the duplication of real traffic, not intuition.
+     */
+    private val capacity: Int = 8192,
     private val fullParser: MessageDecoder = MessageDecoder.Default,
 ) : MessageDecoder {
     @Volatile private var live = ConcurrentHashCache<HexKey, Event>()
@@ -107,6 +122,36 @@ class CachingEventDecoder(
         }
         return msg
     }
+
+    /**
+     * Retires the live generation, so entries age out on the caller's clock instead of
+     * only when the cache fills.
+     *
+     * [capacity] bounds what the cache costs *during* a burst; this bounds how long it
+     * costs anything *after* one. Without it the maps only rotate inside an insert, so
+     * a client receiving a slow trickle keeps everything it saw during the initial
+     * burst forever — memory whose dedup value is long gone.
+     *
+     * An id survives one call and dies on the next, so ticking every 30s keeps nothing
+     * older than ~60s. Two consecutive calls with no traffic in between leave the cache
+     * empty, which is what releases memory when the client really does go quiet.
+     *
+     * Racy by the same design as capacity rotation (see class kdoc): retiring a
+     * generation concurrently with an insert can only lose an id, and a lost id costs a
+     * re-parse, never a wrong message.
+     */
+    override fun ageOutCache() {
+        previous = live
+        live = ConcurrentHashCache()
+    }
+
+    override fun clearCache() {
+        previous = ConcurrentHashCache()
+        live = ConcurrentHashCache()
+    }
+
+    /** Ids currently addressable across both generations. Observability + tests. */
+    val cachedCount: Int get() = live.size() + previous.size()
 
     private class ScannedEvent(
         val subId: String,

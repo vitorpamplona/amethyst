@@ -33,6 +33,23 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 fun interface MessageDecoder {
     fun decode(text: String): Message
 
+    /**
+     * Ages out whatever the decoder is holding. Call periodically: an entry must
+     * survive at most two calls, so a 30s tick keeps nothing older than ~60s.
+     *
+     * A caching decoder's value decays with time — a duplicate that has not arrived
+     * within seconds is not going to — while its memory does not decay at all. Aging
+     * on a clock rather than on idleness is deliberate: relays keep pushing a trickle
+     * of events down open subscriptions forever, so a decoder is never idle in the
+     * sense of "saw no frames", and an idle-triggered release would never fire.
+     *
+     * Never affects correctness: dropping a cached id can only cost a re-parse.
+     */
+    fun ageOutCache() = Unit
+
+    /** Releases everything cached, e.g. when the host is shutting the client down. */
+    fun clearCache() = Unit
+
     companion object {
         /** Plain full-JSON parse of every frame. */
         val Default: MessageDecoder = MessageDecoder { OptimizedJsonMapper.fromJsonToMessage(it) }
