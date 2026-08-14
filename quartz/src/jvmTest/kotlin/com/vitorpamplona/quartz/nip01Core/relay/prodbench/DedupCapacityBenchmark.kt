@@ -105,6 +105,61 @@ class DedupCapacityBenchmark {
         return frame.substring(k + 6, k + 6 + 64)
     }
 
+    private fun used(): Long {
+        val rt = Runtime.getRuntime()
+        return rt.totalMemory() - rt.freeMemory()
+    }
+
+    /** Retained bytes of whatever [build] returns, with GC settled either side. */
+    private fun retained(build: () -> Any): Pair<Long, Any> {
+        repeat(3) {
+            System.gc()
+            Thread.sleep(60)
+        }
+        val before = used()
+        val held = build()
+        repeat(3) {
+            System.gc()
+            Thread.sleep(60)
+        }
+        return (used() - before) to held
+    }
+
+    /**
+     * What the cache actually costs to hold.
+     *
+     * This is the WORST case: the decoder is the only holder, so every cached Event
+     * counts. In the app most of them are also in `LocalCache` (the decoder hands out
+     * the very same instance), and for those the true incremental cost is just the map
+     * node. The gap between the two is the memory the decoder pins for events
+     * `LocalCache` chose to drop.
+     */
+    @Test
+    fun retainedMemoryPerCapacity() {
+        val frames = frames()
+        var sink: Any? = null
+        println("\n=== retained heap held by the decoder (worst case: sole holder) ===")
+        (CAPACITIES + listOf(2_048)).distinct().sorted().forEach { cap ->
+            val (bytes, held) =
+                retained {
+                    val d = CachingEventDecoder(capacity = cap)
+                    frames.forEach { d.decode(it) }
+                    d
+                }
+            sink = held
+            val entries = minOf(cap * 2, 25_571)
+            println(
+                "  capacity %7d  %6.1f MB retained  (<= %d cached events, %.0f B/entry)".format(
+                    cap,
+                    bytes / 1048576.0,
+                    entries,
+                    bytes.toDouble() / entries,
+                ),
+            )
+        }
+        checkNotNull(sink)
+    }
+
     @Test
     fun productionCapacityAgainstRealArrivalOrder() {
         val frames = frames()

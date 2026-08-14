@@ -91,7 +91,7 @@ class NostrClient(
      * another subscription or another relay reuses the already-parsed Event;
      * dispatch semantics are unchanged).
      */
-    decoder: MessageDecoder = MessageDecoder.Default,
+    private val decoder: MessageDecoder = MessageDecoder.Default,
 ) : INostrClient,
     RelayConnectionListener,
     AutoCloseable {
@@ -156,6 +156,11 @@ class NostrClient(
     override fun disconnect() {
         isActiveFlow.value = false
         relayPool.disconnect()
+        // The host is putting us down (typically the app backgrounding). Whatever the
+        // decoder cached has no dedup value left across that gap, but it would keep
+        // costing memory for the whole background stretch, so release it now rather
+        // than leaving a timer running to do it later.
+        decoder.trimIfIdle(idleMillis = 0)
     }
 
     override fun isActive() = isActiveFlow.value
@@ -208,8 +213,31 @@ class NostrClient(
             }
         }
 
+    /**
+     * Releases the decoder's cache after a quiet stretch.
+     *
+     * A caching decoder bounds what it holds by capacity, which caps the cost during
+     * a burst but never ends it: its generations only rotate inside an insert, so a
+     * client that goes quiet pins every cached event indefinitely. Dedup value decays
+     * within seconds (duplicates are the same event arriving from other relays), so
+     * anything still held after [DECODER_IDLE_MS] is pure cost.
+     *
+     * Suspends on [isActiveFlow] like [keepAliveJob], so no timer fires while the
+     * client is down — [disconnect] already trims eagerly on the way there.
+     */
+    private val decoderTrimJob =
+        scope.launch {
+            while (true) {
+                isActiveFlow.first { it }
+                delay(DECODER_TRIM_INTERVAL_MS)
+                decoder.trimIfIdle(DECODER_IDLE_MS)
+            }
+        }
+
     companion object {
         private const val KEEP_ALIVE_INTERVAL_MS = 60_000L
+        private const val DECODER_TRIM_INTERVAL_MS = 30_000L
+        private const val DECODER_IDLE_MS = 60_000L
     }
 
     override fun reconnect(

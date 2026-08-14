@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Turns one raw relay frame into a [Message]. The strategy the relay client
@@ -32,6 +33,22 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
  */
 fun interface MessageDecoder {
     fun decode(text: String): Message
+
+    /**
+     * Releases whatever the decoder is holding if it has seen no frames for
+     * [idleMillis]. Returns true when something was released.
+     *
+     * A caching decoder's value decays with time — a duplicate that has not
+     * arrived in a minute is not going to — but its memory does not, so the
+     * owner ticks this to let a quiet decoder drop what it cached. Stateless
+     * decoders keep the no-op default.
+     *
+     * Never affects correctness: releasing a cache can only cost a re-parse.
+     */
+    fun trimIfIdle(
+        idleMillis: Long,
+        nowMillis: Long = TimeUtils.nowMillis(),
+    ): Boolean = false
 
     companion object {
         /** Plain full-JSON parse of every frame. */

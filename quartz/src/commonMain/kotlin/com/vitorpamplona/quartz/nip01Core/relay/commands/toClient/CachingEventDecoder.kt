@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.ConcurrentHashCache
 import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicLong
@@ -93,6 +94,16 @@ class CachingEventDecoder(
 
     @Volatile private var previous = ConcurrentHashCache<HexKey, Event>()
 
+    /**
+     * When an EVENT frame was last seen, for [trimIfIdle].
+     *
+     * Written on every EVENT frame — hit or miss — so a cache that is actively
+     * serving duplicates counts as busy and is never trimmed out from under the
+     * traffic it is helping. One relaxed volatile store per frame; at observed
+     * rates (~400 frames/s) that is not measurable.
+     */
+    @Volatile private var lastActivityAt: Long = TimeUtils.nowMillis()
+
     // Observability + benchmark hooks.
     private val parsed = AtomicLong(0)
     private val reused = AtomicLong(0)
@@ -106,6 +117,7 @@ class CachingEventDecoder(
             val cached = live.get(scanned.eventId) ?: previous.get(scanned.eventId)
             if (cached != null) {
                 reused.incrementAndFetch()
+                lastActivityAt = TimeUtils.nowMillis()
                 return EventMessage(scanned.subId, cached)
             }
         }
@@ -113,6 +125,7 @@ class CachingEventDecoder(
         val msg = fullParser.decode(text)
         if (msg is EventMessage) {
             parsed.incrementAndFetch()
+            lastActivityAt = TimeUtils.nowMillis()
             if (live.size() >= capacity) {
                 // Benign-race rotation: see class kdoc.
                 previous = live
@@ -121,6 +134,30 @@ class CachingEventDecoder(
             live.put(msg.event.id, msg.event)
         }
         return msg
+    }
+
+    /**
+     * Drops both generations once no EVENT frame has arrived for [idleMillis].
+     *
+     * [capacity] bounds what the cache costs *during* a burst; this bounds how long
+     * it costs anything *after* one. Without it the maps only ever rotate inside an
+     * insert, so a client that goes quiet pins up to `2 * capacity` events for the
+     * rest of the process's life — memory whose dedup value has already decayed to
+     * zero.
+     *
+     * Racy by the same design as rotation (see class kdoc): clearing concurrently
+     * with an insert can only lose an id, and losing an id costs a re-parse, never
+     * a wrong message. [nowMillis] is injectable so tests need no clock.
+     */
+    override fun trimIfIdle(
+        idleMillis: Long,
+        nowMillis: Long,
+    ): Boolean {
+        if (nowMillis - lastActivityAt < idleMillis) return false
+        if (live.size() == 0 && previous.size() == 0) return false
+        previous = ConcurrentHashCache()
+        live = ConcurrentHashCache()
+        return true
     }
 
     private class ScannedEvent(
