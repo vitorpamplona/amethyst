@@ -68,12 +68,6 @@ fun TorSettingsSection(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Tor",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-                Spacer(Modifier.width(12.dp))
                 TorStatusIndicator(status = torStatus)
             }
             TextButton(onClick = { showDialog = true }) {

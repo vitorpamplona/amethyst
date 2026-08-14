@@ -92,17 +92,9 @@ fun MediaServerSettings(
         }
     }
 
-    // Parent (RelaySettingsScreen) provides the 12dp horizontal gutter, so this
-    // column no longer adds its own all-sides 16dp which was showing up as an
-    // extra frame inside the settings screen.
+    // Parent (the Settings accordion card) provides the horizontal gutter and
+    // the section title, so this column renders the body only.
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            "Media Servers (Blossom)",
-            style = MaterialTheme.typography.titleSmall,
-        )
-
-        Spacer(Modifier.height(8.dp))
-
         Text(
             "Configure Blossom servers for media uploads. First server is the default.",
             style = MaterialTheme.typography.bodySmall,

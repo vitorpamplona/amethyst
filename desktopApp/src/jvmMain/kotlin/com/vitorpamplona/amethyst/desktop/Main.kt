@@ -35,11 +35,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -48,6 +45,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -56,15 +54,25 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.KeyShortcut
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
@@ -144,10 +152,14 @@ import com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationRead
 import com.vitorpamplona.amethyst.desktop.ui.notifications.LocalNotificationSettings
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
-import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.ImageCompressionSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
+import com.vitorpamplona.amethyst.desktop.ui.settings.RelaySettingsSection
+import com.vitorpamplona.amethyst.desktop.ui.settings.SettingsAccordionCard
+import com.vitorpamplona.amethyst.desktop.ui.settings.SettingsEntry
+import com.vitorpamplona.amethyst.desktop.ui.settings.SettingsMeta
+import com.vitorpamplona.amethyst.desktop.ui.settings.WalletConnectSettingsSection
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -165,6 +177,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -2391,7 +2404,7 @@ fun ProfileScreen(
 }
 
 @Composable
-fun RelaySettingsScreen(
+fun SettingsScreen(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
     accountManager: AccountManager,
@@ -2403,14 +2416,30 @@ fun RelaySettingsScreen(
     namecoinPreferences: DesktopNamecoinPreferences? = null,
     onBlossomServersChanged: (List<String>) -> Unit = {},
 ) {
-    val relayStatuses by relayManager.relayStatuses.collectAsState()
-    val connectedRelays by relayManager.connectedRelays.collectAsState()
-    val nwcConnection by accountManager.nwcConnection.collectAsState()
-    var newRelayUrl by remember { mutableStateOf("") }
-    var nwcInput by remember { mutableStateOf("") }
-    var nwcError by remember { mutableStateOf<String?>(null) }
+    val entries =
+        settingsEntries(
+            relayManager = relayManager,
+            account = account,
+            accountManager = accountManager,
+            torStatus = torStatus,
+            torSettings = torSettings,
+            onTorSettingsChanged = onTorSettingsChanged,
+            namecoinPreferences = namecoinPreferences,
+            onBlossomServersChanged = onBlossomServersChanged,
+        )
+    // Absent id = collapsed. Not rememberSaveable: expand state resets each visit.
+    val expandedIds = remember { mutableStateMapOf<String, Boolean>() }
+    val logoutScope = rememberCoroutineScope()
 
-    val nwcScope = rememberCoroutineScope()
+    var query by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    val listState = rememberLazyListState()
+    // Tiny list; a plain filter is cheaper than derivedStateOf here.
+    val visible = if (query.isBlank()) entries else entries.filter { it.meta.matches(query) }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    // A non-blank query reveals matches at the top of the list.
+    LaunchedEffect(query) { if (query.isNotBlank()) listState.animateScrollToItem(0) }
 
     com.vitorpamplona.amethyst.desktop.ui.ReadingColumn {
         val sidePadding =
@@ -2421,7 +2450,6 @@ fun RelaySettingsScreen(
                 Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = sidePadding),
         ) {
             Row(
@@ -2431,352 +2459,504 @@ fun RelaySettingsScreen(
                         .heightIn(min = 48.dp)
                         .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     "Settings",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(
+                        onClick = { entries.forEach { expandedIds[it.meta.id] = false } },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Text("Collapse all")
+                    }
+                    TextButton(
+                        onClick = { entries.forEach { expandedIds[it.meta.id] = true } },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Text("Expand all")
+                    }
+                }
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // Account Keys / Backup Section
-            BackupKeysCard(account = account)
-
-            Spacer(Modifier.height(24.dp))
-
-            // Wallet Connect Section
-            Text(
-                "Wallet Connect (NWC)",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
             Spacer(Modifier.height(8.dp))
 
-            Text(
-                "Connect a Lightning wallet to enable zaps. Get a connection string from Alby, Mutiny, or other NWC-compatible wallets.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown &&
+                                event.key == Key.Escape &&
+                                query.isNotEmpty()
+                            ) {
+                                query = ""
+                                expandedIds.clear()
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                placeholder = { Text("Search settings…") },
+                leadingIcon = { Icon(MaterialSymbols.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                query = ""
+                                expandedIds.clear()
+                            },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(MaterialSymbols.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                singleLine = true,
             )
 
             Spacer(Modifier.height(12.dp))
 
-            if (nwcConnection != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column {
-                        Text(
-                            "Wallet Connected",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            "Relay: ${nwcConnection!!.relayUri.url}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = { nwcScope.launch { accountManager.clearNwcConnection(account.npub) } },
-                        colors =
-                            ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error,
-                            ),
-                    ) {
-                        Text("Disconnect")
-                    }
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = nwcInput,
-                        onValueChange = {
-                            nwcInput = it
-                            nwcError = null
-                        },
-                        label = { Text("NWC Connection String") },
-                        placeholder = { Text("nostr+walletconnect://...") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        isError = nwcError != null,
-                        supportingText = nwcError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
-                    )
-                    Button(
-                        onClick = {
-                            nwcScope.launch {
-                                val result = accountManager.setNwcConnection(account.npub, nwcInput)
-                                result.fold(
-                                    onSuccess = { nwcInput = "" },
-                                    onFailure = { nwcError = it.message ?: "Invalid connection string" },
-                                )
-                            }
-                        },
-                        enabled = nwcInput.isNotBlank(),
-                    ) {
-                        Text("Connect")
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-
-            // Media Server Settings (Blossom, kind 10063 — synced with mobile)
-            val networkBlossomServers by (LocalBlossomServers.current?.collectAsState() ?: remember { mutableStateOf(emptyList<String>()) })
-            // The kind-10063 list is authoritative; before it loads (or when the
-            // user has published none) show the default server.
-            val effectiveBlossomServers = networkBlossomServers.ifEmpty { listOf(DEFAULT_BLOSSOM_SERVER) }
-            key(effectiveBlossomServers) {
-                MediaServerSettings(
-                    initialServers = effectiveBlossomServers,
-                    onServersChanged = onBlossomServersChanged,
-                )
-            }
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-
-            // Image Compression Settings
-            ImageCompressionSettings()
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-
-            // Tor Settings
-            com.vitorpamplona.amethyst.desktop.ui.tor.TorSettingsSection(
-                torStatus = torStatus,
-                currentSettings = torSettings,
-                onSettingsChanged = onTorSettingsChanged,
-            )
-            Spacer(Modifier.height(24.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(24.dp))
-
-            // Namecoin Settings (ElectrumX servers for .bit / d/ / id/ resolution)
-            val namecoinPrefsHere = namecoinPreferences ?: LocalNamecoinPreferences.current
-            val namecoinServiceHere = LocalNamecoinService.current
-            if (namecoinPrefsHere != null) {
-                val namecoinScope = rememberCoroutineScope()
-                val namecoinSettings by namecoinPrefsHere.settings.collectAsState()
-                NamecoinSettingsSection(
-                    settings = namecoinSettings,
-                    onToggleEnabled = { enabled ->
-                        namecoinScope.launch { namecoinPrefsHere.setEnabled(enabled) }
-                    },
-                    onAddServer = { server ->
-                        namecoinScope.launch { namecoinPrefsHere.addServer(server) }
-                    },
-                    onRemoveServer = { server ->
-                        namecoinScope.launch { namecoinPrefsHere.removeServer(server) }
-                    },
-                    onReset = {
-                        namecoinScope.launch { namecoinPrefsHere.reset() }
-                    },
-                    onTestServer =
-                        namecoinServiceHere?.let { svc ->
-                            { server -> svc.client.testServer(server) }
-                        },
-                    onPinCert =
-                        namecoinServiceHere?.let { svc ->
-                            { pem ->
-                                namecoinPrefsHere.addPinnedCert(pem)
-                                // Apply immediately so the next lookup uses the new pin.
-                                // The same list is shared with the Namecoin Core RPC
-                                // client when present, mirroring Android's behaviour
-                                // where both backends consume one trust store.
-                                namecoinScope.launch {
-                                    try {
-                                        val pins = namecoinPrefsHere.loadPinnedCerts()
-                                        svc.client.setDynamicCerts(pins)
-                                        svc.rpcClient?.setDynamicCerts(pins)
-                                    } catch (_: Exception) {
-                                        // Best-effort — persisted, will apply on next restart.
-                                    }
-                                }
-                            }
-                        },
-                    onSetBackend = { backend ->
-                        namecoinScope.launch { namecoinPrefsHere.setBackend(backend) }
-                    },
-                    onSetCoreRpcConfig = { cfg ->
-                        namecoinScope.launch {
-                            namecoinPrefsHere.setCoreRpcConfig(cfg)
-                            // Push the new config into the live client so the
-                            // next lookup uses it without restarting the app.
-                            namecoinServiceHere?.rpcClient?.setConfig(cfg)
-                        }
-                    },
-                    onSetFallbackToCustomElectrumx = { enabled ->
-                        namecoinScope.launch {
-                            namecoinPrefsHere.setFallbackToCustomElectrumx(enabled)
-                        }
-                    },
-                    onSetFallbackToDefaultElectrumx = { enabled ->
-                        namecoinScope.launch {
-                            namecoinPrefsHere.setFallbackToDefaultElectrumx(enabled)
-                        }
-                    },
-                    onTestCoreRpc =
-                        namecoinServiceHere?.let { svc ->
-                            { cfg ->
-                                svc.probeCoreRpc(cfg)
-                                    ?: com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
-                                        .RpcProbeResult(
-                                            success = false,
-                                            elapsedMs = 0,
-                                            error = "Namecoin Core RPC client not available",
-                                        )
-                            }
-                        },
-                )
-                Spacer(Modifier.height(24.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(24.dp))
-            }
-
-            // Developer Settings Section (only in debug mode)
-            if (DebugConfig.isDebugMode) {
-                com.vitorpamplona.amethyst.desktop.ui
-                    .DevSettingsSection(account = account)
-                Spacer(Modifier.height(24.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(24.dp))
-            }
-
-            Text(
-                "Relay Settings",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    "${connectedRelays.size} of ${relayStatuses.size} relays connected",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                IconButton(onClick = { relayManager.connect() }) {
-                    Icon(
-                        MaterialSymbols.Refresh,
-                        contentDescription = "Reconnect",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = newRelayUrl,
-                    onValueChange = { newRelayUrl = it },
-                    label = { Text("Add relay") },
-                    placeholder = { Text("wss://relay.example.com") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                )
-                Button(
-                    onClick = {
-                        if (newRelayUrl.isNotBlank()) {
-                            relayManager.addRelay(newRelayUrl)
-                            newRelayUrl = ""
-                        }
-                    },
-                    enabled = newRelayUrl.isNotBlank(),
-                ) {
-                    Text("Add")
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f),
+                state = listState,
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(relayStatuses.values.toList(), key = { it.url.url }) { status ->
-                    RelayStatusCard(
-                        status = status,
-                        onRemove = { relayManager.removeRelay(status.url) },
+                items(visible, key = { it.meta.id }) { entry ->
+                    SettingsAccordionCard(
+                        // A non-blank query force-expands matches to reveal them.
+                        expanded = if (query.isBlank()) expandedIds[entry.meta.id] == true else true,
+                        onToggle = {
+                            expandedIds[entry.meta.id] = !(expandedIds[entry.meta.id] ?: false)
+                        },
+                        headlineContent = { Text(entry.meta.title) },
+                        leadingContent = {
+                            Icon(
+                                symbol = entry.meta.icon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        },
+                        supportingContent = { Text(entry.meta.subtitle) },
+                        content = entry.content,
                     )
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { relayManager.addDefaultRelays() }) {
-                    Text("Reset to Defaults")
+                if (query.isNotBlank() && visible.isEmpty()) {
+                    item(key = "__empty__") {
+                        Text(
+                            "No settings match \"$query\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                        )
+                    }
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
-
-            // Local Relay section
-            val localRelay = com.vitorpamplona.amethyst.desktop.ui.deck.LocalLocalRelayStore.current
-            if (localRelay != null) {
-                com.vitorpamplona.amethyst.desktop.ui.settings.LocalRelaySettingsScreen(
-                    localRelayStore = localRelay,
-                )
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(16.dp))
-            }
-
-            // Privacy lock section
-            com.vitorpamplona.amethyst.desktop.ui.settings
-                .PrivacyLockSettingsScreen()
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
-
-            // Content Filters section — hashtag-spam filter and future
-            // content-moderation toggles.
-            Text(
-                text = "Content Filters",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Spacer(Modifier.height(8.dp))
-            com.vitorpamplona.amethyst.desktop.ui.settings.HashtagSpamSettingsSection(
-                settings = LocalHashtagSpamSettings.current,
-            )
-            Spacer(Modifier.height(16.dp))
-            com.vitorpamplona.amethyst.desktop.ui.settings
-                .ModerationSettingsSection()
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
-
-            val logoutScope = rememberCoroutineScope()
-            OutlinedButton(
-                onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
-                colors =
-                    ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
-            ) {
-                Text("Logout")
+                if (query.isBlank()) {
+                    item(key = "__logout__") {
+                        Spacer(Modifier.height(4.dp))
+                        OutlinedButton(
+                            onClick = { logoutScope.launch { accountManager.logout(deleteKey = true) } },
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error,
+                                ),
+                        ) {
+                            Text("Logout")
+                        }
+                        Spacer(Modifier.height(24.dp))
+                    }
+                }
             }
         }
+    }
+}
+
+/**
+ * Builds the ordered Settings accordion entries. Rebuilt on each recomposition
+ * (the list is tiny and collapsed cards render only their header), so each
+ * entry's [SettingsEntry.content] lambda captures the current param values and
+ * never goes stale. Reads that must react (relay counts, composition locals)
+ * happen here or lazily inside each content lambda.
+ */
+@Composable
+private fun settingsEntries(
+    relayManager: DesktopRelayConnectionManager,
+    account: AccountState.LoggedIn,
+    accountManager: AccountManager,
+    torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
+    torSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
+    onTorSettingsChanged: (com.vitorpamplona.amethyst.commons.tor.TorSettings) -> Unit,
+    namecoinPreferences: DesktopNamecoinPreferences?,
+    onBlossomServersChanged: (List<String>) -> Unit,
+): List<SettingsEntry> {
+    val relayStatuses by relayManager.relayStatuses.collectAsState()
+    val connectedRelays by relayManager.connectedRelays.collectAsState()
+    val namecoinPrefsHere = namecoinPreferences ?: LocalNamecoinPreferences.current
+    val localRelay = com.vitorpamplona.amethyst.desktop.ui.deck.LocalLocalRelayStore.current
+
+    return buildList {
+        add(
+            SettingsEntry(
+                SettingsMeta(
+                    id = "keyBackup",
+                    icon = MaterialSymbols.Key,
+                    title = "Account Keys / Backup",
+                    subtitle = "Back up your secret key",
+                    keywords =
+                        persistentListOf(
+                            "backup",
+                            "nsec",
+                            "key",
+                            "recovery",
+                            "secret key",
+                            "export",
+                            "ncryptsec",
+                        ),
+                ),
+            ) {
+                com.vitorpamplona.amethyst.desktop.ui.keyBackup
+                    .BackupKeysCard(account = account)
+            },
+        )
+
+        add(
+            SettingsEntry(
+                SettingsMeta(
+                    id = "nwc",
+                    icon = MaterialSymbols.Bolt,
+                    title = "Wallet Connect (NWC)",
+                    subtitle = "Connect a Lightning wallet",
+                    keywords =
+                        persistentListOf(
+                            "lightning",
+                            "zap",
+                            "wallet",
+                            "alby",
+                            "mutiny",
+                            "nostr wallet connect",
+                            "connect wallet",
+                            "pay",
+                        ),
+                ),
+            ) {
+                WalletConnectSettingsSection(account = account, accountManager = accountManager)
+            },
+        )
+
+        if (namecoinPrefsHere != null) {
+            add(
+                SettingsEntry(
+                    SettingsMeta(
+                        id = "namecoin",
+                        icon = MaterialSymbols.Lock,
+                        title = "Namecoin Resolution",
+                        subtitle = "Blockchain identity lookups (.bit)",
+                        keywords =
+                            persistentListOf(
+                                ".bit",
+                                "blockchain",
+                                "identity",
+                                "electrumx",
+                                "dns",
+                                "namecoin",
+                                "resolve",
+                            ),
+                    ),
+                ) {
+                    NamecoinSettingsEntryContent(namecoinPreferences)
+                },
+            )
+        }
+
+        add(
+            SettingsEntry(
+                SettingsMeta(
+                    id = "blossom",
+                    icon = MaterialSymbols.Image,
+                    title = "Media Servers (Blossom)",
+                    subtitle = "Configure media uploads",
+                    keywords =
+                        persistentListOf(
+                            "upload",
+                            "media",
+                            "blossom",
+                            "server",
+                            "images",
+                            "check all",
+                            "add server",
+                        ),
+                ),
+            ) {
+                val networkBlossomServers by (
+                    LocalBlossomServers.current?.collectAsState()
+                        ?: remember { mutableStateOf(emptyList<String>()) }
+                )
+                val effectiveBlossomServers = networkBlossomServers.ifEmpty { listOf(DEFAULT_BLOSSOM_SERVER) }
+                key(effectiveBlossomServers) {
+                    MediaServerSettings(
+                        initialServers = effectiveBlossomServers,
+                        onServersChanged = onBlossomServersChanged,
+                    )
+                }
+            },
+        )
+
+        add(
+            SettingsEntry(
+                SettingsMeta(
+                    id = "imageCompression",
+                    icon = MaterialSymbols.Tune,
+                    title = "Image Compression",
+                    subtitle = "Default upload quality",
+                    keywords =
+                        persistentListOf(
+                            "quality",
+                            "compression",
+                            "compress",
+                            "exif",
+                            "upload quality",
+                            "strip metadata",
+                        ),
+                ),
+            ) {
+                ImageCompressionSettings()
+            },
+        )
+
+        add(
+            SettingsEntry(
+                SettingsMeta(
+                    id = "relays",
+                    icon = MaterialSymbols.Podcasts,
+                    title = "Relay Settings",
+                    subtitle = "${connectedRelays.size} of ${relayStatuses.size} relays connected",
+                    keywords =
+                        persistentListOf(
+                            "relay",
+                            "nip-65",
+                            "connect",
+                            "reconnect",
+                            "add relay",
+                            "ws",
+                            "wss",
+                        ),
+                ),
+            ) {
+                RelaySettingsSection(relayManager = relayManager)
+            },
+        )
+
+        if (localRelay != null) {
+            add(
+                SettingsEntry(
+                    SettingsMeta(
+                        id = "localRelay",
+                        icon = MaterialSymbols.Storage,
+                        title = "Local Relay",
+                        subtitle = "Local event cache",
+                        keywords =
+                            persistentListOf(
+                                "cache",
+                                "sqlite",
+                                "offline",
+                                "local event store",
+                                "vacuum",
+                                "prune",
+                            ),
+                    ),
+                ) {
+                    com.vitorpamplona.amethyst.desktop.ui.settings
+                        .LocalRelaySettingsScreen(localRelayStore = localRelay)
+                },
+            )
+        }
+
+        add(
+            SettingsEntry(
+                SettingsMeta(
+                    id = "tor",
+                    icon = MaterialSymbols.Shield,
+                    title = "Tor",
+                    subtitle = "Route connections through Tor",
+                    keywords = persistentListOf("tor", "proxy", "privacy", "onion", "socks"),
+                ),
+            ) {
+                com.vitorpamplona.amethyst.desktop.ui.tor.TorSettingsSection(
+                    torStatus = torStatus,
+                    currentSettings = torSettings,
+                    onSettingsChanged = onTorSettingsChanged,
+                )
+            },
+        )
+
+        add(
+            SettingsEntry(
+                SettingsMeta(
+                    id = "privacyLock",
+                    icon = MaterialSymbols.Lock,
+                    title = "Privacy Lock",
+                    subtitle = "Inactivity lock & redaction",
+                    keywords =
+                        persistentListOf(
+                            "lock",
+                            "password",
+                            "inactivity",
+                            "redaction",
+                            "screen lock",
+                        ),
+                ),
+            ) {
+                com.vitorpamplona.amethyst.desktop.ui.settings
+                    .PrivacyLockSettingsScreen()
+            },
+        )
+
+        add(
+            SettingsEntry(
+                SettingsMeta(
+                    id = "contentFilters",
+                    icon = MaterialSymbols.FilterAlt,
+                    title = "Content Filters",
+                    subtitle = "Hashtag-spam filter",
+                    keywords =
+                        persistentListOf(
+                            "hashtag",
+                            "spam",
+                            "filter",
+                            "mute",
+                            "threshold",
+                        ),
+                ),
+            ) {
+                com.vitorpamplona.amethyst.desktop.ui.settings.HashtagSpamSettingsSection(
+                    settings = LocalHashtagSpamSettings.current,
+                )
+            },
+        )
+
+        add(
+            SettingsEntry(
+                SettingsMeta(
+                    id = "moderation",
+                    icon = MaterialSymbols.Block,
+                    title = "Moderation",
+                    subtitle = "Muted & blocked accounts",
+                    keywords =
+                        persistentListOf(
+                            "mute",
+                            "block",
+                            "report",
+                            "moderation",
+                            "blocked",
+                            "safety",
+                        ),
+                ),
+            ) {
+                com.vitorpamplona.amethyst.desktop.ui.settings
+                    .ModerationSettingsSection()
+            },
+        )
+
+        if (DebugConfig.isDebugMode) {
+            add(
+                SettingsEntry(
+                    SettingsMeta(
+                        id = "developer",
+                        icon = MaterialSymbols.Warning,
+                        title = "Developer Settings",
+                        subtitle = "Debug tools",
+                        keywords = persistentListOf("debug", "developer", "logs"),
+                    ),
+                ) {
+                    com.vitorpamplona.amethyst.desktop.ui
+                        .DevSettingsSection(account = account)
+                },
+            )
+        }
+    }
+}
+
+/** Namecoin (.bit) resolution settings body for the Settings accordion. */
+@Composable
+private fun NamecoinSettingsEntryContent(namecoinPreferences: DesktopNamecoinPreferences?) {
+    val namecoinPrefsHere = namecoinPreferences ?: LocalNamecoinPreferences.current
+    val namecoinServiceHere = LocalNamecoinService.current
+    if (namecoinPrefsHere != null) {
+        val namecoinScope = rememberCoroutineScope()
+        val namecoinSettings by namecoinPrefsHere.settings.collectAsState()
+        NamecoinSettingsSection(
+            settings = namecoinSettings,
+            onToggleEnabled = { enabled ->
+                namecoinScope.launch { namecoinPrefsHere.setEnabled(enabled) }
+            },
+            onAddServer = { server ->
+                namecoinScope.launch { namecoinPrefsHere.addServer(server) }
+            },
+            onRemoveServer = { server ->
+                namecoinScope.launch { namecoinPrefsHere.removeServer(server) }
+            },
+            onReset = {
+                namecoinScope.launch { namecoinPrefsHere.reset() }
+            },
+            onTestServer =
+                namecoinServiceHere?.let { svc ->
+                    { server -> svc.client.testServer(server) }
+                },
+            onPinCert =
+                namecoinServiceHere?.let { svc ->
+                    { pem ->
+                        namecoinPrefsHere.addPinnedCert(pem)
+                        namecoinScope.launch {
+                            try {
+                                val pins = namecoinPrefsHere.loadPinnedCerts()
+                                svc.client.setDynamicCerts(pins)
+                                svc.rpcClient?.setDynamicCerts(pins)
+                            } catch (_: Exception) {
+                                // Best-effort — persisted, will apply on next restart.
+                            }
+                        }
+                    }
+                },
+            onSetBackend = { backend ->
+                namecoinScope.launch { namecoinPrefsHere.setBackend(backend) }
+            },
+            onSetCoreRpcConfig = { cfg ->
+                namecoinScope.launch {
+                    namecoinPrefsHere.setCoreRpcConfig(cfg)
+                    namecoinServiceHere?.rpcClient?.setConfig(cfg)
+                }
+            },
+            onSetFallbackToCustomElectrumx = { enabled ->
+                namecoinScope.launch {
+                    namecoinPrefsHere.setFallbackToCustomElectrumx(enabled)
+                }
+            },
+            onSetFallbackToDefaultElectrumx = { enabled ->
+                namecoinScope.launch {
+                    namecoinPrefsHere.setFallbackToDefaultElectrumx(enabled)
+                }
+            },
+            onTestCoreRpc =
+                namecoinServiceHere?.let { svc ->
+                    { cfg ->
+                        svc.probeCoreRpc(cfg)
+                            ?: com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
+                                .RpcProbeResult(
+                                    success = false,
+                                    elapsedMs = 0,
+                                    error = "Namecoin Core RPC client not available",
+                                )
+                    }
+                },
+        )
     }
 }

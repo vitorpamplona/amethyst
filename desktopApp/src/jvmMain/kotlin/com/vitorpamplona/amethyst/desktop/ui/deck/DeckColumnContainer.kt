@@ -55,7 +55,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.DesktopScreen
-import com.vitorpamplona.amethyst.desktop.RelaySettingsScreen
+import com.vitorpamplona.amethyst.desktop.SettingsScreen
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -494,7 +494,7 @@ internal fun RootContent(
 
         DeckColumnType.Settings -> {
             val torState = com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState.current
-            RelaySettingsScreen(
+            SettingsScreen(
                 relayManager = relayManager,
                 account = account,
                 accountManager = accountManager,
