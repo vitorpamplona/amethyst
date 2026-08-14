@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.serialization)
     alias(libs.plugins.googleKsp)
+    alias(libs.plugins.androidxBaselineProfile)
 }
 
 fun getCurrentBranch(workingDir: java.io.File): String =
@@ -374,6 +375,17 @@ composeCompiler {
     metricsDestination = layout.buildDirectory.dir("compose_compiler")
 }
 
+baselineProfile {
+    // One profile for the whole app rather than per-flavour: the ingest path being
+    // captured is identical in play and fdroid, and a shared profile is what the
+    // fdroid build needs — it never receives Play Cloud Profiles.
+    mergeIntoMain = true
+
+    // Keep the generated profile in source control so release builds do not depend on
+    // a device being attached at build time.
+    saveInSrc = true
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
 
@@ -402,6 +414,9 @@ dependencies {
     // and no Cloud Profiles at all — there, this library is the only thing that gets
     // the shipped baseline profile into ART.
     implementation(libs.androidx.profileinstaller)
+
+    // Profile produced by :baselineprofile from a real cold-start + ingest journey.
+    baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.activity.compose)
 
     // Hardened WebView host for sandboxed napplet/nsite rendering (origin-restricted message bridge).
