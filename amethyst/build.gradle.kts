@@ -331,7 +331,7 @@ ksp {
 
 // TODO: until google merges and unifiedpush updates https://github.com/tink-crypto/tink-java-apps/pull/5
 configurations.all {
-    val tink = "com.google.crypto.tink:tink-android:1.17.0"
+    val tink = "com.google.crypto.tink:tink-android:1.23.0"
     resolutionStrategy {
         force(tink)
         dependencySubstitution {
@@ -396,8 +396,8 @@ dependencies {
     //   adb shell am broadcast -a androidx.tracing.perfetto.action.ENABLE_TRACING \
     //     -n com.vitorpamplona.amethyst.debug/androidx.tracing.perfetto.TracingReceiver
     debugImplementation("androidx.compose.runtime:runtime-tracing")
-    debugImplementation("androidx.tracing:tracing-perfetto:1.0.0")
-    debugImplementation("androidx.tracing:tracing-perfetto-binary:1.0.0")
+    debugImplementation("androidx.tracing:tracing-perfetto:1.0.1")
+    debugImplementation("androidx.tracing:tracing-perfetto-binary:1.0.1")
 
     implementation(project(":quartz"))
     implementation(project(":commons"))
