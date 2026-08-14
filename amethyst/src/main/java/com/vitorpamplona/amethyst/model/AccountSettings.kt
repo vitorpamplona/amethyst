@@ -338,7 +338,9 @@ class AccountSettings(
     var callVideoResolution: CallVideoResolution = CallVideoResolution.HD_720,
     var callMaxBitrateBps: Int = 1_500_000,
     val callsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(true),
-    val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.CUSTOM),
+    // New accounts authenticate with every relay that asks. Existing accounts keep whatever they
+    // had saved (LocalPreferences falls back to CUSTOM for prefs written before this key existed).
+    val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.ALWAYS),
     val relayGroupViewMode: MutableStateFlow<RelayGroupViewMode> = MutableStateFlow(RelayGroupViewMode.DEFAULT),
     val concordViewMode: MutableStateFlow<ConcordViewMode> = MutableStateFlow(ConcordViewMode.DEFAULT),
     // Which conversation protocols the Messages inbox loads and shows. A disabled type is both hidden
