@@ -26,8 +26,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class ParentNoteTest {
     private val communityOwner = "9ca0bd7450742d6a20319c0e3d4c679c9e046a9dc70e8ef55c2905e24052340b"
@@ -138,6 +140,36 @@ class ParentNoteTest {
         val cache = StubCache(notesById = mapOf(parentId to parent, movies to AddressableNote(moviesAddress)))
 
         assertSame(parent, replyingDirectlyTo(note, cache))
+    }
+
+    /**
+     * The predicate `RenderRepost` now shares (`note.replyTo?.lastOrNull { !it.isCommunityDefinition() }`).
+     * The composable itself needs an instrumented test, but the logic that changed is this
+     * predicate: it has to recognise the community from the address, with no event loaded.
+     */
+    @Test
+    fun communityIsRecognisedWithoutItsDefinitionEvent() {
+        val uncached = AddressableNote(moviesAddress)
+        assertNull(uncached.event, "precondition: the definition has not arrived")
+        assertTrue(uncached.isCommunityDefinition(), "an uncached community must still be excluded")
+
+        val article = AddressableNote(Address(30023, communityOwner, "some-article"))
+        assertFalse(article.isCommunityDefinition(), "other addressable kinds must not be excluded")
+
+        val plainNote = Note("55".repeat(32))
+        assertFalse(plainNote.isCommunityDefinition(), "a note with no event and no address is not a community")
+    }
+
+    /** The selection `RenderRepost` performs: skip the community, take the real boosted note. */
+    @Test
+    fun repostSelectionSkipsAnUncachedCommunityAndTakesTheRealNote() {
+        val boosted = Note("66".repeat(32))
+        val replyTo = listOf(AddressableNote(moviesAddress), boosted)
+
+        assertSame(boosted, replyTo.lastOrNull { !it.isCommunityDefinition() })
+
+        // Community-only: nothing to render, rather than the empty shell that produced the blank.
+        assertNull(listOf(AddressableNote(moviesAddress)).lastOrNull { !it.isCommunityDefinition() })
     }
 
     /** A post in a channel is rendered by the channel header, not as a parent note. */

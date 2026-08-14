@@ -65,12 +65,18 @@ fun CommentEvent.isCommunityScoped() = hasRootScopeKind(CommunityDefinitionEvent
  * parent post's kind for the latter. Bridges (e.g. mostr) sometimes emit only the uppercase set,
  * hence the fallback to the root kind when no `k` is present.
  */
-fun CommentEvent.isTopLevelCommunityPost() =
-    if (hasDirectKinds()) {
-        hasReplyScopeKind(CommunityDefinitionEvent.KIND_STR)
-    } else {
-        hasRootScopeKind(CommunityDefinitionEvent.KIND_STR)
-    }
+fun CommentEvent.isTopLevelCommunityPost(): Boolean {
+    // An explicit parent kind (`k`) is authoritative: it names what this comment answers.
+    if (hasDirectKinds()) return hasReplyScopeKind(CommunityDefinitionEvent.KIND_STR)
+
+    // No `k`. Decide from what the comment actually points at rather than guessing: a parent
+    // *address* that is a community means top level; a parent *event* means it answers a post
+    // inside the community, not the community itself.
+    if (hasDirectReplies()) return replyAddressIds().any { Address.isOfKind(it, CommunityDefinitionEvent.KIND_STR) }
+
+    // Nothing names a parent at all -- the shape bridges emit, with only the uppercase root set.
+    return hasRootScopeKind(CommunityDefinitionEvent.KIND_STR)
+}
 
 /**
  * The community this comment is a top-level post in, or null when it is a reply to another post

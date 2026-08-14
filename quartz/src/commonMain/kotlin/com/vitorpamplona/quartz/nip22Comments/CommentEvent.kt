@@ -149,6 +149,9 @@ class CommentEvent(
 
     fun directReplies() = tags.filter { ReplyIdentifierTag.match(it) || ReplyAddressTag.match(it) || ReplyEventTag.match(it) }
 
+    /** Whether a parent is named at all, without materialising [directReplies]. */
+    fun hasDirectReplies() = tags.fastAny { ReplyIdentifierTag.match(it) || ReplyAddressTag.match(it) || ReplyEventTag.match(it) }
+
     fun directKinds() = tags.filter(ReplyKindTag::match)
 
     /** Whether a parent kind (`k`) is declared at all, without materialising [directKinds]. */

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip72ModCommunities
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -106,6 +107,87 @@ class CommunityCommentScopeTest {
         assertFalse(event.isTopLevelCommunityPost())
         assertTrue(event.tagsWithoutCitations().contains(parentId))
     }
+
+    /**
+     * A nested reply that omits the parent kind (`k`) entirely -- malformed, but emitted in the
+     * wild. It must not be mistaken for a top-level post just because the root kind says 34550:
+     * it names a parent *event*, so it answers a post inside the community, not the community.
+     */
+    @Test
+    fun nestedReplyWithoutAParentKindIsNotATopLevelPost() {
+        val event =
+            comment(
+                arrayOf("A", movies),
+                arrayOf("K", "34550"),
+                arrayOf("e", "33".repeat(32)),
+            )
+
+        assertTrue(event.isCommunityScoped())
+        assertFalse(event.isTopLevelCommunityPost())
+    }
+
+    /** The mirror case: no `k`, but the parent *address* is the community, so it is top level. */
+    @Test
+    fun postNamingTheCommunityAsItsParentAddressIsATopLevelPost() {
+        val event =
+            comment(
+                arrayOf("A", movies),
+                arrayOf("a", movies),
+                arrayOf("K", "34550"),
+            )
+
+        assertTrue(event.isTopLevelCommunityPost())
+    }
+
+    /** A reply whose parent address is some other addressable event is not a top-level post. */
+    @Test
+    fun replyToANonCommunityAddressIsNotATopLevelPost() {
+        val event =
+            comment(
+                arrayOf("A", movies),
+                arrayOf("a", "30023:$communityOwner:some-article"),
+                arrayOf("K", "34550"),
+            )
+
+        assertFalse(event.isTopLevelCommunityPost())
+    }
+
+    /**
+     * [communityAddress] was rewritten to stop at the first community root address instead of
+     * parsing every `A` tag into a list. This pins it against the original algorithm as a
+     * reference oracle -- seven call sites outside this PR depend on it being unchanged.
+     */
+    @Test
+    fun communityAddressMatchesTheOriginalAlgorithmOnEveryShape() {
+        val other = "30023:$communityOwner:some-article"
+        val secondCommunity = "34550:$communityOwner:films"
+
+        val shapes =
+            listOf(
+                "no tags at all" to comment(),
+                "one community root" to comment(arrayOf("A", movies)),
+                "non-community root only" to comment(arrayOf("A", other)),
+                "non-community first, community second" to comment(arrayOf("A", other), arrayOf("A", movies)),
+                "two communities picks the first" to comment(arrayOf("A", movies), arrayOf("A", secondCommunity)),
+                "unparseable root" to comment(arrayOf("A", "not-an-address"), arrayOf("A", movies)),
+                "reply address only, no root" to comment(arrayOf("a", movies)),
+                "root without a value" to comment(arrayOf("A")),
+            )
+
+        shapes.forEach { (name, event) ->
+            assertEquals(
+                originalCommunityAddress(event)?.toValue(),
+                (event as Event).communityAddress()?.toValue(),
+                "communityAddress diverged from the original algorithm for: $name",
+            )
+        }
+    }
+
+    /** The pre-rewrite implementation, kept here purely as the oracle for the test above. */
+    private fun originalCommunityAddress(event: CommentEvent) =
+        event.rootAddress().firstNotNullOfOrNull {
+            if (it.kind == CommunityDefinitionEvent.KIND) it else null
+        }
 
     @Test
     fun commentOnSomethingOtherThanACommunityIsNotATopLevelPost() {
