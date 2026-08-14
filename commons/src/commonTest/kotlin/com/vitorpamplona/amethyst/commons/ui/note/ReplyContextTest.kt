@@ -20,16 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -106,32 +98,5 @@ class ReplyContextTest {
         val rawAddress = "30023:$parentAuthorPubKey:my-article"
         assertTrue(rawAddress.contains(":"))
         assertTrue(!parentEventId.contains(":"))
-    }
-
-    private class StubCache(
-        private val notesById: Map<HexKey, Note>,
-        private val users: Map<HexKey, User> = emptyMap(),
-    ) : ICacheProvider {
-        override fun getAnyChannel(note: Note): Channel? = null
-
-        override val relayHints = HintIndexer()
-
-        override fun getUserIfExists(pubkey: HexKey): User? = users[pubkey]
-
-        override fun countUsers(predicate: (String, User) -> Boolean): Int = 0
-
-        override fun getNoteIfExists(hexKey: HexKey): Note? = notesById[hexKey]
-
-        override fun checkGetOrCreateNote(hexKey: HexKey): Note? = notesById[hexKey]
-
-        override fun getOrCreateAddressableNote(address: Address): AddressableNote = error("not used by ReplyContext.from")
-
-        override fun getEventStream(): ICacheEventStream = error("not used by ReplyContext.from")
-
-        override fun hasBeenDeleted(event: Any): Boolean = false
-
-        override fun getOrCreateUser(pubkey: HexKey): User? = users[pubkey]
-
-        override fun justConsumeMyOwnEvent(event: Event): Boolean = false
     }
 }

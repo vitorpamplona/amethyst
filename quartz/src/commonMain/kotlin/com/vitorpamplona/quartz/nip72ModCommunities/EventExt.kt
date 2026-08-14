@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.any
 import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip22Comments.tags.RootAddressTag
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.tags.CommunityTag
 
@@ -44,8 +45,9 @@ fun Event.isForCommunity(communityAddressId: String): Boolean =
 
 fun Event.communityAddress(): Address? =
     if (this is CommentEvent) {
-        this.rootAddress().firstNotNullOfOrNull {
-            if (it.kind == CommunityDefinitionEvent.KIND) it else null
+        // Stops at the first community root address instead of parsing every `A` tag into a list.
+        this.tags.fastFirstNotNullOfOrNull { tag ->
+            RootAddressTag.parseAddress(tag)?.takeIf { it.kind == CommunityDefinitionEvent.KIND }
         }
     } else {
         this.tags.fastFirstNotNullOfOrNull(CommunityTag::parseAddress)
@@ -64,11 +66,17 @@ fun CommentEvent.isCommunityScoped() = hasRootScopeKind(CommunityDefinitionEvent
  * hence the fallback to the root kind when no `k` is present.
  */
 fun CommentEvent.isTopLevelCommunityPost() =
-    if (directKinds().isEmpty()) {
-        hasRootScopeKind(CommunityDefinitionEvent.KIND_STR)
-    } else {
+    if (hasDirectKinds()) {
         hasReplyScopeKind(CommunityDefinitionEvent.KIND_STR)
+    } else {
+        hasRootScopeKind(CommunityDefinitionEvent.KIND_STR)
     }
+
+/**
+ * The community this comment is a top-level post in, or null when it is a reply to another post
+ * (or not a community comment at all). Checks the cheap kind tags before parsing any address.
+ */
+fun CommentEvent.topLevelCommunityAddress(): Address? = if (isTopLevelCommunityPost()) communityAddress() else null
 
 fun CommentEvent.communityScope() = this.tags.fastFirstNotNullOfOrNull(CommunityTag::parseAddress)
 

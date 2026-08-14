@@ -46,7 +46,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.isTopLevelCommunityPost
  */
 fun replyingDirectlyTo(
     note: Note,
-    cache: ICacheProvider?,
+    cache: ICacheProvider,
 ): Note? {
     val event = note.event
 
@@ -55,14 +55,14 @@ fun replyingDirectlyTo(
     val direct =
         (event as? BaseThreadedEvent)
             ?.replyingToAddressOrEvent()
-            ?.let { cache?.getNoteIfExists(it) }
-            ?.takeIf { cache?.getAnyChannel(it) == null && !it.isCommunityDefinition() }
+            ?.let { cache.getNoteIfExists(it) }
+            ?.takeIf { cache.getAnyChannel(it) == null && !it.isCommunityDefinition() }
 
     return direct ?: note.replyTo?.lastOrNull { !it.isCommunityDefinition() }
 }
 
 /**
- * True for a community definition whether or not its event has arrived -- an addressable note
- * knows its kind from the address alone, which an uncached note's null event cannot tell us.
+ * True for a community definition whether or not its event has arrived. See [Note.kindOrNull] for
+ * why the address has to be consulted instead of the event.
  */
-private fun Note.isCommunityDefinition() = address()?.kind == CommunityDefinitionEvent.KIND || event?.kind == CommunityDefinitionEvent.KIND
+fun Note.isCommunityDefinition() = isKind(CommunityDefinitionEvent.KIND)

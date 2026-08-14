@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +36,6 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -134,25 +132,6 @@ fun CommunityScreen(
     val pagerState = rememberForeverPagerState(note.idHex + "CommunityScreenPagerState") { 2 }
     val expanded = remember { mutableStateOf(false) }
 
-    // This whole screen is dedicated to one community, and its header already shows it. Telling
-    // the rows which scope they are inside stops every post from repeating the same community
-    // card as its parent context.
-    CompositionLocalProvider(LocalCurrentExternalScope provides note.address.toValue()) {
-        CommunityScaffold(note, pagerState, expanded, feedViewModel, modFeedViewModel, accountViewModel, nav)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CommunityScaffold(
-    note: AddressableNote,
-    pagerState: PagerState,
-    expanded: MutableState<Boolean>,
-    feedViewModel: CommunityFeedViewModel,
-    modFeedViewModel: CommunityModerationFeedViewModel,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
     DisappearingScaffold(
         isInvertedLayout = false,
         isActive = { !expanded.value },
@@ -216,26 +195,31 @@ private fun CommunityScaffold(
         },
         accountViewModel = accountViewModel,
     ) {
-        HorizontalPager(
-            state = pagerState,
-        ) { page ->
-            when (page) {
-                0 -> {
-                    RefresheableFeedView(
-                        feedViewModel,
-                        null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                }
+        // Every row here is a post in this one community, which the top bar already names. Telling
+        // the rows which scope they are inside stops each of them from repeating the same
+        // community card as its parent context.
+        CompositionLocalProvider(LocalCurrentExternalScope provides note.idHex) {
+            HorizontalPager(
+                state = pagerState,
+            ) { page ->
+                when (page) {
+                    0 -> {
+                        RefresheableFeedView(
+                            feedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
 
-                1 -> {
-                    RefresheableFeedView(
-                        modFeedViewModel,
-                        null,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                    1 -> {
+                        RefresheableFeedView(
+                            modFeedViewModel,
+                            null,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
+                    }
                 }
             }
         }

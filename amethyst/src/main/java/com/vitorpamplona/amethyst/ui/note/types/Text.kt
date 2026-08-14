@@ -47,9 +47,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
-import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayCommunityScope
-import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
-import com.vitorpamplona.amethyst.ui.note.nip22Comments.LocalCurrentExternalScope
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayCommentScope
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
@@ -62,9 +60,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
-import com.vitorpamplona.quartz.nip72ModCommunities.isTopLevelCommunityPost
-import com.vitorpamplona.quartz.nip73ExternalIds.scope
 
 enum class ReplyRenderType {
     FULL,
@@ -149,23 +144,8 @@ fun RenderTextEvent(
                 }
             }
         } else if (!makeItShort && noteEvent is CommentEvent) {
-            // A comment with no in-cache parent note is scoped to something that isn't a note:
-            // an external identifier (`I` tag) or, for a top-level community post, the community
-            // itself. Show that scope as the reply context -- unless the screen we're in is
-            // already dedicated to this exact scope (e.g. the URL or community screen), in which
-            // case every row would otherwise redundantly repeat the same preview.
-            val community = remember(note) { noteEvent.communityAddress()?.takeIf { noteEvent.isTopLevelCommunityPost() } }
-            val scope = remember(note) { noteEvent.scope() }
-
-            if (community != null) {
-                if (community.toValue() != LocalCurrentExternalScope.current) {
-                    DisplayCommunityScope(community, accountViewModel, nav)
-                    Spacer(modifier = StdVertSpacer)
-                }
-            } else if (scope != null && scope.toScope() != LocalCurrentExternalScope.current) {
-                DisplayExternalId(scope, accountViewModel, nav)
-                Spacer(modifier = StdVertSpacer)
-            }
+            // No in-cache parent note: this comment answers a scope rather than a note.
+            DisplayCommentScope(noteEvent, accountViewModel, nav)
         }
     }
 

@@ -21,12 +21,10 @@
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -53,13 +51,13 @@ fun DisplayCommunityScope(
 ) {
     val communityNote = remember(community) { LocalCache.getOrCreateAddressableNote(community) }
 
-    Row(
+    ShortCommunityHeaderNoActions(
+        baseNote = communityNote,
+        accountViewModel = accountViewModel,
+        nav = nav,
         modifier =
             MaterialTheme.colorScheme.replyModifier
                 .clickable { nav.nav(Route.Community(community.kind, community.pubKeyHex, community.dTag)) }
                 .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ShortCommunityHeaderNoActions(communityNote, accountViewModel, nav)
-    }
+    )
 }

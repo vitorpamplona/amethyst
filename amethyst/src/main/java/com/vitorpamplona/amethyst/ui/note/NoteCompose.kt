@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.QuietMark
 import com.vitorpamplona.amethyst.commons.ui.note.RenderCashuMint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderFedimint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
+import com.vitorpamplona.amethyst.commons.ui.note.isCommunityDefinition
 import com.vitorpamplona.amethyst.commons.ui.note.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -1708,7 +1709,7 @@ fun RenderRepost(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    note.replyTo?.lastOrNull { it.event !is CommunityDefinitionEvent }?.let {
+    note.replyTo?.lastOrNull { !it.isCommunityDefinition() }?.let {
         NoteCompose(
             it,
             modifier = Modifier,

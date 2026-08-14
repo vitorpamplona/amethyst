@@ -396,6 +396,16 @@ open class Note(
 
     open fun address(): Address? = null
 
+    /**
+     * This note's kind, known even before its event arrives: an addressable note carries its kind
+     * in the address itself. Prefer this over `event?.kind` whenever a kind is being *excluded* --
+     * an uncached note has a null event, so `event?.kind != SOME_KIND` silently passes for every
+     * note that simply hasn't loaded yet.
+     */
+    fun kindOrNull(): Int? = address()?.kind ?: event?.kind
+
+    fun isKind(kind: Int) = kindOrNull() == kind
+
     open fun createdAt() = event?.createdAt
 
     fun isDraft() = event is DraftWrapEvent

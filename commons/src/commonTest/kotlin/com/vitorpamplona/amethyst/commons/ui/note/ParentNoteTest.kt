@@ -21,15 +21,9 @@
 package com.vitorpamplona.amethyst.commons.ui.note
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlin.test.Test
 import kotlin.test.assertNull
@@ -78,20 +72,25 @@ class ParentNoteTest {
         assertNull(replyingDirectlyTo(noteOf(event), cache))
     }
 
-    /** Same post once the definition has loaded: still no parent card, via the address kind. */
+    /**
+     * A reply whose own parent isn't tagged: `replyingToAddressOrEvent()` falls back to the root
+     * `A`, so the resolved candidate is the community. This is the path the top-level guard does
+     * *not* cover -- it reaches the address-kind exclusion, which has to hold even though the
+     * community's definition event has never loaded and its `event` is therefore null.
+     */
     @Test
-    fun topLevelCommunityPostHasNoParentOnceTheDefinitionLoads() {
+    fun replyFallingBackToTheCommunityRootHasNoParent() {
         val event =
             comment(
                 arrayOf("A", movies),
-                arrayOf("a", movies),
                 arrayOf("K", "34550"),
-                arrayOf("k", "34550"),
+                arrayOf("k", "1111"),
             )
 
-        val community = AddressableNote(moviesAddress)
-        val cache = StubCache(notesById = mapOf(movies to community))
+        val unloadedCommunity = AddressableNote(moviesAddress)
+        val cache = StubCache(notesById = mapOf(movies to unloadedCommunity))
 
+        assertNull(unloadedCommunity.event, "the exclusion must not depend on the definition being cached")
         assertNull(replyingDirectlyTo(noteOf(event), cache))
     }
 
@@ -151,39 +150,5 @@ class ParentNoteTest {
         val cache = StubCache(notesById = mapOf(parentId to parent), channelFor = setOf(parentId))
 
         assertNull(replyingDirectlyTo(note, cache))
-    }
-
-    private class StubCache(
-        private val notesById: Map<HexKey, Note>,
-        private val channelFor: Set<HexKey> = emptySet(),
-    ) : ICacheProvider {
-        override val relayHints = HintIndexer()
-
-        override fun getAnyChannel(note: Note): Channel? =
-            if (note.idHex in channelFor) {
-                object : Channel() {
-                    override fun toBestDisplayName() = "a channel"
-                }
-            } else {
-                null
-            }
-
-        override fun getUserIfExists(pubkey: HexKey): User? = null
-
-        override fun countUsers(predicate: (String, User) -> Boolean): Int = 0
-
-        override fun getNoteIfExists(hexKey: HexKey): Note? = notesById[hexKey]
-
-        override fun checkGetOrCreateNote(hexKey: HexKey): Note? = notesById[hexKey]
-
-        override fun getOrCreateAddressableNote(address: Address): AddressableNote = error("not used by replyingDirectlyTo")
-
-        override fun getEventStream(): ICacheEventStream = error("not used by replyingDirectlyTo")
-
-        override fun hasBeenDeleted(event: Any): Boolean = false
-
-        override fun getOrCreateUser(pubkey: HexKey): User? = null
-
-        override fun justConsumeMyOwnEvent(event: Event): Boolean = false
     }
 }
