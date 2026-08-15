@@ -53,11 +53,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.Insets
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
@@ -76,9 +73,10 @@ import com.vitorpamplona.amethyst.commons.R as CommonsR
  * process. Unlike the embedded browser ([NappletBrowserService], which streams its surface to the main
  * app through SurfaceControlViewHost — a path that, on current Android, forwards taps but drops scroll/
  * zoom/keyboard gestures), this hosts the WebView **directly** in its own window, so scrolling, pinch
- * zoom, and the soft keyboard (`adjustResize`) all work natively. It stays just as keyless: the page JS
- * runs here, every NIP-07 `window.nostr` call is brokered + consent-gated in the main process per origin,
- * and the keys never leave it.
+ * zoom, and the soft keyboard all work natively — the window insets the content for the IME itself (see
+ * [applyFullScreenHostInsets]). It stays just as keyless: the page JS runs here, every NIP-07
+ * `window.nostr` call is brokered + consent-gated in the main process per origin, and the keys never
+ * leave it.
  *
  * Mirrors [NappletHostActivity]'s sandbox scaffolding (trusted chrome, loading screen, foreground hold)
  * but loads a live URL directly instead of serving verified blobs through a shell.
@@ -214,15 +212,10 @@ class NappletBrowserActivity : ComponentActivity() {
                 addView(topProgressBar)
             }
         setContentView(root)
-        // Pad by the system bars + cutout, but NOT the IME — windowSoftInputMode=adjustResize shrinks the
-        // window when the keyboard shows, and the WebView (filling contentFrame) resizes so focused inputs
-        // stay visible. Zero the consumed insets before they reach the WebView so it doesn't double-pad.
-        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
-            val applied = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-            val bars = insets.getInsets(applied)
-            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
-            WindowInsetsCompat.Builder(insets).setInsets(applied, Insets.NONE).build()
-        }
+        // Pad by the system bars + cutout AND the IME: on an edge-to-edge window (enforced for targetSdk
+        // 35+ on Android 15+) windowSoftInputMode=adjustResize no longer shrinks the window, so without
+        // this the keyboard covers the bottom of the page. See applyFullScreenHostInsets.
+        root.applyFullScreenHostInsets()
 
         contentFrame.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         loadingView = buildLoadingView().also { contentFrame.addView(it) }

@@ -56,9 +56,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.Insets
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
@@ -304,19 +301,10 @@ class NappletHostActivity : ComponentActivity() {
                 addView(topProgressBar)
             }
         setContentView(root)
-        // Activities are edge-to-edge by default on recent Android; pad by the system bar and
-        // display-cutout insets so neither the chrome nor the applet draws under the system bars.
-        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
-            val applied = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-            val bars = insets.getInsets(applied)
-            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
-            // Zero the insets we just turned into padding before they reach the child WebView: on
-            // targetSdk 35+ the WebView auto-applies any insets it receives to its own web content, so
-            // leaving them un-consumed padded the bottom a SECOND time — a band of the page's own
-            // background above the navigation bar. Keep the other types (notably IME) flowing so the
-            // applet's keyboard-aware resize still works.
-            WindowInsetsCompat.Builder(insets).setInsets(applied, Insets.NONE).build()
-        }
+        // Activities are edge-to-edge by default on recent Android; pad by the system bar, display-cutout
+        // and IME insets so neither the chrome nor the applet draws under the system bars or the soft
+        // keyboard (adjustResize no longer resizes an edge-to-edge window). See applyFullScreenHostInsets.
+        root.applyFullScreenHostInsets()
 
         probeAndMount()
     }

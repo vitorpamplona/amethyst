@@ -559,7 +559,9 @@
 
         <!-- Direct-WebView browser for a single web client. Runs in the isolated, keyless `:napplet`
              process and hosts the WebView directly (not a streamed surface), so scroll/zoom/keyboard work
-             natively. adjustResize shrinks the window for the soft keyboard. Its own task/recents entry. -->
+             natively. The activity insets its own content for the soft keyboard (adjustResize only still
+             applies below Android 15, where the window is not forced edge-to-edge). Its own task/recents
+             entry. -->
         <activity
             android:name="com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity"
             android:process=":napplet"

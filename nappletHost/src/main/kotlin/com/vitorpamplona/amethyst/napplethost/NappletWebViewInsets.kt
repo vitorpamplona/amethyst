@@ -20,10 +20,42 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import android.view.View
 import android.webkit.WebView
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+
+/**
+ * Insets the root of a **full-screen** sandbox host (browser / napplet / nsite) by the system bars,
+ * the display cutout, **and the IME**, then hides those types from its children.
+ *
+ * The IME half is not optional on current Android. These activities used to lean on
+ * `windowSoftInputMode="adjustResize"` to shrink the window when the keyboard opened — the WebView
+ * shrank with it and the focused input stayed visible. That flag is a **no-op for apps targeting SDK
+ * 35+** running on Android 15+: edge-to-edge is enforced, the window keeps its full height, and the
+ * keyboard simply draws over the bottom of the page. Padding the root by the IME inset reproduces the
+ * old resize behaviour on our side of the window.
+ *
+ * The bottom is `max(bars, ime)` rather than a sum because an open IME sits *over* the navigation bar;
+ * adding them would leave a dead band the height of the nav bar above the keyboard.
+ *
+ * Zeroing the consumed types before they reach the children matters for the same reason
+ * [dropSystemBarInsets] exists: on targetSdk 35+ a WebView applies whatever insets it receives to its
+ * own web content, so leaving them un-consumed pads the page a second time.
+ */
+fun View.applyFullScreenHostInsets() {
+    ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+        val barTypes = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        val bars = insets.getInsets(barTypes)
+        val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+        view.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
+        WindowInsetsCompat
+            .Builder(insets)
+            .setInsets(barTypes or WindowInsetsCompat.Type.ime(), Insets.NONE)
+            .build()
+    }
+}
 
 /**
  * Stops an **embedded** sandbox WebView from inseting its own web content for the system bars.
