@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
@@ -39,7 +40,6 @@ import com.vitorpamplona.quartz.buzz.workspace.buzzParticipants
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -284,8 +284,14 @@ class BuzzDmListViewModel : ViewModel() {
             ).maxOfOrNull { it.createdAt() ?: 0L } ?: 0L
 
     /**
-     * Keeps a live 44100 + 30622 REQ open (so new DMs / hide changes arrive) and re-projects the
-     * inbox when the registry or dialect set moves. Idempotent; torn down with the ViewModel.
+     * Re-projects the inbox as new DMs and hide changes arrive. Idempotent; torn down with the ViewModel.
+     *
+     * The 44100/30622 stream itself is **not** subscribed here. `bind` marks this community's relay a
+     * joined workspace, which is exactly what
+     * [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager]
+     * keys its always-on `#p=me` subscription on — so opening this screen used to put a second, identical
+     * REQ on the same relay. Observing [LocalCache] instead means the screen sees the same events at the
+     * same time for free, and the relay sees one subscription.
      */
     private fun startLive() {
         val account = account ?: return
@@ -294,23 +300,30 @@ class BuzzDmListViewModel : ViewModel() {
 
         liveJob =
             viewModelScope.launch(Dispatchers.IO) {
-                relays().forEach { relay ->
-                    launch {
-                        val filter = Filter(kinds = listOf(MemberAddedNotificationEvent.KIND), tags = mapOf("p" to listOf(myPubkey)))
-                        account.client.subscribeAsFlow(relay, filter).collect { events ->
-                            var changed = false
-                            events.filterIsInstance<MemberAddedNotificationEvent>().forEach { e ->
-                                e.channel()?.let { if (memberChannels.put(it, relay) == null) changed = true }
-                            }
-                            if (changed) {
-                                fetchMetadata(account)
-                                rebuildRows(account)
-                            }
+                launch {
+                    LocalCache.observeNotes(membershipNoticeFilter(myPubkey)).collect { notes ->
+                        // Re-read the relay scope per pass rather than snapshotting it: a workspace
+                        // joined while this screen is open should bring its channels with it.
+                        val scoped = relays()
+                        val memberships =
+                            BuzzChannelInvites
+                                .currentMemberships(notes.toMembershipNotices())
+                                .filterValues { it in scoped }
+                        var changed = false
+                        memberships.forEach { (channelId, relay) ->
+                            if (memberChannels.put(channelId, relay) == null) changed = true
                         }
-                    }
-                    launch {
-                        val filter = Filter(kinds = listOf(DmVisibilityEvent.KIND), tags = mapOf("p" to listOf(myPubkey)))
-                        account.client.subscribeAsFlow(relay, filter).collect { /* consumed → BuzzDmRegistry.hidden */ }
+                        // A 44101 takes the membership away: drop the row rather than leaving a
+                        // conversation the relay no longer lets us read.
+                        val gone = memberChannels.keys.filter { it !in memberships }
+                        if (gone.isNotEmpty()) {
+                            gone.forEach { memberChannels.remove(it) }
+                            changed = true
+                        }
+                        if (changed) {
+                            fetchMetadata(account)
+                            rebuildRows(account)
+                        }
                     }
                 }
                 // Re-project when my hidden set (30622) or the joined-relay set changes.

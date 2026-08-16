@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -1731,7 +1730,6 @@ class AccountViewModel(
         launchSigner {
             account.settings.undismissChannelInvite(channel.groupId.id)
             account.follow(channel)
-            BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
         }
 
     /**
@@ -1763,14 +1761,21 @@ class AccountViewModel(
      */
     fun dismissChannelInvite(channelId: String) {
         account.settings.dismissChannelInvite(channelId)
-        BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channelId)
     }
 
-    /** Actually leave: kind-9022 to the host relay, and drop it from my list and the pending set. */
+    /**
+     * Actually leave: kind-9022 to the host relay, which answers with a kind-44101 that supersedes the
+     * add and drops the prompt on its own.
+     *
+     * The local dismissal is recorded too, so the card goes the moment the button is tapped rather than
+     * a relay round-trip later — and so a relay that never emits the 44101 can't leave a prompt standing
+     * for a membership it has already taken away. Same choice [removeRelayGroupFromMessages] makes for
+     * its half of the pair.
+     */
     fun leaveChannelInvite(channel: RelayGroupChannel) =
         launchSigner {
+            account.settings.dismissChannelInvite(channel.groupId.id)
             account.relayGroups.leaveRelayGroup(channel)
-            BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
         }
 
     /**
