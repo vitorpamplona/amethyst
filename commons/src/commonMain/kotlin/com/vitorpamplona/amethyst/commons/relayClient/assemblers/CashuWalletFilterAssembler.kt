@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
@@ -134,3 +135,36 @@ fun cashuWalletFilters(
 
     return ownedSubs + inboundSubs
 }
+
+/**
+ * The filter used to **page** the account's whole proof set back from a relay,
+ * as opposed to [cashuWalletFilters], which opens a live subscription.
+ *
+ * The live subscription sends one REQ with no `limit` and takes whatever the
+ * relay decides to give back. Relays cap an unbounded REQ (NIP-11
+ * `limitation.max_limit`, or a hard-coded default) and serve the **newest**
+ * events within that cap, so a wallet whose kind:7375 events are outnumbered
+ * by its kind:7376 history — which is every wallet after a few hundred
+ * transactions — silently receives only a suffix of its proofs. Everything
+ * downstream (balance, per-mint balances, coin selection) is a pure function
+ * of that suffix, which is why two devices on the same account can show two
+ * different balances and neither is right.
+ *
+ * There is no way to detect the truncation from the REQ itself: a capped
+ * response and a complete one both just EOSE. The only fix is to not rely on
+ * one REQ — hand this to `fetchAllPages` / `fetchAllPagesFromPool`, which
+ * walks `until` cursors until a page comes back empty and thereby reaches
+ * events of any age regardless of the cap.
+ *
+ * Scoped to kind:7375 alone. Those are the events that carry money; history,
+ * quotes and recommendations are display-only, and paging them too would
+ * multiply the download for a wallet with a long history without changing a
+ * single balance.
+ */
+fun cashuProofBackfillFilters(pubkey: HexKey): List<Filter> =
+    listOf(
+        Filter(
+            kinds = listOf(CashuTokenEvent.KIND),
+            authors = listOf(pubkey),
+        ),
+    )

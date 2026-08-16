@@ -552,7 +552,27 @@ class CashuMintOperations(
         )
     }
 
+    /**
+     * Resolve one keyset's amount→pubkey map by id, **including keysets the
+     * mint has rotated out of active service**.
+     *
+     * `/v1/keys` returns only the active keysets, so resolving through it
+     * makes every inactive keyset unresolvable — and since a NUT-13 counter
+     * chain is scoped to a keyset id, that silently made a NUT-09 restore of
+     * anything minted before the mint's last rotation impossible: the restore
+     * threw "Mint doesn't expose keyset X", or was never attempted at all.
+     * NUT-01's `/v1/keys/{keyset_id}` is the endpoint that answers for any
+     * keyset the mint has ever published, active or not, so ask that first and
+     * keep the active-list lookup as the fallback for mints that don't serve
+     * the per-id route.
+     */
     private suspend fun fetchKeysetById(keysetId: String): KeysetDto {
+        runCatching { client.keysetById(keysetId) }
+            .getOrNull()
+            ?.keysets
+            ?.firstOrNull { it.id == keysetId }
+            ?.let { return it }
+
         val response = client.activeKeysets()
         return response.keysets.firstOrNull { it.id == keysetId }
             ?: throw IllegalStateException("Mint doesn't expose keyset $keysetId")
@@ -560,6 +580,27 @@ class CashuMintOperations(
 
     /** Public surface for callers that need the active keyset (NUT-09 restore driver). */
     suspend fun activeKeyset(): KeysetDto = fetchKeyset()
+
+    /**
+     * Every keyset id at this mint a NUT-09 restore should walk, for [unit],
+     * active keysets first.
+     *
+     * A restore driver that only scans the *active* keyset finds nothing for a
+     * wallet whose proofs were minted before the mint's last keyset rotation —
+     * which, for a mint that rotates on any schedule at all, is most of an
+     * older wallet's balance. Each keyset carries its own NUT-13 counter chain
+     * (`m/129372'/0'/<keyset-id-int>'/<counter>'`), so proofs under a retired
+     * keyset are simply not on the path the active-only scan derives.
+     *
+     * Active first so a caller that cares about counter bookkeeping (only the
+     * active keyset can receive new mints, so only its counter governs future
+     * derivations) sees it before spending its scan budget elsewhere.
+     */
+    suspend fun restorableKeysetIds(unit: String = "sat"): List<String> {
+        val summaries = client.keysets().keysets.filter { it.unit == unit }
+        if (summaries.isEmpty()) return listOfNotNull(runCatching { activeKeyset().id }.getOrNull())
+        return summaries.sortedByDescending { it.active }.map { it.id }.distinct()
+    }
 
     /**
      * NUT-12 §3 Carol-side DLEQ verification on a batch of proofs that

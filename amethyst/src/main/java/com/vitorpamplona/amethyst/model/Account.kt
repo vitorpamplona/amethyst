@@ -709,6 +709,7 @@ class Account(
             pubKey = signer.pubKey,
             signer = signer,
             cache = cache,
+            client = client,
             scope = scope,
             outboxRelaysFlow = outboxRelays.flow,
             inboxRelaysFlow = notificationRelays.flow,

@@ -1111,12 +1111,34 @@ class CashuWalletOps(
      * funds into the wallet.
      *
      * Process:
-     *  1. Fetch the mint's active keyset.
-     *  2. Drive [CashuMintOperations.restore] — scans counters in batches
-     *     until enough empty batches in a row signal "no more proofs".
-     *  3. Filter the returned proofs through /v1/checkstate to keep only
+     *  1. List **every** keyset the mint has published for this unit — see
+     *     below on why the active one is not enough.
+     *  2. Drive [CashuMintOperations.restore] per keyset — scans counters in
+     *     batches until enough empty batches in a row signal "no more proofs".
+     *  3. Filter the pooled proofs through /v1/checkstate to keep only
      *     UNSPENT ones — NUT-09 alone returns even spent proofs.
      *  4. Drop secrets already present in [existingSecrets].
+     *
+     * ### Every keyset, not just the active one
+     *
+     * NUT-13 derives a separate counter chain per keyset
+     * (`m/129372'/0'/<keyset-id-int>'/<counter>'`), so a proof minted under a
+     * keyset the mint has since rotated out is not reachable from the active
+     * keyset's derivation path at any counter. Scanning only the active keyset
+     * therefore reports "nothing to recover" for exactly the balance a restore
+     * exists to find: the older it is, the more likely its keyset is retired.
+     * That looked like an empty wallet rather than an incomplete scan, because
+     * a scan that never asks and a scan that finds nothing return the same
+     * thing.
+     *
+     * A keyset that errors out (mint won't serve its keys, restore rejected)
+     * is logged and skipped so one bad keyset can't sink the whole recovery.
+     *
+     * [RecoverableProofs.keysetId] and [RecoverableProofs.nextCounterAfterScan]
+     * continue to describe the **active** keyset specifically, because that is
+     * the only chain the wallet will derive new secrets on — an inactive
+     * keyset can never receive another mint, so advancing a counter for it
+     * would protect nothing.
      *
      * Since it neither signs, swaps, nor publishes, this is safe to run
      * speculatively across many candidate wallets/seeds.
@@ -1129,28 +1151,36 @@ class CashuWalletOps(
     ): RecoverableProofs {
         seedWarmer()
         val mintOps = ops(mintUrl)
-        val activeKeyset = mintOps.activeKeyset()
-        val result =
-            mintOps.restore(
-                seed = seed,
-                keysetId = activeKeyset.id,
-                startCounter = startCounter,
-            )
-        if (result.proofs.isEmpty()) {
-            return RecoverableProofs(mintUrl, result.keysetId, emptyList(), result.nextCounterAfterScan)
+        val activeKeysetId = mintOps.activeKeyset().id
+        val keysetIds = mintOps.restorableKeysetIds()
+
+        val recovered = mutableListOf<CashuProof>()
+        var activeNextCounter = startCounter
+        for (keysetId in keysetIds) {
+            val result =
+                runCatching { mintOps.restore(seed = seed, keysetId = keysetId, startCounter = startCounter) }
+                    .onFailure {
+                        Log.w("CashuWalletOps") {
+                            "NUT-09 restore of keyset $keysetId at $mintUrl failed: ${describeMintError(it)}"
+                        }
+                    }.getOrNull() ?: continue
+            if (keysetId == activeKeysetId) activeNextCounter = result.nextCounterAfterScan
+            recovered += result.proofs.map { it.proof }
+        }
+
+        if (recovered.isEmpty()) {
+            return RecoverableProofs(mintUrl, activeKeysetId, emptyList(), activeNextCounter)
         }
 
         // /v1/checkstate filters out proofs that were minted but already
         // melted or sent. Without this, recovered "balance" would include
         // already-spent proofs that the mint would reject at next swap.
-        val stateMap = mintOps.checkStates(result.proofs.map { it.proof })
+        val stateMap = mintOps.checkStates(recovered)
         val unspent =
-            result.proofs
-                .filter { recovered ->
-                    stateMap[recovered.proof.secret] == ProofState.UNSPENT &&
-                        recovered.proof.secret !in existingSecrets
-                }.map { it.proof }
-        return RecoverableProofs(mintUrl, result.keysetId, unspent, result.nextCounterAfterScan)
+            recovered.filter { proof ->
+                stateMap[proof.secret] == ProofState.UNSPENT && proof.secret !in existingSecrets
+            }
+        return RecoverableProofs(mintUrl, activeKeysetId, unspent, activeNextCounter)
     }
 
     /**

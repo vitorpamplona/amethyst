@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.cashu.ops.SendTokenCompleted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuProofBackfillFilters
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -35,6 +36,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPagesFromPool
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -61,12 +64,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import java.util.concurrent.ConcurrentHashMap
 
@@ -99,6 +104,7 @@ class CashuWalletState(
     private val pubKey: HexKey,
     private val signer: NostrSigner,
     private val cache: LocalCache,
+    private val client: INostrClient,
     private val scope: CoroutineScope,
     private val outboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
     private val inboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
@@ -519,6 +525,129 @@ class CashuWalletState(
                     if (ids.isNotEmpty()) removeEvents(ids)
                 }
             }
+
+        // Page the full proof set back, once, as soon as we know where to ask.
+        // The live subscription above cannot do this on its own — see
+        // [resyncProofsFromRelays].
+        jobs +=
+            scope.launch(Dispatchers.IO) {
+                val relays =
+                    withTimeoutOrNull(BACKFILL_RELAY_WAIT_MS) {
+                        outboxRelaysFlow.first { it.isNotEmpty() }
+                    }
+                if (relays == null) {
+                    Log.w("CashuWallet") { "No outbox relays after ${BACKFILL_RELAY_WAIT_MS}ms; skipping proof backfill" }
+                } else {
+                    resyncProofsFromRelays()
+                }
+            }
+    }
+
+    // ============================================================
+    // Proof backfill — paging past the relay's REQ cap
+    // ============================================================
+
+    /**
+     * True once a paged proof walk has completed for this session. Guards the
+     * automatic backfill only; [resyncProofsFromRelays] with `force` ignores it.
+     */
+    @Volatile private var proofBackfillDone = false
+
+    private val proofBackfillMutex = Mutex()
+
+    /**
+     * Re-download **every** kind:7375 this account ever published, by paging
+     * each outbox relay with `until` cursors, and then reconcile the result
+     * against the mints.
+     *
+     * ### Why this is needed
+     *
+     * [balanceSats] is a pure function of [_tokenEntries], which is a pure
+     * function of the kind:7375 events we happen to hold. Those arrive over the
+     * live wallet subscription, which sends one unbounded REQ per relay. A relay
+     * answers an unbounded REQ with its own cap (NIP-11 `limitation.max_limit`,
+     * or a hard-coded default) applied to the **newest** matching events — and
+     * the same filter also asks for kind:7376 history, which outnumbers the
+     * proofs by an order of magnitude on any wallet with a few hundred
+     * transactions. The proofs that lose that race are the ones at mints the
+     * user has not touched recently, so what drops off the bottom is precisely
+     * the balance the user forgot they had.
+     *
+     * Nothing recovers from it afterwards: a capped page and a complete page
+     * both just EOSE, and [PerUserEoseManager] records that EOSE as the `since`
+     * for every later REQ to that relay, so the events below the cap are never
+     * asked for again. The subset is stable across cold starts (same filter,
+     * same cap, same events) but differs between devices whose relay set,
+     * arrival order or uptime differ — which is why one account can read 39 sat
+     * on one phone, 1443 on another and 2522 on a third, with none of them
+     * being the wallet's actual balance.
+     *
+     * ### What this does
+     *
+     * `fetchAllPagesFromPool` walks each relay backwards page by page until a
+     * page comes back empty, so the cap bounds a page instead of the download.
+     * Events land in [LocalCache] through the client-wide `EventCollector`, but
+     * we also index what we receive directly rather than waiting on the bundled
+     * cache round-trip, so the balance is correct the moment the walk returns.
+     *
+     * ### Why the scrub afterwards
+     *
+     * Spent proofs are retired with a NIP-09 kind:5, and a relay that ignores
+     * deletions will happily hand those kind:7375 events back on a paged walk.
+     * Taken alone, this would trade an under-count for an over-count. So when
+     * the walk actually recovered something, we finish with the NUT-07
+     * [scrubLocallyStaleProofs] sweep: the mint — not the relay — decides which
+     * proofs are still unspent, and anything it calls SPENT is dropped and
+     * re-deleted. The sweep is skipped when the walk found nothing new, so a
+     * steady-state launch costs no mint traffic.
+     *
+     * Returns the number of kind:7375 events the walk delivered that we did not
+     * already hold, or null when it could not run (not started, no relays, or
+     * already done and not forced).
+     */
+    suspend fun resyncProofsFromRelays(force: Boolean = false): Int? {
+        if (!started) return null
+        if (proofBackfillDone && !force) return null
+        return proofBackfillMutex.withLock {
+            if (proofBackfillDone && !force) return@withLock null
+            val relays = outboxRelaysFlow.value
+            // Don't latch on an empty relay set — the NIP-65 list may simply not
+            // have arrived yet, and the caller retries once it does.
+            if (relays.isEmpty()) return@withLock null
+
+            val filters = cashuProofBackfillFilters(pubKey)
+            // The callback runs on the relay reader thread and must not suspend,
+            // so collect first and index after the walk.
+            val collected = ConcurrentHashMap<HexKey, CashuTokenEvent>()
+            runCatching {
+                client.fetchAllPagesFromPool(
+                    filters = relays.associateWith { filters },
+                    idleTimeoutMs = BACKFILL_IDLE_TIMEOUT_MS,
+                ) { event, _ ->
+                    if (event is CashuTokenEvent && event.pubKey == pubKey) {
+                        collected.putIfAbsent(event.id, event)
+                    }
+                }
+            }.onFailure {
+                Log.w("CashuWallet", "Paged proof backfill failed", it)
+            }
+
+            val fresh = collected.values.filter { it.id !in tokenEvents.keys }
+            Log.i("CashuWallet") {
+                "Proof backfill over ${relays.size} relay(s): ${collected.size} kind:7375 seen, ${fresh.size} new"
+            }
+            proofBackfillDone = true
+
+            if (fresh.isNotEmpty()) {
+                applyEvents(fresh)
+                // A relay that ignores NIP-09 just handed back proofs the mint
+                // already burned. Let the mint arbitrate before the user sees a
+                // number.
+                runCatching { scrubLocallyStaleProofs() }
+                    .onFailure { Log.w("CashuWallet", "Post-backfill NUT-07 sweep failed", it) }
+            }
+            fresh.size
+        }
     }
 
     fun destroy() {
@@ -1566,6 +1695,22 @@ class CashuWalletState(
          * wallet-less users don't stare at a spinner.
          */
         const val DISCOVERY_TIMEOUT_MS = 8_000L
+
+        /**
+         * How long the startup proof backfill waits for a non-empty outbox
+         * relay set before giving up. The NIP-65 list is restored from
+         * AccountSettings almost immediately on a returning launch; this
+         * window only matters on a first sign-in, where the list has to come
+         * off the network before we know where the wallet's events live.
+         */
+        private const val BACKFILL_RELAY_WAIT_MS = 30_000L
+
+        /**
+         * Per-page idle window for the paged proof walk — measured from the
+         * relay's last message, not from the page's start, so a relay actively
+         * streaming a long backlog is never cut off mid-page.
+         */
+        private const val BACKFILL_IDLE_TIMEOUT_MS = 30_000L
 
         private const val NOT_STARTED_MESSAGE = "CashuWalletState.start() not called"
     }
