@@ -115,11 +115,11 @@ fun RenderCardFeed(
     // LazyColumns then share the same listState and only the top one scrolls.
     when (val state = feedState) {
         is CardFeedState.Empty -> {
-            NotificationFeedEmpty(feedContent::invalidateData)
+            HeaderAbove(headerContent) { NotificationFeedEmpty(feedContent::invalidateData) }
         }
 
         is CardFeedState.FeedError -> {
-            FeedError(state.errorMessage, feedContent::invalidateData)
+            HeaderAbove(headerContent) { FeedError(state.errorMessage, feedContent::invalidateData) }
         }
 
         is CardFeedState.Loaded -> {
@@ -137,7 +137,37 @@ fun RenderCardFeed(
         }
 
         CardFeedState.Loading -> {
-            LoadingFeed()
+            HeaderAbove(headerContent) { LoadingFeed() }
+        }
+    }
+}
+
+/**
+ * Draws [headerContent] above a non-loaded feed state.
+ *
+ * The header is not part of the feed's contents — it carries standing prompts (a pending channel
+ * invite, "you have no inbox relay") that are true regardless of whether any notification has loaded.
+ * Drawing it only in the `Loaded` branch made it blink out and back on every visit, because arriving on
+ * the screen re-runs `checkKeysInvalidateDataAndSendToTop` and any refresh that momentarily computes an
+ * empty list flips the state through `Empty`/`Loading` (see the `CardFeedState` comment above). Worse
+ * for the relay prompt specifically: a missing inbox relay is the most likely *reason* the feed is
+ * empty, so the one state that hid it was the one that needed it.
+ *
+ * The padding is applied here because only the `Loaded` branch has a `LazyColumn` to carry the
+ * scaffold's inset as content padding; without it the header would draw under the disappearing top bar.
+ * Same shape [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed.ChatroomListFeedView] uses.
+ */
+@Composable
+private fun HeaderAbove(
+    headerContent: (@Composable () -> Unit)?,
+    content: @Composable () -> Unit,
+) {
+    if (headerContent == null) {
+        content()
+    } else {
+        Column(Modifier.fillMaxSize().padding(rememberFeedContentPadding(FeedPadding))) {
+            headerContent()
+            content()
         }
     }
 }
