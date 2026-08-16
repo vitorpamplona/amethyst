@@ -512,9 +512,9 @@
         \n\n यदि आप अपना पारणशब्द खो देते हैं, तो आप अपनी कुंचिका को पुनः प्राप्त नहीं कर सकते।
     </string>
     <string name="backup_keys_nudge_title">अपने कुंचिकाओं को सुरक्षित रखें</string>
-    <string name="backup_keys_nudge_body">आपकी गुप्त कुंचिका एकमात्र विधि है इस लेखा का अभिगमन के लिए। यदि आप इसे खो देते हैं तो इसे कभी भी पुनःप्राप्त नहीं कर सकते। इसे कहीं सुरक्षित रखें अभी इस समय।</string>
-    <string name="backup_keys_nudge_backup_now">अभी सुरक्षित अनुकृति बनाएँ</string>
-    <string name="backup_keys_nudge_already_saved">उनका अभिलेखन मैंने कर लिया</string>
+    <string name="backup_keys_nudge_body">आपकी गुप्त कुंचिका एकमात्र विधि है इस लेखा का अभिगमन करने के लिए। यदि आप इसे खो देते हैं तो इसे कभी भी पुनःप्राप्त नहीं कर सकते। इसे कहीं सुरक्षित रखें अभी इस समय।</string>
+    <string name="backup_keys_nudge_backup_now">अभी इसी समय सुरक्षित अनुकृति बनाएँ</string>
+    <string name="backup_keys_nudge_already_saved">उनको मैंने सुरक्षित कर लिया</string>
     <string name="backup_keys_nudge_dismiss">हटाएँ</string>
     <string name="failed_to_encrypt_key">आपकी निजी कुंचिका का रहस्यीकरण असफल</string>
     <string name="secret_key_copied_to_clipboard">गुप्त कुंचिका (एनसेक॰) की अनुकृति टाँकाफलक में की गई</string>
@@ -1098,21 +1098,21 @@
     <string name="napplet_connected_app_empty">कोई क्रमक संयोजित नहीं अब तक। \n\n जब एक जाल क्रमक आपकी नोस्टर कुंचिका के साथ जुडता है तब वह यहाँ प्रकट होगा।</string>
     <!-- Relay Authentication (NIP-42) settings -->
     <string name="relay_auth_settings_title">पुनःप्रसारक प्रमाणीकरण</string>
-    <string name="relay_auth_search_keywords">प्रमाण प्रमाणीकरण पुनःप्रसारक हस्ताक्षरण सत्यापन निप॰४२ परिचय</string>
-    <string name="relay_auth_global_policy">प्रमाणीकरण कब करना चाहिए</string>
-    <string name="relay_auth_policy_always">सर्वदा प्रमाणीकरण</string>
-    <string name="relay_auth_policy_always_desc">प्रमाणीकरण चुनौतियों को हस्ताक्षर प्रत्येक पुनःप्रसारक के लिए जो इसका अनुरोध करता है</string>
-    <string name="relay_auth_policy_never">प्रमाणीकरण कभी ना करें</string>
-    <string name="relay_auth_policy_never_desc">प्रमाणीकरण चुनौतियों की उपेक्षा सभी पुनःप्रसारकों के प्रति</string>
-    <string name="relay_auth_policy_custom">अनुकूलित</string>
-    <string name="relay_auth_policy_custom_desc">स्पष्ट चयन करें किन पुनःप्रसारकों में प्रवेशांकन करना चाहिए। नीचे जिसको अनुमति नहीं दी गई उन सब के विषय में आप पूछे जाएँगे।</string>
+    <string name="relay_auth_search_keywords">प्रमाण प्रमाणीकरण प्रवेशांकन पुनःप्रसारक हस्ताक्षरण सत्यापन निप॰४२ परिचय</string>
+    <string name="relay_auth_global_policy">जब एक पुनःप्रसारक पूछता है कि आप कौन हैं</string>
+    <string name="relay_auth_policy_always">सर्वदा प्रवेशांकन</string>
+    <string name="relay_auth_policy_always_desc">प्रत्येक पुनःप्रसारक जो पूछता है।</string>
+    <string name="relay_auth_policy_never">प्रवेशांकन कभी ना करें</string>
+    <string name="relay_auth_policy_never_desc">कुछ पुनःप्रसारक आपकी सेवा करना नहीं स्वीकारेंगे।</string>
+    <string name="relay_auth_policy_custom">निर्णय लें प्रति पुनःप्रसारक अनुसार</string>
+    <string name="relay_auth_policy_custom_desc">नीचे के प्रकरणों में अनुमत। अन्यों के विषय में पूछें।</string>
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">कब पूछे बिना प्रवेशांकन करें\u2026</string>
     <string name="relay_auth_auto_my_relays">\u2026यह मेरा पुनःप्रसारक है। अथवा एक शाला जिससे मैं जुड चुका</string>
-    <string name="relay_auth_auto_read_follows">\u2026मैं पढ रहा हूँ किसी को जिसका अनुगमन करता हूँ</string>
-    <string name="relay_auth_auto_message_follows">\u2026मैं सन्देश भेज रहा हूँ किसी को जिसका अनुगमन करता हूँ</string>
+    <string name="relay_auth_auto_read_follows">\u2026मैं पढ रहा हूँ किसी को जिसका मैं अनुगमन करता हूँ</string>
+    <string name="relay_auth_auto_message_follows">\u2026मैं सन्देश भेज रहा हूँ किसी को जिसका मैं अनुगमन करता हूँ</string>
     <string name="relay_auth_auto_message_strangers">\u2026मैं किसी अन्य को सन्देश भेज रहा हूँ</string>
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
@@ -1156,7 +1156,7 @@
     <string name="relay_auth_undo">पूर्ववत</string>
     <string name="relay_auth_blocked_section">आपकी अवरोधनसूची द्वारा अवरोधित</string>
     <string name="relay_auth_blocked_row_desc">अमेथिस्ट कभी भी प्रवेशांकन नहीं करता अवरोधित पुनःप्रसारकों में।</string>
-    <string name="relay_auth_no_blocked">कुछ भी अवरोधित नहीं। आप यहाँ जो भी स्थापित करें पुनःप्रसारक जिनको आप अवरोधित करते हैं उनमें प्रवेशांकन कभी नहीं होगा।</string>
+    <string name="relay_auth_no_blocked">कुछ भी अवरोधित नहीं। पुनःप्रसारक जिनको आप अवरोधित करते हैं उनमें प्रवेशांकन कभी नहीं होगा जो भी आप यहाँ स्थापित करें।</string>
     <string name="relay_auth_recent_section">निकटकाल प्रवेशांकन</string>
     <string name="relay_auth_no_recent">कोई भी पुनःप्रसारक आपको प्रवेशांकन करने को नहीं कहा अब तक।</string>
     <string name="relay_auth_ago">%1$s पूर्व</string>
