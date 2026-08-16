@@ -48,6 +48,7 @@ val httpScheme = listOf(DualCase("http"))
 val websocketScheme = listOf(DualCase("ws"))
 val nostrScheme = listOf(DualCase("nostr"))
 val blossomScheme = listOf(DualCase("blossom"))
+val ipfsScheme = listOf(DualCase("ipfs"))
 
 class UrlParser {
     fun Char.isAsciiLetter(): Boolean = (this in 'a'..'z' || this in 'A'..'Z')
@@ -92,7 +93,7 @@ class UrlParser {
 
         urls.forEach { url ->
             try {
-                if (url.isValidTopLevelDomain()) {
+                if (url.isValidTopLevelDomain() || url.originalUrl.startsWithAny(ipfsScheme)) {
                     if (url.wroteWithSchema()) {
                         if (url.originalUrl.startsWithAny(httpScheme)) {
                             // quick exit
@@ -109,6 +110,8 @@ class UrlParser {
                             collectGroupLinks(content, url.originalUrl, groupLinks)
                         } else if (url.originalUrl.startsWithAny(blossomScheme)) {
                             blossom.add(url.originalUrl)
+                        } else if (url.originalUrl.startsWithAny(ipfsScheme)) {
+                            completeUrls.add(url.originalUrl)
                         } else {
                             completeUrls.add(url.originalUrl)
                         }

@@ -38,14 +38,19 @@ private val blossomLastSegmentRegex = Regex("^([0-9a-fA-F]{64})(?:\\.[^./]+)?$")
  * or a live stream) returns the original URL unchanged so today's
  * direct-to-CDN behaviour is preserved.
  */
-fun MediaUrlContent.toCoilModel(useLocalBlossomBridge: Boolean): String =
-    bridgeUrl(
+fun MediaUrlContent.toCoilModel(useLocalBlossomBridge: Boolean): String {
+    if (IpfsGatewayResolver.isIpfsUri(url)) {
+        return IpfsGatewayResolver.toHttpUrl(url)
+    }
+
+    return bridgeUrl(
         url = url,
         useBridge = useLocalBlossomBridge,
         mimeType = mimeType,
         authorPubKey = authorPubKey,
         skipBridge = this is MediaUrlVideo && isLiveStream,
     )
+}
 
 /**
  * Bridge entry point for raw URL strings (e.g. profile pictures) that go
@@ -69,6 +74,9 @@ fun bridgeProfilePictureUrl(
     localCacheBase: String = DEFAULT_LOCAL_CACHE_BASE,
 ): String? {
     if (url == null) return null
+    if (IpfsGatewayResolver.isIpfsUri(url)) {
+        return IpfsGatewayResolver.toHttpUrl(url)
+    }
     if (!useBridge) return url
     if (url.startsWith("blossom:", ignoreCase = true)) return url
     if (!url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true)) return url
