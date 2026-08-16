@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
@@ -50,6 +51,12 @@ class PoWMiner(
     // sha256Into writes every attempt's hash here instead of allocating a fresh
     // 32-byte array per hash, keeping the hot loop allocation-free.
     private val hashOut = ByteArray(32)
+
+    // hoisted out of the search: neither changes once the buffer is built, and
+    // reaching them through the MiningBuffer getters on every single candidate
+    // is pure overhead in the innermost loop.
+    private val payload = buffer.bytes
+    private val lastNonceIndex = buffer.nonceEnds - 1
 
     /**
      * True when the last [run] stopped because [isPassOver] flipped rather than
@@ -78,17 +85,28 @@ class PoWMiner(
             }
         }
 
-        for (testByte in VALID_BYTES) {
-            // replaces the background base by the nonce integers
-            buffer.bytes[index] = testByte
+        // pulled into locals so the innermost loop touches no fields at all.
+        // `buffer.bytes` is a getter call per candidate otherwise, and folding it
+        // is left to the JIT — which HotSpot does and ART is not guaranteed to.
+        val alphabet = VALID_BYTES
+        val bytes = payload
 
-            if (index + 1 < buffer.nonceEnds) {
+        // whether this position is the last one is a property of the position,
+        // not of the candidate — deciding it once per level instead of once per
+        // candidate keeps the innermost loop down to a store and a hash.
+        if (index < lastNonceIndex) {
+            for (i in alphabet.indices) {
+                // replaces the background base by the nonce integers
+                bytes[index] = alphabet[i]
                 if (runDigit(index + 1)) return true
                 // unwind the whole recursion rather than stepping to the next
                 // byte: the pass is over, not just this branch.
                 if (passedOver) return false
-            } else {
-                if (reachedDesiredPoW(buffer.bytes)) return true
+            }
+        } else {
+            for (i in alphabet.indices) {
+                bytes[index] = alphabet[i]
+                if (reachedDesiredPoW(bytes)) return true
             }
         }
         return false
@@ -106,12 +124,20 @@ class PoWMiner(
         private val PASS_BUDGET = 1.seconds
 
         // make sure these chars are not escaped by the JSON stringifier
-        private val VALID_CHARS: List<Char> =
-            ('0'..'9') + ('a'..'z') + ('A'..'Z') + "-()[]{}$@!*=;:?,".toCharArray().toList()
+        private val VALID_CHARS: CharArray =
+            (('0'..'9') + ('a'..'z') + ('A'..'Z') + "-()[]{}$@!*=;:?,".toCharArray().toList()).toCharArray()
 
-        private val VALID_BYTES = VALID_CHARS.map { it.code.toByte() }
+        /**
+         * The alphabet the search enumerates, unboxed. A `List<Byte>` here emits
+         * an iterator allocation per recursion level and a `Byte.byteValue()`
+         * unbox per candidate. HotSpot's escape analysis removes both, so the
+         * cost never showed up on the JVM — but that leaves the hot loop's
+         * allocation behaviour up to the JIT, and Android is where mining
+         * actually runs. A ByteArray needs no escape analysis to be free.
+         */
+        private val VALID_BYTES: ByteArray = ByteArray(VALID_CHARS.size) { VALID_CHARS[it].code.toByte() }
 
-        private fun randomBase(size: Int): String = CharArray(size) { VALID_CHARS.random() }.concatToString()
+        private fun randomBase(size: Int): String = CharArray(size) { VALID_CHARS[Random.nextInt(VALID_CHARS.size)] }.concatToString()
 
         /**
          * The miner creates a stringified json template and changes the nonce directly in the UTF-8 ByteArray representation
