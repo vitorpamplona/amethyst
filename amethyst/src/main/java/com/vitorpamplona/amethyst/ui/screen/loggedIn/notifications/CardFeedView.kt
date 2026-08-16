@@ -399,6 +399,14 @@ private fun RenderCardItem(
             )
         }
 
+        is ChannelInviteCard -> {
+            ChannelInviteCompose(
+                item.invite,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
         is MessageSetCard -> {
             MessageSetCompose(
                 messageSetCard = item,

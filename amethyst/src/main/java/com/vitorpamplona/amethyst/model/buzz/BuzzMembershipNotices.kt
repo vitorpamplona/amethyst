@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
+package com.vitorpamplona.amethyst.model.buzz
 
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification
@@ -38,8 +38,12 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
  * LocalCache instead of asking a relay for its own copy.
  *
  * The relay subscription lives in BuzzMembershipEoseManager, mounted with the rest of the account
- * loaders. Both consumers of the stream — the channel-invite prompts and Buzz DM discovery — observe the
- * cache through here, so there is exactly one `#p=me` REQ per workspace relay for the two of them.
+ * loaders. Every consumer of the stream — the Notifications feed's invite cards and Buzz DM discovery —
+ * observes the cache through here, so there is exactly one `#p=me` REQ per workspace relay for all of
+ * them.
+ *
+ * This is model code, not UI: the notifications DAL reads it from `acceptableEvent`, so it must not
+ * live under `ui/`.
  */
 
 /** Every membership verdict addressed to [me], as the cache observers want it. */
@@ -70,12 +74,12 @@ fun Note.toMembershipNotice(): MembershipNotice? {
     return when (val noteEvent = event) {
         is MemberAddedNotificationEvent ->
             noteEvent.channel()?.let {
-                MembershipNotice(it, relay, noteEvent.actor(), noteEvent.createdAt, removed = false)
+                MembershipNotice(noteEvent.id, it, relay, noteEvent.actor(), noteEvent.createdAt, removed = false)
             }
 
         is MemberRemovedNotificationEvent ->
             noteEvent.channel()?.let {
-                MembershipNotice(it, relay, noteEvent.actor(), noteEvent.createdAt, removed = true)
+                MembershipNotice(noteEvent.id, it, relay, noteEvent.actor(), noteEvent.createdAt, removed = true)
             }
 
         else -> null
@@ -85,16 +89,17 @@ fun Note.toMembershipNotice(): MembershipNotice? {
 fun List<Note>.toMembershipNotices(): List<MembershipNotice> = mapNotNull { it.toMembershipNotice() }
 
 /**
- * What the cache currently knows about a channel's type, from its kind-39000.
+ * What [cache] currently knows about a channel's type, from its kind-39000.
  *
  * [ChannelClassification.UNKNOWN] until the directory lands — callers decide what to do with that, and
  * the invite projection deliberately withholds rather than guessing (see
  * [com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites.pendingInvites]).
  */
 fun classifyBuzzChannel(
+    cache: LocalCache,
     channelId: String,
     relay: NormalizedRelayUrl,
 ): ChannelClassification {
-    val metadata = LocalCache.getRelayGroupChannelIfExists(GroupId(channelId, relay))?.event ?: return ChannelClassification.UNKNOWN
+    val metadata = cache.getRelayGroupChannelIfExists(GroupId(channelId, relay))?.event ?: return ChannelClassification.UNKNOWN
     return if (metadata.isBuzzDmChannel()) ChannelClassification.DM else ChannelClassification.NAMED
 }

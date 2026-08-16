@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.bolt12Offers.Bolt12OfferListState
+import com.vitorpamplona.amethyst.model.buzz.ChannelInvitesState
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
@@ -551,6 +552,20 @@ class Account(
 
     val relayGroupListDecryptionCache = RelayGroupListDecryptionCache(signer)
     val relayGroupList = RelayGroupListState(signer, cache, relayGroupListDecryptionCache, scope, settings)
+
+    /**
+     * Buzz channels somebody else added me to that I haven't answered yet, projected from the cached
+     * kind-44100/44101 verdicts. Account state rather than screen state because the notifications DAL
+     * reads it to decide whether a cached 44100 is still a live question.
+     */
+    val channelInvites =
+        ChannelInvitesState(
+            me = signer.pubKey,
+            cache = cache,
+            relayGroupList = relayGroupList,
+            dismissed = settings.dismissedChannelInvites,
+            scope = scope,
+        )
 
     val concordChannelList = ConcordChannelListState(signer, cache, scope, settings)
 

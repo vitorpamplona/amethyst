@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.dal.MusicPlaylistsFee
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.dal.MusicTracksFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ChannelInvitesState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
@@ -142,8 +141,6 @@ class AccountFeedContentStates(
 
     val notificationsOpenPolls = OpenPollsState(account, scope)
 
-    /** Channels somebody added the viewer to, awaiting a show-on-Messages decision. */
-    val channelInvites = ChannelInvitesState(account, scope)
     val notificationSummary = NotificationSummaryState(account)
 
     val feedListOptions = TopNavFilterState(account, scope)
@@ -184,6 +181,21 @@ class AccountFeedContentStates(
                 .drop(1)
                 .collect {
                     dmKnown.invalidateData()
+                }
+        }
+
+        // A pending channel invite renders as a card, but nothing about answering one flows through
+        // newEventBundles: accepting writes my kind-10009, dismissing touches only local settings, and
+        // classification lands a kind-39000 that is not itself a notification. Each of those changes
+        // whether the 44100 still passes `acceptableEvent`, so rebuild when the projection moves —
+        // otherwise an answered invite would sit on the tab until an unrelated event refreshed it.
+        scope.launch(Dispatchers.IO) {
+            account.channelInvites.pendingByEventId
+                .drop(1)
+                .collect {
+                    notifications.invalidateData()
+                    notificationsFollowing.invalidateData()
+                    notificationsEveryone.invalidateData()
                 }
         }
 

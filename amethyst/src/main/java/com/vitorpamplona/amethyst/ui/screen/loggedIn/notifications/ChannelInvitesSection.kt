@@ -66,8 +66,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /**
- * "Somebody added you to a channel" prompts, rendered above the Notifications feed (the same header slot
- * the missing-inbox-relay prompt uses) and inside Messages › New Requests.
+ * "Somebody added you to a channel" prompts, rendered as a block inside Messages › New Requests.
+ *
+ * On the Notifications tab these are not a section at all: each pending invite is a
+ * [ChannelInviteCard] in the ordinary card feed, built by `convertToCard` and drawn by the same
+ * `RenderCardItem` dispatch as every other row — see
+ * [com.vitorpamplona.amethyst.ui.dal.NotificationFeedOrderCard] for why they sort to the top. This
+ * section exists because Messages has its own list that is not a `Card` feed.
  *
  * These are deliberately NOT auto-accepted. On a Buzz relay another member can add you to a channel
  * server-side: the relay writes you into the kind-39002 roster and you can immediately read and post,
@@ -81,7 +86,7 @@ fun ChannelInvitesSection(
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val invites by accountViewModel.feedStates.channelInvites.flow
+    val invites by accountViewModel.account.channelInvites.flow
         .collectAsStateWithLifecycle()
 
     if (invites.isEmpty()) return
@@ -92,7 +97,7 @@ fun ChannelInvitesSection(
             // below it. Without a key Compose matches children by position and each shifted row would
             // recompose against a different invite — re-resolving the actor and reloading their avatar.
             key(invite.channelId) {
-                ChannelInviteCard(invite, accountViewModel, nav)
+                ChannelInviteCompose(invite, accountViewModel, nav)
                 HorizontalDivider(thickness = DividerThickness)
             }
         }
@@ -106,7 +111,7 @@ fun ChannelInvitesSection(
  * reactions slot, which spans the full width and therefore fits "Add to Messages" without wrapping.
  */
 @Composable
-fun ChannelInviteCard(
+fun ChannelInviteCompose(
     invite: BuzzChannelInvite,
     accountViewModel: AccountViewModel,
     nav: INav,

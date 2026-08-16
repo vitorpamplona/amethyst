@@ -35,13 +35,13 @@ class BuzzChannelInvitesTest {
         channelId: String,
         actor: String? = stranger,
         createdAt: Long = 1_000L,
-    ) = MembershipNotice(channelId, relay, actor, createdAt, removed = false)
+    ) = MembershipNotice("add-" + channelId + "-" + createdAt, channelId, relay, actor, createdAt, removed = false)
 
     private fun removed(
         channelId: String,
         actor: String? = stranger,
         createdAt: Long = 2_000L,
-    ) = MembershipNotice(channelId, relay, actor, createdAt, removed = true)
+    ) = MembershipNotice("del-" + channelId + "-" + createdAt, channelId, relay, actor, createdAt, removed = true)
 
     /** Every channel is a plain named channel unless a test says otherwise. */
     private val allNamed = { _: String, _: NormalizedRelayUrl -> ChannelClassification.NAMED }
@@ -167,6 +167,48 @@ class BuzzChannelInvitesTest {
             )
 
         assertEquals(listOf("newest", "middle", "older"), result.map { it.channelId })
+    }
+
+    @Test
+    fun anInviteCarriesTheEventItCameFrom() {
+        // The Notifications feed keys its card on this — it is the identity that lets an invite dedup,
+        // scroll-to and page like every other notification row.
+        val invite = invites(listOf(added("chan-1", createdAt = 7L))).single()
+
+        assertEquals("add-chan-1-7", invite.eventId)
+    }
+
+    @Test
+    fun pendingByEventIdIsKeyedForThePerNoteLookup() {
+        // `NotificationFeedFilter.acceptableEvent` runs per note, so it needs this as a map rather than
+        // a scan: a cached 44100 is a live question exactly when its id is a key here.
+        val byId =
+            BuzzChannelInvites.pendingInvitesByEventId(
+                viewer = me,
+                notices = listOf(added("chan-1", createdAt = 7L), added("chan-2", createdAt = 8L)),
+                dismissed = setOf("chan-2"),
+                joined = emptySet(),
+                classify = allNamed,
+            )
+
+        assertEquals(setOf("add-chan-1-7"), byId.keys)
+        assertEquals("chan-1", byId["add-chan-1-7"]?.channelId)
+    }
+
+    @Test
+    fun aSupersededAddDropsOutOfThePerNoteLookup() {
+        // The 44100 stays in the cache forever, so the accept gate has to answer "no" for one the relay
+        // has since withdrawn — otherwise the card would outlive the membership.
+        val byId =
+            BuzzChannelInvites.pendingInvitesByEventId(
+                viewer = me,
+                notices = listOf(added("chan-1", createdAt = 1L), removed("chan-1", createdAt = 2L)),
+                dismissed = emptySet(),
+                joined = emptySet(),
+                classify = allNamed,
+            )
+
+        assertTrue(byId.isEmpty())
     }
 
     @Test

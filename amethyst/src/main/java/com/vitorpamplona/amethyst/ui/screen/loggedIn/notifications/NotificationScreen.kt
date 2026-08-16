@@ -242,13 +242,11 @@ internal fun SingleNotificationsBody(
             nav = nav,
             routeForLastRead = NOTIFICATION_LAST_READ_KEY,
             scrollToEventId = scrollToEventId,
+            // "X added you to #channel" is not a header prompt any more — each pending invite is a
+            // ChannelInviteCard in the feed itself, sorted ahead of the dated rows by
+            // NotificationFeedOrderCard.
             headerContent = {
                 ObserveInboxRelayListAndDisplayIfNotFound(accountViewModel, nav)
-                // "X added you to #channel" prompts sit above the feed rather than inside it: they are a
-                // standing decision, not a dated event, so they must not scroll away into history.
-                // [RenderCardFeed] draws this slot in every feed state, which is what keeps them on
-                // screen while a refresh bounces the feed through Loading/Empty and back.
-                ChannelInvitesSection(accountViewModel, nav)
             },
         )
     }

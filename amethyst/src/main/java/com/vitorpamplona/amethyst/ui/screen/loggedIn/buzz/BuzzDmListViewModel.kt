@@ -31,6 +31,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.buzz.membershipNoticeFilter
+import com.vitorpamplona.amethyst.model.buzz.toMembershipNotices
 import com.vitorpamplona.amethyst.model.filter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent

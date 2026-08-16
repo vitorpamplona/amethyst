@@ -24,9 +24,15 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-/** Somebody added [BuzzChannelInvite.actor] me to a channel: who did it, where, and when. */
+/**
+ * Somebody added me to a channel: who did it, where, and when.
+ *
+ * [eventId] is the kind-44100 this was projected from — the identity the Notifications feed keys its
+ * card on, so an invite is one row per relay verdict exactly like every other notification.
+ */
 @Immutable
 class BuzzChannelInvite(
+    val eventId: HexKey,
     val channelId: String,
     val relay: NormalizedRelayUrl,
     val actor: HexKey?,
@@ -40,6 +46,7 @@ class BuzzChannelInvite(
  */
 @Immutable
 class MembershipNotice(
+    val eventId: HexKey,
     val channelId: String,
     val relay: NormalizedRelayUrl,
     val actor: HexKey?,
@@ -143,7 +150,16 @@ object BuzzChannelInvites {
             .filterNot { it.actor != null && it.actor.equals(viewer, ignoreCase = true) }
             .filterNot { it.channelId in dismissed || it.channelId in joined }
             .filter { classify(it.channelId, it.relay) == ChannelClassification.NAMED }
-            .map { BuzzChannelInvite(it.channelId, it.relay, it.actor, it.createdAt) }
+            .map { BuzzChannelInvite(it.eventId, it.channelId, it.relay, it.actor, it.createdAt) }
             .sortedByDescending { it.createdAt }
             .toList()
+
+    /** [pendingInvites] keyed by the kind-44100 that produced each one, for per-note lookups. */
+    fun pendingInvitesByEventId(
+        viewer: HexKey,
+        notices: List<MembershipNotice>,
+        dismissed: Set<String>,
+        joined: Set<String>,
+        classify: (channelId: String, relay: NormalizedRelayUrl) -> ChannelClassification,
+    ): Map<HexKey, BuzzChannelInvite> = pendingInvites(viewer, notices, dismissed, joined, classify).associateBy { it.eventId }
 }

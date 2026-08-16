@@ -18,16 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
+package com.vitorpamplona.amethyst.model.buzz
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
-import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListState
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.classifyBuzzChannel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.membershipNoticeFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz.toMembershipNotices
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +46,13 @@ import kotlinx.coroutines.flow.stateIn
  * Nothing here asserts membership (the relay already granted that); it only decides whose call it is to
  * surface the channel.
  *
+ * ### Account state, not screen state
+ *
+ * This hangs off [com.vitorpamplona.amethyst.model.Account] rather than a feed holder because the
+ * notifications DAL reads it: `NotificationFeedFilter.acceptableEvent` consults [pendingByEventId] to
+ * decide whether a cached kind-44100 is still a live question, and `convertToCard` uses the same map to
+ * build the row. A projection only the UI could reach would have forced the DAL to re-derive it.
+ *
  * ### Derived, not recorded
  *
  * This used to read a process-wide registry that the Buzz DM discovery pass wrote into and its
@@ -55,48 +60,58 @@ import kotlinx.coroutines.flow.stateIn
  * same kind-44100 re-added an invite that had already been withdrawn, and the prompt appeared and
  * disappeared on a loop. Deriving from the cache removes the second source of truth: the same events
  * always produce the same answer, in any order, however many times they arrive.
- *
- * Modelled on [OpenPollsState], which projects the same way — `observeNotes` plus a persisted dismissal
- * set — so the Notifications screen and Messages' "New Requests" tab can never disagree about what is
- * pending.
  */
 @Stable
 class ChannelInvitesState(
-    account: Account,
+    private val me: HexKey,
+    private val cache: LocalCache,
+    relayGroupList: RelayGroupListState,
+    dismissed: StateFlow<Set<String>>,
     scope: CoroutineScope,
 ) {
-    private val me = account.userProfile().pubkeyHex
-
     /**
      * Fires when a group's kind-39000 first lands, which is what turns an
      * [com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification.UNKNOWN] channel into a
-     * decidable one. The classification is read imperatively out of [LocalCache] (per channel, by id),
-     * so without this the projection would never recompute when the directory arrives.
+     * decidable one. The classification is read per channel, by id, straight out of the cache, so
+     * without this the projection would never recompute when the directory arrives.
      *
      * Mapped to a count and de-duplicated: the observable list of addressable notes only ever grows, so
      * a size change is exactly "a group we hadn't seen before is now known" — and it keeps a busy
      * account's metadata traffic from re-running the projection on every unrelated group edit.
      */
     private val knownChannelTypes =
-        LocalCache
+        cache
             .observeNotes(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
             .map { it.size }
             .distinctUntilChanged()
 
-    val flow: StateFlow<List<BuzzChannelInvite>> =
+    /** Pending invites keyed by the kind-44100 that produced them — what the notifications DAL reads. */
+    val pendingByEventId: StateFlow<Map<HexKey, BuzzChannelInvite>> =
         combine(
-            LocalCache.observeNotes(membershipNoticeFilter(me)),
+            cache.observeNotes(membershipNoticeFilter(me)),
             knownChannelTypes,
-            account.settings.dismissedChannelInvites,
-            account.relayGroupList.liveRelayGroupList,
-        ) { notices, _, dismissed, joined ->
-            BuzzChannelInvites.pendingInvites(
+            dismissed,
+            relayGroupList.liveRelayGroupList,
+        ) { notices, _, dismissals, joined ->
+            BuzzChannelInvites.pendingInvitesByEventId(
                 viewer = me,
                 notices = notices.toMembershipNotices(),
-                dismissed = dismissed,
+                dismissed = dismissals,
                 joined = joined.mapTo(HashSet()) { it.groupId },
-                classify = ::classifyBuzzChannel,
+                classify = { channelId, relay -> classifyBuzzChannel(cache, channelId, relay) },
             )
         }.flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
+    /** The same set as a newest-first list, for surfaces that render it directly. */
+    val flow: StateFlow<List<BuzzChannelInvite>> =
+        pendingByEventId
+            .map { it.values.sortedByDescending { invite -> invite.createdAt } }
+            .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /** Whether this cached kind-44100 is still an unanswered question. Hot path — a map lookup. */
+    fun isPending(eventId: HexKey) = eventId in pendingByEventId.value
+
+    fun inviteFor(eventId: HexKey): BuzzChannelInvite? = pendingByEventId.value[eventId]
 }
