@@ -189,13 +189,20 @@ class AccountFeedContentStates(
         // classification lands a kind-39000 that is not itself a notification. Each of those changes
         // whether the 44100 still passes `acceptableEvent`, so rebuild when the projection moves —
         // otherwise an answered invite would sit on the tab until an unrelated event refreshed it.
+        //
+        // `clear()` before each invalidation, because answering an invite REMOVES a row and the plain
+        // additive refresh cannot express that: it diffs `feed()` against `lastNotes`, finds no *new*
+        // notes, and bails on `if (newCards.isNotEmpty())` without touching the list — leaving the
+        // answered invite pinned at the top by the invites-first order. Clearing drops the additive
+        // fast path so the refresh rebuilds the whole list, which is the only branch that can shrink.
         scope.launch(Dispatchers.IO) {
             account.channelInvites.pendingByEventId
                 .drop(1)
                 .collect {
-                    notifications.invalidateData()
-                    notificationsFollowing.invalidateData()
-                    notificationsEveryone.invalidateData()
+                    listOf(notifications, notificationsFollowing, notificationsEveryone).forEach {
+                        it.clear()
+                        it.invalidateData()
+                    }
                 }
         }
 

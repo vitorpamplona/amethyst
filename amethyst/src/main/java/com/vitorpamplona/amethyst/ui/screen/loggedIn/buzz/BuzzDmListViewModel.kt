@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.buzz.membershipNoticeFilter
-import com.vitorpamplona.amethyst.model.buzz.toMembershipNotices
+import com.vitorpamplona.amethyst.model.buzz.membershipNotices
 import com.vitorpamplona.amethyst.model.filter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
@@ -303,21 +303,35 @@ class BuzzDmListViewModel : ViewModel() {
         liveJob =
             viewModelScope.launch(Dispatchers.IO) {
                 launch {
-                    LocalCache.observeNotes(membershipNoticeFilter(myPubkey)).collect { notes ->
+                    LocalCache.observeNotes(membershipNoticeFilter(myPubkey)).collect {
+                        // The emission is only the signal; the notices come from a cache scan, because
+                        // `observeNotes` cannot seed these kinds (see [membershipNotices]).
+                        //
                         // Re-read the relay scope per pass rather than snapshotting it: a workspace
                         // joined while this screen is open should bring its channels with it.
                         val scoped = relays()
                         val memberships =
                             BuzzChannelInvites
-                                .currentMemberships(notes.toMembershipNotices())
+                                .currentMemberships(LocalCache.membershipNotices(myPubkey))
                                 .filterValues { it in scoped }
                         var changed = false
                         memberships.forEach { (channelId, relay) ->
                             if (memberChannels.put(channelId, relay) == null) changed = true
                         }
-                        // A 44101 takes the membership away: drop the row rather than leaving a
+                        // A kind-44101 takes the membership away: drop the row rather than leaving a
                         // conversation the relay no longer lets us read.
-                        val gone = memberChannels.keys.filter { it !in memberships }
+                        //
+                        // Only channels the scan actually has a *removal* for. Anything else in
+                        // `memberChannels` was put there by the seed or the one-shot fetch, which see
+                        // relays this scan may not cover — treating "absent from this pass" as "gone"
+                        // would let one pass wipe rows nothing withdrew.
+                        val withdrawn =
+                            LocalCache
+                                .membershipNotices(myPubkey)
+                                .let { BuzzChannelInvites.latestPerChannel(it) }
+                                .filterValues { it.removed }
+                                .keys
+                        val gone = memberChannels.keys.filter { it in withdrawn }
                         if (gone.isNotEmpty()) {
                             gone.forEach { memberChannels.remove(it) }
                             changed = true

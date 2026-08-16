@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.buzz.classifyBuzzChannel
 import com.vitorpamplona.amethyst.model.buzz.membershipNoticeFilter
-import com.vitorpamplona.amethyst.model.buzz.toMembershipNotices
+import com.vitorpamplona.amethyst.model.buzz.membershipNotices
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
@@ -94,7 +94,7 @@ private suspend fun runBuzzDmDiscovery(account: Account) {
             .observeNotes(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
             .map { it.size }
             .distinctUntilChanged(),
-    ) { notices, _ -> BuzzChannelInvites.currentMemberships(notices.toMembershipNotices()) }
+    ) { _, _ -> BuzzChannelInvites.currentMemberships(LocalCache.membershipNotices(me)) }
         .collectLatest { memberships ->
             fetchMissingDirectories(account, memberships)
             BuzzDmChannels.replace(me, memberships.filter { (id, relay) -> classifyBuzzChannel(LocalCache, id, relay) == ChannelClassification.DM })

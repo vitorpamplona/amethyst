@@ -191,7 +191,8 @@ class NotificationFeedFilter(
                 VoiceEvent.KIND,
                 VoiceReplyEvent.KIND,
                 // A Buzz workflow approval gate (46010) addressed to me — I need to grant/deny it.
-                // Also gates the push dispatcher, which uses NOTIFICATION_KINDS as its first filter.
+                // NOTE: this list does NOT gate push. NotificationDispatcher declares its own, separate
+                // NOTIFICATION_KINDS; adding a kind here changes only what renders on the tab.
                 WorkflowApprovalRequestedEvent.KIND,
                 // "Somebody added you to a channel" (44100). Like the approval gate above, this is a
                 // question addressed to me rather than a dated event — it renders as a ChannelInviteCard

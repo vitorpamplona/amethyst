@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.buzz
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -85,17 +86,36 @@ class ChannelInvitesState(
             .map { it.size }
             .distinctUntilChanged()
 
+    /**
+     * The membership verdicts themselves, re-scanned only when something can actually change them.
+     *
+     * The scan walks every note in the cache, so it is deliberately NOT part of the combine below: the
+     * three inputs there (dismissals, my kind-10009, known channel types) change what the notices *mean*
+     * but never what they *are*, and folding them in would re-walk the whole cache on every list edit.
+     *
+     * The observer emission is the arrival signal — it cannot be the data, because `observeNotes`'
+     * initial snapshot can't hold these kinds at all (see [membershipNotices]). The workspace set is the
+     * second trigger: a notice's relay is resolved by preferring a joined workspace over whatever else
+     * delivered it, and restore-from-disk can land after the cache already holds notices, changing which
+     * relay a channel resolves against — and with it whether its kind-39000 is ever found.
+     */
+    private val notices =
+        combine(
+            cache.observeNotes(membershipNoticeFilter(me)),
+            BuzzWorkspaces.flow,
+        ) { _, _ -> cache.membershipNotices(me) }
+
     /** Pending invites keyed by the kind-44100 that produced them — what the notifications DAL reads. */
     val pendingByEventId: StateFlow<Map<HexKey, BuzzChannelInvite>> =
         combine(
-            cache.observeNotes(membershipNoticeFilter(me)),
+            notices,
             knownChannelTypes,
             dismissed,
             relayGroupList.liveRelayGroupList,
-        ) { notices, _, dismissals, joined ->
+        ) { verdicts, _, dismissals, joined ->
             BuzzChannelInvites.pendingInvitesByEventId(
                 viewer = me,
-                notices = notices.toMembershipNotices(),
+                notices = verdicts,
                 dismissed = dismissals,
                 joined = joined.mapTo(HashSet()) { it.groupId },
                 classify = { channelId, relay -> classifyBuzzChannel(cache, channelId, relay) },

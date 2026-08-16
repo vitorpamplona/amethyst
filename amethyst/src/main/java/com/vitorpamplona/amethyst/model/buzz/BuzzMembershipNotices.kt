@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification
 import com.vitorpamplona.amethyst.commons.model.buzz.MembershipNotice
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz.MembershipNotificationKinds
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
@@ -87,6 +88,34 @@ fun Note.toMembershipNotice(): MembershipNotice? {
 }
 
 fun List<Note>.toMembershipNotices(): List<MembershipNotice> = mapNotNull { it.toMembershipNotice() }
+
+private fun Note.isMembershipNoticeFor(me: HexKey): Boolean =
+    when (val noteEvent = event) {
+        is MemberAddedNotificationEvent -> noteEvent.target().equals(me, ignoreCase = true)
+        is MemberRemovedNotificationEvent -> noteEvent.target().equals(me, ignoreCase = true)
+        else -> false
+    }
+
+/**
+ * Every membership verdict for [me] currently in the cache.
+ *
+ * Scanned off [LocalCache.notes] rather than read from an `observeNotes` snapshot, because that
+ * snapshot cannot contain these kinds. `LocalCache.filter` only yields addressables plus notes whose
+ * `kind.isRegular()` — and `isRegular()` is `> 0 && < 10_000`, so a Buzz 44100/44101 matches none of
+ * its branches and the seed comes back empty every time. Live arrivals are fine (the observer's `new()`
+ * applies no such gate), which is why a cold start looked correct: the observer registers before the
+ * relay answers. What broke was any projection built *after* the events had landed — switching to
+ * another account and back builds a fresh one, and `consumeRegularEvent` never re-notifies a duplicate,
+ * so it would have stayed empty for the rest of the session.
+ *
+ * So the observer is kept purely as the change signal and this scan is the data. It is the same shape
+ * `NotificationFeedFilter.feed()` uses over the same map, for the same reason.
+ */
+fun LocalCache.membershipNotices(me: HexKey): List<MembershipNotice> =
+    notes
+        .filterIntoSet { _, note -> note.isMembershipNoticeFor(me) }
+        .toList()
+        .toMembershipNotices()
 
 /**
  * What [cache] currently knows about a channel's type, from its kind-39000.

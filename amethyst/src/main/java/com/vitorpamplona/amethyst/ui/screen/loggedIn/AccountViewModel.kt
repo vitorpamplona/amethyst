@@ -1765,16 +1765,16 @@ class AccountViewModel(
 
     /**
      * Actually leave: kind-9022 to the host relay, which answers with a kind-44101 that supersedes the
-     * add and drops the prompt on its own.
+     * add, so the projection drops the card on its own.
      *
-     * The local dismissal is recorded too, so the card goes the moment the button is tapped rather than
-     * a relay round-trip later — and so a relay that never emits the 44101 can't leave a prompt standing
-     * for a membership it has already taken away. Same choice [removeRelayGroupFromMessages] makes for
-     * its half of the pair.
+     * Deliberately does NOT record a local dismissal. That would clear the card a relay round-trip
+     * sooner, but `dismissedChannelInvites` is keyed by channel id and persisted forever, so it would
+     * also swallow a *later, legitimate* re-add to the same channel — the viewer would be put back in
+     * and never told. Waiting for the relay's own withdrawal keeps "am I a member" answerable from the
+     * events alone. Ignore is the action for "don't ask me again"; this one is for "take me out".
      */
     fun leaveChannelInvite(channel: RelayGroupChannel) =
         launchSigner {
-            account.settings.dismissChannelInvite(channel.groupId.id)
             account.relayGroups.leaveRelayGroup(channel)
         }
 

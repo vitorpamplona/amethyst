@@ -388,9 +388,10 @@ class CardFeedContentState(
     /**
      * The unanswered channel invites, keyed by their kind-44100.
      *
-     * Read once per conversion rather than per note: `acceptableEvent` has already narrowed the feed to
-     * pending ones, so this only has to attach the resolved invite to its row. A 44100 that is no longer
-     * pending falls through to an ordinary card, which the filter should have excluded anyway.
+     * A StateFlow read, so each access is a volatile load of an already-built map — cheap enough to
+     * touch per note. `acceptableEvent` has already narrowed the feed to pending ones, so this only has
+     * to attach the resolved invite to its row; a 44100 that is no longer pending falls through to an
+     * ordinary card, which the filter should have excluded anyway.
      */
     private val pendingInvites: Map<HexKey, BuzzChannelInvite>
         get() =
