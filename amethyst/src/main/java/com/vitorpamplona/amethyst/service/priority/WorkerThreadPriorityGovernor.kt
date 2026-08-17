@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.priority
 
 import android.content.Context
 import android.os.Process
+import android.os.SystemClock
 import android.provider.Settings
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
@@ -31,12 +32,32 @@ import java.io.File
  * cannot starve the main thread out of its frames.
  *
  * **Why this exists.** On a cold start the outbox model dials ~190 relays at once and the process
- * grows to ~500 threads (OkHttp's TaskRunner pool, OkHttp dispatchers, the kotlinx scheduler and
+ * grows to ~650 threads (OkHttp's TaskRunner pool, OkHttp dispatchers, the kotlinx scheduler and
  * Arti's tokio workers). Every one of them is born at nice 0. The main thread is nice -10, but a
- * single -10 thread against ~30 simultaneously-runnable nice-0 threads on 4 cores still loses about
- * half of its schedulable time to the runqueue — long enough that the first feed frame takes
- * multiple seconds and the "Loading account" screen stays on-screen well after the account itself
- * has loaded.
+ * single -10 thread against dozens of simultaneously-runnable nice-0 threads still loses a large
+ * share of its schedulable time to the runqueue — long enough that the first feed frame takes
+ * seconds and the "Loading account" screen stays on-screen well after the account itself has
+ * loaded.
+ *
+ * **Measured on a release-codegen build** (`:amethyst:installPlayBenchmark`, i.e. R8-minified +
+ * baseline-profile AOT), SM-T220, 5-round round-robin, every run valid:
+ *
+ * | workers at | starvation | runqueue wait | time to first paint | spread |
+ * |---|---|---|---|---|
+ * | nice 0 (off) | 26.7% | 2300 ms | 11.1 s | 5.63 s |
+ * | nice 5 | 22.0% | 1774 ms | 8.0 s | 4.05 s |
+ * | nice 9 | 17.1% | 1280 ms | 8.4 s | 3.05 s |
+ * | **nice 10** | **14.6%** | **1234 ms** | **6.2 s** | **1.55 s** |
+ *
+ * nice 10 beat the control in 5 of 5 paired rounds (median 5.0 s faster, ~45%) and collapsed the
+ * run-to-run spread from 5.6 s to 1.6 s, so [DEFAULT_NICE] is 10.
+ *
+ * **This effect only exists in a release build, so never re-validate it on a debug one.** In a
+ * debug build the same sweep changes nothing measurable: there the main thread is ~70% busy,
+ * saturated with ART interpretation, so scheduling was never the constraint (starvation is 15% in
+ * debug vs 27% in release). R8 collapses main's own work while leaving the relay storm untouched,
+ * which is what promotes starvation to the binding constraint. An emulator is equally misleading
+ * for the opposite reason — its shared cores manufacture contention real hardware does not have.
  *
  * **Why a /proc sweep instead of thread factories.** The largest pool by far is OkHttp's
  * `TaskRunner` backend, a process-wide singleton whose thread factory OkHttp does not expose per
@@ -53,49 +74,40 @@ import java.io.File
  * HeapTaskDaemon would make the GC pressure *worse*, not better) and binder threads (IPC replies
  * the system waits on). Everything else is app work that should yield to the UI.
  *
- * **Runtime control.** The target nice level is read from a `Settings.Global` key so the effect can
- * be A/B-measured on one build:
+ * **Cost.** Each thread is touched once, not once per sweep, and the interval backs off whenever a
+ * sweep finds nothing new — the storm front-loads thread creation, so most sweeps after the first
+ * few seconds are empty. Threads that exit are pruned so a recycled tid is re-evaluated.
+ *
+ * **Runtime override.** [SETTING_KEY] overrides [DEFAULT_NICE] without a rebuild, and is also the
+ * off switch (any value <= 0 disables the governor entirely):
  * ```
- * adb shell settings put global amethyst_worker_nice 9    # demote workers (diagnostic only)
- * adb shell settings delete global amethyst_worker_nice   # control (no-op)
+ * adb shell settings put global amethyst_worker_nice 5    # demote to nice 5 instead
+ * adb shell settings put global amethyst_worker_nice 0    # disable
+ * adb shell settings delete global amethyst_worker_nice   # back to DEFAULT_NICE
  * ```
- *
- * **Measured 2026-08-17 (4-round round-robin sweeps on two rigs) — this does NOT fix the stall on
- * real hardware, which is why it ships disabled.** The mechanism works everywhere: starvation tracks
- * the CFS weight monotonically and roughly halves (emulator 50.2% -> 24.8% at nice 9; SM-T220 15.2%
- * -> 8.1%). But the user-visible time-to-first-paint does not reliably improve on device — the
- * paired deltas were non-monotonic across nice levels, i.e. noise.
- *
- * The two rigs disagree because the bottleneck is not the same on both. On a 4-core emulator the
- * main thread is only 27% busy and genuinely starved; on the SM-T220 it is **70% busy** and
- * saturated with its own work (~42s of it), so scheduling was never the constraint. Raising priority
- * there did hand main more CPU (41.9s -> 47.6s on-cpu) and the stall did not move. Treat an emulator
- * as unable to answer scheduling questions: its shared cores manufacture contention real devices do
- * not have.
- *
- * Kept as a diagnostic knob for the scheduling half of the problem. The larger, still-untested lever
- * is bounding the ~190-relay connect fan-out.
- *
  * Despite AOSP's `androidSetThreadPriority` calling `set_sched_policy(SP_BACKGROUND)` at nice >= 10,
  * no cpuset/schedtune move was observed on real hardware (SM-T220 / Android 14): at nice 5, 9 and 10
  * every worker kept main's exact membership (`schedtune:/top-app`, `cpuset:/top-app`, `cpu:/`) and
- * only the nice value changed. So there is no threshold at 10 to design around — pick the level off
- * the weight/throughput curve above.
+ * only the nice value changed — so 10 carries no hidden cgroup penalty over 9.
  */
 object WorkerThreadPriorityGovernor {
-    /** `Settings.Global` key holding the target nice level. Absent/invalid = feature off. */
+    /** `Settings.Global` key overriding [DEFAULT_NICE]; any value <= 0 disables the governor. */
     const val SETTING_KEY = "amethyst_worker_nice"
 
-    /** Sentinel for "not configured" — the governor stays off and costs nothing. */
-    private const val DISABLED = Int.MIN_VALUE
+    /** Best measured value on a release-codegen build — see the table in the class doc. */
+    const val DEFAULT_NICE = 10
 
-    /** Sweep cadence while the cold-start storm is spawning threads. */
-    private const val BURST_INTERVAL_MS = 250L
+    /** Sweep cadence while threads are still appearing. */
+    private const val MIN_INTERVAL_MS = 250L
 
-    /** How long to sweep aggressively before backing off to [IDLE_INTERVAL_MS]. */
+    /** Ceiling the interval backs off to while a sweep keeps finding nothing new. */
+    private const val MAX_BURST_INTERVAL_MS = 2_000L
+
+    /** How long to stay in the adaptive burst before settling at [IDLE_INTERVAL_MS]. */
     private const val BURST_DURATION_MS = 120_000L
 
-    private const val IDLE_INTERVAL_MS = 2_000L
+    /** Steady-state cadence; relay reconnects still spawn threads long after boot. */
+    private const val IDLE_INTERVAL_MS = 5_000L
 
     /**
      * Threads whose scheduling must not be touched. Matched as prefixes against the kernel `comm`
@@ -125,15 +137,15 @@ object WorkerThreadPriorityGovernor {
 
     @Volatile private var started = false
 
-    fun startIfConfigured(context: Context) {
+    fun start(context: Context) {
         if (started) return
-        val targetNice = readTargetNice(context)
-        if (targetNice == DISABLED) {
-            Log.i("ThreadPriority") { "Worker thread governor off (no $SETTING_KEY setting)" }
+        val targetNice = resolveTargetNice(context)
+        if (targetNice == null) {
+            Log.i("ThreadPriority") { "Worker thread governor disabled via $SETTING_KEY" }
             return
         }
         started = true
-        Log.i("ThreadPriority") { "Worker thread governor ON, target nice=$targetNice" }
+        Log.i("ThreadPriority") { "Worker thread governor on, target nice=$targetNice" }
 
         Thread({ sweepLoop(targetNice) }, "worker-nice-governor")
             .apply {
@@ -142,55 +154,88 @@ object WorkerThreadPriorityGovernor {
             }
     }
 
-    private fun readTargetNice(context: Context): Int =
-        runCatching {
-            Settings.Global.getInt(context.contentResolver, SETTING_KEY, DISABLED)
-        }.getOrDefault(DISABLED)
+    /** Returns the nice level to apply, or null when the governor should not run at all. */
+    private fun resolveTargetNice(context: Context): Int? {
+        val configured =
+            runCatching {
+                Settings.Global.getInt(context.contentResolver, SETTING_KEY, DEFAULT_NICE)
+            }.getOrDefault(DEFAULT_NICE)
+
+        // Only a demotion makes sense here; <= 0 is the documented off switch and anything above
+        // the nice ceiling is a typo we should not act on.
+        return configured.takeIf { it in 1..19 }
+    }
 
     private fun sweepLoop(targetNice: Int) {
         // The governor must keep running while the pools it polices saturate the CPU, so it runs
         // slightly above default rather than as background work.
         runCatching { Process.setThreadPriority(Process.THREAD_PRIORITY_FOREGROUND) }
 
-        val startedAt = System.currentTimeMillis()
+        val startedAt = SystemClock.elapsedRealtime()
         val mainTid = Process.myPid()
-        // A thread's nice survives renaming, so once demoted it never needs revisiting.
-        // Seeding with our own tid keeps the sweep from demoting the governor itself.
-        val alreadyDemoted = HashSet<Int>().apply { add(Process.myTid()) }
+        // Tids already dealt with — demoted, or skipped because they are on the denylist. Both are
+        // permanent decisions, so keeping them here means a thread costs one `comm` read for its
+        // whole life instead of one per sweep. Seeded with our own tid so the sweep can't demote
+        // the governor itself.
+        val handled = HashSet<Int>().apply { add(Process.myTid()) }
+        var interval = MIN_INTERVAL_MS
 
         while (true) {
-            val demoted = sweepOnce(mainTid, targetNice, alreadyDemoted)
-            val elapsed = System.currentTimeMillis() - startedAt
+            val demoted = sweepOnce(mainTid, targetNice, handled)
             if (demoted > 0) {
                 Log.d("ThreadPriority") { "Demoted $demoted thread(s) to nice $targetNice" }
             }
-            runCatching {
-                Thread.sleep(if (elapsed < BURST_DURATION_MS) BURST_INTERVAL_MS else IDLE_INTERVAL_MS)
-            }.onFailure { return }
+
+            // Thread creation is front-loaded into the connect storm, so once a sweep comes back
+            // empty the next one almost certainly will too — back off instead of spinning.
+            interval =
+                when {
+                    SystemClock.elapsedRealtime() - startedAt >= BURST_DURATION_MS -> IDLE_INTERVAL_MS
+                    demoted > 0 -> MIN_INTERVAL_MS
+                    else -> (interval * 2).coerceAtMost(MAX_BURST_INTERVAL_MS)
+                }
+
+            runCatching { Thread.sleep(interval) }.onFailure { return }
         }
     }
 
     private fun sweepOnce(
         mainTid: Int,
         targetNice: Int,
-        alreadyDemoted: MutableSet<Int>,
+        handled: MutableSet<Int>,
     ): Int {
-        val tasks = File("/proc/self/task").listFiles() ?: return 0
+        // list() rather than listFiles(): this runs hundreds of times over a boot and the File
+        // objects would be pure garbage on an already GC-pressured heap.
+        val tidNames = File("/proc/self/task").list() ?: return 0
+        val live = HashSet<Int>(tidNames.size * 2)
         var demoted = 0
-        for (task in tasks) {
-            val tid = task.name.toIntOrNull() ?: continue
-            if (tid == mainTid || tid in alreadyDemoted) continue
 
-            // A thread can exit between listing and reading; treat any failure as "skip".
-            val name = runCatching { File(task, "comm").readText().trim() }.getOrNull() ?: continue
-            if (DENYLIST.any { name.startsWith(it) }) continue
+        for (tidName in tidNames) {
+            val tid = tidName.toIntOrNull() ?: continue
+            live.add(tid)
+            if (tid == mainTid || tid in handled) continue
 
-            val ok = runCatching { Process.setThreadPriority(tid, targetNice) }.isSuccess
-            if (ok) {
-                alreadyDemoted.add(tid)
+            // A thread can exit between listing and reading; treat any failure as "skip" and let
+            // the next sweep retry, since it is not yet recorded in `handled`.
+            val name =
+                runCatching {
+                    File("/proc/self/task/$tidName/comm").readText().trim()
+                }.getOrNull() ?: continue
+
+            if (DENYLIST.any { name.startsWith(it) }) {
+                handled.add(tid)
+                continue
+            }
+
+            if (runCatching { Process.setThreadPriority(tid, targetNice) }.isSuccess) {
+                handled.add(tid)
                 demoted++
             }
         }
+
+        // Drop tids that have exited so the kernel recycling one into a new thread doesn't leave
+        // that thread permanently un-demoted.
+        handled.retainAll(live)
         return demoted
     }
 }

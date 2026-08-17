@@ -120,9 +120,10 @@ class Amethyst : Application() {
 
         instance = AppModules(this)
 
-        // Keeps the ~500 relay/ingest worker threads a cold start spawns from starving the UI
-        // thread out of its frames. Off unless the `amethyst_worker_nice` global setting is set.
-        WorkerThreadPriorityGovernor.startIfConfigured(this)
+        // Keeps the ~650 relay/ingest worker threads a cold start spawns from starving the UI
+        // thread out of its frames — worth ~45% off time-to-first-paint on a release build.
+        // Override or disable with the `amethyst_worker_nice` global setting.
+        WorkerThreadPriorityGovernor.start(this)
 
         // Hydrate the device-local favorite-apps list (main process only; the sandbox never reads it).
         FavoriteAppsRegistry.init(this)
