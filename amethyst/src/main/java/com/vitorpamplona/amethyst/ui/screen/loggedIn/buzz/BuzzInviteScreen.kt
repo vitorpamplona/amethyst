@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -189,7 +188,7 @@ fun BuzzInviteScreen(
                         // authenticates without a prompt, then hand off to the in-app window.nostr
                         // browser to accept terms + sign the claim.
                         RelayUrlNormalizer.normalizeOrNull(invite.relayUrl())?.let { relay ->
-                            BuzzWorkspaces.join(relay)
+                            accountViewModel.account.buzzWorkspaces.join(relay)
                             scope.launch { accountViewModel.account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
                         }
                         FavoriteAppLauncher.launchUrl(context, link)

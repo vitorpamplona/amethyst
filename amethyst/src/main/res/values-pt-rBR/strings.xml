@@ -1108,7 +1108,6 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Entrar sem perguntar quando…</string>
-    <string name="relay_auth_auto_my_relays">…for o meu relay, ou uma sala em que entrei</string>
     <string name="relay_auth_auto_read_follows">…eu estiver lendo alguém que sigo</string>
     <string name="relay_auth_auto_message_follows">…eu estiver enviando mensagem para alguém que sigo</string>
     <string name="relay_auth_auto_message_strangers">…eu estiver enviando mensagem para qualquer outra pessoa</string>

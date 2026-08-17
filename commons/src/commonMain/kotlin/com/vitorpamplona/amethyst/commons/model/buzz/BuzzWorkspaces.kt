@@ -35,11 +35,19 @@ import kotlinx.coroutines.flow.StateFlow
  * join event to key off — so this joined set is the client's own bookkeeping of which relays
  * to sync as workspaces.
  *
- * Persisted across launches by the platform (`BuzzWorkspacePreferences` on Android mirrors it
- * to a device-global store and restores it at startup). Like [BuzzRelayDialect] it is a
- * process-wide singleton; joining also marks the relay as a Buzz dialect.
+ * **One instance per account** (`Account.buzzWorkspaces`) — deliberately NOT a process-wide
+ * singleton like [BuzzRelayDialect]. Joining is a per-user act: the invite was redeemed by one
+ * key and the relay grants membership to that key alone. While this was device-global it also
+ * fed `AuthCoordinator.isFirstParty`, so one account joining a workspace made *every* logged-in
+ * account first-party there — the bystander-account AUTH leak the per-account gate exists to
+ * prevent. The dialect mark stays global: which protocol a relay speaks is a property of the
+ * relay, not of who is asking.
+ *
+ * Persisted across launches by the platform (`BuzzWorkspacePreferences` on Android mirrors each
+ * account's set to that account's own store and restores it at startup). Joining also marks the
+ * relay as a Buzz dialect.
  */
-object BuzzWorkspaces {
+class BuzzWorkspaces {
     private val joined = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
 
     /** The joined workspace relays; discovery subscriptions and the workspaces hub collect this. */
@@ -73,10 +81,5 @@ object BuzzWorkspaces {
     fun restore(relays: Set<NormalizedRelayUrl>) {
         relays.forEach { BuzzRelayDialect.mark(it) }
         joined.value = relays
-    }
-
-    /** Test-only: clears the joined set so unit tests don't leak state into each other. */
-    fun clearForTesting() {
-        joined.value = emptySet()
     }
 }

@@ -27,7 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -62,7 +61,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun BuzzDmDiscoveryPreload(accountViewModel: AccountViewModel) {
     val account = accountViewModel.account
-    val joined by BuzzWorkspaces.flow.collectAsStateWithLifecycle()
+    val joined by account.buzzWorkspaces.flow.collectAsStateWithLifecycle()
 
     // Restart the whole discovery (initial warm-auth fetch + live 44100 subs) whenever the joined
     // workspace set changes; the LaunchedEffect scope owns the live subscriptions and cancels them on

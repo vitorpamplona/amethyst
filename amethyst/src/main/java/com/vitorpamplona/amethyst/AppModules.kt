@@ -291,11 +291,6 @@ class AppModules(
     // lazy) so it loads before the first Buzz-relay AUTH and mirrors later changes to disk.
     val buzzAttestationPrefs = BuzzAttestationPreferences(appContext, applicationIOScope)
 
-    // Restore + persist the joined Buzz workspace relays across restarts (device-global). Eager so
-    // the app knows which relays to sync as workspaces on cold start (Buzz membership is
-    // server-side; there is no join event to rebuild the set from).
-    val buzzWorkspacePrefs = BuzzWorkspacePreferences(appContext, applicationIOScope)
-
     // Restore + persist the user's starred Buzz workspace channels across restarts (device-global).
     val buzzChannelStarPrefs = BuzzChannelStarPreferences(appContext, applicationIOScope)
 
@@ -905,6 +900,13 @@ class AppModules(
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
+            // Restore + persist each account's joined Buzz workspace relays across restarts, so the
+            // app knows which relays to sync as workspaces on cold start (Buzz membership is
+            // server-side; there is no join event to rebuild the set from). Per account: the set
+            // also makes a relay first-party for NIP-42.
+            startBuzzWorkspacePersistence = { pubKey, workspaces, accountScope ->
+                BuzzWorkspacePreferences(appContext, accountScope, pubKey, workspaces)
+            },
         )
 
     val sessionManager =

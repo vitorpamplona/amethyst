@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -405,6 +406,13 @@ class Account(
     // Per-account NIP-42 ALLOW/DENY overrides, warm-cached in memory so a relay AUTH challenge is
     // answered without a disk read. Backed by a per-account file (see AccountCacheState).
     val relayAuthPermissions = RelayAuthPermissionCache(relayAuthPermissionStore, scope)
+
+    // The `block/buzz` workspaces THIS account joined. Per account, not per device: the invite was
+    // redeemed by this key and the relay grants membership to it alone — and this set makes the
+    // relay first-party for NIP-42 (see AuthCoordinator.isFirstParty), so a device-global set would
+    // hand every other logged-in account an automatic login on a workspace it never joined.
+    // Restored/persisted per account by BuzzWorkspacePreferences (see AccountCacheState).
+    val buzzWorkspaces = BuzzWorkspaces()
 
     // Per-account NIP-42 policy evaluator (blocked → per-relay override → global policy → prompt),
     // reading THIS account's own toggles, relay lists and follow graph. Cached here so every AUTH
