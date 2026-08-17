@@ -24,11 +24,16 @@ import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -46,7 +51,7 @@ class RelayAuthSessionGrantsTest {
 
     private fun ledger(
         grants: RelayAuthSessionGrants = RelayAuthSessionGrants(),
-        store: InMemoryRelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
+        store: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
         blocked: Set<String> = emptySet(),
     ) = RelayAuthPermissionLedger(
         store = store,
@@ -155,6 +160,63 @@ class RelayAuthSessionGrantsTest {
 
             assertFalse(grants.isGranted(relay))
             assertEquals(RelayAuthVerdict.ASK, ledger.decide(askable(relay)))
+        }
+
+    /**
+     * A store whose write suspends until [gate] opens, modelling the real one: the disk write is
+     * awaited *before* [RelayAuthPermissionCache] publishes the new override to memory, so there is a
+     * window where the override is not yet readable.
+     */
+    private class GatedStore(
+        private val gate: CompletableDeferred<Unit>,
+        private val inner: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
+    ) : RelayAuthPermissionStore by inner {
+        override suspend fun storeDecision(
+            relayUrl: String,
+            decision: RelayAuthDecision,
+        ) {
+            gate.await()
+            inner.storeDecision(relayUrl, decision)
+        }
+    }
+
+    @Test
+    fun promotingAGrantToAlwaysNeverOpensAGapThatRePrompts() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val ledger = ledger(store = GatedStore(gate))
+            ledger.grantForSession(relay)
+
+            val write = launch { ledger.setDecision(relay, RelayAuthDecision.ALLOW) }
+            runCurrent()
+
+            // Mid-write the override is not readable yet. If the grant has already been dropped the
+            // relay is momentarily undecided and a reconnect lands a fresh dialog on a user who just
+            // pressed "Always" — the exact prompt this feature exists to stop.
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+
+            gate.complete(Unit)
+            write.join()
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+        }
+
+    @Test
+    fun neverAllowStopsAuthenticatingBeforeItsWriteLands() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val ledger = ledger(store = GatedStore(gate))
+            ledger.grantForSession(relay)
+
+            val write = launch { ledger.setDecision(relay, RelayAuthDecision.DENY) }
+            runCurrent()
+
+            // The opposite bias to the ALLOW case: a user who just said "never" must not have one more
+            // AUTH signed on the strength of the grant they are replacing.
+            assertNotEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+
+            gate.complete(Unit)
+            write.join()
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
         }
 
     @Test

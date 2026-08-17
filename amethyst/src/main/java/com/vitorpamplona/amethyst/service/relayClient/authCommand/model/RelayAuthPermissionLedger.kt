@@ -161,13 +161,23 @@ class RelayAuthPermissionLedger(
      * Also drops any session grant: the stored decision is now the whole answer for this relay, so
      * leaving the transient one behind would let a later [clearDecision] ("follows your rules again")
      * silently keep authenticating off a grant the user can no longer see.
+     *
+     * The two writes are not atomic — [RelayAuthPermissionCache] only publishes an override to memory
+     * *after* its disk write returns — so a challenge arriving between them must never see neither.
+     * Which side to fail on depends on the decision:
+     * - **DENY** revokes first. The window then asks or denies, never signs: a user who just pressed
+     *   "never allow" must not get one more AUTH out of the grant they are replacing.
+     * - **ALLOW** revokes last, so the grant still covers the window. Revoking first left the relay
+     *   momentarily undecided, which re-prompted the user who had just pressed "always" — the very
+     *   dialog this whole feature exists to stop.
      */
     suspend fun setDecision(
         relayUrl: String,
         decision: RelayAuthDecision,
     ) {
-        sessionGrants.revoke(relayUrl)
+        if (decision == RelayAuthDecision.DENY) sessionGrants.revoke(relayUrl)
         store.storeDecision(relayUrl, decision)
+        sessionGrants.revoke(relayUrl)
     }
 
     /** Removes the per-relay override for [relayUrl], reverting to the global policy. */

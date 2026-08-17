@@ -230,7 +230,14 @@ fun RelayAuthSettingsScreen(
                                     selected = globalPolicy == policy,
                                     title = stringResource(titleRes),
                                     description = stringResource(descRes),
-                                    onClick = { account.settings.changeDefaultRelayAuthPolicy(policy) },
+                                    onClick = {
+                                        account.settings.changeDefaultRelayAuthPolicy(policy)
+                                        // "Never log in" is the switch-it-all-off answer, so a casual
+                                        // "just for now" tap must not quietly outlive it. Deliberate
+                                        // Always/Never exceptions are left alone — those outrank the
+                                        // global policy by design, and the list above says so.
+                                        if (policy == RelayAuthPolicy.NEVER) account.relayAuthSessionGrants.clear()
+                                    },
                                 )
                             }
                         }
