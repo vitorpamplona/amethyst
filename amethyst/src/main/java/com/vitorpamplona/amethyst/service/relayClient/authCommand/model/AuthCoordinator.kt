@@ -103,6 +103,10 @@ class AuthCoordinator(
                     // question. Returning early here instead made "decide per relay" mean "deny, and
                     // don't mention it" for every purpose that names someone else — the exact case the
                     // prompt was built to explain.
+                    //
+                    // It does not reach the "…I'm reading someone I follow" toggle at all: a follow's
+                    // outbox relay can never be first-party for us, so applying it there emptied the
+                    // category instead of narrowing it. RelayAuthResolver.customAllows has the detail.
                     val firstParty = isFirstParty(account, relayUrl)
 
                     val approve =
@@ -115,8 +119,9 @@ class AuthCoordinator(
                                 // reveal @b — an answer is only about the identity it was shown for.
                                 // The bus still collapses concurrent challenges for the same
                                 // (relay, account) pair, which is the case the shared prompt was for.
-                                // In practice this rarely means two dialogs: isFirstParty already
-                                // drops every account without its own reason to be on this relay.
+                                // In practice this rarely means two dialogs: for everything except
+                                // reading a follow, isFirstParty already drops every account without
+                                // its own reason to be on this relay.
                                 //
                                 // But never block the derived stream-key AUTH behind that dialog: on a
                                 // relay that hosts our Concord planes we DISMISS the user-auth ASK
@@ -231,8 +236,13 @@ class AuthCoordinator(
      * Merely *following* the counterparty of someone else's traffic is deliberately NOT first-party:
      * that is exactly how a bystander account got dragged into a paid inbox relay's AUTH (the shared
      * auth context carries the OTHER account's counterparties, evaluated against this account's
-     * follow graph). Reads of a followed author's outbox on an auth-gated relay this account doesn't
-     * use are therefore no longer auto-authed — a deliberate privacy-positive trade-off.
+     * follow graph).
+     *
+     * Reading a followed author's outbox is the one case this cannot speak to. That relay is the
+     * author's, so nothing here can ever return true for it, which is why
+     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthResolver] applies the
+     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles.readFollows] category
+     * without consulting this — otherwise the toggle would be permanently off.
      */
     private fun isFirstParty(
         account: Account,
