@@ -154,6 +154,21 @@ class NappletBrokerService : Service() {
     private var foregroundLeaseWatchdog: Job? = null
 
     private fun handleMessage(msg: Message): Boolean {
+        // A sandbox surface is being destroyed: drop every reference we hold to its Messenger. Holding a
+        // client's Messenger keeps a binder alive, which pins that surface's whole Activity (and its
+        // WebView) in the `:napplet` process past onDestroy — reclaimable only by killing the process.
+        if (msg.what == NappletIpc.MSG_RELEASE_CLIENT) {
+            msg.replyTo?.let { incBus.removeAll(it) }
+            // Release its foreground lease too; otherwise a destroyed surface keeps the main process
+            // pinned resumed until the lease watchdog expires it.
+            msg.data?.getString(NappletIpc.KEY_LAUNCH_TOKEN)?.let { token ->
+                synchronized(foregroundLeases) {
+                    if (foregroundLeases.remove(token) != null) SandboxForegroundHold.release()
+                }
+            }
+            return true
+        }
+
         // A sandbox surface (full-screen :napplet host) entered, renewed, or left the foreground. Hold the
         // main process resumed while at least one is foreground, so opening it doesn't tear down Tor/relays.
         if (msg.what == NappletIpc.MSG_SET_FOREGROUND) {
