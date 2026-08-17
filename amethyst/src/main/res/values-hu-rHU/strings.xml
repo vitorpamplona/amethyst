@@ -512,6 +512,11 @@
     <string name="account_backup_tips3_md" tools:ignore="Typos">        A nagyobb biztonság érdekében titkosítsa egy jelszóval. A jelszóval védett kulcs **ncryptsec1**-vel kezdődik, és a jelszava nélkül nem használható.
          \n\nHa elveszíti a jelszavát, nem tudja visszaállítani a kulcsát.
     </string>
+    <string name="backup_keys_nudge_title">Biztonsági mentés készítése a kulcsokról</string>
+    <string name="backup_keys_nudge_body">A titkos kulcs megadása az egyetlen módja a fiók elérésének. Ha elveszíti, akkor soha nem tudja visszaszerezni. Mentse el biztonságos helyre most.</string>
+    <string name="backup_keys_nudge_backup_now">Biztonsági mentés most</string>
+    <string name="backup_keys_nudge_already_saved">Elmentettem a kulcsokat</string>
+    <string name="backup_keys_nudge_dismiss">Eltüntetés</string>
     <string name="failed_to_encrypt_key">Nem sikerült a privát kulcsot titkosítani</string>
     <string name="secret_key_copied_to_clipboard">A titkos kulcs (nsec) a vágólapra másolva</string>
     <string name="copy_my_secret_key">Saját titkos kulcs másolása</string>
