@@ -159,12 +159,55 @@ fun cashuWalletFilters(
  * Scoped to kind:7375 alone. Those are the events that carry money; history,
  * quotes and recommendations are display-only, and paging them too would
  * multiply the download for a wallet with a long history without changing a
- * single balance.
+ * single balance. A caller that wants the rest — a headless client with no
+ * scrolling list to page for it — asks for [cashuOwnEventBackfillFilters].
  */
-fun cashuProofBackfillFilters(pubkey: HexKey): List<Filter> =
+fun cashuProofBackfillFilters(pubkey: HexKey): List<Filter> = cashuOwnEventBackfillFilters(pubkey, listOf(CashuTokenEvent.KIND))
+
+/**
+ * Every NIP-60/87 kind this account authors, for a paged walk over the relays it
+ * publishes to. The read-side twin of the `authors=` half of [cashuWalletFilters],
+ * minus the live subscription's cap exposure.
+ */
+val OWN_CASHU_KINDS =
+    listOf(
+        CashuWalletEvent.KIND,
+        CashuTokenEvent.KIND,
+        CashuSpendingHistoryEvent.KIND,
+        CashuMintQuoteEvent.KIND,
+        NutzapInfoEvent.KIND,
+        MintRecommendationEvent.KIND,
+    )
+
+/**
+ * A paged backfill of the account's **own** NIP-60/87 events, over the relays it
+ * publishes to. Defaults to every kind it authors; pass a narrower [kinds] to
+ * page only part of it (see [cashuProofBackfillFilters]).
+ *
+ * Hand this to `fetchAllPages` / `fetchAllPagesFromPool`, never to a plain REQ:
+ * the whole point is walking `until` cursors past the relay's cap, which is what
+ * silently truncates the single uncapped REQ [cashuWalletFilters] opens.
+ */
+fun cashuOwnEventBackfillFilters(
+    pubkey: HexKey,
+    kinds: List<Int> = OWN_CASHU_KINDS,
+): List<Filter> =
     listOf(
         Filter(
-            kinds = listOf(CashuTokenEvent.KIND),
+            kinds = kinds,
             authors = listOf(pubkey),
+        ),
+    )
+
+/**
+ * A paged backfill of inbound NIP-61 nutzaps (kind:9321) addressed to this
+ * account, matched by the recipient `#p` tag because someone else authored them.
+ * Read from the account's inbox set, mirroring the split in [cashuWalletFilters].
+ */
+fun cashuInboundNutzapBackfillFilters(pubkey: HexKey): List<Filter> =
+    listOf(
+        Filter(
+            kinds = listOf(NutzapEvent.KIND),
+            tags = mapOf("p" to listOf(pubkey)),
         ),
     )

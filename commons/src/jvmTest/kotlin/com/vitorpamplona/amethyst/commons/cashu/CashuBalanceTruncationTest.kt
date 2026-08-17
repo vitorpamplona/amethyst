@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.cashu
 
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletQueryState
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuInboundNutzapBackfillFilters
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuOwnEventBackfillFilters
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuProofBackfillFilters
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuWalletFilters
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -177,6 +179,37 @@ class CashuBalanceTruncationTest {
         // to one slice of history.
         assertNull(filter.since)
         assertNull(filter.until)
+    }
+
+    @Test
+    fun `own-event backfill covers every kind the live subscription authors`() {
+        val relay = RelayUrlNormalizer.normalize("wss://relay.example.com")
+        val liveOwnKinds =
+            cashuWalletFilters(
+                CashuWalletQueryState(owner, setOf(relay), emptySet()),
+                since = null,
+            ).single { it.filter.authors == listOf(owner) }
+                .filter.kinds
+                .orEmpty()
+
+        val backfillKinds = cashuOwnEventBackfillFilters(owner).single().kinds.orEmpty()
+
+        // A headless client has no scrolling list to page for it, so its one-shot walk has to reach
+        // everything the capped live query would have asked for — otherwise the gap just moves.
+        liveOwnKinds.forEach {
+            assertTrue("backfill must cover live-authored kind $it", it in backfillKinds)
+        }
+    }
+
+    @Test
+    fun `inbound nutzap backfill matches by recipient tag, not author`() {
+        val f = cashuInboundNutzapBackfillFilters(owner).single()
+
+        // Someone else signs a nutzap addressed to me, so it can only be found by the #p tag —
+        // authors=[me] would return nothing and look like an empty inbox.
+        assertEquals(listOf(owner), f.tags?.get("p"))
+        assertNull(f.authors)
+        assertNull("paged walks must not carry a limit", f.limit)
     }
 
     @Test
