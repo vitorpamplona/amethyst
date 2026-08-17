@@ -214,6 +214,7 @@ private object PrefKeys {
     const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
     const val DISMISSED_POLL_NOTE_IDS = "dismissed_poll_note_ids"
     const val DISMISSED_CHANNEL_INVITES = "dismissed_channel_invites"
+    const val MUTED_PUBLIC_CHATS = "muted_public_chats"
     const val VIEWED_POLL_RESULT_NOTE_IDS = "viewed_poll_result_note_ids"
     const val PENDING_ATTESTATIONS = "pending_attestations"
 
@@ -650,6 +651,7 @@ object LocalPreferences {
                     putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
                     putStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, settings.dismissedPollNoteIds.value)
                     putStringSet(PrefKeys.DISMISSED_CHANNEL_INVITES, settings.dismissedChannelInvites.value)
+                    putStringSet(PrefKeys.MUTED_PUBLIC_CHATS, settings.mutedPublicChats.value)
                     putString(
                         PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS,
                         JsonMapper.toJson(settings.viewedPollResultNoteIds.value),
@@ -789,6 +791,7 @@ object LocalPreferences {
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
                     val dismissedChannelInvites = getStringSet(PrefKeys.DISMISSED_CHANNEL_INVITES, null) ?: setOf()
+                    val mutedPublicChats = getStringSet(PrefKeys.MUTED_PUBLIC_CHATS, null) ?: setOf()
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
 
@@ -1048,6 +1051,7 @@ object LocalPreferences {
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         dismissedPollNoteIds = MutableStateFlow(dismissedPollNoteIds),
                         dismissedChannelInvites = MutableStateFlow(dismissedChannelInvites),
+                        mutedPublicChats = MutableStateFlow(mutedPublicChats),
                         viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIdsResolved),
                         pendingAttestations = MutableStateFlow(pendingAttestationsResolved),
                         backupNipA3PaymentTargets = latestPaymentTargetsResolved,

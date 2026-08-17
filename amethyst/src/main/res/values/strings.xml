@@ -602,6 +602,9 @@
     <string name="quick_action_block">Block</string>
     <string name="quick_action_mute_thread">Mute thread</string>
     <string name="quick_action_unmute_thread">Unmute thread</string>
+    <string name="mute_notifications">Mute notifications</string>
+    <string name="unmute_notifications">Unmute notifications</string>
+    <string name="muted_chat_content_description">Notifications are muted for this chat</string>
     <string name="quick_action_report">Report</string>
     <string name="quick_action_dont_show_again_button">Don\'t show again</string>
     <string name="report_dialog_spam">Spam or scams</string>
