@@ -526,17 +526,23 @@ class CashuWalletState(
                 }
             }
 
-        // Page the full proof set back, once, as soon as we know where to ask.
-        // The live subscription above cannot do this on its own — see
-        // [resyncProofsFromRelays].
+        // Page the full proof set back, once, as soon as we know there is a
+        // wallet and where to ask about it. The live subscription above cannot
+        // do this on its own — see [resyncProofsFromRelays].
+        //
+        // Gated on a wallet existing so an Account object that is only resident
+        // to decrypt a pushed gift wrap never pages a wallet nobody has: that
+        // is the same reason the wallet's relay subscription lives in
+        // CashuWalletEoseManager rather than here.
         jobs +=
             scope.launch(Dispatchers.IO) {
-                val relays =
-                    withTimeoutOrNull(BACKFILL_RELAY_WAIT_MS) {
+                val ready =
+                    withTimeoutOrNull(BACKFILL_READY_WAIT_MS) {
+                        _walletEvent.first { it != null }
                         outboxRelaysFlow.first { it.isNotEmpty() }
                     }
-                if (relays == null) {
-                    Log.w("CashuWallet") { "No outbox relays after ${BACKFILL_RELAY_WAIT_MS}ms; skipping proof backfill" }
+                if (ready == null) {
+                    Log.d("CashuWallet") { "No wallet + outbox relays within ${BACKFILL_READY_WAIT_MS}ms; skipping proof backfill" }
                 } else {
                     resyncProofsFromRelays()
                 }
@@ -630,13 +636,19 @@ class CashuWalletState(
                 }
             }.onFailure {
                 Log.w("CashuWallet", "Paged proof backfill failed", it)
+            }.onSuccess {
+                // Latch only on a walk that actually completed. A walk that
+                // blew up (offline at launch, every relay unreachable) has
+                // proved nothing about what the relays hold, and latching on it
+                // would leave the wallet showing the truncated balance for the
+                // rest of the session with no automatic second attempt.
+                proofBackfillDone = true
             }
 
-            val fresh = collected.values.filter { it.id !in tokenEvents.keys }
+            val fresh = collected.values.filter { !tokenEvents.containsKey(it.id) }
             Log.i("CashuWallet") {
                 "Proof backfill over ${relays.size} relay(s): ${collected.size} kind:7375 seen, ${fresh.size} new"
             }
-            proofBackfillDone = true
 
             if (fresh.isNotEmpty()) {
                 applyEvents(fresh)
@@ -645,6 +657,15 @@ class CashuWalletState(
                 // number.
                 runCatching { scrubLocallyStaleProofs() }
                     .onFailure { Log.w("CashuWallet", "Post-backfill NUT-07 sweep failed", it) }
+            } else if (undecryptedTokenCount() > 0) {
+                // Nothing new off the relays, but we are still holding proofs
+                // we could not read. A decrypt failure hides money exactly as
+                // effectively as a missing event does, and the retry inside
+                // recomputeUnspent only fires when some *other* change marks
+                // the tokens dirty — which, in a wallet that has gone quiet, may
+                // be never. A user asking for a refresh is asking for that
+                // retry too.
+                recomputeUnspent()
             }
             fresh.size
         }
@@ -833,8 +854,10 @@ class CashuWalletState(
     private suspend fun recomputeUnspent() {
         val all = tokenEvents.values.toList()
         // Decrypt anything we haven't seen before; reuse cached TokenContent
-        // for events we've already decrypted. Decryption failures are
-        // skipped — the proof set rebuilds the next time a re-key happens.
+        // for events we've already decrypted. Only successes are cached, so a
+        // failure is retried on the next recompute rather than being pinned as
+        // "empty" for the session.
+        var undecryptable = 0
         all.forEach { evt ->
             if (!tokenContents.containsKey(evt.id)) {
                 val content =
@@ -844,13 +867,28 @@ class CashuWalletState(
                                 "Failed to decrypt token ${evt.id.take(8)}: ${it.message}"
                             }
                         }.getOrNull()
-                if (content != null) tokenContents[evt.id] = content
+                if (content != null) tokenContents[evt.id] = content else undecryptable++
+            }
+        }
+
+        // A token we cannot decrypt is money we cannot see, and it drops out of
+        // the balance as silently as a token a relay never delivered. The
+        // retry above only fires when something else triggers a recompute, so
+        // say it out loud: with this counter, a wallet reading low because an
+        // external signer refused N decrypts is diagnosable from a log instead
+        // of looking identical to a wallet that is genuinely empty.
+        if (undecryptable > 0) {
+            Log.w("CashuWallet") {
+                "$undecryptable of ${all.size} kind:7375 event(s) failed to decrypt — balance excludes them"
             }
         }
 
         // Shared del-rollover + sort with the headless reader.
         _tokenEntries.value = CashuWalletReader.computeUnspent(all, tokenContents)
     }
+
+    /** Token events we hold but have never managed to decrypt. See [recomputeUnspent]. */
+    private fun undecryptedTokenCount(): Int = tokenEvents.keys.count { it !in tokenContents.keys }
 
     private fun recomputePending() {
         // Shared destroyed/expired filter with the headless reader.
@@ -876,8 +914,14 @@ class CashuWalletState(
     private suspend fun redeemPendingNutzapsSerialized() {
         if (!redeemMutex.tryLock()) return // a sweep is already in flight
         try {
-            val privkey = walletPrivkeyHex() ?: return
-            val pubkey = p2pkPubkeyHex() ?: return
+            // Establish there is work BEFORE touching the signer. This sweep
+            // fires from every relevant cache bundle, and the two key reads
+            // below are NIP-44 decrypts of kind:17375 — for a NIP-46 bunker or
+            // a NIP-55 external signer that is a round-trip out of the process
+            // (Amber even prompts on some configurations), paid on every bundle
+            // by a wallet whose nutzaps were all redeemed months ago. Nothing
+            // above the candidate filter needs a key, so hoist the filter.
+            if (nutzapEvents.isEmpty()) return
             val skipIds = HashSet<HexKey>()
             historyEvents.values.forEach { h ->
                 h.redeemedReferences().forEach { skipIds.add(it.eventId) }
@@ -887,6 +931,17 @@ class CashuWalletState(
 
             val candidates = nutzapEvents.values.filter { it.id !in skipIds }
             if (candidates.isEmpty()) return
+
+            val privkey = walletPrivkeyHex() ?: return
+            // Derived from the same key the line above just decrypted — pass it
+            // in rather than letting p2pkPubkeyHex() decrypt kind:17375 a
+            // second time for the identical bytes.
+            val pubkey =
+                runCatching {
+                    Secp256k1
+                        .pubKeyCompress(Secp256k1.pubkeyCreate(privkey.hexToByteArray()))
+                        .toHexKey()
+                }.getOrNull() ?: return
 
             for (ev in candidates) {
                 try {
@@ -1047,11 +1102,26 @@ class CashuWalletState(
         val sharedMints = info.mints().map { it.mintUrl }.filter { it in ourMints }
         if (sharedMints.isEmpty()) return null
 
+        // One pass over the entries, not one per shared mint. This runs inside
+        // a composable `remember {}` on every zap chip, so it is per rendered
+        // note — and `_tokenEntries` is no longer the handful of events a
+        // truncated relay delivery used to leave behind, it is the wallet's
+        // whole proof set. The old filter-per-mint form was
+        // O(sharedMints × entries) with a throwaway list allocated per mint.
         val entries = _tokenEntries.value
+        val satsPerMint = HashMap<String, Long>(sharedMints.size)
+        var totalWalletSats = 0L
+        entries.forEach { entry ->
+            val amount = entry.content.totalAmount()
+            totalWalletSats += amount
+            val mint = entry.content.mint
+            if (mint in ourMints) satsPerMint[mint] = (satsPerMint[mint] ?: 0L) + amount
+        }
+
         var bestMint = sharedMints.first()
         var bestMintSats = 0L
         for (mint in sharedMints) {
-            val balance = entries.filter { it.content.mint == mint }.sumOf { it.content.totalAmount() }
+            val balance = satsPerMint[mint] ?: 0L
             if (balance > bestMintSats) {
                 bestMintSats = balance
                 bestMint = mint
@@ -1061,7 +1131,7 @@ class CashuWalletState(
         return NutzapFunding(
             target = NutzapTarget(mintUrl = bestMint, recipientP2pkPubkeyHex = recipientPubkeyHex),
             bestSingleMintSats = bestMintSats,
-            totalWalletSats = entries.sumOf { it.content.totalAmount() },
+            totalWalletSats = totalWalletSats,
         )
     }
 
@@ -1332,11 +1402,26 @@ class CashuWalletState(
                 entry to entry.content.proofs.mapTo(HashSet()) { it.secret }
             }
 
+        // Index secret → entries holding it. A superset of B must share every
+        // one of B's secrets, so the only entries that can possibly cover B are
+        // the ones indexed under B's first secret — which is a handful, not the
+        // whole wallet. The previous all-pairs scan was O(entries²) with a
+        // set-containment test inside; that was invisible while a truncated
+        // relay delivery kept the wallet at a few entries, and is not once the
+        // whole proof set is present.
+        val holdersOfSecret = HashMap<String, MutableList<Pair<TokenEntry, HashSet<String>>>>()
+        withSecrets.forEach { pair ->
+            pair.second.forEach { secret ->
+                holdersOfSecret.getOrPut(secret) { mutableListOf() }.add(pair)
+            }
+        }
+
         val redundant = mutableListOf<TokenEntry>()
         for ((entry, secrets) in withSecrets) {
             if (secrets.isEmpty()) continue
+            val candidates = holdersOfSecret[secrets.first()] ?: continue
             val isRedundant =
-                withSecrets.any { (other, otherSecrets) ->
+                candidates.any { (other, otherSecrets) ->
                     other.event.id != entry.event.id &&
                         otherSecrets.containsAll(secrets) &&
                         (
@@ -1697,13 +1782,13 @@ class CashuWalletState(
         const val DISCOVERY_TIMEOUT_MS = 8_000L
 
         /**
-         * How long the startup proof backfill waits for a non-empty outbox
-         * relay set before giving up. The NIP-65 list is restored from
-         * AccountSettings almost immediately on a returning launch; this
-         * window only matters on a first sign-in, where the list has to come
-         * off the network before we know where the wallet's events live.
+         * How long the startup proof backfill waits for a wallet event plus a
+         * non-empty outbox relay set before giving up. Both are restored from
+         * AccountSettings almost immediately on a returning launch; this window
+         * only matters on a first sign-in, where they have to come off the
+         * network before we know there is a wallet and where its events live.
          */
-        private const val BACKFILL_RELAY_WAIT_MS = 30_000L
+        private const val BACKFILL_READY_WAIT_MS = 60_000L
 
         /**
          * Per-page idle window for the paged proof walk — measured from the

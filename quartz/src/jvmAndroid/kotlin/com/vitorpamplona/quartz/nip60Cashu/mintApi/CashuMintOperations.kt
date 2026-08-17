@@ -664,20 +664,42 @@ class CashuMintOperations(
      * Used by NUT-09 restore to filter spent proofs out of the recovered
      * set before publishing — the mint will sign blind messages whether
      * the underlying secret has been spent or not.
+     *
+     * Chunked at [MAX_CHECKSTATE_REQUEST_ITEMS] `Y`s per request. The wallet
+     * sweep ([scrubStaleProofs]) checks every proof it holds at a mint in one
+     * call, and that set is unbounded — it grows with the wallet's history, and
+     * a client that pages its whole proof set back off the relays can reach
+     * four figures in a single sweep. Mints run the same Pydantic list caps on
+     * `/v1/checkstate` that they do on `/v1/restore`, so an unchunked call
+     * fails the whole sweep with a validation error at exactly the moment the
+     * wallet has the most to reconcile.
+     *
+     * A proof whose `Y` the mint doesn't echo back is simply absent from the
+     * result, as before — callers treat "not UNSPENT" and "not present" alike.
      */
     suspend fun checkStates(proofs: List<CashuProof>): Map<String, ProofState> {
         if (proofs.isEmpty()) return emptyMap()
-        // NUT-07 keys check requests by `Y` (hash-to-curve of the secret).
-        val ys = proofs.map { Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray()).toHexKey() }
-        val response = client.checkState(CheckStateRequestDto(ys = ys))
-        val secretByY =
-            proofs.associateBy {
-                Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray()).toHexKey()
+        // NUT-07 checks by `Y` (hash-to-curve of the secret). That's an EC
+        // operation per proof, so derive it once and keep both directions from
+        // the same pass — computing it separately for the request list and for
+        // the response lookup doubled the curve work on every sweep.
+        val secretByY = HashMap<String, String>(proofs.size)
+        val ys = ArrayList<String>(proofs.size)
+        proofs.forEach { proof ->
+            val y = Bdhke.hashToCurveCompressed(proof.secret.encodeToByteArray()).toHexKey()
+            // putIfAbsent: two proofs can legitimately carry the same secret
+            // (a duplicated kind:7375 the dedup pass hasn't retired yet), and
+            // they map to the same state anyway.
+            if (secretByY.putIfAbsent(y, proof.secret) == null) ys.add(y)
+        }
+
+        val out = HashMap<String, ProofState>(secretByY.size)
+        ys.chunked(MAX_CHECKSTATE_REQUEST_ITEMS).forEach { chunk ->
+            val response = client.checkState(CheckStateRequestDto(ys = chunk))
+            for (row in response.states) {
+                val secret = secretByY[row.y] ?: continue
+                out[secret] = ProofState.fromWire(row.state)
             }
-        val out = mutableMapOf<String, ProofState>()
-        for (row in response.states) {
-            val proof = secretByY[row.y] ?: continue
-            out[proof.secret] = ProofState.fromWire(row.state)
         }
         return out
     }
@@ -844,6 +866,14 @@ class CashuMintOperations(
          * future tightening.
          */
         const val MAX_RESTORE_REQUEST_ITEMS: Int = 500
+
+        /**
+         * Upper bound on `Y`s per `/v1/checkstate` request body. Same
+         * reasoning as [MAX_RESTORE_REQUEST_ITEMS], but the response carries
+         * one small state row per `Y` rather than a full blind signature, so
+         * there is no doubling to leave headroom for.
+         */
+        const val MAX_CHECKSTATE_REQUEST_ITEMS: Int = 500
 
         /** Re-exported from [splitAmountIntoDenominations] for convenience. */
         fun splitAmounts(amount: Long): List<Long> = splitAmountIntoDenominations(amount)

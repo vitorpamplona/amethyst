@@ -61,6 +61,11 @@ import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -1154,16 +1159,41 @@ class CashuWalletOps(
         val activeKeysetId = mintOps.activeKeyset().id
         val keysetIds = mintOps.restorableKeysetIds()
 
+        // Scan keysets concurrently, a few at a time. Each keyset's walk costs
+        // at least `emptyBatchesToStop` /v1/restore round-trips with batch
+        // bodies up to MAX_RESTORE_REQUEST_ITEMS outputs — so a mint that has
+        // rotated ten times turns a scan that used to be three requests into
+        // thirty, and run end to end that is a minute of staring at a spinner
+        // on mobile. The walks are independent (separate derivation chains,
+        // read-only at the mint), so the only reason to serialize them is
+        // politeness to the mint; [RESTORE_KEYSET_CONCURRENCY] keeps that
+        // while cutting the wall clock by roughly the same factor.
+        val semaphore = Semaphore(RESTORE_KEYSET_CONCURRENCY)
+        val results =
+            coroutineScope {
+                keysetIds
+                    .map { keysetId ->
+                        async {
+                            semaphore.withPermit {
+                                keysetId to
+                                    runCatching {
+                                        mintOps.restore(seed = seed, keysetId = keysetId, startCounter = startCounter)
+                                    }.onFailure {
+                                        // One retired keyset the mint won't serve keys for must not
+                                        // sink the recovery of every other keyset at this mint.
+                                        Log.w("CashuWalletOps") {
+                                            "NUT-09 restore of keyset $keysetId at $mintUrl failed: ${describeMintError(it)}"
+                                        }
+                                    }.getOrNull()
+                            }
+                        }
+                    }.awaitAll()
+            }
+
         val recovered = mutableListOf<CashuProof>()
         var activeNextCounter = startCounter
-        for (keysetId in keysetIds) {
-            val result =
-                runCatching { mintOps.restore(seed = seed, keysetId = keysetId, startCounter = startCounter) }
-                    .onFailure {
-                        Log.w("CashuWalletOps") {
-                            "NUT-09 restore of keyset $keysetId at $mintUrl failed: ${describeMintError(it)}"
-                        }
-                    }.getOrNull() ?: continue
+        for ((keysetId, result) in results) {
+            if (result == null) continue
             if (keysetId == activeKeysetId) activeNextCounter = result.nextCounterAfterScan
             recovered += result.proofs.map { it.proof }
         }
@@ -1292,6 +1322,14 @@ class CashuWalletOps(
          * cheap (one /v1/restore batch).
          */
         private const val DEFAULT_RESTORE_SCAN_BACK: Long = 32L
+
+        /**
+         * How many of a mint's keysets [scanRecoverableProofs] walks at once.
+         * Small on purpose: the walks are read-only but each one issues a
+         * series of large `/v1/restore` bodies, and a recovery is not worth
+         * tripping a mint's rate limiter over.
+         */
+        private const val RESTORE_KEYSET_CONCURRENCY: Int = 3
     }
 }
 
