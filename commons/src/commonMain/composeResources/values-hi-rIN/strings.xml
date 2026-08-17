@@ -17,7 +17,7 @@
     <string name="login_hide_key">कुंचिका छिपाएँ</string>
     <!-- New Key Warning -->
     <string name="new_key_warning_title">महत्वपूर्ण। आपके कुंचिकाओं को सुरक्षित रखें।</string>
-    <string name="new_key_warning_message">आपकी गुप्त कुंचिका (एनसेक॰) एकमात्र विधि है आपके अपने लेखा अभिगमन के लिए। यदि आप इसे खो देते हैं तो आपका लेखा भी सर्वदा के लिए चला जाएगा। इसे कहीं सुरक्षित रखें।</string>
+    <string name="new_key_warning_message">आपकी गुप्त कुंचिका (एनसेक॰) एक पारणशब्द के जैसा है जिसे कभी भी पुनःस्थापित नहीं किया जा सकता। पुनःप्राप्त भी नहीं हो सकता। यह एकमात्र विधि है आपके अपने लेखा का अभिगमन करने के लिए। जिस किसी के पास यह है आपकी लेखा का नियन्त्रण करेगा सर्वदा के लिए। यदि आप इसे खो देते हैं तो आपका लेखा भी सर्वदा के लिए चला जाएगा। इसे कभी भी बाँटना नहीं। एक पारणशब्द प्रबन्धक में इसे रखें।</string>
     <string name="new_key_public_label">ख्याप्य कुंचिका (वितरणशक्य):</string>
     <string name="new_key_secret_label">गुप्त कुंचिका (इसे कभी ना बाँटें):</string>
     <string name="new_key_continue_button">मेरे कुंचिकाओं को सुरक्षित रख लिया। आगे</string>
@@ -30,7 +30,7 @@
     <string name="new_key_cancel">निरस्त</string>
     <string name="new_key_step_intro_title">अपने कुंचिकाओं को सुरक्षित रखें आगे बढने से पहले</string>
     <string name="new_key_step_intro_npub">आपकी ख्याप्य कुंचिका (एनपुब॰) आपका वितरणशक्य पता है। इसे निःसंकोच अन्यों को दें जिससे लोग आपको ढूँढ पाएँ तथा अनुगमन कर सकें।</string>
-    <string name="new_key_step_intro_nsec">आपकी गुप्त कुंचिका (एनसेक॰) एक पारणशब्द है जिसे कभी भी पुनःस्थापित नहीं किया जा सकता। यह एकमात्र बार दिखाई जाएगी। इसे सुरक्षित रखें अभी इसी समय। अथवा आप इस लेखा का अभिगमन सर्वदा के लिए खो देंगे।</string>
+    <string name="new_key_step_intro_nsec">आपकी गुप्त कुंचिका (एनसेक॰) एक पारणशब्द है जिसे कभी भी पुनःस्थापित नहीं किया जा सकता। यह एकमात्र बार दिखाई जाएगी। इसे सुरक्षित रखें अभी इसी समय। अथवा आप इस लेखा का अभिगमन क्षमता सर्वदा के लिए खो देंगे।</string>
     <string name="new_key_keys_title">आपके कुंचिकाएँ</string>
     <string name="new_key_confirm_title">एक अन्तिम बात</string>
     <string name="new_key_confirm_recap">अपने गुप्त कुंचिका को एक पारणशब्द प्रबन्धक में रखें। यदि आप इसे खो देते हैं तो कोई भी आपके लिए इसे पुनःप्राप्त नहीं कर सकेगा।</string>
@@ -47,12 +47,15 @@
     <string name="backup_keys_reveal">गुप्त कुंचिका अनावरण</string>
     <string name="backup_keys_hide">गुप्त कुंचिका छिपाएँ</string>
     <string name="backup_keys_copy_plain">गुप्त कुंचिका की अनुकृति</string>
+    <string name="backup_keys_copy_plain_warning">स्पष्टलेख एनसेक॰ की अनुकृति करता है। केवल विश्वसनीय पारणशब्द प्रबन्धक में चिपकाएँ।</string>
     <string name="backup_keys_copy_encrypted">अनुकृति रहस्यीकृत (अनुशम्सित)</string>
     <string name="backup_keys_encrypt_password_label">पारणशब्द रहस्यीकृत सुरक्षित अनुकृति के लिए</string>
     <string name="backup_keys_encrypt_failed">कुंचिका रहस्यीकरण असफल। पुनःप्रयास करें।</string>
+    <string name="backup_keys_external_signer">यह लेखा एक बाहरी हस्ताक्षरकर्ता का उपयोग करता है। कोई गुप्त कुंचिका नहीं रखी गई यहाँ।</string>
     <string name="backup_keys_copied">अनुकृत।</string>
     <string name="backup_keys_copy">अनुकृति</string>
     <string name="backup_keys_unlock_title">गुप्त कुंचिका अनावरण</string>
+    <string name="backup_keys_unlock_subtitle">अपने गोपनीयता ताला पारणशब्द को प्रविष्ट करें अपने गुप्त कुंचिका का अनावरण करने के लिए।</string>
     <!-- Common Actions -->
     <string name="action_copy">अनुकृति</string>
     <string name="action_paste">चिपकाएँ</string>

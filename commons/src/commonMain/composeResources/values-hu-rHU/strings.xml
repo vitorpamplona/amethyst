@@ -17,11 +17,45 @@
     <string name="login_hide_key">Kulcs elrejtése</string>
     <!-- New Key Warning -->
     <string name="new_key_warning_title">FONTOS: Mentse el a kulcsait!</string>
-    <string name="new_key_warning_message">A titkos kulcsa (nsec) az EGYETLEN módja annak, hogy hozzáférjen a fiókjához. Ha elveszíti, akkor a fiókja végleg elvész. Mentse el egy biztonságos helyre!</string>
+    <string name="new_key_warning_message">A titkos kulcs (nsec) olyan, mint egy jelszó, amelyet SOHA nem lehet visszaállítani vagy helyreállítani. Ez az EGYETLEN módja a fiókhoz való hozzáférésnek, és aki birtokolja, az örökre irányítja ezt a fiókot. Ha elveszíti, a fiókja végleg elvész. Soha ne adja tovább és tárolja egy jelszókezelőben.</string>
     <string name="new_key_public_label">Nyilvános kulcs (megosztható):</string>
     <string name="new_key_secret_label">Titkos kulcs (SOHA ne ossza meg!):</string>
     <string name="new_key_continue_button">Elmentettem a kulcsaimat, folytatás</string>
+    <string name="new_key_saved_checkbox">Egy biztonságos helyre mentettem a kulcsaimat</string>
+    <string name="new_key_copy_encrypted_button">Titkosított másolása (ajánlott)</string>
+    <string name="new_key_encrypt_password_label">Jelszó a titkosított biztonsági mentéshez</string>
+    <string name="new_key_step_indicator">%1$d. lépés / %2$d</string>
+    <string name="new_key_next">Következő</string>
+    <string name="new_key_back">Vissza</string>
+    <string name="new_key_cancel">Mégse</string>
+    <string name="new_key_step_intro_title">Mielőtt továbblépne, mentse el a kulcsait</string>
+    <string name="new_key_step_intro_npub">A nyilvános kulcs (npub) az a cím, amelyet megoszthat másokkal. Nyugodtan adja meg másoknak, hogy megtalálhassák és követni tudják Önt.</string>
+    <string name="new_key_step_intro_nsec">A titkos kulcs (nsec) egy jelszó, amelyet SOHA nem lehet visszaállítani. Ez az egyetlen alkalom, amikor megjelenik — mentse el most, különben örökre elveszíti a hozzáférését ehhez a fiókhoz.</string>
+    <string name="new_key_keys_title">Saját kulcsok</string>
+    <string name="new_key_confirm_title">Még valami</string>
+    <string name="new_key_confirm_recap">Tárolja a titkos kulcsát egy jelszókezelőben. Ha elveszíti, akkor senki sem tudja helyreállítani Önnek.</string>
+    <string name="new_key_readonly_info">Ez csak egy olvasásra jogosult fiók. Nem jött létre titkos kulcs, így nincs miről biztonsági mentést készíteni.</string>
     <!-- Key Backup (Desktop settings) -->
+    <string name="backup_keys_title">Kulcsok biztonsági mentése</string>
+    <string name="backup_keys_public_label">Nyilvános kulcs (npub)</string>
+    <string name="backup_keys_public_help">A nyilvános kulcsát nyugodtan megoszthatja másokkal. Adja meg másoknak, hogy megtalálhassák és követni tudják Önt.</string>
+    <string name="backup_keys_show_qr">QR-kód megjelenítése</string>
+    <string name="backup_keys_hide_qr">QR-kód elrejtése</string>
+    <string name="backup_keys_secret_label">Titkos kulcs (nsec)</string>
+    <string name="backup_keys_secret_warning">A titkos kulcs egy jelszó, amelyet SOHA nem lehet visszaállítani vagy helyreállítani. Aki ismeri, az örökre irányíthatja ezt a fiókot. Soha ne adja meg senkinek és tárolja egy biztonságos jelszókezelőben.</string>
+    <string name="backup_keys_secret_hidden">A titkos kulcs rejtve van</string>
+    <string name="backup_keys_reveal">Titkos kulcs megjelenítése</string>
+    <string name="backup_keys_hide">Titkos kulcs elrejtése</string>
+    <string name="backup_keys_copy_plain">Titkos kulcs másolása</string>
+    <string name="backup_keys_copy_plain_warning">Másolja az nsec kulcsot egyszerű szövegként, majd illessze be egy megbízható jelszókezelőbe.</string>
+    <string name="backup_keys_copy_encrypted">Titkosított másolása (ajánlott)</string>
+    <string name="backup_keys_encrypt_password_label">Jelszó a titkosított biztonsági mentéshez</string>
+    <string name="backup_keys_encrypt_failed">Nem sikerült titkosítani a kulcsot. Próbálja újra.</string>
+    <string name="backup_keys_external_signer">Ez a fiók külső aláírót használ, itt nincs titkos kulcs tárolva.</string>
+    <string name="backup_keys_copied">Másolva!</string>
+    <string name="backup_keys_copy">Másolás</string>
+    <string name="backup_keys_unlock_title">Titkos kulcs megjelenítése</string>
+    <string name="backup_keys_unlock_subtitle">Adja meg az adatvédelmi zár jelszavát a titkos kulcsának megjelenítéséhez.</string>
     <!-- Common Actions -->
     <string name="action_copy">Másolás</string>
     <string name="action_paste">Beillesztés</string>
