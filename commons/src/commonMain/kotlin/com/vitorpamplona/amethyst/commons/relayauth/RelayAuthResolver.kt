@@ -45,6 +45,8 @@ data class RelayAuthCustomToggles(
  * so the decision itself is pure and unit-testable without any account/relay wiring.
  *
  * @param storedOverride an explicit per-relay decision the user set previously, or null.
+ * @param hasSessionGrant the user already answered "log in" for this relay during this run of the
+ *   app, without asking to remember it permanently. Held in memory only, so it dies with the process.
  * @param isBlocked the relay is on the user's blocked-relay list (kind 10006).
  * @param policy the top-level [RelayAuthPolicy].
  * @param toggles the [RelayAuthCustomToggles] applied when [policy] is [RelayAuthPolicy.CUSTOM].
@@ -68,6 +70,7 @@ data class RelayAuthCustomToggles(
 data class RelayAuthInputs(
     val storedOverride: RelayAuthDecision?,
     val isBlocked: Boolean,
+    val hasSessionGrant: Boolean = false,
     val policy: RelayAuthPolicy,
     val toggles: RelayAuthCustomToggles,
     val isInMyRelayList: Boolean,
@@ -84,13 +87,16 @@ data class RelayAuthInputs(
  *
  * 1. Blocked-relay list → [RelayAuthVerdict.DENY] (never reveal identity to a blocked relay).
  * 2. Explicit per-relay override → honor it.
- * 3. Top-level [RelayAuthPolicy]:
+ * 3. [RelayAuthInputs.hasSessionGrant] → [RelayAuthVerdict.ALLOW]. Ranked *below* the stored override
+ *    so a later "never allow" — the only way a DENY can be written for a relay already granted this
+ *    session — takes effect immediately instead of losing to the in-memory grant.
+ * 4. Top-level [RelayAuthPolicy]:
  *    - [RelayAuthPolicy.NEVER] → DENY
  *    - [RelayAuthPolicy.ALWAYS] → ALLOW
  *    - [RelayAuthPolicy.CUSTOM] → ALLOW if any *enabled* [RelayAuthCustomToggles] category matches
  *      this relay (own relays/venues, reading follows, messaging follows, messaging strangers);
  *      else fall through
- * 4. Fall-through → [RelayAuthVerdict.ASK] when the purpose is known, otherwise DENY.
+ * 5. Fall-through → [RelayAuthVerdict.ASK] when the purpose is known, otherwise DENY.
  *
  * The [RelayAuthPolicy.CUSTOM] grant additionally requires [RelayAuthInputs.isFirstParty]: under
  * "decide per relay" an account never reveals its identity *without being asked* on a relay it has no
@@ -111,6 +117,11 @@ object RelayAuthResolver {
                 RelayAuthDecision.DENY -> RelayAuthVerdict.DENY
             }
         }
+
+        // The user answered this exact question, for this exact relay, earlier in this session. Not
+        // gated on isFirstParty: an explicit answer outranks every inference we would otherwise make
+        // about whether the account belongs here.
+        if (inputs.hasSessionGrant) return RelayAuthVerdict.ALLOW
 
         return when (inputs.policy) {
             RelayAuthPolicy.NEVER -> RelayAuthVerdict.DENY

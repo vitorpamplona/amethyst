@@ -36,9 +36,11 @@ class RelayAuthResolverTest {
         servesStrangerWriteCounterparty: Boolean = false,
         hasAttributablePurpose: Boolean = true,
         isFirstParty: Boolean = true,
+        hasSessionGrant: Boolean = false,
     ) = RelayAuthInputs(
         storedOverride = storedOverride,
         isBlocked = isBlocked,
+        hasSessionGrant = hasSessionGrant,
         policy = policy,
         toggles = toggles,
         isInMyRelayList = isInMyRelayList,
@@ -63,6 +65,40 @@ class RelayAuthResolverTest {
                     policy = RelayAuthPolicy.ALWAYS,
                 ),
             ),
+        )
+    }
+
+    @Test
+    fun sessionGrantAllowsWhatWouldOtherwiseAsk() {
+        // Without the grant this is the plain "we can explain it, so ask" case.
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs()))
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(hasSessionGrant = true)))
+    }
+
+    @Test
+    fun sessionGrantSurvivesTheCasesThatWouldNormallySuppressTheAnswer() {
+        // The two inputs that turn an automatic grant off: no first-party reason to be here, and a
+        // NEVER policy. An answer the user typed for this exact relay outranks both.
+        assertEquals(
+            RelayAuthVerdict.ALLOW,
+            resolve(inputs(hasSessionGrant = true, isFirstParty = false)),
+        )
+        assertEquals(
+            RelayAuthVerdict.ALLOW,
+            resolve(inputs(hasSessionGrant = true, policy = RelayAuthPolicy.NEVER)),
+        )
+    }
+
+    @Test
+    fun blockedRelayAndStoredDenyBothBeatASessionGrant() {
+        assertEquals(
+            RelayAuthVerdict.DENY,
+            resolve(inputs(hasSessionGrant = true, isBlocked = true)),
+        )
+        // "Never allow" answered later in the same session must take effect immediately.
+        assertEquals(
+            RelayAuthVerdict.DENY,
+            resolve(inputs(hasSessionGrant = true, storedOverride = RelayAuthDecision.DENY)),
         )
     }
 

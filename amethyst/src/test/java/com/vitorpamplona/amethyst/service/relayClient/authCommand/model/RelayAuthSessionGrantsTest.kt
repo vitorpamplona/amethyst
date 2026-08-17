@@ -1,0 +1,175 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
+
+import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
+import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * "Log in" without the remember switch has to survive the relay's next reconnect, or the same dialog
+ * comes back every time the socket drops — which is what pushed users into "always allow".
+ *
+ * These tests drive [RelayAuthPermissionLedger] rather than the pure resolver, because the thing worth
+ * pinning is that the grant is consulted on the real decision path and that the persisted rules still
+ * outrank it.
+ */
+class RelayAuthSessionGrantsTest {
+    private val relay = "wss://auth.example.com/"
+    private val other = "wss://elsewhere.example.com/"
+
+    private fun ledger(
+        grants: RelayAuthSessionGrants = RelayAuthSessionGrants(),
+        store: InMemoryRelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
+        blocked: Set<String> = emptySet(),
+    ) = RelayAuthPermissionLedger(
+        store = store,
+        globalPolicy = { RelayAuthPolicy.CUSTOM },
+        sessionGrants = grants,
+        isBlocked = { it in blocked },
+    )
+
+    /** A challenge we can explain but have no automatic rule for: the ASK case. */
+    private fun askable(relayUrl: String) =
+        RelayAuthContext(
+            relayUrl,
+            listOf(AuthPurpose(AuthPurposeKind.MY_INBOX)),
+        )
+
+    @Test
+    fun withoutAGrantTheSameRelayKeepsAsking() =
+        runTest {
+            val ledger = ledger()
+            assertEquals(RelayAuthVerdict.ASK, ledger.decide(askable(relay)))
+            assertEquals(RelayAuthVerdict.ASK, ledger.decide(askable(relay)))
+        }
+
+    @Test
+    fun aSessionGrantAnswersEveryLaterReconnect() =
+        runTest {
+            val ledger = ledger()
+            assertEquals(RelayAuthVerdict.ASK, ledger.decide(askable(relay)))
+
+            ledger.grantForSession(relay)
+
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+        }
+
+    @Test
+    fun aGrantCoversOnlyTheRelayItWasGivenFor() =
+        runTest {
+            val ledger = ledger()
+            ledger.grantForSession(relay)
+
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+            assertEquals(RelayAuthVerdict.ASK, ledger.decide(askable(other)))
+        }
+
+    @Test
+    fun grantsAreNeverWrittenToTheStore() =
+        runTest {
+            val store = InMemoryRelayAuthPermissionStore()
+            val ledger = ledger(store = store)
+            ledger.grantForSession(relay)
+
+            // Nothing persisted: a fresh process (a ledger over the same disk, with empty session
+            // memory) is back to asking.
+            assertEquals(emptyMap<String, RelayAuthDecision>(), store.allDecisions())
+            assertEquals(RelayAuthVerdict.ASK, ledger(store = store).decide(askable(relay)))
+        }
+
+    @Test
+    fun blockListOutranksAGrant() =
+        runTest {
+            val ledger = ledger(blocked = setOf(relay))
+            ledger.grantForSession(relay)
+
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
+        }
+
+    @Test
+    fun neverAllowTakesEffectImmediatelyOverAGrant() =
+        runTest {
+            val grants = RelayAuthSessionGrants()
+            val ledger = ledger(grants)
+            ledger.grantForSession(relay)
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+
+            // The user answers "Never allow" on a later prompt for the same relay.
+            ledger.setDecision(relay, RelayAuthDecision.DENY)
+
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
+            assertFalse(grants.isGranted(relay))
+        }
+
+    @Test
+    fun clearingAnExceptionDropsTheGrantSoTheRelayReallyFollowsTheRulesAgain() =
+        runTest {
+            val grants = RelayAuthSessionGrants()
+            val ledger = ledger(grants)
+            ledger.grantForSession(relay)
+            ledger.setDecision(relay, RelayAuthDecision.ALLOW)
+
+            ledger.clearDecision(relay)
+
+            assertFalse(grants.isGranted(relay))
+            assertEquals(RelayAuthVerdict.ASK, ledger.decide(askable(relay)))
+        }
+
+    @Test
+    fun revokingRestoresTheQuestion() =
+        runTest {
+            val grants = RelayAuthSessionGrants()
+            val ledger = ledger(grants)
+            ledger.grantForSession(relay)
+            assertTrue(grants.isGranted(relay))
+
+            ledger.revokeSessionGrant(relay)
+
+            assertFalse(grants.isGranted(relay))
+            assertEquals(RelayAuthVerdict.ASK, ledger.decide(askable(relay)))
+        }
+
+    @Test
+    fun grantsAreObservableForTheSettingsScreen() {
+        val grants = RelayAuthSessionGrants()
+        assertEquals(emptySet<String>(), grants.grants.value)
+
+        grants.grant(relay)
+        grants.grant(other)
+        assertEquals(setOf(relay, other), grants.grants.value)
+
+        grants.revoke(relay)
+        assertEquals(setOf(other), grants.grants.value)
+
+        grants.clear()
+        assertEquals(emptySet<String>(), grants.grants.value)
+    }
+}

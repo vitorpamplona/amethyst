@@ -147,6 +147,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthSessionGrants
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthVenues
 import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDeliveryTracker
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
@@ -406,6 +407,11 @@ class Account(
     // answered without a disk read. Backed by a per-account file (see AccountCacheState).
     val relayAuthPermissions = RelayAuthPermissionCache(relayAuthPermissionStore, scope)
 
+    // The relays this account approved by answering the NIP-42 prompt *without* the "remember"
+    // switch. Deliberately in-memory only: it dies with this Account (i.e. with the process, or at
+    // logout), which is what makes it a session grant rather than a stored ALLOW.
+    val relayAuthSessionGrants = RelayAuthSessionGrants()
+
     // Per-account NIP-42 policy evaluator (blocked → per-relay override → global policy → prompt),
     // reading THIS account's own toggles, relay lists and follow graph. Cached here so every AUTH
     // path (foreground screen + background notification consumer) shares one instance, and so an
@@ -414,6 +420,7 @@ class Account(
         RelayAuthPermissionLedger(
             store = relayAuthPermissions,
             globalPolicy = { settings.defaultRelayAuthPolicy.value },
+            sessionGrants = relayAuthSessionGrants,
             customToggles = {
                 RelayAuthCustomToggles(
                     myRelaysAndVenues = settings.relayAuthTrustMyRelaysAndVenues.value,

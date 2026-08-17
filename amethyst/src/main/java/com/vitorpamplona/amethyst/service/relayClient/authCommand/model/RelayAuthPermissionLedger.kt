@@ -33,8 +33,9 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 /**
  * Decides whether Amethyst should authenticate with a given relay (NIP-42), for one account.
  *
- * Precedence (see [RelayAuthResolver]): blocked-relay list → per-relay override → global
- * [globalPolicy] → prompt-if-attributable-else-deny. Under [RelayAuthPolicy.CUSTOM] the
+ * Precedence (see [RelayAuthResolver]): blocked-relay list → per-relay override → this session's
+ * in-memory grants ([sessionGrants]) → global [globalPolicy] → prompt-if-attributable-else-deny.
+ * Under [RelayAuthPolicy.CUSTOM] the
  * [customToggles] gate each category, using [isFollowed] to split the counterparties carried in the
  * [RelayAuthContext] into followed vs. stranger.
  *
@@ -49,6 +50,13 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 class RelayAuthPermissionLedger(
     val store: RelayAuthPermissionStore,
     val globalPolicy: () -> RelayAuthPolicy,
+    /**
+     * Relays this account already approved during this run of the app. Answering the prompt without
+     * the "remember" switch records the grant here, so the same relay's next reconnect is answered
+     * silently instead of raising the same dialog again. Empty by default — a ledger built without
+     * one simply has no session memory.
+     */
+    val sessionGrants: RelayAuthSessionGrants = RelayAuthSessionGrants(),
     val customToggles: () -> RelayAuthCustomToggles = { RelayAuthCustomToggles() },
     val isInMyRelayList: (String) -> Boolean = { false },
     val isBlocked: (String) -> Boolean = { false },
@@ -81,6 +89,7 @@ class RelayAuthPermissionLedger(
             RelayAuthInputs(
                 storedOverride = store.loadDecision(ctx.relayUrl),
                 isBlocked = isBlocked(ctx.relayUrl),
+                hasSessionGrant = sessionGrants.isGranted(ctx.relayUrl),
                 policy = globalPolicy(),
                 toggles = customToggles(),
                 isInMyRelayList = isInMyRelayList(ctx.relayUrl),
@@ -137,14 +146,35 @@ class RelayAuthPermissionLedger(
         if (additions.isNotEmpty()) store.recordUse(ctx.relayUrl, additions)
     }
 
-    /** Stores a per-relay override for [relayUrl]. */
+    /**
+     * Remembers a "log in" answer for [relayUrl] until the app is restarted, so the relay's next
+     * reconnect doesn't ask again. Nothing is written to disk — see [RelayAuthSessionGrants].
+     */
+    fun grantForSession(relayUrl: String) = sessionGrants.grant(relayUrl)
+
+    /** Forgets this session's grant for [relayUrl], so the next challenge is decided from scratch. */
+    fun revokeSessionGrant(relayUrl: String) = sessionGrants.revoke(relayUrl)
+
+    /**
+     * Stores a per-relay override for [relayUrl].
+     *
+     * Also drops any session grant: the stored decision is now the whole answer for this relay, so
+     * leaving the transient one behind would let a later [clearDecision] ("follows your rules again")
+     * silently keep authenticating off a grant the user can no longer see.
+     */
     suspend fun setDecision(
         relayUrl: String,
         decision: RelayAuthDecision,
-    ) = store.storeDecision(relayUrl, decision)
+    ) {
+        sessionGrants.revoke(relayUrl)
+        store.storeDecision(relayUrl, decision)
+    }
 
     /** Removes the per-relay override for [relayUrl], reverting to the global policy. */
-    suspend fun clearDecision(relayUrl: String) = store.clearDecision(relayUrl)
+    suspend fun clearDecision(relayUrl: String) {
+        sessionGrants.revoke(relayUrl)
+        store.clearDecision(relayUrl)
+    }
 
     /** All per-relay overrides — for the settings screen. */
     suspend fun allDecisions(): Map<String, RelayAuthDecision> = store.allDecisions()
