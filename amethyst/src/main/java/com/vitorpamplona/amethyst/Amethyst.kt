@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
+import com.vitorpamplona.amethyst.service.priority.WorkerThreadPriorityGovernor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
@@ -118,6 +119,11 @@ class Amethyst : Application() {
         Log.i("AmethystApp") { "Amethyst ${BuildConfig.VERSION_NAME} starting in main process (log level ${Log.minLevel})" }
 
         instance = AppModules(this)
+
+        // Keeps the ~650 relay/ingest worker threads a cold start spawns from starving the UI
+        // thread out of its frames — worth ~45% off time-to-first-paint on a release build.
+        // Override or disable with the `amethyst_worker_nice` global setting.
+        WorkerThreadPriorityGovernor.start(this)
 
         // Hydrate the device-local favorite-apps list (main process only; the sandbox never reads it).
         FavoriteAppsRegistry.init(this)
