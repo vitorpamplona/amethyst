@@ -212,9 +212,15 @@ private fun HoldAttestationSection(
                         when (val outcome = parseHeldAttestation(input, myPubkey)) {
                             is HoldOutcome.Failure -> error = outcome.message
                             is HoldOutcome.Success -> {
-                                attestation.put(outcome.attestation)
-                                input = ""
-                                error = null
+                                // put() re-checks the signature, so honour its answer instead of
+                                // assuming it stored: clearing the field on a rejected paste would
+                                // read as success and leave the account holding nothing.
+                                if (attestation.put(outcome.attestation)) {
+                                    input = ""
+                                    error = null
+                                } else {
+                                    error = NOT_FOR_THIS_ACCOUNT
+                                }
                             }
                         }
                     },
@@ -237,6 +243,9 @@ private sealed interface HoldOutcome {
         val message: String,
     ) : HoldOutcome
 }
+
+/** Shown for both rejection paths — the parse-time check and [BuzzHeldAttestations.put]'s. */
+private const val NOT_FOR_THIS_ACCOUNT = "This attestation does not authorize the current account, or its signature is invalid."
 
 /**
  * Parses a pasted `["auth", owner, conditions, sig]` JSON array and verifies it
@@ -261,7 +270,7 @@ private fun parseHeldAttestation(
         OwnerAttestation.parse(tag)
             ?: return HoldOutcome.Failure("Not a NIP-OA auth tag.")
     if (!attestation.verify(myPubkey)) {
-        return HoldOutcome.Failure("This attestation does not authorize the current account, or its signature is invalid.")
+        return HoldOutcome.Failure(NOT_FOR_THIS_ACCOUNT)
     }
     return HoldOutcome.Success(attestation)
 }

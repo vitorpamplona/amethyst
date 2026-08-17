@@ -55,7 +55,6 @@ class BuzzAttestationPreferences(
     private val pubKeyHex: HexKey,
     private val attestation: BuzzHeldAttestations,
 ) {
-    private val json = Json { ignoreUnknownKeys = true }
     private val key = stringPreferencesKey("$KEY_PREFIX$pubKeyHex")
 
     @Serializable
@@ -87,19 +86,7 @@ class BuzzAttestationPreferences(
         try {
             val prefs = context.sharedPreferencesDataStore.data.first()
             // put() verifies, so a credential that no longer checks out is dropped either way.
-            val saved = prefs[key]?.let { json.decodeFromString<Entry>(it) }
-            if (saved != null) {
-                attestation.put(OwnerAttestation(saved.owner, saved.conditions, saved.sig))
-                return
-            }
-            // Nothing under this account's key: pick our entry out of the pre-namespacing list. That
-            // list was already agent-keyed, so this migration is exact — no other account's
-            // credential can match, and one that fails put()'s check is simply not reinstated.
-            val legacy = prefs[LEGACY_KEY] ?: return
-            json
-                .decodeFromString<List<LegacyEntry>>(legacy)
-                .firstOrNull { it.agent == pubKeyHex }
-                ?.let { attestation.put(OwnerAttestation(it.owner, it.conditions, it.sig)) }
+            restoreFrom(prefs[key], prefs[LEGACY_KEY], pubKeyHex)?.let(attestation::put)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("BuzzAttestationPrefs") { "Error reading held attestation: ${e.message}" }
@@ -109,11 +96,10 @@ class BuzzAttestationPreferences(
     private suspend fun persist(held: OwnerAttestation?) {
         try {
             context.sharedPreferencesDataStore.edit { prefs ->
-                if (held == null) {
-                    prefs.remove(key)
-                } else {
-                    prefs[key] = json.encodeToString(Entry(held.ownerPubKey, held.conditions, held.sig))
-                }
+                // Write [NONE] rather than removing the key: removing it is indistinguishable from
+                // never having migrated, which would let the legacy list re-seed a credential the
+                // user just deleted. See [restoreFrom].
+                prefs[key] = if (held == null) NONE else json.encodeToString(Entry(held.ownerPubKey, held.conditions, held.sig))
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -126,5 +112,42 @@ class BuzzAttestationPreferences(
 
         /** The device-global key written before the store became per-account; read-only now. */
         private val LEGACY_KEY = stringPreferencesKey("buzz.heldAttestations")
+
+        /**
+         * Tombstone for "this account has been migrated and holds nothing", which an *absent* key
+         * cannot express — absent still means "never migrated" and is allowed to seed from
+         * [LEGACY_KEY]. Without it, removing a held attestation lasted only until the next launch,
+         * because nothing ever clears the legacy list. (The starred-channel and joined-workspace
+         * stores get this for free: they persist an empty *set*, which reads back present.)
+         */
+        private const val NONE = ""
+
+        private val json = Json { ignoreUnknownKeys = true }
+
+        /**
+         * Which attestation to reinstate, given this account's saved value and the pre-namespacing
+         * device-global list. Pure, so the migration precedence is testable without a `Context`.
+         *
+         * [saved] wins whenever it is present, [NONE] included. Only a never-migrated account falls
+         * back to [legacy], and it takes just the entry issued to its own key — that list was
+         * already agent-keyed, so no other account's credential can match. Nothing is verified here;
+         * [BuzzHeldAttestations.put] is the gate that rejects a tampered credential.
+         */
+        internal fun restoreFrom(
+            saved: String?,
+            legacy: String?,
+            agentPubKey: HexKey,
+        ): OwnerAttestation? {
+            if (saved != null) {
+                if (saved == NONE) return null
+                val entry = json.decodeFromString<Entry>(saved)
+                return OwnerAttestation(entry.owner, entry.conditions, entry.sig)
+            }
+            val list = legacy ?: return null
+            return json
+                .decodeFromString<List<LegacyEntry>>(list)
+                .firstOrNull { it.agent == agentPubKey }
+                ?.let { OwnerAttestation(it.owner, it.conditions, it.sig) }
+        }
     }
 }

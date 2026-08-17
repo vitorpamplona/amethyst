@@ -94,6 +94,9 @@ class BuzzWorkspacePreferences(
 
     private suspend fun persist(relays: Set<NormalizedRelayUrl>) {
         try {
+            // Always write the joined set, empty included — never remove the key. An absent key
+            // means "never migrated" and re-seeds from the legacy one above, so removing it
+            // would undo the user's last removal on the next launch.
             context.sharedPreferencesDataStore.edit { prefs ->
                 prefs[key] = relays.map { it.url }.toSet()
             }

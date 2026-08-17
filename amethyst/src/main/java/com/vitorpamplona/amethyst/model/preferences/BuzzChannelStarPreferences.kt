@@ -75,6 +75,9 @@ class BuzzChannelStarPreferences(
 
     private suspend fun persist(ids: Set<String>) {
         try {
+            // Always write the starred set, empty included — never remove the key. An absent key
+            // means "never migrated" and re-seeds from the legacy one above, so removing it
+            // would undo the user's last removal on the next launch.
             context.sharedPreferencesDataStore.edit { prefs -> prefs[key] = ids }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
