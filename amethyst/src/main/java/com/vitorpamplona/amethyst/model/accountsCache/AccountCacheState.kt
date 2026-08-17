@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46Clien
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -75,11 +74,12 @@ class AccountCacheState(
     /** App-global store of connected NIP-46 client display + relay info. */
     val nip46ClientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
     /**
-     * Starts per-account persistence of the joined Buzz workspaces (restore now, mirror later
-     * changes). A lambda because the store needs an Android `Context` and this class deliberately
+     * Starts per-account persistence of the Buzz client-side bookkeeping that has no Nostr event to
+     * rebuild from — the joined workspaces and the starred channels (restore now, mirror later
+     * changes). A lambda because those stores need an Android `Context` and this class deliberately
      * takes none; no-op by default so tests and non-Android hosts build an Account without it.
      */
-    val startBuzzWorkspacePersistence: (HexKey, BuzzWorkspaces, CoroutineScope) -> Unit = { _, _, _ -> },
+    val startBuzzPersistence: (Account) -> Unit = { },
 ) {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -293,10 +293,10 @@ class AccountCacheState(
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
         ).also { newAccount ->
-            // Per account, not per device: this set makes a relay first-party for NIP-42, so a
+            // Per account, not per device: the joined set makes a relay first-party for NIP-42, so a
             // shared one hands every other logged-in account an automatic login on a workspace it
-            // never joined. See BuzzWorkspacePreferences.
-            startBuzzWorkspacePersistence(signer.pubKey, newAccount.buzzWorkspaces, newAccount.scope)
+            // never joined, and a shared star set reorders everyone's channel list at once.
+            startBuzzPersistence(newAccount)
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))
             }

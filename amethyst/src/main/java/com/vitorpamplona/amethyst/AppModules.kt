@@ -291,9 +291,6 @@ class AppModules(
     // lazy) so it loads before the first Buzz-relay AUTH and mirrors later changes to disk.
     val buzzAttestationPrefs = BuzzAttestationPreferences(appContext, applicationIOScope)
 
-    // Restore + persist the user's starred Buzz workspace channels across restarts (device-global).
-    val buzzChannelStarPrefs = BuzzChannelStarPreferences(appContext, applicationIOScope)
-
     // Restore + persist the set of relay-group channels deleted (kind-9008) on this device, so a
     // deleted channel stays hidden across a restart even if the host relay re-announces a stale
     // kind-44100 for it (device-global; a delete is authoritative and terminal for everyone).
@@ -900,12 +897,13 @@ class AppModules(
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
-            // Restore + persist each account's joined Buzz workspace relays across restarts, so the
-            // app knows which relays to sync as workspaces on cold start (Buzz membership is
-            // server-side; there is no join event to rebuild the set from). Per account: the set
-            // also makes a relay first-party for NIP-42.
-            startBuzzWorkspacePersistence = { pubKey, workspaces, accountScope ->
-                BuzzWorkspacePreferences(appContext, accountScope, pubKey, workspaces)
+            // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
+            // joined workspace relays (so the app knows which relays to sync as workspaces on cold
+            // start — Buzz membership is server-side) and the starred channels. Per account: the
+            // joined set makes a relay first-party for NIP-42, and a star is personal.
+            startBuzzPersistence = { account ->
+                BuzzWorkspacePreferences(appContext, account.scope, account.pubKey, account.buzzWorkspaces)
+                BuzzChannelStarPreferences(appContext, account.scope, account.pubKey, account.buzzChannelStars)
             },
         )
 
