@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
@@ -419,6 +420,11 @@ class Account(
     // of the community view, so a shared set let one account reorder and badge every other one's
     // channel list. Restored/persisted per account by BuzzChannelStarPreferences.
     val buzzChannelStars = BuzzChannelStars()
+
+    // The NIP-OA attestation an owner issued to THIS account's key, attached to its Buzz-relay
+    // AUTH so the relay grants virtual membership. Restored/persisted per account by
+    // BuzzAttestationPreferences.
+    val buzzAttestation = BuzzHeldAttestations(pubKey)
 
     // Per-account NIP-42 policy evaluator (blocked → per-relay override → global policy → prompt),
     // reading THIS account's own toggles, relay lists and follow graph. Cached here so every AUTH

@@ -287,10 +287,6 @@ class AppModules(
         }
     }
 
-    // Restore + persist held NIP-OA attestations across restarts (device-global). Eager (not
-    // lazy) so it loads before the first Buzz-relay AUTH and mirrors later changes to disk.
-    val buzzAttestationPrefs = BuzzAttestationPreferences(appContext, applicationIOScope)
-
     // Restore + persist the set of relay-group channels deleted (kind-9008) on this device, so a
     // deleted channel stays hidden across a restart even if the host relay re-announces a stale
     // kind-44100 for it (device-global; a delete is authoritative and terminal for everyone).
@@ -904,6 +900,9 @@ class AppModules(
             startBuzzPersistence = { account ->
                 BuzzWorkspacePreferences(appContext, account.scope, account.pubKey, account.buzzWorkspaces)
                 BuzzChannelStarPreferences(appContext, account.scope, account.pubKey, account.buzzChannelStars)
+                // Eager like the rest, so a held NIP-OA attestation is loaded before this account's
+                // first Buzz-relay AUTH rather than after it.
+                BuzzAttestationPreferences(appContext, account.scope, account.pubKey, account.buzzAttestation)
             },
         )
 

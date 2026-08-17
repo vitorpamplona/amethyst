@@ -37,25 +37,37 @@ import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Device-global persistence for the NIP-OA attestations this device holds
- * ([BuzzHeldAttestations]), so a held credential survives an app restart instead of
- * needing to be re-pasted. Uses the app-wide [sharedPreferencesDataStore] like
- * [NamecoinSharedPreferences] (not per-account — the store is already keyed by the agent
- * pubkey each attestation authorizes).
+ * Per-account persistence for the NIP-OA attestation this account holds
+ * ([BuzzHeldAttestations]), so a held credential survives an app restart instead of needing to be
+ * re-pasted. The key is namespaced by pubkey; the store used to be one device-global list because
+ * each entry carried the agent key it authorized, which made the file a per-account store with
+ * extra steps.
  *
- * On construction it loads the saved entries into the singleton — **re-verifying each
- * against its agent key**, so a tampered on-disk credential is dropped rather than trusted
- * — then mirrors every later change back to disk. Construct once, eagerly, at startup.
+ * On construction it loads this account's saved attestation and mirrors every later change back to
+ * disk. Re-verification on restore is no longer done here: [BuzzHeldAttestations.put] verifies
+ * against the agent key itself and rejects what fails, so a tampered on-disk credential is dropped
+ * by the same gate that rejects a mistyped one. Construct once per account, eagerly.
  */
 @Stable
 class BuzzAttestationPreferences(
     private val context: Context,
     private val scope: CoroutineScope,
+    private val pubKeyHex: HexKey,
+    private val attestation: BuzzHeldAttestations,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
+    private val key = stringPreferencesKey("$KEY_PREFIX$pubKeyHex")
 
     @Serializable
     private data class Entry(
+        val owner: HexKey,
+        val conditions: String,
+        val sig: HexKey,
+    )
+
+    /** The pre-namespacing on-disk shape: one list for the whole device, each entry agent-keyed. */
+    @Serializable
+    private data class LegacyEntry(
         val agent: HexKey,
         val owner: HexKey,
         val conditions: String,
@@ -67,41 +79,52 @@ class BuzzAttestationPreferences(
             restoreFromDisk()
             // Persist on every change AFTER the initial restore (drop(1) skips the value
             // present at collection start, which restoreFromDisk already wrote).
-            BuzzHeldAttestations.flow.drop(1).collect { persist(it) }
+            attestation.flow.drop(1).collect { persist(it) }
         }
     }
 
     private suspend fun restoreFromDisk() {
         try {
-            val raw = context.sharedPreferencesDataStore.data.first()[KEY] ?: return
-            val verified =
-                json
-                    .decodeFromString<List<Entry>>(raw)
-                    .mapNotNull { e ->
-                        val attestation = OwnerAttestation(e.owner, e.conditions, e.sig)
-                        // Only reinstate a credential that still verifies for its agent key.
-                        if (attestation.verify(e.agent)) e.agent to attestation else null
-                    }.toMap()
-            if (verified.isNotEmpty()) BuzzHeldAttestations.restore(verified)
+            val prefs = context.sharedPreferencesDataStore.data.first()
+            // put() verifies, so a credential that no longer checks out is dropped either way.
+            val saved = prefs[key]?.let { json.decodeFromString<Entry>(it) }
+            if (saved != null) {
+                attestation.put(OwnerAttestation(saved.owner, saved.conditions, saved.sig))
+                return
+            }
+            // Nothing under this account's key: pick our entry out of the pre-namespacing list. That
+            // list was already agent-keyed, so this migration is exact — no other account's
+            // credential can match, and one that fails put()'s check is simply not reinstated.
+            val legacy = prefs[LEGACY_KEY] ?: return
+            json
+                .decodeFromString<List<LegacyEntry>>(legacy)
+                .firstOrNull { it.agent == pubKeyHex }
+                ?.let { attestation.put(OwnerAttestation(it.owner, it.conditions, it.sig)) }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("BuzzAttestationPrefs") { "Error reading held attestations: ${e.message}" }
+            Log.e("BuzzAttestationPrefs") { "Error reading held attestation: ${e.message}" }
         }
     }
 
-    private suspend fun persist(entries: Map<HexKey, OwnerAttestation>) {
+    private suspend fun persist(held: OwnerAttestation?) {
         try {
-            val list = entries.map { (agent, a) -> Entry(agent, a.ownerPubKey, a.conditions, a.sig) }
             context.sharedPreferencesDataStore.edit { prefs ->
-                prefs[KEY] = json.encodeToString(list)
+                if (held == null) {
+                    prefs.remove(key)
+                } else {
+                    prefs[key] = json.encodeToString(Entry(held.ownerPubKey, held.conditions, held.sig))
+                }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e("BuzzAttestationPrefs") { "Error writing held attestations: ${e.message}" }
+            Log.e("BuzzAttestationPrefs") { "Error writing held attestation: ${e.message}" }
         }
     }
 
     companion object {
-        private val KEY = stringPreferencesKey("buzz.heldAttestations")
+        private const val KEY_PREFIX = "buzz.heldAttestation."
+
+        /** The device-global key written before the store became per-account; read-only now. */
+        private val LEGACY_KEY = stringPreferencesKey("buzz.heldAttestations")
     }
 }

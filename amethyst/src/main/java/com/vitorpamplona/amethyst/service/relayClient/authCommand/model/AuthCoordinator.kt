@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
@@ -162,7 +161,7 @@ class AuthCoordinator(
                         // Remember why we granted this relay so the settings screen can explain it.
                         account.relayAuthLedger.recordGrant(context)
                         try {
-                            signed.add(account.signer.sign(buzzAugmented(authTemplate, account.pubKey, relayUrl)))
+                            signed.add(account.signer.sign(buzzAugmented(authTemplate, account, relayUrl)))
                         } catch (e: Exception) {
                             Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
                         }
@@ -204,23 +203,23 @@ class AuthCoordinator(
     }
 
     /**
-     * If [relayUrl] speaks the Buzz dialect and this device holds a NIP-OA attestation
-     * authorizing [accountPubKey], returns [template] with the owner-signed `auth` tag
-     * appended — so the relay grants virtual membership to an un-enrolled agent key while
-     * its owner stays a member. Otherwise returns [template] unchanged.
+     * If [relayUrl] speaks the Buzz dialect and [account] holds a NIP-OA attestation authorizing
+     * its key, returns [template] with the owner-signed `auth` tag appended — so the relay grants
+     * virtual membership to an un-enrolled agent key while its owner stays a member. Otherwise
+     * returns [template] unchanged.
      *
-     * Applied ONLY to an account's own AUTH (the caller passes the account pubkey), never
-     * to the Concord stream-key AUTHs that share the same [template] object, and it is a
-     * no-op on non-Buzz relays and for accounts with no held attestation — so it can never
-     * add an `auth` tag where one isn't wanted.
+     * Applied ONLY to an account's own AUTH (the caller passes the account being signed for), never
+     * to the Concord stream-key AUTHs that share the same [template] object, and it is a no-op on
+     * non-Buzz relays and for accounts with no held attestation — so it can never add an `auth` tag
+     * where one isn't wanted.
      */
     private fun buzzAugmented(
         template: EventTemplate<RelayAuthEvent>,
-        accountPubKey: HexKey,
+        account: Account,
         relayUrl: NormalizedRelayUrl,
     ): EventTemplate<RelayAuthEvent> {
         if (!BuzzRelayDialect.isBuzz(relayUrl)) return template
-        val authTag = BuzzHeldAttestations.authTagFor(accountPubKey) ?: return template
+        val authTag = account.buzzAttestation.authTag() ?: return template
         return EventTemplate(template.createdAt, template.kind, template.tags + arrayOf(authTag), template.content)
     }
 
