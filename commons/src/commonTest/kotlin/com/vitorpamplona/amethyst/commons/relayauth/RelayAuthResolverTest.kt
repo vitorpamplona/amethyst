@@ -146,11 +146,22 @@ class RelayAuthResolverTest {
     }
 
     @Test
-    fun nonFirstPartyNeverAutoAuthsUnderAlwaysPolicy() {
-        // "Always log in" is a statement about the relays this account uses. A relay it is only
-        // touching because of somebody else's traffic still has to be asked about.
+    fun alwaysPolicyAuthsEvenWhenNotFirstParty() {
+        // "Always log in" means every relay that asks, first-party or not — narrowing it to the relays
+        // this account uses is what CUSTOM is for. (This previously returned ASK for non-first-party,
+        // which left no way to express "authenticate everywhere" and prompted once per third-party
+        // outbox relay on a fresh install.)
         assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(policy = RelayAuthPolicy.ALWAYS, isFirstParty = true)))
-        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(policy = RelayAuthPolicy.ALWAYS, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(policy = RelayAuthPolicy.ALWAYS, isFirstParty = false)))
+    }
+
+    @Test
+    fun customPolicyStillRequiresFirstParty() {
+        // The first-party gate belongs to CUSTOM: a toggle that matches is not enough if the only reason
+        // we are on this relay belongs to somebody else.
+        val allOn = RelayAuthCustomToggles(myRelaysAndVenues = true, readFollows = true, messageFollows = true, messageStrangers = true)
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(toggles = allOn, isInMyRelayList = true, isFirstParty = true)))
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, isInMyRelayList = true, isFirstParty = false)))
     }
 
     @Test
