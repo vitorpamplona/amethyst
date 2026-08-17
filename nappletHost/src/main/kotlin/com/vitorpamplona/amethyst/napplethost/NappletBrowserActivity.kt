@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.lang.ref.WeakReference
 import java.util.concurrent.Executor
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
@@ -107,7 +108,33 @@ class NappletBrowserActivity : ComponentActivity() {
 
     // ---- broker bridge (per-origin NIP-07 tokens; identical to NappletBrowserService) ----
     private var brokerMessenger: Messenger? = null
-    private val replyMessenger = Messenger(Handler(Looper.getMainLooper(), ::onBrokerReply))
+
+    /**
+     * Reply channel handed to the broker. It MUST NOT hold this Activity strongly.
+     *
+     * A [Messenger] sent over IPC is a binder: while the main process holds it, ART keeps a **JNI global
+     * reference** to the backing [Handler] here in `:napplet`. A `Handler(looper, ::onBrokerReply)` makes
+     * the Activity the handler's `mCallback` (a bound method reference captures `this`), so that one
+     * retained binder pinned Activity → PhoneWindow → DecorView → WebView past `onDestroy`, and no GC in
+     * this process could ever reclaim it — only killing the process could. Measured: one full-screen page
+     * opened and closed left a destroyed Activity plus its WebView alive through repeated forced GCs.
+     *
+     * Holding the Activity weakly severs that chain at the source, so even a broker that never processes
+     * [NappletIpc.MSG_RELEASE_CLIENT] (see [onDestroy]) cannot leak a surface. Messages arriving after
+     * destruction are dropped, which is correct: there is nothing left to deliver them to.
+     */
+    private val replyMessenger = Messenger(WeakBrokerReplyHandler(this))
+
+    private class WeakBrokerReplyHandler(
+        activity: NappletBrowserActivity,
+    ) : Handler(Looper.getMainLooper()) {
+        private val ref = WeakReference(activity)
+
+        override fun handleMessage(msg: Message) {
+            ref.get()?.onBrokerReply(msg)
+        }
+    }
+
     private val pendingBrokerRequests = mutableListOf<Message>()
     private var bridgeReplyProxy: JavaScriptReplyProxy? = null
     private var fireSeq = 0
@@ -259,6 +286,10 @@ class NappletBrowserActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        // Tell the broker to drop every reference to our reply Messenger BEFORE unbinding — a retained
+        // Messenger is a binder, and it would pin this Activity (and its WebView) in `:napplet` for the
+        // life of the process. `unbindService` alone does not release it. See [replyMessenger].
+        releaseFromBroker()
         runCatching { unbindService(brokerConnection) }
         if (this::webView.isInitialized) {
             // Detach from the view tree BEFORE destroy(). Destroying a WebView while it is still attached to
@@ -285,6 +316,21 @@ class NappletBrowserActivity : ComponentActivity() {
                     }
             }
         if (brokerMessenger != null) sendToBroker(msg)
+    }
+
+    /**
+     * Asks the broker to drop every reference it holds to [replyMessenger] (inc-bus subscriptions and this
+     * surface's foreground lease). Sent directly rather than through [sendToBroker] because that queues
+     * when the broker is unbound — and we are being destroyed, so a queued release would never be sent.
+     */
+    private fun releaseFromBroker() {
+        val broker = brokerMessenger ?: return
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply {
+                replyTo = replyMessenger
+                data = Bundle().apply { putString(NappletIpc.KEY_LAUNCH_TOKEN, startUrl) }
+            }
+        runCatching { broker.send(msg) }
     }
 
     @Suppress("SetJavaScriptEnabled")
