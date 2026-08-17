@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip47Wa
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip60Cashu.CashuWalletEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip60Cashu.CashuWalletHistoryEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -96,6 +97,11 @@ class AccountFilterAssembler(
     // History: older notifications, paged backward by until+limit per relay, driven by the feed's markers.
     val notificationsHistory = AccountNotificationsHistoryEoseManager(client, ::preferredKeys)
 
+    // History: older NIP-60 spending rows (kind:7376), paged backward by until+limit per outbox relay,
+    // driven by the wallet's transaction list. The live wallet subscription below reads six kinds in one
+    // uncapped REQ, so history — the most numerous of them — is exactly what a relay's cap truncates.
+    val cashuWalletHistory = CashuWalletHistoryEoseManager(client, ::preferredKeys)
+
     val group =
         listOf(
             AccountMetadataEoseManager(client, ::preferredKeys),
@@ -109,6 +115,7 @@ class AccountFilterAssembler(
             // NIP-60 wallet + NIP-61 nutzap inbox. Mounted here rather than run from a collector
             // inside CashuWalletState, so it starts and stops with every other account-level loader.
             CashuWalletEoseManager(client, ::preferredKeys),
+            cashuWalletHistory,
             MarmotGroupEventsEoseManager(client, ::preferredKeys),
         )
 

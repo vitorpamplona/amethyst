@@ -423,10 +423,11 @@ amy's on-relay events match the app's. NUT-13 counters persist in
 | Command | What it does |
 |---|---|
 | `amy cashu wallet create [--mint URL] [--mints a,b] [--privkey HEX] [--relay r1,r2]` | Publish a kind:17375 wallet + kind:10019 nutzap info. Advertises your outbox relays for nutzaps unless `--relay` overrides. |
-| `amy cashu wallet show` | P2PK pubkey, mints, balance, per-mint balances, proof/history/pending counts. |
+| `amy cashu wallet show [--sync]` | P2PK pubkey, mints, balance, per-mint balances, proof/history/pending counts. `--sync` pulls from the relays first. |
 | `amy cashu wallet export-key` | Decrypt and print the wallet's P2PK private key. |
 | `amy cashu wallet destroy` | Withdraw the nutzap advertisement and NIP-09 delete the wallet (leaves token events — the ecash still lives at the mint). |
-| `amy cashu balance [--mint URL]` | Spendable balance from the local store (optionally one mint). |
+| `amy cashu sync` | Page every NIP-60/61 event off the relays into the local store, then report the balance and the proof/history counts. Every other `cashu` read projects the store and never touches the network, so this is what fills it — run it first on a machine that didn't create the wallet. |
+| `amy cashu balance [--mint URL] [--sync]` | Spendable balance from the local store (optionally one mint). `--sync` pages from the relays first. |
 | `amy cashu mint ping URL` / `info URL` | Stateless `/v1/info` probe (name/pubkey/version) / full DTO. |
 | `amy cashu receive ln SATS [--mint URL]` | Request a mint quote; prints the bolt11 + kind:7374 quote. |
 | `amy cashu receive complete QUOTE_ID` | Poll the quote; once the invoice is settled, mint proofs (kind:7375 + kind:7376). (`resume` is a deprecated alias.) |

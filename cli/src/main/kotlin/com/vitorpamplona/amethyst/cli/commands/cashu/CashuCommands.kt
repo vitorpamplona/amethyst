@@ -37,11 +37,13 @@ object CashuCommands {
         |Cashu wallet (NIP-60 / NIP-61):
         |  cashu wallet create [--mint URL] [--mints a,b]  publish a kind:17375 wallet + kind:10019
         |        [--privkey HEX] [--relay r1,r2]            nutzap info
-        |  cashu wallet show                               P2PK pubkey, mints, balances, counts
+        |  cashu wallet show [--sync]                      P2PK pubkey, mints, balances, counts
         |  cashu wallet export-key                         decrypt + print the wallet's P2PK key
         |  cashu wallet destroy                            withdraw nutzap ad + NIP-09 delete wallet
         |  cashu mint ping URL / info URL                  stateless /v1/info probe (no account)
-        |  cashu balance [--mint URL]                      spendable balance from the local store
+        |  cashu sync                                      page every NIP-60/61 event off the relays
+        |                                                  into the local store, then report balance
+        |  cashu balance [--mint URL] [--sync]             spendable balance from the local store
         |  cashu receive ln SATS [--mint URL]              request a mint quote (bolt11 + kind:7374)
         |  cashu receive complete QUOTE_ID                 poll the quote; mint proofs once settled
         |  cashu receive token TOKEN                       redeem a cashuB… token into the wallet
@@ -65,12 +67,13 @@ object CashuCommands {
         route(
             name = "cashu",
             tail = tail,
-            usage = "cashu <wallet|mint|balance|receive|send|maintenance|mint-rec>",
+            usage = "cashu <wallet|mint|sync|balance|receive|send|maintenance|mint-rec>",
             help = USAGE,
             routes =
                 mapOf(
                     "wallet" to { rest -> CashuWalletCommands.dispatch(dataDir, rest) },
                     "mint" to { rest -> CashuMintCommands.dispatch(rest) },
+                    "sync" to { rest -> CashuSyncCommand.run(dataDir, rest) },
                     "balance" to { rest -> CashuBalanceCommand.run(dataDir, rest) },
                     "receive" to { rest -> CashuReceiveCommands.dispatch(dataDir, rest) },
                     "send" to { rest -> CashuSendCommands.dispatch(dataDir, rest) },

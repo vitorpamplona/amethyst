@@ -26,38 +26,35 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 
 /**
- * `amy cashu balance [--mint URL] [--sync]` — spendable balance from the local
- * store, via the shared CashuWalletReader projection. Optionally filtered to one
- * mint.
+ * `amy cashu sync` — page the whole NIP-60/61 event set off the relays into the
+ * local store, then report the resulting balance.
  *
- * `--sync` pages the wallet off the relays first (see [CashuContext.sync]).
- * Without it this is a pure local read, and reports only what the store already
- * holds — which for a wallet created elsewhere may be nothing at all.
+ * Every other `cashu` read command projects the local store and never touches
+ * the network, which is what makes them instant and offline-capable — but it
+ * also means they only ever saw whatever else had filled the store, and nothing
+ * in amy fetched the NIP-60 kinds at all. This is the verb that fills it.
+ *
+ * Reports both the balance and the proof/history counts so a caller can tell a
+ * genuinely empty wallet from an unsynced one.
  */
-object CashuBalanceCommand {
+object CashuSyncCommand {
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
         val args = Args(rest)
-        val mintFilter = args.flag("mint")?.trimEnd('/')
-        val sync = args.bool("sync")
         args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
-            if (sync) ctx.cashu.sync()
+            val downloaded = ctx.cashu.sync()
             val snap = ctx.cashuSnapshot()
-            val byMint =
-                snap.balancesByMint.let { all ->
-                    if (mintFilter == null) all else all.filterKeys { it.trimEnd('/') == mintFilter }
-                }
             Output.emit(
                 mapOf(
-                    "balance_sats" to byMint.values.sum(),
-                    "balances_by_mint" to byMint,
-                    "proofs_count" to
-                        snap.tokenEntries
-                            .filter { mintFilter == null || it.content.mint.trimEnd('/') == mintFilter }
-                            .sumOf { it.content.proofs.size },
+                    "events_downloaded" to downloaded,
+                    "balance_sats" to snap.balanceSats,
+                    "balances_by_mint" to snap.balancesByMint,
+                    "proofs_count" to snap.tokenEntries.sumOf { it.content.proofs.size },
+                    "token_events" to snap.tokenEntries.size,
+                    "history_events" to snap.history.size,
                 ),
             )
         }

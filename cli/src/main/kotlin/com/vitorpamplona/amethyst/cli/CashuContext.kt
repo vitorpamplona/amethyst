@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.cli.stores.FileCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuInboundNutzapBackfillFilters
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuOwnEventBackfillFilters
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -93,10 +95,59 @@ class CashuContext(
         )
 
     /**
+     * Page this account's whole NIP-60/61/87 event set off the relays into the
+     * local store, so the next [snapshot] projects a complete wallet rather than
+     * whatever happened to be synced. Returns the number of events delivered
+     * (duplicates across relays already deduped by [Context.drainAllPages]).
+     *
+     * ### Why paging, and why this is opt-in
+     *
+     * [snapshot] reads the store and nothing else — that is amy's contract, and
+     * it is why `cashu balance` is instant and offline-capable. The cost is that
+     * the balance is only ever as complete as whatever last filled the store,
+     * and nothing in amy fetched the NIP-60 kinds at all: a wallet created on
+     * the phone read zero here. So this is a verb (`amy cashu sync`) and a flag
+     * (`--sync`), never an implicit round-trip inside a read.
+     *
+     * It pages rather than issuing one REQ because a relay answers an unbounded
+     * REQ with its own cap applied to the newest matching events, and kind:7376
+     * history outnumbers the kind:7375 proofs by an order of magnitude on a
+     * wallet with any history — so the events that fall off the bottom are the
+     * proofs at mints the user hasn't touched lately, and the balance reads low
+     * with nothing to indicate it. `drainAllPages` walks each relay on its own
+     * `until` cursor to exhaustion, which is the only way to be sure.
+     *
+     * Split across relay sets exactly like the Android subscription: own events
+     * from the outbox (where they were published), inbound nutzaps from the
+     * inbox (where senders deliver them).
+     */
+    suspend fun sync(): Int {
+        val pk = ctx.identity.pubKeyHex
+        val outbox = ctx.outboxRelays()
+        val inbox = ctx.inboxRelays()
+
+        val own =
+            if (outbox.isEmpty()) {
+                emptyList()
+            } else {
+                ctx.drainAllPages(outbox.associateWith { cashuOwnEventBackfillFilters(pk) })
+            }
+        val nutzaps =
+            if (inbox.isEmpty()) {
+                emptyList()
+            } else {
+                ctx.drainAllPages(inbox.associateWith { cashuInboundNutzapBackfillFilters(pk) })
+            }
+
+        return own.size + nutzaps.size
+    }
+
+    /**
      * Project this account's locally-stored NIP-60/61/87 events into a wallet
      * snapshot via the shared [CashuWalletReader] — the same decrypt +
      * del-rollover + pending-quote logic the Android holder runs. Reads the
-     * cache only; commands that need fresh state should [Context.drain] first.
+     * cache only; commands that need fresh state should [sync] (or
+     * [Context.drain]) first.
      */
     suspend fun snapshot(): CashuWalletReader.WalletSnapshot {
         val pk = ctx.identity.pubKeyHex
