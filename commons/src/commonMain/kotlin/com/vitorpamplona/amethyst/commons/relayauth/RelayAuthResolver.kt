@@ -92,11 +92,14 @@ data class RelayAuthInputs(
  *      else fall through
  * 4. Fall-through → [RelayAuthVerdict.ASK] when the purpose is known, otherwise DENY.
  *
- * Both automatic grants in step 3 additionally require [RelayAuthInputs.isFirstParty]: an account
- * never reveals its identity *without being asked* on a relay it has no reason of its own to be on.
- * That is what keeps a bystander account off a relay only another account uses. It deliberately does
- * not suppress the question — a non-first-party challenge we can explain falls through to ASK, so
- * "decide per relay" means the user decides rather than a silent denial they never see.
+ * The [RelayAuthPolicy.CUSTOM] grant additionally requires [RelayAuthInputs.isFirstParty]: under
+ * "decide per relay" an account never reveals its identity *without being asked* on a relay it has no
+ * reason of its own to be on, which is what keeps a bystander account off a relay only another account
+ * uses. It deliberately does not suppress the question — a non-first-party challenge we can explain
+ * falls through to ASK, so the user decides rather than getting a silent denial they never see.
+ *
+ * [RelayAuthPolicy.ALWAYS] is NOT gated this way: it means what it says, every relay that asks. Users
+ * who want the narrower "only the relays I actually use" behaviour choose CUSTOM.
  */
 object RelayAuthResolver {
     fun resolve(inputs: RelayAuthInputs): RelayAuthVerdict {
@@ -111,7 +114,11 @@ object RelayAuthResolver {
 
         return when (inputs.policy) {
             RelayAuthPolicy.NEVER -> RelayAuthVerdict.DENY
-            RelayAuthPolicy.ALWAYS -> if (inputs.isFirstParty) RelayAuthVerdict.ALLOW else fallThrough(inputs)
+            // Unconditional, by design: "Always log in" means every relay that asks. Narrowing it to the
+            // relays this account uses is what CUSTOM ("decide per relay") is for — gating ALWAYS as well
+            // left the user no way to express "just authenticate everywhere" and, on a fresh install with
+            // a large follow list, produced a prompt for each of the 250+ third-party outbox relays.
+            RelayAuthPolicy.ALWAYS -> RelayAuthVerdict.ALLOW
             RelayAuthPolicy.CUSTOM ->
                 if (inputs.isFirstParty && customAllows(inputs)) RelayAuthVerdict.ALLOW else fallThrough(inputs)
         }
