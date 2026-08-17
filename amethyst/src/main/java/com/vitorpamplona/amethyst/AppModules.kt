@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.os.BatteryManager
+import android.os.SystemClock
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
@@ -189,6 +190,7 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -333,6 +335,12 @@ class AppModules(
                 .drop(1)
                 .collect { surgeDns.staleAll() }
         }
+    }
+
+    // Runs for the whole process lifetime (main process only — the sandbox never builds AppModules).
+    // See [startHeapPressureWatchdog] for why the OS trim callbacks cannot be relied on.
+    init {
+        startHeapPressureWatchdog()
     }
 
     // Shared cache populated by OnionLocationInterceptor from any HTTP/WebSocket
@@ -1303,6 +1311,53 @@ class AppModules(
         accountsCache.clear()
     }
 
+    /**
+     * Self-triggered reclaim, because the OS-driven path cannot fire when we need it most.
+     *
+     * `onTrimMemory` is the ONLY caller of [trim], and since API 34 the OS delivers just two levels,
+     * both of which require the app to be backgrounded:
+     *  - `UI_HIDDEN(20)` — activities stopped. Only trims images; never touches [LocalCache].
+     *  - `BACKGROUND(40)` — the process is on the system LRU list, which is what gates every bulk
+     *    reclaim we have (Tier 2 pruning, feed trimming, the hard cache trims).
+     *
+     * Two independent situations therefore get NO reclaim at all:
+     *  1. **Foreground use.** The deprecated `RUNNING_*` levels are never delivered, so a long session
+     *     simply grows until the heap is full.
+     *  2. **The always-on notification service.** A process hosting a foreground service can never enter
+     *     the cached state, so `BACKGROUND` is unreachable *even while backgrounded* — ActivityManager
+     *     refuses it outright ("Unable to set a background trim level on a foreground process").
+     *
+     * Measured consequence: a 3.4-day session sat at 492 MB of a 512 MB heap (3% free), paying 685 ms
+     * mark-compact GCs every ~10 s with dozens of threads blocked in `WaitForGcToComplete`, until an
+     * input-dispatch ANR. Reproduced independently on a second device with no foreground service at all.
+     *
+     * So we watch our own occupancy instead of waiting to be told. Above [HEAP_HIGH_WATER] we run the
+     * app's existing `BACKGROUND` reclaim — deliberately the same path, not a parallel policy, because at
+     * this occupancy "real reclaim pressure" is simply true. [MIN_RECLAIM_INTERVAL_MS] keeps a prune that
+     * frees little from spinning.
+     */
+    private fun startHeapPressureWatchdog() {
+        applicationIOScope.launch {
+            var lastRunAt = 0L
+            while (isActive) {
+                delay(HEAP_CHECK_INTERVAL_MS)
+                val runtime = Runtime.getRuntime()
+                val max = runtime.maxMemory()
+                val used = runtime.totalMemory() - runtime.freeMemory()
+                val ratio = used.toDouble() / max
+                val now = SystemClock.elapsedRealtime()
+                if (ratio >= HEAP_HIGH_WATER && now - lastRunAt >= MIN_RECLAIM_INTERVAL_MS) {
+                    lastRunAt = now
+                    Log.w("AppModules") {
+                        "Heap at ${(ratio * 100).toInt()}% (${used / (1024 * 1024)}MB of ${max / (1024 * 1024)}MB) — " +
+                            "self-triggering BACKGROUND reclaim; the OS will not deliver one here."
+                    }
+                    trim(ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)
+                }
+            }
+        }
+    }
+
     fun trim(level: Int) {
         _trimLevelEvents.tryEmit(level)
         // Backgrounding is a natural moment to flush the usage ledger too.
@@ -1346,5 +1401,24 @@ class AppModules(
                 }
             }
         }
+    }
+
+    companion object {
+        /**
+         * Fraction of `Runtime.maxMemory()` above which we stop waiting for an OS trim that is never
+         * coming and reclaim ourselves. 70% leaves real headroom: the ANR-producing session was pinned at
+         * 96% (492 MB of 512 MB, 3% free), where every allocation already stalls behind a GC.
+         */
+        private const val HEAP_HIGH_WATER = 0.70
+
+        /** Three `Runtime` reads; cheap enough to run often, slow enough to be invisible. */
+        private const val HEAP_CHECK_INTERVAL_MS = 60_000L
+
+        /**
+         * Floor between self-triggered reclaims. Pruning cannot free events the UI still holds, so a busy
+         * screen can sit above the high-water mark for a while; without this we would re-prune every
+         * check and burn CPU on a heap that has nothing left to give.
+         */
+        private const val MIN_RECLAIM_INTERVAL_MS = 120_000L
     }
 }
