@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip19Bech32.bech32
 
+import kotlin.jvm.JvmField
+
 /*
  * Copyright 2020 ACINQ SAS
  *
@@ -81,14 +83,49 @@ object Bech32 {
     // char -> 5 bits value
     private val map = Array<Int5>(255) { -1 }
 
+    @PublishedApi
+    internal const val DATA_CHARS_SIZE = 128
+
+    /**
+     * Membership table for [isDataChar], kept separate from [map] because [map] is an
+     * `Array<Byte>` — a boxed `java.lang.Byte[]` — and [isDataChar] runs per character over whole
+     * note contents (up to ~767KB), where unboxing on every char would show up.
+     *
+     * `@JvmField` so callers of the inline [isDataChar] compile to a direct `getstatic` instead of
+     * a property-getter `invokevirtual` per character (the same reasoning as `PointTypes`).
+     * `@PublishedApi internal` because a public inline function cannot touch a private member.
+     */
+    @PublishedApi
+    @JvmField
+    internal val DATA_CHARS = BooleanArray(DATA_CHARS_SIZE)
+
     init {
         for (i in 0..ALPHABET.lastIndex) {
             map[ALPHABET[i].code] = i.toByte()
+            DATA_CHARS[ALPHABET[i].code] = true
         }
         for (i in 0..ALPHABET_UPPERCASE.lastIndex) {
             map[ALPHABET_UPPERCASE[i].code] = i.toByte()
+            DATA_CHARS[ALPHABET_UPPERCASE[i].code] = true
         }
     }
+
+    /**
+     * True when [c] is part of the bech32 data alphabet, in either case — i.e. everything except
+     * `1`, `b`, `i` and `o`, which BIP-173 excludes as visually ambiguous.
+     *
+     * Exposed so scanners can find where an encoded payload *ends* without decoding it. The NIP-19
+     * content scan needs exactly that on every ingested event, and cannot use a regex to do it:
+     * Android's `java.util.regex` is ICU-backed and `Matcher.region()` copies the entire input into
+     * native memory per call, which drove the app's native heap to ~1.9GB on a cold start.
+     *
+     * `inline` because it is called per character over whole note contents (up to ~767KB). As a
+     * normal member it compiled to an `invokevirtual` per char, which measured ~1-2% slower across
+     * the scan benchmark than the equivalent private lookup it replaced; inlining puts the constant
+     * compare and the `baload` straight into the caller's loop and closes that gap.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun isDataChar(c: Char): Boolean = c.code < DATA_CHARS_SIZE && DATA_CHARS[c.code]
 
     fun expand(hrp: String): Array<Int5> {
         val half = hrp.length + 1

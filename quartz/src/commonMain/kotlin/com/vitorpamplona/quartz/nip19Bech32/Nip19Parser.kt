@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -163,17 +164,6 @@ object Nip19Parser {
 
     private val EVENT_VARIABLE_PREFIXES = arrayOf("nevent1", "naddr1", "note1", "nrelay1", "nembed1")
 
-    /** bech32: digits except `1`, letters except `b`, `i`, `o`. ASCII-only, both cases. */
-    private val BECH32_CHARS =
-        BooleanArray(128).apply {
-            for (c in "qpzry9x8gf2tvdw0s3jn54khce6mua7l") {
-                this[c.code] = true
-                if (c in 'a'..'z') this[c.code - 32] = true
-            }
-        }
-
-    private fun isBech32(c: Char): Boolean = c.code < 128 && BECH32_CHARS[c.code]
-
     /**
      * `\S` in the trailing group. Java's `\s` is the six ASCII whitespace chars unless
      * `UNICODE_CHARACTER_CLASS` is set, so U+00A0 and friends count as NON-space here.
@@ -280,7 +270,7 @@ object Nip19Parser {
                         if (!matchesPrefixAt(content, i, prefix)) continue
                         val dataStart = i + prefix.length
                         var dataEnd = dataStart
-                        while (dataEnd < len && isBech32(content[dataEnd])) dataEnd++
+                        while (dataEnd < len && Bech32.isDataChar(content[dataEnd])) dataEnd++
                         // `+` needs at least one payload char.
                         if (dataEnd > dataStart) {
                             end = endOfTrailing(content, dataEnd)
@@ -310,7 +300,7 @@ object Nip19Parser {
         to: Int,
     ): Boolean {
         for (k in from until to) {
-            if (!isBech32(content[k])) return false
+            if (!Bech32.isDataChar(content[k])) return false
         }
         return true
     }
