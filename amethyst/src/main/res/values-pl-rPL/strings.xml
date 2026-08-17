@@ -591,6 +591,9 @@
     <string name="quick_action_block">Zablokuj</string>
     <string name="quick_action_mute_thread">Zablokuj wątek</string>
     <string name="quick_action_unmute_thread">Odblokuj wątek</string>
+    <string name="mute_notifications">Wycisz powiadomienia</string>
+    <string name="unmute_notifications">Wyłącz wyciszenie powiadomień</string>
+    <string name="muted_chat_content_description">Powiadomienia są wyciszone dla tego czatu</string>
     <string name="quick_action_report">Zgłoś</string>
     <string name="quick_action_dont_show_again_button">Nie pokazuj więcej</string>
     <string name="report_dialog_spam">Spam lub oszustwa</string>
@@ -3094,6 +3097,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="cashu_remove_mint">Usuń Minta</string>
     <string name="cashu_add_mint">Dodaj mint</string>
     <string name="cashu_history">Historia</string>
+    <string name="cashu_history_loading_older">Ładowanie starszych transakcji…</string>
+    <string name="cashu_history_all_loaded">Brak starszych transakcji</string>
+    <string name="cashu_history_some_relays_unreachable">Brak starszych transakcji z transmiterów, które odpowiedziały — z niektórymi nie udało się nawiązać połączenia</string>
     <string name="cashu_wallet_autosaves">Twój portfel zapisuje dane automatycznie w miarę dodawania lub usuwania mintów. Klucz Nutzap jest generowany automatycznie przy pierwszym dodaniu minta.</string>
     <string name="cashu_wallet_saving">Zapisywanie…</string>
     <string name="cashu_p2pk_section">Klucz Nutzap (zaawansowany)</string>
