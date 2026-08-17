@@ -3255,6 +3255,9 @@
     <string name="cashu_remove_mint">Remove mint</string>
     <string name="cashu_add_mint">Add mint</string>
     <string name="cashu_history">History</string>
+    <string name="cashu_history_loading_older">Loading older transactions…</string>
+    <string name="cashu_history_all_loaded">No older transactions</string>
+    <string name="cashu_history_some_relays_unreachable">No older transactions from the relays that answered — some could not be reached</string>
     <string name="cashu_wallet_autosaves">Your wallet saves automatically as you add or remove mints. A nutzap key is created for you the first time you add a mint.</string>
     <string name="cashu_wallet_saving">Saving…</string>
     <string name="cashu_p2pk_section">Nutzap key (advanced)</string>

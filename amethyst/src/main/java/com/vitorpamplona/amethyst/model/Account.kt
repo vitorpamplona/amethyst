@@ -704,6 +704,12 @@ class Account(
     // the history loader ([AccountNotificationsHistoryEoseManager]) binds its orchestrator to these.
     val notificationHistory = RelayLoadingCursors()
 
+    // Per-relay backward-paging cursors for the NIP-60 spending history (kind:7376): how far back each
+    // outbox relay has been paged by until+limit. Same lifetime rule as notificationHistory — held here
+    // so paging progress survives leaving and re-entering the wallet screen; the history loader
+    // ([CashuWalletHistoryEoseManager]) binds its orchestrator to these.
+    val cashuHistory = RelayLoadingCursors()
+
     val cashuWalletState =
         com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState(
             pubKey = signer.pubKey,
