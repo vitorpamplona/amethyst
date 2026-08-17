@@ -90,7 +90,7 @@ class AccountSyncedSettings(
             MutableStateFlow(DrawerItemVisibility.sanitize(navBarItemsFromNames(internalSettings.navigation.hiddenDrawerItems))),
         )
 
-    fun toInternal(): AccountSyncedSettingsInternal =
+    fun toInternal(mutedPublicChats: Set<String>): AccountSyncedSettingsInternal =
         AccountSyncedSettingsInternal(
             reactions = AccountReactionPreferencesInternal(reactions.reactionChoices.value, reactions.reactionRowItems.value),
             zaps =
@@ -120,7 +120,12 @@ class AccountSyncedSettings(
                 ),
             videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value),
             media = AccountMediaPreferencesInternal(media.audioVisualizer.value.name),
-            chats = AccountChatPreferencesInternal(chats.pinnedChatrooms.value.map { it.users.sorted() }),
+            chats =
+                AccountChatPreferencesInternal(
+                    chats.pinnedChatrooms.value.map { it.users.sorted() },
+                    // sorted so the serialized form is deterministic
+                    mutedPublicChats.sorted(),
+                ),
             proofOfWork =
                 AccountPoWPreferencesInternal(
                     proofOfWork.difficulty.value,

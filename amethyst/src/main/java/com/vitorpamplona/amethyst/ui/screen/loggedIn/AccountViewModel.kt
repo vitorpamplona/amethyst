@@ -104,7 +104,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.Marm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.markRoomNoteAsRead
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnreadFlow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnread
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
@@ -443,7 +443,7 @@ class AccountViewModel(
     /**
      * The bottom-bar envelope dot: true when ANY Messages row is showing its blue dot.
      *
-     * Per-row via [rowHasUnreadFlow], which mirrors what each row composable computes for itself.
+     * Per-row via [rowHasUnread], which mirrors what each row composable computes for itself.
      * This used to call `unreadPrivateChatRoute` directly, which returns null for anything that is not
      * `ChatroomKeyable` — so only NIP-17/NIP-04 DMs counted, and a public chat, ephemeral room, geohash
      * cell, Marmot group, NIP-29/Buzz channel or Concord channel could sit there with a visible dot
@@ -459,7 +459,7 @@ class AccountViewModel(
                     MutableStateFlow(null)
                 }
             }.flatMapLatest { loadedFeedState ->
-                val flows = loadedFeedState?.list?.mapNotNull { chat -> rowHasUnreadFlow(chat, account) }
+                val flows = loadedFeedState?.list?.mapNotNull { chat -> rowHasUnread(chat, account)?.flow }
 
                 if (!flows.isNullOrEmpty()) {
                     combine(flows) { newItems ->
@@ -2039,6 +2039,13 @@ class AccountViewModel(
     fun toggleChatroomPin(room: ChatroomKey) =
         launchSigner {
             account.toggleChatroomPin(room)
+        }
+
+    fun mutedPublicChatsFlow(): StateFlow<Set<String>> = account.settings.mutedPublicChats
+
+    fun toggleMutedPublicChat(channelId: String) =
+        launchSigner {
+            account.toggleMutedPublicChat(channelId)
         }
 
     fun updateZapAmounts(

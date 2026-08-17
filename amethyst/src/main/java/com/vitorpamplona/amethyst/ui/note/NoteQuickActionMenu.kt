@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.theme.SmallestBorder
 import com.vitorpamplona.amethyst.ui.theme.isLight
 import com.vitorpamplona.amethyst.ui.theme.secondaryButtonBackground
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import kotlinx.coroutines.launch
@@ -369,22 +370,29 @@ fun CardBody(
                 VerticalDivider(color = primaryLight)
 
                 val isMuted = accountViewModel.isThreadMutedFor(note)
-                NoteQuickActionItem(
-                    MaterialSymbols.AutoMirrored.VolumeOff,
-                    stringRes(
+                // Every NIP-28 message shares one thread root — the channel — so "Mute thread" on a
+                // public chat can only ever hide that channel's ENTIRE content, and invisibly: the
+                // Messages row has no such check, so the room still lists while its messages vanish.
+                // "Mute notifications" owns silencing a public chat now. Unmute stays reachable so
+                // anyone already caught by a legacy mute can escape from the message in front of them.
+                if (note.event !is ChannelMessageEvent || isMuted) {
+                    NoteQuickActionItem(
+                        MaterialSymbols.AutoMirrored.VolumeOff,
+                        stringRes(
+                            if (isMuted) {
+                                R.string.quick_action_unmute_thread
+                            } else {
+                                R.string.quick_action_mute_thread
+                            },
+                        ),
+                    ) {
                         if (isMuted) {
-                            R.string.quick_action_unmute_thread
+                            accountViewModel.unmuteThread(note)
                         } else {
-                            R.string.quick_action_mute_thread
-                        },
-                    ),
-                ) {
-                    if (isMuted) {
-                        accountViewModel.unmuteThread(note)
-                    } else {
-                        accountViewModel.muteThread(note)
+                            accountViewModel.muteThread(note)
+                        }
+                        onDismiss()
                     }
-                    onDismiss()
                 }
             }
         }

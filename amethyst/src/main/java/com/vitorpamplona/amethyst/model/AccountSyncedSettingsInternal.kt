@@ -242,4 +242,14 @@ class AccountChatPreferencesInternal(
     // pubkeys (hex) sorted ascending, so the serialized form is deterministic
     // regardless of set iteration order.
     var pinnedRooms: List<List<String>> = emptyList(),
+    // NIP-28 channel ids (hex) whose notifications are silenced, sorted ascending
+    // for the same determinism reason as pinnedRooms.
+    //
+    // NULLABLE ON PURPOSE. The default has to tell two cases apart:
+    //   null = key absent — an older client rewrote the blob and dropped it, so
+    //          the local mute set must be left alone.
+    //   []   = an explicit "unmute everything" from a client that knows the field.
+    // A non-null default would collapse them and let an old client silently erase
+    // the user's mutes on every launch. See updateAppSpecificData.
+    var mutedPublicChats: List<String>? = null,
 )

@@ -119,6 +119,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import kotlinx.coroutines.flow.emptyFlow
 
 @Composable
 fun ChatroomHeaderCompose(
@@ -292,15 +293,34 @@ private fun ChannelRoomCompose(
             noteEvent?.content?.take(200)
         }
 
-    val lastReadTime by accountViewModel.account.loadLastReadFlow("Channel/${channel.idHex}").collectAsStateWithLifecycle()
+    // One predicate for the row dot and the bottom-bar badge — see rowHasUnread.
+    // `emptyFlow()` is a shared singleton, so a row that can never be unread allocates nothing.
+    // The seed matters: collection only starts after the first composition, so without it every
+    // row would paint dotless for a frame and then correct itself while scrolling.
+    val unread = remember(lastMessage) { rowHasUnread(lastMessage, accountViewModel.account) }
+    val hasNewMessages by (unread?.flow ?: emptyFlow()).collectAsStateWithLifecycle(unread?.initial ?: false)
+
+    var menuOpen by remember { mutableStateOf(false) }
+    // Kept as a State (no `by`) so `.value` is read only inside the title and menu-text
+    // slots, confining mute-toggle invalidations to those scopes.
+    val mutedChats = accountViewModel.mutedPublicChatsFlow().collectAsStateWithLifecycle()
 
     ChannelName(
         channelIdHex = channel.idHex,
         channelPicture = channelPicture,
-        channelTitle = { modifier -> ChannelTitleWithLabelInfo(channelName, MaterialSymbols.Public, R.string.public_chat, modifier) },
+        channelTitle = { modifier ->
+            val isMuted = channel.idHex in mutedChats.value
+            ChannelTitleWithLabelInfo(
+                channelName,
+                if (isMuted) MaterialSymbols.NotificationsOff else MaterialSymbols.Public,
+                R.string.public_chat,
+                modifier,
+                labelContentDescription = if (isMuted) stringRes(R.string.muted_chat_content_description) else null,
+            )
+        },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = "$authorName: $description",
-        hasNewMessages = (noteEvent?.createdAt ?: Long.MIN_VALUE) > lastReadTime,
+        hasNewMessages = hasNewMessages,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =
@@ -308,7 +328,31 @@ private fun ChannelRoomCompose(
                 .collectAsStateWithLifecycle()
                 .value,
         onClick = { nav.nav(routeFor(channel)) },
+        onLongClick = { menuOpen = true },
     )
+
+    DropdownMenu(
+        expanded = menuOpen,
+        onDismissRequest = { menuOpen = false },
+    ) {
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringRes(
+                        if (channel.idHex in mutedChats.value) {
+                            R.string.unmute_notifications
+                        } else {
+                            R.string.mute_notifications
+                        },
+                    ),
+                )
+            },
+            onClick = {
+                accountViewModel.toggleMutedPublicChat(channel.idHex)
+                menuOpen = false
+            },
+        )
+    }
 }
 
 @Composable
@@ -753,6 +797,7 @@ private fun ChannelTitleWithLabelInfo(
     labelIcon: MaterialSymbol,
     label: Int,
     modifier: Modifier,
+    labelContentDescription: String? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         Text(
@@ -768,6 +813,7 @@ private fun ChannelTitleWithLabelInfo(
             symbol = labelIcon,
             text = stringRes(id = label),
             modifier = Modifier.widthIn(max = ChatLabelMaxWidth),
+            contentDescription = labelContentDescription,
         )
     }
 }

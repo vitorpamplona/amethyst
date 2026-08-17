@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
+import com.vitorpamplona.amethyst.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
@@ -496,6 +497,14 @@ class NotificationFeedFilter(
 
         val noteEvent = it.event
 
+        // Muted public chats contribute nothing to Notifications.
+        //
+        // NOTE: this filter is one-way. NotificationFeedFilter is an AdditiveFeedFilter, so
+        // applyFilter only ever runs over newly-arriving items — nothing re-scans LocalCache
+        // when the mute set changes. Entries suppressed while muted therefore do NOT come
+        // back on unmute until the tab is refreshed. Device-confirmed; see the design doc.
+        if (isMutedPublicChatMessage(noteEvent, account.settings.mutedPublicChats.value)) return false
+
         // "Somebody added you to a channel" (kind 44100). The relay keypair authors it, so none of the
         // follow/relevance heuristics below can say anything useful about it — its relevance is that it
         // is addressed to me and still unanswered. Every rule that decides "unanswered" (self-join,
@@ -503,6 +512,10 @@ class NotificationFeedFilter(
         // the account's projection, so this is a map lookup, and answering the prompt drops the row on
         // the next invalidation. This is a standing decision, not a chat message: it ignores the
         // Messages toggle.
+        //
+        // Ordered after the mute check only for readability — a blanket "never show this" reads before a
+        // kind-specific accept. The two can't actually interact: the mute rule matches public-chat
+        // messages, which a kind-44100 is not.
         if (noteEvent is MemberAddedNotificationEvent) return account.channelInvites.isPending(it.idHex)
 
         // Buzz DM: a group chat message in a `t=dm` channel whose 39000 participants include me. A Buzz
@@ -568,7 +581,12 @@ class NotificationFeedFilter(
             noteEvent is RepostEvent || noteEvent is GenericRepostEvent
         ) {
             val target = it.replyTo?.lastOrNull()
-            if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) {
+            if (target != null &&
+                (
+                    account.isThreadMuted(account.resolveThreadRoot(target)) ||
+                        isMutedPublicChatMessage(target.event, account.settings.mutedPublicChats.value)
+                )
+            ) {
                 return false
             }
         }
