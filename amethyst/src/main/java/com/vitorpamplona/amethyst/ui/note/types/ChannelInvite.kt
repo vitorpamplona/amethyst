@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -315,12 +316,17 @@ private fun ChannelRosterLine(
             }
         }
 
+        // "24 members · relay.host". The count carries its unit through the same plural every other
+        // group surface uses (the workspace channel list, discovery, the parent picker), because a bare
+        // number sitting immediately after the faces reads as counting the faces — "3 people you
+        // follow" — which is the one thing it does not mean.
+        val host = channel.groupId.relayUrl.displayUrl()
         Text(
             text =
                 if (memberCount > 0) {
-                    "$memberCount · " + channel.groupId.relayUrl.displayUrl()
+                    pluralStringResource(R.plurals.relay_group_member_count, memberCount, memberCount) + " · " + host
                 } else {
-                    channel.groupId.relayUrl.displayUrl()
+                    host
                 },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.placeholderText,
