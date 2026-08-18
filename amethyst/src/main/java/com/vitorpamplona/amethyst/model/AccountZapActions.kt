@@ -72,7 +72,15 @@ class AccountZapActions(
         lnurl: String? = null,
     ) = LnZapRequestEvent.create(
         zappedEvent = event,
-        relays = account.nip65RelayList.inboxFlow.value + (additionalRelays ?: emptySet()),
+        // Where the provider should publish the receipt. Zapping group content pins that to the room's
+        // host relay: the receipt belongs where the message it pays for lives, so the room can show it
+        // and the recipient's group query can find it — and, for a private or closed group, so a
+        // kind-9735 naming the room never lands on a relay outside it. Everything else keeps the
+        // ordinary NIP-65 inbox routing.
+        relays =
+            account.cache.relayGroupHostsFor(event).ifEmpty {
+                account.nip65RelayList.inboxFlow.value
+            } + (additionalRelays ?: emptySet()),
         signer = account.signer,
         pollOption = pollOption,
         message = message,
