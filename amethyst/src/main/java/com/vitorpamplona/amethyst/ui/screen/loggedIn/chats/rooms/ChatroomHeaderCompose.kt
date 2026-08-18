@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -485,9 +486,6 @@ private fun RelayGroupRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val channelState by observeChannel(baseChannel, accountViewModel)
-    val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
-
     val author = lastMessage.author
     val noteEvent = lastMessage.event
     val lastContent =
@@ -513,6 +511,54 @@ private fun RelayGroupRoomCompose(
             }
         }
 
+    RelayGroupRow(
+        baseChannel = baseChannel,
+        lastContent = lastContent,
+        lastTime = lastMessage.createdAt(),
+        accountViewModel = accountViewModel,
+        nav = nav,
+    ) { channel, dismiss ->
+        // Long-press brings the group's membership actions to the Messages row itself, mirroring the
+        // group top bar so "Remove from Messages" (drop from my list, stay a member) and "Leave"
+        // (kind-9022) are reachable without opening the group first.
+        DropdownMenuItem(
+            text = { Text(stringRes(R.string.remove_from_messages)) },
+            onClick = {
+                dismiss()
+                accountViewModel.removeRelayGroupFromMessages(channel)
+            },
+        )
+        DropdownMenuItem(
+            text = { Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error) },
+            onClick = {
+                dismiss()
+                accountViewModel.leaveRelayGroup(channel)
+            },
+        )
+    }
+}
+
+/**
+ * One NIP-29 group as a Messages row: its picture, name, host-relay chip, and a caller-supplied
+ * "last message" line and long-press menu.
+ *
+ * Everything except those two is fixed here, because every list that shows a group has to agree on it —
+ * the picture fallback, the unread rule, and where a tap goes. A pending invite is a row in the same
+ * sense a joined group is (see `ChannelInvitesSection`); it differs only in what its newest line says
+ * and what you can do to it, which is exactly the two slots.
+ */
+@Composable
+fun RelayGroupRow(
+    baseChannel: RelayGroupChannel,
+    lastContent: String?,
+    lastTime: Long?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    menuContent: @Composable ColumnScope.(channel: RelayGroupChannel, dismiss: () -> Unit) -> Unit,
+) {
+    val channelState by observeChannel(baseChannel, accountViewModel)
+    val channel = channelState?.channel as? RelayGroupChannel ?: baseChannel
+
     val groupPicture = channel.profilePicture()?.ifBlank { null }
     val channelPicture =
         if (groupPicture != null) {
@@ -529,9 +575,6 @@ private fun RelayGroupRoomCompose(
     // A placeholder row (no messages yet) has a null createdAt and never lights the dot.
     val lastReadTime by accountViewModel.account.loadLastReadFlow(relayGroupChannelLastReadRoute(channel.groupId)).collectAsStateWithLifecycle()
 
-    // Long-press brings the group's membership actions to the Messages row itself, mirroring the group
-    // top bar so "Remove from Messages" (drop from my list, stay a member) and "Leave" (kind-9022) are
-    // reachable without opening the group first.
     var menuOpen by remember { mutableStateOf(false) }
 
     Box {
@@ -554,9 +597,9 @@ private fun RelayGroupRoomCompose(
                     )
                 }
             },
-            channelLastTime = lastMessage.createdAt(),
+            channelLastTime = lastTime,
             channelLastContent = lastContent,
-            hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
+            hasNewMessages = (lastTime ?: Long.MIN_VALUE) > lastReadTime,
             loadProfilePicture = accountViewModel.settings.showProfilePictures(),
             loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
             autoPlayGif =
@@ -568,20 +611,7 @@ private fun RelayGroupRoomCompose(
         )
 
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.remove_from_messages)) },
-                onClick = {
-                    menuOpen = false
-                    accountViewModel.removeRelayGroupFromMessages(channel)
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringRes(R.string.leave), color = MaterialTheme.colorScheme.error) },
-                onClick = {
-                    menuOpen = false
-                    accountViewModel.leaveRelayGroup(channel)
-                },
-            )
+            menuContent(channel) { menuOpen = false }
         }
     }
 }
