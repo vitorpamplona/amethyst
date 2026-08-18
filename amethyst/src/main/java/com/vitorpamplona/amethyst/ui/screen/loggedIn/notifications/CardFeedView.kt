@@ -400,8 +400,17 @@ private fun RenderCardItem(
         }
 
         is ChannelInviteCard -> {
-            ChannelInviteCompose(
-                item.invite,
+            // The same NoteCompose every other row uses. The invite-specific part is only the body,
+            // dispatched by kind in RenderNoteRow — so the author header, 3-dot menu, reactions row,
+            // last-read background and click-through are the shared ones rather than re-implemented.
+            NoteCompose(
+                baseNote = item.note,
+                modifier = Modifier.fillMaxWidth(),
+                routeForLastRead = routeForLastRead,
+                isBoostedNote = false,
+                isQuotedNote = false,
+                isHiddenFeed = showHidden,
+                quotesLeft = 3,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
