@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
@@ -82,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.buzzTimelinePreviewSummary
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.loadMarmotRelayIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.rememberMarmotGroupIconUrl
@@ -108,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBubbleModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -207,6 +210,16 @@ private fun ChatroomEntry(
     val geohashChannel = lastMessage.inGatherers?.firstNotNullOfOrNull { it as? GeohashChatChannel }
     if (geohashChannel != null) {
         GeohashRoomCompose(lastMessage, geohashChannel, accountViewModel, nav)
+        return
+    }
+
+    // A relay's "somebody added you" verdict (kind 44100) stands in for the group it invites me to.
+    // Matched before the generic group-scoped fallback below, which would otherwise render it as an
+    // ordinary joined-group row: with the relay keypair's npub and the raw JSON body as the preview,
+    // and a long-press menu offering to leave a group I never agreed to join.
+    val inviteEvent = lastMessage.event as? MemberAddedNotificationEvent
+    if (inviteEvent != null) {
+        ChannelInviteRoomCompose(lastMessage, accountViewModel, nav)
         return
     }
 
@@ -613,6 +626,69 @@ fun RelayGroupRow(
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             menuContent(channel) { menuOpen = false }
         }
+    }
+}
+
+/**
+ * A pending channel invite as a Messages row: the group it invites me to, with the invitation itself
+ * as the row's newest line.
+ *
+ * New Requests is a list of rooms awaiting a decision and this is one, so it sorts in among the
+ * unaccepted DMs by when the invite landed rather than being pinned above them. Deciding happens the
+ * same way it does for a joined group: tap opens the channel so it can be read first (its top bar
+ * offers "Add to Messages"), long-press brings the three answers to the row.
+ */
+@Composable
+private fun ChannelInviteRoomCompose(
+    inviteNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val notice = remember(inviteNote) { inviteNote.toMembershipNotice() } ?: return
+    val baseChannel =
+        remember(notice) { LocalCache.getOrCreateRelayGroupChannel(GroupId(notice.channelId, notice.relay)) }
+
+    // The actor, not the signer: a kind-44100 is signed by the relay keypair reporting the membership
+    // change it made, so naming its author here would put an npub on every invite.
+    val actorName = observeUserNameByHex(notice.actor, accountViewModel)
+    val lastContent =
+        if (notice.actor != null) {
+            stringRes(R.string.channel_invite_row_added_you_by, actorName)
+        } else {
+            stringRes(R.string.channel_invite_row_added_you)
+        }
+
+    RelayGroupRow(
+        baseChannel = baseChannel,
+        lastContent = lastContent,
+        lastTime = notice.createdAt,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    ) { channel, dismiss ->
+        DropdownMenuItem(
+            text = { Text(stringRes(R.string.add_to_messages)) },
+            onClick = {
+                dismiss()
+                accountViewModel.acceptChannelInvite(channel)
+            },
+        )
+        // Ignore is a local display choice that leaves me in the roster; Leave is the kind-9022 that
+        // actually removes me from the channel. Keeping both means "get this off my list" never has
+        // to mean "announce to the relay that I left".
+        DropdownMenuItem(
+            text = { Text(stringRes(R.string.channel_invite_ignore)) },
+            onClick = {
+                dismiss()
+                accountViewModel.dismissChannelInvite(channel.groupId.id)
+            },
+        )
+        DropdownMenuItem(
+            text = { Text(stringRes(R.string.channel_invite_leave), color = MaterialTheme.colorScheme.error) },
+            onClick = {
+                dismiss()
+                accountViewModel.leaveChannelInvite(channel)
+            },
+        )
     }
 }
 

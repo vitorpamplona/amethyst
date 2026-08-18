@@ -184,17 +184,20 @@ class AccountFeedContentStates(
                 }
         }
 
-        // A pending channel invite renders as a card, but nothing about answering one flows through
-        // newEventBundles: accepting writes my kind-10009, dismissing touches only local settings, and
-        // classification lands a kind-39000 that is not itself a notification. Each of those changes
-        // whether the 44100 still passes `acceptableEvent`, so rebuild when the projection moves —
-        // otherwise an answered invite would sit on the tab until an unrelated event refreshed it.
+        // A pending channel invite is a row on Notifications and on Messages › New Requests, but
+        // nothing about answering one flows through newEventBundles: accepting writes my kind-10009,
+        // dismissing touches only local settings, and classification lands a kind-39000 that is not
+        // itself a notification. Each of those changes whether the 44100 still belongs in either
+        // feed, so rebuild when the projection moves — otherwise an answered invite would sit on the
+        // tab until an unrelated event refreshed it. Arriving invites come through here too: neither
+        // filter picks a 44100 up additively, so this is what puts a new one on screen.
         //
-        // `clear()` before each invalidation, because answering an invite REMOVES a row and the plain
+        // The card feeds need `clear()` first, because answering an invite REMOVES a row and their
         // additive refresh cannot express that: it diffs `feed()` against `lastNotes`, finds no *new*
-        // notes, and bails on `if (newCards.isNotEmpty())` without touching the list — leaving the
-        // answered invite pinned at the top by the invites-first order. Clearing drops the additive
-        // fast path so the refresh rebuilds the whole list, which is the only branch that can shrink.
+        // notes, and bails without touching the list — leaving the answered invite in place. Clearing
+        // drops the additive fast path so the refresh rebuilds the whole list, which is the only
+        // branch that can shrink. FeedContentState (dmNew) rebuilds from feed() on invalidateData()
+        // regardless, so it shrinks on its own.
         scope.launch(Dispatchers.IO) {
             account.channelInvites.pendingByEventId
                 .drop(1)
@@ -203,6 +206,7 @@ class AccountFeedContentStates(
                         it.clear()
                         it.invalidateData()
                     }
+                    dmNew.invalidateData()
                 }
         }
 

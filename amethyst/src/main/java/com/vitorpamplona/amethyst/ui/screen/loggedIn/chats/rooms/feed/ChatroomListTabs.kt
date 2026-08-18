@@ -131,18 +131,6 @@ fun MessagesPager(
             scrollStateKey = tabs[page].scrollStateKey,
             accountViewModel = accountViewModel,
             nav = nav,
-            // Channels somebody added you to are pending decisions, exactly like an unaccepted DM — so
-            // they belong on New Requests, pinned above the rows and shaped like them. Passed as the
-            // feed's header rather than stacked beside it: the collapsing top bar draws over this
-            // area, so a header outside the list renders underneath it. The Notifications tab shows
-            // the same prompts from the same state holder — as full notes there, since that feed's
-            // unit is a note — so the two surfaces cannot disagree about which invites are open.
-            headerContent =
-                if (tabs[page].resource == R.string.new_requests) {
-                    { ChannelInvitesSection(accountViewModel, nav) }
-                } else {
-                    null
-                },
         )
     }
 }

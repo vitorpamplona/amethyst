@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
@@ -73,7 +74,22 @@ class ChatroomListNewFeedFilter(
                 }
             }
 
-        return (privateMessages + marmotGroups).sortedByDefaultFeedOrder()
+        // NIP-29 groups a relay says somebody added me to, but that I have not answered: not on my
+        // kind-10009, not dismissed, no later kind-44101 withdrawing it. Exactly the same standing as
+        // an unaccepted DM — a room waiting on a decision — so it belongs in this list and not pinned
+        // above it, sorted by when the invite landed like everything else here.
+        //
+        // The row is the kind-44100 itself, which carries the channel (`h`), the actor and the time.
+        // ChatroomHeaderCompose renders it as the group's row with the invitation as its newest line.
+        val relayGroupInvites =
+            if (!isEnabled(ChatFeedType.NIP29)) {
+                emptyList()
+            } else {
+                account.channelInvites.flow.value
+                    .mapNotNull { LocalCache.getNoteIfExists(it.eventId) }
+            }
+
+        return (privateMessages + marmotGroups + relayGroupInvites).sortedByDefaultFeedOrder()
     }
 
     override fun updateListWith(
