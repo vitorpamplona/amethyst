@@ -85,8 +85,13 @@ class ChatroomListNewFeedFilter(
             if (!isEnabled(ChatFeedType.NIP29)) {
                 emptyList()
             } else {
-                account.channelInvites.flow.value
-                    .mapNotNull { LocalCache.getNoteIfExists(it.eventId) }
+                // Read the map the invalidation is driven by, not the sorted list derived from it:
+                // `AccountFeedContentStates` rebuilds this feed when `pendingByEventId` emits, and
+                // `flow` is a second StateFlow mapped off that one, so at the instant the rebuild runs
+                // it can still hold the previous answer — an accepted invite then keeps its row until
+                // something else refreshes the list. (Order is irrelevant here; the feed sorts below.)
+                account.channelInvites.pendingByEventId.value.keys
+                    .mapNotNull { LocalCache.getNoteIfExists(it) }
             }
 
         return (privateMessages + marmotGroups + relayGroupInvites).sortedByDefaultFeedOrder()
