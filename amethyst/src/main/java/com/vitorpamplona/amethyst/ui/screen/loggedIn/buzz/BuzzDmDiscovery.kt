@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.buzz.buzzChannelTypes
 import com.vitorpamplona.amethyst.model.buzz.classifyBuzzChannel
 import com.vitorpamplona.amethyst.model.buzz.membershipNoticeFilter
 import com.vitorpamplona.amethyst.model.buzz.membershipNotices
@@ -88,16 +89,23 @@ private suspend fun runBuzzDmDiscovery(account: Account) {
         LocalCache.observeNotes(membershipNoticeFilter(me)),
         // A channel's type is only decidable once its kind-39000 is in the cache, and that lands
         // *after* the notice that revealed the channel — so the directory arriving has to re-run the
-        // classification. The observable list of addressables only grows, so a size change is exactly
-        // "a group we hadn't seen before is now known".
+        // classification. The emission carries the types themselves rather than a count of notes,
+        // because `LocalCache.consume(GroupMetadataEvent)` wakes this observer before it copies the
+        // event into the channel: classifying off the channel at this instant reads one that is still
+        // empty and answers UNKNOWN, and nothing emits again to correct it. See [buzzChannelTypes].
         LocalCache
             .observeNotes(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
-            .map { it.size }
+            .map { buzzChannelTypes(it) }
             .distinctUntilChanged(),
-    ) { _, _ -> BuzzChannelInvites.currentMemberships(LocalCache.membershipNotices(me)) }
-        .collectLatest { memberships ->
-            fetchMissingDirectories(account, memberships)
-            BuzzDmChannels.replace(me, memberships.filter { (id, relay) -> classifyBuzzChannel(LocalCache, id, relay) == ChannelClassification.DM })
+    ) { _, knownTypes -> BuzzChannelInvites.currentMemberships(LocalCache.membershipNotices(me)) to knownTypes }
+        .collectLatest { (memberships, knownTypes) ->
+            fetchMissingDirectories(account, memberships, knownTypes)
+            BuzzDmChannels.replace(
+                me,
+                memberships.filter { (id, relay) ->
+                    classifyBuzzChannel(LocalCache, id, relay, knownTypes) == ChannelClassification.DM
+                },
+            )
         }
 }
 
@@ -113,10 +121,11 @@ private suspend fun runBuzzDmDiscovery(account: Account) {
 private suspend fun fetchMissingDirectories(
     account: Account,
     memberships: Map<String, NormalizedRelayUrl>,
+    knownTypes: Map<String, ChannelClassification>,
 ) {
     val byRelay =
         memberships
-            .filterKeys { id -> memberships[id]?.let { classifyBuzzChannel(LocalCache, id, it) } == ChannelClassification.UNKNOWN }
+            .filterKeys { id -> memberships[id]?.let { classifyBuzzChannel(LocalCache, id, it, knownTypes) } == ChannelClassification.UNKNOWN }
             .entries
             .groupBy({ it.value }, { it.key })
             .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }

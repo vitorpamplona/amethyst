@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 
 /*
  * The cache-side view of the Buzz membership stream: everything that reads kind-44100/44101 out of
@@ -118,17 +119,49 @@ fun LocalCache.membershipNotices(me: HexKey): List<MembershipNotice> =
         .toMembershipNotices()
 
 /**
+ * The Buzz type of every channel whose kind-39000 the cache already holds, keyed by group id.
+ *
+ * Built from the metadata events themselves rather than from the [RelayGroupChannel]s they populate,
+ * because the two are filled in at different moments. `LocalCache.consume(GroupMetadataEvent)` loads the
+ * event onto its addressable note and wakes the cache observers *first*, and only then copies it into
+ * the channel — so a projection woken by that very emission reads a channel that is still empty, gets
+ * [ChannelClassification.UNKNOWN], and, because nothing emits a second time, stays wrong until an
+ * unrelated membership notice happens to arrive. (It also covers the case where the channel is never
+ * populated at all: `consume` only touches it when the event carried relay provenance.) Reading the
+ * event that caused the emission cannot race with itself.
+ *
+ * Keyed by group id alone, without the host relay: this is a fallback for [classifyBuzzChannel], which
+ * still prefers the relay-scoped channel whenever that one has already been filled in.
+ */
+fun buzzChannelTypes(metadataNotes: List<Note>): Map<String, ChannelClassification> {
+    val types = HashMap<String, ChannelClassification>(metadataNotes.size)
+    metadataNotes.forEach { note ->
+        val metadata = note.event as? GroupMetadataEvent ?: return@forEach
+        types[metadata.groupId()] =
+            if (metadata.isBuzzDmChannel()) ChannelClassification.DM else ChannelClassification.NAMED
+    }
+    return types
+}
+
+/**
  * What [cache] currently knows about a channel's type, from its kind-39000.
  *
  * [ChannelClassification.UNKNOWN] until the directory lands — callers decide what to do with that, and
  * the invite projection deliberately withholds rather than guessing (see
  * [com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites.pendingInvites]).
+ *
+ * [knownTypes] (from [buzzChannelTypes]) is consulted when the channel has no metadata yet, which is
+ * what makes the answer stable at the instant the directory lands — see that function for why the
+ * channel alone is not enough.
  */
 fun classifyBuzzChannel(
     cache: LocalCache,
     channelId: String,
     relay: NormalizedRelayUrl,
+    knownTypes: Map<String, ChannelClassification> = emptyMap(),
 ): ChannelClassification {
-    val metadata = cache.getRelayGroupChannelIfExists(GroupId(channelId, relay))?.event ?: return ChannelClassification.UNKNOWN
+    val metadata =
+        cache.getRelayGroupChannelIfExists(GroupId(channelId, relay))?.event
+            ?: return knownTypes[channelId] ?: ChannelClassification.UNKNOWN
     return if (metadata.isBuzzDmChannel()) ChannelClassification.DM else ChannelClassification.NAMED
 }

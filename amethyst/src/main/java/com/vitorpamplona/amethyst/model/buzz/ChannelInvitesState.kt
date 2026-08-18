@@ -71,19 +71,25 @@ class ChannelInvitesState(
     scope: CoroutineScope,
 ) {
     /**
-     * Fires when a group's kind-39000 first lands, which is what turns an
-     * [com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification.UNKNOWN] channel into a
-     * decidable one. The classification is read per channel, by id, straight out of the cache, so
-     * without this the projection would never recompute when the directory arrives.
+     * What every group whose kind-39000 has landed turns out to be, which is what makes an
+     * [com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification.UNKNOWN] channel decidable.
+     * Without this the projection would never recompute when the directory arrives.
      *
-     * Mapped to a count and de-duplicated: the observable list of addressable notes only ever grows, so
-     * a size change is exactly "a group we hadn't seen before is now known" — and it keeps a busy
-     * account's metadata traffic from re-running the projection on every unrelated group edit.
+     * It carries the classification rather than merely signalling that it changed, and that is the
+     * point: `LocalCache.consume(GroupMetadataEvent)` wakes this observer *before* it copies the event
+     * into the [com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel], so a
+     * recompute that went back to the channel for the answer read one that was still empty, concluded
+     * UNKNOWN, and — with nothing left to emit — kept the invite hidden until an unrelated membership
+     * notice arrived. Device-confirmed: a kind-44100 followed 20s later by its kind-39000 produced no
+     * card at all, and one unrelated kind-44101 made it appear instantly.
+     *
+     * De-duplicated on the map, so a busy account's metadata traffic still only re-runs the projection
+     * when a group's type actually becomes known or changes.
      */
     private val knownChannelTypes =
         cache
             .observeNotes(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
-            .map { it.size }
+            .map { buzzChannelTypes(it) }
             .distinctUntilChanged()
 
     /**
@@ -112,13 +118,13 @@ class ChannelInvitesState(
             knownChannelTypes,
             dismissed,
             relayGroupList.liveRelayGroupList,
-        ) { verdicts, _, dismissals, joined ->
+        ) { verdicts, knownTypes, dismissals, joined ->
             BuzzChannelInvites.pendingInvitesByEventId(
                 viewer = me,
                 notices = verdicts,
                 dismissed = dismissals,
                 joined = joined.mapTo(HashSet()) { it.groupId },
-                classify = { channelId, relay -> classifyBuzzChannel(cache, channelId, relay) },
+                classify = { channelId, relay -> classifyBuzzChannel(cache, channelId, relay, knownTypes) },
             )
         }.flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, emptyMap())
