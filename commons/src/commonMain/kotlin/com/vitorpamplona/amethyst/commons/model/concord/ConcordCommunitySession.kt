@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
+import com.vitorpamplona.quartz.concord.cord02Community.GuestbookEntry
 import com.vitorpamplona.quartz.concord.cord03Channels.ChannelChat
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord04Roles.EditionFold
@@ -192,6 +193,26 @@ class ConcordCommunitySession(
      * lifetime exactly and needs no separate eviction.
      */
     private val editionByWrapId = HashMap<HexKey, ControlEdition?>()
+
+    /**
+     * Guestbook wraps opened into entries, memoized by wrap id — the guestbook analogue of
+     * [editionByWrapId]. [refoldGuestbook] runs on *every* arriving guestbook wrap and re-projects
+     * the whole buffer, so without this the nth arrival re-opens all n wraps and a boot costs
+     * O(n^2) envelope opens (each = two NIP-44 decrypts + two signature verifies). Measured on a
+     * cold start: 6,229 opens over 448 distinct wraps, ~all of the app's NIP-44 traffic.
+     *
+     * Safe to key on wrap id alone: [guestbookKey] is derived once at construction from the
+     * session's epoch and never rotates in place (a rekey builds a new session).
+     */
+    private val guestbookEntryByWrapId = HashMap<HexKey, GuestbookEntry?>()
+
+    /**
+     * Envelope opens [refoldGuestbook] actually performed (cache misses). Exposed so a test can
+     * assert the fold stays linear in arrivals; a regression to re-opening the buffer shows up here
+     * as O(n^2) long before it shows up as a slow boot.
+     */
+    internal var guestbookOpens = 0
+        private set
 
     // Prior-epoch Control Plane address -> (wrapId -> wrap). Kept apart from [controlWraps]: these
     // never join the live fold, they only produce the anti-rollback floor.
@@ -607,8 +628,16 @@ class ConcordCommunitySession(
 
     private fun refoldGuestbook() {
         lock.withLock {
-            val wraps = guestbookWraps.values.toList()
-            _members.value = ConcordActions.guestbookMembers(wraps, guestbookKey)
+            val entries =
+                guestbookWraps.values.mapNotNull { wrap ->
+                    if (guestbookEntryByWrapId.containsKey(wrap.id)) {
+                        guestbookEntryByWrapId[wrap.id]
+                    } else {
+                        guestbookOpens++
+                        ConcordActions.guestbookEntry(wrap, guestbookKey).also { guestbookEntryByWrapId[wrap.id] = it }
+                    }
+                }
+            _members.value = ConcordActions.projectGuestbook(entries)
         }
     }
 
