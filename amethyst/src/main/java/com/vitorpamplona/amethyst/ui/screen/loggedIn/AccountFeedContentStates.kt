@@ -60,7 +60,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.dal.MusicPlaylistsFee
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.dal.MusicTracksFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ChannelInvitesState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
@@ -142,8 +141,6 @@ class AccountFeedContentStates(
 
     val notificationsOpenPolls = OpenPollsState(account, scope)
 
-    /** Channels somebody added the viewer to, awaiting a show-on-Messages decision. */
-    val channelInvites = ChannelInvitesState(account, scope)
     val notificationSummary = NotificationSummaryState(account)
 
     val feedListOptions = TopNavFilterState(account, scope)
@@ -184,6 +181,32 @@ class AccountFeedContentStates(
                 .drop(1)
                 .collect {
                     dmKnown.invalidateData()
+                }
+        }
+
+        // A pending channel invite is a row on Notifications and on Messages › New Requests, but
+        // nothing about answering one flows through newEventBundles: accepting writes my kind-10009,
+        // dismissing touches only local settings, and classification lands a kind-39000 that is not
+        // itself a notification. Each of those changes whether the 44100 still belongs in either
+        // feed, so rebuild when the projection moves — otherwise an answered invite would sit on the
+        // tab until an unrelated event refreshed it. Arriving invites come through here too: neither
+        // filter picks a 44100 up additively, so this is what puts a new one on screen.
+        //
+        // The card feeds need `clear()` first, because answering an invite REMOVES a row and their
+        // additive refresh cannot express that: it diffs `feed()` against `lastNotes`, finds no *new*
+        // notes, and bails without touching the list — leaving the answered invite in place. Clearing
+        // drops the additive fast path so the refresh rebuilds the whole list, which is the only
+        // branch that can shrink. FeedContentState (dmNew) rebuilds from feed() on invalidateData()
+        // regardless, so it shrinks on its own.
+        scope.launch(Dispatchers.IO) {
+            account.channelInvites.pendingByEventId
+                .drop(1)
+                .collect {
+                    listOf(notifications, notificationsFollowing, notificationsEveryone).forEach {
+                        it.clear()
+                        it.invalidateData()
+                    }
+                    dmNew.invalidateData()
                 }
         }
 

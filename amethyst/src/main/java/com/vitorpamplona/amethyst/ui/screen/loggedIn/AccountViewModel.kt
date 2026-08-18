@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -1731,7 +1730,6 @@ class AccountViewModel(
         launchSigner {
             account.settings.undismissChannelInvite(channel.groupId.id)
             account.follow(channel)
-            BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
         }
 
     /**
@@ -1763,14 +1761,21 @@ class AccountViewModel(
      */
     fun dismissChannelInvite(channelId: String) {
         account.settings.dismissChannelInvite(channelId)
-        BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channelId)
     }
 
-    /** Actually leave: kind-9022 to the host relay, and drop it from my list and the pending set. */
+    /**
+     * Actually leave: kind-9022 to the host relay, which answers with a kind-44101 that supersedes the
+     * add, so the projection drops the card on its own.
+     *
+     * Deliberately does NOT record a local dismissal. That would clear the card a relay round-trip
+     * sooner, but `dismissedChannelInvites` is keyed by channel id and persisted forever, so it would
+     * also swallow a *later, legitimate* re-add to the same channel — the viewer would be put back in
+     * and never told. Waiting for the relay's own withdrawal keeps "am I a member" answerable from the
+     * events alone. Ignore is the action for "don't ask me again"; this one is for "take me out".
+     */
     fun leaveChannelInvite(channel: RelayGroupChannel) =
         launchSigner {
             account.relayGroups.leaveRelayGroup(channel)
-            BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
         }
 
     /**

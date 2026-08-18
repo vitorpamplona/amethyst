@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.drafts.AccountDraftsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot.MarmotGroupEventsEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
@@ -117,6 +118,10 @@ class AccountFilterAssembler(
             CashuWalletEoseManager(client, ::preferredKeys),
             cashuWalletHistory,
             MarmotGroupEventsEoseManager(client, ::preferredKeys),
+            // What a Buzz workspace relay addresses to me personally: membership verdicts (44100/44101)
+            // and my hidden-DM snapshot (30622). Feeds both the channel-invite prompts and Buzz DM
+            // discovery, which read them back out of LocalCache rather than each opening a `#p=me` REQ.
+            BuzzMembershipEoseManager(client, ::preferredKeys),
         )
 
     /**

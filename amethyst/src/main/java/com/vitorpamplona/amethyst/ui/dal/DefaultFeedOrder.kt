@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.ChannelInviteCard
 import com.vitorpamplona.quartz.nip01Core.core.Event
 
 val DefaultFeedOrder: Comparator<Note> =
@@ -32,6 +33,20 @@ val DefaultFeedOrderEvent: Comparator<Event> =
 
 val DefaultFeedOrderCard: Comparator<Card> =
     compareByDescending<Card> { it.createdAt() }.thenBy { it.id() }
+
+/**
+ * Notifications order: unanswered channel invites first, then newest-first like everything else.
+ *
+ * An invite is a standing question — it stays actionable until it is answered — so ranking it purely by
+ * `created_at` would let a week of reactions bury a decision the user still has to make, and a long
+ * enough feed could page it off the end entirely. Everything else on the tab is a dated event and keeps
+ * the ordinary ordering. Pending is the only state that reaches a card: answering one drops it from the
+ * projection, so it never lingers at the top.
+ */
+val NotificationFeedOrderCard: Comparator<Card> =
+    compareBy<Card> { if (it is ChannelInviteCard) 0 else 1 }
+        .thenByDescending { it.createdAt() }
+        .thenBy { it.id() }
 
 // Snapshots createdAt once per note so the comparator stays consistent even if
 // another thread swaps a Note's event mid-sort (e.g. a newer AddressableEvent
