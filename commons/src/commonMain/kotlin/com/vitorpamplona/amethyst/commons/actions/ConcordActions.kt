@@ -560,11 +560,27 @@ object ConcordActions {
     fun guestbookMembers(
         wraps: List<Event>,
         guestbook: GroupKey,
-    ): Set<HexKey> {
+    ): Set<HexKey> = projectGuestbook(wraps.mapNotNull { guestbookEntry(it, guestbook) })
+
+    /**
+     * Opens a single guestbook [wrap] into its entry, or null when it doesn't belong to
+     * [guestbook] or isn't a guestbook rumor.
+     *
+     * Split out of [guestbookMembers] so a caller holding a growing wrap buffer can memoize the
+     * open per wrap id: opening is the expensive half (two NIP-44 decrypts plus the wrap and seal
+     * signature verifies), while [projectGuestbook] over the already-opened entries is trivial.
+     * Re-projecting a buffer of n wraps on every arrival without that memo is quadratic in
+     * decryptions — see [ConcordCommunitySession]'s guestbook cache.
+     */
+    fun guestbookEntry(
+        wrap: Event,
+        guestbook: GroupKey,
+    ): GuestbookEntry? = ConcordStreamEnvelope.openOrNull(wrap, guestbook)?.rumor?.let { Guestbook.parse(it) }
+
+    /** Last-writer-wins projection of already-opened [entries] down to the JOINed member set. */
+    fun projectGuestbook(entries: Collection<GuestbookEntry>): Set<HexKey> {
         val latest = HashMap<HexKey, GuestbookEntry>()
-        for (wrap in wraps) {
-            val rumor = ConcordStreamEnvelope.openOrNull(wrap, guestbook)?.rumor ?: continue
-            val entry = Guestbook.parse(rumor) ?: continue
+        for (entry in entries) {
             val prev = latest[entry.member.lowercase()]
             if (prev == null || entry.createdAt > prev.createdAt) latest[entry.member.lowercase()] = entry
         }
