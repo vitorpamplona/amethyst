@@ -57,6 +57,9 @@ dependencies {
     implementation(libs.coil.okhttp)
     implementation(libs.coil.svg)
 
+    // Unicode emoji picker (Kodein Emoji.kt — MIT; offline system-font rendering on desktop)
+    implementation(libs.kodein.emoji.compose.m3)
+
     // Video / audio playback — MIT, OS-native backends (MF / AVFoundation / GStreamer)
     // composemediaplayer 0.10.0 leaks kotlinx-coroutines-test as a *runtime* dependency
     // in its published POM. That jar ships a META-INF/services registration for

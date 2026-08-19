@@ -20,7 +20,14 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.chats
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,8 +45,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,17 +60,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -73,6 +83,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -80,19 +92,39 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
+import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
+import com.vitorpamplona.amethyst.desktop.ImageCompressionStore
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DEFAULT_BLOSSOM_SERVER
 import com.vitorpamplona.amethyst.desktop.ui.LocalBlossomServers
+import com.vitorpamplona.amethyst.desktop.ui.chats.composer.EmojiPickerPanel
+import com.vitorpamplona.amethyst.desktop.ui.chats.composer.EmojiSuggestion
+import com.vitorpamplona.amethyst.desktop.ui.chats.composer.EmojiSuggestionStrip
+import com.vitorpamplona.amethyst.desktop.ui.chats.composer.GifPickerPanel
+import com.vitorpamplona.amethyst.desktop.ui.chats.composer.MentionSuggestions
+import com.vitorpamplona.amethyst.desktop.ui.chats.composer.standardEmojis
 import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
+import com.vitorpamplona.amethyst.desktop.ui.media.QualitySelectorChip
+import com.vitorpamplona.amethyst.desktop.ui.note.DesktopRichText
+import com.vitorpamplona.amethyst.desktop.ui.note.RichTextCallbacks
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
@@ -102,6 +134,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.awt.datatransfer.DataFlavor
@@ -113,6 +146,12 @@ private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
 private val MEDIA_EXTENSIONS =
     setOf("jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "mp4", "webm", "mov", "mp3", "ogg", "wav", "flac")
+
+// Reencodable still-image types — gate the quality selector AND per-file
+// reencoding on these. GIF is excluded (animated GIFs pass through unchanged);
+// AVIF/HEIC are excluded because the reencoder rejects them (it would throw and
+// abort the send) — they upload as-is instead.
+private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
 
 /**
  * Right panel of the DM split-pane layout (flexible width).
@@ -137,6 +176,8 @@ fun ChatPane(
     cacheProvider: ICacheProvider,
     feedViewModel: ChatroomFeedViewModel,
     messageState: ChatNewMessageState,
+    emojiPacks: EmojiPackState? = null,
+    attachedFiles: SnapshotStateList<File>,
     dmBroadcastStatus: DmBroadcastStatus = DmBroadcastStatus.Idle,
     onNavigateToProfile: (String) -> Unit = {},
     onBack: (() -> Unit)? = null,
@@ -148,11 +189,66 @@ fun ChatPane(
     val feedState by feedViewModel.feedState.feedContent.collectAsState()
     val messageText by messageState.message.collectAsState()
     val recipientsMissingRelays by messageState.recipientsMissingDmRelays.collectAsState()
+    val replyTo by messageState.replyTo.collectAsState()
 
-    // File attachment state
-    val attachedFiles = remember { mutableStateListOf<File>() }
+    // `:shortcode:` autocomplete: match the word under the caret against the
+    // account's selected NIP-30 packs AND standard unicode emoji shortcodes.
+    val myEmojis =
+        if (emojiPacks != null) {
+            emojiPacks.myEmojis.collectAsState().value
+        } else {
+            emptyList()
+        }
+    val currentWord = messageText.currentWord()
+    val emojiSuggestions =
+        remember(currentWord, myEmojis) {
+            if (currentWord.startsWith(":") && currentWord.length > 1) {
+                val code = currentWord.removePrefix(":")
+                val custom =
+                    myEmojis
+                        .filter { it.code.startsWith(code, ignoreCase = true) }
+                        .map { EmojiSuggestion(it.code, ":${it.code}:", previewUrl = it.link, previewGlyph = null) }
+                val standard =
+                    standardEmojis.mapNotNull { emoji ->
+                        val alias = emoji.details.aliases.firstOrNull { it.startsWith(code, ignoreCase = true) }
+                        alias?.let {
+                            EmojiSuggestion(it, emoji.details.string, previewUrl = null, previewGlyph = emoji.details.string)
+                        }
+                    }
+                (custom + standard).take(30)
+            } else {
+                emptyList()
+            }
+        }
+
+    // @mention autocomplete: search the cache for users matching the @word under
+    // the caret (done off the composition to avoid a cache scan every keystroke).
+    var mentionSuggestions by remember { mutableStateOf<List<User>>(emptyList()) }
+    LaunchedEffect(currentWord) {
+        mentionSuggestions =
+            if (currentWord.startsWith("@") && currentWord.length > 1) {
+                cacheProvider.findUsersStartingWith(currentWord.removePrefix("@"), 5)
+            } else {
+                emptyList()
+            }
+    }
+
+    // File attachment state is hoisted above the lock gate (see
+    // DeckColumnContainer) so it survives a lock/unlock cycle.
     var isUploading by remember { mutableStateOf(false) }
+    // True for the whole duration of a send (upload + publish) — drives the
+    // send-button spinner.
+    var isSending by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Image compression: shared global default + optional per-composer override,
+    // reusing the same store the note composer uses. Override resets after send.
+    val defaultQuality by ImageCompressionStore.quality.collectAsState()
+    val stripExifSetting by ImageCompressionStore.stripExif.collectAsState()
+    val declareRealMimeType by ImageCompressionStore.encryptedMediaRealType.collectAsState()
+    var qualityOverride by remember { mutableStateOf<CompressionQuality?>(null) }
+    val activeQuality = qualityOverride ?: defaultQuality
+    val hasImageAttachment = attachedFiles.any { it.extension.lowercase() in IMAGE_EXTENSIONS }
 
     // Helper: attach files
     fun attachFiles(files: List<File>) {
@@ -333,6 +429,7 @@ fun ChatPane(
                                     }
                                 }
                             },
+                            onReply = { messageState.setReply(it) },
                         )
                     }
 
@@ -362,44 +459,119 @@ fun ChatPane(
                     onPaste = {},
                     onRemove = { attachedFiles.remove(it) },
                 )
+                // Compression quality selector — only meaningful for reencodable images.
+                if (hasImageAttachment) {
+                    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) {
+                        QualitySelectorChip(
+                            activeQuality = activeQuality,
+                            isOverride = qualityOverride != null,
+                            onSelect = { qualityOverride = it },
+                            onReset = { qualityOverride = null },
+                        )
+                    }
+                }
+            }
+
+            // @mention autocomplete dropdown
+            MentionSuggestions(
+                suggestions = mentionSuggestions,
+                onPick = { user ->
+                    onMentionPicked(messageState, messageText, user)
+                    mentionSuggestions = emptyList()
+                },
+            )
+
+            // `:shortcode:` autocomplete strip (custom packs + standard emoji)
+            EmojiSuggestionStrip(
+                suggestions = emojiSuggestions,
+                onPick = { suggestion ->
+                    messageState.updateMessage(messageText.replaceCurrentWord(suggestion.insertText))
+                },
+            )
+
+            // Reply-quote preview (NIP-17 threaded reply target)
+            replyTo?.let { replyNote ->
+                ReplyPreviewBar(
+                    note = replyNote,
+                    account = account,
+                    onDismiss = { messageState.clearReply() },
+                )
             }
 
             // Message input
             MessageInput(
-                messageText = messageText.text,
+                messageText = messageText,
                 recipientsMissingRelays = recipientsMissingRelays,
                 canSend = messageState.canSend || attachedFiles.isNotEmpty(),
                 isUploading = isUploading,
+                isSending = isSending,
                 hasAttachments = attachedFiles.isNotEmpty(),
-                onMessageChange = { messageState.updateMessage(messageText.copy(text = it)) },
+                onMessageChange = { messageState.updateMessage(it) },
                 onAttach = { attachFiles(DesktopFilePicker.pickMediaFiles()) },
                 onSend = {
                     scope.launch {
-                        if (attachedFiles.isNotEmpty()) {
-                            isUploading = true
-                            try {
-                                sendEncryptedFiles(
-                                    files = attachedFiles.toList(),
-                                    roomKey = roomKey,
-                                    account = account,
-                                    cacheProvider = cacheProvider,
-                                    blossomServers = blossomServers,
-                                )
-                                attachedFiles.clear()
-                            } catch (e: Exception) {
-                                // Keep files in attachment row for retry
-                                println("Encrypted file send failed: ${e.message}")
-                            } finally {
-                                isUploading = false
+                        isSending = true
+                        try {
+                            if (attachedFiles.isNotEmpty()) {
+                                isUploading = true
+                                try {
+                                    sendEncryptedFiles(
+                                        files = attachedFiles.toList(),
+                                        roomKey = roomKey,
+                                        account = account,
+                                        cacheProvider = cacheProvider,
+                                        blossomServers = blossomServers,
+                                        quality = activeQuality,
+                                        stripExif = stripExifSetting,
+                                        declareRealMimeType = declareRealMimeType,
+                                    )
+                                    attachedFiles.clear()
+                                    qualityOverride = null
+                                } catch (e: Exception) {
+                                    // Keep files in the attachment row for retry and
+                                    // surface the reason (console-only failures were
+                                    // invisible during testing).
+                                    println("Encrypted file send failed: ${e.message}")
+                                    val msg = e.message ?: e::class.simpleName.orEmpty()
+                                    val hint =
+                                        when {
+                                            // Server inspects the bytes and rejects the encrypted blob
+                                            // no matter what type we declare — it can't host private files.
+                                            "does not match" in msg || "expected application/json" in msg ->
+                                                " — this media server inspects uploads and can't host encrypted DM files. Switch to nostr.download in Media settings."
+                                            "415" in msg || "media type" in msg || "file type" in msg ->
+                                                " — this media server rejects private (opaque) uploads. Switch to one that accepts them (e.g. nostr.download), or enable “Reveal media type on encrypted DM uploads” in Media settings."
+                                            else -> ""
+                                        }
+                                    snackbarHostState.showSnackbar("Couldn't send attachment: $msg$hint")
+                                } finally {
+                                    isUploading = false
+                                }
                             }
-                        }
-                        // Also send text message if present
-                        if (messageState.canSend) {
-                            if (messageState.send()) {
+                            // Also send text message if present. Wrap in try/catch:
+                            // an uncaught throw here (e.g. a relay/signer error after
+                            // the message was already published) previously skipped
+                            // clear(), leaving the sent text/GIF stuck in the input.
+                            if (messageState.canSend) {
+                                try {
+                                    if (messageState.send()) {
+                                        messageState.clear()
+                                    }
+                                } catch (e: Exception) {
+                                    println("DM text send failed: ${e.message}")
+                                    // The message may already have been broadcast, so
+                                    // clear the composer and report the error rather
+                                    // than risk a duplicate on retry.
+                                    messageState.clear()
+                                    snackbarHostState.showSnackbar(
+                                        "Message sent, but a relay reported: ${e.message ?: e::class.simpleName}",
+                                    )
+                                }
+                            } else if (attachedFiles.isEmpty()) {
                                 messageState.clear()
                             }
-                        } else if (attachedFiles.isEmpty()) {
-                            messageState.clear()
+                        } finally {
+                            isSending = false
                         }
                     }
                 },
@@ -423,13 +595,31 @@ private fun MessageList(
     cacheProvider: ICacheProvider,
     onAuthorClick: (String) -> Unit,
     onReaction: (Note, String) -> Unit = { _, _ -> },
+    onReply: (Note) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    // Message the user just jumped to via a reply preview — briefly highlighted.
+    var highlightedNoteId by remember { mutableStateOf<String?>(null) }
 
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(0)
+        }
+    }
+
+    // Scroll to the referenced message and flash it. No-op if it isn't loaded
+    // in the current window (older than what's on screen).
+    fun jumpToMessage(noteId: String) {
+        val index = messages.indexOfFirst { it.idHex == noteId }
+        if (index < 0) return
+        scope.launch {
+            listState.animateScrollToItem(index)
+            highlightedNoteId = noteId
+            delay(1600)
+            if (highlightedNoteId == noteId) highlightedNoteId = null
         }
     }
 
@@ -448,8 +638,12 @@ private fun MessageList(
                 isMe = isMe,
                 isDraft = isDraft,
                 account = account,
+                cacheProvider = cacheProvider,
+                isHighlighted = note.idHex == highlightedNoteId,
                 onAuthorClick = onAuthorClick,
                 onReaction = { emoji -> onReaction(note, emoji) },
+                onReply = { onReply(note) },
+                onReplyContextClick = { parentId -> jumpToMessage(parentId) },
             )
         }
     }
@@ -477,12 +671,42 @@ private fun MessageWithReactions(
     isMe: Boolean,
     isDraft: Boolean,
     account: IAccount,
+    cacheProvider: ICacheProvider,
+    isHighlighted: Boolean = false,
     onAuthorClick: (String) -> Unit,
     onReaction: (String) -> Unit,
+    onReply: () -> Unit = {},
+    onReplyContextClick: (String) -> Unit = {},
 ) {
     var isHovered by remember { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
     val showIcon = (isHovered || showPicker) && !isDraft
+
+    // Reply-jump highlight: a brief bounce-in scale + background flash when the
+    // user taps a reply preview that points at this message.
+    val highlightScale by animateFloatAsState(
+        targetValue = if (isHighlighted) 1.03f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "replyHighlightScale",
+    )
+    val highlightBg by animateColorAsState(
+        targetValue = if (isHighlighted) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent,
+        animationSpec = tween(durationMillis = 250),
+        label = "replyHighlightBg",
+    )
+
+    // The DM cache doesn't link Note.replyTo for chat messages, so resolve the
+    // replied-to parent from the event's reply e-tag directly.
+    val replyParent =
+        remember(note.idHex) {
+            val replyId =
+                when (val e = note.event) {
+                    is ChatMessageEvent -> e.replyTo().lastOrNull()
+                    is ChatMessageEncryptedFileHeaderEvent -> e.replyTo().lastOrNull()
+                    else -> null
+                }
+            replyId?.let { cacheProvider.getNoteIfExists(it) }
+        }
 
     // Decrypt NIP-04 content asynchronously; NIP-17 content is already plaintext
     val event = note.event
@@ -515,7 +739,15 @@ private fun MessageWithReactions(
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                 .onPointerEvent(PointerEventType.Exit) { isHovered = false },
     ) {
-        Column {
+        Column(
+            modifier =
+                Modifier
+                    .graphicsLayer {
+                        scaleX = highlightScale
+                        scaleY = highlightScale
+                    }.clip(RoundedCornerShape(8.dp))
+                    .background(highlightBg),
+        ) {
             ChatMessageCompose(
                 note = note,
                 isLoggedInUser = isMe,
@@ -594,6 +826,23 @@ private fun MessageWithReactions(
                             }
                         }
 
+                        // Reply icon: same reserve-space + fade-on-hover treatment as
+                        // the reaction button. Sets the composer's reply target.
+                        Box(modifier = Modifier.alpha(if (showIcon) 1f else 0f)) {
+                            IconButton(
+                                onClick = onReply,
+                                enabled = showIcon,
+                                modifier = Modifier.size(20.dp),
+                            ) {
+                                Icon(
+                                    symbol = MaterialSymbols.Reply,
+                                    contentDescription = "Reply",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
                         // AddReaction icon: always laid out to reserve space (so hover
                         // doesn't reflow the detail row and shift the whole list);
                         // alpha fades in/out based on hover.
@@ -630,18 +879,39 @@ private fun MessageWithReactions(
                     }
                 },
             ) { _ ->
-                when (note.event) {
-                    is ChatMessageEncryptedFileHeaderEvent -> {
-                        ChatFileAttachment(event = note.event as ChatMessageEncryptedFileHeaderEvent)
+                Column {
+                    // Replied-to message preview (tap to jump + highlight).
+                    replyParent?.let { parent ->
+                        MessageReplyContext(
+                            parent = parent,
+                            account = account,
+                            onClick = { onReplyContextClick(parent.idHex) },
+                        )
                     }
+                    when (note.event) {
+                        is ChatMessageEncryptedFileHeaderEvent -> {
+                            ChatFileAttachment(event = note.event as ChatMessageEncryptedFileHeaderEvent)
+                        }
 
-                    else -> {
-                        SelectionContainer {
-                            if (decryptedContent != null) {
-                                Text(
-                                    text = decryptedContent!!,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                        else -> {
+                            val content = decryptedContent
+                            if (content != null) {
+                                // Rich rendering so nostr:npub mentions resolve to
+                                // names, and image/GIF URLs (incl. picked GIFs) and
+                                // custom emoji render inline instead of as raw text.
+                                val tags =
+                                    remember(note.idHex) {
+                                        note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList
+                                    }
+                                val richState =
+                                    remember(content, tags) {
+                                        CachedRichTextParser.parseText(content, tags)
+                                    }
+                                DesktopRichText(
+                                    content = content,
+                                    state = richState,
+                                    localCache = cacheProvider as? DesktopLocalCache,
+                                    callbacks = RichTextCallbacks(onMentionClick = onAuthorClick),
                                 )
                             } else {
                                 Text(
@@ -657,6 +927,71 @@ private fun MessageWithReactions(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Small "replying to …" preview shown at the top of a reply message bubble.
+ * Shows the quoted author + a snippet; tapping it asks the list to jump to and
+ * highlight the original message. Mirrors the reply chips in Signal/WhatsApp/
+ * Telegram.
+ */
+@Composable
+private fun MessageReplyContext(
+    parent: Note,
+    account: IAccount,
+    onClick: () -> Unit,
+) {
+    var preview by remember(parent.idHex) { mutableStateOf("") }
+    LaunchedEffect(parent.idHex) {
+        preview =
+            when (val e = parent.event) {
+                is ChatMessageEncryptedFileHeaderEvent -> "📎 Attachment"
+                is PrivateDmEvent ->
+                    try {
+                        e.decryptContent(account.signer)
+                    } catch (_: Exception) {
+                        ""
+                    }
+
+                else -> e?.content ?: ""
+            }
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .padding(bottom = 4.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .clickable(onClick = onClick)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .width(3.dp)
+                    .height(28.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.primary),
+        )
+        Spacer(Modifier.width(6.dp))
+        Column {
+            Text(
+                text = parent.author?.toBestDisplayName() ?: "Unknown",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = preview,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -725,19 +1060,97 @@ private fun ReactionBar(onReaction: (String) -> Unit) {
 }
 
 /**
+ * Preview bar shown above the composer when a message is selected as the reply
+ * target. Mirrors Android's DisplayReplyingToNote: quoted author + snippet +
+ * dismiss. On send, [ChatNewMessageState] threads the reply via
+ * ChatMessageEvent.reply().
+ */
+@Composable
+private fun ReplyPreviewBar(
+    note: Note,
+    account: IAccount,
+    onDismiss: () -> Unit,
+) {
+    val event = note.event
+    var preview by remember(note.idHex) { mutableStateOf("") }
+    LaunchedEffect(note.idHex, event) {
+        preview =
+            when (event) {
+                is ChatMessageEncryptedFileHeaderEvent -> "📎 Attachment"
+                is PrivateDmEvent ->
+                    try {
+                        event.decryptContent(account.signer)
+                    } catch (_: Exception) {
+                        ""
+                    }
+
+                else -> event?.content ?: ""
+            }
+    }
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Reply,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = note.author?.toBestDisplayName() ?: "Unknown",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = preview,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(28.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Close,
+                    contentDescription = "Cancel reply",
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/**
  * Message input area at the bottom of the chat pane.
  */
 @Composable
 private fun MessageInput(
-    messageText: String,
+    messageText: TextFieldValue,
     recipientsMissingRelays: Boolean,
     canSend: Boolean,
     isUploading: Boolean = false,
+    isSending: Boolean = false,
     hasAttachments: Boolean = false,
-    onMessageChange: (String) -> Unit,
+    onMessageChange: (TextFieldValue) -> Unit,
     onAttach: () -> Unit = {},
     onSend: () -> Unit,
 ) {
+    var showEmojiPicker by remember { mutableStateOf(false) }
+    var showGifPicker by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -799,7 +1212,7 @@ private fun MessageInput(
                 interactionSource = messageInteraction,
                 decorationBox = { innerTextField ->
                     androidx.compose.material3.OutlinedTextFieldDefaults.DecorationBox(
-                        value = messageText,
+                        value = messageText.text,
                         innerTextField = innerTextField,
                         enabled = true,
                         singleLine = false,
@@ -828,21 +1241,91 @@ private fun MessageInput(
                 },
             )
 
+            // Emoji picker
+            Box {
+                IconButton(
+                    onClick = { showEmojiPicker = !showEmojiPicker },
+                    enabled = !isUploading,
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.EmojiEmotions,
+                        contentDescription = "Emoji",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                if (showEmojiPicker) {
+                    Popup(
+                        alignment = Alignment.BottomEnd,
+                        offset = IntOffset(0, -48),
+                        onDismissRequest = { showEmojiPicker = false },
+                        properties = PopupProperties(focusable = true),
+                    ) {
+                        EmojiPickerPanel(
+                            onPick = { emoji ->
+                                onMessageChange(insertAtCursor(messageText, emoji))
+                            },
+                        )
+                    }
+                }
+            }
+
+            // GIF picker (Nostr-native, NIP-94)
+            Box {
+                TextButton(
+                    onClick = { showGifPicker = !showGifPicker },
+                    enabled = !isUploading,
+                    modifier = Modifier.size(width = 44.dp, height = 40.dp),
+                    contentPadding =
+                        androidx.compose.foundation.layout
+                            .PaddingValues(0.dp),
+                ) {
+                    Text(
+                        text = "GIF",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                if (showGifPicker) {
+                    Popup(
+                        alignment = Alignment.BottomEnd,
+                        offset = IntOffset(0, -48),
+                        onDismissRequest = { showGifPicker = false },
+                        properties = PopupProperties(focusable = true),
+                    ) {
+                        GifPickerPanel(
+                            onPick = { url ->
+                                onMessageChange(messageText.insertUrlAtCursor(url))
+                                showGifPicker = false
+                            },
+                        )
+                    }
+                }
+            }
+
             IconButton(
                 onClick = onSend,
-                enabled = canSend && !isUploading,
+                enabled = canSend && !isSending,
                 modifier = Modifier.size(40.dp),
             ) {
-                Icon(
-                    MaterialSymbols.AutoMirrored.Send,
-                    contentDescription = "Send",
-                    tint =
-                        if (canSend && !isUploading) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                        },
-                )
+                if (isSending) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Icon(
+                        MaterialSymbols.AutoMirrored.Send,
+                        contentDescription = "Send",
+                        tint =
+                            if (canSend) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            },
+                    )
+                }
             }
         }
 
@@ -877,6 +1360,33 @@ private fun MessageInput(
 }
 
 /**
+ * Insert [insert] at the caret (replacing any selection) and place the caret
+ * immediately after it. Shared by the emoji picker, custom-emoji / mention
+ * autocomplete, and GIF picker to write into the composer's TextFieldValue.
+ */
+internal fun insertAtCursor(
+    current: TextFieldValue,
+    insert: String,
+): TextFieldValue {
+    val sel = current.selection
+    val newText = current.text.replaceRange(sel.min, sel.max, insert)
+    val cursor = sel.min + insert.length
+    return TextFieldValue(text = newText, selection = TextRange(cursor))
+}
+
+/**
+ * Replaces the `@word` under the caret with a `nostr:npub…` reference (plus a
+ * trailing space), mirroring the note composer's mention insertion.
+ */
+private fun onMentionPicked(
+    messageState: ChatNewMessageState,
+    current: TextFieldValue,
+    user: User,
+) {
+    messageState.updateMessage(current.replaceCurrentWord("nostr:${user.pubkeyNpub()} "))
+}
+
+/**
  * Encrypts and uploads files, then sends each as a ChatMessageEncryptedFileHeaderEvent (kind 15)
  * wrapped in GiftWrap for each recipient.
  */
@@ -886,6 +1396,9 @@ private suspend fun sendEncryptedFiles(
     account: IAccount,
     cacheProvider: ICacheProvider,
     blossomServers: StateFlow<List<String>>?,
+    quality: CompressionQuality? = null,
+    stripExif: Boolean = true,
+    declareRealMimeType: Boolean = false,
 ) {
     val orchestrator = UploadOrchestrator()
     val server = blossomServers?.value?.firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
@@ -893,7 +1406,12 @@ private suspend fun sendEncryptedFiles(
 
     for (file in files) {
         val cipher = AESGCM()
-        val result = orchestrator.uploadEncrypted(file, cipher, server, account.signer)
+        // Only re-encode genuinely reencodable raster images; everything else
+        // (video, audio, GIF, AVIF/HEIC, unknown) uploads unchanged so a single
+        // unsupported file can't abort the whole send.
+        val fileQuality = if (file.extension.lowercase() in IMAGE_EXTENSIONS) quality else null
+        val result =
+            orchestrator.uploadEncrypted(file, cipher, server, account.signer, stripExif, fileQuality, declareRealMimeType)
         val url = result.blossom.url ?: continue
 
         val template =

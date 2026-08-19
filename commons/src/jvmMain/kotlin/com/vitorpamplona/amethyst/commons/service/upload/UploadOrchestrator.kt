@@ -161,41 +161,94 @@ class UploadOrchestrator(
         cipher: AESGCM,
         serverBaseUrl: String,
         signer: NostrSigner,
+        // Defaults preserve the prior behaviour exactly (no reencode, no EXIF
+        // strip → encrypt raw bytes) for existing Android/CLI callers. Only
+        // callers that opt in (e.g. Desktop DMs) change what leaves the machine.
+        stripExif: Boolean = false,
+        quality: CompressionQuality? = null,
+        // When false (default) the encrypted blob is uploaded as opaque
+        // application/octet-stream so the server can't learn the media type.
+        // When true it's uploaded with the real media type — less private, but
+        // required by strict Blossom servers that reject octet-stream (HTTP 415).
+        declareRealMimeType: Boolean = false,
     ): EncryptedUploadResult {
-        // 1. Compute pre-encryption metadata (dimensions, blurhash, mime, originalHash)
-        val metadata = MediaMetadataReader.compute(file)
+        var reencodedTemp: File? = null
+        var strippedTemp: File? = null
+        try {
+            // 1. Re-encode (or pass-through) BEFORE encrypting, mirroring [upload].
+            //    quality == null → pass-through (preserves prior DM behaviour, and
+            //    the CLI/Android callers). ImageReencoder itself passes animated
+            //    GIFs through byte-identical, so GIF DMs stay animated.
+            val reencode =
+                when {
+                    quality == null -> ReencodeResult.PassThrough(ImageReencoder.PassReason.BypassByUser)
+                    else -> ImageReencoder.reencode(file, quality)
+                }
+            val afterReencode =
+                when (reencode) {
+                    is ReencodeResult.Reencoded -> reencode.file.also { reencodedTemp = it }
+                    is ReencodeResult.PassThrough -> file
+                }
 
-        // 2. Read file bytes and encrypt
-        val plaintext = file.readBytes()
-        val encrypted = cipher.encrypt(plaintext)
+            // 2. Strip EXIF only when shipping the original (re-encode wipes it).
+            val finalFile =
+                if (stripExif && reencode is ReencodeResult.PassThrough) {
+                    val stripped = MediaCompressor.stripExif(afterReencode)
+                    if (stripped != afterReencode) strippedTemp = stripped
+                    stripped
+                } else {
+                    afterReencode
+                }
 
-        // 3. Compute SHA256 of ENCRYPTED blob (not plaintext)
-        val encryptedHash = sha256(encrypted).toHexKey()
-        val encryptedSize = encrypted.size
+            // 3. Compute pre-encryption metadata on the bytes that get encrypted
+            //    (dimensions, blurhash, mime, originalHash of the final plaintext).
+            val metadata = MediaMetadataReader.compute(finalFile)
 
-        // 4. Create Blossom auth with encrypted hash and size
-        val authHeader =
-            BlossomAuth.createUploadAuth(
-                hash = encryptedHash,
-                size = encryptedSize.toLong(),
-                alt = "Encrypted upload",
-                signer = signer,
+            // 4. Read final bytes and encrypt
+            val plaintext = finalFile.readBytes()
+            val encrypted = cipher.encrypt(plaintext)
+
+            // 5. Compute SHA256 of ENCRYPTED blob (not plaintext)
+            val encryptedHash = sha256(encrypted).toHexKey()
+            val encryptedSize = encrypted.size
+
+            // 6. Create Blossom auth with encrypted hash and size
+            val authHeader =
+                BlossomAuth.createUploadAuth(
+                    hash = encryptedHash,
+                    size = encryptedSize.toLong(),
+                    alt = "Encrypted upload",
+                    signer = signer,
+                )
+
+            // 7. Upload the encrypted blob. Default: declare
+            //    application/octet-stream so the server can't learn whether a
+            //    private attachment is an image, video, voice note, etc. — this
+            //    needs a server that accepts opaque blobs (e.g. nostr.download).
+            //    Callers may opt into [declareRealMimeType] to declare the real
+            //    type instead, so strict servers that reject octet-stream (HTTP
+            //    415) also work, at the cost of leaking the media category.
+            val uploadContentType =
+                if (declareRealMimeType) metadata.mimeType else "application/octet-stream"
+            val result =
+                client.upload(
+                    bytes = encrypted,
+                    contentType = uploadContentType,
+                    serverBaseUrl = serverBaseUrl,
+                    authHeader = authHeader,
+                )
+
+            return EncryptedUploadResult(
+                blossom = result,
+                metadata = metadata,
+                encryptedHash = encryptedHash,
+                encryptedSize = encryptedSize,
             )
-
-        // 5. Upload encrypted blob as opaque binary
-        val result =
-            client.upload(
-                bytes = encrypted,
-                contentType = "application/octet-stream",
-                serverBaseUrl = serverBaseUrl,
-                authHeader = authHeader,
-            )
-
-        return EncryptedUploadResult(
-            blossom = result,
-            metadata = metadata,
-            encryptedHash = encryptedHash,
-            encryptedSize = encryptedSize,
-        )
+        } finally {
+            withContext(NonCancellable) {
+                strippedTemp?.deleteOrWarn("UploadOrchestrator", "encrypted stripped temp")
+                reencodedTemp?.deleteOrWarn("UploadOrchestrator", "encrypted reencoded temp")
+            }
+        }
     }
 }

@@ -209,6 +209,7 @@ object MaterialSymbols {
     val RemoveCircleOutline = MaterialSymbol("\uF08F")
     val RemoveDone = MaterialSymbol("\uE9D3")
     val Replay = MaterialSymbol("\uE042")
+    val Reply = MaterialSymbol("\uE15E")
     val Report = MaterialSymbol("\uF052")
     val Restaurant = MaterialSymbol("\uE56C")
     val Save = MaterialSymbol("\uE161")
