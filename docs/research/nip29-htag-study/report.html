@@ -1,0 +1,470 @@
+<title>NIP-29 Group Id Collisions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --ground:#EFF1F6; --surface:#FFFFFF; --surface-2:#F6F8FB;
+  --ink:#151821; --muted:#5C6478; --faint:#818AA0;
+  --rule:#D5DAE5; --rule-soft:#E4E8F0;
+  --accent:#3B4FC4; --accent-soft:#E5E8FA;
+  --sig:#B62B57; --sig-soft:#FBE6EC;
+  --ok:#0C6E59; --ok-soft:#DFF0EB;
+  --warn:#8A6A12; --warn-soft:#F7EED6;
+  --shadow:0 1px 2px rgba(20,26,44,.06),0 8px 24px -16px rgba(20,26,44,.28);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1015; --surface:#161A22; --surface-2:#1C212B;
+    --ink:#E3E7F0; --muted:#98A1B6; --faint:#7B8499;
+    --rule:#2A303C; --rule-soft:#222836;
+    --accent:#8D9CF5; --accent-soft:#1E2440;
+    --sig:#F2789F; --sig-soft:#3A1B27;
+    --ok:#5FC9AE; --ok-soft:#12302A;
+    --warn:#D9B45C; --warn-soft:#2E2716;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1015; --surface:#161A22; --surface-2:#1C212B;
+  --ink:#E3E7F0; --muted:#98A1B6; --faint:#7B8499;
+  --rule:#2A303C; --rule-soft:#222836;
+  --accent:#8D9CF5; --accent-soft:#1E2440;
+  --sig:#F2789F; --sig-soft:#3A1B27;
+  --ok:#5FC9AE; --ok-soft:#12302A;
+  --warn:#D9B45C; --warn-soft:#2E2716;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -18px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1140px;margin:0 auto;padding:0 24px 96px;
+      display:flex;flex-direction:column;gap:56px}
+.prose{max-width:66ch}
+h1,h2,h3,.lbl,.tile b,th,.chip,button,input{
+  font-family:"IBM Plex Sans Condensed","Helvetica Neue",Arial,sans-serif}
+code,.mono,td.m,.key{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+h1{font-size:clamp(2.3rem,5.2vw,3.5rem);line-height:1.02;font-weight:700;
+   letter-spacing:-.022em;margin:0;text-wrap:balance}
+h2{font-size:1.65rem;font-weight:700;letter-spacing:-.012em;margin:0 0 .35em;
+   text-wrap:balance;line-height:1.12}
+h3{font-size:1.06rem;font-weight:600;margin:0 0 .3em;letter-spacing:-.005em}
+p{margin:0 0 1em}
+a{color:var(--accent)}
+.lbl{font-size:.72rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+     color:var(--faint)}
+
+/* ---------- masthead ---------- */
+header{padding:64px 0 0;display:flex;flex-direction:column;gap:22px}
+.rule-top{height:3px;background:var(--ink);width:64px;border-radius:2px}
+.dek{font-size:1.22rem;color:var(--muted);max-width:60ch;margin:0}
+.verdict{
+  background:var(--surface);border:1px solid var(--rule);border-radius:3px;
+  border-left:4px solid var(--sig);padding:20px 24px;max-width:72ch;
+  box-shadow:var(--shadow)}
+.verdict p{margin:0}
+.verdict strong{color:var(--sig)}
+
+/* ---------- stat rail ---------- */
+.rail{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);
+      border-radius:3px;overflow:hidden;
+      grid-template-columns:repeat(auto-fit,minmax(158px,1fr))}
+.tile{background:var(--surface);padding:16px 18px 18px;display:flex;
+      flex-direction:column;gap:4px}
+.tile b{font-size:1.85rem;font-weight:700;line-height:1;letter-spacing:-.02em;
+        font-variant-numeric:tabular-nums}
+.tile span{font-size:.83rem;color:var(--muted);line-height:1.35;
+           font-family:"IBM Plex Sans Condensed",Arial,sans-serif}
+.tile.hi b{color:var(--sig)}
+.tile.ok b{color:var(--ok)}
+
+/* ---------- generic blocks ---------- */
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:3px;
+      padding:22px 24px}
+.grid3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.grid3 .card h3{color:var(--accent)}
+.grid3 .card p{margin:0;font-size:.96rem;color:var(--muted)}
+
+/* ---------- tables ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;
+           background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th{position:sticky;top:0;z-index:2;background:var(--surface-2);
+   font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+   color:var(--faint);text-align:left;padding:10px 14px;
+   border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:9px 14px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--surface-2)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;
+       font-family:"IBM Plex Mono",monospace;font-size:.85rem}
+td.m{font-size:.83rem;word-break:break-all;max-width:34ch}
+.key{color:var(--faint);font-size:.8rem}
+.relays{display:flex;flex-direction:column;gap:2px;max-width:38ch}
+.relays span{font-family:"IBM Plex Mono",monospace;font-size:.78rem;
+             word-break:break-all}
+.relays .more{color:var(--faint);font-family:"IBM Plex Sans Condensed",Arial,sans-serif}
+
+/* ---------- chips ---------- */
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;
+      padding:2px 9px;font-size:.7rem;font-weight:600;letter-spacing:.06em;
+      text-transform:uppercase;border:1px solid transparent;white-space:nowrap}
+.t-A{background:var(--sig-soft);color:var(--sig);border-color:var(--sig)}
+.t-B{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.t-C{background:var(--surface-2);color:var(--faint);border-color:var(--rule)}
+.shape{font-family:"IBM Plex Mono",monospace;font-size:.76rem;color:var(--muted)}
+
+/* ---------- controls ---------- */
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+          margin:0 0 14px}
+.controls button{
+  font-size:.76rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  padding:6px 13px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--rule);background:var(--surface);color:var(--muted)}
+.controls button[aria-pressed="true"]{
+  background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.controls input{
+  flex:1;min-width:200px;padding:7px 12px;border-radius:3px;font-size:.88rem;
+  border:1px solid var(--rule);background:var(--surface);color:var(--ink);
+  font-family:"IBM Plex Mono",monospace}
+.controls input::placeholder{color:var(--faint)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.count{font-size:.8rem;color:var(--faint);
+       font-family:"IBM Plex Sans Condensed",Arial,sans-serif}
+
+/* ---------- shape bars ---------- */
+.bars{display:flex;flex-direction:column;gap:11px}
+.bar{display:grid;grid-template-columns:minmax(120px,150px) 1fr;gap:14px;
+     align-items:center}
+.bar .nm{font-family:"IBM Plex Mono",monospace;font-size:.79rem;color:var(--muted);
+         text-align:right}
+.bar .track{display:flex;flex-direction:column;gap:3px}
+.bar .r{display:grid;grid-template-columns:1fr 92px;align-items:center;gap:9px;
+         height:11px}
+.bar .seg{height:11px;display:block}
+.bar .fill{height:11px;border-radius:1px;min-width:2px}
+.bar .fill.all{background:var(--accent);opacity:.42}
+.bar .fill.col{background:var(--sig)}
+.bar .v{font-family:"IBM Plex Mono",monospace;font-size:.7rem;color:var(--faint);
+        font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;gap:18px;font-size:.78rem;color:var(--muted);
+        font-family:"IBM Plex Sans Condensed",Arial,sans-serif;margin-bottom:6px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:1px;
+          margin-right:6px;vertical-align:middle}
+.legend i.all{background:var(--accent);opacity:.42}
+.legend i.col{background:var(--sig)}
+
+footer{border-top:1px solid var(--rule);padding-top:22px;color:var(--faint);
+       font-size:.85rem;max-width:66ch}
+ul.tight{margin:0;padding-left:1.1em}
+ul.tight li{margin-bottom:.45em}
+@media (max-width:640px){
+  body{font-size:16px}
+  .bar{grid-template-columns:1fr}
+  .bar .nm{text-align:left}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="wrap">
+
+<header>
+  <div class="rule-top"></div>
+  <div class="lbl">Nostr network survey &middot; 19 August 2026</div>
+  <h1>Do NIP-29 group ids collide across relays?</h1>
+  <p class="dek">A crawl of 25,419 known relays, 33,547 user group lists and every
+  kind-39000 that could be recovered — resolved by relay signing key rather than
+  by URL, because URLs cannot answer this question.</p>
+  <div class="verdict">
+    <p><strong>Yes, but rarely, and almost never by accident.</strong> Of 3,962
+    distinct group ids across 1,271 NIP-29 relay instances, 142 appear on more
+    than one relay and 42 are backed by signature-verified, relay-signed
+    metadata. Every confirmed collision traces to a default id shipped with
+    software, a client-generated id republished to several relays, or a relay
+    that cloned another relay's group — not to two operators independently
+    drawing the same random id.</p>
+  </div>
+</header>
+
+<section>
+  <div class="rail" id="rail"></div>
+</section>
+
+<section class="prose">
+  <h2>Why relay URLs can't answer this</h2>
+  <p>The obvious method — ask every relay for kind 39000, group by the
+  <code>d</code> tag — produces nonsense. Three confounders, each of which
+  inflated an earlier pass of this study by an order of magnitude:</p>
+</section>
+<section class="grid3">
+  <div class="card">
+    <h3>Copies travel</h3>
+    <p>Kinds 39000/39001/39002 are ordinary addressable events, so any relay may
+    hold a copy. <code>nos.lol</code> alone returned metadata for 1,116 distinct
+    groups it does not host. Of 1,942 relay URLs that answered a kind-39000
+    query, only 37 held no kind-1 notes — the rest are general relays mirroring
+    other people's groups.</p>
+  </div>
+  <div class="card">
+    <h3>One relay, many URLs</h3>
+    <p>Path-routed deployments such as
+    <code>wss://groups.0xchat.com/&lt;hash&gt;</code>, plus aliases and explicit
+    ports, mean a naive count of distinct URLs multiplies a single relay
+    instance into dozens.</p>
+  </div>
+  <div class="card">
+    <h3>NIP-11 <code>pubkey</code> lies</h3>
+    <p>On <code>pyramid.fiatjaf.com</code> it is the operator's npub; on
+    <code>groups.0xchat.com</code> it happens to be the relay key. It only
+    becomes usable once cross-checked against what actually signs the group
+    metadata.</p>
+  </div>
+</section>
+
+<section class="prose">
+  <p>The way through is that <em>NIP-29 has the relay sign the group
+  metadata</em>, and that signature survives every mirrored copy. So this study
+  defines a <strong>relay instance as the pubkey that signs the
+  kind-39000</strong>, and treats URLs as a secondary rendering of those keys.
+  Under that definition the numbers stop moving: 1,271 relay instances, of which
+  1,082 host exactly one group — the one-relay-per-group pattern that
+  <code>*.communities.buzz.xyz</code>, <code>*.spaces.coracle.social</code> and
+  <code>layer3.news/&lt;path&gt;</code> deployments have made the norm.</p>
+  <p>Every one of the 664 events behind the tables below was re-fetched, its id
+  recomputed from the serialization and its BIP-340 signature verified. All 664
+  passed — there is no forged or malformed group metadata anywhere in the
+  corpus.</p>
+</section>
+
+<section>
+  <h2>What the confirmed collisions are</h2>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card">
+      <h3>Defaults shipped with software</h3>
+      <p><code>clan-test</code> carries 44 verified distinct relay keys, every
+      copy holding the identical content
+      <code>{"about":"","name":"test"}</code>. One quickstart default, deployed
+      44+ times, each instance minting a fresh relay key. Same family:
+      <code>clan-test2</code>, <code>clan-scuffed-crew</code>. Short generic
+      slugs behave alike: <code>general</code>, <code>support</code>,
+      <code>h1</code>, <code>orbee</code>, <code>nostrord</code>.</p>
+    </div>
+    <div class="card">
+      <h3>Relays that cloned a relay</h3>
+      <p><code>strfry.ymir.cloud</code> runs its own key and has re-signed group
+      metadata for ids that also live on <code>basspistol.org</code>
+      (<code>h1</code>), <code>relay.zap.stream</code>
+      (<code>acleprush</code>) and <code>chat.wisp.talk</code>
+      (<code>zoxqa84y6lv7</code>). The group id survived the copy; the signing
+      key did not.</p>
+    </div>
+    <div class="card">
+      <h3>Client ids replayed to several relays</h3>
+      <p><code>7c92b9a7956977b7</code> spans 4 relay keys including
+      <code>groups.0xchat.com</code> and <code>groups.satsdisco.com</code>;
+      <code>997bcfd35d30dfa3</code> and ~17 other 16-hex ids do the same. 64 bits
+      do not collide by chance at this scale — the client chose the id and
+      published it more than once.</p>
+    </div>
+    <div class="card">
+      <h3>Owner-namespaced ids</h3>
+      <p><code>npub1…:groupName</code> prevents collisions between users but not
+      between relays: one owner creating the same-named group on several relays
+      produces the identical id each time. 5 confirmed, 62 across all evidence
+      tiers.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Which id shapes collide</h2>
+  <p class="prose" style="color:var(--muted);font-size:.98rem">Share of all 3,962
+  ids, against share of the 42 confirmed collisions. Human-readable slugs and
+  16-hex ids are heavily over-represented; long random ids essentially never
+  collide.</p>
+  <div class="card" style="margin-top:14px">
+    <div class="legend">
+      <span><i class="all"></i>share of all ids</span>
+      <span><i class="col"></i>share of confirmed collisions</span>
+    </div>
+    <div class="bars" id="bars"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Every shared id</h2>
+  <p class="prose" style="color:var(--muted);font-size:.98rem">
+  <span class="chip t-A">Tier A</span> two or more pubkeys with a
+  signature-verified kind 39000 for this id.
+  <span class="chip t-B">Tier B</span> verified, but only through kind
+  39001/39002 — a permissive general relay accepts those from anyone, so
+  <code>poker-game</code>'s eleven signers are eleven users, not eleven relays.
+  <span class="chip t-C">Tier C</span> the pubkey was seen in a relay's answer
+  but the raw event could not be re-fetched.</p>
+  <div class="controls" style="margin-top:16px">
+    <button data-t="all" aria-pressed="true">All 142</button>
+    <button data-t="A" aria-pressed="false">Tier A &middot; 42</button>
+    <button data-t="B" aria-pressed="false">Tier B &middot; 89</button>
+    <button data-t="C" aria-pressed="false">Tier C &middot; 11</button>
+    <input id="q" type="search" placeholder="filter by id, group name or relay…"
+           aria-label="Filter shared ids">
+    <span class="count" id="count"></span>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th>Tier</th><th>Group id (h)</th><th>Name</th><th>Id shape</th>
+        <th style="text-align:right">Relays</th>
+        <th style="text-align:right">Verified</th>
+        <th>Relay instances</th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Largest relay instances</h2>
+  <div class="tablewrap" style="margin-top:14px">
+    <table>
+      <thead><tr>
+        <th style="text-align:right">Groups</th><th>Relay</th><th>Signing key</th>
+      </tr></thead>
+      <tbody id="tr"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="prose">
+  <h2>Limitations</h2>
+  <ul class="tight">
+    <li>Only 126 of 1,271 relay instances could be tied to a live URL. The rest
+    are known solely by their signing key, recovered from metadata mirrored onto
+    aggregators; their relays are dead, private, or absent from NIP-66. 31 of the
+    142 shared ids have at least one resolvable URL.</li>
+    <li>NIP-66 is the discovery ceiling. A NIP-29 relay no monitor has seen and
+    no kind-10009 references is invisible here.</li>
+    <li><code>.onion</code> and <code>.i2p</code> relays were skipped — no Tor or
+    I2P transport was available to the crawler.</li>
+    <li>Two keys signing one id proves two relay <em>instances</em>, not two
+    <em>operators</em>. A relay that rotated its key, or one operator running
+    several deployments, looks identical from outside.</li>
+    <li><code>_</code>, the NIP-29 relay-wide group, is declared by 20 different
+    relays in users' kind-10009 lists and is excluded from the tables: it is a
+    collision by design, and no relay publishes a kind-39000 for it.</li>
+  </ul>
+</section>
+
+<footer>
+  Crawler and analysis live in <code>docs/research/nip29-htag-study/tools/</code>;
+  full CSVs in <code>data/</code>. The client implements NIP-42 AUTH with a
+  throwaway key (94 relays refused reads otherwise, 75 accepted it), adaptive
+  <code>limit</code> back-off, and <code>until</code>-pagination past each
+  relay's cap. BIP-340 verification is dependency-free.
+</footer>
+</div>
+<script id="data" type="application/json">{"counts":{"kind_10009_events_collected":33547,"relays_known_from_nip66":25419,"relay_urls_probed_for_39000":3050,"relay_urls_that_returned_39000_family":1942,"nip11_docs_fetched":2764,"nip11_declaring_nip29":251,"distinct_relay_instances":1271,"relay_instances_bound_to_a_url":126,"relay_urls_bound_to_an_instance":380,"distinct_h_tags":3962,"h_with_at_least_one_relay_key":3354,"h_shared_by_2plus_relay_instances":142,"h_reachable_at_2plus_relay_hosts":104,"h_claimed_at_2plus_hosts_in_kind10009":16},"tiers":{"A":42,"B":89,"C":11},"class_all":{"human-readable slug":624,"npub-namespaced":968,"random hex-16":368,"random hex-64":969,"random letters":104,"random alnum":437,"random hex-32":161,"uuid":170,"random hex-6":92,"random hex-12":4,"numeric id":49,"random hex-8":15,"relay-wide `_`":1},"class_tierA":{"human-readable slug":13,"random hex-16":19,"npub-namespaced":5,"random hex-64":2,"random letters":2,"random alnum":1},"top":[{"n":1378,"url":"wss://groups.0xchat.com","key":"ad98dd84852786e33eb0651878eb835b242d25f7c0255e6e5a745bf7b6be15c8"},{"n":83,"url":"wss://groups.yugoatobe.com","key":"a76bebdb78d558d5f25a6a13a858e48358ecc5dd9616ed64db0d7d23ab9551f1"},{"n":69,"url":"wss://nip29.f7z.io","key":"7e1eabe25256545cfe0c534a99bfa5c6cd224e04b614182a9993feff54196c95"},{"n":64,"url":"","key":"00bb97abe00326e97091a24c7b16a412053cd8394a5c2be997798ed53f4bbe67"},{"n":58,"url":"","key":"3c72addb4fdf09af94f0c94d7fe92a386a7e70cf8a1d85916386bb2535c7b1b1"},{"n":56,"url":"wss://groups.satsdisco.com","key":"a3cda8aa93454e98a553f1fa096f5f101cba6999c9e3afa81ef3e53d5c9ae5e7"},{"n":35,"url":"","key":"e5e569296aa8c653c94cbdd4b752228820f5470e016590b339cd0f3183d85b79"},{"n":29,"url":"wss://newlay.relay.tools","key":"41e1d75b7541b556f2865e405b936e7d5a706c6178dac564211f704a6c907062"},{"n":27,"url":"wss://relay29.notoshi.win","key":"e0ee85a63929f52e9555fdf1c4453a24cd9122557e491c18efcaeed655f402e3"},{"n":27,"url":"","key":"c553997189ea41092c5a2f926a1be77dfb82db5d7b8334f69109de4f9064d0b2"},{"n":26,"url":"wss://chat.wisp.talk","key":"d9e2be1167486325e4360c0d5bb3107081795ecd92c96ee31bd1248598c69f26"},{"n":21,"url":"","key":"805efff537b6376991cae73a0b0f605d0aa594b4518fbcca4f6ebb74404363e2"}],"hist":{"1":1082,"2":98,"3":38,"56":1,"1378":1,"8":6,"69":1,"83":1,"4":5,"11":3,"5":11,"26":1,"14":2,"27":2,"15":1,"6":3,"10":2,"35":1,"58":1,"20":2,"9":3,"29":1,"64":1,"12":1,"7":2,"21":1},"rows":[{"h":"clan-test","n":"","c":"human-readable slug","t":"A","k":49,"v":44,"va":49,"r":["key:00ba9099","key:03125e3a","key:0319cdc0","key:0b39d583","key:1642183d","key:18283348","key:1baf936e","key:1d05184e","key:215d0664","key:32d1f284","key:37896c4a","key:37d14f64","key:395434a2","key:42a22274","key:4c5fbaff","key:5a046afa","key:600ed8ae","key:62361b92","key:64cf2cb3","key:6b03a7c3","key:6ff84457","key:73d98542","key:87ba5faa","key:8ad7fe5a","key:91d2561b","key:91ed0b40","key:98c3091b","key:9ad2920c","key:9ae60d70","key:9c5bc8ca","key:a31ce0b3","key:af2998c9","key:af83c0ae","key:b6ba8f57","key:b970dd51","key:bf0794b0","key:bf76473d","key:ca6d0766","key:cbac5108","key:d40e5a5f","key:d88e847e","key:e141ff9d","key:e8a719fc","key:f1bf84cd","key:f22e1cdb","key:f58ff8a9","key:f6b1203e","key:f72299ed","key:fc3c2b95"]},{"h":"7c92b9a7956977b7","n":"7c92b9a7956977b7","c":"random hex-16","t":"A","k":4,"v":4,"va":4,"r":["key:081d5c44","key:ea2fa747","wss://groups.0xchat.com","wss://groups.satsdisco.com"]},{"h":"76099794e780b9cd","n":"","c":"random hex-16","t":"A","k":3,"v":3,"va":3,"r":["wss://groups.satsdisco.com","wss://groups.yugoatobe.com","wss://nip29.f7z.io"]},{"h":"997bcfd35d30dfa3","n":"997bcfd35d30dfa3","c":"random hex-16","t":"A","k":3,"v":3,"va":3,"r":["key:52b38b2e","wss://groups.0xchat.com","wss://groups.yugoatobe.com"]},{"h":"clan-scuffed-crew","n":"","c":"human-readable slug","t":"A","k":3,"v":3,"va":3,"r":["key:cd4c2d77","key:f6b1203e","key:f9cb8b9f"]},{"h":"516e83805fa692f9","n":"\ud83d\udfe0 BITCOIN","c":"random hex-16","t":"A","k":3,"v":2,"va":2,"r":["key:385c3a6e","key:52623aec","key:f9b3bad7"]},{"h":"clan-test2","n":"","c":"human-readable slug","t":"A","k":3,"v":2,"va":3,"r":["key:395434a2","key:906e3c0d","key:dbd08b92"]},{"h":"npub1dj7xhmazjpyv0yqqdzxxmt3vf04gwlkpuk4xmqa9z355lnax3knqhy43xu:diagopen-1772305009562","n":"DiagOpen-1772305009562","c":"npub-namespaced","t":"A","k":3,"v":2,"va":3,"r":["key:30875f0e","key:6cbc6bef","key:d2c6620c"]},{"h":"npub1glrlt80e4jgxmjjt52nd2w55r5pktk74zevvxk08dm4qjn4pju9q97wn99:rendereropensmoke-1772271205645","n":"RendererOpenSmoke-1772271205645","c":"npub-namespaced","t":"A","k":3,"v":2,"va":3,"r":["key:112a3601","key:47c7f59d","key:f8f31fea"]},{"h":"04cc3b4b5e95be19a574b19a1d04745ea02af0cfab93cba5fd08f594ceff8e05","n":"\ud83d\udc83\ud83c\udffb\u5f71\u89c6\ud83e\udee6\u76f4\u64ad\u6e90","c":"random hex-64","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.0xchat.com","wss://strfry.ymir.cloud"]},{"h":"0df3540cb80c689a","n":"\ud83c\udfdb\ufe0f Forum ","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["key:385c3a6e","key:f9b3bad7"]},{"h":"206486afd34f7fd8","n":"206486afd34f7fd8","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["key:52623aec","wss://groups.satsdisco.com"]},{"h":"344460545dc4a092","n":"344460545dc4a092","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["key:285314c8","wss://groups.0xchat.com"]},{"h":"368714f675c49406","n":"","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.satsdisco.com","wss://groups.yugoatobe.com"]},{"h":"3e83ccbed52786c13c0e24188f7b7a4c6ade25a66c9234e21010edd73224f6f5","n":"Livros em PDF","c":"random hex-64","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.0xchat.com","wss://strfry.ymir.cloud"]},{"h":"3fe3d428d48c8054","n":"3fe3d428d48c8054","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["key:cebdd42b","wss://groups.satsdisco.com"]},{"h":"884ab129-7b59-47","n":"EnTrappt's Highlighter","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.0xchat.com","wss://relay29.notoshi.win"]},{"h":"94dfa2316b20d0ed","n":"","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.satsdisco.com","wss://nip29.f7z.io"]},{"h":"GROUP_4d0cd951","n":"Kurtlar Vadisi","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["key:0e25c22a","key:dfeeef3e"]},{"h":"acleprush","n":"zap.stream","c":"random letters","t":"A","k":2,"v":2,"va":2,"r":["wss://relay.zap.stream","wss://strfry.ymir.cloud"]},{"h":"adef469c11ed45bb","n":"\ud80c\ude76  Obelisk","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["key:385c3a6e","key:f9b3bad7"]},{"h":"bf422b9ed3b380fa","n":"","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.0xchat.com","wss://groups.yugoatobe.com"]},{"h":"bfe4b11b98602f25","n":"","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.satsdisco.com","wss://groups.yugoatobe.com"]},{"h":"c1876ebb8e3a159b","n":"c1876ebb8e3a159b","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["key:081d5c44","key:ea2fa747"]},{"h":"d85c2e528de55b24","n":"","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.0xchat.com","wss://groups.satsdisco.com"]},{"h":"dd470c415873ea85","n":"dd470c415873ea85","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["key:384bf414","wss://groups.0xchat.com"]},{"h":"dns:buzzster.xyz","n":"","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["key:3eb8fe5e","key:b8a9e7be"]},{"h":"e06899f0e9e220b5","n":"","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.satsdisco.com","wss://groups.yugoatobe.com"]},{"h":"e090f912cd46140b","n":"","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.0xchat.com","wss://groups.satsdisco.com"]},{"h":"eagarghstayshou","n":"Get We3!Rd","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["wss://spatia-arcana.com","wss://strfry.ymir.cloud"]},{"h":"f8f8affc81dec495","n":"","c":"random hex-16","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.satsdisco.com","wss://groups.yugoatobe.com"]},{"h":"general","n":"general","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["wss://groups.satsdisco.com","wss://mihhdu.org/nostr"]},{"h":"h1","n":"hallway","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["wss://basspistol.org","wss://strfry.ymir.cloud"]},{"h":"iapeeboploo","n":"DubHeads","c":"random letters","t":"A","k":2,"v":2,"va":2,"r":["wss://basspistol.org","wss://strfry.ymir.cloud"]},{"h":"mynd-labs","n":"mynd-labs","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["key:79023e27","wss://relay.mynd.my.id"]},{"h":"nostrord","n":"Nostrord","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["wss://chat.wisp.talk","wss://groups.0xchat.com"]},{"h":"npub1t927j9wh58w6v7wh7j0h656wx7693jyu75ake88gyhn0j6xps3xswuph3h:diagopen-1772304696067","n":"DiagOpen-1772304696067","c":"npub-namespaced","t":"A","k":2,"v":2,"va":2,"r":["key:5955e915","key:72d89358"]},{"h":"npub1vqjxnvcwqg803swqhvnk3sfwxr0mxgxgvczv9x7p44wcc0kdevtqvnxrr5:diagopen-1772304924062","n":"DiagOpen-1772304924062","c":"npub-namespaced","t":"A","k":2,"v":2,"va":2,"r":["key:602469b3","key:6cbc6bef"]},{"h":"npub1wtvfxkyquzdky3sasqr5mnla76x4zmm0k5p3rjvhkpuwxrlu5gcsn2h9w4:diagopen-1772304806212","n":"DiagOpen-1772304806212","c":"npub-namespaced","t":"A","k":2,"v":2,"va":2,"r":["key:602469b3","key:72d89358"]},{"h":"orbee","n":"Orbee","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["key:a99a869e","wss://groups.0xchat.com"]},{"h":"support","n":"support","c":"human-readable slug","t":"A","k":2,"v":2,"va":2,"r":["key:79023e27","wss://relay.mynd.my.id"]},{"h":"zoxqa84y6lv7","n":"Art Talk \ud83c\udfa8","c":"random alnum","t":"A","k":2,"v":2,"va":2,"r":["wss://chat.wisp.talk","wss://strfry.ymir.cloud"]},{"h":"npub1npzwvwukmqh2ep6h2hyszyja6mmthp8ggllfeveewdqjrzjlxx3s4mnrmd:testBeepyBeep","n":"test beepy beep","c":"npub-namespaced","t":"B","k":6,"v":1,"va":6,"r":["key:6108aa41","key:9844e63b","key:c3d20e43","key:cab0bc24","key:e5f3d95e","key:fb5b7aa7"]},{"h":"npub1rlr8jpy7xpc5u97p20x9zvd8aqdh9tk00ga5sk8wugul95qy2w2qy6pnkg:throatDoctor","n":"THROAT DOCTOR","c":"npub-namespaced","t":"B","k":6,"v":1,"va":6,"r":["key:13e5bc15","key:1fc67904","key:22bebd34","key:24d439a9","key:4520f82e","key:a3d580fc"]},{"h":"npub1d9z59mkrqnq6p064fvlewel5q66kpdj2dajkf88fdsdzxgzkerrsv0qmeq:testFreebom","n":"test freebom","c":"npub-namespaced","t":"B","k":5,"v":1,"va":5,"r":["key:5505ac0a","key:694542ee","key:7b52bc85","key:833ac438","key:c9cd2704"]},{"h":"npub1qqhdpw8z0jghhafd9xr2z7cmu95zjht6dk4zarpquhqqknc83xssd8ltln:testFebeeenis","n":"test febeeenis","c":"npub-namespaced","t":"B","k":5,"v":1,"va":5,"r":["key:002ed0b8","key:1a034301","key:3a34cf83","key:d31f9800","key:e18f845e"]},{"h":"npub1zwffdet2tgs69uf3vm0t3zcwwwvskw836hw3jynr820r3tkucdxsne58ww:poppacopta","n":"Poppacopta","c":"npub-namespaced","t":"B","k":5,"v":1,"va":5,"r":["key:139296e5","key:1d9d4f4a","key:50ef5862","key:785b7d3a","key:e7353c04"]},{"h":"npub14le4ev6udkrx3em2g7uy4dxf96kqyaf4eve0p534l9943q9mrxzsnc380q:testMoomee","n":"test moomee","c":"npub-namespaced","t":"B","k":4,"v":1,"va":4,"r":["key:15493b18","key:1a034301","key:3a34cf83","key:aff35cb3"]},{"h":"npub1jc2ekwyn66996p9t3eacdufj9rsw0xv8apmgks7l637uw033hjlqvmhy0c:jufferyUpstein","n":"Juffery Upstein","c":"npub-namespaced","t":"B","k":4,"v":1,"va":4,"r":["key:6106ee36","key:96159b38","key:98e5ca0b","key:c37d50ad"]},{"h":"npub1e8xjwp8d5t8rdccd2v5yapphlwgsva6llvjacz5dry2nznsv0raq2xvcwt:testSqueakoBorps","n":"test squeako borps","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:687d5598","key:9f0afbd1","key:c9cd2704"]},{"h":"npub1ejfn7ww67htvyza0tzqy2lg25fxyvvgq99y9xhvl4sg2ugknf94qvgjzw5:bonjour","n":"bonjour","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:466cc5c5","key:cc3d80c8","key:cc933f39"]},{"h":"npub1hgrlrt6hjkl3tvcxw3j53fcwdrwkv2xsxmumzpe3syhav3n9mnpsd6vlvh:testJoofus","n":"test joofus","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:28edf379","key:4ad891a5","key:ba07f1af"]},{"h":"npub1jc2ekwyn66996p9t3eacdufj9rsw0xv8apmgks7l637uw033hjlqvmhy0c:test-group-1","n":"test-group-1","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:244e3f59","key:96159b38","key:b4529029"]},{"h":"npub1n263qszmjnzn48r20na0nmwttfty82z4lqwa7sfy5ekav0cxkwpqgjt7k0:steamyManuel","n":"steamy manuel","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:0a65f22a","key:678d84c8","key:9ab51040"]},{"h":"npub1nxppmz6ypf9dc3tuc7n0hv3etqltwgne7z7pc3xl0y4x4cdhcp0q3nwmpy:gufenschlaffen","n":"GUFENSCHLAFFEN","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:02d08b99","key:99821d8b","key:d86563ea"]},{"h":"npub1rtzx9qz03te2jzks5rnvy8rv0pfjdafeeq76ze9slyyfh5wrudyszpvgjj:beejChercky","n":"BEEJ CHERCKY","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:1ac46280","key:96159b38","key:a119baf8"]},{"h":"npub1tlp32g7mpjmvephc2s4kf6nc32nmcnpuk9u8cnhshhnklzxxrhks60855t:testHaha","n":"test haha","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:3a079e1c","key:5fc31523","key:b5b971cd"]},{"h":"npub1tycqy0egafh3feygztlp3mk64zavvzqx36mczct6h77j5ln64v0sy9py50:holyMolyWow","n":"holy moly WOW","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:5930023f","key:6106ee36","key:96159b38"]},{"h":"npub1vffp2rcg89talkc90gp0dggg4yg09kgeu5uezmptpk0qkn9k6etsdknfdu:checklist-group-1770509242703","n":"checklist-group-1770509242703","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:3fb9decc","key:6252150f","key:8215eea7"]},{"h":"npub1wp5h0rgd48j6c437j0yg8ysn4vsqxyvekvwlj3sxdsurltf8csxs7tudje:stankysoggyboys","n":"stankysoggyboys","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:3aa38fc2","key:7069778d","key:96159b38"]},{"h":"npub1xcfdkegfp8g943l9948l30zm3ean2ystvy08ukxgnxxwvhy4uh7snn0gxn:testYummy","n":"test yummy","c":"npub-namespaced","t":"B","k":3,"v":1,"va":3,"r":["key:3612db65","key:4949b17d","key:dd24948d"]},{"h":"174399f1-c4f4-422f-8a94-1093da44c958","n":"it-174399f1","c":"uuid","t":"B","k":2,"v":1,"va":2,"r":["key:176e5f78","key:e119daab"]},{"h":"3007f5f7f76485b4fb9e83a4fe60a5ed","n":"nmtmnd","c":"random hex-32","t":"B","k":2,"v":1,"va":2,"r":["key:2cea8e74","key:774b5467"]},{"h":"4af9446d4962c061d79e523b11eb9c24","n":"dststd","c":"random hex-32","t":"B","k":2,"v":1,"va":2,"r":["key:35c81734","key:774b5467"]},{"h":"5198909637393356","n":"bobsroom","c":"random hex-16","t":"B","k":2,"v":1,"va":2,"r":["key:5fc31523","wss://groups.0xchat.com"]},{"h":"5c1006d79058cb58c6154f679ebb3132","n":"muslim.chat","c":"random hex-32","t":"B","k":2,"v":1,"va":2,"r":["key:975bc2e7","wss://groups.0xchat.com"]},{"h":"749265311de6f38e0c84ecb38a9b9c48","n":"dlqstn","c":"random hex-32","t":"B","k":2,"v":1,"va":2,"r":["key:082478aa","key:51bdabe5"]},{"h":"9aa77b0bc6e97b15a5528fda89aad88b","n":"stndsdtn","c":"random hex-32","t":"B","k":2,"v":1,"va":2,"r":["key:2cea8e74","key:b005b7ae"]},{"h":":general","n":"general","c":"human-readable slug","t":"B","k":2,"v":1,"va":2,"r":["key:052ef530","key:9f7da645"]},{"h":"a91d2fea-20bb-4de3-9f9c-c94a7143a4cf","n":"it-a91d2fea","c":"uuid","t":"B","k":2,"v":1,"va":2,"r":["key:244a2253","key:bd1ddf16"]},{"h":"a98a66606c1915f1935db15a55114560","n":"xcv","c":"random hex-32","t":"B","k":2,"v":1,"va":2,"r":["key:082478aa","key:5fb8875b"]},{"h":"b018e5e086e456ee55bd6c36522fbd71","n":"dtsTDSDST","c":"random hex-32","t":"B","k":2,"v":1,"va":2,"r":["key:c1d1abda","key:d5d80937"]},{"h":"bb205175274848716c2f959d765084a6","n":"mnggmngmgm nm nqngm mgnq","c":"random hex-32","t":"B","k":2,"v":1,"va":2,"r":["key:62e0bb76","key:c1d1abda"]},{"h":"cbf11c3dc6370581ccdf678bba40b6ae","n":"dstntnsd","c":"random hex-32","t":"B","k":2,"v":1,"va":2,"r":["key:0b20e8e3","key:51bdabe5"]},{"h":"clan-derp","n":"","c":"human-readable slug","t":"B","k":2,"v":1,"va":2,"r":["key:236636dd","key:75cdf8cb"]},{"h":"clan-doesitworkyetcom","n":"","c":"human-readable slug","t":"B","k":2,"v":1,"va":2,"r":["key:88aeb563","key:c5ee5eda"]},{"h":"clan-nerds","n":"","c":"human-readable slug","t":"B","k":2,"v":1,"va":2,"r":["key:73d98542","key:d88e847e"]},{"h":"clan-test8","n":"","c":"human-readable slug","t":"B","k":2,"v":1,"va":2,"r":["key:45c45d68","key:5e17bb57"]},{"h":"clan-testerspace","n":"","c":"human-readable slug","t":"B","k":2,"v":1,"va":2,"r":["key:4243fa74","key:7b535d71"]},{"h":"clan-testspace5","n":"","c":"human-readable slug","t":"B","k":2,"v":1,"va":2,"r":["key:97c14136","key:c8b0d62d"]},{"h":"f9a8c3bb-d44b-4741-85d1-ce218bedee6c","n":"it-f9a8c3bb","c":"uuid","t":"B","k":2,"v":1,"va":2,"r":["key:0fe6a881","key:907b304d"]},{"h":"mgdlofde","n":"","c":"human-readable slug","t":"B","k":2,"v":1,"va":2,"r":["key:eeb822ac","wss://mihhdu.org/nostr"]},{"h":"npub10ehaknf468l4zslnv0qecwtw20yf5jxats7408jdhar5rzj0tvts24d3q5:testSkibidiDingle","n":"test skibidi dingle","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:0122c2ef","key:7e6fdb4d"]},{"h":"npub139slrjkltav9fazj7va6kkx20htz3cxhw088acaununnuxcee9vqyyg8m2:yuckyButtzVagene","n":"yucky buttz vagene","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:8961f1ca","key:e95c17a9"]},{"h":"npub14d6pywa0ed9h7ckvcmkrdw6nl4v2zkk37r4u5x7w03z8wt84unpq65t0tj:s19-19c8345e5aa-2761-group","n":"S19-19c8345e5aa-2761-group","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:91e445e9","key:ab74123b"]},{"h":"npub14dpnzt355h95uwp5ce60uaqev2sdyx3ty4mrzs9uu9can4k0pwvsgqqxgq:testTunaTutu","n":"test tuna tutu","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:511258b8","key:ab43312e"]},{"h":"npub16enecjcqe2zd0ahzjkawuhnevmdxxvcl4npyfp6kke6xsunx364qglpyyy:tickleMonstaHouse","n":"tickle monsta house","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:d6679c4b","key:daf0812f"]},{"h":"npub17zdqdjaklrjxyefmd0rwxevs056fxu4zfvvx2c9wag0wzhv4r2tqvk4rh5:shimmyBoySalad","n":"shimmy boy salad","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:5e7e1a5f","key:f09a06cb"]},{"h":"npub183e2mk60muy6l98se9xhl6f28p48uux03gwctytrs6aj2dw8kxcsw0rcm2:s19-19c7d7fb17a-5b46-group","n":"S19-19c7d7fb17a-5b46-group","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:2c0b7cf9","key:3c72addb"]},{"h":"npub183e2mk60muy6l98se9xhl6f28p48uux03gwctytrs6aj2dw8kxcsw0rcm2:s19-19c7d87a642-9903-group","n":"S19-19c7d87a642-9903-group","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:2c0b7cf9","key:3c72addb"]},{"h":"npub183e2mk60muy6l98se9xhl6f28p48uux03gwctytrs6aj2dw8kxcsw0rcm2:s19-19c7dc3b8b2-054b-group","n":"S19-19c7dc3b8b2-054b-group","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:2c0b7cf9","key:3c72addb"]},{"h":"npub183e2mk60muy6l98se9xhl6f28p48uux03gwctytrs6aj2dw8kxcsw0rcm2:s19-19c7dcba180-16de-group","n":"S19-19c7dcba180-16de-group","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:2c0b7cf9","key:3c72addb"]},{"h":"npub19d86sh8tc3yeus070xus600jf672ymygvjswyzpcxu3wxmmgpqmsn506k4:slobbaThaDonk","n":"SLOBBA THA DONK","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:286fe8cd","key:2b4fa85c"]},{"h":"npub1aewpuzcz5ggvultmsudwvmn3gnyadzcuxmqvw89f3ykwdg7u7w7q7qtrcj:yuckyButt","n":"yucky butt","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:7592868e","key:ee5c1e0b"]},{"h":"npub1dqflskkn5e2ny3hgpdn43syg2ywdnvt2p0m3h48eut4kkw27dj9snq7ya8:testGoggas","n":"test goggas","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:6813f85a","key:e18f845e"]},{"h":"npub1es39x75xamamxmtu7yqz2hjg7tq6yr9rcm5mkt0qrzgt07wdy28qducg0n:testGilbo","n":"test gilbo","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:cc22537a","key:e0dd50a9"]},{"h":"npub1eu8lqngaedqn8jpteme7t3emc64jehrywxe0p52pcrvvps2l2mmq9zu05p:s19-19c83126d11-bf5f-group","n":"S19-19c83126d11-bf5f-group","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:41c8dd1f","key:cf0ff04d"]},{"h":"npub1fncvaa7yppdlnkkd6kxpqhsr0deazl4z7lmkjweymw00j3a5jjesdjg4m7:zonk","n":"ZONK","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:459fd777","key:4cf0cef7"]},{"h":"npub1ghau6c0a3q750u424vj5xtk0fxaqhu5znl4yk5nwnrpq9f09jdesx5uwrh:yuckButtzDonk","n":"yuck buttz DONK","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:45fbcd61","key:f9b47aae"]},{"h":"npub1heduqa889nqae3phgg0yre6y6nvtzr6ynhtjsvdscdgxvpzjtsmqc3awh4:myNewGroup","n":"My New Group","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:a39f1649","key:be5bc074"]},{"h":"npub1hkyrsqqtgs2kanjfvfutwfqjm40e4v85ud0eeh2kfghlll0hk8hs7gac47:bigZonkay","n":"BIG ZONKAY","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:350752a7","key:bd883800"]},{"h":"npub1jyr8c346fwpmna8zq7e4rp0zu5fmh39ndfvjqnkn0srqa3vul9fs8wvyzv:testBollsache","n":"test bollsache","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:15493b18","key:91067c46"]},{"h":"npub1k8vgumd608hr49xlqppa67vl7tq77vakykxvsmk2aqy30as27m5qkfg5cm:barbaraFoccacia","n":"barbara foccacia","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:a43871ba","key:b1d88e6d"]},{"h":"npub1lfpejvfe66a69zc7fzlxsc9gq4tlz23ecye43dh5uryphwsk3wcsdavmjs:testYagglesack","n":"test yagglesack","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:3e76cc44","key:fa439931"]},{"h":"npub1mv0d5wxc76rnexts3ll8p0d9u3xvywxsht4stk9umej3ng20mykqkvqppt:turdstinky","n":"turdstinky","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:67553b9d","key:db1eda38"]},{"h":"npub1q6fpdd3azzkka455mgd8wfg55k9csgsefdlcm6x6z3cu02x2z9ps684gf8:testYuckYuck","n":"test yuck yuck","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:069216b6","key:e44e4acd"]},{"h":"npub1rcuh7h6v6hqaz23s8c6d424zr7qdtcu4zqjnfcdgfz833qz3g0aqkrmlfx:testFoggleschmits","n":"test foggleschmits","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:1e397f5f","key:69472b29"]},{"h":"npub1rn244v3mnqq57z6g3fcjugu7rg2gveet9am08svph5sqxm6ezcnslalhvc:testGargleMeats","n":"test gargle meats","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:1cd55ab2","key:f00fb1e7"]},{"h":"npub1sg27aflk3mu9vw0kk293rpqmyssvz44pwfde4emane6f70qnxulse3w56a:jimmyJangaSalami","n":"Jimmy JANGA SALAMI","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:8215eea7","key:8310696a"]},{"h":"npub1svgxj636azvze5za4ux99ryd8xdk8rl659qg4l4nkct9q28kth5qcp6av7:scubaGoodingJrFoundation","n":"SCUBA GOODING JR FOUNDATION","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:6ce1d910","key:8310696a"]},{"h":"npub1svrmldxn8elnyfkvtcnkrryuhrua6sgcduucyyne2cjpu75ev2dsjffyls:wildSillyBoys","n":"wild silly boys","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:8307bfb4","key:fb981aaf"]},{"h":"npub1szhzl9mcrgce6zwwxklvch8vk69hm0chdlc2z772mev464m06x0s2jk4ta:testBeenis","n":"test beenis","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:6d26c0ca","key:80ae2f97"]},{"h":"npub1tjtk48gnrjmuuqqkvt32yr8fhfjmpp7x6ytvvgjx77m6z05yjwus064en7:meatstickDonks","n":"meatstick donks","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:1dab008b","key:5c976a9d"]},{"h":"npub1vqnsdlwul0wd59xh6xagtcjedn2vvf2l5cwvz2weffh7ffjfq3gq0352qh:scoobyDoots","n":"Scooby DOOTS","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:031aea4b","key:602706fd"]},{"h":"npub1vyawdp3z3s7n0af0fyens40qzuxyqpwd7csy7vpyfq9daccekpdqltqanf:yelbowFishermen","n":"yelbow fishermen","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:613ae686","key:8c1a02cf"]},{"h":"npub1wm5h5sru6mzqnqfg3cl9t5pc5pl0l5066uwr7w9c5dtpewqefn8qw4m4nt:testYarglemeeps","n":"test yarglemeeps","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:76e97a40","key:e18f845e"]},{"h":"npub1xwkd36h0ek6yahjyz4jljnctezpkksgj9k4tkq94yrd2td0lt8ksmpgxxl:s19-19c82ca9224-a2aa-group","n":"S19-19c82ca9224-a2aa-group","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:3339498a","key:33acd8ea"]},{"h":"npub1y49x8wmm0zgcjt0eqegjketkucnrqhy5m656uqygfauu2m3fszzqqh2lzg:s19-19c83384aa9-60c8-group","n":"S19-19c83384aa9-60c8-group","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:254a63bb","key:dcb5d244"]},{"h":"npub1yge23k5uvrj3k0jss9cw4tadhqspsjf0k9h7ce8nyuqze0kuveqqryp9y8:testMoomoomama","n":"test moomoomama","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:2232a8da","key:dd24948d"]},{"h":"npub1zqhy595g9wgul2tfrugvj8st8u9ptvsew9jm9r3m5ev9598uutesc7eyn4:test24Fresh","n":"test 24 fresh","c":"npub-namespaced","t":"B","k":2,"v":1,"va":2,"r":["key:102e4a16","key:34974b32"]},{"h":"camp_tXBtTEUPlg","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:a55e335c","key:e5e56929"]},{"h":"friend:1d5d6596be14d3464b5e8deb1947739b350ac84b5525e2f5caa354a8e0c3815d:feeb965a576e778045f33045ee92d9522773235c4be22736078b10e0b89d5980","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:1d5d6596","key:feeb965a"]},{"h":"friend:26497f80c698dddf7a2790acdfa7a8982fd559c5f2ce52b4a6e19fc30435637d:e1f1d2184f4e7e9387e0b6374de25b031a3a6a6b4caf4542ac1294c0e53cf3c0","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:26497f80","key:e1f1d218"]},{"h":"friend:502069150214833890f70fd3dc3adab4e5cffdd1186efe2af84f0fa24873d4de:10ce08b45e1185612879d7d83f68faef3499d7d531c17c29a85aaf2aed8b9672","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:10ce08b4","key:50206915"]},{"h":"friend:578082c22e35383d4291d22ac3978266056cbed9e991a32d6463c64ce418e1d2:870a11b1df668122fe938eaf0c6d34a240e9321ea3d7fa17915824501b3ff6a2","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:578082c2","key:870a11b1"]},{"h":"friend:5af8945d9db2af8dd06feb8f0c0f131be4b920847d02032995b5615b2cd134c6:8c2ab1f3dddad172e14fb60c26971ba8031eca55ce9ac1f039b51a377f8c7a6b","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:5af8945d","key:8c2ab1f3"]},{"h":"friend:6fca75bf31841757980a9e0a5e7f39698f824e5978288c20a3f65235224b66c6:8b56989ebbf40daa0693eefbb61d1fc06fecde0af0206982f0cd3141424e33f1","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:6fca75bf","key:8b56989e"]},{"h":"friend:98b2793a435c25ad2b900b2ae9f2de1d9b54cc8eb7be92a00334b1301181fe15:fc5bcdfc8a6a381abfab88ffc63af786a3350c23cd6c8f23c53b2a2a1072db17","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:98b2793a","key:fc5bcdfc"]},{"h":"friend:b92911e5efb30ad8243f817c7e9a43cbf1ed5a7d38976cbf945d0eac2961a4ac:098069abf1ff3da3b0b0028b65465f990df692319796894387db21cc9edbcdfe","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:098069ab","key:b92911e5"]},{"h":"friend:d8e25a7c23841d9e203e12063f76c0ef44772b4b297eddf232ff330ddeb09bb7:334006c5d8fb2c35bf809364c91955f33b11408de95df47f9f22c1f3fe610189","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:334006c5","key:d8e25a7c"]},{"h":"friend:d8e25a7c23841d9e203e12063f76c0ef44772b4b297eddf232ff330ddeb09bb7:f9a395e654962bf34c6a34b6358793f88abd40ebdcc156a7f56ef68126e3ae05","n":"","c":"human-readable slug","t":"B","k":2,"v":0,"va":2,"r":["key:d8e25a7c","key:f9a395e6"]},{"h":"poker-game","n":"","c":"human-readable slug","t":"C","k":11,"v":0,"va":0,"r":["key:2c84cb0d","key:52b3c29a","key:69693ff0","key:6e566cc7","key:9c67716c","key:a9480917","key:aa758389","key:bc7b36eb","key:da0fb4cc","key:e41ad39c","key:f6db36f1"]},{"h":"26a9cceda473cb1b","n":"\ud83d\udcac General Chat","c":"random hex-16","t":"C","k":3,"v":1,"va":1,"r":["key:385c3a6e","key:52623aec","key:f9b3bad7"]},{"h":"2ed3e14eed731b08b5822cb49863aa53","n":"Zap Cooking Friends","c":"random hex-32","t":"C","k":2,"v":1,"va":1,"r":["key:2798982f","key:34263017"]},{"h":"402bab5511d86a21","n":"\ud83c\udf99\ufe0f Voice P2P","c":"random hex-16","t":"C","k":2,"v":1,"va":1,"r":["key:385c3a6e","key:f9b3bad7"]},{"h":"5e20ad1b10932efbd4355b1b5885a9bd","n":"Garlicstr \ud83e\uddc4","c":"random hex-32","t":"C","k":2,"v":1,"va":1,"r":["key:2798982f","key:34263017"]},{"h":"911f9134a48ae0c2","n":"\ud83d\udfe3 NOSTR","c":"random hex-16","t":"C","k":2,"v":1,"va":1,"r":["key:385c3a6e","key:52623aec"]},{"h":"c27e014bcd51c6a87732ac7439fdfbdc","n":"\ud83c\udf73 The Frugal Kitchen","c":"random hex-32","t":"C","k":2,"v":1,"va":1,"r":["key:2798982f","key:34263017"]},{"h":"eb8d9bb9055c1057","n":"Stress Test","c":"random hex-16","t":"C","k":2,"v":1,"va":1,"r":["key:385c3a6e","key:52623aec"]},{"h":"cascade-car-player","n":"","c":"human-readable slug","t":"C","k":2,"v":0,"va":0,"r":["key:54c507c5","key:ac1374cd"]},{"h":"friend:6b7b4bec00dba9c66c1315ed681d1a0c3d2a5d5515005271dba30f17d01c4ebb:c005cef4c72884b6a2bdc057848118b0b45192f697183b7cd1d678d0569ecc60","n":"","c":"human-readable slug","t":"C","k":2,"v":0,"va":1,"r":["key:6b7b4bec","key:c005cef4"]},{"h":"friend:d44287f31dc3e444f5295d4718c84de4304ed36a505bf6a252e41f4f6854445b:bb3d712cdb7f2a68cca1b16ce28cb7d96514c0bc38c9a8d40ad86d82b924ffeb","n":"","c":"human-readable slug","t":"C","k":2,"v":0,"va":0,"r":["key:bb3d712c","key:d44287f3"]}]}</script>
+<script>
+(function(){
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const esc = s => String(s == null ? "" : s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const nf = n => n.toLocaleString("en-US");
+
+/* ---- stat rail ---- */
+const C = D.counts;
+const tiles = [
+  ["", nf(C.distinct_h_tags), "distinct group ids observed"],
+  ["", nf(C.distinct_relay_instances), "relay instances, by signing key"],
+  ["hi", nf(C.h_shared_by_2plus_relay_instances), "ids on more than one relay"],
+  ["hi", nf(D.tiers.A), "confirmed by relay-signed metadata"],
+  ["ok", "664 / 664", "signatures verified, zero invalid"],
+  ["", nf(C.relays_known_from_nip66), "relays swept from NIP-66"]
+];
+document.getElementById("rail").innerHTML = tiles.map(t =>
+  `<div class="tile ${t[0]}"><b>${t[1]}</b><span>${t[2]}</span></div>`).join("");
+
+/* ---- id-shape bars ---- */
+const allT = Object.values(D.class_all).reduce((a,b)=>a+b,0);
+const colT = Object.values(D.class_tierA).reduce((a,b)=>a+b,0);
+const shapes = Object.keys(D.class_all)
+  .filter(k => k !== "relay-wide `_`")
+  .map(k => ({k, a:(D.class_all[k]||0)/allT, c:(D.class_tierA[k]||0)/colT,
+              an:D.class_all[k]||0, cn:D.class_tierA[k]||0}))
+  .sort((x,y) => y.c - x.c || y.a - x.a);
+const mx = Math.max(...shapes.map(s => Math.max(s.a, s.c))) || 1;
+document.getElementById("bars").innerHTML = shapes.map(s => `
+  <div class="bar">
+    <div class="nm">${esc(s.k)}</div>
+    <div class="track">
+      <div class="r"><span class="seg"><span class="fill all" style="display:block;width:${(s.a/mx*100).toFixed(1)}%"></span></span>
+        <span class="v">${(s.a*100).toFixed(1)}% &middot; ${s.an}</span></div>
+      <div class="r"><span class="seg"><span class="fill col" style="display:block;width:${(s.c/mx*100).toFixed(1)}%"></span></span>
+        <span class="v">${(s.c*100).toFixed(1)}% &middot; ${s.cn}</span></div>
+    </div>
+  </div>`).join("");
+
+/* ---- shared-id table ---- */
+const tb = document.getElementById("tb"), cnt = document.getElementById("count");
+let tier = "all", q = "";
+
+function relayCell(list){
+  const shown = list.slice(0,3).map(u =>
+    u.indexOf("key:") === 0
+      ? `<span class="key">${esc(u)}</span>`
+      : `<span>${esc(u)}</span>`).join("");
+  const rest = list.length > 3
+    ? `<span class="more">+${list.length - 3} more</span>` : "";
+  return `<div class="relays">${shown}${rest}</div>`;
+}
+
+function render(){
+  const rows = D.rows.filter(r => {
+    if (tier !== "all" && r.t !== tier) return false;
+    if (!q) return true;
+    const hay = (r.h + " " + r.n + " " + r.r.join(" ")).toLowerCase();
+    return hay.indexOf(q) !== -1;
+  });
+  cnt.textContent = rows.length + " of " + D.rows.length + " shown";
+  tb.innerHTML = rows.map(r => `
+    <tr>
+      <td><span class="chip t-${r.t}">${r.t}</span></td>
+      <td class="m">${esc(r.h)}</td>
+      <td>${esc(r.n) || "<span class='key'>—</span>"}</td>
+      <td class="shape">${esc(r.c)}</td>
+      <td class="num">${r.k}</td>
+      <td class="num">${r.t === "A" ? r.v : (r.t === "B" ? r.va : "—")}</td>
+      <td>${relayCell(r.r)}</td>
+    </tr>`).join("") ||
+    `<tr><td colspan="7" style="color:var(--faint);padding:22px 14px">
+       Nothing matches that filter.</td></tr>`;
+}
+
+document.querySelectorAll(".controls button").forEach(b => {
+  b.addEventListener("click", () => {
+    tier = b.dataset.t;
+    document.querySelectorAll(".controls button").forEach(o =>
+      o.setAttribute("aria-pressed", String(o === b)));
+    render();
+  });
+});
+document.getElementById("q").addEventListener("input", e => {
+  q = e.target.value.trim().toLowerCase();
+  render();
+});
+render();
+
+/* ---- relay inventory ---- */
+document.getElementById("tr").innerHTML = D.top.map(t => `
+  <tr>
+    <td class="num">${nf(t.n)}</td>
+    <td class="m">${t.url ? esc(t.url)
+      : "<span class='key'>url not resolved</span>"}</td>
+    <td class="m key">${esc(t.key)}</td>
+  </tr>`).join("");
+})();
+</script>
