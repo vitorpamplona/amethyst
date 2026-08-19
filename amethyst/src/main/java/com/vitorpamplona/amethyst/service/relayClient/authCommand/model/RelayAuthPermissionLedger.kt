@@ -53,10 +53,15 @@ class RelayAuthPermissionLedger(
     /**
      * Relays this account already approved during this run of the app. Answering the prompt without
      * the "remember" switch records the grant here, so the same relay's next reconnect is answered
-     * silently instead of raising the same dialog again. Empty by default — a ledger built without
-     * one simply has no session memory.
+     * silently instead of raising the same dialog again.
+     *
+     * Required, with no default, because it is shared state: one account's grants have to be the
+     * same object on every AUTH path (the foreground screen and the background notification
+     * consumer both decide off this ledger — see [com.vitorpamplona.amethyst.model.Account]). A
+     * default would let a ledger built without one quietly get a private set instead, so answers
+     * given on one path would not be seen on the other and the dialog would come back anyway.
      */
-    val sessionGrants: RelayAuthSessionGrants = RelayAuthSessionGrants(),
+    val sessionGrants: RelayAuthSessionGrants,
     val customToggles: () -> RelayAuthCustomToggles = { RelayAuthCustomToggles() },
     val isInMyRelayList: (String) -> Boolean = { false },
     val isBlocked: (String) -> Boolean = { false },
@@ -170,6 +175,17 @@ class RelayAuthPermissionLedger(
 
     /** Forgets this session's grant for [relayUrl], so the next challenge is decided from scratch. */
     fun revokeSessionGrant(relayUrl: String) = sessionGrants.revoke(relayUrl)
+
+    /**
+     * Forgets this session's grants for every relay in [blockedRelayUrls] — the kind-10006 block
+     * list, which outranks everything else on the decision path.
+     *
+     * Blocking already denies while it is in force, so this is about what happens *after* it is
+     * lifted: without it, unblocking would resume authenticating off an answer given before the
+     * block. The weaker "never allow" drops the grant too (see [setDecision]), so the stronger
+     * signal has to as well.
+     */
+    fun revokeSessionGrantsFor(blockedRelayUrls: Collection<String>) = blockedRelayUrls.forEach(sessionGrants::revoke)
 
     /**
      * Stores a per-relay override for [relayUrl].

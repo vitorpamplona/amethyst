@@ -289,4 +289,22 @@ class RelayAuthSessionGrantsTest {
             assertTrue(ledger.grantForSession(relay))
             assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
         }
+
+    @Test
+    fun blockingARelayForgetsItsSessionGrantSoUnblockingDoesNotResumeIt() =
+        runTest {
+            // While the block is in force the relay is denied whatever the grant says, so what this
+            // pins is the state left behind for when the block is lifted.
+            val grants = RelayAuthSessionGrants()
+            val ledger = ledger(grants = grants)
+
+            ledger.grantForSession(relay)
+            ledger.grantForSession(other)
+
+            ledger.revokeSessionGrantsFor(listOf(relay))
+
+            assertEquals(setOf(other), grants.grants.value)
+            assertEquals(RelayAuthVerdict.ASK, ledger.decide(askable(relay)))
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(other)))
+        }
 }
