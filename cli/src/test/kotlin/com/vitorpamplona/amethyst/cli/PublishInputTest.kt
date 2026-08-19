@@ -143,6 +143,23 @@ class PublishDuplicateTest {
     }
 
     @Test
+    fun nip01ReplacedPrefixIsRecognised() {
+        assertTrue(PublishBatch.isSuperseded("replaced: a newer version exists"))
+        assertTrue(PublishBatch.isSuperseded("REPLACED: newer"))
+        assertFalse(PublishBatch.isSuperseded("blocked: nope"))
+    }
+
+    @Test
+    fun reasonsBucketByNip01Prefix() {
+        assertEquals("replaced:", PublishBatch.reasonBucket("replaced: a newer version exists"))
+        assertEquals("rate-limited:", PublishBatch.reasonBucket("rate-limited: slow down there"))
+        assertEquals("duplicate:", PublishBatch.reasonBucket("  duplicate: have it"))
+        // No machine-readable prefix — fall back to the leading words.
+        assertEquals("no response within timeout", PublishBatch.reasonBucket("no response within timeout"))
+        assertEquals("(no reason given)", PublishBatch.reasonBucket("   "))
+    }
+
+    @Test
     fun realRejectionsAreNotDuplicates() {
         assertFalse(PublishBatch.isDuplicate("blocked: pubkey not allowed"))
         assertFalse(PublishBatch.isDuplicate("rate-limited: slow down"))

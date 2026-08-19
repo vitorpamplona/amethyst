@@ -105,6 +105,7 @@ class PublishBatch(
         var total = 0
         var published = 0
         var duplicates = 0
+        var superseded = 0
         var invalid = 0
         var stopped = false
         private var lastReported = 0
@@ -122,6 +123,7 @@ class PublishBatch(
                     if (total == 1) first = verdict.event to verdict.ack
                     var accepted = false
                     var alreadyThere = false
+                    var outdated = false
                     verdict.ack.forEach { (relay, result) ->
                         val counts = perRelay.getOrPut(relay.url) { IntArray(3) }
                         when {
@@ -135,6 +137,11 @@ class PublishBatch(
                                 alreadyThere = true
                             }
 
+                            isSuperseded(result.message) -> {
+                                counts[2]++
+                                outdated = true
+                            }
+
                             else -> counts[1]++
                         }
                     }
@@ -145,6 +152,11 @@ class PublishBatch(
                         // run, not a failure — counting it as one would make a
                         // re-run of the same batch "fail" 100%.
                         duplicates++
+                    } else if (outdated) {
+                        // Replaceable kind, and the relay holds a NEWER version.
+                        // Its state is already at least as fresh as ours, so
+                        // there is nothing here to retry or fix.
+                        superseded++
                     } else {
                         failures.add(
                             Failure(
@@ -165,7 +177,8 @@ class PublishBatch(
             if (total - lastReported < PROGRESS_EVERY) return
             lastReported = total
             System.err.println(
-                "publish: $total sent — $published new, $duplicates already there, ${failures.size} failed",
+                "publish: $total sent — $published new, ${duplicates + superseded} already current, " +
+                    "${failures.size} failed",
             )
         }
 
@@ -174,6 +187,7 @@ class PublishBatch(
                 total = total,
                 published = published,
                 duplicates = duplicates,
+                superseded = superseded,
                 invalid = invalid,
                 failures = failures.toList(),
                 perRelay = perRelay.mapValues { RelayTally(it.value[0], it.value[1], it.value[2]) },
@@ -200,6 +214,8 @@ class PublishBatch(
         val published: Int,
         /** Events the relay already had — `OK false` with NIP-01's `duplicate:` prefix. */
         val duplicates: Int,
+        /** Replaceable events the relay already holds a newer version of. */
+        val superseded: Int,
         val invalid: Int,
         val failures: List<Failure>,
         val perRelay: Map<String, RelayTally>,
@@ -217,6 +233,7 @@ class PublishBatch(
                 "total" to total,
                 "published" to published,
                 "duplicates" to duplicates,
+                "superseded" to superseded,
                 "failed" to failures.size - invalid,
                 "invalid" to invalid,
                 "stopped_early" to stopped,
@@ -234,6 +251,16 @@ class PublishBatch(
                     failures.take(MAX_REPORTED_FAILURES).map {
                         mapOf("event_id" to it.eventId, "reason" to it.reason)
                     },
+                // The histogram is the part that scales: with thousands of
+                // failures the capped list says nothing about the shape, and
+                // "are these all one benign reason?" is the first question.
+                "failure_reasons" to
+                    failures
+                        .groupingBy { reasonBucket(it.reason) }
+                        .eachCount()
+                        .entries
+                        .sortedByDescending { it.value }
+                        .map { mapOf("reason" to it.key, "count" to it.value) },
                 "failures_truncated" to (failures.size > MAX_REPORTED_FAILURES),
             )
 
@@ -256,6 +283,29 @@ class PublishBatch(
          * state, so it is tallied separately from a real rejection.
          */
         fun isDuplicate(message: String): Boolean = message.trimStart().startsWith("duplicate:", ignoreCase = true)
+
+        /**
+         * NIP-01 `replaced:` — a replaceable/addressable event the relay holds a
+         * newer version of. Like `duplicate:`, the relay's state is already at
+         * least as current as ours, so a mirror has nothing left to do.
+         */
+        fun isSuperseded(message: String): Boolean = message.trimStart().startsWith("replaced:", ignoreCase = true)
+
+        /**
+         * Group a rejection by its NIP-01 machine-readable prefix (`blocked:`,
+         * `rate-limited:`, `pow:`, …) so the histogram stays small; anything
+         * without one is bucketed by its first few words.
+         */
+        fun reasonBucket(reason: String): String {
+            val trimmed = reason.trim()
+            val colon = trimmed.indexOf(':')
+            if (colon in 1..24) return trimmed.take(colon + 1)
+            return trimmed
+                .split(' ')
+                .take(4)
+                .joinToString(" ")
+                .ifEmpty { "(no reason given)" }
+        }
 
         const val INVALID_SIGNATURE = "event id/signature does not verify"
 
