@@ -1170,7 +1170,6 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Přihlásit se bez ptaní, když…</string>
-    <string name="relay_auth_auto_my_relays">…jde o mé relé nebo o místnost, do které jsem vstoupil</string>
     <string name="relay_auth_auto_read_follows">…čtu někoho, koho sleduji</string>
     <string name="relay_auth_auto_message_follows">…píšu někomu, koho sleduji</string>
     <string name="relay_auth_auto_message_strangers">…píšu komukoli jinému</string>

@@ -53,7 +53,7 @@ class AppSpecificState(
     fun getAppSpecificDataFlow(): StateFlow<NoteState> = amethystSettingsNote.flow().metadata.stateFlow
 
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
-        val toInternal = settings.syncedSettings.toInternal()
+        val toInternal = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
         return signer.sign(
             AppSpecificDataEvent.build(
                 dTag = APP_SPECIFIC_DATA_D_TAG,

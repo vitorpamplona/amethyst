@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -105,7 +104,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.Marm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotGroupIconUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.markRoomNoteAsRead
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnreadFlow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.rowHasUnread
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
@@ -444,7 +443,7 @@ class AccountViewModel(
     /**
      * The bottom-bar envelope dot: true when ANY Messages row is showing its blue dot.
      *
-     * Per-row via [rowHasUnreadFlow], which mirrors what each row composable computes for itself.
+     * Per-row via [rowHasUnread], which mirrors what each row composable computes for itself.
      * This used to call `unreadPrivateChatRoute` directly, which returns null for anything that is not
      * `ChatroomKeyable` — so only NIP-17/NIP-04 DMs counted, and a public chat, ephemeral room, geohash
      * cell, Marmot group, NIP-29/Buzz channel or Concord channel could sit there with a visible dot
@@ -460,7 +459,7 @@ class AccountViewModel(
                     MutableStateFlow(null)
                 }
             }.flatMapLatest { loadedFeedState ->
-                val flows = loadedFeedState?.list?.mapNotNull { chat -> rowHasUnreadFlow(chat, account) }
+                val flows = loadedFeedState?.list?.mapNotNull { chat -> rowHasUnread(chat, account)?.flow }
 
                 if (!flows.isNullOrEmpty()) {
                     combine(flows) { newItems ->
@@ -1731,7 +1730,6 @@ class AccountViewModel(
         launchSigner {
             account.settings.undismissChannelInvite(channel.groupId.id)
             account.follow(channel)
-            BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
         }
 
     /**
@@ -1763,14 +1761,21 @@ class AccountViewModel(
      */
     fun dismissChannelInvite(channelId: String) {
         account.settings.dismissChannelInvite(channelId)
-        BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channelId)
     }
 
-    /** Actually leave: kind-9022 to the host relay, and drop it from my list and the pending set. */
+    /**
+     * Actually leave: kind-9022 to the host relay, which answers with a kind-44101 that supersedes the
+     * add, so the projection drops the card on its own.
+     *
+     * Deliberately does NOT record a local dismissal. That would clear the card a relay round-trip
+     * sooner, but `dismissedChannelInvites` is keyed by channel id and persisted forever, so it would
+     * also swallow a *later, legitimate* re-add to the same channel — the viewer would be put back in
+     * and never told. Waiting for the relay's own withdrawal keeps "am I a member" answerable from the
+     * events alone. Ignore is the action for "don't ask me again"; this one is for "take me out".
+     */
     fun leaveChannelInvite(channel: RelayGroupChannel) =
         launchSigner {
             account.relayGroups.leaveRelayGroup(channel)
-            BuzzChannelInvites.remove(account.userProfile().pubkeyHex, channel.groupId.id)
         }
 
     /**
@@ -2034,6 +2039,13 @@ class AccountViewModel(
     fun toggleChatroomPin(room: ChatroomKey) =
         launchSigner {
             account.toggleChatroomPin(room)
+        }
+
+    fun mutedPublicChatsFlow(): StateFlow<Set<String>> = account.settings.mutedPublicChats
+
+    fun toggleMutedPublicChat(channelId: String) =
+        launchSigner {
+            account.toggleMutedPublicChat(channelId)
         }
 
     fun updateZapAmounts(

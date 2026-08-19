@@ -26,8 +26,13 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 
 /**
- * `amy cashu balance [--mint URL]` — spendable balance from the local store,
- * via the shared CashuWalletReader projection. Optionally filtered to one mint.
+ * `amy cashu balance [--mint URL] [--sync]` — spendable balance from the local
+ * store, via the shared CashuWalletReader projection. Optionally filtered to one
+ * mint.
+ *
+ * `--sync` pages the wallet off the relays first (see [CashuContext.sync]).
+ * Without it this is a pure local read, and reports only what the store already
+ * holds — which for a wallet created elsewhere may be nothing at all.
  */
 object CashuBalanceCommand {
     suspend fun run(
@@ -36,8 +41,10 @@ object CashuBalanceCommand {
     ): Int {
         val args = Args(rest)
         val mintFilter = args.flag("mint")?.trimEnd('/')
+        val sync = args.bool("sync")
         args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
+            if (sync) ctx.cashu.sync()
             val snap = ctx.cashuSnapshot()
             val byMint =
                 snap.balancesByMint.let { all ->

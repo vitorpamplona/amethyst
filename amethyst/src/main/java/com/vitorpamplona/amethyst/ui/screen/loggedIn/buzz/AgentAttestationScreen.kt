@@ -139,7 +139,7 @@ fun AgentAttestationScreen(
             // Agent side: hold an attestation an owner gave you, so this account
             // authenticates to the owner's Buzz relays as a virtual member. Available to
             // any signer — holding a credential doesn't require the raw key.
-            HoldAttestationSection(myPubkey = myPubkey)
+            HoldAttestationSection(myPubkey = myPubkey, attestation = accountViewModel.account.buzzAttestation)
 
             // Owner side: issue an attestation for an agent key. Needs the raw private key.
             val privKey = keyPair.privKey
@@ -153,15 +153,17 @@ fun AgentAttestationScreen(
 }
 
 /**
- * Agent-side: paste an `auth` tag an owner issued to this account's key. It is verified
- * against [myPubkey] and, on success, stored in [BuzzHeldAttestations] so the auth
- * coordinator attaches it when this account AUTHs to a Buzz relay. Persisted across
- * restarts (device-global) by `BuzzAttestationPreferences`.
+ * Agent-side: paste an `auth` tag an owner issued to this account's key. [parseHeldAttestation]
+ * turns it into a typed failure the field can show, and [BuzzHeldAttestations.put] re-checks the
+ * signature before storing, so the auth coordinator attaches it when this account AUTHs to a Buzz
+ * relay. Persisted across restarts, per account, by `BuzzAttestationPreferences`.
  */
 @Composable
-private fun HoldAttestationSection(myPubkey: String) {
-    val held by BuzzHeldAttestations.flow.collectAsState()
-    val mine = held[myPubkey]
+private fun HoldAttestationSection(
+    myPubkey: String,
+    attestation: BuzzHeldAttestations,
+) {
+    val mine = attestation.flow.collectAsState().value
 
     var input by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -183,7 +185,7 @@ private fun HoldAttestationSection(myPubkey: String) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedButton(onClick = { BuzzHeldAttestations.remove(myPubkey) }) {
+                OutlinedButton(onClick = { attestation.clear() }) {
                     Text(stringRes(R.string.buzz_attest_remove))
                 }
             } else {
@@ -210,9 +212,15 @@ private fun HoldAttestationSection(myPubkey: String) {
                         when (val outcome = parseHeldAttestation(input, myPubkey)) {
                             is HoldOutcome.Failure -> error = outcome.message
                             is HoldOutcome.Success -> {
-                                BuzzHeldAttestations.put(myPubkey, outcome.attestation)
-                                input = ""
-                                error = null
+                                // put() re-checks the signature, so honour its answer instead of
+                                // assuming it stored: clearing the field on a rejected paste would
+                                // read as success and leave the account holding nothing.
+                                if (attestation.put(outcome.attestation)) {
+                                    input = ""
+                                    error = null
+                                } else {
+                                    error = NOT_FOR_THIS_ACCOUNT
+                                }
                             }
                         }
                     },
@@ -235,6 +243,9 @@ private sealed interface HoldOutcome {
         val message: String,
     ) : HoldOutcome
 }
+
+/** Shown for both rejection paths — the parse-time check and [BuzzHeldAttestations.put]'s. */
+private const val NOT_FOR_THIS_ACCOUNT = "This attestation does not authorize the current account, or its signature is invalid."
 
 /**
  * Parses a pasted `["auth", owner, conditions, sig]` JSON array and verifies it
@@ -259,7 +270,7 @@ private fun parseHeldAttestation(
         OwnerAttestation.parse(tag)
             ?: return HoldOutcome.Failure("Not a NIP-OA auth tag.")
     if (!attestation.verify(myPubkey)) {
-        return HoldOutcome.Failure("This attestation does not authorize the current account, or its signature is invalid.")
+        return HoldOutcome.Failure(NOT_FOR_THIS_ACCOUNT)
     }
     return HoldOutcome.Success(attestation)
 }

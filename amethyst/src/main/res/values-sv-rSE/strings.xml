@@ -1108,7 +1108,6 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Logga in utan att fråga när…</string>
-    <string name="relay_auth_auto_my_relays">…det är mitt relä, eller ett rum jag gått med i</string>
     <string name="relay_auth_auto_read_follows">…jag läser någon jag följer</string>
     <string name="relay_auth_auto_message_follows">…jag skriver till någon jag följer</string>
     <string name="relay_auth_auto_message_strangers">…jag skriver till någon annan</string>

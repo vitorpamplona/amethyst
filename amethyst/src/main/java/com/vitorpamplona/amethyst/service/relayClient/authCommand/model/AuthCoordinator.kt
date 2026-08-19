@@ -21,9 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
@@ -103,6 +101,10 @@ class AuthCoordinator(
                     // question. Returning early here instead made "decide per relay" mean "deny, and
                     // don't mention it" for every purpose that names someone else — the exact case the
                     // prompt was built to explain.
+                    //
+                    // It does not reach the "…I'm reading someone I follow" toggle at all: a follow's
+                    // outbox relay can never be first-party for us, so applying it there emptied the
+                    // category instead of narrowing it. RelayAuthResolver.customAllows has the detail.
                     val firstParty = isFirstParty(account, relayUrl)
 
                     val approve =
@@ -115,8 +117,9 @@ class AuthCoordinator(
                                 // reveal @b — an answer is only about the identity it was shown for.
                                 // The bus still collapses concurrent challenges for the same
                                 // (relay, account) pair, which is the case the shared prompt was for.
-                                // In practice this rarely means two dialogs: isFirstParty already
-                                // drops every account without its own reason to be on this relay.
+                                // In practice this rarely means two dialogs: for everything except
+                                // reading a follow, isFirstParty already drops every account without
+                                // its own reason to be on this relay.
                                 //
                                 // But never block the derived stream-key AUTH behind that dialog: on a
                                 // relay that hosts our Concord planes we DISMISS the user-auth ASK
@@ -165,7 +168,7 @@ class AuthCoordinator(
                         // Remember why we granted this relay so the settings screen can explain it.
                         account.relayAuthLedger.recordGrant(context)
                         try {
-                            signed.add(account.signer.sign(buzzAugmented(authTemplate, account.pubKey, relayUrl)))
+                            signed.add(account.signer.sign(buzzAugmented(authTemplate, account, relayUrl)))
                         } catch (e: Exception) {
                             Log.e("AuthCoordinator", "Failed trying to authenticate a writeable account", e)
                         }
@@ -207,23 +210,23 @@ class AuthCoordinator(
     }
 
     /**
-     * If [relayUrl] speaks the Buzz dialect and this device holds a NIP-OA attestation
-     * authorizing [accountPubKey], returns [template] with the owner-signed `auth` tag
-     * appended — so the relay grants virtual membership to an un-enrolled agent key while
-     * its owner stays a member. Otherwise returns [template] unchanged.
+     * If [relayUrl] speaks the Buzz dialect and [account] holds a NIP-OA attestation authorizing
+     * its key, returns [template] with the owner-signed `auth` tag appended — so the relay grants
+     * virtual membership to an un-enrolled agent key while its owner stays a member. Otherwise
+     * returns [template] unchanged.
      *
-     * Applied ONLY to an account's own AUTH (the caller passes the account pubkey), never
-     * to the Concord stream-key AUTHs that share the same [template] object, and it is a
-     * no-op on non-Buzz relays and for accounts with no held attestation — so it can never
-     * add an `auth` tag where one isn't wanted.
+     * Applied ONLY to an account's own AUTH (the caller passes the account being signed for), never
+     * to the Concord stream-key AUTHs that share the same [template] object, and it is a no-op on
+     * non-Buzz relays and for accounts with no held attestation — so it can never add an `auth` tag
+     * where one isn't wanted.
      */
     private fun buzzAugmented(
         template: EventTemplate<RelayAuthEvent>,
-        accountPubKey: HexKey,
+        account: Account,
         relayUrl: NormalizedRelayUrl,
     ): EventTemplate<RelayAuthEvent> {
         if (!BuzzRelayDialect.isBuzz(relayUrl)) return template
-        val authTag = BuzzHeldAttestations.authTagFor(accountPubKey) ?: return template
+        val authTag = account.buzzAttestation.authTag() ?: return template
         return EventTemplate(template.createdAt, template.kind, template.tags + arrayOf(authTag), template.content)
     }
 
@@ -238,18 +241,24 @@ class AuthCoordinator(
      * Merely *following* the counterparty of someone else's traffic is deliberately NOT first-party:
      * that is exactly how a bystander account got dragged into a paid inbox relay's AUTH (the shared
      * auth context carries the OTHER account's counterparties, evaluated against this account's
-     * follow graph). Reads of a followed author's outbox on an auth-gated relay this account doesn't
-     * use are therefore no longer auto-authed — a deliberate privacy-positive trade-off.
+     * follow graph).
+     *
+     * Reading a followed author's outbox is the one case this cannot speak to. That relay is the
+     * author's, so nothing here can ever return true for it, which is why
+     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthResolver] applies the
+     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles.readFollows] category
+     * without consulting this — otherwise the toggle would be permanently off.
      */
     private fun isFirstParty(
         account: Account,
         relayUrl: NormalizedRelayUrl,
     ): Boolean =
-        // A Buzz workspace the user explicitly joined is a first-party reason to authenticate: its
-        // channel/DM discovery is read-only (`#p` = me), which is otherwise deliberately NOT
+        // A Buzz workspace THIS account explicitly joined is a first-party reason to authenticate:
+        // its channel/DM discovery is read-only (`#p` = me), which is otherwise deliberately NOT
         // first-party, so without this the p-gated 44100/30622 reads would never be served and the
-        // workspace would stay empty.
-        BuzzWorkspaces.isJoined(relayUrl) ||
+        // workspace would stay empty. Read off the account, never a device-global set: the invite was
+        // redeemed by one key, and a shared set made every other logged-in account first-party here.
+        account.buzzWorkspaces.isJoined(relayUrl) ||
             RelayAuthFirstParty.hasReason(
                 me = account.pubKey,
                 relayUrl = relayUrl,

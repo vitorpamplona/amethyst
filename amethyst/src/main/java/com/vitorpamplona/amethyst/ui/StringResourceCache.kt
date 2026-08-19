@@ -151,21 +151,16 @@ fun painterRes(
     @DrawableRes resourceId: Int,
     sizeReference: Int,
 ): Painter {
-    val cached = iconCache.get(resourceId)
-    if (cached != null) {
-        val composition = cached.get(sizeReference)
-        if (composition != null) {
-            return composition
-        }
-    }
+    val bySize = iconCache.get(resourceId)
+    bySize?.get(sizeReference)?.let { return it }
 
     val loaded = painterResource(resourceId)
 
-    if (cached == null) {
-        iconCache.put(resourceId, LruCache<Int, Painter>(10))
-    } else {
-        cached.put(sizeReference, loaded)
-    }
+    // Store on the FIRST miss as well. This previously created the per-size cache but never
+    // put `loaded` into it, so a resource had to be requested three times before it could
+    // ever hit: once to install the (empty) inner cache, once to populate it, once to read it.
+    val sizes = bySize ?: LruCache<Int, Painter>(10).also { iconCache.put(resourceId, it) }
+    sizes.put(sizeReference, loaded)
 
     return loaded
 }

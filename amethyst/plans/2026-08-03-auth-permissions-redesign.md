@@ -51,6 +51,12 @@ Shipped as designed. Where it diverged or went further:
   connection forever. A second challenge for the same (relay, account) rides along
   on the owner's answer with no deadline of its own — running one would let it
   resolve the shared deferred and tear down a dialog mid-read.
+- **Corrected later:** this plan left the decision model alone, including the
+  blanket `isFirstParty` gate on `CUSTOM`. That gate turned out to make
+  `readFollows` ("…I'm reading someone I follow") unreachable — a follow's outbox
+  relay is theirs, so it is never first-party for us, and every follow produced a
+  prompt with the toggle explicitly on. `RelayAuthResolver.customAllows` now
+  checks that one category ahead of the gate; the other three still require it.
 - **Still not done:** what a timeout should *look like*. It is now an honest 60s of
   visible time rather than a clock the user never saw, but it is still a dialog
   that vanishes and an event left pending in the outbox with no feedback. That

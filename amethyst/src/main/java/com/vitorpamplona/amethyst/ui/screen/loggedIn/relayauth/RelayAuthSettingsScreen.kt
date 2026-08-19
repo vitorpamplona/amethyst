@@ -260,7 +260,7 @@ fun RelayAuthSettingsScreen(
                             ) {
                                 SettingsSwitchTile(
                                     icon = MaterialSymbols.Dns,
-                                    title = R.string.relay_auth_auto_my_relays,
+                                    title = R.string.relay_auth_auto_my_relays_and_venues,
                                     checked = myRelays,
                                     onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
                                 )

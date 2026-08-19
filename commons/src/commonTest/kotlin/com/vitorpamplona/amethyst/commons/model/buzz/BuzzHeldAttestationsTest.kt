@@ -21,44 +21,72 @@
 package com.vitorpamplona.amethyst.commons.model.buzz
 
 import com.vitorpamplona.quartz.buzz.oaOwnerAttestation.OwnerAttestation
-import kotlin.test.AfterTest
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class BuzzHeldAttestationsTest {
-    private val agent = "a".repeat(64)
-    private val owner = "b".repeat(64)
-    private val attestation = OwnerAttestation(ownerPubKey = owner, conditions = "kind=40002", sig = "c".repeat(128))
+    private val agentKey = KeyPair()
+    private val otherKey = KeyPair()
+    private val ownerKey = KeyPair()
 
-    @AfterTest
-    fun tearDown() = BuzzHeldAttestations.clearForTesting()
+    private val agent = agentKey.pubKey.toHexKey()
+    private val other = otherKey.pubKey.toHexKey()
+
+    private val attestation = OwnerAttestation.sign(agent, CONDITIONS, ownerKey.privKey!!)
+
+    // One store per account, holding the attestation issued to that account's key.
+    private val held = BuzzHeldAttestations(agent)
 
     @Test
     fun emptyStoreYieldsNoTag() {
-        assertNull(BuzzHeldAttestations.attestationFor(agent))
-        assertNull(BuzzHeldAttestations.authTagFor(agent))
+        assertNull(held.flow.value)
+        assertNull(held.authTag())
     }
 
     @Test
     fun heldAttestationSurfacesAsItsAuthTag() {
-        BuzzHeldAttestations.put(agent, attestation)
-        assertEquals(attestation, BuzzHeldAttestations.attestationFor(agent))
+        assertTrue(held.put(attestation))
+        assertEquals(attestation, held.flow.value)
         // The tag attached to the agent's AUTH is exactly the attestation's ["auth", …] tag.
-        assertContentEquals(attestation.toTag(), BuzzHeldAttestations.authTagFor(agent))
+        assertContentEquals(attestation.toTag(), held.authTag())
     }
 
     @Test
-    fun removeClearsTheHeldAttestation() {
-        BuzzHeldAttestations.put(agent, attestation)
-        BuzzHeldAttestations.remove(agent)
-        assertNull(BuzzHeldAttestations.authTagFor(agent))
+    fun clearDropsTheHeldAttestation() {
+        held.put(attestation)
+        held.clear()
+        assertNull(held.authTag())
+        assertNull(held.flow.value)
     }
 
     @Test
-    fun oneAgentsAttestationDoesNotLeakToAnother() {
-        BuzzHeldAttestations.put(agent, attestation)
-        assertNull(BuzzHeldAttestations.authTagFor("d".repeat(64)))
+    fun anAttestationIssuedToAnotherKeyIsRejected() {
+        // The check that used to be the caller's job: this credential is real and verifies — for
+        // somebody else's key. Storing it would attach an `auth` tag the relay rejects, and the
+        // store's whole contract is that it never holds one.
+        val theirs = BuzzHeldAttestations(other)
+
+        assertFalse(theirs.put(attestation))
+        assertNull(theirs.authTag())
+    }
+
+    @Test
+    fun aTamperedAttestationIsRejectedAndLeavesTheHeldOneIntact() {
+        held.put(attestation)
+
+        val forged = attestation.copy(conditions = "kind=1")
+
+        assertFalse(held.put(forged))
+        assertEquals(attestation, held.flow.value)
+    }
+
+    companion object {
+        private const val CONDITIONS = "kind=40002"
     }
 }
