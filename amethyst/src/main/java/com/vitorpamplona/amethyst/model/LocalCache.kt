@@ -749,6 +749,21 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         return relayGroupChannels.filter { key, _ -> key.id == groupId }.singleOrNull()
     }
 
+    /**
+     * Every host relay of the NIP-29 group [event] is scoped to (its `h` tag), or an empty set when the
+     * event carries no group scope or the group is unknown to this cache.
+     *
+     * Keyed by group id alone rather than by [GroupId]: an event about to be *sent* (a reaction, a zap
+     * request, a comment) knows which room it belongs to but not which relay hosts it — that is exactly
+     * what this resolves. Group ids are relay-minted UUIDs, so the same id on two hosts is a
+     * theoretical case, and answering with both is the safe reading of it: the content reaches every
+     * host that claims the room, and none that don't.
+     */
+    fun relayGroupHostsFor(event: Event): Set<NormalizedRelayUrl> {
+        val groupId = event.groupId() ?: return emptySet()
+        return relayGroupChannels.filter { key, _ -> key.id == groupId }.mapTo(mutableSetOf()) { it.groupId.relayUrl }
+    }
+
     fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
     fun getNoteIfExists(event: Event): Note? =

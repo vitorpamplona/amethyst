@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip29RelayGroups.groupId
+import com.vitorpamplona.quartz.nip29RelayGroups.tags.GroupIdTag
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -120,6 +122,12 @@ class LnZapRequestEvent(
             if (zappedEvent is AddressableEvent) {
                 tags = tags + listOf(ATag.assemble(zappedEvent.address(), null))
             }
+            // Zapping NIP-29 group content is itself group content: carry the room's `h` tag so the
+            // receipt the provider publishes is scoped to the room, which is what lets the host relay
+            // serve it to the members (and to the recipient's `#h` notification query) instead of
+            // dropping an unscoped kind-9735 nobody in the group will ever see. Same rule reactions
+            // follow (ReactionAction copies the `h` tag onto the kind-7).
+            zappedEvent.groupId()?.let { tags = tags + listOf(GroupIdTag.assemble(it)) }
             if (pollOption != null && pollOption >= 0) {
                 tags = tags + listOf(arrayOf(PollOptionTag.TAG_NAME, pollOption.toString()))
             }

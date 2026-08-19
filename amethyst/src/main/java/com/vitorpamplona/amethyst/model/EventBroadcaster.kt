@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
@@ -111,6 +112,11 @@ class EventBroadcaster(
         val channelRelays = account.cache.getAnyChannel(event)?.relays()
         if (channelRelays != null && channelRelays.isNotEmpty()) return false
 
+        // A group-scoped event whose room this cache doesn't know yet: it still must not go to the
+        // broadcast list. Its `h` tag names a room only its host can serve, so broadcasting it says
+        // "I am in this group" to relays that can do nothing with the content.
+        if (event.isGroupScoped()) return false
+
         return true
     }
 
@@ -142,6 +148,16 @@ class EventBroadcaster(
         if (event is SealedRumorEvent || event is BaseDMGroupEvent || event.sig.isEmpty()) {
             return emptySet()
         }
+
+        // NIP-29 group content, and everything that refers to it — a kind-9 message, a kind-1111 comment,
+        // a like, a zap request — exists in a room on a host relay and nowhere else. The room's members
+        // read it there; the author's outbox and the broadcast list can neither serve it to them nor do
+        // anything else useful with it, and for a private or closed group publishing it there advertises
+        // who is in which room. So the host wins outright rather than being one more relay in the union.
+        // Same rule the group reply composer already applies (CommentPostViewModel), applied to every
+        // group-scoped event instead of just that one path.
+        val groupHosts = account.cache.relayGroupHostsFor(event)
+        if (groupHosts.isNotEmpty()) return groupHosts
 
         val includeBroadcast = wantsBroadcastRelays(event)
         val broadcastRelays = if (includeBroadcast) account.broadcastRelayList.flow.value else emptySet()
