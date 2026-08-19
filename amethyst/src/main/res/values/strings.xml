@@ -602,6 +602,9 @@
     <string name="quick_action_block">Block</string>
     <string name="quick_action_mute_thread">Mute thread</string>
     <string name="quick_action_unmute_thread">Unmute thread</string>
+    <string name="mute_notifications">Mute notifications</string>
+    <string name="unmute_notifications">Unmute notifications</string>
+    <string name="muted_chat_content_description">Notifications are muted for this chat</string>
     <string name="quick_action_report">Report</string>
     <string name="quick_action_dont_show_again_button">Don\'t show again</string>
     <string name="report_dialog_spam">Spam or scams</string>
@@ -2885,6 +2888,9 @@
     <string name="relay_group_no_messages_yet">No messages yet</string>
     <string name="channel_invite_title">Added to %1$s</string>
     <string name="channel_invite_unknown_actor">Someone</string>
+    <string name="channel_invite_added_you">added you to this channel</string>
+    <string name="channel_invite_row_added_you_by">%1$s added you to this channel</string>
+    <string name="channel_invite_row_added_you">You were added to this channel</string>
     <string name="channel_invite_ignore">Ignore</string>
     <string name="channel_invite_leave">Leave</string>
     <string name="relay_group_join_to_post">Join this group to send messages.</string>
@@ -3255,6 +3261,9 @@
     <string name="cashu_remove_mint">Remove mint</string>
     <string name="cashu_add_mint">Add mint</string>
     <string name="cashu_history">History</string>
+    <string name="cashu_history_loading_older">Loading older transactions…</string>
+    <string name="cashu_history_all_loaded">No older transactions</string>
+    <string name="cashu_history_some_relays_unreachable">No older transactions from the relays that answered — some could not be reached</string>
     <string name="cashu_wallet_autosaves">Your wallet saves automatically as you add or remove mints. A nutzap key is created for you the first time you add a mint.</string>
     <string name="cashu_wallet_saving">Saving…</string>
     <string name="cashu_p2pk_section">Nutzap key (advanced)</string>

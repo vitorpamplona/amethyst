@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.bolt12Offers.Bolt12OfferListState
+import com.vitorpamplona.amethyst.model.buzz.ChannelInvitesState
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
@@ -572,6 +573,21 @@ class Account(
     val relayGroupListDecryptionCache = RelayGroupListDecryptionCache(signer)
     val relayGroupList = RelayGroupListState(signer, cache, relayGroupListDecryptionCache, scope, settings)
 
+    /**
+     * Buzz channels somebody else added me to that I haven't answered yet, projected from the cached
+     * kind-44100/44101 verdicts. Account state rather than screen state because the notifications DAL
+     * reads it to decide whether a cached 44100 is still a live question.
+     */
+    val channelInvites =
+        ChannelInvitesState(
+            me = signer.pubKey,
+            cache = cache,
+            buzzWorkspaces = buzzWorkspaces,
+            relayGroupList = relayGroupList,
+            dismissed = settings.dismissedChannelInvites,
+            scope = scope,
+        )
+
     val concordChannelList = ConcordChannelListState(signer, cache, scope, settings)
 
     /**
@@ -724,11 +740,18 @@ class Account(
     // the history loader ([AccountNotificationsHistoryEoseManager]) binds its orchestrator to these.
     val notificationHistory = RelayLoadingCursors()
 
+    // Per-relay backward-paging cursors for the NIP-60 spending history (kind:7376): how far back each
+    // outbox relay has been paged by until+limit. Same lifetime rule as notificationHistory — held here
+    // so paging progress survives leaving and re-entering the wallet screen; the history loader
+    // ([CashuWalletHistoryEoseManager]) binds its orchestrator to these.
+    val cashuHistory = RelayLoadingCursors()
+
     val cashuWalletState =
         com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState(
             pubKey = signer.pubKey,
             signer = signer,
             cache = cache,
+            client = client,
             scope = scope,
             outboxRelaysFlow = outboxRelays.flow,
             inboxRelaysFlow = notificationRelays.flow,
@@ -1051,6 +1074,15 @@ class Account(
 
     suspend fun toggleChatroomPin(room: ChatroomKey) {
         settings.toggleChatroomPin(room)
+        sendNewAppSpecificData()
+    }
+
+    /**
+     * Local state first, then publish. The local write is what every suppression point
+     * reads, so it must not wait on the signer — publishing is best-effort sync.
+     */
+    suspend fun toggleMutedPublicChat(channelId: String) {
+        settings.toggleMutedPublicChat(channelId)
         sendNewAppSpecificData()
     }
 

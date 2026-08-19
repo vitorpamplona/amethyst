@@ -43,6 +43,7 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -352,19 +353,26 @@ fun noteActionSections(
     val moderation =
         buildList {
             val isThreadMuted = accountViewModel.isThreadMutedFor(note)
-            add(
-                NoteAction(
-                    MaterialSymbols.AutoMirrored.VolumeOff,
-                    stringRes(if (isThreadMuted) R.string.quick_action_unmute_thread else R.string.quick_action_mute_thread),
-                ) {
-                    if (isThreadMuted) {
-                        accountViewModel.unmuteThread(note)
-                    } else {
-                        accountViewModel.muteThread(note)
-                    }
-                    handlers.onDismiss()
-                },
-            )
+            // Every NIP-28 message shares one thread root — the channel — so "Mute thread" on a
+            // public chat can only ever hide that channel's ENTIRE content, and invisibly: the
+            // Messages row has no such check, so the room still lists while its messages vanish.
+            // "Mute notifications" owns silencing a public chat now. Unmute stays reachable so
+            // anyone already caught by a legacy mute can escape from the message in front of them.
+            if (note.event !is ChannelMessageEvent || isThreadMuted) {
+                add(
+                    NoteAction(
+                        MaterialSymbols.AutoMirrored.VolumeOff,
+                        stringRes(if (isThreadMuted) R.string.quick_action_unmute_thread else R.string.quick_action_mute_thread),
+                    ) {
+                        if (isThreadMuted) {
+                            accountViewModel.unmuteThread(note)
+                        } else {
+                            accountViewModel.muteThread(note)
+                        }
+                        handlers.onDismiss()
+                    },
+                )
+            }
 
             // Own messages always get a delete affordance (the surface routes private
             // rumors through the gift-wrapped deletion); reporting yourself never

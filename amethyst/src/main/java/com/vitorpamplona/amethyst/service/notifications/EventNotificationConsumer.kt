@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.renderers.ArticleNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.BadgeNotification
@@ -218,11 +219,20 @@ class EventNotificationConsumer(
         // Don't push-notify events this account authored.
         if (event.pubKey == account.signer.pubKey) return
 
-        // Drop reactions/zaps/reposts whose target note lives on a muted thread
-        // (matches the in-app feed, which mutes all four).
+        // Drop reactions/zaps/reposts whose target note lives on a muted thread, or in a
+        // public chat the user has silenced (matches the in-app feed, which mutes all four).
+        // Without the second check, muting a channel still let a like on your own message
+        // there notify you — the row's glyph promises silence, so it has to mean it.
         if (event is ReactionEvent || event is LnZapEvent || event is RepostEvent || event is GenericRepostEvent) {
             val target = LocalCache.getNoteIfExists(event)?.replyTo?.lastOrNull()
-            if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) return
+            if (target != null &&
+                (
+                    account.isThreadMuted(account.resolveThreadRoot(target)) ||
+                        isMutedPublicChatMessage(target.event, account.settings.mutedPublicChats.value)
+                )
+            ) {
+                return
+            }
         }
 
         when (event) {
@@ -315,6 +325,12 @@ class EventNotificationConsumer(
         event: ChannelMessageEvent,
         account: Account,
     ) {
+        // Reads local device state, NOT the NIP-78 blob: on a push-driven cold start
+        // AppSpecificState may not have decrypted yet (and for a NIP-55 account that is
+        // an Amber IPC round-trip that can fail outright in the background). Losing this
+        // race would post exactly the notification the mute exists to prevent.
+        if (isMutedPublicChatMessage(event, account.settings.mutedPublicChats.value)) return
+
         val note = LocalCache.getNoteIfExists(event.id) ?: return
 
         if (NotificationFeedFilter.isNotifiablePublicChatReply(note, account.signer.pubKey)) {

@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.EditButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.LeaveChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.LinkChatButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.MuteChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.OpenChatButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.header.actions.ShareChatButton
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -187,6 +188,8 @@ fun LongChannelActionOptions(
     LinkChatButton(channel, accountViewModel, nav)
 
     ShareChatButton(channel, accountViewModel, nav)
+
+    MuteChatButton(channel, accountViewModel)
 
     EditButtonIfIamCreator(channel, accountViewModel, nav)
 

@@ -115,9 +115,22 @@ object CashuWalletCommands {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
+        val args = Args(rest)
+        val sync = args.bool("sync")
+        args.rejectUnknown()
         Context.open(dataDir).use { ctx ->
+            if (sync) ctx.cashu.sync()
             val snap = ctx.cashuSnapshot()
-            if (snap.walletEvent == null) return Output.error("no_wallet", "no kind:17375 wallet in the local store — run `cashu wallet create`")
+            // "Not in the store" is not the same as "does not exist": a wallet created on another
+            // client is on the relays and simply hasn't been pulled down here yet, and telling the
+            // user to `create` one in that state would publish a fresh kind:17375 over a replaceable
+            // slot that already holds theirs. Point at `sync` first.
+            if (snap.walletEvent == null) {
+                return Output.error(
+                    "no_wallet",
+                    "no kind:17375 wallet in the local store — run `cashu sync` to pull an existing one, or `cashu wallet create`",
+                )
+            }
             Output.emit(
                 mapOf(
                     "p2pk_pubkey" to snap.nutzapInfoEvent?.p2pkPubkey(),

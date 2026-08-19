@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.Entity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -133,6 +134,67 @@ object Nip19Parser {
 
     fun hasAny(content: String): Boolean = nip19regex.matches(content)
 
+    // ---------------------------------------------------------------------------------------
+    // ICU-free scanner for the ingest hot path.
+    //
+    // `java.util.regex` on Android is backed by ICU, and `Matcher.region()` -> `reset()` ->
+    // `MatcherNative.setInput()` copies the ENTIRE input into native memory on every call.
+    // `Regex.matchAt` builds a fresh Matcher per call, and [forEachNip19Match] calls it once per
+    // candidate position — so scanning one note allocated a full native UTF-16 copy of its content
+    // *per candidate*, with content running to 767KB in the tail. Because the Java Matcher object
+    // is tiny, Java-heap-driven GC had no reason to reclaim them promptly, so the native heap grew
+    // unbounded: measured 45MB -> 1372MB over a cold start, ending in an lmkd kill at ~1.9GB RSS.
+    // Disabling this one scan made the native heap plateau at ~257MB instead.
+    //
+    // The grammar is small enough to match directly, so nothing here touches ICU. Case folding is
+    // done ASCII-only on purpose: `RegexOption.IGNORE_CASE` maps to `Pattern.CASE_INSENSITIVE`,
+    // which is ASCII-only unless `UNICODE_CASE` is also set. Using Kotlin's `ignoreCase = true`
+    // would be Unicode-aware and would accept inputs the regex rejected (U+212A KELVIN SIGN folding
+    // to `k`, say).
+    // ---------------------------------------------------------------------------------------
+
+    /** Entities whose bech32 payload the regexes pin to exactly 58 chars. */
+    private val FIXED_58_PREFIXES = arrayOf("nsec1", "npub1", "note1")
+
+    /** Entities whose bech32 payload is `+` (one or more). */
+    private val VARIABLE_PREFIXES = arrayOf("nevent1", "naddr1", "nprofile1", "nrelay1", "nembed1")
+
+    /** [nip19regexEvents] has no fixed-58 branch — there `note1` takes a variable payload. */
+    private val EVENT_FIXED_58_PREFIXES = emptyArray<String>()
+
+    private val EVENT_VARIABLE_PREFIXES = arrayOf("nevent1", "naddr1", "note1", "nrelay1", "nembed1")
+
+    /**
+     * `\S` in the trailing group. Java's `\s` is the six ASCII whitespace chars unless
+     * `UNICODE_CHARACTER_CLASS` is set, so U+00A0 and friends count as NON-space here.
+     */
+    private fun isRegexSpace(c: Char): Boolean = c == ' ' || c == '\t' || c == '\n' || c == '\u000B' || c == '\u000C' || c == '\r'
+
+    /** ASCII-only case-insensitive prefix compare; [prefix] must be lowercase ASCII. */
+    private fun matchesPrefixAt(
+        content: String,
+        offset: Int,
+        prefix: String,
+    ): Boolean {
+        if (offset + prefix.length > content.length) return false
+        for (k in prefix.indices) {
+            val c = content[offset + k]
+            val folded = if (c in 'A'..'Z') c + 32 else c
+            if (folded != prefix[k]) return false
+        }
+        return true
+    }
+
+    /** End (exclusive) of the `[\S]*` run starting at [from]. */
+    private fun endOfTrailing(
+        content: String,
+        from: Int,
+    ): Int {
+        var j = from
+        while (j < content.length && !isRegexSpace(content[j])) j++
+        return j
+    }
+
     /**
      * True when one of the NIP-19 entity prefixes starts at [i].
      *
@@ -165,31 +227,100 @@ object Nip19Parser {
     }
 
     /**
-     * Applies [regex] anchored at every NIP-19 candidate position in [content].
+     * Matches `<prefix><bech32 payload><[\S]*>` at every NIP-19 candidate position in [content],
+     * without ICU — see the block comment above [FIXED_58_PREFIXES] for why that matters.
      *
-     * [isCandidateAt] covers the union of the prefixes across the three NIP-19
-     * regexes, so a narrower [regex] simply fails `matchAt` on a prefix it does
-     * not accept — still far cheaper than `findAll` restarting the engine at
-     * every position in the string.
+     * [isCandidateAt] covers the union of the prefixes across the three NIP-19 regexes, so a
+     * caller passing a narrower prefix set simply finds no match at a prefix it does not accept.
+     *
+     * The prefixes are mutually exclusive (none is a prefix of another), so the first one that
+     * matches decides the branch, exactly as the regex alternation did. A fixed-58 entity with
+     * fewer than 58 payload chars fails outright rather than falling through to the variable
+     * branch, again matching the regex: no variable prefix can equal a fixed-58 one.
      */
     private inline fun forEachNip19Match(
         content: String,
-        regex: Regex,
-        action: (MatchResult) -> Unit,
+        fixed58Prefixes: Array<String>,
+        variablePrefixes: Array<String>,
+        action: (type: String, key: String, additionalChars: String) -> Unit,
     ) {
         var i = 0
         val len = content.length
+        // Jump between 'n'/'N' with indexOf — an intrinsified, vectorised char search — instead of
+        // testing every character. Both cases are tracked separately so each is only re-searched
+        // once consumed, amortising to about one indexOf per candidate. Measured ~2x faster on
+        // content with no entity at all, which is 94% of real notes (2588-note production sample),
+        // and ~26% faster on the 767KB mention-heavy tail. Small mention-dense content (a ~700B
+        // note with 2 mentions) is a few microseconds slower; that trade is deliberate.
+        var nextLower = content.indexOf('n')
+        var nextUpper = content.indexOf('N')
         while (i < len) {
+            if (nextLower in 0..<i) nextLower = content.indexOf('n', i)
+            if (nextUpper in 0..<i) nextUpper = content.indexOf('N', i)
+            i =
+                when {
+                    nextLower < 0 && nextUpper < 0 -> return
+                    nextLower < 0 -> nextUpper
+                    nextUpper < 0 -> nextLower
+                    else -> if (nextLower < nextUpper) nextLower else nextUpper
+                }
+            if (i >= len) return
             if (isCandidateAt(content, i)) {
-                val match = regex.matchAt(content, i)
-                if (match != null) {
-                    action(match)
-                    i = match.range.last + 1
+                var end = -1
+
+                for (prefix in fixed58Prefixes) {
+                    if (!matchesPrefixAt(content, i, prefix)) continue
+                    val dataStart = i + prefix.length
+                    val dataEnd = dataStart + 58
+                    if (dataEnd <= len && allBech32(content, dataStart, dataEnd)) {
+                        end = endOfTrailing(content, dataEnd)
+                        action(
+                            content.substring(i, dataStart),
+                            content.substring(dataStart, dataEnd),
+                            content.substring(dataEnd, end),
+                        )
+                    }
+                    break
+                }
+
+                if (end < 0) {
+                    for (prefix in variablePrefixes) {
+                        if (!matchesPrefixAt(content, i, prefix)) continue
+                        val dataStart = i + prefix.length
+                        var dataEnd = dataStart
+                        while (dataEnd < len && Bech32.isDataChar(content[dataEnd])) dataEnd++
+                        // `+` needs at least one payload char.
+                        if (dataEnd > dataStart) {
+                            end = endOfTrailing(content, dataEnd)
+                            action(
+                                content.substring(i, dataStart),
+                                content.substring(dataStart, dataEnd),
+                                content.substring(dataEnd, end),
+                            )
+                        }
+                        break
+                    }
+                }
+
+                // `end` is exclusive and always past `i`, so the scan still advances.
+                if (end >= 0) {
+                    i = end
                     continue
                 }
             }
             i++
         }
+    }
+
+    private fun allBech32(
+        content: String,
+        from: Int,
+        to: Int,
+    ): Boolean {
+        for (k in from until to) {
+            if (!Bech32.isDataChar(content[k])) return false
+        }
+        return true
     }
 
     /**
@@ -208,14 +339,8 @@ object Nip19Parser {
      */
     fun parseAll(content: String): List<Entity> {
         val returningList = mutableListOf<Entity>()
-        forEachNip19Match(content, nip19regex) { matcher ->
-            val type = matcher.groups[3]?.value ?: matcher.groups[5]?.value // npub1
-            val key = matcher.groups[4]?.value ?: matcher.groups[6]?.value // bech32
-            val additionalChars = matcher.groups[7]?.value // additional chars
-
-            if (type != null) {
-                parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
-            }
+        forEachNip19Match(content, FIXED_58_PREFIXES, VARIABLE_PREFIXES) { type, key, additionalChars ->
+            parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
         }
         return returningList
     }
@@ -223,14 +348,8 @@ object Nip19Parser {
     /** Same scan as [parseAll], restricted to the event-ish entities. */
     fun parseAllEvents(content: String): List<Entity> {
         val returningList = mutableListOf<Entity>()
-        forEachNip19Match(content, nip19regexEvents) { matcher ->
-            val type = matcher.groups[2]?.value // nevent1
-            val key = matcher.groups[3]?.value // bech32
-            val additionalChars = matcher.groups[4]?.value // additional chars
-
-            if (type != null) {
-                parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
-            }
+        forEachNip19Match(content, EVENT_FIXED_58_PREFIXES, EVENT_VARIABLE_PREFIXES) { type, key, additionalChars ->
+            parseComponents(type, key, additionalChars)?.entity?.let { returningList.add(it) }
         }
         return returningList
     }

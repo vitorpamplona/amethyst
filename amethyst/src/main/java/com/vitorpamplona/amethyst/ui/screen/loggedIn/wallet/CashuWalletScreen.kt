@@ -32,7 +32,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -64,6 +66,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
@@ -74,6 +77,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -82,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip60Cashu.CashuWalletHistoryEoseManager
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -96,6 +101,9 @@ import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.SpendingDirection
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -382,7 +390,19 @@ private fun CashuWalletContent(
     onMoveCoins: (String) -> Unit,
     onResumePendingQuote: () -> Unit,
 ) {
+    val listState = rememberLazyListState()
+
+    // The kind:7376 rows below are only ever as complete as the relays were asked to be. The live wallet
+    // subscription asks for six kinds in one uncapped REQ, and history is the most numerous of them, so
+    // what lands there is a recent-N suffix chosen by each relay's cap. This pager walks older pages on
+    // demand — see CashuWalletHistoryEoseManager.
+    val history7376 = remember(accountViewModel) { accountViewModel.dataSources().account.cashuWalletHistory }
+    val loadingOlder by history7376.loadingMore.collectAsStateWithLifecycle()
+    val pagingStatus by history7376.status.collectAsStateWithLifecycle()
+    CashuHistoryPaging(historyCount = { history.size }, listState = listState, history = history7376)
+
     LazyColumn(
+        state = listState,
         modifier =
             modifier
                 .fillMaxSize()
@@ -447,10 +467,88 @@ private fun CashuWalletContent(
             items(history, key = { it.id }) { entry ->
                 HistoryRow(entry, accountViewModel, nav)
             }
+            item {
+                CashuHistoryFooter(
+                    loadingOlder = loadingOlder,
+                    exhausted = pagingStatus.exhausted,
+                    stalledCount = pagingStatus.stalledCount,
+                )
+            }
         }
 
         item { Spacer(modifier = Modifier.height(24.dp)) }
     }
+}
+
+/** How many history rows to pull in before the user has scrolled at all. */
+private const val CASHU_HISTORY_TARGET = 30
+
+/** How close to the end of the list a page request fires. */
+private const val CASHU_HISTORY_PREFETCH_AHEAD = 5
+
+/**
+ * Drives the spending-history backward pager: pull a page on open so the list isn't whatever suffix the
+ * relay caps returned, then page older rows as the list nears its end. Same two-driver shape the NIP-29
+ * thread list and the notifications feed use — a bootstrap that fills the first screen, and a look-ahead
+ * that keeps going only while the user is actually scrolling toward the bottom.
+ */
+@Composable
+private fun CashuHistoryPaging(
+    historyCount: () -> Int,
+    listState: LazyListState,
+    history: CashuWalletHistoryEoseManager,
+) {
+    LaunchedEffect(history) {
+        combine(snapshotFlow { historyCount() }, history.loadingMore, history.status) { count, loading, s ->
+            count < CASHU_HISTORY_TARGET && !loading && !s.exhausted
+        }.distinctUntilChanged()
+            .filter { it }
+            .collect { history.advanceAll() }
+    }
+    LaunchedEffect(history, listState) {
+        snapshotFlow {
+            val last =
+                listState.layoutInfo.visibleItemsInfo
+                    .lastOrNull()
+                    ?.index ?: 0
+            val total = historyCount()
+            total > 0 && last >= total - CASHU_HISTORY_PREFETCH_AHEAD
+        }.distinctUntilChanged()
+            .filter { it }
+            .collect {
+                if (!history.status.value.exhausted && !history.loadingMore.value) history.advanceAll()
+            }
+    }
+}
+
+/**
+ * A quiet footer under the transaction list: what the pager is doing, or nothing when idle.
+ *
+ * Splits on [stalledCount] because `exhausted` means "nothing more reachable right now", not "caught
+ * up" — a relay that answered an auth CLOSE, is unreachable, or went silent is stalled rather than done,
+ * and claiming the history is complete while some of it was never served would be a lie about the user's
+ * own money.
+ */
+@Composable
+private fun CashuHistoryFooter(
+    loadingOlder: Boolean,
+    exhausted: Boolean,
+    stalledCount: Int,
+) {
+    val text =
+        when {
+            loadingOlder -> stringRes(R.string.cashu_history_loading_older)
+            exhausted && stalledCount > 0 -> stringRes(R.string.cashu_history_some_relays_unreachable)
+            exhausted -> stringRes(R.string.cashu_history_all_loaded)
+            else -> return
+        }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+    )
 }
 
 /**

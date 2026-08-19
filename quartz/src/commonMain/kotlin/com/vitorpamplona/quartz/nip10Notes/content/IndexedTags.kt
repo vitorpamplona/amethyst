@@ -29,36 +29,36 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArray
 val tagSearch = Regex("(?:\\s|\\A)\\#\\[([0-9]+)\\]")
 
 /**
- * Walks every `#[n]` reference in [content].
+ * Walks every `#[n]` reference in [content], handing each callback the digits between the brackets.
  *
- * [tagSearch] requires `(?:\s|\A)` immediately before the `#`, so every match
- * starts at position 0 or at a whitespace. That lets the scan jump between `#`
- * occurrences with `indexOf` — an intrinsified char search — and apply the regex
- * **anchored** at each, instead of letting `findAll` drive the regex engine from
- * every position in the string.
+ * Jumps between `#` occurrences with `indexOf` — an intrinsified char search — then matches
+ * `#[<digits>]` directly rather than anchoring a regex there.
  *
- * Measured on the production content distribution (median 529 B, tail to 767 KB):
- * ~63 MB/s -> multiple GB/s when the content has no `#`, and ~18x on reference-dense
- * text. Equivalence with the previous `findAll` implementation (both callers) is
- * guarded by `RegexContentBenchmark` in `commons`.
+ * **Why not a regex.** On Android `java.util.regex` is ICU-backed, and `Matcher.region()` ->
+ * `reset()` -> `MatcherNative.setInput()` copies the *entire input* into native memory per call,
+ * so anchoring a fresh Matcher at each candidate cost a full native UTF-16 copy of the content per
+ * `#`. See [findHashtags] for the measurements; this scanner shares the defect but never fires on
+ * real data, since `#[0]` is the legacy citation form that no current client emits.
+ *
+ * [tagSearch] is kept as the specification the scan is tested against, not used here.
  */
 private inline fun forEachIndexTag(
     content: String,
-    action: (MatchResult) -> Unit,
+    action: (digits: String) -> Unit,
 ) {
     var h = content.indexOf('#')
     while (h >= 0) {
-        if (h == 0 || content[h - 1].isWhitespace()) {
-            val match =
-                try {
-                    tagSearch.matchAt(content, if (h == 0) 0 else h - 1)
-                } catch (e: Exception) {
-                    null
+        // `(?:\s|\A)` — the `#` must open the string or follow one ASCII space character.
+        if (h == 0 || isAsciiRegexSpace(content[h - 1])) {
+            if (h + 1 < content.length && content[h + 1] == '[') {
+                var d = h + 2
+                while (d < content.length && content[d] in '0'..'9') d++
+                // `([0-9]+)` needs a digit, and the `]` must actually be there.
+                if (d > h + 2 && d < content.length && content[d] == ']') {
+                    action(content.substring(h + 2, d))
+                    h = content.indexOf('#', d + 1)
+                    continue
                 }
-            if (match != null) {
-                action(match)
-                h = content.indexOf('#', match.range.last + 1)
-                continue
             }
         }
         h = content.indexOf('#', h + 1)
@@ -73,10 +73,11 @@ fun findIndexTagsWithPeople(
     tags: TagArray,
     output: MutableSet<String> = mutableSetOf<String>(),
 ): List<String> {
-    forEachIndexTag(content) { index ->
+    forEachIndexTag(content) { digits ->
         try {
-            val tag = index.groups[1]?.value?.let { tags[it.toInt()] }
-            if (tag != null && tag.size > 1 && tag[0] == "p") {
+            // Out-of-range indexes and non-numeric digits land in the catch below.
+            val tag = tags[digits.toInt()]
+            if (tag.size > 1 && tag[0] == "p") {
                 output.add(tag[1])
             }
         } catch (e: Exception) {
@@ -94,13 +95,14 @@ fun findIndexTagsWithEventsOrAddresses(
     tags: TagArray,
     output: MutableSet<String> = mutableSetOf<String>(),
 ): Set<String> {
-    forEachIndexTag(content) { index ->
+    forEachIndexTag(content) { digits ->
         try {
-            val tag = index.groups[1]?.value?.let { tags[it.toInt()] }
-            if (tag != null && tag.size > 1 && tag[0] == "e") {
+            // Out-of-range indexes and non-numeric digits land in the catch below.
+            val tag = tags[digits.toInt()]
+            if (tag.size > 1 && tag[0] == "e") {
                 output.add(tag[1])
             }
-            if (tag != null && tag.size > 1 && tag[0] == "a") {
+            if (tag.size > 1 && tag[0] == "a") {
                 output.add(tag[1])
             }
         } catch (e: Exception) {
