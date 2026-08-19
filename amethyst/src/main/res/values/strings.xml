@@ -1198,6 +1198,11 @@
     <string name="relay_auth_remove_exception">Remove exception</string>
     <string name="relay_auth_exception_removed_undo">Exception removed. %1$s follows your rules again.</string>
     <string name="relay_auth_undo">Undo</string>
+    <string name="relay_auth_session_section">Just for now</string>
+    <string name="relay_auth_session_row_desc">Logged in until you restart Amethyst</string>
+    <string name="relay_auth_forget_session">Forget this login</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s will ask again the next time it needs you.</string>
+    <string name="relay_auth_session_undo_blocked">Not restored. “Never log in” is on, so Amethyst won\'t log in to %1$s.</string>
     <string name="relay_auth_blocked_section">Blocked by your block list</string>
     <string name="relay_auth_blocked_row_desc">Amethyst never logs in to blocked relays.</string>
     <string name="relay_auth_no_blocked">Nothing blocked. Relays you block will never be logged in to, whatever you set here.</string>

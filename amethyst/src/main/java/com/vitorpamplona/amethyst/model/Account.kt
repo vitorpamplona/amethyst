@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
@@ -151,6 +152,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthSessionGrants
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthVenues
 import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDeliveryTracker
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
@@ -427,6 +429,11 @@ class Account(
     // BuzzAttestationPreferences.
     val buzzAttestation = BuzzHeldAttestations(pubKey)
 
+    // The relays this account approved by answering the NIP-42 prompt *without* the "remember"
+    // switch. Deliberately in-memory only: it dies with this Account (i.e. with the process, or at
+    // logout), which is what makes it a session grant rather than a stored ALLOW.
+    val relayAuthSessionGrants = RelayAuthSessionGrants()
+
     // Per-account NIP-42 policy evaluator (blocked → per-relay override → global policy → prompt),
     // reading THIS account's own toggles, relay lists and follow graph. Cached here so every AUTH
     // path (foreground screen + background notification consumer) shares one instance, and so an
@@ -435,6 +442,7 @@ class Account(
         RelayAuthPermissionLedger(
             store = relayAuthPermissions,
             globalPolicy = { settings.defaultRelayAuthPolicy.value },
+            sessionGrants = relayAuthSessionGrants,
             customToggles = {
                 RelayAuthCustomToggles(
                     myRelaysAndVenues = settings.relayAuthTrustMyRelaysAndVenues.value,
@@ -454,6 +462,27 @@ class Account(
             },
             isVenueHostRelay = { relayUrl -> relayUrl.normalizeRelayUrlOrNull()?.let { it in venueHostRelays() } ?: false },
         )
+
+    /**
+     * Sets the global NIP-42 policy, dropping every session grant when it becomes
+     * [RelayAuthPolicy.NEVER].
+     *
+     * The two halves belong together, which is why they live here instead of in the settings screen
+     * that used to pair them: a session grant outranks the policy (see
+     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthResolver]), so "never log in" only
+     * means what it says if the casual one-tap answers go with it. As a composable's `onClick` that
+     * was a property of one screen rather than of the account, and any other caller of
+     * [AccountSettings.changeDefaultRelayAuthPolicy] silently reintroduced grants that outlive the
+     * switch-it-all-off answer.
+     *
+     * Stored Always/Never exceptions are deliberately left alone: those outrank the policy by
+     * design, and the settings screen lists them, so they are a standing answer rather than a
+     * casual one.
+     */
+    fun changeDefaultRelayAuthPolicy(policy: RelayAuthPolicy) {
+        settings.changeDefaultRelayAuthPolicy(policy)
+        if (policy == RelayAuthPolicy.NEVER) relayAuthSessionGrants.clear()
+    }
 
     /**
      * Relays that exist here because *this account* joined a room on them: the host of every NIP-29
@@ -3594,6 +3623,20 @@ class Account(
 
     init {
         Log.d("AccountRegisterObservers", "Init")
+
+        // Blocking a relay has to forget any "just for now" login to it, or unblocking later would
+        // silently resume authenticating off an answer given before the block. Blocking is the
+        // strongest signal available here — the weaker "never allow" already drops the grant via
+        // RelayAuthPermissionLedger.setDecision, so it would be odd for the stronger one not to.
+        //
+        // Observed rather than hooked onto the local block action because the kind-10006 list is
+        // shared: a block published by another client arrives as a flow update with no call of ours
+        // behind it.
+        scope.launch {
+            blockedRelayList.flow.collect { blocked ->
+                relayAuthLedger.revokeSessionGrantsFor(blocked.map { it.url })
+            }
+        }
 
         // Start the Cashu wallet state observers AFTER all field initializers
         // complete — auto-redeem can fire as soon as start() returns, and it

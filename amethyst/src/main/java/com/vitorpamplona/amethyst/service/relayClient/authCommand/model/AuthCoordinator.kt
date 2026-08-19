@@ -143,7 +143,14 @@ class AuthCoordinator(
                                         )
                                     }
                                 when (choice) {
-                                    UserAuthChoice.ALLOW_ONCE -> true
+                                    UserAuthChoice.ALLOW_ONCE -> {
+                                        // Not literally once: relays re-challenge on every reconnect,
+                                        // so answering only the in-flight challenge meant the same
+                                        // dialog came back minutes later. The grant is kept in memory
+                                        // for the rest of this run and dies with the process.
+                                        account.relayAuthLedger.grantForSession(relayUrl.url)
+                                        true
+                                    }
                                     UserAuthChoice.ALWAYS_ALLOW -> {
                                         account.relayAuthLedger.setDecision(relayUrl.url, RelayAuthDecision.ALLOW)
                                         true
