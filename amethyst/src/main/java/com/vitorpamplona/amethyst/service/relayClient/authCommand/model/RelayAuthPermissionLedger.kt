@@ -149,8 +149,24 @@ class RelayAuthPermissionLedger(
     /**
      * Remembers a "log in" answer for [relayUrl] until the app is restarted, so the relay's next
      * reconnect doesn't ask again. Nothing is written to disk — see [RelayAuthSessionGrants].
+     *
+     * Refused, returning false, while [globalPolicy] is [RelayAuthPolicy.NEVER]: that is the
+     * switch-it-all-off answer, and a session grant outranks the policy (see [RelayAuthResolver]),
+     * so recording one here would quietly re-enable the very thing the user just turned off. The
+     * settings screen clears existing grants when the policy is set to NEVER; this stops a *new*
+     * one being written afterwards — which the undo on "forget this login" otherwise did, because
+     * its snackbar carries an action label and so sits on screen indefinitely, long enough for the
+     * policy to change underneath it.
+     *
+     * Only the policy needs this guard. A stored override arriving in the same window is
+     * self-protecting: it is ranked *above* the grant, so an ALLOW or DENY written meanwhile
+     * decides the relay either way. So is the block list, which outranks everything.
      */
-    fun grantForSession(relayUrl: String) = sessionGrants.grant(relayUrl)
+    fun grantForSession(relayUrl: String): Boolean {
+        if (globalPolicy() == RelayAuthPolicy.NEVER) return false
+        sessionGrants.grant(relayUrl)
+        return true
+    }
 
     /** Forgets this session's grant for [relayUrl], so the next challenge is decided from scratch. */
     fun revokeSessionGrant(relayUrl: String) = sessionGrants.revoke(relayUrl)
