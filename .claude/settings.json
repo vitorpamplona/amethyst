@@ -10,6 +10,16 @@
             "timeout": 180
           }
         ]
+      },
+      {
+        "matcher": "Bash|Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/no-handrolled-relay-client.sh",
+            "timeout": 15
+          }
+        ]
       }
     ],
     "SessionStart": [

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.Output
@@ -29,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import java.io.File
 
 /**
  * Shared helpers for the nak-style raw-event verbs (`event`, `publish`,
@@ -51,6 +53,121 @@ object RawEventSupport {
             arg.trim()
         }
     }
+
+    /**
+     * Where a batch of events comes from: `--file PATH`, the first positional
+     * argument, or stdin. Exactly one wins, in that order.
+     */
+    fun eventSource(args: Args): EventSource {
+        val file = args.flag("file")
+        if (file != null) return EventSource.File(file)
+        val arg = args.positionalOrNull(0)
+        return if (arg == null || arg == "-") EventSource.Stdin else EventSource.Literal(arg.trim())
+    }
+
+    sealed interface EventSource {
+        data class File(
+            val path: String,
+        ) : EventSource
+
+        data class Literal(
+            val json: String,
+        ) : EventSource
+
+        data object Stdin : EventSource
+    }
+
+    /**
+     * Yield one raw JSON blob per event from [source], accepting all three
+     * shapes a caller might reasonably hand us:
+     *
+     *   * a single event object (what `amy publish '<json>'` has always taken),
+     *   * JSONL — one compact event per line (what `amy fetch` prints, so
+     *     `amy fetch … | amy publish --relay …` just works),
+     *   * a JSON array of event objects.
+     *
+     * A `--file` of JSONL is streamed line by line rather than slurped, so a
+     * multi-gigabyte dump publishes without being held in memory. Arrays and
+     * literals are parsed whole — they have to be.
+     *
+     * Blank lines are skipped. A line that is not valid JSON is left for the
+     * caller to report per-event; nothing is silently dropped.
+     */
+    fun readEvents(source: EventSource): Sequence<String> =
+        when (source) {
+            is EventSource.Literal -> splitBlob(source.json)
+            EventSource.Stdin -> splitBlob(System.`in`.readBytes().decodeToString())
+            is EventSource.File -> {
+                val f = File(source.path)
+                if (!f.isFile) throw IllegalArgumentException("no such file: ${source.path}")
+                if (firstMeaningfulChar(f) == '[') {
+                    splitBlob(f.readText())
+                } else {
+                    // Streamed: the whole point of --file for a big dump.
+                    sequence {
+                        f.bufferedReader().use { reader ->
+                            while (true) {
+                                val line = reader.readLine() ?: break
+                                val t = line.trim()
+                                if (t.isNotEmpty()) yield(t)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    /** First non-whitespace byte of [file], or null when it is empty. */
+    private fun firstMeaningfulChar(file: File): Char? {
+        file.bufferedReader().use { reader ->
+            while (true) {
+                val c = reader.read()
+                if (c < 0) return null
+                if (!c.toChar().isWhitespace()) return c.toChar()
+            }
+        }
+    }
+
+    /**
+     * Split an in-memory blob into per-event JSON. A leading `[` means a JSON
+     * array; otherwise the blob is JSONL, except that a blob which parses whole
+     * as one object is treated as the single pretty-printed event it looks like.
+     */
+    private fun splitBlob(blob: String): Sequence<String> {
+        val trimmed = blob.trim()
+        if (trimmed.isEmpty()) return emptySequence()
+        if (trimmed.startsWith("[")) {
+            val node = Output.mapper.readTree(trimmed)
+            return node.map { it.toString() }.asSequence()
+        }
+        val lines =
+            trimmed
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .toList()
+        if (lines.size > 1 && parsesWhole(trimmed)) {
+            // Pretty-printed single object: many lines, but one JSON value.
+            return sequenceOf(trimmed)
+        }
+        return lines.asSequence()
+    }
+
+    /**
+     * True when [text] is ONE complete JSON value and nothing else.
+     *
+     * The trailing-token check is the whole point: a plain `readTree` on
+     * JSONL happily returns the first object and silently ignores every
+     * later line, which would publish 1 event out of 33,000.
+     */
+    private fun parsesWhole(text: String): Boolean =
+        runCatching {
+            Output.mapper
+                .reader()
+                .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                .readTree(text)
+                ?.isObject == true
+        }.getOrDefault(false)
 
     /** Parse a `--relay a,b,c` flag into normalized relay URLs; an un-normalizable entry is a `bad_args` failure. */
     fun relayFlag(args: Args): Set<NormalizedRelayUrl> =

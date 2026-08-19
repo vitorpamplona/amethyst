@@ -271,7 +271,7 @@ amy --account bob event --kind 1 --content "signed remotely"   # authored by ali
 |---|---|
 | `amy event --kind N [--content TEXT] [--tags JSON] [--created-at TS]` | Build + sign an arbitrary event with the active account. Prints the signed event. `--tags` is a JSON array-of-arrays, e.g. `'[["t","nostr"],["e","<id>"]]'`. |
 | `amy event … --publish` / `--relay URL[,URL…]` | As above, then broadcast (to the outbox, or to the given relays). |
-| `amy publish [EVENT-JSON] [--relay URL[,URL…]]` | Broadcast a pre-made signed event (verified first). Reads stdin when the argument is omitted or `-`. |
+| `amy publish [EVENT-JSON] [--file PATH] [--relay URL[,URL…]] [--concurrency N] [--stop-on-error]` | Broadcast one or more pre-made signed events (each verified first). Input is the argument, `--file`, or stdin (also when the argument is `-`), as a single event, JSONL, or a JSON array — so `amy fetch --kind 1 --all \| amy publish --relay wss://…` mirrors a whole result set. A multi-event run emits the batch shape (`total` / `published` / `failed` / `per_relay`) instead of the single-event one. |
 
 ### Queries
 

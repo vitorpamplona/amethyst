@@ -24,26 +24,35 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
 
 /**
- * `amy publish [EVENT-JSON] [--relay URL[,URL…]]` — broadcast a pre-made,
- * already-signed event (nak's `publish`). The event JSON comes from the
- * positional argument or from stdin when omitted or `-`.
+ * `amy publish [EVENT-JSON] [--relay URL[,URL…]]` — broadcast pre-made,
+ * already-signed events (nak's `publish`).
  *
- * The event is verified before broadcast — a bad id/signature is rejected
- * rather than published. Targets default to the account's outbox when
- * `--relay` is not given.
+ * The events come from the positional argument, from `--file PATH`, or from
+ * stdin when the argument is omitted or `-`. One event or many: a single JSON
+ * object, JSONL (one per line — the shape `amy fetch` prints), or a JSON array
+ * all work, so `amy fetch --kind 1 --all | amy publish --relay wss://…`
+ * mirrors a whole result set onto another relay.
+ *
+ * Every event is verified before broadcast — a bad id/signature is reported
+ * and skipped rather than published. Targets default to the account's outbox
+ * when `--relay` is not given.
  */
 object PublishCommand {
     val USAGE: String =
         """
-        |amy publish — broadcast a pre-made signed event
+        |amy publish — broadcast pre-made signed events
         |
-        |  publish [EVENT-JSON] [--relay URL[,URL…]]   broadcast a pre-made signed event (verified
-        |                                                first; reads stdin when the arg is omitted/`-`;
-        |                                                targets default to the account's outbox)
+        |  publish [EVENT-JSON] [--relay URL[,URL…]]   broadcast one or more pre-made signed
+        |          [--file PATH] [--concurrency N]      events (each verified first). Input is the
+        |          [--timeout SECS] [--stop-on-error]   argument, --file, or stdin (also when the
+        |                                                arg is `-`), as a single event, JSONL, or
+        |                                                a JSON array. Targets default to the
+        |                                                account's outbox. --concurrency sets how
+        |                                                many events are in flight (default 4);
+        |                                                --stop-on-error halts at the first
+        |                                                failure instead of finishing the batch.
         """.trimMargin()
 
     suspend fun run(
@@ -55,19 +64,12 @@ object PublishCommand {
             return 0
         }
         val args = Args(rest)
-        args.rejectUnknown("relay")
-        val json = RawEventSupport.readArgOrStdin(args)
-        if (json.isEmpty()) return Output.error("bad_args", "no event JSON on the argument or stdin")
-
-        val event =
-            try {
-                Event.fromJson(json)
-            } catch (e: Exception) {
-                return Output.error("bad_args", "could not parse event JSON: ${e.message}")
-            }
-        if (!event.verify()) {
-            return Output.error("invalid_event", "event id/signature does not verify — refusing to publish")
-        }
+        val concurrency = args.intFlag("concurrency", 4)
+        if (concurrency < 1) return Output.error("bad_args", "--concurrency expects a positive number")
+        val timeoutSecs = args.timeoutMs(15) / 1000
+        val stopOnError = args.bool("stop-on-error")
+        val source = RawEventSupport.eventSource(args)
+        args.rejectUnknown("relay", "file")
 
         Context.openOrAnonymous(dataDir).use { ctx ->
             ctx.prepare()
@@ -75,15 +77,25 @@ object PublishCommand {
             if (targets.isEmpty()) {
                 return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             }
-            val ack = ctx.publish(event, targets)
-            RawEventSupport.publishGuard(ack, event.id)?.let { return it }
-            Output.emit(
-                mapOf(
-                    "event_id" to event.id,
-                    "kind" to event.kind,
-                ) + RawEventSupport.ackFields(ack),
-            )
-            return 0
+
+            val outcome =
+                PublishBatch(targets, timeoutSecs, stopOnError, concurrency)
+                    .run(ctx, RawEventSupport.readEvents(source))
+
+            if (outcome.total == 0) {
+                return Output.error("bad_args", "no event JSON on the argument, --file, or stdin")
+            }
+            // One event in, one event out: keep the historical single-event
+            // result shape and exit contract exactly as they were.
+            outcome.single?.let { (event, ack) ->
+                RawEventSupport.publishGuard(ack, event.id)?.let { return it }
+                Output.emit(
+                    mapOf("event_id" to event.id, "kind" to event.kind) + RawEventSupport.ackFields(ack),
+                )
+                return 0
+            }
+            Output.emit(outcome.asResult())
+            return outcome.exitCode()
         }
     }
 }

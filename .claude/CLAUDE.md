@@ -171,6 +171,25 @@ catalogs them) before writing a new subscription/collect loop. Reuse `fetchAll`,
 `fetchFirst`, `fetchAllPages`, `publishAndConfirm`, `count`, `negentropyReconcile`,
 etc. instead of re-implementing them.
 
+**This rule is language- and context-independent.** It is not scoped to feature
+code: a throwaway analysis script, a one-off crawl, an ops task, a benchmark
+harness — in Python, Node, shell, anything — is still covered. If you are about
+to open a websocket to a relay or emit a `["REQ"…]` / `["EVENT"…]` frame
+yourself, stop: drive it through **`amy`** (`cli/`), which already handles
+NIP-42 AUTH, per-relay `limit` caps, `until`-pagination, signature
+verification, and the outbox model, and prints one JSON object per run under
+`--json` so the analysis half still pipes into jq/python.
+
+    amy fetch --kind K --relay wss://… --all      one-shot query, paginated
+    amy subscribe / amy count / amy sync          stream · NIP-45 · NIP-77
+    amy publish [EVENT|--file PATH] --relay …     broadcast one event or many
+    amy store stat                                what the local store holds
+
+**Before writing any relay-touching script, run `amy --help` first** — the
+verb you need usually exists, and `/amy-expert` covers extending it when it
+doesn't. A `PreToolUse` hook blocks hand-rolled relay clients; the message it
+prints names the escape hatch for genuine raw-socket work.
+
 **Share vs keep platform-native:**
 
 - **Share** → `quartz/commonMain/` (business logic, data models, protocol) and

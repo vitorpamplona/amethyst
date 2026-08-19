@@ -591,8 +591,10 @@ private fun printUsage() {
         |        [--tags JSON] [--created-at TS]        account. Prints the signed event; add --publish
         |        [--publish] [--relay URL[,URL…]]       (or --relay) to broadcast. --tags takes a JSON
         |                                                array-of-arrays, e.g. '[["t","nostr"]]'.
-        |  publish [EVENT-JSON] [--relay URL[,URL…]]   broadcast a pre-made signed event (verified
-        |                                                first; reads stdin when the arg is omitted/`-`)
+        |  publish [EVENT-JSON] [--relay URL[,URL…]]   broadcast one or more pre-made signed events
+        |          [--file PATH] [--concurrency N]       (each verified first). Input is the arg,
+        |          [--timeout SECS] [--stop-on-error]    --file, or stdin (also when the arg is `-`),
+        |                                                as one event, JSONL, or a JSON array.
         |
         |Queries (filter flags shared by fetch/subscribe):
         |  fetch  [--kind K[,K]] [--author U[,U]]      one-shot query: collect until EOSE, print, exit.
