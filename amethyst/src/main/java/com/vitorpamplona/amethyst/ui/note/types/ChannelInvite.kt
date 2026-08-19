@@ -98,7 +98,12 @@ fun RenderChannelInvite(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val workspaces = accountViewModel.account.buzzWorkspaces.flow.value
+    // Collected, not read as .value: the workspace set arrives asynchronously (a 13534 roster landing
+    // after this row is first drawn), and a plain .value read is a one-shot snapshot that never
+    // recomposes — so an invite drawn before its workspace was known would stay blank. This is what
+    // Compose's StateFlowValueCalledInComposition lint flags.
+    val workspaces by accountViewModel.account.buzzWorkspaces.flow
+        .collectAsStateWithLifecycle()
     val notice = remember(note, workspaces) { note.toMembershipNotice(workspaces) } ?: return
     // A withdrawn membership is not an invite. The projection already excludes these before a card is
     // built; re-checked here because this renderer is reachable from any NoteCompose over a 44100.

@@ -644,7 +644,11 @@ private fun ChannelInviteRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val workspaces = accountViewModel.account.buzzWorkspaces.flow.value
+    // Collected rather than read as .value, for the same reason as RenderChannelInvite: the workspace
+    // set lands asynchronously, and a snapshot read never recomposes, so a row drawn before its
+    // workspace was known would never appear.
+    val workspaces by accountViewModel.account.buzzWorkspaces.flow
+        .collectAsStateWithLifecycle()
     val notice = remember(inviteNote, workspaces) { inviteNote.toMembershipNotice(workspaces) } ?: return
     val baseChannel =
         remember(notice) { LocalCache.getOrCreateRelayGroupChannel(GroupId(notice.channelId, notice.relay)) }
