@@ -34,12 +34,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
@@ -73,6 +76,13 @@ private const val MIME_TYPE_KEY = "m"
 private const val DIM_KEY = "dim"
 
 /**
+ * How many levels of secret (variation-selector-encoded) emoji to unwrap while
+ * warming. 2 covers the realistic case — a note's secret, plus a secret nested in
+ * the revealed body — without letting a hand-crafted chain fan out unbounded.
+ */
+private const val SECRET_EMOJI_DEPTH = 2
+
+/**
  * Warms the feed notes just outside the viewport — on **both** sides, so scrolling
  * either direction is covered — off the main thread, so they are ready by the time
  * the user reaches them. For each note [warm] does three things:
@@ -89,6 +99,10 @@ private const val DIM_KEY = "dim"
  *     the composable reserves the right space on first layout (no jump).
  *  3. **Warms OpenGraph/link previews** for non-media URLs via [UrlCachedPreviewer]
  *     (gated on `showUrlPreview()`), so link cards render instantly.
+ *  4. **Unwraps secret emoji** and does 1-3 for the body each one hides, so the
+ *     message revealed on tap is already cached (see [WarmTargets.harvest]). The
+ *     posts *quoted* inside a secret are handled by [PrefetchSecretEmojiMedia],
+ *     which needs a composition to hold the relay subscription.
  *
  * A `warmed` set keeps back-and-forth scrolling cheap: a note already processed is
  * skipped entirely. `collectLatest` also cancels a stale pass as soon as the
@@ -219,26 +233,15 @@ private fun List<Note>.notesAfter(
 }
 
 /** Prefetches this note's media into Coil and warms its link previews, honoring the data-saver gates. */
-private fun Note.warm(
+internal fun Note.warm(
     context: Context,
     accountViewModel: AccountViewModel,
 ) {
-    val targets = collectWarmTargets() ?: return
-
-    if (accountViewModel.settings.showImages()) {
-        targets.forEachImage(context::prefetchImage)
-    }
-    if (accountViewModel.settings.showUrlPreview()) {
-        targets.links.forEach { url ->
-            if (UrlCachedPreviewer.cache.get(url) == null) {
-                accountViewModel.urlPreview(url) {}
-            }
-        }
-    }
+    collectWarmTargets()?.warm(context, accountViewModel)
 }
 
 /** The set of URLs worth warming ahead of a note scrolling into view. */
-private class WarmTargets {
+internal class WarmTargets {
     // image URL -> a video URL whose layout box should also be seeded from this
     // image's (poster's) decoded aspect ratio, or null for a plain image.
     private val images = LinkedHashMap<String, String?>()
@@ -265,8 +268,32 @@ private class WarmTargets {
         images.forEach { (url, videoUrl) -> action(url, videoUrl) }
     }
 
-    /** Harvest media and links from a fully parsed rich-text body. */
-    fun harvest(state: RichTextViewerState) {
+    /** Sends everything harvested so far to Coil / the link previewer, honoring the data-saver gates. */
+    fun warm(
+        context: Context,
+        accountViewModel: AccountViewModel,
+    ) {
+        if (accountViewModel.settings.showImages()) {
+            forEachImage(context::prefetchImage)
+        }
+        if (accountViewModel.settings.showUrlPreview()) {
+            links.forEach { url ->
+                if (UrlCachedPreviewer.cache.get(url) == null) {
+                    accountViewModel.urlPreview(url) {}
+                }
+            }
+        }
+    }
+
+    /**
+     * Harvest media and links from a fully parsed rich-text body, including the
+     * bodies hidden inside its secret (variation-selector-encoded) emoji — see
+     * [harvestSecrets].
+     */
+    fun harvest(
+        state: RichTextViewerState,
+        secretDepth: Int = SECRET_EMOJI_DEPTH,
+    ) {
         state.mediaList.forEach { media ->
             when (media) {
                 is MediaUrlImage -> image(media.url)
@@ -279,6 +306,40 @@ private class WarmTargets {
         state.urlSet.withScheme.forEach { url ->
             if (!RichTextParser.isImageOrVideoUrl(url)) link(url)
         }
+        harvestSecrets(state, secretDepth)
+    }
+
+    /**
+     * Walks the parsed body for [SecretEmoji] words — an emoji carrying a message
+     * hidden in trailing variation selectors — and harvests the media of the
+     * message each one reveals on tap. Nothing about the hidden body is shown until
+     * the tap, so without this the reveal starts every image download from scratch.
+     *
+     * The hidden body is parsed through [CachedRichTextParser] with the very key
+     * `DisplaySecretEmoji` uses — the host note's tags, no callbackUri, no author —
+     * so the reveal is a parse cache hit as well as an image cache hit. A hidden
+     * body may itself contain a secret emoji, hence [secretDepth].
+     */
+    private fun harvestSecrets(
+        state: RichTextViewerState,
+        secretDepth: Int,
+    ) {
+        if (secretDepth <= 0) return
+        state.paragraphs.forEach { paragraph ->
+            paragraph.words.forEach { word ->
+                if (word is SecretEmoji) harvestSecret(word.segmentText, state.tags, secretDepth)
+            }
+        }
+    }
+
+    private fun harvestSecret(
+        codedEmoji: String,
+        tags: ImmutableListOfLists<String>,
+        secretDepth: Int,
+    ) {
+        val decoded = EmojiCoder.decode(codedEmoji)
+        if (decoded.isBlank()) return
+        harvest(CachedRichTextParser.parseText(decoded, tags), secretDepth - 1)
     }
 
     /**
@@ -286,12 +347,40 @@ private class WarmTargets {
      * the body and classify them by extension. A bare content video has no poster
      * we can cheaply warm, so it is skipped.
      */
-    fun harvestContentUrls(content: String) {
+    fun harvestContentUrls(
+        content: String,
+        secretDepth: Int = SECRET_EMOJI_DEPTH,
+    ) {
         UrlParser().parseValidUrls(content).withScheme.forEach { url ->
             when {
                 RichTextParser.isImageUrl(url) -> image(url)
                 RichTextParser.isVideoUrl(url) -> Unit
                 else -> link(url)
+            }
+        }
+        harvestSecretContentUrls(content, secretDepth)
+    }
+
+    /**
+     * The [harvestContentUrls] counterpart of [harvestSecrets]: decodes each secret
+     * emoji in a body we can't render-warm and scans the revealed text for URLs.
+     * Deliberately does *not* go through [CachedRichTextParser] — we can't reproduce
+     * these kinds' render keys, so parsing here would only add a dead entry that
+     * evicts a live one.
+     */
+    private fun harvestSecretContentUrls(
+        content: String,
+        secretDepth: Int,
+    ) {
+        if (secretDepth <= 0) return
+        // Cheap gate: no variation selector in the body means no secret emoji, and
+        // splitting it into words would be wasted work.
+        if (!content.hasVariationSelector()) return
+
+        content.splitToSequence(' ', '\n', '\t').forEach { word ->
+            if (EmojiCoder.isCoded(word)) {
+                val decoded = EmojiCoder.decode(word)
+                if (decoded.isNotBlank()) harvestContentUrls(decoded, secretDepth - 1)
             }
         }
     }
@@ -312,6 +401,17 @@ private class WarmTargets {
         }
     }
 }
+
+/**
+ * True when [this] contains any character a secret emoji's payload is made of: a
+ * VS1..VS16 selector (BMP) or the single high surrogate (`\uDB40`) every selector
+ * in the VS17..VS256 supplement block starts with. A pure `Char` scan, so it stays
+ * allocation-free on the overwhelmingly common no-secret body.
+ */
+private fun String.hasVariationSelector(): Boolean =
+    any { c ->
+        c in '\uFE00'..'\uFE0F' || c == '\uDB40'
+    }
 
 /**
  * Collects everything worth warming for this note. Reads NIP-92 imeta tags (every

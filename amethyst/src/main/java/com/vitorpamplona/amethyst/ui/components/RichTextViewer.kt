@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUse
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
+import com.vitorpamplona.amethyst.ui.feeds.PrefetchSecretEmojiMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -733,6 +734,10 @@ fun DisplaySecretEmoji(
         }
 
         val localSecretContent = secretContent
+
+        // Warms the hidden body's images, video posters and quoted events while the
+        // emoji is still collapsed, so the tap reveals a complete message.
+        PrefetchSecretEmojiMedia(localSecretContent, accountViewModel)
 
         AnimatedBorderTextCornerRadius(
             segment.segmentText,

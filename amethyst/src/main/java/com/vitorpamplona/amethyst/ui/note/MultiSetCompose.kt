@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.components.ExpandableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.feeds.PrefetchSecretEmojiMedia
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
@@ -361,6 +362,10 @@ fun DisplaySecretEmojiAsReaction(
     }
 
     val localSecretContent = secretContent
+
+    // Warms the hidden body's images, video posters and quoted events while the
+    // reaction is still collapsed, so the tap reveals a complete message.
+    PrefetchSecretEmojiMedia(localSecretContent, accountViewModel)
 
     AnimatedBorderTextCornerRadius(
         reaction,
