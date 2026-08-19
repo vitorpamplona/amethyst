@@ -62,6 +62,7 @@ class RelayAuthReadFollowsTest {
         RelayAuthPermissionLedger(
             store = NoStore(),
             globalPolicy = { RelayAuthPolicy.CUSTOM },
+            sessionGrants = RelayAuthSessionGrants(),
             customToggles = { toggles },
             isFollowed = { it == followed },
         )
