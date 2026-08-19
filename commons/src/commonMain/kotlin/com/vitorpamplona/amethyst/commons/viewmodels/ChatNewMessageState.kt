@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -38,6 +39,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,6 +74,13 @@ class ChatNewMessageState(
      * cache-only strict check.
      */
     private val dmInboxResolver: (suspend (HexKey) -> List<NormalizedRelayUrl>?)? = null,
+    /**
+     * Optional NIP-30 custom-emoji pack state. When provided, [sendNip17]
+     * resolves any `:shortcode:` in the outgoing message against the account's
+     * selected packs and attaches the matching `emoji` tags so recipients render
+     * the custom emojis. Null (default) → no custom-emoji tagging.
+     */
+    private val emojiPacks: EmojiPackState? = null,
 ) {
     private val _message = MutableStateFlow(TextFieldValue(""))
     val message: StateFlow<TextFieldValue> = _message.asStateFlow()
@@ -208,6 +217,7 @@ class ChatNewMessageState(
 
         val replyHint = _replyTo.value?.toEventHint<BaseDMGroupEvent>()
         val subjectText = _subject.value.text.ifBlank { null }
+        val emojiTags = emojiPacks?.findEmojiTags(messageText)?.takeIf { it.isNotEmpty() }
 
         val template =
             if (replyHint == null) {
@@ -216,6 +226,7 @@ class ChatNewMessageState(
                     hashtags(findHashtags(messageText))
                     references(findURLs(messageText))
                     quotes(findNostrEventUris(messageText))
+                    emojiTags?.let { emojis(it) }
                 }
             } else {
                 ChatMessageEvent.reply(messageText, replyHint) {
@@ -223,6 +234,7 @@ class ChatNewMessageState(
                     hashtags(findHashtags(messageText))
                     references(findURLs(messageText))
                     quotes(findNostrEventUris(messageText))
+                    emojiTags?.let { emojis(it) }
                 }
             }
 

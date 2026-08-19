@@ -44,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -63,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -73,6 +75,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.awt.Cursor
+import java.io.File
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -93,14 +96,17 @@ fun DesktopMessagesScreen(
     localCache: DesktopLocalCache,
     compactMode: Boolean = false,
     onNavigateToProfile: (String) -> Unit = {},
+    // Hoisted above the lock gate (see DeckColumnContainer) so a lock/unlock
+    // cycle preserves the selected conversation + draft + attachments.
+    // messageState is null only when no room is selected.
+    listState: ChatroomListState,
+    emojiPacks: EmojiPackState,
+    messageState: ChatNewMessageState?,
+    attachedFiles: SnapshotStateList<File>,
 ) {
     val scope = rememberCoroutineScope()
     val accountRelays = com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays.current
     var showDmRelayPicker by remember { mutableStateOf(false) }
-    val listState =
-        remember(account) {
-            ChatroomListState(account, cacheProvider, relayManager, localCache, scope)
-        }
     val selectedRoom by listState.selectedRoom.collectAsState()
     val listFocusRequester = remember { FocusRequester() }
     var showNewDmDialog by remember { mutableStateOf(false) }
@@ -158,6 +164,9 @@ fun DesktopMessagesScreen(
                         account = account,
                         cacheProvider = cacheProvider,
                         scope = scope,
+                        emojiPacks = emojiPacks,
+                        messageState = messageState,
+                        attachedFiles = attachedFiles,
                         onNavigateToProfile = onNavigateToProfile,
                         listFocusRequester = listFocusRequester,
                         onShowNewDm = { showNewDmDialog = true },
@@ -171,6 +180,9 @@ fun DesktopMessagesScreen(
                         account = account,
                         cacheProvider = cacheProvider,
                         scope = scope,
+                        emojiPacks = emojiPacks,
+                        messageState = messageState,
+                        attachedFiles = attachedFiles,
                         onNavigateToProfile = onNavigateToProfile,
                         listFocusRequester = listFocusRequester,
                         onShowNewDm = { showNewDmDialog = true },
@@ -242,6 +254,9 @@ private fun CompactMessagesContent(
     account: IAccount,
     cacheProvider: ICacheProvider,
     scope: CoroutineScope,
+    emojiPacks: EmojiPackState,
+    messageState: ChatNewMessageState?,
+    attachedFiles: SnapshotStateList<File>,
     onNavigateToProfile: (String) -> Unit,
     listFocusRequester: FocusRequester,
     onShowNewDm: () -> Unit,
@@ -250,22 +265,10 @@ private fun CompactMessagesContent(
 ) {
     Box(modifier = Modifier.fillMaxSize().then(keyHandler)) {
         val currentRoom = selectedRoom
-        if (currentRoom != null) {
+        if (currentRoom != null && messageState != null) {
             val feedViewModel =
                 remember(currentRoom) {
                     ChatroomFeedViewModel(currentRoom, account, cacheProvider)
-                }
-            val messageState =
-                remember(currentRoom) {
-                    ChatNewMessageState(
-                        account,
-                        cacheProvider,
-                        scope,
-                        dmInboxResolver =
-                            (account as? DesktopIAccount)?.dmInboxResolver?.let { resolver ->
-                                { hexKey -> resolver.resolve(hexKey) }
-                            },
-                    )
                 }
             val broadcastStatus =
                 if (account is DesktopIAccount) {
@@ -282,6 +285,8 @@ private fun CompactMessagesContent(
                 cacheProvider = cacheProvider,
                 feedViewModel = feedViewModel,
                 messageState = messageState,
+                emojiPacks = emojiPacks,
+                attachedFiles = attachedFiles,
                 dmBroadcastStatus = broadcastStatus,
                 onNavigateToProfile = onNavigateToProfile,
                 onBack = { listState.clearSelection() },
@@ -311,6 +316,9 @@ private fun SplitMessagesContent(
     account: IAccount,
     cacheProvider: ICacheProvider,
     scope: CoroutineScope,
+    emojiPacks: EmojiPackState,
+    messageState: ChatNewMessageState?,
+    attachedFiles: SnapshotStateList<File>,
     onNavigateToProfile: (String) -> Unit,
     listFocusRequester: FocusRequester,
     onShowNewDm: () -> Unit,
@@ -354,22 +362,10 @@ private fun SplitMessagesContent(
                     .background(MaterialTheme.colorScheme.surface),
         ) {
             val currentRoom = selectedRoom
-            if (currentRoom != null) {
+            if (currentRoom != null && messageState != null) {
                 val feedViewModel =
                     remember(currentRoom) {
                         ChatroomFeedViewModel(currentRoom, account, cacheProvider)
-                    }
-                val messageState =
-                    remember(currentRoom) {
-                        ChatNewMessageState(
-                            account,
-                            cacheProvider,
-                            scope,
-                            dmInboxResolver =
-                                (account as? DesktopIAccount)?.dmInboxResolver?.let { resolver ->
-                                    { hexKey -> resolver.resolve(hexKey) }
-                                },
-                        )
                     }
                 val broadcastStatus =
                     if (account is DesktopIAccount) {
@@ -386,6 +382,8 @@ private fun SplitMessagesContent(
                     cacheProvider = cacheProvider,
                     feedViewModel = feedViewModel,
                     messageState = messageState,
+                    emojiPacks = emojiPacks,
+                    attachedFiles = attachedFiles,
                     dmBroadcastStatus = broadcastStatus,
                     onNavigateToProfile = onNavigateToProfile,
                 )
