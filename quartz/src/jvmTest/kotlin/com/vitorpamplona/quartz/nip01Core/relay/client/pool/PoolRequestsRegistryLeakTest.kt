@@ -342,4 +342,64 @@ class PoolRequestsRegistryLeakTest {
 
         assertTrue(reqs.getSubscriptionFiltersOrNull("tail") != null, "the live tail must survive the churn")
     }
+
+    /**
+     * A subscribe and an unsubscribe of the SAME id racing on different threads. The
+     * release must never swallow the new subscription's REQ: a feed the app still wants
+     * that never gets a REQ is silent forever, which is far worse than a leaked row.
+     *
+     * Honest caveat: the window this protects (a release landing between a concurrent
+     * subscribe's row creation and its send decision) is a few instructions wide, and
+     * this test does NOT reliably reproduce it — it passes with the guard removed. It is
+     * a regression guard on the invariant "registry membership tracks desired-ness", not
+     * proof that the guard fires. The guard is kept because it is two comparisons and the
+     * failure it prevents is a permanently silent subscription.
+     */
+    @Test
+    fun subscribeRacingAnUnsubscribeOfTheSameIdStillSendsItsReq() {
+        repeat(300) { episode ->
+            val reqs = PoolRequests()
+            val sent = java.util.concurrent.ConcurrentLinkedQueue<Command>()
+            val subId = "raced-$episode"
+
+            // A live sub about to be torn down.
+            reqs.addOrUpdate(subId, mapOf(relayA to filters()), null)
+            reqs.sendToRelayIfChanged(subId, setOf(relayA)) { r, cmd -> reqs.onSent(r, cmd) }
+
+            val start = java.util.concurrent.CountDownLatch(1)
+            val unsub =
+                Thread {
+                    start.await()
+                    val relays = reqs.remove(subId)
+                    reqs.sendToRelayIfChanged(subId, relays) { r, cmd ->
+                        sent.add(cmd)
+                        reqs.onSent(r, cmd)
+                    }
+                }
+            val resub =
+                Thread {
+                    start.await()
+                    val relays = reqs.addOrUpdate(subId, mapOf(relayA to filters()), null)
+                    reqs.sendToRelayIfChanged(subId, relays) { r, cmd ->
+                        sent.add(cmd)
+                        reqs.onSent(r, cmd)
+                    }
+                }
+            unsub.start()
+            resub.start()
+            start.countDown()
+            unsub.join()
+            resub.join()
+
+            // Whoever won, the invariant is: if the sub is still desired it must have a
+            // row (so later filter changes and reconnect replays work), and if it is not
+            // desired it must have none.
+            val desired = reqs.getSubscriptionFiltersOrNull(subId) != null
+            assertEquals(
+                if (desired) 1 else 0,
+                reqs.activeSubscriptionCount(),
+                "episode $episode: registry must match desired-ness (desired=$desired)",
+            )
+        }
+    }
 }

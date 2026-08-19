@@ -194,6 +194,9 @@ class PoolCounts {
         // Query is gone and every relay has been told: drop the row (see [relayState]).
         if (!queries.containsKey(queryId)) {
             relayState.remove(queryId)
+            // A concurrent count() may have re-added this id; leave it the empty row it
+            // expects rather than a missing one.
+            if (queries.containsKey(queryId)) subState(queryId)
         }
     }
 

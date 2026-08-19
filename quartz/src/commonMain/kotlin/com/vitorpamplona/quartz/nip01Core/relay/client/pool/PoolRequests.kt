@@ -423,10 +423,17 @@ class PoolRequests(
         relaysToUpdate: Set<NormalizedRelayUrl>,
         sync: (NormalizedRelayUrl, Command) -> Unit,
     ) {
-        // Never create a row here. NostrClient.unsubscribe calls this on BOTH registries
-        // with the same id, so a COUNT id would otherwise materialize a permanent
-        // (and never-scanned-past) row in the REQ registry, and vice-versa.
-        val state = relayState.get(subId) ?: return
+        // Don't create a row for an id that isn't ours: NostrClient.unsubscribe calls this
+        // on BOTH registries with the same id, so a COUNT id would otherwise materialize a
+        // permanent (and never-scanned-past) row in the REQ registry, and vice-versa.
+        //
+        // A DESIRED sub always gets one, though: [addOrUpdate] created it, and if a
+        // concurrent unsubscribe of the same id released it in between, re-creating is
+        // exactly right -- an empty row means "nothing in flight", so the REQ below is
+        // still decided and sent. Returning early there would leave a wanted feed silent.
+        val state =
+            relayState.get(subId)
+                ?: if (desiredSubs.containsKey(subId)) subState(subId) else return
 
         relaysToUpdate.forEach { relay ->
             // Decide + pre-mark atomically under the sub's lock, then send outside it.
@@ -442,6 +449,10 @@ class PoolRequests(
         // and no listener, and correctly no-op.
         if (!desiredSubs.containsKey(subId)) {
             relayState.remove(subId)
+            // A concurrent subscribe() may have re-added this id between the check and
+            // the removal. Leave it the empty row it expects rather than a missing one:
+            // empty means "nothing in flight", so its REQ is still decided and sent.
+            if (desiredSubs.containsKey(subId)) subState(subId)
         }
     }
 

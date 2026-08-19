@@ -336,10 +336,21 @@ class NostrClient(
         val relaysToUpdateReqs = activeRequests.remove(subId)
         val relaysToUpdateCounts = activeCounts.remove(subId)
 
-        if (isActive()) {
-            activeRequests.sendToRelayIfChanged(subId, relaysToUpdateReqs, relayPool::sendIfConnected)
-            activeCounts.sendToRelayIfChanged(subId, relaysToUpdateCounts, relayPool::sendIfConnected)
-        }
+        // The flush must run even while INACTIVE, because it is also what releases the
+        // subscription's state row. The app backgrounds constantly and tears feeds down
+        // while it is down there; gating this on isActive() would leak a row per teardown
+        // for the whole background stretch, and every one of them would then be scanned
+        // on every relay connect once the app comes back.
+        //
+        // What is gated is the wire traffic: while inactive the pool is disconnected, so
+        // sending is both impossible and pointless (the relay dropped the subscription
+        // when the socket died) -- and routing through the pool would materialize a relay
+        // client for a relay we deliberately stopped talking to.
+        val send: (NormalizedRelayUrl, Command) -> Unit =
+            if (isActive()) relayPool::sendIfConnected else { _, _ -> }
+
+        activeRequests.sendToRelayIfChanged(subId, relaysToUpdateReqs, send)
+        activeCounts.sendToRelayIfChanged(subId, relaysToUpdateCounts, send)
     }
 
     override fun syncFilters(relay: IRelayClient) {
