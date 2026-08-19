@@ -53,9 +53,10 @@ class RelayAuthSessionGrantsTest {
         grants: RelayAuthSessionGrants = RelayAuthSessionGrants(),
         store: RelayAuthPermissionStore = InMemoryRelayAuthPermissionStore(),
         blocked: Set<String> = emptySet(),
+        policy: () -> RelayAuthPolicy = { RelayAuthPolicy.CUSTOM },
     ) = RelayAuthPermissionLedger(
         store = store,
-        globalPolicy = { RelayAuthPolicy.CUSTOM },
+        globalPolicy = policy,
         sessionGrants = grants,
         isBlocked = { it in blocked },
     )
@@ -234,4 +235,58 @@ class RelayAuthSessionGrantsTest {
         grants.clear()
         assertEquals(emptySet<String>(), grants.grants.value)
     }
+
+    @Test
+    fun aGrantIsRefusedWhileThePolicyIsNever() =
+        runTest {
+            val grants = RelayAuthSessionGrants()
+            val ledger = ledger(grants = grants, policy = { RelayAuthPolicy.NEVER })
+
+            assertFalse(ledger.grantForSession(relay))
+            assertFalse(grants.isGranted(relay))
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
+        }
+
+    @Test
+    fun undoingAForgetAfterSwitchingToNeverDoesNotResurrectTheGrant() =
+        runTest {
+            // The settings screen's undo snackbar carries an action label, so Material3 leaves it up
+            // indefinitely — the user can switch the whole policy off and only then tap undo.
+            val grants = RelayAuthSessionGrants()
+            var policy = RelayAuthPolicy.CUSTOM
+            val ledger = ledger(grants = grants, policy = { policy })
+
+            assertTrue(ledger.grantForSession(relay))
+            assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(relay)))
+
+            // "Forget this login", then "Never log in" — which also clears what is already granted.
+            ledger.revokeSessionGrant(relay)
+            policy = RelayAuthPolicy.NEVER
+            grants.clear()
+
+            // ...and only now, undo.
+            assertFalse(ledger.grantForSession(relay))
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
+        }
+
+    @Test
+    fun theGuardOnlyAppliesToNever() =
+        runTest {
+            assertTrue(ledger(policy = { RelayAuthPolicy.CUSTOM }).grantForSession(relay))
+            assertTrue(ledger(policy = { RelayAuthPolicy.ALWAYS }).grantForSession(relay))
+        }
+
+    @Test
+    fun aStoredDecisionTakenDuringTheUndoWindowNeedsNoGuardBecauseItOutranksTheGrant() =
+        runTest {
+            // Why the guard is narrowed to the policy: an override written while the snackbar was up
+            // is ranked above the grant, so restoring the grant cannot undo the user's newer answer.
+            val ledger = ledger()
+
+            ledger.revokeSessionGrant(relay)
+            ledger.setDecision(relay, RelayAuthDecision.DENY)
+
+            assertTrue(ledger.grantForSession(relay))
+            assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
+        }
 }

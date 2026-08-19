@@ -155,18 +155,29 @@ fun RelayAuthSettingsScreen(
 
     val removedLabel = stringResource(R.string.relay_auth_exception_removed_undo)
     val sessionForgottenLabel = stringResource(R.string.relay_auth_session_forgotten_undo)
+    val sessionUndoBlockedLabel = stringResource(R.string.relay_auth_session_undo_blocked)
     val undoLabel = stringResource(R.string.relay_auth_undo)
 
     fun forgetSessionGrant(url: String) {
         ledger.revokeSessionGrant(url)
         scope.launch {
+            val display = url.normalizeRelayUrlOrNull()?.displayUrl() ?: url
             val result =
                 snackbarHostState.showSnackbar(
-                    message = sessionForgottenLabel.format(url.normalizeRelayUrlOrNull()?.displayUrl() ?: url),
+                    message = sessionForgottenLabel.format(display),
                     actionLabel = undoLabel,
                     withDismissAction = true,
                 )
-            if (result == SnackbarResult.ActionPerformed) ledger.grantForSession(url)
+            // An action label makes Material3 show this indefinitely, so the undo can be tapped long
+            // after the fact — including after the policy above was switched to "Never log in", which
+            // clears every grant. The ledger refuses to write a new one in that state; report that
+            // instead of leaving a tapped undo looking like it silently did nothing.
+            if (result == SnackbarResult.ActionPerformed && !ledger.grantForSession(url)) {
+                snackbarHostState.showSnackbar(
+                    message = sessionUndoBlockedLabel.format(display),
+                    withDismissAction = true,
+                )
+            }
         }
     }
 
