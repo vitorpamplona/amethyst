@@ -76,10 +76,22 @@ class PoolRequests(
      *
      * This is important to link responses with which filter was a sub replying to and
      * to figure out if we need to update the relay if a REQ has changed.
+     *
+     * **Invariant: this holds LIVE subscriptions only.** A row exists between
+     * [addOrUpdate] and the [sendToRelayIfChanged] that flushes the CLOSE for a
+     * [remove]d sub, and nothing else may create one (see [onSent]). That invariant is
+     * what bounds [onConnecting] / [onDisconnected] / [onCannotConnect], which scan the
+     * whole map on every relay lifecycle event: a registry that instead accumulated
+     * every sub id ever used makes each connect O(all subs ever created), and on a
+     * server-side pool driving thousands of relays those scans saturate the dispatcher
+     * and starve every other plane sharing the client.
      */
     private val relayState = LargeCache<String, RequestSubscriptionState<NormalizedRelayUrl>>()
 
-    fun subState(subId: String): RequestSubscriptionState<NormalizedRelayUrl> = relayState.getOrCreate(subId) { RequestSubscriptionState() }
+    private fun subState(subId: String): RequestSubscriptionState<NormalizedRelayUrl> = relayState.getOrCreate(subId) { RequestSubscriptionState() }
+
+    /** Live subscription count. Exposed so a host can alarm on registry growth. */
+    fun activeSubscriptionCount(): Int = relayState.size()
 
     /*
      * Locking model: every compound access to a subscription's state machine
@@ -184,9 +196,17 @@ class PoolRequests(
             desiredSubListeners.remove(subId)
             // update relays for pool
             updateRelays()
+            // NOTE: the state row deliberately survives until [sendToRelayIfChanged]
+            // flushes the CLOSE -- that decision reads the filters this relay still
+            // believes are in flight. Dropping the row here makes the CLOSE frame
+            // disappear (the sub then leaks on the RELAY instead).
             // return all affected relays
             oldRelays
         } else {
+            // Nothing desired under this id, so any row left behind is dead: a double
+            // unsubscribe, or the same id being removed from the sibling registry
+            // (NostrClient.unsubscribe hits both this and PoolCounts).
+            relayState.remove(subId)
             emptySet()
         }
 
@@ -215,7 +235,12 @@ class PoolRequests(
     ) {
         when (cmd) {
             is ReqCmd -> {
-                subState(cmd.subId).let { state ->
+                // Non-creating on purpose: both send paths ([decideCommandLocked] and
+                // [syncState]) pre-mark the row under the lock before the frame leaves,
+                // so a row always exists for a REQ we actually sent. A null here means
+                // the sub was unsubscribed while the frame was in flight -- recreating
+                // the row would resurrect a dead subscription in the registry.
+                relayState.get(cmd.subId)?.let { state ->
                     state.withLock(relay) { state.onOpenReq(relay, cmd.filters) }
                 }
                 desiredSubListeners.get(cmd.subId)?.onSubscriptionStarted(
@@ -225,7 +250,7 @@ class PoolRequests(
             }
 
             is CloseCmd -> {
-                subState(cmd.subId).let { state ->
+                relayState.get(cmd.subId)?.let { state ->
                     state.withLock(relay) { state.onSubscriptionClosed(relay) }
                 }
                 desiredSubListeners.get(cmd.subId)?.onSubscriptionClosed(
@@ -398,13 +423,25 @@ class PoolRequests(
         relaysToUpdate: Set<NormalizedRelayUrl>,
         sync: (NormalizedRelayUrl, Command) -> Unit,
     ) {
-        val state = subState(subId)
+        // Never create a row here. NostrClient.unsubscribe calls this on BOTH registries
+        // with the same id, so a COUNT id would otherwise materialize a permanent
+        // (and never-scanned-past) row in the REQ registry, and vice-versa.
+        val state = relayState.get(subId) ?: return
+
         relaysToUpdate.forEach { relay ->
             // Decide + pre-mark atomically under the sub's lock, then send outside it.
             val cmd = state.withLock(relay) { decideCommandLocked(state, subId, relay) }
             if (cmd != null) {
                 sync(relay, cmd)
             }
+        }
+
+        // The sub is gone and every affected relay has now been told. Drop the row so
+        // the registry keeps holding live subscriptions only. Frames that were already
+        // on the wire when the CLOSE went out land in [onIncomingMessage], find no row
+        // and no listener, and correctly no-op.
+        if (!desiredSubs.containsKey(subId)) {
+            relayState.remove(subId)
         }
     }
 

@@ -458,6 +458,12 @@ class NostrClient(
 
     override fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>> = activeCounts.activeFiltersFor(url)
 
+    override fun registrySizes() =
+        RegistrySizes(
+            liveRequests = activeRequests.activeSubscriptionCount(),
+            liveCounts = activeCounts.activeQueryCount(),
+        )
+
     override fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey> = eventOutbox.activeOutboxCacheFor(url)
 
     override fun activeOutboxEvents(url: NormalizedRelayUrl): List<Event> = eventOutbox.activeOutboxEventsFor(url)
