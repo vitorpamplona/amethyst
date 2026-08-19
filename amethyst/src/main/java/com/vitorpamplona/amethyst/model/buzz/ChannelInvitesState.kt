@@ -66,6 +66,7 @@ import kotlinx.coroutines.flow.stateIn
 class ChannelInvitesState(
     private val me: HexKey,
     private val cache: LocalCache,
+    private val buzzWorkspaces: BuzzWorkspaces,
     relayGroupList: RelayGroupListState,
     dismissed: StateFlow<Set<String>>,
     scope: CoroutineScope,
@@ -108,8 +109,8 @@ class ChannelInvitesState(
     private val notices =
         combine(
             cache.observeNotes(membershipNoticeFilter(me)),
-            BuzzWorkspaces.flow,
-        ) { _, _ -> cache.membershipNotices(me) }
+            buzzWorkspaces.flow,
+        ) { _, workspaces -> cache.membershipNotices(me, workspaces) }
 
     /** Pending invites keyed by the kind-44100 that produced them — what the notifications DAL reads. */
     val pendingByEventId: StateFlow<Map<HexKey, BuzzChannelInvite>> =

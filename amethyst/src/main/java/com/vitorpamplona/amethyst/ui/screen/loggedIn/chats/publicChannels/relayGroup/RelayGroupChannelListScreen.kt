@@ -68,7 +68,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -289,7 +288,8 @@ fun RelayGroupChannelListScreen(
     // visibly reshuffled in the second after opening, and came back differently each visit. Ordering
     // by a property of the channel instead makes the first frame the final order; a channel whose
     // 39000 hasn't arrived sorts by its id until the name lands.
-    val starred by BuzzChannelStars.flow.collectAsStateWithLifecycle()
+    val starred by accountViewModel.account.buzzChannelStars.flow
+        .collectAsStateWithLifecycle()
 
     fun buzzSortKey(groupId: GroupId): String = channelsById[groupId.id]?.toBestDisplayName()?.lowercase() ?: groupId.id
 

@@ -644,7 +644,8 @@ private fun ChannelInviteRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val notice = remember(inviteNote) { inviteNote.toMembershipNotice() } ?: return
+    val workspaces = accountViewModel.account.buzzWorkspaces.flow.value
+    val notice = remember(inviteNote, workspaces) { inviteNote.toMembershipNotice(workspaces) } ?: return
     val baseChannel =
         remember(notice) { LocalCache.getOrCreateRelayGroupChannel(GroupId(notice.channelId, notice.relay)) }
 

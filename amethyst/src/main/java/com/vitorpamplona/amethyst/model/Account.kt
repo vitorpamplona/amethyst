@@ -34,7 +34,10 @@ import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -407,6 +410,23 @@ class Account(
     // answered without a disk read. Backed by a per-account file (see AccountCacheState).
     val relayAuthPermissions = RelayAuthPermissionCache(relayAuthPermissionStore, scope)
 
+    // The `block/buzz` workspaces THIS account joined. Per account, not per device: the invite was
+    // redeemed by this key and the relay grants membership to it alone — and this set makes the
+    // relay first-party for NIP-42 (see AuthCoordinator.isFirstParty), so a device-global set would
+    // hand every other logged-in account an automatic login on a workspace it never joined.
+    // Restored/persisted per account by BuzzWorkspacePreferences (see AccountCacheState).
+    val buzzWorkspaces = BuzzWorkspaces()
+
+    // The Buzz channels THIS account pinned. A star says which channels this user wants at the top
+    // of the community view, so a shared set let one account reorder and badge every other one's
+    // channel list. Restored/persisted per account by BuzzChannelStarPreferences.
+    val buzzChannelStars = BuzzChannelStars()
+
+    // The NIP-OA attestation an owner issued to THIS account's key, attached to its Buzz-relay
+    // AUTH so the relay grants virtual membership. Restored/persisted per account by
+    // BuzzAttestationPreferences.
+    val buzzAttestation = BuzzHeldAttestations(pubKey)
+
     // Per-account NIP-42 policy evaluator (blocked → per-relay override → global policy → prompt),
     // reading THIS account's own toggles, relay lists and follow graph. Cached here so every AUTH
     // path (foreground screen + background notification consumer) shares one instance, and so an
@@ -562,6 +582,7 @@ class Account(
         ChannelInvitesState(
             me = signer.pubKey,
             cache = cache,
+            buzzWorkspaces = buzzWorkspaces,
             relayGroupList = relayGroupList,
             dismissed = settings.dismissedChannelInvites,
             scope = scope,

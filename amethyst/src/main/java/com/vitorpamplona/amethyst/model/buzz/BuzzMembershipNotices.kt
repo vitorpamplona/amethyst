@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.model.buzz
 
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification
 import com.vitorpamplona.amethyst.commons.model.buzz.MembershipNotice
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -62,17 +61,19 @@ fun membershipNoticeFilter(me: HexKey) =
  * the relay that issued it — the channel UUID it names is that relay's. So prefer a relay we joined as a
  * workspace; fall back to whatever else delivered it, which keeps a notice usable when the workspace set
  * hasn't been restored from disk yet.
+ *
+ * [workspaces] is passed in rather than read from a singleton because the joined set is per account
+ * (`Account.buzzWorkspaces`): whose workspaces to prefer is a question only the caller can answer.
  */
-private fun Note.membershipRelay(): NormalizedRelayUrl? {
+private fun Note.membershipRelay(workspaces: Set<NormalizedRelayUrl>): NormalizedRelayUrl? {
     val seen = relays
     if (seen.isEmpty()) return null
-    val workspaces = BuzzWorkspaces.flow.value
     return seen.firstOrNull { it in workspaces } ?: seen.first()
 }
 
 /** Flattens a cached kind-44100/44101 into a [MembershipNotice], or null when it isn't usable. */
-fun Note.toMembershipNotice(): MembershipNotice? {
-    val relay = membershipRelay() ?: return null
+fun Note.toMembershipNotice(workspaces: Set<NormalizedRelayUrl>): MembershipNotice? {
+    val relay = membershipRelay(workspaces) ?: return null
     return when (val noteEvent = event) {
         is MemberAddedNotificationEvent ->
             noteEvent.channel()?.let {
@@ -88,7 +89,7 @@ fun Note.toMembershipNotice(): MembershipNotice? {
     }
 }
 
-fun List<Note>.toMembershipNotices(): List<MembershipNotice> = mapNotNull { it.toMembershipNotice() }
+fun List<Note>.toMembershipNotices(workspaces: Set<NormalizedRelayUrl>): List<MembershipNotice> = mapNotNull { it.toMembershipNotice(workspaces) }
 
 private fun Note.isMembershipNoticeFor(me: HexKey): Boolean =
     when (val noteEvent = event) {
@@ -112,11 +113,14 @@ private fun Note.isMembershipNoticeFor(me: HexKey): Boolean =
  * So the observer is kept purely as the change signal and this scan is the data. It is the same shape
  * `NotificationFeedFilter.feed()` uses over the same map, for the same reason.
  */
-fun LocalCache.membershipNotices(me: HexKey): List<MembershipNotice> =
+fun LocalCache.membershipNotices(
+    me: HexKey,
+    workspaces: Set<NormalizedRelayUrl>,
+): List<MembershipNotice> =
     notes
         .filterIntoSet { _, note -> note.isMembershipNoticeFor(me) }
         .toList()
-        .toMembershipNotices()
+        .toMembershipNotices(workspaces)
 
 /**
  * The Buzz type of every channel whose kind-39000 the cache already holds, keyed by group id.

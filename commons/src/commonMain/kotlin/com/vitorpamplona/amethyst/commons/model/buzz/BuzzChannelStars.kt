@@ -28,10 +28,15 @@ import kotlinx.coroutines.flow.StateFlow
  * NIP-29 `h`/UUID, globally unique on Buzz). Starred channels float to the top of the community view.
  *
  * There is no Nostr event for a personal star — it's the client's own bookkeeping — so, like
- * [BuzzWorkspaces], this is a process-wide singleton mirrored to a device-global store by the
- * platform ([com.vitorpamplona.amethyst] `BuzzChannelStarPreferences`) and restored at startup.
+ * [BuzzWorkspaces], it is mirrored to disk by the platform
+ * ([com.vitorpamplona.amethyst] `BuzzChannelStarPreferences`) and restored at startup.
+ *
+ * **One instance per account** (`Account.buzzChannelStars`). A star is by definition personal: it
+ * says which channels *this user* wants pinned to the top of the community view. While it was a
+ * process-wide singleton, one account's favorites reordered and badged every other logged-in
+ * account's channel list — and switching accounts silently rewrote the set they shared.
  */
-object BuzzChannelStars {
+class BuzzChannelStars {
     private val starred = MutableStateFlow<Set<String>>(emptySet())
 
     /** The starred channel ids; the community view collects this to pin + badge them. */
@@ -51,10 +56,5 @@ object BuzzChannelStars {
     /** Replaces the whole set — used to restore from disk at startup. */
     fun restore(ids: Set<String>) {
         starred.value = ids
-    }
-
-    /** Test-only: clears the set so unit tests don't leak state into each other. */
-    fun clearForTesting() {
-        starred.value = emptySet()
     }
 }

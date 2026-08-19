@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -113,7 +112,14 @@ class BuzzDmListViewModel : ViewModel() {
         val lastActivity: Long,
     )
 
-    private fun relays(): Set<NormalizedRelayUrl> = scopeRelay?.let { setOf(it) } ?: (BuzzWorkspaces.flow.value + BuzzRelayDialect.flow.value)
+    private fun relays(): Set<NormalizedRelayUrl> =
+        scopeRelay?.let { setOf(it) } ?: (
+            account
+                ?.buzzWorkspaces
+                ?.flow
+                ?.value
+                .orEmpty() + BuzzRelayDialect.flow.value
+        )
 
     /**
      * Binds to [account] scoped to the community [relayUrl]. Marks that relay a joined workspace and
@@ -130,7 +136,7 @@ class BuzzDmListViewModel : ViewModel() {
         val relay = RelayUrlNormalizer.normalizeOrNull(relayUrl) ?: return
         this.scopeRelay = relay
 
-        val newlyJoined = BuzzWorkspaces.join(relay)
+        val newlyJoined = account.buzzWorkspaces.join(relay)
         viewModelScope.launch { account.relayAuthLedger.setDecision(relay.url, RelayAuthDecision.ALLOW) }
         if (newlyJoined) reconnectPoolAfterJoin(account.client)
 
@@ -310,9 +316,10 @@ class BuzzDmListViewModel : ViewModel() {
                         // Re-read the relay scope per pass rather than snapshotting it: a workspace
                         // joined while this screen is open should bring its channels with it.
                         val scoped = relays()
+                        val workspaces = account.buzzWorkspaces.flow.value
                         val memberships =
                             BuzzChannelInvites
-                                .currentMemberships(LocalCache.membershipNotices(myPubkey))
+                                .currentMemberships(LocalCache.membershipNotices(myPubkey, workspaces))
                                 .filterValues { it in scoped }
                         var changed = false
                         memberships.forEach { (channelId, relay) ->
@@ -327,7 +334,7 @@ class BuzzDmListViewModel : ViewModel() {
                         // would let one pass wipe rows nothing withdrew.
                         val withdrawn =
                             LocalCache
-                                .membershipNotices(myPubkey)
+                                .membershipNotices(myPubkey, workspaces)
                                 .let { BuzzChannelInvites.latestPerChannel(it) }
                                 .filterValues { it.removed }
                                 .keys
@@ -344,7 +351,7 @@ class BuzzDmListViewModel : ViewModel() {
                 }
                 // Re-project when my hidden set (30622) or the joined-relay set changes.
                 launch {
-                    combine(BuzzDmRegistry.hidden, BuzzWorkspaces.flow, BuzzRelayDialect.flow) { _, _, _ -> }
+                    combine(BuzzDmRegistry.hidden, account.buzzWorkspaces.flow, BuzzRelayDialect.flow) { _, _, _ -> }
                         .collect { rebuildRows(account) }
                 }
             }

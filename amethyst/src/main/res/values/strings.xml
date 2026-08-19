@@ -1152,7 +1152,7 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Log in without asking when\u2026</string>
-    <string name="relay_auth_auto_my_relays">\u2026it\'s my relay, or a room I joined</string>
+    <string name="relay_auth_auto_my_relays_and_venues">\u2026it\'s my relay, or a room I joined or follow</string>
     <string name="relay_auth_auto_read_follows">\u2026I\'m reading someone I follow</string>
     <string name="relay_auth_auto_message_follows">\u2026I\'m messaging someone I follow</string>
     <string name="relay_auth_auto_message_strangers">\u2026I\'m messaging anyone else</string>

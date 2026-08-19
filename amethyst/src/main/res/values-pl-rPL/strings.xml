@@ -1174,7 +1174,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Zaloguj się bez pytania, kiedy\u2026</string>
-    <string name="relay_auth_auto_my_relays">\u2026to mój transmiter lub pokój, do którego dołączyłem</string>
     <string name="relay_auth_auto_read_follows">Czytam wpis osoby, którą obserwuję</string>
     <string name="relay_auth_auto_message_follows">\u2026wysyłam wiadomość do osoby, którą obserwuję</string>
     <string name="relay_auth_auto_message_strangers">\u2026piszę do wszystkich pozostałych</string>

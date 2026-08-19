@@ -97,16 +97,20 @@ private suspend fun runBuzzDmDiscovery(account: Account) {
             .observeNotes(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
             .map { buzzChannelTypes(it) }
             .distinctUntilChanged(),
-    ) { _, knownTypes -> BuzzChannelInvites.currentMemberships(LocalCache.membershipNotices(me)) to knownTypes }
-        .collectLatest { (memberships, knownTypes) ->
-            fetchMissingDirectories(account, memberships, knownTypes)
-            BuzzDmChannels.replace(
-                me,
-                memberships.filter { (id, relay) ->
-                    classifyBuzzChannel(LocalCache, id, relay, knownTypes) == ChannelClassification.DM
-                },
-            )
-        }
+    ) { _, knownTypes ->
+        // Read the joined set per pass, not once: which relay vouched for a notice depends on it,
+        // and restore-from-disk can land after the cache already holds notices.
+        val workspaces = account.buzzWorkspaces.flow.value
+        BuzzChannelInvites.currentMemberships(LocalCache.membershipNotices(me, workspaces)) to knownTypes
+    }.collectLatest { (memberships, knownTypes) ->
+        fetchMissingDirectories(account, memberships, knownTypes)
+        BuzzDmChannels.replace(
+            me,
+            memberships.filter { (id, relay) ->
+                classifyBuzzChannel(LocalCache, id, relay, knownTypes) == ChannelClassification.DM
+            },
+        )
+    }
 }
 
 /**

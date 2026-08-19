@@ -1110,7 +1110,6 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">कब पूछे बिना प्रवेशांकन करें\u2026</string>
-    <string name="relay_auth_auto_my_relays">\u2026यह मेरा पुनःप्रसारक है। अथवा एक शाला जिससे मैं जुड चुका</string>
     <string name="relay_auth_auto_read_follows">\u2026मैं पढ रहा हूँ किसी को जिसका मैं अनुगमन करता हूँ</string>
     <string name="relay_auth_auto_message_follows">\u2026मैं सन्देश भेज रहा हूँ किसी को जिसका मैं अनुगमन करता हूँ</string>
     <string name="relay_auth_auto_message_strangers">\u2026मैं किसी अन्य को सन्देश भेज रहा हूँ</string>

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz
 
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
@@ -130,7 +129,7 @@ class BuzzMembershipEoseManager(
         // whole membership history to know which channels I am in — and the EOSE map that would supply
         // a floor is in-memory too, so it is null exactly when the full read is needed. The filter is
         // `#p`-scoped to my own key, so an all-time query costs one index scan.
-        return BuzzWorkspaces.flow.value.flatMap { relay ->
+        return key.account.buzzWorkspaces.flow.value.flatMap { relay ->
             filterWorkspaceInboxToPubkey(relay, me, since?.get(relay)?.time)
         }
     }
@@ -144,7 +143,7 @@ class BuzzMembershipEoseManager(
         userJobMap[user] =
             listOf(
                 key.account.scope.launch(Dispatchers.IO) {
-                    BuzzWorkspaces.flow.collectLatest { relays ->
+                    key.account.buzzWorkspaces.flow.collectLatest { relays ->
                         // Idempotent, and re-run per joined set rather than once at mount so a workspace
                         // joined later is pre-approved too.
                         relays.forEach { key.account.relayAuthLedger.setDecision(it.url, RelayAuthDecision.ALLOW) }

@@ -98,7 +98,8 @@ fun RenderChannelInvite(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val notice = remember(note) { note.toMembershipNotice() } ?: return
+    val workspaces = accountViewModel.account.buzzWorkspaces.flow.value
+    val notice = remember(note, workspaces) { note.toMembershipNotice(workspaces) } ?: return
     // A withdrawn membership is not an invite. The projection already excludes these before a card is
     // built; re-checked here because this renderer is reachable from any NoteCompose over a 44100.
     if (notice.removed) return

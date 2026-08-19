@@ -26,7 +26,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetAggregator
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetMetrics
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -107,7 +106,7 @@ class AgentConsoleViewModel : ViewModel() {
         this.scopeRelay = relay
         this.account = account
         relay?.let {
-            val newlyJoined = BuzzWorkspaces.join(it)
+            val newlyJoined = account.buzzWorkspaces.join(it)
             viewModelScope.launch { account.relayAuthLedger.setDecision(it.url, RelayAuthDecision.ALLOW) }
             if (newlyJoined) reconnectPoolAfterJoin(account.client)
         }
