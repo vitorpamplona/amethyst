@@ -1157,6 +1157,11 @@
     <string name="relay_auth_remove_exception">अपवर्ग हटाएँ</string>
     <string name="relay_auth_exception_removed_undo">अपवर्ग हटाया गया। %1$s पुनः आपके नियमों का पालन कर रहा है।</string>
     <string name="relay_auth_undo">पूर्ववत</string>
+    <string name="relay_auth_session_section">केवल इस समय</string>
+    <string name="relay_auth_session_row_desc">प्रवेशांकित अमेथिस्ट को आपके द्वारा पुनःआरम्भ किए जाने तक</string>
+    <string name="relay_auth_forget_session">इस प्रवेशांकन को भूल जाएँ</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s पुनःपूछेगा अगली बार जब उसे आपकी आवश्यकता हो।</string>
+    <string name="relay_auth_session_undo_blocked">पुनःस्थापित नहीं। कभी प्रवेशांकन ना करें यह आज्ञा सक्रिय है। इसीलिए अमेथिस्ट %1$s में प्रवेशांकन नहीं करेगा।</string>
     <string name="relay_auth_blocked_section">आपकी अवरोधनसूची द्वारा अवरोधित</string>
     <string name="relay_auth_blocked_row_desc">अमेथिस्ट कभी भी प्रवेशांकन नहीं करता अवरोधित पुनःप्रसारकों में।</string>
     <string name="relay_auth_no_blocked">कुछ भी अवरोधित नहीं। पुनःप्रसारक जिनको आप अवरोधित करते हैं उनमें प्रवेशांकन कभी नहीं होगा जो भी आप यहाँ स्थापित करें।</string>
