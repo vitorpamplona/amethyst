@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.tags.ExternalIdMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -50,6 +51,10 @@ class ExternalIdTrustedListEvent(
     PubKeyHintProvider {
     override fun members(): List<ExternalIdMemberTag> = tags.members()
 
+    override fun isMemberTag(tag: Tag) = ExternalIdMemberTag.isTag(tag)
+
+    override fun memberValueOf(tag: Tag) = ExternalIdMemberTag.parseId(tag)
+
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(ATag::parseAddressId)
@@ -74,8 +79,10 @@ class ExternalIdTrustedListEvent(
             initializer: TagArrayBuilder<ExternalIdTrustedListEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
             dTag(listId)
-            members(members)
+            // metadata first: it keeps the header tags ahead of a membership
+            // that can run to thousands of entries
             initializer()
+            members(members)
         }
     }
 }

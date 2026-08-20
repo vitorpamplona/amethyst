@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.trustedLists.externalIds.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.trustedLists.tags.MemberTagFields
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.TrustedListMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
@@ -60,11 +61,7 @@ data class ExternalIdMemberTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
 
-            return ExternalIdMemberTag(
-                tag[1],
-                tag.getOrNull(2)?.takeIf { it.isNotEmpty() },
-                tag.getOrNull(3)?.toIntOrNull(),
-            )
+            return ExternalIdMemberTag(tag[1], MemberTagFields.hint(tag), MemberTagFields.score(tag))
         }
 
         fun parseId(tag: Tag): String? {

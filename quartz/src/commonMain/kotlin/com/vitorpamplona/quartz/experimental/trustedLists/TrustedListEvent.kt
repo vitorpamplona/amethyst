@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.experimental.trustedLists.tags.ListStatus
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.TrustedListMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
 /**
@@ -79,9 +80,20 @@ abstract class TrustedListEvent(
      */
     abstract fun members(): List<TrustedListMemberTag>
 
-    fun memberValues() = members().map { it.memberValue }
+    /** True when [tag] is one of this kind's member tags. Must accept exactly what [members] parses. */
+    protected abstract fun isMemberTag(tag: Tag): Boolean
 
-    fun memberCount() = members().size
+    /** The member value in [tag], or null when it is not one of this kind's member tags. */
+    protected abstract fun memberValueOf(tag: Tag): String?
+
+    /**
+     * The member values alone. Goes straight from the tags so that callers who
+     * do not need the hints and scores never pay to build the member objects --
+     * these lists run to thousands of entries.
+     */
+    fun memberValues(): List<String> = tags.mapNotNull { memberValueOf(it) }
+
+    fun memberCount(): Int = tags.count { isMemberTag(it) }
 
     /**
      * True when the publisher signalled that it could not carry the full

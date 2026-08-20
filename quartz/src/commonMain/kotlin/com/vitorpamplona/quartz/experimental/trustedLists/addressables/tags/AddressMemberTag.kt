@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.trustedLists.addressables.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.trustedLists.tags.MemberTagFields
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.TrustedListMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
@@ -28,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -67,7 +67,7 @@ data class AddressMemberTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
 
-            return AddressMemberTag(tag[1], parseHint(tag), parseScore(tag))
+            return AddressMemberTag(tag[1], MemberTagFields.relayHint(tag), MemberTagFields.score(tag))
         }
 
         fun parseAddressId(tag: Tag): String? {
@@ -88,17 +88,15 @@ data class AddressMemberTag(
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
+            // only index a value that is actually a coordinate, as ATag does
+            ensure(tag[1].contains(':')) { return null }
 
-            val hint = parseHint(tag)
+            val hint = MemberTagFields.relayHint(tag)
 
             ensure(hint != null) { return null }
 
             return AddressHint(tag[1], hint)
         }
-
-        private fun parseHint(tag: Tag) = tag.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeOrNull(it) }
-
-        private fun parseScore(tag: Tag) = tag.getOrNull(3)?.toIntOrNull()
 
         fun assemble(
             address: String,

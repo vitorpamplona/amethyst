@@ -35,6 +35,9 @@ breaks kind-keyed dispatch and federation.
 All four extend `TrustedListEvent`, which carries everything the family shares.
 `members()` is narrowed per kind but always satisfies `TrustedListMemberTag`,
 so a kind-agnostic reader can take `memberValue` and `score` without branching.
+`memberValues()` and `memberCount()` read the tags directly rather than going
+through `members()`, so callers that only need the membership never pay to
+build the member objects — these lists run to thousands of entries.
 
 ## Wire shape
 
@@ -62,7 +65,10 @@ so a kind-agnostic reader can take `memberValue` and `score` without branching.
   index 3 for every kind in the family, so a publisher with a score but no
   relay hint pads index 2 with an empty string — as in the `p` tag above.
   On `e` members index 3 is the score, **not** a NIP-10 marker: these lists
-  enumerate membership, they do not thread.
+  enumerate membership, they do not thread. Index 2 is only read as a relay
+  hint when it looks like one (`MemberTagFields.relayHint`): the normalizer
+  turns any bare word into `wss://<word>/`, so an unguarded parse would index a
+  petname as a relay. On `i` members that slot is NIP-73's URL hint instead.
 - `observer`, `source-tag`, `cutoff`, `min-rank` are provenance.
 - Single-letter tags that are *not* the kind's member tag are
   relay-filterable **discovery** metadata — what the list is about — and are

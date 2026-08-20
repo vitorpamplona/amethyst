@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.events.tags.EventMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
@@ -56,6 +57,10 @@ class EventTrustedListEvent(
     PubKeyHintProvider {
     override fun members(): List<EventMemberTag> = tags.members()
 
+    override fun isMemberTag(tag: Tag) = EventMemberTag.isTag(tag)
+
+    override fun memberValueOf(tag: Tag) = EventMemberTag.parseId(tag)
+
     override fun eventHints() = tags.mapNotNull(EventMemberTag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(EventMemberTag::parseId)
@@ -84,8 +89,10 @@ class EventTrustedListEvent(
             initializer: TagArrayBuilder<EventTrustedListEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
             dTag(listId)
-            members(members)
+            // metadata first: it keeps the header tags ahead of a membership
+            // that can run to thousands of entries
             initializer()
+            members(members)
         }
     }
 }

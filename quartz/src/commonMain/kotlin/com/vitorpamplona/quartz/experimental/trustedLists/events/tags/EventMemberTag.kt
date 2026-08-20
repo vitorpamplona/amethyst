@@ -21,13 +21,13 @@
 package com.vitorpamplona.quartz.experimental.trustedLists.events.tags
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.trustedLists.tags.MemberTagFields
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.TrustedListMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.nip01Core.hints.types.EventIdHint
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
@@ -63,7 +63,7 @@ data class EventMemberTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            return EventMemberTag(tag[1], parseHint(tag), parseScore(tag))
+            return EventMemberTag(tag[1], MemberTagFields.relayHint(tag), MemberTagFields.score(tag))
         }
 
         fun parseId(tag: Tag): HexKey? {
@@ -78,16 +78,12 @@ data class EventMemberTag(
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
 
-            val hint = parseHint(tag)
+            val hint = MemberTagFields.relayHint(tag)
 
             ensure(hint != null) { return null }
 
             return EventIdHint(tag[1], hint)
         }
-
-        private fun parseHint(tag: Tag) = tag.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let { RelayUrlNormalizer.normalizeOrNull(it) }
-
-        private fun parseScore(tag: Tag) = tag.getOrNull(3)?.toIntOrNull()
 
         fun assemble(
             eventId: HexKey,

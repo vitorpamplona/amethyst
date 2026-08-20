@@ -39,6 +39,7 @@ import kotlin.test.assertTrue
 
 class TrustedListEventTest {
     private val observer = "2efaa715bbb46dd5be6b7da8d7700266d11674b913b8178addb5c2e63d987331"
+    private val member = "b83a28b7e4e5d20bd960c5faeb6625f95529166b8bdb045d42634a2f35919450"
     private val tagEventId = "2f6a8652bde6fb5a974d6e06e4eae3b4f130140fd170b2686a291463f47a7451"
     private val tagAuthor = "e5272de914bd301755c439b88e6959a43c9d2664831f093c51e9c799a16a102f"
     private val dummySig = "00".repeat(64)
@@ -135,12 +136,12 @@ class TrustedListEventTest {
 
         val echo = event.contentEcho()
         assertEquals(3, echo?.members?.size)
-        assertEquals("b83a28b7e4e5d20bd960c5faeb6625f95529166b8bdb045d42634a2f35919450", echo?.members?.first()?.memberValue())
+        assertEquals("b83a28b7e4e5d20bd960c5faeb6625f95529166b8bdb045d42634a2f35919450", echo?.members?.first()?.memberValue)
         assertEquals(4, echo?.members?.first()?.endorsements)
         assertEquals(0, echo?.members?.first()?.disputes)
         assertEquals(99, echo?.members?.first()?.score)
         assertNull(echo?.partial, "a complete list carries no partial marker")
-        assertEquals(event.memberValues(), echo?.members?.mapNotNull { it.memberValue() })
+        assertEquals(event.memberValues(), echo?.members?.mapNotNull { it.memberValue })
     }
 
     @Test
@@ -316,6 +317,84 @@ class TrustedListEventTest {
         assertEquals("podcast:guid:c90e609a-df1e-596a-bd5e-57bcc8aad6cc", member.memberValue)
         assertEquals("https://fountain.fm/show/abc", member.hint)
         assertEquals(91, member.score)
+    }
+
+    @Test
+    fun aNonUrlAtTheHintSlotIsNotReadAsARelay() {
+        // the normalizer happily turns a bare word into wss://<word>/, so an
+        // unguarded parse would fabricate a relay hint out of a petname
+        val event =
+            EventFactory.create<Event>(
+                id = "00".repeat(32),
+                pubKey = "a68dbf561cfe3da1b76f1e65c7d4d9cc116f79921b38a815fd75cb5460b4b599",
+                createdAt = 1_787_253_028L,
+                kind = UserTrustedListEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("d", "tl"),
+                        arrayOf("p", member, "alice", "99"),
+                        arrayOf("p", "ba2f394833658475e91680b898f9be0f1d850166c6a839dbe084d0266ad6e20a", "wss://nos.lol/", "97"),
+                    ),
+                content = "",
+                sig = dummySig,
+            )
+        assertIs<UserTrustedListEvent>(event)
+
+        assertNull(event.members().first().relayHint, "a petname must not become a relay hint")
+        assertEquals(99, event.members().first().score, "the score must still be read")
+        assertEquals("wss://nos.lol/", event.members()[1].relayHint?.url)
+        assertEquals(listOf("wss://nos.lol/"), event.pubKeyHints().map { it.relay.url })
+    }
+
+    @Test
+    fun aNonCoordinateAddressIsNotIndexedAsAHint() {
+        val event =
+            EventFactory.create<Event>(
+                id = "00".repeat(32),
+                pubKey = "a68dbf561cfe3da1b76f1e65c7d4d9cc116f79921b38a815fd75cb5460b4b599",
+                createdAt = 1_787_253_028L,
+                kind = AddressableTrustedListEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("d", "tl"),
+                        arrayOf("a", "not-a-coordinate", "wss://nos.lol/"),
+                        arrayOf("a", "39999:$tagAuthor:podcaster", "wss://nos.lol/"),
+                    ),
+                content = "",
+                sig = dummySig,
+            )
+        assertIs<AddressableTrustedListEvent>(event)
+
+        assertEquals(listOf("39999:$tagAuthor:podcaster"), event.addressHints().map { it.addressId })
+    }
+
+    @Test
+    fun memberCountMatchesTheParsedMembers() {
+        // memberCount() counts tags without building the member objects, so it
+        // has to accept exactly what members() parses -- malformed tags included
+        val event =
+            EventFactory.create<Event>(
+                id = "00".repeat(32),
+                pubKey = "a68dbf561cfe3da1b76f1e65c7d4d9cc116f79921b38a815fd75cb5460b4b599",
+                createdAt = 1_787_253_028L,
+                kind = UserTrustedListEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("d", "tl"),
+                        arrayOf("observer", observer),
+                        arrayOf("p", member, "", "99"),
+                        arrayOf("p", "too-short"),
+                        arrayOf("p"),
+                        arrayOf("e", "f00dcafe00000000000000000000000000000000000000000000000000000000"),
+                    ),
+                content = "",
+                sig = dummySig,
+            )
+        assertIs<UserTrustedListEvent>(event)
+
+        assertEquals(event.members().size, event.memberCount())
+        assertEquals(event.members().map { it.memberValue }, event.memberValues())
+        assertEquals(1, event.memberCount(), "only the well-formed p tag is a member")
     }
 
     @Test

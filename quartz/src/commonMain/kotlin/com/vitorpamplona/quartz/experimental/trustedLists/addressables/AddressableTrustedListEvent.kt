@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.tags.AddressMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -51,6 +52,10 @@ class AddressableTrustedListEvent(
     PubKeyHintProvider {
     override fun members(): List<AddressMemberTag> = tags.members()
 
+    override fun isMemberTag(tag: Tag) = AddressMemberTag.isTag(tag)
+
+    override fun memberValueOf(tag: Tag) = AddressMemberTag.parseAddressId(tag)
+
     override fun addressHints() = tags.mapNotNull(AddressMemberTag::parseAsHint)
 
     override fun linkedAddressIds() = tags.mapNotNull(AddressMemberTag::parseAddressId)
@@ -73,8 +78,10 @@ class AddressableTrustedListEvent(
             initializer: TagArrayBuilder<AddressableTrustedListEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
             dTag(listId)
-            members(members)
+            // metadata first: it keeps the header tags ahead of a membership
+            // that can run to thousands of entries
             initializer()
+            members(members)
         }
     }
 }

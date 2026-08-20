@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.trustedLists
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.trustedLists.tags.TrustedListMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import kotlinx.serialization.Serializable
 
@@ -67,5 +68,9 @@ data class TrustedListContentMember(
     val disputes: Int? = null,
     val score: Int? = null,
 ) {
-    fun memberValue() = pubkey ?: id ?: address ?: i
+    /**
+     * Matches [TrustedListMemberTag.memberValue] on the tag side. Computed, so
+     * it never round-trips into the JSON as a key of its own.
+     */
+    val memberValue: String? get() = pubkey ?: id ?: address ?: i
 }
