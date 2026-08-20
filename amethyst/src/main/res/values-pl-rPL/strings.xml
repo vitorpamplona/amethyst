@@ -1174,6 +1174,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Zaloguj się bez pytania, kiedy\u2026</string>
+    <string name="relay_auth_auto_my_relays_and_venues">\u2026to mój transmiter lub pokój, do którego dołączyłem lub który obserwuję</string>
     <string name="relay_auth_auto_read_follows">Czytam wpis osoby, którą obserwuję</string>
     <string name="relay_auth_auto_message_follows">\u2026wysyłam wiadomość do osoby, którą obserwuję</string>
     <string name="relay_auth_auto_message_strangers">\u2026piszę do wszystkich pozostałych</string>
@@ -2773,6 +2774,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_no_messages_yet">Brak wiadomości</string>
     <string name="channel_invite_title">Dodano do %1$s</string>
     <string name="channel_invite_unknown_actor">Ktoś</string>
+    <string name="channel_invite_added_you">dodał Cię do tego kanału</string>
+    <string name="channel_invite_row_added_you_by">%1$s dodał Cię do tego kanału</string>
+    <string name="channel_invite_row_added_you">Zostałeś dodany do tego kanału</string>
     <string name="channel_invite_ignore">Ignoruj</string>
     <string name="channel_invite_leave">Wyjdź</string>
     <string name="relay_group_join_to_post">Dołącz do tej grupy, aby wysyłać wiadomości.</string>

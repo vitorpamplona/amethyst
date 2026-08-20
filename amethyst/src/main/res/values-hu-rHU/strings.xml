@@ -574,6 +574,9 @@
     <string name="quick_action_block">Letiltás</string>
     <string name="quick_action_mute_thread">Szál némítása</string>
     <string name="quick_action_unmute_thread">Szál némításának megszüntetése</string>
+    <string name="mute_notifications">Értesítések némítása</string>
+    <string name="unmute_notifications">Értesítések némításának megszüntetése</string>
+    <string name="muted_chat_content_description">Ehhez a csevegéshez némítva vannak az értesítések</string>
     <string name="quick_action_report">Bejelentés</string>
     <string name="quick_action_dont_show_again_button">Ne jelenítse meg újra</string>
     <string name="report_dialog_spam">Kéretlen tartalom vagy átverés</string>
@@ -1111,6 +1114,7 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Jelentkezzen be kérdés nélkül, ha\u2026</string>
+    <string name="relay_auth_auto_my_relays_and_venues">\u2026ez a saját átjátszóm vagy egy szoba, amihez csatlakoztam vagy követek</string>
     <string name="relay_auth_auto_read_follows">\u2026olyan valakit olvasok, akit követek</string>
     <string name="relay_auth_auto_message_follows">\u2026olyan valakinek írok, akit követek</string>
     <string name="relay_auth_auto_message_strangers">\u2026bárki másnak írok</string>
@@ -2658,6 +2662,9 @@
     <string name="relay_group_no_messages_yet">Még nincsenek üzenetek</string>
     <string name="channel_invite_title">Hozzáadva ide: %1$s</string>
     <string name="channel_invite_unknown_actor">Valaki</string>
+    <string name="channel_invite_added_you">hozzáadta Önt ehhez a csatornához</string>
+    <string name="channel_invite_row_added_you_by">%1$s hozzáadta Önt ehhez a csatornához</string>
+    <string name="channel_invite_row_added_you">Ön hozzá lett adva ehhez a csatornához</string>
     <string name="channel_invite_ignore">Elvetés</string>
     <string name="channel_invite_leave">Kilépés</string>
     <string name="relay_group_join_to_post">Csatlakozzon ehhez a csoporthoz az üzenetek küldéséhez.</string>
@@ -2971,6 +2978,9 @@
     <string name="cashu_remove_mint">Pénzverde eltávolítása</string>
     <string name="cashu_add_mint">Pénzverde hozzáadása</string>
     <string name="cashu_history">Előzmények</string>
+    <string name="cashu_history_loading_older">Régebbi tranzakciók betöltése…</string>
+    <string name="cashu_history_all_loaded">Nincsenek régebbi tranzakciók</string>
+    <string name="cashu_history_some_relays_unreachable">A kérésre válaszoló átjátszók közül nem érkezett régebbi tranzakció – néhányat nem sikerült elérni</string>
     <string name="cashu_wallet_autosaves">A pénztárcája automatikusan mentésre kerül, amikor pénzverdét ad hozzá vagy távolít el. Egy nutzap kulcs jön létre az Ön számára, amikor először ad hozzá egy pénzverdét.</string>
     <string name="cashu_wallet_saving">Mentés…</string>
     <string name="cashu_p2pk_section">Nutzap kulcs (speciális)</string>
