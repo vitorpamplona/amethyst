@@ -141,6 +141,10 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -786,6 +790,10 @@ class EventFactory {
                 EventAssertionEvent.KIND -> EventAssertionEvent(id, pubKey, createdAt, tags, content, sig)
                 AddressableAssertionEvent.KIND -> AddressableAssertionEvent(id, pubKey, createdAt, tags, content, sig)
                 ExternalIdAssertionEvent.KIND -> ExternalIdAssertionEvent(id, pubKey, createdAt, tags, content, sig)
+                UserTrustedListEvent.KIND -> UserTrustedListEvent(id, pubKey, createdAt, tags, content, sig)
+                EventTrustedListEvent.KIND -> EventTrustedListEvent(id, pubKey, createdAt, tags, content, sig)
+                AddressableTrustedListEvent.KIND -> AddressableTrustedListEvent(id, pubKey, createdAt, tags, content, sig)
+                ExternalIdTrustedListEvent.KIND -> ExternalIdTrustedListEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayAddMemberEvent.KIND -> RelayAddMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayRemoveMemberEvent.KIND -> RelayRemoveMemberEvent(id, pubKey, createdAt, tags, content, sig)
                 RelayMembershipListEvent.KIND -> RelayMembershipListEvent(id, pubKey, createdAt, tags, content, sig)
