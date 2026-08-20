@@ -2,9 +2,9 @@
 
 Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexableContent()`
 expression. **Update this file in the same PR as any change to the searchable set or to an
-`indexableContent()` body** (see SKILL.md). Verified against the code 2026-08-04.
+`indexableContent()` body** (see SKILL.md). Verified against the code 2026-08-04; kinds 30392-30395 added 2026-08-20.
 
-Counts: 126 concrete classes covering 129 kind values (`GitStatusEvent` spans 4 kinds;
+Counts: 130 concrete classes covering 133 kind values (`GitStatusEvent` spans 4 kinds;
 kind 30063 has a collision — see the footnote). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
 
@@ -100,6 +100,10 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 30313 | MeetingRoomEvent | nip53LiveActivities/meetingSpaces | `listOfNotNull(title(), summary())` NL |
 | 30315 | StatusEvent | nip38UserStatus | `content` |
 | 30382 | ContactCardEvent | nip85TrustedAssertions/users | `(listOfNotNull(petName(), summary()) + topics())` NL — public tags only, never the NIP-44 content |
+| 30392 | UserTrustedListEvent | experimental/trustedLists/users | inherited `TrustedListEvent`: `listOfNotNull(title(), sourceTag()?.slug)` NL — labels only; the membership JSON in `content` is never indexed |
+| 30393 | EventTrustedListEvent | experimental/trustedLists/events | inherited `TrustedListEvent` (same as 30392) |
+| 30394 | AddressableTrustedListEvent | experimental/trustedLists/addressables | inherited `TrustedListEvent` (same as 30392) |
+| 30395 | ExternalIdTrustedListEvent | experimental/trustedLists/externalIds | inherited `TrustedListEvent` (same as 30392) |
 | 30402 | ClassifiedsEvent | nip99Classifieds | `listOfNotNull(title(), summary(), content)` NL |
 | 30617 | GitRepositoryEvent | nip34Git/repository | `listOfNotNull(name(), description(), content)` NL |
 | 30620 | WorkflowDefEvent | buzz/workflow | `listOfNotNull(name(), content)` NL |

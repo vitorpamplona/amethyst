@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
  * Base of the Tapestry Trusted List family: an addressable event that
@@ -58,7 +59,20 @@ abstract class TrustedListEvent(
     tags: TagArray,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    SearchableEvent {
+    /**
+     * Only the two fields a human wrote: the list's label and the slug of the
+     * tag its membership was computed from ("Podcaster" / "podcaster").
+     *
+     * Everything else on these events is machine data. `content` is the JSON
+     * echo of the membership -- pubkeys, ids and counts -- so it is never
+     * indexed; neither is `d`, which embeds hex fragments, nor `metric`, whose
+     * value is a constant across every list one publisher emits and would only
+     * add generic tokens to the index.
+     */
+    override fun indexableContent() = listOfNotNull(title(), sourceTag()?.slug).joinToString("\n")
+
     /** The addressable identity of this list. Deterministic per list. */
     fun listId() = dTag()
 
