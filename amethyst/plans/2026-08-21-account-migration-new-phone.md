@@ -159,6 +159,37 @@ fresh defaults over them. Without it the ordinary transfer sequence — import t
 settings, then log in with the key — erased everything that had just been
 imported.
 
+## Backup / device-transfer rules
+
+While answering "does Android's phone transfer carry this?", two things in
+`data_extraction_rules.xml` turned out to be wrong, and one assumption behind
+them turned out to be false.
+
+The assumption: the file described itself as defense-in-depth because
+`allowBackup="false"` was set. The platform docs say otherwise — "On devices
+from some device manufacturers, specifying `android:allowBackup="false"`
+disables cloud-based backup and restore ... but doesn't disable device-to-device
+transfers for the app." On those devices the `<device-transfer>` section is the
+only thing standing between app data and a D2D copy.
+
+The two bugs, both of which meant the per-account files were not actually
+excluded:
+
+- `<exclude domain="sharedpref" path="secret_keeper.xml"/>` matches only the
+  global file. `EncryptedStorage.prefsFileName()` names the per-account files
+  `secret_keeper_<npub>.xml`, and `path` "does not support wildcard or regular
+  expression syntax" — so no fixed filename can cover them.
+- The rule meant to catch the rest,
+  `<exclude domain="sharedpref" path="." requireFlags="clientSideEncryption"/>`,
+  uses an attribute valid only on `<include>` and "NOT available in the Android
+  12+ `<data-extraction-rules>` format".
+
+Both files now exclude every domain wholesale via `path="."`, which sidesteps
+the wildcard limitation entirely. Nothing transfers, which matches the app's
+intent: these files are encrypted with a hardware-bound Keystore master key, so
+a copy on another phone is undecryptable and could only produce a device holding
+files it cannot open.
+
 ## Known limits
 
 - An account that is already loaded holds its settings in memory and would write

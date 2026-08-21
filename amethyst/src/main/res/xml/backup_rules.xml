@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Defense-in-depth: allowBackup="false" is set in AndroidManifest.xml.
-     These rules provide additional protection if backup is ever enabled. -->
+<!--
+  Android 11 and lower (android:fullBackupContent). The Android 12+ equivalent
+  is data_extraction_rules.xml — keep the two in step.
+
+  On these releases android:allowBackup="false" does disable both backup and
+  transfer, so this file is genuinely defense-in-depth. It still excludes every
+  domain wholesale rather than naming files: the per-account preference files
+  are secret_keeper_<npub>.xml and the path attribute takes no wildcards, so a
+  filename-based exclude cannot cover them.
+-->
 <full-backup-content>
-    <!-- Exclude encrypted secrets (device-bound, can't decrypt on other devices) -->
-    <exclude domain="sharedpref" path="secret_keeper.xml" />
-    <exclude domain="sharedpref" path="." requireFlags="clientSideEncryption" />
-
-    <!-- Exclude all DataStore files (contains encrypted keys and account prefs) -->
-    <exclude domain="file" path="datastore" />
-
-    <!-- Exclude external storage (large, ephemeral) -->
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
     <exclude domain="external" path="." />
+    <exclude domain="device_root" path="." />
+    <exclude domain="device_file" path="." />
+    <exclude domain="device_database" path="." />
+    <exclude domain="device_sharedpref" path="." />
 </full-backup-content>

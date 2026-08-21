@@ -1,28 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Defense-in-depth: allowBackup="false" is set in AndroidManifest.xml.
-     These rules provide additional protection if backup is ever enabled. -->
+<!--
+  Amethyst does not participate in backup or device transfer.
+
+  Account data is encrypted with an Android Keystore master key (see
+  EncryptedStorage), which is hardware-bound and never leaves the device. A copy
+  of those files on another phone is undecryptable, so transferring them cannot
+  restore an account — it can only produce a device holding files it is unable
+  to open. Moving an account to a new phone goes through Settings > Transfer to
+  a new device, which re-encrypts under a user-chosen password precisely because
+  a password travels and a Keystore key does not. See
+  amethyst/plans/2026-08-21-account-migration-new-phone.md.
+
+  android:allowBackup="false" is set in AndroidManifest.xml, but on Android 12+
+  that alone is NOT enough. Per the platform docs: "On devices from some device
+  manufacturers, specifying android:allowBackup="false" disables cloud-based
+  backup and restore (such as Google Drive backups) but doesn't disable
+  device-to-device transfers for the app." So <device-transfer> below is
+  load-bearing, not belt-and-braces.
+
+  Each domain is excluded wholesale via path="." (which means every file in that
+  domain) rather than by filename. The per-account preference files are named
+  secret_keeper_<npub>.xml, and the path attribute "does not support wildcard or
+  regular expression syntax" — so no fixed filename can ever cover them, and an
+  exclude naming only secret_keeper.xml silently misses every real account.
+-->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Exclude encrypted secrets (device-bound KeyStore encryption) -->
-        <exclude domain="sharedpref" path="secret_keeper.xml" />
-        <exclude domain="sharedpref" path="." requireFlags="clientSideEncryption" />
-
-        <!-- Exclude all DataStore files (encrypted keys and account preferences) -->
-        <exclude domain="file" path="datastore" />
-
-        <!-- Exclude external storage -->
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
         <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
     </cloud-backup>
 
     <device-transfer>
-        <!-- Exclude encrypted secrets (device-bound, unusable on target device) -->
-        <exclude domain="sharedpref" path="secret_keeper.xml" />
-        <exclude domain="sharedpref" path="." requireFlags="clientSideEncryption" />
-
-        <!-- Exclude all DataStore files (encrypted keys and account preferences) -->
-        <exclude domain="file" path="datastore" />
-
-        <!-- Exclude external storage -->
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
         <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
     </device-transfer>
 </data-extraction-rules>
