@@ -4865,4 +4865,19 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
+    <string name="cashu_history_all_loaded">Inga äldre transaktioner</string>
+    <string name="cashu_history_loading_older">Läser in äldre transaktioner…</string>
+    <string name="cashu_history_some_relays_unreachable">Inga äldre transaktioner från reläerna som svarade — några gick inte att nå</string>
+    <string name="channel_invite_added_you">lade till dig i den här kanalen</string>
+    <string name="channel_invite_row_added_you">Du lades till i den här kanalen</string>
+    <string name="channel_invite_row_added_you_by">%1$s lade till dig i den här kanalen</string>
+    <string name="mute_notifications">Tysta aviseringar</string>
+    <string name="muted_chat_content_description">Aviseringar är tystade för den här chatten</string>
+    <string name="relay_auth_auto_my_relays_and_venues">…det är mitt relä, eller ett rum jag gått med i eller följer</string>
+    <string name="relay_auth_forget_session">Glöm den här inloggningen</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s frågar igen nästa gång det behöver dig.</string>
+    <string name="relay_auth_session_row_desc">Inloggad tills du startar om Amethyst</string>
+    <string name="relay_auth_session_section">Bara för nu</string>
+    <string name="relay_auth_session_undo_blocked">Inte återställd. “Autentisera aldrig” är på, så Amethyst loggar inte in på %1$s.</string>
+    <string name="unmute_notifications">Sluta tysta aviseringar</string>
 </resources>

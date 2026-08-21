@@ -5077,4 +5077,19 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
+    <string name="cashu_history_all_loaded">Žádné starší transakce</string>
+    <string name="cashu_history_loading_older">Načítání starších transakcí…</string>
+    <string name="cashu_history_some_relays_unreachable">Žádné starší transakce z relayů, které odpověděly — některé se nepodařilo kontaktovat</string>
+    <string name="channel_invite_added_you">vás přidal do tohoto kanálu</string>
+    <string name="channel_invite_row_added_you">Byl jste přidán do tohoto kanálu</string>
+    <string name="channel_invite_row_added_you_by">%1$s vás přidal do tohoto kanálu</string>
+    <string name="mute_notifications">Ztlumit oznámení</string>
+    <string name="muted_chat_content_description">Oznámení pro tento chat jsou ztlumena</string>
+    <string name="relay_auth_auto_my_relays_and_venues">…je to moje relé nebo místnost, do které jsem se přidal nebo kterou sleduji</string>
+    <string name="relay_auth_forget_session">Zapomenout toto přihlášení</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s se zeptá znovu, až vás bude příště potřebovat.</string>
+    <string name="relay_auth_session_row_desc">Přihlášeno, dokud nerestartujete Amethyst</string>
+    <string name="relay_auth_session_section">Jen pro tuto chvíli</string>
+    <string name="relay_auth_session_undo_blocked">Neobnoveno. Je zapnuto “Nikdy se neověřovat”, takže se Amethyst k %1$s nepřihlásí.</string>
+    <string name="unmute_notifications">Zrušit ztlumení oznámení</string>
 </resources>
