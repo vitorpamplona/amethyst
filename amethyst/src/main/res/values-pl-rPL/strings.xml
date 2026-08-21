@@ -1222,6 +1222,11 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_auth_remove_exception">Usuń wyjątek</string>
     <string name="relay_auth_exception_removed_undo">Wyjątek usunięty. %1$s ponownie postępuje zgodnie z twoimi zasadami.</string>
     <string name="relay_auth_undo">Cofnij</string>
+    <string name="relay_auth_session_section">Na chwilę obecną</string>
+    <string name="relay_auth_session_row_desc">Zalogowano do czasu ponownego uruchomienia Amethyst</string>
+    <string name="relay_auth_forget_session">Zapomnij o tym logowaniu</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s zapyta ponownie, gdy następnym razem będzie cię potrzebował.</string>
+    <string name="relay_auth_session_undo_blocked">Nie zostało przywrócone. Opcja „Nigdy nie loguj się” jest włączona, więc Amethyst nie zaloguje się do %1$s.</string>
     <string name="relay_auth_blocked_section">Zablokowane przez Twoją listę zablokowanych</string>
     <string name="relay_auth_blocked_row_desc">Amethyst nigdy nie loguje się do zablokowanych transmiterów.</string>
     <string name="relay_auth_no_blocked">Nic nie zablokowano. Transmitery, które blokujesz, nigdy nie będą zalogowane, bez względu na to, co tu ustawisz.</string>
