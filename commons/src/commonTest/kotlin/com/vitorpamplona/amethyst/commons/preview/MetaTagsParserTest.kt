@@ -20,9 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.preview
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
+/**
+ * Lived in `androidDeviceTest` until it was moved here: nothing in it is Android-specific, and on
+ * a device-only source set it never ran in CI -- every attribute shape below was unguarded.
+ */
 class MetaTagsParserTest {
     @Test
     fun testParse() {

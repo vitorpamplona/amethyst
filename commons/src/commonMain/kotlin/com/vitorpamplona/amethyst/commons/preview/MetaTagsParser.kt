@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.preview
 
 import com.vitorpamplona.amethyst.commons.util.codePointToChars
-import kotlinx.collections.immutable.toImmutableMap
 
 data class MetaTag(
     private val attrs: Map<String, String>,
@@ -32,9 +31,44 @@ data class MetaTag(
     fun attr(name: String): String = attrs[name.lowercase()] ?: ""
 }
 
+/**
+ * Extracts `<meta>` tags out of a (possibly partial) HTML document.
+ *
+ * This runs on every link preview, over bytes straight off the network, so the scan touches each
+ * character once and allocates nothing until an actual `<meta>` shows up: `<` is found with
+ * [String.indexOf], tag names are compared in place against the four names that matter, and only a
+ * meta tag's attribute span is ever handed to [parseAttrs].
+ */
 object MetaTagsParser {
-    private val NON_ATTR_NAME_CHARS = setOf(Char(0x0), '"', '\'', '>', '/')
-    private val NON_UNQUOTED_ATTR_VALUE_CHARS = setOf('"', '\'', '=', '>', '<', '`')
+    private const val NO_QUOTE = ' '
+
+    private const val META = "meta"
+    private const val HEAD = "head"
+
+    // Elements whose content is text rather than markup: script and style hold raw text, title and
+    // textarea hold character data. A `<` inside any of them is not a tag.
+    private const val SCRIPT = "script"
+    private const val STYLE = "style"
+    private const val TITLE = "title"
+    private const val TEXTAREA = "textarea"
+
+    private const val SCRIPT_END = "</script"
+    private const val STYLE_END = "</style"
+    private const val TITLE_END = "</title"
+    private const val TEXTAREA_END = "</textarea"
+    private const val COMMENT_START = "!--"
+    private const val COMMENT_END = "-->"
+
+    private enum class TagKind {
+        /** A `<meta …>` start tag: its attribute span is [TagScanner.attrsStart]..<[TagScanner.attrsEnd]. */
+        META,
+
+        /** The `</head>` that ends the interesting part of the document. */
+        HEAD_END,
+
+        /** Anything else: other elements, comments, declarations, unparseable markup. */
+        OTHER,
+    }
 
     /**
      * Lazily parse a partial HTML document and extract meta tags.
@@ -43,99 +77,175 @@ object MetaTagsParser {
         sequence {
             val s = TagScanner(input)
             while (!s.exhausted()) {
-                val t = s.nextTag() ?: continue
-                if (t.name == "head" && t.isEnd) {
-                    break
-                }
-                if (t.name == "meta") {
-                    val attrs = parseAttrs(t.attrPart) ?: continue
+                val kind = s.nextTag()
+                if (kind == TagKind.HEAD_END) break
+                if (kind == TagKind.META) {
+                    val attrs = parseAttrs(input, s.attrsStart, s.attrsEnd) ?: continue
                     yield(MetaTag(attrs))
                 }
             }
         }
 
-    private data class RawTag(
-        val isEnd: Boolean,
-        val name: String,
-        val attrPart: String,
-    )
-
     private class TagScanner(
         private val input: String,
     ) {
+        private val length = input.length
         private var p = 0
 
-        fun exhausted(): Boolean = p >= input.length
+        /** Attribute span of the tag [nextTag] last reported as [TagKind.META]. */
+        var attrsStart = 0
+            private set
+        var attrsEnd = 0
+            private set
 
-        private fun peek(): Char = input[p]
+        fun exhausted(): Boolean = p >= length
 
-        private fun consume(): Char = input[p++]
+        /**
+         * True when `input[from..<to]` equals [lower], ASCII-case-insensitively. [lower] must hold
+         * only lowercase ASCII letters: `code or 0x20` lands on such a letter only when the input
+         * char is that same letter in either case, so the fold cannot produce a false positive.
+         */
+        private fun nameIs(
+            from: Int,
+            to: Int,
+            lower: String,
+        ): Boolean {
+            if (to - from != lower.length) return false
+            for (i in lower.indices) {
+                val c = input[from + i]
+                if (c != lower[i] && (c.code or 0x20).toChar() != lower[i]) return false
+            }
+            return true
+        }
 
-        private fun skipWhile(pred: (Char) -> Boolean) {
-            while (!this.exhausted() && pred(this.peek())) {
-                this.consume()
+        private fun skipComment() {
+            val end = input.indexOf(COMMENT_END, p)
+            p = if (end < 0) length else end + COMMENT_END.length
+        }
+
+        private fun skipToTagEnd() {
+            val end = input.indexOf('>', p)
+            p = if (end < 0) length else end + 1
+        }
+
+        /** Leaves [p] on the `</name` that closes a raw-text element, or at the end of the input. */
+        private fun skipRawText(endTag: String) {
+            var i = p
+            while (true) {
+                i = input.indexOf('<', i)
+                if (i < 0) {
+                    p = length
+                    return
+                }
+                if (input.regionMatches(i, endTag, 0, endTag.length, ignoreCase = true)) {
+                    p = i
+                    return
+                }
+                i++
             }
         }
 
-        private fun skipSpaces() {
-            this.skipWhile { it.isWhitespace() }
-        }
-
-        fun nextTag(): RawTag? {
-            skipWhile { it != '<' }
-            if (this.exhausted()) return null
-            consume()
-
-            // read tag name
-            val isEnd = peek() == '/'
-            if (isEnd) {
-                consume()
+        fun nextTag(): TagKind {
+            val lt = input.indexOf('<', p)
+            if (lt < 0) {
+                p = length
+                return TagKind.OTHER
             }
+            p = lt + 1
+            if (p >= length) return TagKind.OTHER
+
+            // `<!-- ... -->`, `<!DOCTYPE ...>` and `<?...?>` are not element markup, so the
+            // attribute-quote tracking below must not run over them. A comment holding an odd
+            // number of quote characters -- an apostrophe in "we don't", a lone `"` -- would
+            // otherwise leave the scanner inside a phantom quoted attribute value and make it
+            // swallow every tag that follows, until the next matching quote character. That is
+            // enough to hide a page's whole `<meta property="og:*">` block from the preview.
+            val first = input[p]
+            if (first == '!' || first == '?') {
+                if (input.startsWith(COMMENT_START, p)) {
+                    skipComment()
+                } else {
+                    skipToTagEnd()
+                }
+                return TagKind.OTHER
+            }
+
+            // read the tag name
+            val isEnd = first == '/'
+            if (isEnd) p++
             val nameStart = p
-            skipWhile { !it.isWhitespace() && it != '>' }
+            while (p < length && !input[p].isWhitespace() && input[p] != '>') p++
             val nameEnd = p
 
-            // seek to start of attrs part
-            skipSpaces()
-            val attrsStart = p
+            // seek to the start of the attrs part
+            while (p < length && input[p].isWhitespace()) p++
+            attrsStart = p
 
-            // skip until end of tag
-            var quote: Char? = null
-            while (!exhausted()) {
-                val c = consume()
-                when {
-                    // `/>` out of quote -> end of tag
-                    quote == null && c == '/' && peek() == '>' -> {
-                        consume()
+            // skip to the end of the tag, tracking quoted values so a `>` inside one doesn't end it
+            var i = p
+            var quote = NO_QUOTE
+            while (i < length) {
+                val c = input[i]
+                if (quote == NO_QUOTE) {
+                    // `>` or `/>` out of quote -> end of tag
+                    if (c == '>') {
+                        i++
                         break
                     }
-
-                    // `>` out of quote -> end of tag
-                    quote == null && c == '>' -> {
+                    if (c == '/' && i + 1 < length && input[i + 1] == '>') {
+                        i += 2
                         break
                     }
-
-                    // entering quote
-                    quote == null && (c == '\'' || c == '"') -> {
-                        quote = c
-                    }
-
-                    // leaving quote
-                    quote != null && c == quote -> {
-                        quote = null
-                    }
+                    if (c == '"' || c == '\'') quote = c
+                } else if (c == quote) {
+                    quote = NO_QUOTE
                 }
+                i++
             }
-            val attrsEnd = p - 1
+            p = i
+            attrsEnd = i - 1
 
-            val name = input.slice(nameStart..<nameEnd)
-            if (!name.matches(Regex("""[0-9a-zA-Z]+"""))) {
-                return null
+            if (isEnd) {
+                return if (nameIs(nameStart, nameEnd, HEAD)) TagKind.HEAD_END else TagKind.OTHER
             }
-            val attrsPart = input.slice(attrsStart..<attrsEnd)
-            return RawTag(isEnd, name.lowercase(), attrsPart)
+
+            // Text-only elements are skipped whole: `for (i = 0; i < n; i++)` in a script, a quote
+            // in a JS string, or the `<` and the apostrophe in `<title>5 < 6, that's math</title>`
+            // are content, not markup, and scanning them as markup hides the tags that follow --
+            // the same way an unbalanced quote inside a comment does. Switching on the name length
+            // first keeps the common tag (a `<div>`, a `<link>`) down to one comparison.
+            when (nameEnd - nameStart) {
+                META.length -> if (nameIs(nameStart, nameEnd, META)) return TagKind.META
+
+                STYLE.length ->
+                    if (nameIs(nameStart, nameEnd, STYLE)) {
+                        skipRawText(STYLE_END)
+                    } else if (nameIs(nameStart, nameEnd, TITLE)) {
+                        skipRawText(TITLE_END)
+                    }
+
+                SCRIPT.length -> if (nameIs(nameStart, nameEnd, SCRIPT)) skipRawText(SCRIPT_END)
+
+                TEXTAREA.length -> if (nameIs(nameStart, nameEnd, TEXTAREA)) skipRawText(TEXTAREA_END)
+            }
+
+            return TagKind.OTHER
         }
     }
+
+    // These two are `when` branches rather than a `Set<Char>` because `Set<Char>.contains` boxes
+    // the char, once per attribute character of every meta tag.
+    private fun isNonAttrNameChar(c: Char): Boolean =
+        when (c) {
+            '\u0000', '"', '\'', '>', '/' -> true
+            else -> false
+        }
+
+    private fun isNonUnquotedAttrValueChar(c: Char): Boolean =
+        when (c) {
+            '"', '\'', '=', '>', '<', '`' -> true
+            else -> false
+        }
 
     // map of HTML element attribute name to its value, with additional logics:
     // - attribute names are matched in a case-insensitive manner
@@ -216,16 +326,20 @@ object MetaTagsParser {
 
         private val attrs = mutableMapOf<String, String>()
 
-        fun add(attr: Pair<String, String>) {
-            val name = attr.first.lowercase()
-            if (attrs.containsKey(name)) {
-                throw IllegalArgumentException("duplicated attribute name: $name")
-            }
-            val value = attr.second.replace(RE_CHAR_REF, Companion::replaceCharRefs)
-            attrs += Pair(name, value)
+        /** Adds an attribute, returning false if that name was already set (the first value wins). */
+        fun add(
+            name: String,
+            value: String,
+        ): Boolean {
+            val key = name.lowercase()
+            if (attrs.containsKey(key)) return false
+            // Resolving character references is the expensive half of an attribute and almost no
+            // value has an `&` in it, so the scan for one pays for itself.
+            attrs[key] = if (value.indexOf('&') < 0) value else value.replace(RE_CHAR_REF, Companion::replaceCharRefs)
+            return true
         }
 
-        fun freeze(): Map<String, String> = attrs.toImmutableMap()
+        fun freeze(): Map<String, String> = attrs
     }
 
     private enum class State {
@@ -236,16 +350,22 @@ object MetaTagsParser {
         SPACE,
     }
 
-    private fun parseAttrs(input: String): Map<String, String>? {
+    /** Parses the attributes of a single tag, held in `input[from..<to]`. */
+    private fun parseAttrs(
+        input: String,
+        from: Int,
+        to: Int,
+    ): Map<String, String>? {
         val attrs = Attrs()
 
         var state = State.NAME
-        var nameBegin = 0
-        var nameEnd = 0
-        var valueBegin = 0
-        var valueQuote: Char? = null
+        var nameBegin = from
+        var nameEnd = from
+        var valueBegin = from
+        var valueQuote = NO_QUOTE
 
-        input.forEachIndexed { i, c ->
+        for (i in from..<to) {
+            val c = input[i]
             when (state) {
                 State.NAME -> {
                     when {
@@ -259,7 +379,7 @@ object MetaTagsParser {
                             state = State.BEFORE_EQ
                         }
 
-                        NON_ATTR_NAME_CHARS.contains(c) || c.isISOControl() || !c.isDefined() -> {
+                        isNonAttrNameChar(c) || c.isISOControl() || !c.isDefined() -> {
                             return null
                         }
                     }
@@ -275,7 +395,7 @@ object MetaTagsParser {
 
                         else -> {
                             // if it is expecting = but gets another name, starts another property
-                            runCatching { attrs.add(Pair(input.slice(nameBegin..<nameEnd), "")) }
+                            attrs.add(input.substring(nameBegin, nameEnd), "")
 
                             nameBegin = i
                             state = State.NAME
@@ -295,47 +415,33 @@ object MetaTagsParser {
 
                         else -> {
                             valueBegin = i
-                            valueQuote = null
+                            valueQuote = NO_QUOTE
                             state = State.VALUE
                         }
                     }
                 }
 
                 State.VALUE -> {
-                    var attr: Pair<String, String>? = null
-                    if (valueQuote != null) {
-                        if (c == valueQuote) {
-                            attr =
-                                Pair(
-                                    input.slice(nameBegin..<nameEnd),
-                                    input.slice(valueBegin..<i),
-                                )
-                        }
+                    // -1 while the value is still running; otherwise the index one past its last char
+                    var valueEnd = -1
+                    if (valueQuote != NO_QUOTE) {
+                        if (c == valueQuote) valueEnd = i
                     } else {
                         when {
-                            c.isWhitespace() -> {
-                                attr =
-                                    Pair(
-                                        input.slice(nameBegin..<nameEnd),
-                                        input.slice(valueBegin..<i),
-                                    )
-                            }
+                            c.isWhitespace() -> valueEnd = i
 
-                            i == input.length - 1 -> {
-                                attr =
-                                    Pair(
-                                        input.slice(nameBegin..<nameEnd),
-                                        input.slice(valueBegin..i),
-                                    )
-                            }
+                            i == to - 1 -> valueEnd = i + 1
 
-                            NON_UNQUOTED_ATTR_VALUE_CHARS.contains(c) -> {
-                                return null
-                            }
+                            isNonUnquotedAttrValueChar(c) -> return null
                         }
                     }
-                    if (attr != null) {
-                        runCatching { attrs.add(attr) }.getOrNull() ?: return null
+                    if (valueEnd >= 0) {
+                        val added =
+                            attrs.add(
+                                input.substring(nameBegin, nameEnd),
+                                input.substring(valueBegin, valueEnd),
+                            )
+                        if (!added) return null
                         state = State.SPACE
                     }
                 }
