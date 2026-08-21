@@ -728,6 +728,7 @@ class UrlDetector(
                 "wss:",
                 "nostr:",
                 "blossom:",
+                "ipfs:",
             )
 
         val VALID_SCHEMES =
