@@ -44,11 +44,18 @@ object MetaTagsParser {
 
     private const val META = "meta"
     private const val HEAD = "head"
+
+    // Elements whose content is text rather than markup: script and style hold raw text, title and
+    // textarea hold character data. A `<` inside any of them is not a tag.
     private const val SCRIPT = "script"
     private const val STYLE = "style"
+    private const val TITLE = "title"
+    private const val TEXTAREA = "textarea"
 
     private const val SCRIPT_END = "</script"
     private const val STYLE_END = "</style"
+    private const val TITLE_END = "</title"
+    private const val TEXTAREA_END = "</textarea"
     private const val COMMENT_START = "!--"
     private const val COMMENT_END = "-->"
 
@@ -202,15 +209,24 @@ object MetaTagsParser {
                 return if (nameIs(nameStart, nameEnd, HEAD)) TagKind.HEAD_END else TagKind.OTHER
             }
 
-            if (nameIs(nameStart, nameEnd, META)) return TagKind.META
+            // Text-only elements are skipped whole: `for (i = 0; i < n; i++)` in a script, a quote
+            // in a JS string, or the `<` and the apostrophe in `<title>5 < 6, that's math</title>`
+            // are content, not markup, and scanning them as markup hides the tags that follow --
+            // the same way an unbalanced quote inside a comment does. Switching on the name length
+            // first keeps the common tag (a `<div>`, a `<link>`) down to one comparison.
+            when (nameEnd - nameStart) {
+                META.length -> if (nameIs(nameStart, nameEnd, META)) return TagKind.META
 
-            // Script and style bodies are raw text: a `<` in `for (i = 0; i < n; i++)` or a quote
-            // in a JS string is not markup and must not be scanned as such, for the same reason
-            // comments can't be.
-            if (nameIs(nameStart, nameEnd, SCRIPT)) {
-                skipRawText(SCRIPT_END)
-            } else if (nameIs(nameStart, nameEnd, STYLE)) {
-                skipRawText(STYLE_END)
+                STYLE.length ->
+                    if (nameIs(nameStart, nameEnd, STYLE)) {
+                        skipRawText(STYLE_END)
+                    } else if (nameIs(nameStart, nameEnd, TITLE)) {
+                        skipRawText(TITLE_END)
+                    }
+
+                SCRIPT.length -> if (nameIs(nameStart, nameEnd, SCRIPT)) skipRawText(SCRIPT_END)
+
+                TEXTAREA.length -> if (nameIs(nameStart, nameEnd, TEXTAREA)) skipRawText(TEXTAREA_END)
             }
 
             return TagKind.OTHER

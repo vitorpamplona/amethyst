@@ -24,7 +24,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Comments, declarations and script bodies are not element markup. Scanning them for
+ * Comments, declarations and the text-only elements (script, style, title, textarea) are not
+ * element markup. Scanning them for
  * attribute quotes lets an odd apostrophe -- "we don't" is enough -- leave the scanner
  * inside a phantom quoted value, swallowing every tag up to the next quote character.
  * That is what hid the entire og: block of https://brainstorm.world from link previews.
@@ -98,6 +99,75 @@ class MetaTagsParserCommentTest {
 
         assertEquals(1, metaTags.size)
         assertEquals("Real Title", metaTags[0].attr("content"))
+    }
+
+    @Test
+    fun titleTextWithALessThanDoesNotSwallowFollowingMetaTags() {
+        // `<title>5 < 6, that's math</title>` is ordinary HTML: an unescaped `<` in title text,
+        // then an apostrophe. Scanned as markup, the `<` opens a phantom tag and the apostrophe
+        // opens a phantom attribute value that runs to the end of the document.
+        val input =
+            """
+            |<html><head>
+            |  <title>5 < 6, that's math</title>
+            |  <meta property="og:title" content="Real Title">
+            |</head></html>
+            """.trimMargin()
+
+        val metaTags = MetaTagsParser.parse(input).toList()
+
+        assertEquals(1, metaTags.size)
+        assertEquals("Real Title", metaTags[0].attr("content"))
+    }
+
+    @Test
+    fun metaTagsInsideTitleTextAreNotParsed() {
+        // Title content is character data, so this is a title that reads literally
+        // `a <meta property="og:title" content="Fake"> b`, not a second og:title.
+        val input =
+            """
+            |<html><head>
+            |  <title>a <meta property="og:title" content="Fake"> b</title>
+            |  <meta property="og:title" content="Real Title">
+            |</head></html>
+            """.trimMargin()
+
+        val metaTags = MetaTagsParser.parse(input).toList()
+
+        assertEquals(1, metaTags.size)
+        assertEquals("Real Title", metaTags[0].attr("content"))
+    }
+
+    @Test
+    fun textareaTextDoesNotSwallowFollowingMetaTags() {
+        val input =
+            """
+            |<html><head>
+            |  <textarea>x < y's z</textarea>
+            |  <meta property="og:title" content="Real Title">
+            |</head></html>
+            """.trimMargin()
+
+        val metaTags = MetaTagsParser.parse(input).toList()
+
+        assertEquals(1, metaTags.size)
+        assertEquals("Real Title", metaTags[0].attr("content"))
+    }
+
+    @Test
+    fun aSelfClosedScriptStillOpensRawText() {
+        // Deliberate, and what a browser does: `/` on a script start tag is ignored, so everything
+        // up to `</script>` is script data. A page written this way shows nothing after it either.
+        // Pinned so that "fixing" it never turns a JS string into an og: tag.
+        val input =
+            """
+            |<html><head>
+            |  <script src="a.js"/>
+            |  <meta property="og:title" content="Unreachable">
+            |</head></html>
+            """.trimMargin()
+
+        assertEquals(0, MetaTagsParser.parse(input).count())
     }
 
     @Test
