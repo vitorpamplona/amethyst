@@ -77,6 +77,8 @@ fun ConnectedCallUI(
     onHangup: () -> Unit,
     onToggleMute: () -> Unit,
     onToggleVideo: () -> Unit,
+    onStartScreenShare: () -> Unit,
+    onStopScreenShare: () -> Unit,
     onCycleAudioRoute: () -> Unit,
     onInvitePeer: (String) -> Unit = {},
 ) {
@@ -99,11 +101,13 @@ fun ConnectedCallUI(
     val defaultTrue = remember { kotlinx.coroutines.flow.MutableStateFlow(true) }
     val isAudioMuted by (callSession?.isAudioMuted ?: defaultFalse).collectAsState()
     val isVideoEnabled by (callSession?.isVideoEnabled ?: defaultTrue).collectAsState()
+    val isScreenSharing by (callSession?.isScreenSharing ?: defaultFalse).collectAsState()
     val isFrontCamera by (callSession?.isFrontCamera ?: defaultTrue).collectAsState()
     val currentAudioRoute by (callSession?.audioRoute ?: remember { kotlinx.coroutines.flow.MutableStateFlow(AudioRoute.EARPIECE) }).collectAsState()
     val hasActiveVideo =
         state.callType == com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType.VIDEO ||
             isVideoEnabled ||
+            isScreenSharing ||
             remoteVideoTracks.isNotEmpty()
 
     var showAddParticipant by remember { mutableStateOf(false) }
@@ -142,7 +146,7 @@ fun ConnectedCallUI(
                 modifier = Modifier.fillMaxSize(),
             )
 
-            if (isVideoEnabled) {
+            if (isVideoEnabled && !isScreenSharing) {
                 localVideoTrack?.let { track ->
                     VideoRenderer(
                         videoTrack = track,
@@ -159,16 +163,27 @@ fun ConnectedCallUI(
                 }
             }
 
-            Text(
-                text = formatDuration(elapsed),
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 14.sp,
+            Column(
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
                         .windowInsetsPadding(WindowInsets.statusBars)
                         .padding(top = 16.dp),
-            )
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (isScreenSharing) {
+                    Text(
+                        text = stringRes(R.string.call_screen_sharing),
+                        color = Color.Cyan,
+                        fontSize = 14.sp,
+                    )
+                }
+                Text(
+                    text = formatDuration(elapsed),
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp,
+                )
+            }
         } else {
             // Voice-only path: render the same peer grid so each pending
             // callee shows their individual "Calling…" status rather than a
@@ -205,10 +220,13 @@ fun ConnectedCallUI(
         CallControls(
             isAudioMuted = isAudioMuted,
             isVideoEnabled = isVideoEnabled,
+            isScreenSharing = isScreenSharing,
             isFrontCamera = isFrontCamera,
             currentAudioRoute = currentAudioRoute,
             onToggleMute = onToggleMute,
             onToggleVideo = onToggleVideo,
+            onStartScreenShare = onStartScreenShare,
+            onStopScreenShare = onStopScreenShare,
             onSwitchCamera = { callSession?.switchCamera() },
             onCycleAudioRoute = onCycleAudioRoute,
             onAddParticipant = { showAddParticipant = true },
@@ -226,10 +244,13 @@ fun ConnectedCallUI(
 private fun CallControls(
     isAudioMuted: Boolean,
     isVideoEnabled: Boolean,
+    isScreenSharing: Boolean,
     isFrontCamera: Boolean,
     currentAudioRoute: AudioRoute,
     onToggleMute: () -> Unit,
     onToggleVideo: () -> Unit,
+    onStartScreenShare: () -> Unit,
+    onStopScreenShare: () -> Unit,
     onSwitchCamera: () -> Unit,
     onCycleAudioRoute: () -> Unit,
     onAddParticipant: () -> Unit,
@@ -252,15 +273,38 @@ private fun CallControls(
                     modifier = Modifier.size(28.dp),
                 )
             }
-            IconButton(onClick = onToggleVideo, modifier = Modifier.size(56.dp)) {
+            IconButton(
+                onClick = onToggleVideo,
+                enabled = !isScreenSharing,
+                modifier = Modifier.size(56.dp),
+            ) {
                 Icon(
                     symbol = if (isVideoEnabled) MaterialSymbols.Videocam else MaterialSymbols.VideocamOff,
                     contentDescription = stringRes(if (isVideoEnabled) R.string.call_camera_off else R.string.call_camera_on),
-                    tint = if (!isVideoEnabled) Color.Red else Color.White,
+                    tint =
+                        when {
+                            isScreenSharing -> Color.Gray
+                            !isVideoEnabled -> Color.Red
+                            else -> Color.White
+                        },
                     modifier = Modifier.size(28.dp),
                 )
             }
-            if (isVideoEnabled) {
+            IconButton(
+                onClick = if (isScreenSharing) onStopScreenShare else onStartScreenShare,
+                modifier = Modifier.size(56.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Cast,
+                    contentDescription =
+                        stringRes(
+                            if (isScreenSharing) R.string.call_screen_share_stop else R.string.call_screen_share_start,
+                        ),
+                    tint = if (isScreenSharing) Color.Cyan else Color.White,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+            if (isVideoEnabled && !isScreenSharing) {
                 IconButton(onClick = onSwitchCamera, modifier = Modifier.size(56.dp)) {
                     Icon(
                         symbol =

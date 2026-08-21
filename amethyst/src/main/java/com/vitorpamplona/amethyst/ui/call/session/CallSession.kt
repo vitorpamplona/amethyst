@@ -27,6 +27,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.AnswerRouteAction
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
@@ -60,6 +61,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.webrtc.EglBase
 import org.webrtc.IceCandidate
+import org.webrtc.RtpSender
 import org.webrtc.VideoTrack
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -108,6 +110,7 @@ class CallSession(
     private val _isAudioMuted = MutableStateFlow(false)
     val isAudioMuted: StateFlow<Boolean> = _isAudioMuted.asStateFlow()
     val isVideoEnabled: StateFlow<Boolean> = mediaManager.isVideoEnabled
+    val isScreenSharing: StateFlow<Boolean> = mediaManager.isScreenSharing
     val isFrontCamera: StateFlow<Boolean> = mediaManager.isFrontCamera
     val audioRoute: StateFlow<AudioRoute> = audioManager.audioRoute
     val isBluetoothAvailable: StateFlow<Boolean> = audioManager.isBluetoothAvailable
@@ -117,7 +120,7 @@ class CallSession(
     @Volatile private var closed = false
 
     @Volatile private var foregroundServiceStarted = false
-    private val videoSenders = ConcurrentHashMap<HexKey, org.webrtc.RtpSender>()
+    private val videoSenders = ConcurrentHashMap<HexKey, RtpSender>()
 
     private val pendingRenegotiation = ConcurrentHashMap<HexKey, Boolean>()
 
@@ -142,6 +145,12 @@ class CallSession(
     // ---- Initialization ----
 
     init {
+        mediaManager.onScreenShareEnded = {
+            if (!closed) {
+                scope.launch { stopScreenShareNow() }
+            }
+        }
+
         // Collect all session-level events (answers, ICE candidates,
         // peer joins/leaves, mid-call offers) from the single SharedFlow.
         scope.launch {
@@ -227,6 +236,7 @@ class CallSession(
 
         scope.launch {
             audioManager.isNearEar.collect { nearEar ->
+                if (mediaManager.isScreenSharing.value) return@collect
                 val videoTrack = mediaManager.localVideoTrack ?: return@collect
                 if (nearEar && mediaManager.isVideoEnabled.value && !videoPausedByProximity) {
                     videoPausedByProximity = true
@@ -530,6 +540,79 @@ class CallSession(
 
     // ---- UI toggle controls ----
 
+    fun startScreenShare(permissionData: Intent) {
+        val state = callManager.state.value
+        if (closed || (state !is CallState.Connecting && state !is CallState.Connected)) return
+
+        scope.launch {
+            if (mediaManager.isScreenSharing.value) return@launch
+            try {
+                ensureForegroundService(isScreenSharing = true)
+                val screenTrack = withContext(Dispatchers.IO) { mediaManager.startScreenShare(permissionData) }
+                if (closed) {
+                    stopScreenShareNow()
+                    return@launch
+                }
+                replaceVideoTrack(screenTrack)
+                updateForegroundServiceNotification(isScreenSharing = true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start screen share", e)
+                if (mediaManager.isScreenSharing.value) {
+                    try {
+                        stopScreenShareNow()
+                    } catch (cleanupError: Exception) {
+                        Log.e(TAG, "Failed to clean up screen share", cleanupError)
+                    }
+                }
+                _errorMessage.value = "Failed to share screen: ${e.message}"
+                updateForegroundServiceNotification(isScreenSharing = false)
+            }
+        }
+    }
+
+    fun stopScreenShare() {
+        scope.launch { stopScreenShareNow() }
+    }
+
+    private fun stopScreenShareNow() {
+        val resources = mediaManager.stopScreenShare() ?: return
+        try {
+            val restoredTrack =
+                mediaManager.localVideoTrack.takeIf { mediaManager.isVideoEnabled.value }
+            replaceVideoTrack(restoredTrack)
+            if (videoPausedByProximity) {
+                mediaManager.localVideoTrack?.setEnabled(false)
+                mediaManager.stopCamera()
+            }
+        } finally {
+            mediaManager.disposeScreenShareResources(resources)
+            updateForegroundServiceNotification(isScreenSharing = false)
+        }
+    }
+
+    private fun replaceVideoTrack(track: VideoTrack?) {
+        peerSessionMgr.allSessionKeys().forEach { key ->
+            val session = webRtcSession(key) ?: return@forEach
+            if (track != null) {
+                val sender = videoSenders[key]
+                if (sender != null) {
+                    if (!sender.setTrack(track, false)) {
+                        Log.e(TAG, "Failed to replace video track for ${key.take(8)}")
+                    }
+                } else {
+                    session.addTrack(track, settingsProvider().callMaxBitrateBps)?.let { newSender ->
+                        videoSenders[key] = newSender
+                    }
+                }
+            } else {
+                videoSenders.remove(key)?.let { sender ->
+                    sender.setTrack(null, false)
+                    session.removeTrack(sender)
+                }
+            }
+        }
+    }
+
     fun toggleMute() {
         val muted = !_isAudioMuted.value
         _isAudioMuted.value = muted
@@ -537,6 +620,7 @@ class CallSession(
     }
 
     fun toggleVideo() {
+        if (mediaManager.isScreenSharing.value) return
         val enabling = !mediaManager.isVideoEnabled.value
         if (enabling) {
             if (mediaManager.localVideoTrack == null) {
@@ -569,6 +653,7 @@ class CallSession(
     }
 
     fun switchCamera() {
+        if (mediaManager.isScreenSharing.value) return
         mediaManager.switchCamera()
     }
 
@@ -651,7 +736,7 @@ class CallSession(
             throw e
         }
         mediaManager.localAudioTrack?.let { session.addTrack(it) }
-        mediaManager.localVideoTrack?.let { track ->
+        (mediaManager.screenVideoTrack ?: mediaManager.localVideoTrack)?.let { track ->
             val sender = session.addTrack(track, settingsProvider().callMaxBitrateBps)
             if (sender != null) {
                 videoSenders[peerPubKey] = sender
@@ -702,6 +787,7 @@ class CallSession(
         Log.d(TAG) { "close() called on ${Thread.currentThread().name} state=${callManager.state.value::class.simpleName}" }
         // Signal the init collectors to stop touching resources.
         closed = true
+        mediaManager.onScreenShareEnded = null
 
         try {
             audioManager.stopRinging()
@@ -755,13 +841,16 @@ class CallSession(
 
     // ---- Foreground service ----
 
-    private fun ensureForegroundService() {
-        if (foregroundServiceStarted) return
+    private fun ensureForegroundService(isScreenSharing: Boolean = mediaManager.isScreenSharing.value) {
+        if (foregroundServiceStarted) {
+            updateForegroundServiceNotification(isScreenSharing)
+            return
+        }
         foregroundServiceStarted = true
-        startForegroundService()
+        startForegroundService(isScreenSharing)
     }
 
-    private fun startForegroundService() {
+    private fun startForegroundService(isScreenSharing: Boolean = mediaManager.isScreenSharing.value) {
         try {
             val peerName = callManager.currentPeerPubKey() ?: ""
             val isVideo = mediaManager.isVideoEnabled.value
@@ -771,7 +860,11 @@ class CallSession(
                     action = CallForegroundService.ACTION_START
                     putExtra(CallForegroundService.EXTRA_PEER_NAME, peerName)
                     putExtra(CallForegroundService.EXTRA_IS_VIDEO, isVideo)
+                    putExtra(CallForegroundService.EXTRA_IS_SCREEN_SHARING, isScreenSharing)
                     putExtra(CallForegroundService.EXTRA_IS_RINGING, isRinging)
+                    if (isScreenSharing) {
+                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, context.getString(R.string.call_screen_sharing))
+                    }
                 }
             context.startForegroundService(intent)
         } catch (e: Exception) {
@@ -779,7 +872,7 @@ class CallSession(
         }
     }
 
-    private fun updateForegroundServiceNotification() {
+    private fun updateForegroundServiceNotification(isScreenSharing: Boolean = mediaManager.isScreenSharing.value) {
         if (!foregroundServiceStarted) return
         try {
             val peerName = callManager.currentPeerPubKey() ?: ""
@@ -790,7 +883,11 @@ class CallSession(
                     action = CallForegroundService.ACTION_UPDATE
                     putExtra(CallForegroundService.EXTRA_PEER_NAME, peerName)
                     putExtra(CallForegroundService.EXTRA_IS_VIDEO, isVideo)
+                    putExtra(CallForegroundService.EXTRA_IS_SCREEN_SHARING, isScreenSharing)
                     putExtra(CallForegroundService.EXTRA_IS_RINGING, isRinging)
+                    if (isScreenSharing) {
+                        putExtra(CallForegroundService.EXTRA_STATUS_TEXT, context.getString(R.string.call_screen_sharing))
+                    }
                 }
             context.startService(intent)
         } catch (e: Exception) {

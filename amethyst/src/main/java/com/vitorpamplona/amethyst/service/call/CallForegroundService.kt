@@ -53,6 +53,7 @@ class CallForegroundService : Service() {
         const val ACTION_UPDATE = "com.vitorpamplona.amethyst.CALL_UPDATE"
         const val EXTRA_PEER_NAME = "peer_name"
         const val EXTRA_IS_VIDEO = "is_video"
+        const val EXTRA_IS_SCREEN_SHARING = "is_screen_sharing"
         const val EXTRA_STATUS_TEXT = "status_text"
         const val EXTRA_IS_RINGING = "is_ringing"
         private const val HANGUP_REQUEST_CODE = 0x70001
@@ -75,6 +76,7 @@ class CallForegroundService : Service() {
             ACTION_START, ACTION_UPDATE -> {
                 val peerName = intent.getStringExtra(EXTRA_PEER_NAME) ?: "Unknown"
                 val isVideo = intent.getBooleanExtra(EXTRA_IS_VIDEO, false)
+                val isScreenSharing = intent.getBooleanExtra(EXTRA_IS_SCREEN_SHARING, false)
                 val isRinging = intent.getBooleanExtra(EXTRA_IS_RINGING, false)
                 val statusText = intent.getStringExtra(EXTRA_STATUS_TEXT)
                 val notification = buildNotification(peerName, statusText)
@@ -97,6 +99,9 @@ class CallForegroundService : Service() {
                                 if (isVideo && hasCameraPermission) {
                                     type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
                                 }
+                                if (isScreenSharing) {
+                                    type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                                }
                             }
                             type
                         } else {
@@ -108,7 +113,11 @@ class CallForegroundService : Service() {
                     try {
                         val fallbackType =
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                                var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                                if (isScreenSharing) {
+                                    type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                                }
+                                type
                             } else {
                                 0
                             }

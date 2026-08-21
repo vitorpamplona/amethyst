@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.call
 
 import android.content.Context
+import android.content.Intent
+import android.media.projection.MediaProjection
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +37,7 @@ import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
 import org.webrtc.MediaConstraints
 import org.webrtc.PeerConnectionFactory
+import org.webrtc.ScreenCapturerAndroid
 import org.webrtc.SurfaceTextureHelper
 import org.webrtc.VideoSource
 import org.webrtc.VideoTrack
@@ -65,15 +68,29 @@ class CallMediaManager(
     var localVideoTrack: VideoTrack? = null
         private set
 
+    var screenVideoSource: VideoSource? = null
+        private set
+    var screenVideoTrack: VideoTrack? = null
+        private set
+
     private var cameraCapturer: CameraVideoCapturer? = null
     private var surfaceTextureHelper: SurfaceTextureHelper? = null
+    private var screenCapturer: ScreenCapturerAndroid? = null
+    private var screenSurfaceTextureHelper: SurfaceTextureHelper? = null
     private var usingFrontCamera: Boolean = true
+    private var cameraWasEnabledBeforeScreenShare = false
+    private var stoppingScreenShare = false
+
+    var onScreenShareEnded: (() -> Unit)? = null
 
     private val _localVideoTrackFlow = MutableStateFlow<VideoTrack?>(null)
     val localVideoTrackFlow: StateFlow<VideoTrack?> = _localVideoTrackFlow.asStateFlow()
 
     private val _isVideoEnabled = MutableStateFlow(false)
     val isVideoEnabled: StateFlow<Boolean> = _isVideoEnabled.asStateFlow()
+
+    private val _isScreenSharing = MutableStateFlow(false)
+    val isScreenSharing: StateFlow<Boolean> = _isScreenSharing.asStateFlow()
 
     private val _isFrontCamera = MutableStateFlow(true)
     val isFrontCamera: StateFlow<Boolean> = _isFrontCamera.asStateFlow()
@@ -146,6 +163,131 @@ class CallMediaManager(
         captureFps = fps
     }
 
+    /**
+     * Starts Android's system screen capture using the one-shot permission result supplied by
+     * [android.media.projection.MediaProjectionManager]. The returned track is owned by this
+     * manager and must be attached to the peer senders before [stopScreenShare] releases it.
+     */
+    @Synchronized
+    fun startScreenShare(permissionData: Intent): VideoTrack {
+        screenVideoTrack?.let { return it }
+
+        val factory = peerConnectionFactory ?: throw IllegalStateException("PeerConnectionFactory not initialized")
+        val egl = sharedEglBase ?: throw IllegalStateException("EGL context not initialized")
+        val displayMetrics = context.resources.displayMetrics
+        val captureSize = screenShareCaptureSize(displayMetrics.widthPixels, displayMetrics.heightPixels)
+        cameraWasEnabledBeforeScreenShare = _isVideoEnabled.value
+        var source: VideoSource? = null
+        var track: VideoTrack? = null
+        var helper: SurfaceTextureHelper? = null
+        var capturer: ScreenCapturerAndroid? = null
+
+        try {
+            val createdSource = factory.createVideoSource(true)
+            source = createdSource
+            val createdTrack = factory.createVideoTrack("screen0", createdSource)
+            track = createdTrack
+            val createdHelper = SurfaceTextureHelper.create("ScreenCaptureThread", egl.eglBaseContext)
+            helper = createdHelper
+            val createdCapturer =
+                ScreenCapturerAndroid(
+                    permissionData,
+                    object : MediaProjection.Callback() {
+                        override fun onStop() {
+                            if (!stoppingScreenShare) {
+                                onScreenShareEnded?.invoke()
+                            }
+                        }
+                    },
+                )
+            capturer = createdCapturer
+
+            screenVideoSource = createdSource
+            screenVideoTrack = createdTrack
+            screenSurfaceTextureHelper = createdHelper
+            screenCapturer = createdCapturer
+            if (cameraWasEnabledBeforeScreenShare) {
+                stopCamera()
+            }
+            createdCapturer.initialize(createdHelper, context, createdSource.capturerObserver)
+            createdCapturer.startCapture(captureSize.width, captureSize.height, captureFps)
+            _isScreenSharing.value = true
+            _isVideoEnabled.value = true
+            _localVideoTrackFlow.value = createdTrack
+            return createdTrack
+        } catch (e: Exception) {
+            screenCapturer = null
+            screenSurfaceTextureHelper = null
+            screenVideoTrack = null
+            screenVideoSource = null
+            runCatching { capturer?.dispose() }
+            runCatching { helper?.dispose() }
+            runCatching { track?.dispose() }
+            runCatching { source?.dispose() }
+            if (cameraWasEnabledBeforeScreenShare) {
+                _isVideoEnabled.value = true
+                _localVideoTrackFlow.value = localVideoTrack
+                startCamera()
+            }
+            cameraWasEnabledBeforeScreenShare = false
+            throw e
+        }
+    }
+
+    /**
+     * Stops screen capture and restores the camera state from before sharing started. The
+     * returned resources remain alive until the caller has replaced every [RtpSender] track.
+     */
+    @Synchronized
+    fun stopScreenShare(): ScreenShareResources? {
+        val track = screenVideoTrack ?: return null
+        val source = requireNotNull(screenVideoSource)
+        stoppingScreenShare = true
+        try {
+            screenCapturer?.let { capturer ->
+                runCatching { capturer.stopCapture() }
+                runCatching { capturer.dispose() }
+            }
+            screenSurfaceTextureHelper?.let { runCatching { it.dispose() } }
+        } finally {
+            screenCapturer = null
+            screenSurfaceTextureHelper = null
+            screenVideoTrack = null
+            screenVideoSource = null
+            _isScreenSharing.value = false
+
+            if (cameraWasEnabledBeforeScreenShare) {
+                recreateCameraResources()
+                _isVideoEnabled.value = true
+                _localVideoTrackFlow.value = localVideoTrack
+                startCamera()
+            } else {
+                _isVideoEnabled.value = false
+                _localVideoTrackFlow.value = localVideoTrack
+            }
+            cameraWasEnabledBeforeScreenShare = false
+            stoppingScreenShare = false
+        }
+        return ScreenShareResources(track, source)
+    }
+
+    fun disposeScreenShareResources(resources: ScreenShareResources?) {
+        resources ?: return
+        runCatching { resources.track.dispose() }
+        runCatching { resources.source.dispose() }
+    }
+
+    private fun recreateCameraResources() {
+        val factory = peerConnectionFactory ?: return
+        // RtpSender.setTrack may release the previous native track wrapper, so restore a fresh
+        // camera track before binding it back to the senders.
+        runCatching { localVideoTrack?.dispose() }
+        runCatching { localVideoSource?.dispose() }
+        localVideoSource = factory.createVideoSource(false)
+        localVideoTrack = factory.createVideoTrack("video0", localVideoSource)
+    }
+
+    @Synchronized
     fun startCamera() {
         if (cameraCapturer != null) return
         val source = localVideoSource ?: return
@@ -186,6 +328,7 @@ class CallMediaManager(
         )
     }
 
+    @Synchronized
     fun stopCamera() {
         try {
             cameraCapturer?.stopCapture()
@@ -215,6 +358,8 @@ class CallMediaManager(
     }
 
     fun dispose() {
+        val screenResources = stopScreenShare()
+        disposeScreenShareResources(screenResources)
         try {
             stopCamera()
         } catch (e: Exception) {
