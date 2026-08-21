@@ -591,6 +591,9 @@
     <string name="quick_action_block">Blokovat</string>
     <string name="quick_action_mute_thread">Ztlumit vlákno</string>
     <string name="quick_action_unmute_thread">Zrušit ztlumení vlákna</string>
+    <string name="mute_notifications">Ztlumit oznámení</string>
+    <string name="unmute_notifications">Zrušit ztlumení oznámení</string>
+    <string name="muted_chat_content_description">Oznámení pro tento chat jsou ztlumena</string>
     <string name="quick_action_report">Nahlásit</string>
     <string name="quick_action_dont_show_again_button">Nepředvádět znovu</string>
     <string name="report_dialog_spam">Spam nebo podvody</string>
@@ -1170,6 +1173,7 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Přihlásit se bez ptaní, když…</string>
+    <string name="relay_auth_auto_my_relays_and_venues">…je to moje relé nebo místnost, do které jsem se přidal nebo kterou sleduji</string>
     <string name="relay_auth_auto_read_follows">…čtu někoho, koho sleduji</string>
     <string name="relay_auth_auto_message_follows">…píšu někomu, koho sleduji</string>
     <string name="relay_auth_auto_message_strangers">…píšu komukoli jinému</string>
@@ -1217,6 +1221,11 @@
     <string name="relay_auth_remove_exception">Odebrat výjimku</string>
     <string name="relay_auth_exception_removed_undo">Výjimka odebrána. %1$s se opět řídí vašimi pravidly.</string>
     <string name="relay_auth_undo">Zpět</string>
+    <string name="relay_auth_session_section">Jen pro tuto chvíli</string>
+    <string name="relay_auth_session_row_desc">Přihlášeno, dokud nerestartujete Amethyst</string>
+    <string name="relay_auth_forget_session">Zapomenout toto přihlášení</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s se zeptá znovu, až vás bude příště potřebovat.</string>
+    <string name="relay_auth_session_undo_blocked">Neobnoveno. Je zapnuto “Nikdy se neověřovat”, takže se Amethyst k %1$s nepřihlásí.</string>
     <string name="relay_auth_blocked_section">Blokováno vaším seznamem blokovaných</string>
     <string name="relay_auth_blocked_row_desc">Amethyst se k blokovaným relé nikdy nepřihlašuje.</string>
     <string name="relay_auth_no_blocked">Nic není blokováno. K relé, která zablokujete, se Amethyst nikdy nepřihlásí, ať zde nastavíte cokoli.</string>
@@ -2769,6 +2778,9 @@
     <string name="relay_group_no_messages_yet">Zatím žádné zprávy</string>
     <string name="channel_invite_title">Přidáno do %1$s</string>
     <string name="channel_invite_unknown_actor">Někdo</string>
+    <string name="channel_invite_added_you">vás přidal do tohoto kanálu</string>
+    <string name="channel_invite_row_added_you_by">%1$s vás přidal do tohoto kanálu</string>
+    <string name="channel_invite_row_added_you">Byl jste přidán do tohoto kanálu</string>
     <string name="channel_invite_ignore">Ignorovat</string>
     <string name="channel_invite_leave">Opustit</string>
     <string name="relay_group_join_to_post">Připojte se k této skupině pro odesílání zpráv.</string>
@@ -3091,6 +3103,9 @@
     <string name="cashu_remove_mint">Odebrat mint</string>
     <string name="cashu_add_mint">Přidat mint</string>
     <string name="cashu_history">Historie</string>
+    <string name="cashu_history_loading_older">Načítání starších transakcí…</string>
+    <string name="cashu_history_all_loaded">Žádné starší transakce</string>
+    <string name="cashu_history_some_relays_unreachable">Žádné starší transakce z relayů, které odpověděly — některé se nepodařilo kontaktovat</string>
     <string name="cashu_wallet_autosaves">Vaše peněženka se ukládá automaticky, jak přidáváte nebo odebíráte mincovny. Klíč nutzap se pro vás vytvoří při prvním přidání mincovny.</string>
     <string name="cashu_wallet_saving">Ukládání…</string>
     <string name="cashu_p2pk_section">Klíč pro nutzap (pokročilé)</string>
@@ -5077,19 +5092,4 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
-    <string name="cashu_history_all_loaded">Žádné starší transakce</string>
-    <string name="cashu_history_loading_older">Načítání starších transakcí…</string>
-    <string name="cashu_history_some_relays_unreachable">Žádné starší transakce z relayů, které odpověděly — některé se nepodařilo kontaktovat</string>
-    <string name="channel_invite_added_you">vás přidal do tohoto kanálu</string>
-    <string name="channel_invite_row_added_you">Byl jste přidán do tohoto kanálu</string>
-    <string name="channel_invite_row_added_you_by">%1$s vás přidal do tohoto kanálu</string>
-    <string name="mute_notifications">Ztlumit oznámení</string>
-    <string name="muted_chat_content_description">Oznámení pro tento chat jsou ztlumena</string>
-    <string name="relay_auth_auto_my_relays_and_venues">…je to moje relé nebo místnost, do které jsem se přidal nebo kterou sleduji</string>
-    <string name="relay_auth_forget_session">Zapomenout toto přihlášení</string>
-    <string name="relay_auth_session_forgotten_undo">%1$s se zeptá znovu, až vás bude příště potřebovat.</string>
-    <string name="relay_auth_session_row_desc">Přihlášeno, dokud nerestartujete Amethyst</string>
-    <string name="relay_auth_session_section">Jen pro tuto chvíli</string>
-    <string name="relay_auth_session_undo_blocked">Neobnoveno. Je zapnuto “Nikdy se neověřovat”, takže se Amethyst k %1$s nepřihlásí.</string>
-    <string name="unmute_notifications">Zrušit ztlumení oznámení</string>
 </resources>
