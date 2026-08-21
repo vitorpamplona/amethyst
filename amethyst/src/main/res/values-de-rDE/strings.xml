@@ -571,6 +571,9 @@
     <string name="quick_action_block">Blockieren</string>
     <string name="quick_action_mute_thread">Thread stummschalten</string>
     <string name="quick_action_unmute_thread">Thread entdämpfen</string>
+    <string name="mute_notifications">Benachrichtigungen stummschalten</string>
+    <string name="unmute_notifications">Stummschaltung der Benachrichtigungen aufheben</string>
+    <string name="muted_chat_content_description">Benachrichtigungen für diesen Chat sind stummgeschaltet</string>
     <string name="quick_action_report">Melden</string>
     <string name="quick_action_dont_show_again_button">Nicht erneut anzeigen</string>
     <string name="report_dialog_spam">Spam oder Betrug</string>
@@ -1110,6 +1113,7 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Ohne Nachfrage anmelden, wenn…</string>
+    <string name="relay_auth_auto_my_relays_and_venues">…es ist mein Relay oder ein Raum, dem ich beigetreten bin oder dem ich folge</string>
     <string name="relay_auth_auto_read_follows">…ich jemanden lese, dem ich folge</string>
     <string name="relay_auth_auto_message_follows">…ich jemandem schreibe, dem ich folge</string>
     <string name="relay_auth_auto_message_strangers">…ich jemand anderem schreibe</string>
@@ -1153,6 +1157,11 @@
     <string name="relay_auth_remove_exception">Ausnahme entfernen</string>
     <string name="relay_auth_exception_removed_undo">Ausnahme entfernt. %1$s folgt wieder deinen Regeln.</string>
     <string name="relay_auth_undo">Rückgängig</string>
+    <string name="relay_auth_session_section">Nur für jetzt</string>
+    <string name="relay_auth_session_row_desc">Angemeldet, bis du Amethyst neu startest</string>
+    <string name="relay_auth_forget_session">Diese Anmeldung vergessen</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s fragt beim nächsten Mal wieder, wenn es dich braucht.</string>
+    <string name="relay_auth_session_undo_blocked">Nicht wiederhergestellt. “Nie authentifizieren” ist aktiv, daher meldet sich Amethyst nicht bei %1$s an.</string>
     <string name="relay_auth_blocked_section">Von deiner Blockliste blockiert</string>
     <string name="relay_auth_blocked_row_desc">Amethyst meldet sich nie bei blockierten Relays an.</string>
     <string name="relay_auth_no_blocked">Nichts blockiert. Bei Relays, die du blockierst, meldet sich Amethyst nie an — egal, was du hier einstellst.</string>
@@ -2657,6 +2666,9 @@
     <string name="relay_group_no_messages_yet">Noch keine Nachrichten</string>
     <string name="channel_invite_title">Zu %1$s hinzugefügt</string>
     <string name="channel_invite_unknown_actor">Jemand</string>
+    <string name="channel_invite_added_you">hat dich zu diesem Kanal hinzugefügt</string>
+    <string name="channel_invite_row_added_you_by">%1$s hat dich zu diesem Kanal hinzugefügt</string>
+    <string name="channel_invite_row_added_you">Du wurdest zu diesem Kanal hinzugefügt</string>
     <string name="channel_invite_ignore">Ignorieren</string>
     <string name="channel_invite_leave">Verlassen</string>
     <string name="relay_group_join_to_post">Tritt dieser Gruppe bei, um Nachrichten zu senden.</string>
@@ -2969,6 +2981,9 @@
     <string name="cashu_remove_mint">Mint entfernen</string>
     <string name="cashu_add_mint">Mint hinzufügen</string>
     <string name="cashu_history">Verlauf</string>
+    <string name="cashu_history_loading_older">Ältere Transaktionen werden geladen…</string>
+    <string name="cashu_history_all_loaded">Keine älteren Transaktionen</string>
+    <string name="cashu_history_some_relays_unreachable">Keine älteren Transaktionen von den Relays, die geantwortet haben — einige waren nicht erreichbar</string>
     <string name="cashu_wallet_autosaves">Deine Wallet wird automatisch gespeichert, während du Mints hinzufügst oder entfernst. Ein Nutzap-Schlüssel wird für dich erstellt, sobald du das erste Mint hinzufügst.</string>
     <string name="cashu_wallet_saving">Wird gespeichert…</string>
     <string name="cashu_p2pk_section">Nutzap-Schlüssel (erweitert)</string>
@@ -4867,19 +4882,4 @@
     <string name="buzz_persona_avatar">Avatar-URL (optional)</string>
     <string name="buzz_persona_publishing">Wird veröffentlicht…</string>
     <string name="buzz_persona_publish">Persona veröffentlichen</string>
-    <string name="cashu_history_all_loaded">Keine älteren Transaktionen</string>
-    <string name="cashu_history_loading_older">Ältere Transaktionen werden geladen…</string>
-    <string name="cashu_history_some_relays_unreachable">Keine älteren Transaktionen von den Relays, die geantwortet haben — einige waren nicht erreichbar</string>
-    <string name="channel_invite_added_you">hat dich zu diesem Kanal hinzugefügt</string>
-    <string name="channel_invite_row_added_you">Du wurdest zu diesem Kanal hinzugefügt</string>
-    <string name="channel_invite_row_added_you_by">%1$s hat dich zu diesem Kanal hinzugefügt</string>
-    <string name="mute_notifications">Benachrichtigungen stummschalten</string>
-    <string name="muted_chat_content_description">Benachrichtigungen für diesen Chat sind stummgeschaltet</string>
-    <string name="relay_auth_auto_my_relays_and_venues">…es ist mein Relay oder ein Raum, dem ich beigetreten bin oder dem ich folge</string>
-    <string name="relay_auth_forget_session">Diese Anmeldung vergessen</string>
-    <string name="relay_auth_session_forgotten_undo">%1$s fragt beim nächsten Mal wieder, wenn es dich braucht.</string>
-    <string name="relay_auth_session_row_desc">Angemeldet, bis du Amethyst neu startest</string>
-    <string name="relay_auth_session_section">Nur für jetzt</string>
-    <string name="relay_auth_session_undo_blocked">Nicht wiederhergestellt. “Nie authentifizieren” ist aktiv, daher meldet sich Amethyst nicht bei %1$s an.</string>
-    <string name="unmute_notifications">Stummschaltung der Benachrichtigungen aufheben</string>
 </resources>

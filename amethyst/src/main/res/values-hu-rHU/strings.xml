@@ -1158,6 +1158,11 @@
     <string name="relay_auth_remove_exception">Kivétel eltávolítása</string>
     <string name="relay_auth_exception_removed_undo">Kivétel eltávolítva. %1$s ismét az Ön szabályait követi.</string>
     <string name="relay_auth_undo">Visszavonás</string>
+    <string name="relay_auth_session_section">Csak most</string>
+    <string name="relay_auth_session_row_desc">Bejelentkezve maradás az Amethyst újraindításáig</string>
+    <string name="relay_auth_forget_session">Bejelentkezés elfelejtése</string>
+    <string name="relay_auth_session_forgotten_undo">Ha szükség lesz rá, a(z) %1$s ismét rákérdez.</string>
+    <string name="relay_auth_session_undo_blocked">Nincs visszaállítva. A „Soha ne jelentkezzen be” be van kapcsolva, ezért az Amethyst nem fog bejelentkezni ide: %1$s.</string>
     <string name="relay_auth_blocked_section">Letiltva az Ön tiltólistája alapján</string>
     <string name="relay_auth_blocked_row_desc">Az Amethyst soha nem jelentkezik be a letiltott átjátszókra.</string>
     <string name="relay_auth_no_blocked">Semmi sincs letiltva. Az Ön által blokkolt átjátszókra soha nem fog bejelentkezni, függetlenül attól, hogy mit állít be itt.</string>

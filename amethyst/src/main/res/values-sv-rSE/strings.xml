@@ -571,6 +571,9 @@
     <string name="quick_action_block">Blockera</string>
     <string name="quick_action_mute_thread">Tysta tråd</string>
     <string name="quick_action_unmute_thread">Avtysta tråd</string>
+    <string name="mute_notifications">Tysta aviseringar</string>
+    <string name="unmute_notifications">Sluta tysta aviseringar</string>
+    <string name="muted_chat_content_description">Aviseringar är tystade för den här chatten</string>
     <string name="quick_action_report">Rapportera</string>
     <string name="quick_action_dont_show_again_button">Visa inte igen</string>
     <string name="report_dialog_spam">Spam eller scams</string>
@@ -1108,6 +1111,7 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Logga in utan att fråga när…</string>
+    <string name="relay_auth_auto_my_relays_and_venues">…det är mitt relä, eller ett rum jag gått med i eller följer</string>
     <string name="relay_auth_auto_read_follows">…jag läser någon jag följer</string>
     <string name="relay_auth_auto_message_follows">…jag skriver till någon jag följer</string>
     <string name="relay_auth_auto_message_strangers">…jag skriver till någon annan</string>
@@ -1151,6 +1155,11 @@
     <string name="relay_auth_remove_exception">Ta bort undantag</string>
     <string name="relay_auth_exception_removed_undo">Undantaget togs bort. %1$s följer dina regler igen.</string>
     <string name="relay_auth_undo">Ångra</string>
+    <string name="relay_auth_session_section">Bara för nu</string>
+    <string name="relay_auth_session_row_desc">Inloggad tills du startar om Amethyst</string>
+    <string name="relay_auth_forget_session">Glöm den här inloggningen</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s frågar igen nästa gång det behöver dig.</string>
+    <string name="relay_auth_session_undo_blocked">Inte återställd. “Autentisera aldrig” är på, så Amethyst loggar inte in på %1$s.</string>
     <string name="relay_auth_blocked_section">Blockerat av din blockeringslista</string>
     <string name="relay_auth_blocked_row_desc">Amethyst loggar aldrig in på blockerade reläer.</string>
     <string name="relay_auth_no_blocked">Inget blockerat. Reläer du blockerar loggas aldrig in på, oavsett vad du ställer in här.</string>
@@ -2655,6 +2664,9 @@
     <string name="relay_group_no_messages_yet">Inga meddelanden ännu</string>
     <string name="channel_invite_title">Tillagd i %1$s</string>
     <string name="channel_invite_unknown_actor">Någon</string>
+    <string name="channel_invite_added_you">lade till dig i den här kanalen</string>
+    <string name="channel_invite_row_added_you_by">%1$s lade till dig i den här kanalen</string>
+    <string name="channel_invite_row_added_you">Du lades till i den här kanalen</string>
     <string name="channel_invite_ignore">Ignorera</string>
     <string name="channel_invite_leave">Lämna</string>
     <string name="relay_group_join_to_post">Gå med i den här gruppen för att skicka meddelanden.</string>
@@ -2967,6 +2979,9 @@
     <string name="cashu_remove_mint">Ta bort mint</string>
     <string name="cashu_add_mint">Lägg till mint</string>
     <string name="cashu_history">Historik</string>
+    <string name="cashu_history_loading_older">Läser in äldre transaktioner…</string>
+    <string name="cashu_history_all_loaded">Inga äldre transaktioner</string>
+    <string name="cashu_history_some_relays_unreachable">Inga äldre transaktioner från reläerna som svarade — några gick inte att nå</string>
     <string name="cashu_wallet_autosaves">Din plånbok sparas automatiskt när du lägger till eller tar bort mints. En nutzap-nyckel skapas åt dig första gången du lägger till en mint.</string>
     <string name="cashu_wallet_saving">Sparar…</string>
     <string name="cashu_p2pk_section">Nutzap-nyckel (avancerat)</string>
@@ -4865,19 +4880,4 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
-    <string name="cashu_history_all_loaded">Inga äldre transaktioner</string>
-    <string name="cashu_history_loading_older">Läser in äldre transaktioner…</string>
-    <string name="cashu_history_some_relays_unreachable">Inga äldre transaktioner från reläerna som svarade — några gick inte att nå</string>
-    <string name="channel_invite_added_you">lade till dig i den här kanalen</string>
-    <string name="channel_invite_row_added_you">Du lades till i den här kanalen</string>
-    <string name="channel_invite_row_added_you_by">%1$s lade till dig i den här kanalen</string>
-    <string name="mute_notifications">Tysta aviseringar</string>
-    <string name="muted_chat_content_description">Aviseringar är tystade för den här chatten</string>
-    <string name="relay_auth_auto_my_relays_and_venues">…det är mitt relä, eller ett rum jag gått med i eller följer</string>
-    <string name="relay_auth_forget_session">Glöm den här inloggningen</string>
-    <string name="relay_auth_session_forgotten_undo">%1$s frågar igen nästa gång det behöver dig.</string>
-    <string name="relay_auth_session_row_desc">Inloggad tills du startar om Amethyst</string>
-    <string name="relay_auth_session_section">Bara för nu</string>
-    <string name="relay_auth_session_undo_blocked">Inte återställd. “Autentisera aldrig” är på, så Amethyst loggar inte in på %1$s.</string>
-    <string name="unmute_notifications">Sluta tysta aviseringar</string>
 </resources>
