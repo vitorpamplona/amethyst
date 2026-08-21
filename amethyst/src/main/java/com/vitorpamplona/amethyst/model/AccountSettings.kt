@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -1531,7 +1532,126 @@ class AccountSettings(
                 mergeMutedPublicChats(mutedPublicChats.value, newSyncedSettings.chats.mutedPublicChats),
             )
 
+            applyPortableSettings(mergePortableSettings(portableSettings(), newSyncedSettings.app))
+            // The POST-apply snapshot, not the merged value that went in. A blob
+            // from a newer client can name a feed or a chat type this build has
+            // no enum for; those are dropped on apply, so recording the merged
+            // value would leave the fingerprint permanently unreachable and
+            // republish the settings event on every save — with two such devices,
+            // forever. Recording what this build actually holds converges.
+            markPortableSettingsSynced(portableSettings())
+
             saveAccountSettings()
+        }
+    }
+
+    // ---
+    // Settings that follow the user to another device (see PortableAccountSettings)
+    // ---
+
+    /**
+     * The portable settings as they stood the last time they were published to,
+     * or received from, relays — serialized, because [PortableAccountSettings]
+     * holds `TopFilter`s that have no `equals` and would compare by identity.
+     *
+     * Null means this account has never exchanged an app section: a blob written
+     * before the section existed. The first save after upgrading then publishes,
+     * which is how existing accounts get their settings onto relays.
+     */
+    private var lastSyncedPortableFingerprint: String? = null
+
+    /** True when [settings] differ from what relays last saw. Pure — see [markPortableSettingsSynced]. */
+    fun portableSettingsDifferFromSynced(settings: PortableAccountSettings) = JsonMapper.toJson(settings.toInternal()) != lastSyncedPortableFingerprint
+
+    /**
+     * Records [settings] as the relay-side state. Call only AFTER a publish
+     * actually succeeds (or when a blob arrives); marking optimistically would
+     * drop the change if signing or sending failed, and nothing would retry it.
+     *
+     * Pass what this device actually holds, never a value that merely passed
+     * through it — see the call in [updateAppSpecificData].
+     */
+    fun markPortableSettingsSynced(settings: PortableAccountSettings) {
+        lastSyncedPortableFingerprint = JsonMapper.toJson(settings.toInternal())
+    }
+
+    /** Snapshot of the portable settings, for the NIP-78 blob or a transfer file. */
+    fun portableSettings() =
+        PortableAccountSettings(
+            feedFilters = feedFilterFlows().mapValues { it.value.value },
+            mutedPublicChats = mutedPublicChats.value,
+            disabledChatFeeds = (ChatFeedType.ALL - enabledChatFeeds.value).mapTo(mutableSetOf()) { it.code },
+            disabledHomeFeedTypes = (HomeFeedType.ALL - enabledHomeFeedTypes.value).mapTo(mutableSetOf()) { it.code },
+            relayGroupViewMode = relayGroupViewMode.value,
+            concordViewMode = concordViewMode.value,
+            relayAuthPolicy = defaultRelayAuthPolicy.value,
+            relayAuthTrustMyRelaysAndVenues = relayAuthTrustMyRelaysAndVenues.value,
+            relayAuthTrustReadFollows = relayAuthTrustReadFollows.value,
+            relayAuthTrustMessageFollows = relayAuthTrustMessageFollows.value,
+            relayAuthTrustMessageStrangers = relayAuthTrustMessageStrangers.value,
+            hideDeleteRequestDialog = hideDeleteRequestDialog,
+            hideBlockAlertDialog = hideBlockAlertDialog,
+            hideNip17WarningDialog = hideNIP17WarningDialog,
+            hasDonatedInVersion = hasDonatedInVersion.value,
+            callsEnabled = callsEnabled.value,
+            splitNotificationsEnabled = splitNotificationsEnabled.value,
+            showMessagesInNotifications = showMessagesInNotifications.value,
+        )
+
+    /**
+     * Writes [settings] back onto this account.
+     *
+     * Each field is compared before emitting: these flows drive feed reloads and
+     * relay subscriptions, so re-emitting an unchanged value on every blob
+     * arrival would restart work for nothing.
+     */
+    fun applyPortableSettings(settings: PortableAccountSettings) {
+        feedFilterFlows().forEach { (key, flow) ->
+            val incoming = settings.feedFilters[key] ?: return@forEach
+            // by code: the addressable TopFilter subclasses have no equals()
+            if (flow.value.code != incoming.code) flow.tryEmit(incoming)
+        }
+
+        // The mute set is deliberately NOT applied here. It rides the blob's chats
+        // section, where absent and explicitly-empty mean different things, and
+        // that decision belongs to mergeMutedPublicChats — the only reason it
+        // appears on PortableAccountSettings at all is so toInternal() can write
+        // it out. See updateAppSpecificData.
+
+        val newChatFeeds = ChatFeedType.ALL - settings.disabledChatFeeds.mapNotNull { ChatFeedType.fromCode(it) }.toSet()
+        if (enabledChatFeeds.value != newChatFeeds) enabledChatFeeds.tryEmit(newChatFeeds)
+
+        val newHomeFeedTypes = HomeFeedType.ALL - settings.disabledHomeFeedTypes.mapNotNull { HomeFeedType.fromCode(it) }.toSet()
+        if (enabledHomeFeedTypes.value != newHomeFeedTypes) enabledHomeFeedTypes.tryEmit(newHomeFeedTypes)
+
+        if (relayGroupViewMode.value != settings.relayGroupViewMode) relayGroupViewMode.tryEmit(settings.relayGroupViewMode)
+        if (concordViewMode.value != settings.concordViewMode) concordViewMode.tryEmit(settings.concordViewMode)
+        if (defaultRelayAuthPolicy.value != settings.relayAuthPolicy) defaultRelayAuthPolicy.tryEmit(settings.relayAuthPolicy)
+
+        if (relayAuthTrustMyRelaysAndVenues.value != settings.relayAuthTrustMyRelaysAndVenues) {
+            relayAuthTrustMyRelaysAndVenues.tryEmit(settings.relayAuthTrustMyRelaysAndVenues)
+        }
+        if (relayAuthTrustReadFollows.value != settings.relayAuthTrustReadFollows) {
+            relayAuthTrustReadFollows.tryEmit(settings.relayAuthTrustReadFollows)
+        }
+        if (relayAuthTrustMessageFollows.value != settings.relayAuthTrustMessageFollows) {
+            relayAuthTrustMessageFollows.tryEmit(settings.relayAuthTrustMessageFollows)
+        }
+        if (relayAuthTrustMessageStrangers.value != settings.relayAuthTrustMessageStrangers) {
+            relayAuthTrustMessageStrangers.tryEmit(settings.relayAuthTrustMessageStrangers)
+        }
+
+        hideDeleteRequestDialog = settings.hideDeleteRequestDialog
+        hideBlockAlertDialog = settings.hideBlockAlertDialog
+        hideNIP17WarningDialog = settings.hideNip17WarningDialog
+
+        if (hasDonatedInVersion.value != settings.hasDonatedInVersion) hasDonatedInVersion.tryEmit(settings.hasDonatedInVersion)
+        if (callsEnabled.value != settings.callsEnabled) callsEnabled.tryEmit(settings.callsEnabled)
+        if (splitNotificationsEnabled.value != settings.splitNotificationsEnabled) {
+            splitNotificationsEnabled.tryEmit(settings.splitNotificationsEnabled)
+        }
+        if (showMessagesInNotifications.value != settings.showMessagesInNotifications) {
+            showMessagesInNotifications.tryEmit(settings.showMessagesInNotifications)
         }
     }
 

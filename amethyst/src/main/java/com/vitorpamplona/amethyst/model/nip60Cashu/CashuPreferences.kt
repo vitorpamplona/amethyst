@@ -113,10 +113,47 @@ class CashuPreferences(
         prefs.edit(commit = true) { putLong(counterKey(keysetId), legacyValue) }
     }
 
+    /**
+     * Every keyset's counter, for a device transfer.
+     *
+     * These are the one part of the wallet that does NOT come back from relays:
+     * the NUT-13 seed lives in kind:17375, so a new phone restores the seed,
+     * restarts every counter at zero, and re-derives blinded messages the mint
+     * has already signed — which the mint rejects, stranding that keyset.
+     */
+    @Synchronized
+    fun exportCounters(): Map<String, Long> =
+        prefs.all
+            .filterKeys { it.startsWith(COUNTER_PREFIX) }
+            .mapNotNull { (key, value) ->
+                val counter = value as? Long ?: return@mapNotNull null
+                key.removePrefix(COUNTER_PREFIX) to counter
+            }.toMap()
+
+    /**
+     * Applies imported counters, keeping the higher value per keyset.
+     *
+     * Merged rather than assigned for the same reason [seedCounterIfMissing]
+     * never moves a counter backwards: a stale bundle must not undo spending
+     * this device has already done.
+     */
+    @SuppressLint("ApplySharedPref")
+    @Synchronized
+    fun importCounters(counters: Map<String, Long>) {
+        val advances = counters.filter { (keysetId, counter) -> counter > peekCounter(keysetId) }
+        if (advances.isEmpty()) return
+
+        prefs.edit(commit = true) {
+            advances.forEach { (keysetId, counter) -> putLong(counterKey(keysetId), counter) }
+        }
+    }
+
     companion object {
         private const val FILE_PREFIX = "cashu_prefs_"
 
         private fun counterKey(keysetId: String) = "counter_$keysetId"
+
+        private const val COUNTER_PREFIX = "counter_"
 
         /** Per-account instance. [npub] keys the on-disk file so each account is isolated. */
         fun forAccount(npub: String): CashuPreferences {

@@ -1163,6 +1163,42 @@ class Account(
 
     internal suspend fun sendNewAppSpecificData() = sendMyPublicAndPrivateOutbox(appSpecific.saveNewAppSpecificData())
 
+    /**
+     * Publishes the settings that follow the user to another device, when they
+     * have actually changed.
+     *
+     * Hooked onto the debounced save rather than onto each of the ~40 setters
+     * that can touch them: a setter-by-setter wiring is one edit away from
+     * being incomplete forever, and "the setting I changed didn't come across"
+     * is the exact failure this is meant to prevent. The change check keeps
+     * saves that touch nothing portable — a read marker, a dismissed poll —
+     * from publishing an identical event.
+     *
+     * Read-only accounts can't sign, so they skip it and keep whatever the blob
+     * gave them.
+     */
+    private suspend fun publishPortableSettingsIfChanged() {
+        if (!settings.isWriteable()) return
+
+        val portable = settings.portableSettings()
+        if (!settings.portableSettingsDifferFromSynced(portable)) return
+
+        try {
+            sendNewAppSpecificData()
+            // Only after the send returns: marking first would swallow the change
+            // if signing or the relay write failed, and nothing else would retry.
+            settings.markPortableSettingsSynced(portable)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            // Swallowed on purpose. This runs inside the collector that also
+            // persists settings to disk, and an escaping exception would cancel
+            // it — so a declined signer prompt or an offline relay would stop
+            // this account saving anything for the rest of the session. Left
+            // unmarked, so the next save retries the publish.
+            Log.w("Account", "Could not publish the portable settings", e)
+        }
+    }
+
     // ---
     // NIP-13 proof-of-work publishing
     // ---
@@ -3783,6 +3819,7 @@ class Account(
             settings.saveable.debounce(1000).collect {
                 if (it.accountSettings != null) {
                     LocalPreferences.saveToEncryptedStorage(it.accountSettings)
+                    publishPortableSettingsIfChanged()
                 }
             }
         }

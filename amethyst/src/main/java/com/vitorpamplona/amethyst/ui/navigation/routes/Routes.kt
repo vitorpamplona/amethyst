@@ -443,6 +443,8 @@ sealed class Route {
 
     @Serializable object AccountBackup : Route()
 
+    @Serializable object DeviceTransfer : Route()
+
     @Serializable object Settings : Route()
 
     @Serializable object ComposeSettings : Route()

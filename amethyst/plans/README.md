@@ -1,10 +1,11 @@
 # amethyst plans
 
-_Audited 2026-06-30. 21 plans: 19 shipped (archived), 1 in-progress, 1 queued, 0 abandoned._
+_Audited 2026-08-21. 22 plans: 19 shipped (archived), 2 in-progress, 1 queued, 0 abandoned._
 
 ## In progress
 | Plan | Summary |
 | ---- | ------- |
+| [2026-08-21-account-migration-new-phone.md](2026-08-21-account-migration-new-phone.md) | What survives a phone swap and what silently doesn't; portable settings moved onto the NIP-78 blob, plus an encrypted transfer file for the device-only remainder. |
 | [2026-05-24-ios-support.md](2026-05-24-ios-support.md) | Incremental KMP-to-iOS port; quartz/commons iOS targets are configured (Phase 1) but no `iosApp` module exists yet. |
 
 ## Queued

@@ -162,6 +162,53 @@ class AccountSyncedSettingsInternal(
     val chats: AccountChatPreferencesInternal = AccountChatPreferencesInternal(),
     val proofOfWork: AccountPoWPreferencesInternal = AccountPoWPreferencesInternal(),
     val navigation: AccountNavigationPreferencesInternal = AccountNavigationPreferencesInternal(),
+    /**
+     * Settings that used to live only on the device. Nullable as a whole so a
+     * blob written before this section existed is read as "absent", not as a
+     * request to reset every one of them. See [AccountAppPreferencesInternal].
+     */
+    val app: AccountAppPreferencesInternal? = null,
+)
+
+/**
+ * Preferences that describe the user rather than the device, carried in the
+ * NIP-78 blob so they follow the user to a new phone without the old one being
+ * involved. Everything here was device-only until
+ * `amethyst/plans/2026-08-21-account-migration-new-phone.md`.
+ *
+ * EVERY FIELD IS NULLABLE, and null means "the key was absent" — not a value.
+ * A client older than a given field rewrites the blob without it, and because
+ * `AppSpecificState` replays the cached event on every app start, reading
+ * absent as "the default" would wipe that setting on every launch. The same
+ * hazard [AccountChatPreferencesInternal.mutedPublicChats] documents; the
+ * decision itself lives in [mergePortableSettings], where it is testable.
+ */
+@Serializable
+class AccountAppPreferencesInternal(
+    /** Per-feed top filter, keyed by the preference-file id (`defaultHomeFollowList`, …). */
+    var feedFilters: Map<String, TopFilter>? = null,
+    /** DISABLED chat feed codes — absence means all-on, matching the local file. */
+    var disabledChatFeeds: List<String>? = null,
+    /** DISABLED home feed codes, for the same reason as [disabledChatFeeds]. */
+    var disabledHomeFeedTypes: List<String>? = null,
+    // The three below are enum *names*, not the enums. An id written by a newer
+    // client would fail the enum decoder and take the whole blob down with it,
+    // so unknown names are dropped on read instead — the approach
+    // AccountNavigationPreferencesInternal.hiddenDrawerItems already takes.
+    var relayGroupViewMode: String? = null,
+    var concordViewMode: String? = null,
+    var relayAuthPolicy: String? = null,
+    var relayAuthTrustMyRelaysAndVenues: Boolean? = null,
+    var relayAuthTrustReadFollows: Boolean? = null,
+    var relayAuthTrustMessageFollows: Boolean? = null,
+    var relayAuthTrustMessageStrangers: Boolean? = null,
+    var hideDeleteRequestDialog: Boolean? = null,
+    var hideBlockAlertDialog: Boolean? = null,
+    var hideNip17WarningDialog: Boolean? = null,
+    var hasDonatedInVersion: List<String>? = null,
+    var callsEnabled: Boolean? = null,
+    var splitNotificationsEnabled: Boolean? = null,
+    var showMessagesInNotifications: Boolean? = null,
 )
 
 @Serializable

@@ -30,7 +30,7 @@ listing (including archived plans), open that folder's `README.md`.
 
 | Module | Plans | Shipped | In-prog | Queued | Aband. | Index |
 | ------ | ----: | ------: | ------: | -----: | -----: | ----- |
-| amethyst | 21 | 19 | 1 | 1 | 0 | [amethyst/plans](amethyst/plans/README.md) |
+| amethyst | 22 | 19 | 2 | 1 | 0 | [amethyst/plans](amethyst/plans/README.md) |
 | nestsClient | 26 | 23 | 1 | 2 | 0 | [nestsClient/plans](nestsClient/plans/README.md) |
 | desktopApp | 13 | 10 | 2 | 1 | 0 | [desktopApp/plans](desktopApp/plans/README.md) |
 | quartz | 10 | 7 | 0 | 3 | 0 | [quartz/plans](quartz/plans/README.md) |
@@ -50,6 +50,7 @@ them under each folder's `archive/` via the per-module index above.
 
 | Module | Plan | Summary |
 | ------ | ---- | ------- |
+| amethyst | [account-migration-new-phone](amethyst/plans/2026-08-21-account-migration-new-phone.md) | Audit of what does and doesn't survive a phone swap; portable settings now ride the NIP-78 blob and an encrypted transfer file carries the device-only remainder. |
 | amethyst | [ios-support](amethyst/plans/2026-05-24-ios-support.md) | KMP-to-iOS port; quartz/commons iOS targets configured (Phase 1) but no `iosApp` module yet. |
 | commons | [custom-feeds-plan](commons/plans/2026-05-04-custom-feeds-plan.md) | Custom feeds; model + builder + kind 31890 + desktop UI shipped, but relay-filter layer, DVM marketplace, kind 10090 sync, list resolution pending. |
 | commons | [nest-subscription-manager-extraction](commons/plans/2026-05-06-nest-subscription-manager-extraction.md) | Split per-speaker subscription state machine out of `NestViewModel`; only the `ActiveSubscription` stepping-stone extracted. |

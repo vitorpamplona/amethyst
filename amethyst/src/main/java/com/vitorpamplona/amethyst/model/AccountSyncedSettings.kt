@@ -90,7 +90,13 @@ class AccountSyncedSettings(
             MutableStateFlow(DrawerItemVisibility.sanitize(navBarItemsFromNames(internalSettings.navigation.hiddenDrawerItems))),
         )
 
-    fun toInternal(mutedPublicChats: Set<String>): AccountSyncedSettingsInternal =
+    /**
+     * Builds the blob payload. [portable] carries the settings that are stored
+     * on [AccountSettings] rather than here — the mute set (which the push
+     * dispatcher needs before the blob can be decrypted) and the preferences
+     * that were device-only until the new-phone migration work.
+     */
+    fun toInternal(portable: PortableAccountSettings): AccountSyncedSettingsInternal =
         AccountSyncedSettingsInternal(
             reactions = AccountReactionPreferencesInternal(reactions.reactionChoices.value, reactions.reactionRowItems.value),
             zaps =
@@ -124,7 +130,7 @@ class AccountSyncedSettings(
                 AccountChatPreferencesInternal(
                     chats.pinnedChatrooms.value.map { it.users.sorted() },
                     // sorted so the serialized form is deterministic
-                    mutedPublicChats.sorted(),
+                    portable.mutedPublicChats.sorted(),
                 ),
             proofOfWork =
                 AccountPoWPreferencesInternal(
@@ -139,6 +145,7 @@ class AccountSyncedSettings(
                     navigation.bottomBarItems.value,
                     navigation.hiddenDrawerItems.value.toNames(),
                 ),
+            app = portable.toInternal(),
         )
 
     fun updateFrom(syncedSettingsInternal: AccountSyncedSettingsInternal) {

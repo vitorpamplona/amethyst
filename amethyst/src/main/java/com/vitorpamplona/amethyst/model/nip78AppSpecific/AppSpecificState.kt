@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.model.mergePortableSettings
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
@@ -53,7 +54,7 @@ class AppSpecificState(
     fun getAppSpecificDataFlow(): StateFlow<NoteState> = amethystSettingsNote.flow().metadata.stateFlow
 
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
-        val toInternal = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
+        val toInternal = settings.syncedSettings.toInternal(settings.portableSettings())
         return signer.sign(
             AppSpecificDataEvent.build(
                 dTag = APP_SPECIFIC_DATA_D_TAG,
@@ -73,6 +74,16 @@ class AppSpecificState(
                         val decrypted = signer.decrypt(event.content, event.pubKey)
                         val syncedSettings = JsonMapper.fromJson<AccountSyncedSettingsInternal>(decrypted)
                         settings.syncedSettings.updateFrom(syncedSettings)
+
+                        // Replay of the cached event, not a fresh arrival: the local
+                        // preference file already holds these, so record what relays
+                        // have instead of applying anything. Equal to the local state
+                        // means no republish on the next save; drifted (a change made
+                        // offline, or an account upgrading from a build with no `app`
+                        // section) republishes once and heals.
+                        syncedSettings.app?.let {
+                            settings.markPortableSettingsSynced(mergePortableSettings(settings.portableSettings(), it))
+                        }
                     } catch (e: Throwable) {
                         if (e is CancellationException) throw e
                         Log.w("LocalPreferences", "Error Decoding latestAppSpecificData from Preferences", e)

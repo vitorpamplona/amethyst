@@ -25,6 +25,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
+import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferEntry
+import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferKeys
+import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferValues
+import com.vitorpamplona.amethyst.commons.model.account.transfer.TransferValue
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntry
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
@@ -100,6 +104,9 @@ data class AccountInfo(
     val isTransient: Boolean = false,
 )
 
+// Keys the device-transfer file must never carry are declared in
+// AccountTransferKeys and aliased here, so a rename can't silently stop the
+// exporter from excluding them.
 private object PrefKeys {
     const val CURRENT_ACCOUNT = "currently_logged_in_account"
 
@@ -108,7 +115,7 @@ private object PrefKeys {
     // account's own participation flag. Persisted so it survives restarts/crashes.
     const val NOTIFICATION_SERVICE_ENABLED = "notification_service_enabled"
     const val SAVED_ACCOUNTS = "all_saved_accounts"
-    const val NOSTR_PRIVKEY = "nostr_privkey"
+    const val NOSTR_PRIVKEY = AccountTransferKeys.NOSTR_PRIVKEY
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
@@ -119,9 +126,9 @@ private object PrefKeys {
     const val OPTIMIZE_MEDIA_ON_UPLOAD = "optimizeMediaOnUpload"
     const val HIDE_COMMUNITY_RULES_VIOLATIONS = "hideCommunityRulesViolations"
     const val NIP46_SIGNER_ENABLED = "nip46SignerEnabled"
-    const val NIP46_BUNKER_SECRET = "nip46BunkerSecret"
-    const val NIP46_TRANSPORT_KEY = "nip46TransportKey"
-    const val NIP46_SEEN_IDS = "nip46SeenRequestIds"
+    const val NIP46_BUNKER_SECRET = AccountTransferKeys.NIP46_BUNKER_SECRET
+    const val NIP46_TRANSPORT_KEY = AccountTransferKeys.NIP46_TRANSPORT_KEY
+    const val NIP46_SEEN_IDS = AccountTransferKeys.NIP46_SEEN_IDS
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
     const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val DEFAULT_NOTIFICATION_FOLLOW_LIST = "defaultNotificationFollowList"
@@ -476,6 +483,26 @@ object LocalPreferences {
             }
         }
 
+        // Upgrade guard, the mirror of the one above: signing in for a pubkey that
+        // already has settings on this device must keep those settings and adopt
+        // the key, not start from defaults. Logging in is how a device transfer
+        // finishes — the settings arrive first, the key second — and saving fresh
+        // defaults here would erase everything that was just imported.
+        if (accountSettings.isWriteable()) {
+            val existing = loadAccountConfigFromEncryptedStorage(npub)
+            if (existing != null && !existing.isWriteable()) {
+                saveKeyMaterial(npub, accountSettings)
+                // Drop the read-only copy so the reload sees the key just written.
+                mutex.withLock { cachedAccounts.remove(npub) }
+
+                val upgraded = loadAccountConfigFromEncryptedStorage(npub)
+                if (upgraded != null) {
+                    setCurrentAccount(upgraded)
+                    return upgraded
+                }
+            }
+        }
+
         // Save the per-npub file before emitting onto the savedAccounts flow.
         // Otherwise a collector (e.g. AlwaysOnNotificationServiceManager) can race in
         // and call loadAccountConfigFromEncryptedStorage(npub) before NOSTR_PUBKEY is
@@ -489,6 +516,29 @@ object LocalPreferences {
     }
 
     suspend fun allSavedAccounts(): List<AccountInfo> = savedAccounts()
+
+    /**
+     * Writes only the key material for [npub], leaving every other preference in
+     * place. Used when signing in for a pubkey whose settings are already on the
+     * device — see the upgrade guard in [setDefaultAccount].
+     */
+    private suspend fun saveKeyMaterial(
+        npub: String,
+        accountSettings: AccountSettings,
+    ) = withContext(Dispatchers.IO) {
+        encryptedPreferences(npub).edit {
+            putString(PrefKeys.NOSTR_PUBKEY, accountSettings.keyPair.pubKey.toHexKey())
+            putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, accountSettings.externalSignerPackageName != null)
+
+            if (accountSettings.externalSignerPackageName != null) {
+                remove(PrefKeys.NOSTR_PRIVKEY)
+                putString(PrefKeys.SIGNER_PACKAGE_NAME, accountSettings.externalSignerPackageName)
+            } else {
+                remove(PrefKeys.SIGNER_PACKAGE_NAME)
+                accountSettings.keyPair.privKey?.let { putString(PrefKeys.NOSTR_PRIVKEY, it.toHexKey()) }
+            }
+        }
+    }
 
     suspend fun saveToEncryptedStorage(settings: AccountSettings) {
         Log.d("LocalPreferences", "Saving to encrypted storage")
@@ -694,6 +744,89 @@ object LocalPreferences {
                     e,
                 )
                 null
+            }
+        }
+    }
+
+    // ---
+    // Device-to-device transfer
+    //
+    // The export copies each account's preference file wholesale instead of
+    // naming fields. A field list would omit every setting added after it was
+    // written, which is the exact failure the transfer feature exists to
+    // prevent; AccountTransferKeys names the few keys that must NOT travel.
+    // ---
+
+    /** This account's transferable preferences, in the bundle's value shape. */
+    suspend fun exportAccountPreferences(npub: String): Map<String, TransferValue> =
+        withContext(Dispatchers.IO) {
+            AccountTransferValues.fromPreferenceMap(encryptedPreferences(npub).all)
+        }
+
+    /** The secret key, when the user asked for keys to be included in the file. */
+    suspend fun exportPrivateKey(npub: String): String? =
+        withContext(Dispatchers.IO) {
+            encryptedPreferences(npub).getString(PrefKeys.NOSTR_PRIVKEY, null)?.ifBlank { null }
+        }
+
+    /** The NIP-55 signer app this account signs through, when it uses one. */
+    suspend fun exportSignerPackageName(npub: String): String? =
+        withContext(Dispatchers.IO) {
+            encryptedPreferences(npub).getString(PrefKeys.SIGNER_PACKAGE_NAME, null)
+        }
+
+    /** The app-wide (not per-account) settings: theme, language, autoplay. */
+    suspend fun exportSharedPreferences(): Map<String, TransferValue> =
+        withContext(Dispatchers.IO) {
+            val stored = encryptedPreferences().getString(PrefKeys.SHARED_SETTINGS, null)
+            if (stored == null) emptyMap() else mapOf(PrefKeys.SHARED_SETTINGS to TransferValue.Str(stored))
+        }
+
+    /**
+     * Writes an imported account onto this device and registers it in the
+     * account list.
+     *
+     * Merges rather than replaces: an account the user is already logged into
+     * keeps any key it already holds, and keys the bundle doesn't mention are
+     * left as they are. Overwriting the whole file would let a settings-only
+     * bundle log the user out of an account they are actively using.
+     */
+    suspend fun importAccount(entry: AccountTransferEntry) {
+        withContext(Dispatchers.IO) {
+            val npub = entry.npub
+            encryptedPreferences(npub).edit {
+                entry.preferences.forEach { (key, value) ->
+                    if (AccountTransferKeys.isTransferable(key)) put(key, value)
+                }
+                entry.privKeyHex?.let { putString(PrefKeys.NOSTR_PRIVKEY, it) }
+                entry.externalSignerPackageName?.let {
+                    putString(PrefKeys.SIGNER_PACKAGE_NAME, it)
+                    putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, true)
+                }
+            }
+
+            // The settings object for this npub may already be loaded and would
+            // otherwise keep serving — and later re-save — the pre-import state,
+            // silently undoing the whole import.
+            mutex.withLock { cachedAccounts.remove(npub) }
+
+            val hasPrivKey = entry.privKeyHex != null || !exportPrivateKey(npub).isNullOrBlank()
+            addAccount(
+                AccountInfo(
+                    npub = npub,
+                    hasPrivKey = hasPrivKey,
+                    loggedInWithExternalSigner = entry.externalSignerPackageName != null,
+                    isTransient = false,
+                ),
+            )
+        }
+    }
+
+    /** Restores the app-wide settings from a bundle. */
+    suspend fun importSharedPreferences(values: Map<String, TransferValue>) {
+        withContext(Dispatchers.IO) {
+            encryptedPreferences().edit {
+                values.forEach { (key, value) -> put(key, value) }
             }
         }
     }
@@ -1273,3 +1406,18 @@ private fun SharedPreferences.readInboxPrefs() =
         relayAuthTrustMessageFollows = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_FOLLOWS, true),
         relayAuthTrustMessageStrangers = getBoolean(PrefKeys.RELAY_AUTH_TRUST_MESSAGE_STRANGERS, false),
     )
+
+/** Writes a bundle value back under its original preference type. */
+private fun SharedPreferences.Editor.put(
+    key: String,
+    value: TransferValue,
+) {
+    when (value) {
+        is TransferValue.Str -> putString(key, value.v)
+        is TransferValue.Bool -> putBoolean(key, value.v)
+        is TransferValue.Int32 -> putInt(key, value.v)
+        is TransferValue.Int64 -> putLong(key, value.v)
+        is TransferValue.Flt -> putFloat(key, value.v)
+        is TransferValue.StrSet -> putStringSet(key, value.v.toSet())
+    }
+}

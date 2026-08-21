@@ -209,6 +209,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.interestSets.display.Intere
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.interestSets.list.ListOfInterestSetsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.interestSets.list.metadata.InterestSetMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.AccountBackupScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.DeviceTransferScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.lists.PeopleListScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.display.packs.FollowPackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.ListOfPeopleListsScreen
@@ -576,6 +577,7 @@ fun BuildNavigation(
 
         composableFromEnd<Route.AllSettings> { AllSettingsScreen(accountViewModel, nav) }
         composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
+        composableFromEnd<Route.DeviceTransfer> { DeviceTransferScreen(accountViewModel, nav) }
         composableFromEnd<Route.SecurityFilters> { SecurityFiltersScreen(accountViewModel, nav) }
         composableFromEnd<Route.BlockedUsers> { BlockedUsersScreen(accountViewModel, nav) }
         composableFromEnd<Route.SpammingUsers> { SpammingUsersScreen(accountViewModel, nav) }

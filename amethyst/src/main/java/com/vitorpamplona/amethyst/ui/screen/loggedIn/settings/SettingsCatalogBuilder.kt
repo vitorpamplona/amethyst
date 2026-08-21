@@ -107,6 +107,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.namecoin_settings, MaterialSymbols.Security, R.string.namecoin_search_keywords, Route.NamecoinSettings),
                     symEntry(R.string.active_subs_title, MaterialSymbols.CloudSync, R.string.active_subs_search_keywords, Route.ActiveSubscriptions),
                     symEntry(R.string.resource_usage_title, MaterialSymbols.Bolt, R.string.resource_usage_search_keywords, Route.ResourceUsage),
+                    symEntry(R.string.device_transfer, MaterialSymbols.SwapHoriz, R.string.device_transfer_search_keywords, Route.DeviceTransfer),
                 ),
         )
 
