@@ -33,6 +33,7 @@ data class MetaTag(
 }
 
 object MetaTagsParser {
+    private val TAG_NAME = Regex("""[0-9a-zA-Z]+""")
     private val NON_ATTR_NAME_CHARS = setOf(Char(0x0), '"', '\'', '>', '/')
     private val NON_UNQUOTED_ATTR_VALUE_CHARS = setOf('"', '\'', '=', '>', '<', '`')
 
@@ -81,10 +82,42 @@ object MetaTagsParser {
             this.skipWhile { it.isWhitespace() }
         }
 
+        private fun skipComment() {
+            val end = input.indexOf("-->", p)
+            p = if (end < 0) input.length else end + 3
+        }
+
+        private fun skipToTagEnd() {
+            skipWhile { it != '>' }
+            if (!exhausted()) consume()
+        }
+
+        /** Leaves [p] on the `</name` that closes a raw-text element, or at the end of the input. */
+        private fun skipRawText(name: String) {
+            val end = input.indexOf("</$name", p, ignoreCase = true)
+            p = if (end < 0) input.length else end
+        }
+
         fun nextTag(): RawTag? {
             skipWhile { it != '<' }
             if (this.exhausted()) return null
             consume()
+            if (this.exhausted()) return null
+
+            // `<!-- ... -->`, `<!DOCTYPE ...>` and `<?...>` are not element markup, so the
+            // attribute-quote tracking below must not run over them. A comment holding an odd
+            // number of quote characters -- an apostrophe in "we don't", a lone `"` -- would
+            // otherwise leave the scanner inside a phantom quoted attribute value and make it
+            // swallow every tag that follows, until the next matching quote character. That is
+            // enough to hide a page's whole `<meta property="og:*">` block from the preview.
+            if (peek() == '!' || peek() == '?') {
+                if (input.startsWith("!--", p)) {
+                    skipComment()
+                } else {
+                    skipToTagEnd()
+                }
+                return null
+            }
 
             // read tag name
             val isEnd = peek() == '/'
@@ -105,7 +138,7 @@ object MetaTagsParser {
                 val c = consume()
                 when {
                     // `/>` out of quote -> end of tag
-                    quote == null && c == '/' && peek() == '>' -> {
+                    quote == null && c == '/' && !exhausted() && peek() == '>' -> {
                         consume()
                         break
                     }
@@ -129,11 +162,20 @@ object MetaTagsParser {
             val attrsEnd = p - 1
 
             val name = input.slice(nameStart..<nameEnd)
-            if (!name.matches(Regex("""[0-9a-zA-Z]+"""))) {
+            if (!name.matches(TAG_NAME)) {
                 return null
             }
+            val lowercaseName = name.lowercase()
+
+            // Script and style bodies are raw text: a `<` in `for (i = 0; i < n; i++)` or a quote
+            // in a JS string is not markup and must not be scanned as such, for the same reason
+            // comments can't be.
+            if (!isEnd && (lowercaseName == "script" || lowercaseName == "style")) {
+                skipRawText(lowercaseName)
+            }
+
             val attrsPart = input.slice(attrsStart..<attrsEnd)
-            return RawTag(isEnd, name.lowercase(), attrsPart)
+            return RawTag(isEnd, lowercaseName, attrsPart)
         }
     }
 
