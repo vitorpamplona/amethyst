@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.experimental.trustedLists.tags.ListStatus
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -395,6 +396,59 @@ class TrustedListEventTest {
         assertEquals(event.members().size, event.memberCount())
         assertEquals(event.members().map { it.memberValue }, event.memberValues())
         assertEquals(1, event.memberCount(), "only the well-formed p tag is a member")
+    }
+
+    @Test
+    fun indexesOnlyTheHumanWrittenFields() {
+        val event = podcasterList()
+        assertIs<UserTrustedListEvent>(event)
+
+        assertEquals("Podcaster\npodcaster", event.indexableContent())
+    }
+
+    @Test
+    fun theMembershipJsonNeverReachesTheIndex() {
+        val event = podcasterList()
+        assertIs<UserTrustedListEvent>(event)
+
+        val indexed = event.indexableContent()
+        assertFalse(indexed.contains("b83a28b7"), "member pubkeys must not be indexed: $indexed")
+        assertFalse(indexed.contains("endorsements"), "the content echo must not be indexed: $indexed")
+        assertFalse(indexed.contains("pinned-tag-membership"), "the metric is a machine id: $indexed")
+        assertFalse(indexed.contains("tl-pin"), "the d tag embeds hex fragments: $indexed")
+        assertFalse(indexed.contains(observer), "the observer is a pubkey: $indexed")
+    }
+
+    @Test
+    fun indexingIsSafeOnAListWithNoHumanFields() {
+        // FullTextSearchModule probes kinds by constructing an empty event and
+        // reindex runs over whatever is already stored, so this must not throw
+        val event =
+            EventFactory.create<Event>(
+                id = "00".repeat(32),
+                pubKey = "a68dbf561cfe3da1b76f1e65c7d4d9cc116f79921b38a815fd75cb5460b4b599",
+                createdAt = 1_787_253_028L,
+                kind = ExternalIdTrustedListEvent.KIND,
+                tags = arrayOf(arrayOf("d", "tl")),
+                content = "",
+                sig = dummySig,
+            )
+        assertIs<ExternalIdTrustedListEvent>(event)
+
+        assertEquals("", event.indexableContent())
+    }
+
+    @Test
+    fun everyKindInTheFamilyIsSearchable() {
+        listOf(
+            UserTrustedListEvent.KIND,
+            EventTrustedListEvent.KIND,
+            AddressableTrustedListEvent.KIND,
+            ExternalIdTrustedListEvent.KIND,
+        ).forEach { kind ->
+            val probe = EventFactory.create<Event>("0", "0", 0L, kind, emptyArray(), "", "")
+            assertIs<SearchableEvent>(probe, "kind $kind must be searchable")
+        }
     }
 
     @Test

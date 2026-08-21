@@ -20,6 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
+import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListContent
+import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListContentMember
+import com.vitorpamplona.quartz.experimental.trustedLists.metric
+import com.vitorpamplona.quartz.experimental.trustedLists.sourceTag
+import com.vitorpamplona.quartz.experimental.trustedLists.title
+import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMemberTag
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -360,5 +367,38 @@ class SearchTest : BaseDBTest() {
             db.assertQuery(chan, Filter(search = "uniqchan")) // name
             db.assertQuery(chan, Filter(search = "uniqtopic")) // about
             db.assertQuery(chan, Filter(search = "uniqpic")) // picture URL
+        }
+
+    @Test
+    fun testTrustedListIndexesItsLabelsAndNothingElse() =
+        forEachDB { db ->
+            val memberKey = "b83a28b7e4e5d20bd960c5faeb6625f95529166b8bdb045d42634a2f35919450"
+            val list =
+                signer.sign(
+                    UserTrustedListEvent.build(
+                        listId = "tl-pin-2efaa715-e5272de9-uniqslug",
+                        members = listOf(PubKeyMemberTag(memberKey, score = 99)),
+                        content =
+                            TrustedListContent(
+                                members = listOf(TrustedListContentMember(pubkey = memberKey, endorsements = 4, score = 99)),
+                            ).toContent(),
+                    ) {
+                        title("Uniqpodcaster")
+                        metric("pinned-tag-membership")
+                        sourceTag("2f".repeat(32), "e5".repeat(32), "uniqslug")
+                    },
+                )
+            db.store.insertEvent(list)
+
+            // the human-written fields
+            db.assertQuery(list, Filter(search = "uniqpodcaster")) // title
+            db.assertQuery(list, Filter(search = "uniqslug")) // source-tag slug
+
+            // the machine fields must stay out of the index: the content echo
+            // is membership JSON, and the metric is a constant across every
+            // list one publisher emits
+            db.assertQuery(null, Filter(search = "endorsements"))
+            db.assertQuery(null, Filter(search = "membership"))
+            db.assertQuery(null, Filter(search = memberKey))
         }
 }

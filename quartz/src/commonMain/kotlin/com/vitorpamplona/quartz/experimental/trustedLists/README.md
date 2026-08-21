@@ -80,6 +80,15 @@ build the member objects — these lists run to thousands of entries.
 - `content` is an optional JSON echo of the members with their computed values
   (`contentEcho()` → `TrustedListContent`).
 
+## Search
+
+All four kinds are `SearchableEvent`. Only the two human-written fields are
+indexed — the `title` and the `source-tag` slug (`"Podcaster\npodcaster"`).
+Everything else is machine data and stays out: `content` is the membership
+JSON (pubkeys, ids and counts), `d` embeds hex fragments, and `metric` is a
+constant across every list one publisher emits, so indexing it would only add
+generic tokens like `tag` and `membership` to every document in the family.
+
 ## Completeness and retraction
 
 A list an integrator relies on must be complete, or say that it isn't. The
