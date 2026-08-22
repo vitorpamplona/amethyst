@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.model.account.transfer
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -88,6 +91,55 @@ class AccountTransferBundleTest {
         // uriToRoute happily decodes an nsec to a pubkey; the round-trip check is
         // what keeps a secret key out of a filename.
         assertFalse(isWellFormedNpub("nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5"))
+    }
+
+    // ---
+    // key/npub binding: npubs are public, so a bundle can name any victim
+    // ---
+
+    @Test
+    fun acceptsAnEntryWhoseKeyDerivesToItsNpub() {
+        val priv = "a".repeat(64)
+        val npub = Nip01Crypto.pubKeyCreate(priv.hexToByteArray()).toNpub()
+
+        assertTrue(AccountTransferEntry(npub = npub, privKeyHex = priv).keyMatchesNpub())
+    }
+
+    @Test
+    fun rejectsAKeyFiledUnderSomeoneElsesNpub() {
+        // The destructive case: KeyPair derives the pubkey FROM the private key,
+        // so honouring this would file the attacker's identity under the victim's
+        // npub — and nostr keys are unrecoverable.
+        val victim = Nip01Crypto.pubKeyCreate("b".repeat(64).hexToByteArray()).toNpub()
+
+        assertFalse(AccountTransferEntry(npub = victim, privKeyHex = "a".repeat(64)).keyMatchesNpub())
+    }
+
+    @Test
+    fun anEntryWithNoKeyIsConsistentByDefinition() {
+        // External-signer accounts carry no key; they must still import.
+        assertTrue(AccountTransferEntry(npub = "npub1x", externalSignerPackageName = "com.example").keyMatchesNpub())
+    }
+
+    @Test
+    fun rejectsAMalformedKeyRatherThanThrowing() {
+        assertFalse(AccountTransferEntry(npub = "npub1x", privKeyHex = "zzzz").keyMatchesNpub())
+    }
+
+    // ---
+    // counter bounds
+    // ---
+
+    @Test
+    fun dropsCountersNoWalletCouldHaveReached() {
+        // Merged by max and never moved backwards, so an absurd value would
+        // permanently disable the keyset with no way back through the UI.
+        val sanitized =
+            sanitizeCounters(
+                mapOf("sane" to 42L, "huge" to Long.MAX_VALUE, "atTheLimit" to MAX_IMPORTABLE_CASHU_COUNTER, "negative" to -1L),
+            )
+
+        assertEquals(mapOf("sane" to 42L), sanitized)
     }
 
     @Test

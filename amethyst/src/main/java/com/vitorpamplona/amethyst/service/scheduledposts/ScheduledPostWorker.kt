@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostPublisher
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
@@ -165,6 +166,27 @@ class ScheduledPostWorker(
 
                 try {
                     val event = Event.fromJson(post.signedEventJson)
+
+                    // The same two guards ScheduledPostPublisher applies, and for a
+                    // sharper reason here: the store is a plain JSON file that a
+                    // device transfer can now populate, so a row is not necessarily
+                    // something this user composed. Publishing an unverified event
+                    // would send it from their client, on relays the row names, and
+                    // then feed it into their own cache as if they had signed it.
+                    if (event.pubKey != post.accountPubkey) {
+                        val msg = "pubkey mismatch"
+                        store.markFailed(post.id, msg)
+                        Log.w(TAG) { "Refusing to publish ${post.id}: $msg" }
+                        continue
+                    }
+
+                    if (!event.verify()) {
+                        val msg = "invalid signature"
+                        store.markFailed(post.id, msg)
+                        Log.w(TAG) { "Refusing to publish ${post.id}: $msg" }
+                        continue
+                    }
+
                     val relays = post.relayUrls.map { NormalizedRelayUrl(it) }.toSet()
                     val extras = post.extraEventsJson.map { Event.fromJson(it) }
 

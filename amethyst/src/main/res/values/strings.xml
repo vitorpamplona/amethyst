@@ -533,12 +533,12 @@
     <string name="device_transfer_export_done">Transfer file saved.</string>
     <string name="device_transfer_export_failed">Could not save the transfer file</string>
     <string name="device_transfer_import_title">Restore from a transfer file</string>
-    <string name="device_transfer_import_explainer">Adds what the file holds to this device. Accounts already here keep their keys, and nothing already set up is removed. Restart Amethyst afterwards so every account picks up the imported settings.</string>
+    <string name="device_transfer_import_explainer">Adds the accounts and settings the file holds. An account already on this device keeps the key it already has. Stores the file carries — favorites, browser history — replace what is here rather than merging. Restart Amethyst afterwards so every account picks up the imported settings.</string>
     <string name="device_transfer_choose_file">Choose file</string>
     <string name="device_transfer_unlock">Unlock file</string>
     <string name="device_transfer_import_button">Restore to this device</string>
-    <string name="device_transfer_restore_permissions">Also restore app permissions</string>
-    <string name="device_transfer_restore_permissions_warning">Which apps may sign with your key, which relays you log in to, and what mini apps are allowed to do. Only turn this on for a file you created yourself.</string>
+    <string name="device_transfer_restore_permissions">Also restore permissions and network settings</string>
+    <string name="device_transfer_restore_permissions_warning">Which apps may sign with your key, which relays you log in to, what mini apps may do, your Tor and appearance settings, and any queued posts. Only turn this on for a file you created yourself.</string>
     <string name="device_transfer_preview">Contains %1$s account(s).</string>
     <string name="device_transfer_preview_version">Written by Amethyst %1$s</string>
     <string name="device_transfer_import_done">Transfer complete. Restart Amethyst to finish applying it.</string>

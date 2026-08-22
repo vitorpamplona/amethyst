@@ -801,11 +801,18 @@ object LocalPreferences {
     suspend fun importAccount(entry: AccountTransferEntry) {
         withContext(Dispatchers.IO) {
             val npub = entry.npub
+            val existingKey = exportPrivateKey(npub)
+
             encryptedPreferences(npub).edit {
                 entry.preferences.forEach { (key, value) ->
                     if (AccountTransferKeys.isTransferable(key)) put(key, value)
                 }
-                entry.privKeyHex?.let { putString(PrefKeys.NOSTR_PRIVKEY, it) }
+                // Only when this device holds no key for the account. Nostr keys
+                // are unrecoverable, so an import that overwrites one destroys the
+                // identity for good — and the bundle is untrusted input.
+                if (existingKey.isNullOrBlank()) {
+                    entry.privKeyHex?.let { putString(PrefKeys.NOSTR_PRIVKEY, it) }
+                }
                 entry.externalSignerPackageName?.let {
                     putString(PrefKeys.SIGNER_PACKAGE_NAME, it)
                     putBoolean(PrefKeys.LOGIN_WITH_EXTERNAL_SIGNER, true)
@@ -817,7 +824,7 @@ object LocalPreferences {
             // silently undoing the whole import.
             mutex.withLock { cachedAccounts.remove(npub) }
 
-            val hasPrivKey = entry.privKeyHex != null || !exportPrivateKey(npub).isNullOrBlank()
+            val hasPrivKey = entry.privKeyHex != null || !existingKey.isNullOrBlank()
             addAccount(
                 AccountInfo(
                     npub = npub,

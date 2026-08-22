@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransfer
 import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferEnvelope
 import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferStores
 import com.vitorpamplona.amethyst.commons.model.account.transfer.isWellFormedNpub
+import com.vitorpamplona.amethyst.commons.model.account.transfer.keyMatchesNpub
+import com.vitorpamplona.amethyst.commons.model.account.transfer.sanitizeCounters
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -92,7 +94,7 @@ object AccountTransferService {
         }
 
     /** Entries this device will actually import — the rest carry an npub it will not create a record for. */
-    fun importableAccounts(bundle: AccountTransferBundle) = bundle.accounts.filter { isWellFormedNpub(it.npub) }
+    fun importableAccounts(bundle: AccountTransferBundle) = bundle.accounts.filter { isWellFormedNpub(it.npub) && it.keyMatchesNpub() }
 
     /** Accounts in [bundle] that will need their external signer reconnected here. */
     fun accountsNeedingReconnect(bundle: AccountTransferBundle) = importableAccounts(bundle).filter { it.privKeyHex == null && it.externalSignerPackageName != null }
@@ -122,7 +124,7 @@ object AccountTransferService {
      *
      * @param includePermissions restore the consent records too — which apps may
      * sign, which relays to authenticate to, what napplets may do. Only safe for
-     * a file the user made themselves; see [AccountTransferStores.PERMISSION_STORES].
+     * a file the user made themselves; see [AccountTransferStores.GUARDED_STORES].
      */
     suspend fun import(
         bundle: AccountTransferBundle,
@@ -131,7 +133,10 @@ object AccountTransferService {
         withContext(Dispatchers.IO) {
             val context = Amethyst.instance.appContext
 
-            LocalPreferences.importGlobalPreferences(bundle.globalPreferences)
+            // Gated with the rest: this file's payload is UiSettings, which decides
+            // whether images, link previews and avatars are fetched automatically —
+            // i.e. whether the device reaches out to hosts a bundle chose.
+            if (includePermissions) LocalPreferences.importGlobalPreferences(bundle.globalPreferences)
             AppWideStoreTransfer.importPreferenceFiles(context, bundle.sharedPreferences)
             AppWideStoreTransfer.importFiles(context, bundle.files, includePermissions)
 
@@ -143,8 +148,16 @@ object AccountTransferService {
                     return@forEach
                 }
 
+                // A key that does not belong to the npub it is filed under is not
+                // something a real export produces, and honouring it would replace
+                // that account's identity. See keyMatchesNpub.
+                if (!entry.keyMatchesNpub()) {
+                    Log.w("AccountTransfer") { "Skipping a bundle entry whose key does not match its npub" }
+                    return@forEach
+                }
+
                 LocalPreferences.importAccount(entry)
-                CashuPreferences.forAccount(entry.npub).importCounters(entry.cashuKeysetCounters)
+                CashuPreferences.forAccount(entry.npub).importCounters(sanitizeCounters(entry.cashuKeysetCounters))
             }
         }
     }

@@ -44,7 +44,7 @@ object AppWideStoreTransfer {
     fun exportFiles(context: Context): Map<String, String> {
         val filesDir = context.filesDir
         val paths =
-            (AccountTransferStores.DATA_STORES + AccountTransferStores.PERMISSION_STORES)
+            (AccountTransferStores.DATA_STORES + AccountTransferStores.GUARDED_STORES)
                 .map(AccountTransferStores::dataStorePath) +
                 signerPermissionStorePaths(filesDir) +
                 AccountTransferStores.FILES
@@ -109,13 +109,13 @@ object AppWideStoreTransfer {
                 return@forEach
             }
 
-            // Restoring a consent record is not the same act as restoring a
-            // setting: these decide which apps may sign with the user's key and
-            // which relays they authenticate to, and the bundle deciding that on
-            // their behalf is exactly what a hostile file would want. Off unless
+            // Restoring one of these is not the same act as restoring a setting:
+            // they decide which apps may sign with the user's key, which relays
+            // they authenticate to, and whether traffic goes over Tor. A hostile
+            // file deciding that on their behalf is the whole attack. Off unless
             // the user said so for this import.
-            if (!includePermissions && AccountTransferStores.isPermissionFile(path)) {
-                Log.i("AccountTransfer") { "Skipping a permission store the user did not opt to restore: $path" }
+            if (!includePermissions && AccountTransferStores.isGuardedFile(path)) {
+                Log.i("AccountTransfer") { "Skipping a guarded store the user did not opt to restore: $path" }
                 return@forEach
             }
 

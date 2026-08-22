@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.account.transfer
 
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
@@ -205,6 +206,42 @@ fun isWellFormedNpub(npub: String): Boolean =
         if (e is CancellationException) throw e
         false
     }
+
+/**
+ * True when [AccountTransferEntry.privKeyHex] actually belongs to
+ * [AccountTransferEntry.npub].
+ *
+ * An entry pairing one account's npub with a different account's key is not
+ * something a real export produces, and honouring it is destructive: the key is
+ * stored under that npub's file, and `KeyPair` derives the pubkey FROM the
+ * private key, so the account silently becomes whoever owns the key while still
+ * listed under the original npub. Since npubs are public, a bundle can name any
+ * victim.
+ */
+fun AccountTransferEntry.keyMatchesNpub(): Boolean {
+    val hex = privKeyHex ?: return true
+
+    return try {
+        Nip01Crypto.pubKeyCreate(hex.hexToByteArray()).toNpub() == npub
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        false
+    }
+}
+
+/**
+ * The largest NUT-13 counter an import may carry.
+ *
+ * Counters become BIP32 indexes, which are only valid below 2^31, and
+ * [mergeCounters] never moves one backwards — so a bundle naming an absurd value
+ * would permanently disable that keyset on this device with no way back through
+ * the UI. Rejecting is better than clamping: clamping to the ceiling bricks it
+ * just as thoroughly.
+ */
+const val MAX_IMPORTABLE_CASHU_COUNTER = 1L shl 31
+
+/** Drops counters no legitimate wallet would have reached. See [MAX_IMPORTABLE_CASHU_COUNTER]. */
+fun sanitizeCounters(counters: Map<String, Long>) = counters.filterValues { it in 0 until MAX_IMPORTABLE_CASHU_COUNTER }
 
 /**
  * Merge NUT-13 counters from an imported bundle into whatever this device
