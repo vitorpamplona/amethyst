@@ -533,7 +533,7 @@ reads an optional per-release changelog from
 
 ## Bootstrap runbook (one-time)
 
-> **Status as of v1.13.1: neither Homebrew nor Winget has been bootstrapped.**
+> **Status as of v1.14.0: neither Homebrew nor Winget has been bootstrapped.**
 > `https://formulae.brew.sh/api/cask/amethyst-nostr.json` and
 > `microsoft/winget-pkgs/manifests/v/VitorPamplona/Amethyst` both 404, so
 > **Amethyst does not currently ship through either channel.** The bump
@@ -584,7 +584,7 @@ The token then lives only in that maintainer's shell:
 
 ```bash
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...   # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.13.2
+scripts/bump-homebrew-cask.sh v1.14.0
 ```
 
 Create one at
@@ -600,7 +600,7 @@ Same split, and it needs **no token at all**. `scripts/bump-winget.sh` drives
 runs fine from macOS or Linux:
 
 ```bash
-scripts/bump-winget.sh v1.13.2
+scripts/bump-winget.sh v1.14.0
 ```
 
 CI (`bump-winget.yml`, `GITHUB_TOKEN` only) does the bookkeeping: downloads the

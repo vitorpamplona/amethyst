@@ -190,7 +190,7 @@ itself reads from.
 `Homebrew/homebrew-cask` (cask `amethyst-nostr`) and `microsoft/winget-pkgs`
 (`VitorPamplona.Amethyst`) — but **neither package has ever been submitted
 upstream**, so both workflows detect that and skip with a `::warning::`. As of
-**v1.13.1** these two channels deliver nothing; macOS and Windows users get the
+**v1.14.0** these two channels deliver nothing; macOS and Windows users get the
 desktop app from GitHub Releases only.
 
 Two separate faults kept this invisible until v1.13.1, both now fixed:
@@ -219,9 +219,9 @@ readable by anyone with push access here), so a maintainer runs the last step:
 ```bash
 # after merging the sync PRs
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...     # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.13.2
+scripts/bump-homebrew-cask.sh v1.14.0
 
-scripts/bump-winget.sh v1.13.2               # no token — uses your `gh` auth
+scripts/bump-winget.sh v1.14.0               # no token — uses your `gh` auth
 ```
 
 Both scripts re-verify the published artifact's sha256 before submitting, and
