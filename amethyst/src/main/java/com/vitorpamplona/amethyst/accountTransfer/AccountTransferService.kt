@@ -76,6 +76,7 @@ object AccountTransferService {
                         externalSignerPackageName = LocalPreferences.exportSignerPackageName(npub),
                         preferences = LocalPreferences.exportAccountPreferences(npub),
                         cashuKeysetCounters = CashuPreferences.forAccount(npub).exportCounters(),
+                        marmotMessages = MarmotArchiveTransfer.export(context.filesDir, npub),
                     )
                 }
 
@@ -158,6 +159,16 @@ object AccountTransferService {
 
                 LocalPreferences.importAccount(entry)
                 CashuPreferences.forAccount(entry.npub).importCounters(sanitizeCounters(entry.cashuKeysetCounters))
+
+                // Guarded with the rest: MIP-03 inner events are unsigned rumors
+                // whose authenticity came from the MLS credential check when they
+                // were first decrypted, and that cannot be re-established from a
+                // file. An archive is therefore trusted exactly as much as the
+                // bundle carrying it, and a hostile one could fabricate an entire
+                // conversation attributed to anyone in the group.
+                if (includePermissions) {
+                    MarmotArchiveTransfer.import(context.filesDir, entry.npub, entry.marmotMessages)
+                }
             }
         }
     }

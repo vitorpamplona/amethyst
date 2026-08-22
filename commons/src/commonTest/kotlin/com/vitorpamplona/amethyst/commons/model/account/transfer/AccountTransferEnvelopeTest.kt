@@ -52,6 +52,7 @@ class AccountTransferEnvelopeTest {
                                 "volume" to TransferValue.Flt(0.5f),
                             ),
                         cashuKeysetCounters = mapOf("009a1f293253e41e" to 42L),
+                        marmotMessages = mapOf("ab".repeat(16) to listOf("""{"kind":9,"content":"hi"}""", """{"kind":9,"content":"there"}""")),
                     ),
                 ),
             globalPreferences = mapOf("shared_settings" to TransferValue.Str("""{"theme":"DARK"}""")),
@@ -75,6 +76,26 @@ class AccountTransferEnvelopeTest {
         // the file, so assert on it rather than on a generic marker.
         assertFalse(encrypted.decodeToString().contains("nostr+walletconnect"))
         assertFalse(encrypted.decodeToString().contains("npub1vitor"))
+        // Private group history is plaintext in the bundle; the envelope is the
+        // only thing keeping it off disk in the clear.
+        assertFalse(encrypted.decodeToString().contains("there"))
+    }
+
+    @Test
+    fun roundTripsArchivedGroupHistoryInOrder() {
+        val encrypted = AccountTransferEnvelope.encrypt(bundle, "pw", testLogN)
+        val archive =
+            AccountTransferEnvelope
+                .decrypt(encrypted, "pw")
+                .accounts
+                .single()
+                .marmotMessages
+
+        // Order matters: the store replays these as a conversation.
+        assertEquals(
+            listOf("""{"kind":9,"content":"hi"}""", """{"kind":9,"content":"there"}"""),
+            archive["ab".repeat(16)],
+        )
     }
 
     @Test

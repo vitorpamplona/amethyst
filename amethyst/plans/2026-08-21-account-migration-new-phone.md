@@ -92,6 +92,44 @@ Two carry caveats worth knowing:
 - **Connected-app pairings** travel, but the NIP-46 bunker identity does not
   (see below), so they only become live again once the user re-pairs.
 
+### Marmot (MLS) — the archive travels, the crypto does not
+
+Per account, under `accounts/<pubkeyHex>/`:
+
+| Path | Contents | Travels? |
+| --- | --- | --- |
+| `mls_groups/<id>/messages` | decrypted inner event JSON | **Yes**, guarded |
+| `mls_groups/<id>/state` | MLS ratchet state | No |
+| `mls_groups/<id>/retained` | retained epoch secrets | No |
+| `marmot_keypackages/state` | key package bundles (private keys) | No |
+
+Cloning a ratchet onto a second device is exactly what MLS's forward secrecy
+exists to prevent: two devices sharing one leaf can reuse a key at the same
+epoch, and the ratchet's whole job is that old state is destroyed as it
+advances. MLS handles multiple devices by adding each as its own member with its
+own key package, never by copying. Key packages are consume-once and hold
+private keys, so duplicating them is its own hazard. All of it is Keystore-
+sealed anyway, so a byte copy would arrive undecryptable.
+
+The consequence is the part worth stating plainly: the new phone rejoins as a
+new member and **cannot decrypt anything sent before it joined**. Nor is the
+history recoverable from the crypto state — `retained` is a short out-of-order
+window for late-arriving messages (`tryDecryptWithRetainedEpoch`), not an
+archive. So `messages` is the only thing that can carry a past conversation
+across, which is why it travels even though the rest does not.
+
+It is guarded rather than automatic because it cannot be authenticated.
+MIP-03 inner events are unsigned rumors — `Account` replays them with
+`justConsume(…, wasVerified = true)` precisely because they carry no Schnorr
+signature, their authenticity having come from the MLS credential check at
+decrypt time. That check cannot be redone from a file, so an archive is trusted
+exactly as much as the bundle carrying it, and a hostile bundle could fabricate
+a whole conversation attributed to anyone.
+
+Rejoining is not something the transfer can do: an admin has to accept the new
+device's key package. What the transfer does carry is `latestKeyPackageRelayList`
+(kind 10051), so the new device knows where to publish.
+
 ### Deliberately dropped
 
 | State | Why |

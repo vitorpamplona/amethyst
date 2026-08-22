@@ -131,6 +131,25 @@ data class AccountTransferEntry(
      * see [mergeCounters].
      */
     val cashuKeysetCounters: Map<String, Long> = emptyMap(),
+    /**
+     * Marmot (MLS) conversation history, group id -> decrypted inner event JSON
+     * in append order.
+     *
+     * The ARCHIVE only. The group's MLS state — ratchet, retained epoch secrets,
+     * key package bundles — deliberately stays on the old device: cloning a
+     * ratchet onto a second device is what MLS's forward secrecy is built to
+     * prevent, and two devices sharing one leaf can reuse a key at the same
+     * epoch. So the new phone rejoins as a new member for future messages,
+     * which by design cannot decrypt anything sent before it joined — this
+     * archive is the only way the past conversation survives the move.
+     *
+     * TRUSTED EXACTLY AS MUCH AS THE FILE. These are MIP-03 inner events, which
+     * are unsigned rumors; their authenticity came from the MLS credential check
+     * at decrypt time and cannot be re-established afterwards. Restoring them is
+     * therefore a guarded action — a bundle can otherwise fabricate a whole
+     * conversation attributed to anyone.
+     */
+    val marmotMessages: Map<String, List<String>> = emptyMap(),
 )
 
 /**
@@ -239,6 +258,14 @@ fun AccountTransferEntry.keyMatchesNpub(): Boolean {
  * just as thoroughly.
  */
 const val MAX_IMPORTABLE_CASHU_COUNTER = 1L shl 31
+
+/**
+ * Per-group ceiling on archived Marmot messages, both directions.
+ *
+ * Bounds the file for a real export and, more to the point, bounds what an
+ * imported bundle can push into the cache in one go.
+ */
+const val MAX_ARCHIVED_MESSAGES_PER_GROUP = 20_000
 
 /** Drops counters no legitimate wallet would have reached. See [MAX_IMPORTABLE_CASHU_COUNTER]. */
 fun sanitizeCounters(counters: Map<String, Long>) = counters.filterValues { it in 0 until MAX_IMPORTABLE_CASHU_COUNTER }
