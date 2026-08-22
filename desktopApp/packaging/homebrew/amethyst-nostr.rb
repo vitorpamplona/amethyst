@@ -16,8 +16,8 @@
 #     https://github.com/vitorpamplona/amethyst/releases/download/vX.Y.Z/amethyst-desktop-X.Y.Z-macos-arm64.dmg
 #   shasum -a 256 amethyst.dmg
 cask "amethyst-nostr" do
-  version "1.13.1"
-  sha256 "ead8f4f6263417d661b0d24be3853ec3284b330abc14748ebd77a2c2afcd2789"
+  version "1.14.0"
+  sha256 "84a1bdaf3577ed7375ab65c48358efd3c609fa47b504de61f4e8fc436f6b3436"
 
   url "https://github.com/vitorpamplona/amethyst/releases/download/v#{version}/amethyst-desktop-#{version}-macos-arm64.dmg"
   name "Amethyst"
