@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup
 
 import android.content.Context
 import android.net.Uri
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,13 +44,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.platform.LocalContext
@@ -98,6 +103,17 @@ fun DeviceTransferScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Same treatment as the key backup screen, and for the same reason: the
+    // password typed here can be revealed on screen and is the only thing
+    // protecting every secret key in the exported file. Cleared on dispose so
+    // the flag never leaks to other screens.
+    val context = LocalContext.current
+    DisposableEffect(context) {
+        val window = context.getFragmentActivity()?.window
+        window?.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+    }
+
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(R.string.device_transfer), nav = nav) },
     ) { padding ->
@@ -238,6 +254,9 @@ private fun ImportSection(accountViewModel: AccountViewModel) {
     var errorMessage by remember { mutableStateOf("") }
     var preview by remember { mutableStateOf<AccountTransferBundle?>(null) }
     var busy by remember { mutableStateOf(false) }
+    // Off by default, and deliberately a separate decision: restoring consent
+    // records lets the file decide which apps may sign with the user's key.
+    var includePermissions by remember { mutableStateOf(false) }
 
     val openLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -333,7 +352,7 @@ private fun ImportSection(accountViewModel: AccountViewModel) {
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text(
-                    text = stringRes(R.string.device_transfer_preview, loaded.accounts.size.toString()),
+                    text = stringRes(R.string.device_transfer_preview, AccountTransferService.importableAccounts(loaded).size.toString()),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 loaded.appVersion?.let {
@@ -361,12 +380,26 @@ private fun ImportSection(accountViewModel: AccountViewModel) {
 
         Spacer(Modifier.height(12.dp))
 
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(checked = includePermissions, onCheckedChange = { includePermissions = it })
+            Column(Modifier.padding(start = 12.dp)) {
+                Text(stringRes(R.string.device_transfer_restore_permissions), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = stringRes(R.string.device_transfer_restore_permissions_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.grayText,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         Button(
             onClick = {
                 busy = true
                 scope.launch {
                     try {
-                        AccountTransferService.import(loaded)
+                        AccountTransferService.import(loaded, includePermissions)
                         password = ""
                         chosenFile = null
                         preview = null

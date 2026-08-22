@@ -44,7 +44,8 @@ object AppWideStoreTransfer {
     fun exportFiles(context: Context): Map<String, String> {
         val filesDir = context.filesDir
         val paths =
-            AccountTransferStores.DATA_STORES.map(AccountTransferStores::dataStorePath) +
+            (AccountTransferStores.DATA_STORES + AccountTransferStores.PERMISSION_STORES)
+                .map(AccountTransferStores::dataStorePath) +
                 signerPermissionStorePaths(filesDir) +
                 AccountTransferStores.FILES
 
@@ -95,6 +96,7 @@ object AppWideStoreTransfer {
     fun importFiles(
         context: Context,
         files: Map<String, String>,
+        includePermissions: Boolean,
     ) {
         val filesDir = context.filesDir
 
@@ -104,6 +106,16 @@ object AppWideStoreTransfer {
             // account's .secrets DataStore, say — must be unreachable by name.
             if (!AccountTransferStores.isImportableFile(path)) {
                 Log.w("AccountTransfer") { "Refusing to import an unrecognized store: $path" }
+                return@forEach
+            }
+
+            // Restoring a consent record is not the same act as restoring a
+            // setting: these decide which apps may sign with the user's key and
+            // which relays they authenticate to, and the bundle deciding that on
+            // their behalf is exactly what a hostile file would want. Off unless
+            // the user said so for this import.
+            if (!includePermissions && AccountTransferStores.isPermissionFile(path)) {
+                Log.i("AccountTransfer") { "Skipping a permission store the user did not opt to restore: $path" }
                 return@forEach
             }
 

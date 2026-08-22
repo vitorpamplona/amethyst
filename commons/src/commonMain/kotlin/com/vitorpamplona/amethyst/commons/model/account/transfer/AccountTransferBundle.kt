@@ -20,8 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.model.account.transfer
 
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The plaintext payload of a device-to-device account transfer file.
@@ -179,6 +184,27 @@ sealed class TransferValue {
         val v: List<String>,
     ) : TransferValue()
 }
+
+/**
+ * True when [npub] is a canonical npub this device is willing to create an
+ * account record for.
+ *
+ * A bundle is untrusted input, and its npub is used unchecked as part of a
+ * preference FILE NAME and as the identity of a saved account. Round-tripping
+ * (decode, re-encode, compare) is the check rather than a prefix test, because
+ * only that rejects every non-canonical string — including the empty one, which
+ * is the dangerous case: account deletion matches preference files by
+ * `name.contains(npub)`, so an account saved under "" would match every file on
+ * disk and take every other account's data with it when removed.
+ */
+fun isWellFormedNpub(npub: String): Boolean =
+    try {
+        val hex = (Nip19Parser.uriToRoute(npub)?.entity as? NPub)?.hex
+        hex != null && hex.hexToByteArray().toNpub() == npub
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        false
+    }
 
 /**
  * Merge NUT-13 counters from an imported bundle into whatever this device

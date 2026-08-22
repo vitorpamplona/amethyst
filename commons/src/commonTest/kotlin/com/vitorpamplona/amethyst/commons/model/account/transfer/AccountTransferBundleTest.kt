@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.model.account.transfer
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class AccountTransferBundleTest {
     @Test
@@ -50,6 +52,42 @@ class AccountTransferBundleTest {
         val merged = mergeCounters(mapOf("known" to 1L), mapOf("fresh" to 7L))
 
         assertEquals(mapOf("known" to 1L, "fresh" to 7L), merged)
+    }
+
+    // ---
+    // npub validation: the bundle is untrusted input and its npub becomes both a
+    // preference file name and a saved-account identity.
+    // ---
+
+    @Test
+    fun acceptsACanonicalNpub() {
+        assertTrue(isWellFormedNpub("npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6"))
+    }
+
+    @Test
+    fun rejectsTheEmptyNpub() {
+        // The dangerous one: account deletion matches preference files by
+        // name.contains(npub), so "" matches every file on disk and removing
+        // that account would take every other account's data with it.
+        assertFalse(isWellFormedNpub(""))
+    }
+
+    @Test
+    fun rejectsNonCanonicalAndHostileStrings() {
+        assertFalse(isWellFormedNpub("1"))
+        assertFalse(isWellFormedNpub("../../databases/x"))
+        assertFalse(isWellFormedNpub("npub1"))
+        assertFalse(isWellFormedNpub("not an npub at all"))
+        // A bare hex pubkey decodes as a key but is not the canonical npub form
+        // the account files are named with.
+        assertFalse(isWellFormedNpub("3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"))
+    }
+
+    @Test
+    fun rejectsAnNsecOfferedWhereAnNpubBelongs() {
+        // uriToRoute happily decodes an nsec to a pubkey; the round-trip check is
+        // what keeps a secret key out of a filename.
+        assertFalse(isWellFormedNpub("nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5"))
     }
 
     @Test

@@ -42,23 +42,48 @@ object AccountTransferStores {
             "shared_settings",
             "favorite_apps",
             "browser_history",
-            "napplet_permissions",
             "napplet_storage",
             "napplet_network",
             "weburl_network",
+        )
+
+    /**
+     * Stores that record a DECISION THE USER MADE about trusting something else:
+     * which apps may sign with their key, which relays they authenticate to,
+     * which capabilities a napplet holds.
+     *
+     * Kept separate from [DATA_STORES] because restoring them is not the same
+     * kind of act as restoring settings. A transfer file is untrusted input — a
+     * user can be talked into importing one someone else made — and these stores
+     * are keyed by app coordinate, relay URL or account pubkey rather than being
+     * scoped to the bundle's own accounts. Restoring them from a hostile bundle
+     * would silently pre-authorize an attacker's app to sign with the victim's
+     * key, or pre-approve NIP-42 AUTH to a relay that then deanonymizes them.
+     *
+     * They still travel; the import just asks first. See
+     * `AppWideStoreTransfer.importFiles`.
+     */
+    val PERMISSION_STORES =
+        listOf(
             // Per-relay NIP-42 AUTH decisions.
             "relay_auth",
-            // Connected apps that pair with Amethyst as a NIP-46 signer. The
-            // bunker identity itself deliberately stays behind
-            // (AccountTransferKeys.NIP46_DEVICE_IDENTITY), so these entries only
-            // become live again once the user re-pairs from the new phone.
+            // Connected apps paired with Amethyst as a NIP-46 signer. The bunker
+            // identity itself deliberately stays behind
+            // (AccountTransferKeys.NIP46_DEVICE_IDENTITY), so these only become
+            // live again once the user re-pairs from the new phone.
             "nip46_clients",
+            // Per-applet capability grants, keyed by account pubkey — and npubs
+            // are public, so a bundle can name any victim.
+            "napplet_permissions",
         )
 
     /**
      * Per-app-coordinate signer permission stores, named
      * `nsp_<hash>.preferences_pb`. Discovered by prefix because the hash is
      * derived from the app coordinate at runtime and cannot be listed here.
+     *
+     * A permission store in the sense of [PERMISSION_STORES] — these hold the
+     * policy deciding whether an app may sign with the user's key.
      */
     const val SIGNER_PERMISSION_PREFIX = "nsp_"
 
@@ -101,15 +126,28 @@ object AccountTransferStores {
      * files dir, including an account's `.secrets` DataStore. Only the stores
      * this feature actually exports can be written back.
      */
-    fun isImportableFile(path: String): Boolean {
-        if (path in FILES) return true
+    fun isImportableFile(path: String): Boolean = storeNameOf(path) != null
+
+    /** True when [path] is one of the consent records described on [PERMISSION_STORES]. */
+    fun isPermissionFile(path: String): Boolean {
+        val store = storeNameOf(path) ?: return false
+        return store in PERMISSION_STORES || store.startsWith(SIGNER_PERMISSION_PREFIX)
+    }
+
+    /**
+     * The store [path] names, or null when a bundle is not allowed to write it.
+     * Returns the plain file name for entries in [FILES].
+     */
+    private fun storeNameOf(path: String): String? {
+        if (path in FILES) return path
 
         val name = path.removePrefix("$DATA_STORE_DIR/")
-        if (name == path || name.contains('/')) return false
-        if (!name.endsWith(DATA_STORE_SUFFIX)) return false
+        if (name == path || name.contains('/')) return null
+        if (!name.endsWith(DATA_STORE_SUFFIX)) return null
 
         val store = name.removeSuffix(DATA_STORE_SUFFIX)
-        return store in DATA_STORES || store.startsWith(SIGNER_PERMISSION_PREFIX)
+        val known = store in DATA_STORES || store in PERMISSION_STORES || store.startsWith(SIGNER_PERMISSION_PREFIX)
+        return if (known) store else null
     }
 
     /**

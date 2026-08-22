@@ -26,7 +26,10 @@ import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferBundle
 import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferEntry
 import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferEnvelope
+import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferStores
+import com.vitorpamplona.amethyst.commons.model.account.transfer.isWellFormedNpub
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -88,8 +91,11 @@ object AccountTransferService {
             )
         }
 
+    /** Entries this device will actually import — the rest carry an npub it will not create a record for. */
+    fun importableAccounts(bundle: AccountTransferBundle) = bundle.accounts.filter { isWellFormedNpub(it.npub) }
+
     /** Accounts in [bundle] that will need their external signer reconnected here. */
-    fun accountsNeedingReconnect(bundle: AccountTransferBundle) = bundle.accounts.filter { it.privKeyHex == null && it.externalSignerPackageName != null }
+    fun accountsNeedingReconnect(bundle: AccountTransferBundle) = importableAccounts(bundle).filter { it.privKeyHex == null && it.externalSignerPackageName != null }
 
     /**
      * Decrypts [bytes] without applying anything, so the UI can show what the
@@ -113,16 +119,30 @@ object AccountTransferService {
      * preference the bundle doesn't mention, and cashu counters merge upward
      * rather than being assigned. Importing the same file twice is therefore a
      * no-op, and importing an older file cannot undo newer local state.
+     *
+     * @param includePermissions restore the consent records too — which apps may
+     * sign, which relays to authenticate to, what napplets may do. Only safe for
+     * a file the user made themselves; see [AccountTransferStores.PERMISSION_STORES].
      */
-    suspend fun import(bundle: AccountTransferBundle) {
+    suspend fun import(
+        bundle: AccountTransferBundle,
+        includePermissions: Boolean,
+    ) {
         withContext(Dispatchers.IO) {
             val context = Amethyst.instance.appContext
 
             LocalPreferences.importGlobalPreferences(bundle.globalPreferences)
             AppWideStoreTransfer.importPreferenceFiles(context, bundle.sharedPreferences)
-            AppWideStoreTransfer.importFiles(context, bundle.files)
+            AppWideStoreTransfer.importFiles(context, bundle.files, includePermissions)
 
             bundle.accounts.forEach { entry ->
+                // The npub becomes a preference file name and a saved-account
+                // identity, and the bundle is untrusted input. See isWellFormedNpub.
+                if (!isWellFormedNpub(entry.npub)) {
+                    Log.w("AccountTransfer") { "Skipping a bundle entry whose npub is not canonical" }
+                    return@forEach
+                }
+
                 LocalPreferences.importAccount(entry)
                 CashuPreferences.forAccount(entry.npub).importCounters(entry.cashuKeysetCounters)
             }
