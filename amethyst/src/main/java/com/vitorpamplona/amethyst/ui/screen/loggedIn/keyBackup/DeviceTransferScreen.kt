@@ -144,7 +144,10 @@ private fun ExportSection(accountViewModel: AccountViewModel) {
             busy = true
             scope.launch {
                 try {
-                    val npubs = LocalPreferences.allSavedAccounts().map { it.npub }
+                    // Transient accounts are deliberately not persisted on this
+                    // device; importing one would recreate it as a permanent,
+                    // keyless entry in the account switcher.
+                    val npubs = LocalPreferences.allSavedAccounts().filter { !it.isTransient }.map { it.npub }
                     val bytes = AccountTransferService.export(npubs, password)
                     withContext(Dispatchers.IO) {
                         context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }

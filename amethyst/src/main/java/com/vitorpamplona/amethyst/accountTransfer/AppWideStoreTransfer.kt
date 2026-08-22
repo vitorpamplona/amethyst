@@ -99,9 +99,11 @@ object AppWideStoreTransfer {
         val filesDir = context.filesDir
 
         files.forEach { (path, encoded) ->
-            // Never let a bundle write outside the files dir.
-            if (path.contains("..") || path.startsWith("/")) {
-                Log.w("AccountTransfer") { "Refusing to import a store with a suspicious path: $path" }
+            // Allow-list, not a traversal check: a bundle is untrusted input, and
+            // anything under the files dir it is not supposed to touch — an
+            // account's .secrets DataStore, say — must be unreachable by name.
+            if (!AccountTransferStores.isImportableFile(path)) {
+                Log.w("AccountTransfer") { "Refusing to import an unrecognized store: $path" }
                 return@forEach
             }
 
@@ -135,7 +137,12 @@ object AppWideStoreTransfer {
         preferenceFiles: Map<String, Map<String, TransferValue>>,
     ) {
         preferenceFiles.forEach { (name, values) ->
-            if (name in AccountTransferKeys.EXCLUDED_PREFERENCE_FILES) return@forEach
+            // Allow-list rather than a deny-list: naming `secret_keeper` here
+            // would write plaintext into the EncryptedSharedPreferences file.
+            if (!AccountTransferStores.isImportablePreferenceFile(name)) {
+                Log.w("AccountTransfer") { "Refusing to import an unrecognized preference file: $name" }
+                return@forEach
+            }
 
             context.prefs(name).edit {
                 values.forEach { (key, value) ->
@@ -146,9 +153,6 @@ object AppWideStoreTransfer {
                         is TransferValue.Int64 -> putLong(key, value.v)
                         is TransferValue.Flt -> putFloat(key, value.v)
                         is TransferValue.StrSet -> putStringSet(key, value.v.toSet())
-                        // SharedPreferences has no Double; only a DataStore can
-                        // produce one, and those travel as raw files.
-                        is TransferValue.Dbl -> Unit
                     }
                 }
             }

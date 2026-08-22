@@ -90,4 +90,34 @@ object AccountTransferStores {
      * missing attachment, and text-only posts — the common case — are unaffected.
      */
     val FILES = listOf("scheduled_posts.json")
+
+    /**
+     * True when a bundle is allowed to write to [path] (relative to the files
+     * dir).
+     *
+     * An allow-list, not a traversal check. A bundle is untrusted input — it can
+     * be edited, or simply come from someone else — and a path check that only
+     * blocks `..` still lets a crafted file overwrite anything else under the
+     * files dir, including an account's `.secrets` DataStore. Only the stores
+     * this feature actually exports can be written back.
+     */
+    fun isImportableFile(path: String): Boolean {
+        if (path in FILES) return true
+
+        val name = path.removePrefix("$DATA_STORE_DIR/")
+        if (name == path || name.contains('/')) return false
+        if (!name.endsWith(DATA_STORE_SUFFIX)) return false
+
+        val store = name.removeSuffix(DATA_STORE_SUFFIX)
+        return store in DATA_STORES || store.startsWith(SIGNER_PERMISSION_PREFIX)
+    }
+
+    /**
+     * True when a bundle is allowed to write the SharedPreferences file [name].
+     *
+     * Same reasoning as [isImportableFile]. In particular this keeps a bundle
+     * from naming `secret_keeper`, which would write plaintext into the
+     * EncryptedSharedPreferences file that holds the account registry.
+     */
+    fun isImportablePreferenceFile(name: String): Boolean = name in PREFERENCE_FILES
 }

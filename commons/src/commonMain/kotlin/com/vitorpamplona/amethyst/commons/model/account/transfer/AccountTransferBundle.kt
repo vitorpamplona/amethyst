@@ -99,9 +99,13 @@ data class AccountTransferBundle(
 data class AccountTransferEntry(
     val npub: String,
     /**
-     * Present only when the user explicitly opted into including secret keys.
-     * Null means the account still imports — settings and all — but the new
-     * phone asks for the key (or re-pairs the external signer) on first login.
+     * The account's secret key. Always carried for an account that holds one:
+     * the file exists to move an account, and an account without its key is not
+     * moved — the user would land with their settings and no way to post.
+     *
+     * Null means the account has no key HERE to carry, i.e. it signs through an
+     * external app (NIP-55). Those import fine and reconnect on the new phone;
+     * see [externalSignerPackageName].
      */
     val privKeyHex: String? = null,
     /** NIP-55 external signer package, when the account signs through one. */
@@ -162,13 +166,6 @@ sealed class TransferValue {
     @SerialName("f")
     data class Flt(
         val v: Float,
-    ) : TransferValue()
-
-    /** DataStore preferences can hold a Double; SharedPreferences cannot. */
-    @Serializable
-    @SerialName("d")
-    data class Dbl(
-        val v: Double,
     ) : TransferValue()
 
     /**

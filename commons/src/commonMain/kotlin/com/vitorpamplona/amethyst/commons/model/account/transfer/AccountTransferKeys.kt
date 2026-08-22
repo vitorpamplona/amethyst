@@ -35,11 +35,10 @@ package com.vitorpamplona.amethyst.commons.model.account.transfer
  */
 object AccountTransferKeys {
     /**
-     * The account's secret key. Handled out of band as
-     * [AccountTransferEntry.privKeyHex] so that including it stays an explicit,
-     * separately-consented choice rather than a side effect of exporting
-     * settings — a transfer file the user meant as "my settings" must not turn
-     * out to carry their identity.
+     * The account's secret key. Excluded from the verbatim preference copy
+     * because it is carried deliberately as [AccountTransferEntry.privKeyHex] —
+     * withheld here so that exactly one code path decides how keys travel, and
+     * the UI can state plainly what the file contains.
      */
     const val NOSTR_PRIVKEY = "nostr_privkey"
 

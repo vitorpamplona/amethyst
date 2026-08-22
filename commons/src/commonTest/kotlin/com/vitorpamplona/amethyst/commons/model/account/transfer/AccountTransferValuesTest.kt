@@ -78,26 +78,6 @@ class AccountTransferValuesTest {
     }
 
     @Test
-    fun aDataStoreMapKeepsKeysTheAccountExclusionListWouldDrop() {
-        // The exclusion list names keys in the ACCOUNT preference file. A
-        // DataStore is a different namespace, so a coincidental name collision
-        // must not silently drop one of its entries.
-        val converted =
-            AccountTransferValues.fromDataStoreMap(
-                mapOf(AccountTransferKeys.LAST_READ_PER_ROUTE to "x", "ui.theme" to "DARK"),
-            )
-
-        assertEquals(setOf(AccountTransferKeys.LAST_READ_PER_ROUTE, "ui.theme"), converted.keys)
-    }
-
-    @Test
-    fun keepsDoublesWhichOnlyADataStoreCanHold() {
-        val converted = AccountTransferValues.fromDataStoreMap(mapOf("ratio" to 0.5))
-
-        assertEquals(TransferValue.Dbl(0.5), converted["ratio"])
-    }
-
-    @Test
     fun dropsTheKeysThatMustNotLeaveTheDevice() {
         val converted =
             AccountTransferValues.fromPreferenceMap(

@@ -1533,13 +1533,19 @@ class AccountSettings(
             )
 
             applyPortableSettings(mergePortableSettings(portableSettings(), newSyncedSettings.app))
-            // The POST-apply snapshot, not the merged value that went in. A blob
+
+            // Only when the blob actually carried the section. A null app means
+            // relays hold nothing for it — recording local state as "what relays
+            // have" would then suppress the very first publish, which is how an
+            // account upgrading from a build without the section gets its
+            // settings onto relays at all.
+            //
+            // The POST-apply snapshot, not the merged value that went in: a blob
             // from a newer client can name a feed or a chat type this build has
-            // no enum for; those are dropped on apply, so recording the merged
+            // no enum for, and those are dropped on apply. Recording the merged
             // value would leave the fingerprint permanently unreachable and
-            // republish the settings event on every save — with two such devices,
-            // forever. Recording what this build actually holds converges.
-            markPortableSettingsSynced(portableSettings())
+            // republish on every save — with two such devices, forever.
+            if (newSyncedSettings.app != null) markPortableSettingsSynced(portableSettings())
 
             saveAccountSettings()
         }

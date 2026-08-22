@@ -3819,7 +3819,12 @@ class Account(
             settings.saveable.debounce(1000).collect {
                 if (it.accountSettings != null) {
                     LocalPreferences.saveToEncryptedStorage(it.accountSettings)
-                    publishPortableSettingsIfChanged()
+
+                    // Launched, not awaited. Publishing signs an event, and with a
+                    // NIP-55/NIP-46 signer that is an IPC round-trip that can sit
+                    // at a user prompt for its full timeout. Awaiting it here would
+                    // hold up the local write that just ran, on every save.
+                    scope.launch(Dispatchers.IO) { publishPortableSettingsIfChanged() }
                 }
             }
         }

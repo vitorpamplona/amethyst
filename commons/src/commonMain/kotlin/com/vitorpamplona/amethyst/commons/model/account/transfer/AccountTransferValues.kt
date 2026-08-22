@@ -35,21 +35,10 @@ object AccountTransferValues {
      * dropping the keys [AccountTransferKeys] holds back and any value of a
      * type preferences cannot hold.
      */
-    fun fromPreferenceMap(all: Map<String, Any?>): Map<String, TransferValue> = fromMap(all) { AccountTransferKeys.isTransferable(it) }
-
-    /**
-     * Same conversion for a store whose keys are opaque to the exclusion list
-     * — a DataStore, where nothing is withheld by name.
-     */
-    fun fromDataStoreMap(all: Map<String, Any?>): Map<String, TransferValue> = fromMap(all) { true }
-
-    private inline fun fromMap(
-        all: Map<String, Any?>,
-        allowed: (String) -> Boolean,
-    ): Map<String, TransferValue> =
+    fun fromPreferenceMap(all: Map<String, Any?>): Map<String, TransferValue> =
         all
             .mapNotNull { (key, value) ->
-                if (!allowed(key)) return@mapNotNull null
+                if (!AccountTransferKeys.isTransferable(key)) return@mapNotNull null
                 toTransferValue(value)?.let { key to it }
             }.toMap()
 
@@ -60,7 +49,6 @@ object AccountTransferValues {
             is Int -> TransferValue.Int32(value)
             is Long -> TransferValue.Int64(value)
             is Float -> TransferValue.Flt(value)
-            is Double -> TransferValue.Dbl(value)
             // Sorted so the same preferences always produce the same bytes, and
             // filtered because the platform only stores string sets — anything
             // else in there is not something we can put back.

@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.utils.Log
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The slice of [AccountSettings] that lives on the device today but describes a
@@ -77,7 +80,9 @@ data class PortableAccountSettings(
 /** Serializes for the NIP-78 blob. Every field is written; absence only ever means "older client". */
 fun PortableAccountSettings.toInternal() =
     AccountAppPreferencesInternal(
-        feedFilters = feedFilters,
+        // Each filter serialized on its own, so one undecodable entry cannot
+        // take down the whole settings blob. See AccountAppPreferencesInternal.
+        feedFilters = feedFilters.mapValues { JsonMapper.toJson(it.value) },
         // sorted so the serialized form is deterministic and identical settings
         // don't produce a differing event on every save
         disabledChatFeeds = disabledChatFeeds.sorted(),
@@ -120,7 +125,7 @@ fun mergePortableSettings(
     return local.copy(
         // Merged per key, not replaced: a client that predates a feed writes the
         // blob without that feed's entry, and the entry must not be lost.
-        feedFilters = remote.feedFilters?.let { local.feedFilters + it } ?: local.feedFilters,
+        feedFilters = remote.feedFilters?.let { local.feedFilters + decodeFeedFilters(it) } ?: local.feedFilters,
         disabledChatFeeds = remote.disabledChatFeeds?.toSet() ?: local.disabledChatFeeds,
         disabledHomeFeedTypes = remote.disabledHomeFeedTypes?.toSet() ?: local.disabledHomeFeedTypes,
         // Matched by name rather than through the enums' own fromName(), which
@@ -148,19 +153,25 @@ fun mergePortableSettings(
 }
 
 /**
- * Two filter selections are the same when their [TopFilter.code]s match.
+ * Decodes the wire form of [PortableAccountSettings.feedFilters], dropping
+ * entries this build cannot read.
  *
- * The addressable subclasses (`PeopleList`, `Community`, …) are plain classes
- * with no `equals`, so `==` compares identity and would report a change on
- * every decode of the blob — republishing the settings event in a loop.
+ * A filter kind added by a newer client decodes to nothing here and the feed
+ * keeps whatever it had locally — the same "unknown value, keep local" rule the
+ * enum names follow. Decoding them as one typed map instead would make a single
+ * unknown kind fail the entire settings blob.
  */
-fun sameFilters(
-    a: Map<String, TopFilter>,
-    b: Map<String, TopFilter>,
-): Boolean {
-    if (a.size != b.size) return false
-    return a.all { (key, filter) -> b[key]?.code == filter.code }
-}
+fun decodeFeedFilters(raw: Map<String, String>): Map<String, TopFilter> =
+    raw
+        .mapNotNull { (key, json) ->
+            try {
+                key to JsonMapper.fromJson<TopFilter>(json)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("PortableSettings") { "Dropping a feed filter this build cannot read for $key: ${e.message}" }
+                null
+            }
+        }.toMap()
 
 /**
  * The per-feed filter flows, keyed by the id used both in the preference file

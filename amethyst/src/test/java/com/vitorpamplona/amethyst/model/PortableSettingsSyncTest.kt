@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -123,7 +122,7 @@ class PortableSettingsSyncTest {
         // Replacing the whole map would reset the filter it never knew about.
         val remote =
             AccountAppPreferencesInternal(
-                feedFilters = mapOf("defaultHomeFollowList" to TopFilter.Global),
+                feedFilters = mapOf("defaultHomeFollowList" to JsonMapper.toJson<TopFilter>(TopFilter.Global)),
             )
 
         val merged = mergePortableSettings(local, remote)
@@ -198,15 +197,38 @@ class PortableSettingsSyncTest {
     }
 
     @Test
-    fun addressableFiltersCompareByCodeNotIdentity() {
-        // TopFilter's addressable subclasses are plain classes with no equals(),
-        // so identity comparison would report a change on every decode and
-        // republish the settings event in a loop.
-        val a = mapOf("defaultHomeFollowList" to TopFilter.Hashtag("nostr"))
-        val b = mapOf("defaultHomeFollowList" to TopFilter.Hashtag("nostr"))
+    fun aFilterKindThisBuildCannotReadDropsOnlyThatEntry() {
+        // The load-bearing property of the wire format. TopFilter is a sealed
+        // hierarchy, so a typed map would put a subclass discriminator on the
+        // blob and one unknown kind would fail the WHOLE decode — silently
+        // ending settings sync on every older client. Opaque JSON per entry
+        // confines the failure to the entry.
+        val decoded =
+            decodeFeedFilters(
+                mapOf(
+                    "defaultHomeFollowList" to JsonMapper.toJson<TopFilter>(TopFilter.Hashtag("nostr")),
+                    "defaultArticlesFollowList" to """{"type":"com.example.FilterFromTheFuture"}""",
+                    "defaultShortsFollowList" to "not json at all",
+                ),
+            )
 
-        assertNotEquals(a, b)
-        assertTrue(sameFilters(a, b))
-        assertTrue(!sameFilters(a, mapOf("defaultHomeFollowList" to TopFilter.Hashtag("bitcoin"))))
+        assertEquals(setOf("defaultHomeFollowList"), decoded.keys)
+        assertEquals(TopFilter.Hashtag("nostr").code, decoded["defaultHomeFollowList"]?.code)
+    }
+
+    @Test
+    fun feedFiltersSurviveAFullRoundTripThroughTheBlob() {
+        val filters =
+            mapOf(
+                "defaultHomeFollowList" to TopFilter.AllFollows,
+                "defaultArticlesFollowList" to TopFilter.Hashtag("nostr"),
+            )
+
+        val wire = JsonMapper.fromJson<AccountAppPreferencesInternal>(JsonMapper.toJson(local.copy(feedFilters = filters).toInternal()))
+        val decoded = decodeFeedFilters(wire.feedFilters!!)
+
+        // by code: the addressable subclasses are plain classes with no equals()
+        assertEquals(TopFilter.AllFollows.code, decoded["defaultHomeFollowList"]?.code)
+        assertEquals(TopFilter.Hashtag("nostr").code, decoded["defaultArticlesFollowList"]?.code)
     }
 }

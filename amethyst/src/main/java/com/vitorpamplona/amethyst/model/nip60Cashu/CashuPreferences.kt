@@ -25,6 +25,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.account.transfer.mergeCounters
 
 /**
  * Per-account Cashu state that needs durable, synchronous persistence —
@@ -140,7 +141,11 @@ class CashuPreferences(
     @SuppressLint("ApplySharedPref")
     @Synchronized
     fun importCounters(counters: Map<String, Long>) {
-        val advances = counters.filter { (keysetId, counter) -> counter > peekCounter(keysetId) }
+        val current = exportCounters()
+        // Through the shared helper rather than a second implementation of the
+        // same rule: this is the one place in the feature where getting it wrong
+        // costs the user money, so the logic that runs is the logic under test.
+        val advances = mergeCounters(current, counters).filter { (keysetId, counter) -> current[keysetId] != counter }
         if (advances.isEmpty()) return
 
         prefs.edit(commit = true) {

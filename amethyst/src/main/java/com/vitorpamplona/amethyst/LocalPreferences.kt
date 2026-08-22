@@ -1434,8 +1434,5 @@ private fun SharedPreferences.Editor.put(
         is TransferValue.Int64 -> putLong(key, value.v)
         is TransferValue.Flt -> putFloat(key, value.v)
         is TransferValue.StrSet -> putStringSet(key, value.v.toSet())
-        // SharedPreferences has no Double. Only a DataStore can produce one, and
-        // those travel as raw files, so this branch is unreachable in practice.
-        is TransferValue.Dbl -> Unit
     }
 }

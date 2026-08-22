@@ -185,8 +185,20 @@ class AccountSyncedSettingsInternal(
  */
 @Serializable
 class AccountAppPreferencesInternal(
-    /** Per-feed top filter, keyed by the preference-file id (`defaultHomeFollowList`, …). */
-    var feedFilters: Map<String, TopFilter>? = null,
+    /**
+     * Per-feed top filter, keyed by the preference-file id
+     * (`defaultHomeFollowList`, …), each value the filter's own JSON.
+     *
+     * Strings, not `TopFilter`, and the reason is the same one the enum fields
+     * below give. `TopFilter` is a sealed hierarchy, so a typed map puts a
+     * subclass discriminator on the wire; a filter kind added by a newer client
+     * would fail the polymorphic decoder and take the WHOLE
+     * [AccountSyncedSettingsInternal] decode with it — silently ending settings
+     * sync on every older client, not merely dropping one feed. Holding the
+     * values as opaque JSON confines a decode failure to the entry that caused
+     * it. See [mergePortableSettings].
+     */
+    var feedFilters: Map<String, String>? = null,
     /** DISABLED chat feed codes — absence means all-on, matching the local file. */
     var disabledChatFeeds: List<String>? = null,
     /** DISABLED home feed codes, for the same reason as [disabledChatFeeds]. */
