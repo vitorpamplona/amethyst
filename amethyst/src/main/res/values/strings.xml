@@ -523,12 +523,12 @@
     <string name="device_transfer">Transfer to a new device</string>
     <string name="device_transfer_explainer">Your profile, follows, relay lists, mutes and most settings live on relays and come back on their own when you log in on a new phone. This file carries what relays never see: wallet connections, ecash counters, Tor settings and read markers.</string>
     <string name="device_transfer_export_title">Create a transfer file</string>
-    <string name="device_transfer_export_explainer">The file is encrypted with the password you choose. Keep it somewhere safe — anyone who has both the file and the password gets everything in it.</string>
+    <string name="device_transfer_export_explainer">Includes every account you are signed in to, with their secret keys, plus your settings, wallets and app data. The file is encrypted with the password you choose, so pick a strong one and keep the file somewhere safe.</string>
     <string name="device_transfer_password">Password</string>
     <string name="device_transfer_password_confirm">Confirm password</string>
     <string name="device_transfer_password_mismatch">The passwords do not match</string>
-    <string name="device_transfer_include_keys">Include secret keys</string>
-    <string name="device_transfer_include_keys_warning">Off by default. With this on, the file can log in as you — treat it like your nsec.</string>
+    <string name="device_transfer_keys_warning">This file contains your secret keys. Anyone with the file and the password can post as you — treat it like your nsec.</string>
+    <string name="device_transfer_needs_reconnect">%1$s account(s) sign through an external app and carry no key. You will need to reconnect that app after importing.</string>
     <string name="device_transfer_export_button">Save transfer file</string>
     <string name="device_transfer_export_done">Transfer file saved.</string>
     <string name="device_transfer_export_failed">Could not save the transfer file</string>

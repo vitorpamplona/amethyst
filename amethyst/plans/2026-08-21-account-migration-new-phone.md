@@ -59,7 +59,7 @@ Per-account encrypted SharedPreferences (`amethyst_<npub>`), written by
 | `torSettings` | Tor config resets | Transfer file |
 | `pendingAttestations` | Pending OTS attestations dropped | Transfer file |
 | `alwaysOnNotificationService` | Background service opt-in resets | Transfer file |
-| `nostr_privkey` | — | Transfer file, opt-in only |
+| `nostr_privkey` | — | Transfer file, always |
 | `nip46BunkerSecret`, `nip46TransportKey`, `nip46SeenRequestIds` | Bunker-paired apps must re-pair | **Deliberately not transferred** — see below |
 
 Other stores, outside that file:
@@ -69,21 +69,38 @@ Other stores, outside that file:
 | `cashu_prefs_<npub>.xml` (`CashuPreferences`) | NUT-13 counters per keyset | **Transfer file — highest severity** |
 | UI shared settings (`SHARED_SETTINGS`) | Theme, language, autoplay | Transfer file (app-wide section) |
 
-### Not covered yet, and why
+### App-wide stores, also carried
 
-These are DataStore or JSON-file stores rather than preference files, so each
-needs its own collector and its own merge rule — they don't come along with the
-verbatim preference copy. They are listed here so the gap is a decision rather
-than an oversight:
+Named in `AccountTransferStores`, copied as raw bytes:
 
-| Store | Contents | Why not yet |
-| --- | --- | --- |
-| `datastore/relay_auth.preferences_pb` | Per-relay AUTH grants | A record of explicit consent; re-prompting on a new device is defensible, and arguably correct. |
-| `datastore/nsp_*.preferences_pb`, `nip46_clients` | Connected-app signer permissions | Paired with the bunker identity, which deliberately does not travel. Re-pairing regrants them. |
-| napplet permission/storage/notification stores | Per-applet grants and data | Per-applet sandboxed storage; needs a per-origin merge rule. |
-| `scheduled_posts.json` | Posts not yet published | Rows reference media by local file path, so a copied row can land unpublishable. Needs the media to move too. |
-| `amethyst_calendar_reminders` | Reminder schedule | Backed by OS alarms that must be re-registered on the new device, not just copied. |
-| `FavoriteAppsRegistry`, `BrowserHistoryRegistry`, Buzz prefs | Favorites, history, Buzz state | Straightforward; queued behind the higher-severity stores above. |
+| Store | Contents |
+| --- | --- |
+| `shared_settings` | UI settings, Tor, OTS, Namecoin, Buzz workspaces/stars/attestations, relay-group deletions |
+| `favorite_apps`, `browser_history` | Favorited apps, browser history |
+| `napplet_permissions`, `napplet_storage`, `napplet_network`, `weburl_network` | Per-applet grants and sandboxed data |
+| `relay_auth` | Per-relay NIP-42 AUTH decisions |
+| `nip46_clients`, `nsp_*` | Connected-app signer pairings and permission grants |
+| `amethyst_global_settings`, calendar reminder prefs, `chess_dismissed_games` | App-wide SharedPreferences files |
+| `scheduled_posts.json` | Posts not yet published |
+
+Two carry caveats worth knowing:
+
+- **Scheduled posts** reference uploaded media by local path, so a row can land
+  on the new phone pointing at a file that isn't there. Carried anyway: losing a
+  queued post silently is worse than one that reports a missing attachment, and
+  text-only posts are unaffected.
+- **Connected-app pairings** travel, but the NIP-46 bunker identity does not
+  (see below), so they only become live again once the user re-pairs.
+
+### Deliberately dropped
+
+| State | Why |
+| --- | --- |
+| Read markers (`last_read_route_per_route`) | Per-device reading history, unbounded, changes on nearly every interaction |
+| Dismissed polls, viewed poll results | Same — history of what happened on the old phone |
+| Pending OTS attestations | A request in flight belongs to the device that made it |
+| `amethyst_secure_keys` | Keystore-sealed; a copy is undecryptable on the target |
+| The account registry (`all_saved_accounts_info`, `currently_logged_in_account`) | Rebuilt by the importer as it adds each account |
 
 ### The one that costs money
 

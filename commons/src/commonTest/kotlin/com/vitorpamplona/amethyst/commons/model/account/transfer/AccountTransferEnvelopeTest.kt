@@ -54,7 +54,9 @@ class AccountTransferEnvelopeTest {
                         cashuKeysetCounters = mapOf("009a1f293253e41e" to 42L),
                     ),
                 ),
-            sharedPreferences = mapOf("ui.theme" to TransferValue.Str("dark")),
+            globalPreferences = mapOf("shared_settings" to TransferValue.Str("""{"theme":"DARK"}""")),
+            sharedPreferences = mapOf("amethyst_global_settings" to mapOf("notification_service_enabled" to TransferValue.Bool(true))),
+            files = mapOf("datastore/favorite_apps.preferences_pb" to "AAECAw=="),
         )
 
     @Test

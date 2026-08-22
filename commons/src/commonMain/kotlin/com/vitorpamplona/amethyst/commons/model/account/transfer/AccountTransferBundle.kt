@@ -62,10 +62,33 @@ data class AccountTransferBundle(
     val appVersion: String? = null,
     val accounts: List<AccountTransferEntry> = emptyList(),
     /**
-     * App-wide (not per-account) preferences — theme, language, image/video
-     * autoplay. Same verbatim-copy reasoning as [AccountTransferEntry.preferences].
+     * The app-wide ENCRYPTED preference file, minus the account registry
+     * ([AccountTransferKeys.EXCLUDED_GLOBAL_KEYS]). Read through its decrypting
+     * accessor rather than copied as bytes: it is sealed with a Keystore master
+     * key that never leaves the device, so the plaintext is what has to travel.
      */
-    val sharedPreferences: Map<String, TransferValue> = emptyMap(),
+    val globalPreferences: Map<String, TransferValue> = emptyMap(),
+    /**
+     * App-wide plain SharedPreferences files, keyed by file name (no `.xml`).
+     * Same verbatim-copy reasoning as [AccountTransferEntry.preferences].
+     */
+    val sharedPreferences: Map<String, Map<String, TransferValue>> = emptyMap(),
+    /**
+     * Whole files copied verbatim, keyed by path relative to the app's files
+     * dir, with Base64 content. This is where most of the app lives outside the
+     * account files: UI settings, Tor, favorites, browser history, napplet
+     * grants and storage, per-relay AUTH decisions, connected-app signer
+     * permissions, scheduled posts.
+     *
+     * Copied as bytes rather than read through the DataStore API on purpose.
+     * DataStore permits only one active instance per file per process and throws
+     * if a second one appears, so an exporter that opened its own handle to a
+     * store the app already had open would crash the export. Reading bytes is
+     * also safe against a concurrent write: DataStore commits by writing a temp
+     * file and renaming, so a reader sees either the whole old file or the whole
+     * new one, never a torn one.
+     */
+    val files: Map<String, String> = emptyMap(),
 ) {
     companion object {
         const val CURRENT_VERSION = 1
@@ -139,6 +162,13 @@ sealed class TransferValue {
     @SerialName("f")
     data class Flt(
         val v: Float,
+    ) : TransferValue()
+
+    /** DataStore preferences can hold a Double; SharedPreferences cannot. */
+    @Serializable
+    @SerialName("d")
+    data class Dbl(
+        val v: Double,
     ) : TransferValue()
 
     /**

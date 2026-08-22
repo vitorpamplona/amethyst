@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.accountTransfer
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.model.account.transfer.AccountTransferBundle
@@ -43,23 +44,30 @@ import kotlinx.coroutines.withContext
  */
 object AccountTransferService {
     /**
-     * @param npubs accounts to include; typically every saved account.
-     * @param includeSecretKeys when false the file carries settings only, and
-     * the new phone asks for the key on first login. Kept as a separate
-     * decision so a file the user thinks of as "my settings" never turns out to
-     * carry their identity.
+     * Builds a transfer file for [npubs] — typically every saved account.
+     *
+     * Secret keys are always included. The file is meant to move an account, and
+     * an account without its key is not moved: the user would land on the new
+     * phone with their settings and no way to post. The password is what
+     * protects it, which is why the UI insists on one and says plainly what the
+     * file contains.
+     *
+     * Accounts that sign through an external app (NIP-55) have no key here to
+     * carry. Their signer package travels so the new phone knows which app to
+     * ask for, but the user has to reconnect it there — the pairing is between
+     * that app and this device.
      */
     suspend fun export(
         npubs: List<String>,
-        includeSecretKeys: Boolean,
         password: String,
     ): ByteArray =
         withContext(Dispatchers.IO) {
+            val context = Amethyst.instance.appContext
             val accounts =
                 npubs.map { npub ->
                     AccountTransferEntry(
                         npub = npub,
-                        privKeyHex = if (includeSecretKeys) LocalPreferences.exportPrivateKey(npub) else null,
+                        privKeyHex = LocalPreferences.exportPrivateKey(npub),
                         externalSignerPackageName = LocalPreferences.exportSignerPackageName(npub),
                         preferences = LocalPreferences.exportAccountPreferences(npub),
                         cashuKeysetCounters = CashuPreferences.forAccount(npub).exportCounters(),
@@ -72,11 +80,16 @@ object AccountTransferService {
                         createdAt = TimeUtils.now(),
                         appVersion = BuildConfig.VERSION_NAME,
                         accounts = accounts,
-                        sharedPreferences = LocalPreferences.exportSharedPreferences(),
+                        globalPreferences = LocalPreferences.exportGlobalPreferences(),
+                        sharedPreferences = AppWideStoreTransfer.exportPreferenceFiles(context),
+                        files = AppWideStoreTransfer.exportFiles(context),
                     ),
                 password = password,
             )
         }
+
+    /** Accounts in [bundle] that will need their external signer reconnected here. */
+    fun accountsNeedingReconnect(bundle: AccountTransferBundle) = bundle.accounts.filter { it.privKeyHex == null && it.externalSignerPackageName != null }
 
     /**
      * Decrypts [bytes] without applying anything, so the UI can show what the
@@ -103,7 +116,11 @@ object AccountTransferService {
      */
     suspend fun import(bundle: AccountTransferBundle) {
         withContext(Dispatchers.IO) {
-            LocalPreferences.importSharedPreferences(bundle.sharedPreferences)
+            val context = Amethyst.instance.appContext
+
+            LocalPreferences.importGlobalPreferences(bundle.globalPreferences)
+            AppWideStoreTransfer.importPreferenceFiles(context, bundle.sharedPreferences)
+            AppWideStoreTransfer.importFiles(context, bundle.files)
 
             bundle.accounts.forEach { entry ->
                 LocalPreferences.importAccount(entry)

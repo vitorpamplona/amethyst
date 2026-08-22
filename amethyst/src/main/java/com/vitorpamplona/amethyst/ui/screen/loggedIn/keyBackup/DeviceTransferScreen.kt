@@ -25,7 +25,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,7 +42,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,7 +49,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.platform.LocalContext
@@ -136,7 +133,6 @@ private fun ExportSection(accountViewModel: AccountViewModel) {
 
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
-    var includeSecretKeys by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
 
     // The password is only in memory until the file lands, so the export runs
@@ -149,7 +145,7 @@ private fun ExportSection(accountViewModel: AccountViewModel) {
             scope.launch {
                 try {
                     val npubs = LocalPreferences.allSavedAccounts().map { it.npub }
-                    val bytes = AccountTransferService.export(npubs, includeSecretKeys, password)
+                    val bytes = AccountTransferService.export(npubs, password)
                     withContext(Dispatchers.IO) {
                         context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                             ?: error("Could not open the chosen file for writing")
@@ -204,17 +200,11 @@ private fun ExportSection(accountViewModel: AccountViewModel) {
 
     Spacer(Modifier.height(12.dp))
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Switch(checked = includeSecretKeys, onCheckedChange = { includeSecretKeys = it })
-        Column(Modifier.padding(start = 12.dp)) {
-            Text(stringRes(R.string.device_transfer_include_keys), style = MaterialTheme.typography.bodyMedium)
-            Text(
-                text = stringRes(R.string.device_transfer_include_keys_warning),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.grayText,
-            )
-        }
-    }
+    Text(
+        text = stringRes(R.string.device_transfer_keys_warning),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error,
+    )
 
     Spacer(Modifier.height(12.dp))
 
@@ -348,6 +338,19 @@ private fun ImportSection(accountViewModel: AccountViewModel) {
                         text = stringRes(R.string.device_transfer_preview_version, it),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.grayText,
+                    )
+                }
+
+                // Accounts that sign through an external app carry no key. Say so
+                // before the import, not after: the user needs to know they still
+                // have that app to hand.
+                val needReconnect = remember(loaded) { AccountTransferService.accountsNeedingReconnect(loaded) }
+                if (needReconnect.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringRes(R.string.device_transfer_needs_reconnect, needReconnect.size.toString()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }

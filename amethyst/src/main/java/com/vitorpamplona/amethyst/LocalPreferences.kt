@@ -215,15 +215,15 @@ private object PrefKeys {
     const val TOR_SETTINGS = "tor_settings"
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
-    const val LAST_READ_PER_ROUTE = "last_read_route_per_route"
+    const val LAST_READ_PER_ROUTE = AccountTransferKeys.LAST_READ_PER_ROUTE
     const val LOGIN_WITH_EXTERNAL_SIGNER = "login_with_external_signer"
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
     const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
-    const val DISMISSED_POLL_NOTE_IDS = "dismissed_poll_note_ids"
+    const val DISMISSED_POLL_NOTE_IDS = AccountTransferKeys.DISMISSED_POLL_NOTE_IDS
     const val DISMISSED_CHANNEL_INVITES = "dismissed_channel_invites"
     const val MUTED_PUBLIC_CHATS = "muted_public_chats"
-    const val VIEWED_POLL_RESULT_NOTE_IDS = "viewed_poll_result_note_ids"
-    const val PENDING_ATTESTATIONS = "pending_attestations"
+    const val VIEWED_POLL_RESULT_NOTE_IDS = AccountTransferKeys.VIEWED_POLL_RESULT_NOTE_IDS
+    const val PENDING_ATTESTATIONS = AccountTransferKeys.PENDING_ATTESTATIONS
 
     // Per-account one-shot flag: false only for freshly-GENERATED accounts that
     // haven't yet backed up their secret key. Absent (defaults to true) for every
@@ -775,11 +775,18 @@ object LocalPreferences {
             encryptedPreferences(npub).getString(PrefKeys.SIGNER_PACKAGE_NAME, null)
         }
 
-    /** The app-wide (not per-account) settings: theme, language, autoplay. */
-    suspend fun exportSharedPreferences(): Map<String, TransferValue> =
+    /**
+     * The app-wide encrypted preference file, minus the account registry.
+     *
+     * Read through the decrypting accessor rather than copied as bytes: the file
+     * is sealed with a Keystore master key that cannot leave this device, so a
+     * byte copy would be undecryptable on the target.
+     */
+    suspend fun exportGlobalPreferences(): Map<String, TransferValue> =
         withContext(Dispatchers.IO) {
-            val stored = encryptedPreferences().getString(PrefKeys.SHARED_SETTINGS, null)
-            if (stored == null) emptyMap() else mapOf(PrefKeys.SHARED_SETTINGS to TransferValue.Str(stored))
+            AccountTransferValues
+                .fromPreferenceMap(encryptedPreferences().all)
+                .filterKeys { it !in AccountTransferKeys.EXCLUDED_GLOBAL_KEYS }
         }
 
     /**
@@ -822,11 +829,19 @@ object LocalPreferences {
         }
     }
 
-    /** Restores the app-wide settings from a bundle. */
-    suspend fun importSharedPreferences(values: Map<String, TransferValue>) {
+    /**
+     * Restores the app-wide encrypted settings.
+     *
+     * The account registry is skipped on the way in as well as out, so a bundle
+     * cannot resurrect accounts it doesn't carry or point "current account" at
+     * one this device has never seen.
+     */
+    suspend fun importGlobalPreferences(values: Map<String, TransferValue>) {
         withContext(Dispatchers.IO) {
             encryptedPreferences().edit {
-                values.forEach { (key, value) -> put(key, value) }
+                values.forEach { (key, value) ->
+                    if (key !in AccountTransferKeys.EXCLUDED_GLOBAL_KEYS) put(key, value)
+                }
             }
         }
     }
@@ -1419,5 +1434,8 @@ private fun SharedPreferences.Editor.put(
         is TransferValue.Int64 -> putLong(key, value.v)
         is TransferValue.Flt -> putFloat(key, value.v)
         is TransferValue.StrSet -> putStringSet(key, value.v.toSet())
+        // SharedPreferences has no Double. Only a DataStore can produce one, and
+        // those travel as raw files, so this branch is unreachable in practice.
+        is TransferValue.Dbl -> Unit
     }
 }
