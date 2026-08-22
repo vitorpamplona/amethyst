@@ -25,8 +25,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
@@ -62,6 +60,8 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberDisappearingBarState
 import com.vitorpamplona.amethyst.ui.components.getActivityWindow
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -127,9 +127,9 @@ fun DisappearingScaffold(
     // color falls back to Color.Black and is invisible on the dark theme).
     val baseModifier =
         if (canHideBars) {
-            Modifier.imePadding().nestedScroll(connection)
+            Modifier.imePaddingSafe().nestedScroll(connection)
         } else {
-            Modifier.imePadding()
+            Modifier.imePaddingSafe()
         }
     val rootModifier =
         baseModifier
@@ -161,7 +161,9 @@ private fun ScaffoldLayout(
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
     val navBarInsets = WindowInsets.navigationBars
-    val imeInsets = WindowInsets.ime
+    // The corrected inset, matching the imePaddingSafe() on the root modifier above — the two
+    // have to agree or this subtraction reserves the wrong amount of nav bar.
+    val imeInsets = rememberSafeImeInsets()
     SubcomposeLayout { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
@@ -200,7 +202,7 @@ private fun ScaffoldLayout(
         // hides itself on canPop entries, or while the keyboard is up), reserve the
         // system-nav-bar inset so the FAB and content stay clear of the navigation bar instead
         // of sliding under it. Subtract the IME inset: the root imePadding has already lifted the
-        // whole scaffold above the keyboard, and WindowInsets.ime spans the nav-bar band, so
+        // whole scaffold above the keyboard, and the IME inset spans the nav-bar band, so
         // reserving the full nav bar on top of that would double-count and strand a gap above the
         // keyboard (the `bottomBar == null` branch gets this for free via navigationBarsPadding,
         // which excludes the consumed IME inset). The `bottomBar == null` case is on rootModifier.
