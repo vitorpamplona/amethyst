@@ -75,62 +75,12 @@
     "rchk": ""
   },
   "sinceLastTag": {
-    "tag": "v1.13.1",
-    "since": "2026-07-28T23:17:02-04:00",
+    "tag": "v1.14.0",
+    "since": "2026-08-22T13:13:30-04:00",
     "translators": [
       {
         "user": "vitorpamplona",
-        "languages": [
-          "Chinese Simplified",
-          "Czech",
-          "Dutch",
-          "German",
-          "Hindi",
-          "Hungarian",
-          "Polish",
-          "Portuguese, Brazilian",
-          "Slovenian",
-          "Swedish"
-        ]
-      },
-      {
-        "user": "Bardesss",
-        "languages": [
-          "Dutch"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "maxblake2015",
-        "languages": [
-          "Polish"
-        ]
-      },
-      {
-        "user": "rajs19420616",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
-        "user": "Coool",
-        "languages": [
-          "Latvian"
-        ]
-      },
-      {
-        "user": "davotoula",
-        "languages": [
-          "Czech",
-          "German",
-          "Portuguese, Brazilian",
-          "Swedish"
-        ]
+        "languages": []
       },
       {
         "user": "greenart7c3",
@@ -162,6 +112,10 @@
       },
       {
         "user": "vazw",
+        "languages": []
+      },
+      {
+        "user": "Bardesss",
         "languages": []
       },
       {
@@ -198,6 +152,10 @@
       },
       {
         "user": "adhrasreoshiathoi",
+        "languages": []
+      },
+      {
+        "user": "davotoula",
         "languages": []
       },
       {
@@ -265,6 +223,10 @@
         "languages": []
       },
       {
+        "user": "rajs19420616",
+        "languages": []
+      },
+      {
         "user": "Maxblake",
         "languages": []
       },
@@ -289,6 +251,10 @@
         "languages": []
       },
       {
+        "user": "summoner001",
+        "languages": []
+      },
+      {
         "user": "fiddleway",
         "languages": []
       },
@@ -301,7 +267,15 @@
         "languages": []
       },
       {
+        "user": "Coool",
+        "languages": []
+      },
+      {
         "user": "hypnotichemionus4",
+        "languages": []
+      },
+      {
+        "user": "maxblake2015",
         "languages": []
       },
       {
