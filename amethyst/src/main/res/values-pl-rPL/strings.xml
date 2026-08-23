@@ -3020,7 +3020,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="edit_draft">Edytuj wersję roboczą</string>
     <string name="login_with_qr_code">Zaloguj się przy użyciu QR kodu</string>
     <string name="route_home">Start</string>
-    <string name="route_discover">Odkryj</string>
+    <string name="route_discover">Eksploracja</string>
     <string name="route_messages">Wiadomości</string>
     <string name="route_notifications">Powiadomienia</string>
     <string name="route_video">Filmiki</string>

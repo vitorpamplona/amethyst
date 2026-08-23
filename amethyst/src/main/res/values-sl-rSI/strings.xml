@@ -54,6 +54,8 @@
     <string name="violence">Nasilje</string>
     <string name="unknown_author">Avtor neznan</string>
     <string name="copy_text">Kopiraj tekst</string>
+    <string name="copy_text_original">Kopiraj original</string>
+    <string name="copy_text_translated">Kopiraj prevedeno</string>
     <string name="copy_user_pubkey">Kopiraj ID avtorja</string>
     <string name="copy_note_id">Kopiraj ID zapiska</string>
     <string name="copy_raw_json">Kopiraj izvorni JSON</string>
@@ -221,6 +223,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="connection_success_rate_description">Delež uspešnih povezav z relejem</string>
     <string name="search_and_add_a_user">Išči in dodaj uporabnika</string>
     <string name="add_a_relay">Dodaj rele</string>
+    <string name="relay_url_not_valid">Neveljaven naslov releja. Uporabite ime gostitelja ali IP-naslov v oklepajih (na primer [201:d0e:9ba5:8bbc::1]:8080).</string>
     <string name="my_name">Moje ime @oznake</string>
     <string name="display_name">Prikazano ime</string>
     <string name="my_display_name">Moje prikazno ime</string>
@@ -327,8 +330,20 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="concord_invite_failed_invalid">Ta povezava do povabila ni veljavna ali pa je ni mogoče odpreti s tem računom.</string>
     <string name="concord_invite_failed_incompatible">Te povezave do povabila ni mogoče odpreti. Morda je zastarela, jo je nadomestila nova ali pa je bila ustvarjena z novejšo različico aplikacije. Zaprosite za novo povezavo do povabila.</string>
     <string name="concord_invite_failed_revoked">Ta povezava do povabila je bila preklicana in je ni več mogoče uporabiti. Zaprosite za novo.</string>
+    <string name="concord_invite_failed_banned">Ta skupnost vas je odstranila. Povezava še vedno deluje, vendar vas seznam članov več ne sprejme.</string>
+    <string name="concord_invite_links_title">Povezave do povabil</string>
+    <string name="concord_invite_links_action">Povezave do povabil…</string>
+    <string name="concord_invite_links_created">Ustvari %1$s</string>
+    <string name="concord_invite_links_empty">Za to skupnost še niste ustvarili nobene povezave do povabila. Povezave, ki so jih ustvarili drugi skrbniki, se upravljajo na njihovih lastnih napravah.</string>
+    <string name="concord_invite_links_unreadable">Vaših povezav do povabila ni bilo mogoče naložiti, zato trenutno nobene ni mogoče preklicati. Preverite povezavo in poskusite znova.</string>
+    <string name="concord_invite_revoke_action">Prekliči povezavo</string>
+    <string name="concord_invite_revoke_title">Prekličem to povezavo?</string>
+    <string name="concord_invite_revoke_explainer">Kdo koli ima to povezavo, se ne bo več mogel pridružiti. Ljudje, ki so se z njo že pridružili, ostanejo v skupnosti. Tega dejanja ni mogoče razveljaviti.</string>
+    <string name="concord_invite_revoke_confirm">Prekliči</string>
+    <string name="concord_invite_revoked_ok">Povezava do povabila je preklicana.</string>
+    <string name="concord_invite_revoked_failed">Povezave ni bilo mogoče preklicati. Preverite povezavo in poskusite znova.</string>
     <string name="concord_invite_failed_expired">Ta povezava do povabila je potekla in je ni več mogoče uporabiti. Zaprosite za novo povezavo.</string>
-    <string name="concord_invite_preview_unknown_name">Ime skupnosti je razkrito šele, ko se ji pridružite.</string>
+    <string name="concord_invite_preview_unknown_name">Ime skupnosti je razkrito šele, ko se ji pridružite</string>
     <string name="concord_invite_preview_explainer">Pridružitev se poveže z releji tega povabila, objavi obvestilo o pridružitvi, podpisano z vašim računom, in doda skupnost na vaš seznam. Dokler ne tapnete »Pridruži se«, se ne pošlje ničesar.</string>
     <string name="concord_invite_preview_relays">Releji, s katerimi se bo povezalo to povabilo: %1$s</string>
     <string name="concord_home_title">Kanali Concord</string>
@@ -351,6 +366,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="concord_leave_message">Želite zapustiti skupnost %1$s? Odstranjena bo iz seznama tega računa in sinhronizacija v vaših napravah se bo ustavila. Skupnost o tem ne bo obveščena in ne boste odstranjeni iz seznama njenih članov. Sporočil, ki jih ne boste mogli več dešifrirati, morda ne bo mogoče obnoviti, vrnete pa se lahko le z novim povabilom.</string>
     <string name="concord_leave_owner_warning">To skupnost ste ustvarili vi. Z izhodom je ne boste izbrisali ali predali komu drugemu, vendar boste zavrgli lastniški ključ, shranjen na vašem seznamu – tako je ne boste mogli več upravljati.</string>
     <string name="concord_edit_relays_desc">Kjer so objavljeni in prebrani šifrirani ravninski sloji (encrypted planes) te skupnosti</string>
+    <string name="concord_dissolved_read_only">Ta skupnost je bila razpuščena in je zdaj samo za branje. Še vedno lahko berete njeno zgodovino, vendar novih sporočil ni mogoče objaviti.</string>
     <string name="concord_typing_one">%1$s tipka…</string>
     <string name="concord_typing_two">%1$s in %2$s tipkata…</string>
     <string name="concord_typing_many">Več ljudi tipka…</string>
@@ -467,6 +483,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="refresh">Osveži</string>
     <string name="changed_chat_profile_to">Nov profil klepeta:</string>
     <string name="leave">Zapusti</string>
+    <string name="remove_from_messages">Odstrani iz sporočil</string>
+    <string name="add_to_messages">Dodaj med sporočila</string>
     <string name="unfollow">Prenehaj slediti</string>
     <string name="channel_created">Kanal ustvarjen</string>
     <string name="channel_information_changed_to">"Informacije kanala spremenjene v"</string>
@@ -523,6 +541,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="account_backup_tips3_md" tools:ignore="Typos">        Za dodatno varnost, lahko šifriraš svoj ključ z dodatnim geslom. Ta ključ se začne z **ncryptsec1** in ne more bit uporabljen brez dodatnega gesla.
         \n\nČe izgubiš geslo, obnova ključa ni več mogoča.
     </string>
+    <string name="backup_keys_nudge_title">Varno shrani ključe</string>
+    <string name="backup_keys_nudge_body">Vaš zasebni ključ je edini način za dostop do tega računa. Če ga izgubite, ga ne boste mogli več obnoviti. Shranite ga na varno mesto.</string>
+    <string name="backup_keys_nudge_backup_now">Varno shrani zdaj</string>
+    <string name="backup_keys_nudge_already_saved">shranjeno</string>
+    <string name="backup_keys_nudge_dismiss">Opusti</string>
     <string name="failed_to_encrypt_key">Neuspelo dešifriranje tvojega privatnega ključa</string>
     <string name="secret_key_copied_to_clipboard">Privatni ključ (nsec) kopiran v odložišče</string>
     <string name="copy_my_secret_key">Kopiraj moj privatni ključ</string>
@@ -580,6 +603,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="quick_action_block">Blokiraj</string>
     <string name="quick_action_mute_thread">Utišaj niz objav</string>
     <string name="quick_action_unmute_thread">Vklopi zvok niza objav</string>
+    <string name="mute_notifications">Utišaj obvestila</string>
+    <string name="unmute_notifications">Vklopi zvok</string>
+    <string name="muted_chat_content_description">Obvestila za ta klepet so utišana</string>
     <string name="quick_action_report">Prijavi</string>
     <string name="quick_action_dont_show_again_button">Ne prikaži ponovno</string>
     <string name="report_dialog_spam">Nezaželena vsebina ali prevara</string>
@@ -1158,12 +1184,76 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
+    <string name="relay_auth_auto_login_when">Prijavi se brez spraševanja, ko…</string>
+    <string name="relay_auth_auto_my_relays_and_venues">…gre za moj rele ali sobo, ki sem se ji pridružil ali ji sledim</string>
+    <string name="relay_auth_auto_read_follows">...berem objave nekoga, ki mu sledim</string>
+    <string name="relay_auth_auto_message_follows">…pošiljam sporočilo nekomu, ki mu sledim</string>
+    <string name="relay_auth_auto_message_strangers">…pošiljam sporočilo komur koli drugemu</string>
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <string name="relay_auth_login_as">Te vpišem kot %1$s?</string>
+    <string name="relay_auth_relay_asks">Vpraša kdo si</string>
+    <string name="relay_auth_why_send_dm">Za %1$s ne bo sprejel vašega sporočila, razen če se prijavite.</string>
+    <string name="relay_auth_why_notify_inbox">%1$s ne bo izvedel za vaš odgovor, razen če se prijavite.</string>
+    <string name="relay_auth_why_read_outbox">Obvestila uporabnika %1$s ne bodo na voljo, razen če se prijavite.</string>
+    <string name="relay_auth_why_post_venue">Ne bo sprejel vaše objave v %1$s, razen če se prijavite.</string>
+    <string name="relay_auth_why_read_venue">Ne bo omogočil dostopa do %1$s, razen če se prijavite.</string>
+    <string name="relay_auth_why_my_inbox">Ne bo dostavil odgovorov, zapov in sporočil, poslanih vam, razen če se prijavite.</string>
+    <string name="relay_auth_why_thread">Ne bo omogočil ogleda preostanka tega pogovora, razen če se prijavite.</string>
+    <string name="relay_auth_why_thread_with">Ne bo omogočil ogleda preostanka vašega pogovora z osebo %1$s, razen če se prijavite.</string>
+    <string name="relay_auth_why_my_own_relay">To je eden od vaših lastnih relejev, ki od vseh zahteva prijavo.</string>
+    <string name="relay_auth_why_other">Od vseh zahteva prijavo, zato Amethyst ne more preveriti, kaj vse zadržuje.</string>
+    <string name="relay_auth_someone_unloaded">nekdo, ki ga še niste naložili</string>
+    <plurals name="relay_auth_name_and_n_others">
+        <item quantity="one">%1$s in  %2$d ostali</item>
+        <item quantity="two">%1$s in %2$d ostala</item>
+        <item quantity="few">%1$s in  %2$d ostali</item>
+        <item quantity="other">%1$s in %2$d ostalih</item>
+    </plurals>
+    <plurals name="relay_auth_also_holding_back">
+        <item quantity="one">Zadržuje pa še %1$d drugo stvar.</item>
+        <item quantity="two">Zadržuje pa še %1$d drugi stvari.</item>
+        <item quantity="few">Zadržuje pa še %1$d druge stvari.</item>
+        <item quantity="other">Zadržuje pa še %1$d drugih stvari.</item>
+    </plurals>
+    <string name="relay_auth_remember_relay">Zapomni si za ta rele</string>
+    <string name="relay_auth_log_in">Vpiši se</string>
+    <string name="relay_auth_not_now">Ne zdaj</string>
+    <string name="relay_auth_never_allow">Ne dovoli nikoli</string>
+    <string name="relay_auth_how_we_decide">Kako se Amethyst odloči</string>
     <!-- Settings: three lists that each hold what their header says. -->
+    <string name="relay_auth_exceptions">Izjeme</string>
+    <string name="relay_auth_no_exceptions">Še ni izjem. Vsak rele sledi zgornjim pravilom.</string>
+    <string name="relay_auth_exception_always">Vedno, po vaši izbiri</string>
+    <string name="relay_auth_exception_never">Nikoli, po vaši izbiri</string>
+    <string name="relay_auth_segment_always">Vedno</string>
+    <string name="relay_auth_segment_never">Nikoli</string>
+    <string name="relay_auth_remove_exception">Odstrani izjemo</string>
+    <string name="relay_auth_exception_removed_undo">Izjema odstranjena. %1$s znova sledi vašim pravilom.</string>
+    <string name="relay_auth_undo">Razveljavi</string>
+    <string name="relay_auth_session_section">Samo zdaj</string>
+    <string name="relay_auth_session_row_desc">Vpisani dokler znova ne zaženete Amethyst</string>
+    <string name="relay_auth_forget_session">Pozabi zta vpis</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s vas bo vprašal ponovno naslednjič, ko vas potrebuje.</string>
+    <string name="relay_auth_session_undo_blocked">Ni obnovljeno. Vklopljena je možnost »Nikoli se ne prijavi«, zato se Amethyst ne bo prijavil v %1$s.</string>
+    <string name="relay_auth_blocked_section">Blokirano s strani vašega seznama blokiranih</string>
+    <string name="relay_auth_blocked_row_desc">Amethyst nikoli ne vpisuje na blokirane releje.</string>
+    <string name="relay_auth_no_blocked">Nič ni blokirano. V releje, ki jih blokirate, se aplikacija ne bo nikoli prijavila, ne glede na vaše tukajšnje nastavitve.</string>
+    <string name="relay_auth_recent_section">Nedavni vpisi</string>
+    <string name="relay_auth_no_recent">Niti eden rele vas še ni pozval k prijavi.</string>
+    <string name="relay_auth_ago">Pred %1$s</string>
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
+    <string name="relay_auth_purpose_send_dm">Vaša sporočila</string>
+    <string name="relay_auth_purpose_notify_inbox">Vaši odgovori</string>
+    <string name="relay_auth_purpose_read_outbox">Ljudje katerih berete</string>
+    <string name="relay_auth_purpose_post_venue">soba v katero pošiljate</string>
+    <string name="relay_auth_purpose_read_venue">soba iz katere berete</string>
+    <string name="relay_auth_purpose_my_inbox">vaš nabiralnik</string>
+    <string name="relay_auth_purpose_thread">pogovor</string>
+    <string name="relay_auth_purpose_my_own_relay">vaš rele</string>
+    <string name="relay_auth_purpose_other">ta rele</string>
     <string name="nip82_repository_label">Vir: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Prenos</string>
@@ -1542,6 +1632,58 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="private_note_visible_to">Vidno za:</string>
     <string name="private_note_no_receivers">Ni še prejemnikov: ta zapis lahko vidiš samo ti. Dodaj ljudi, da ga deliš z njimi.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
+    <string name="audience_manage">Nastavite kdo to vidi</string>
+    <string name="audience_empty_private">Le vi \u2014 izberete kdo to vidi</string>
+    <string name="audience_empty_public">Dodaj ljudi za opozorila</string>
+    <string name="audience_summary_two">%1$s in %2$s</string>
+    <string name="audience_group_chip">%1$s \u00b7 %2$s</string>
+    <string name="audience_group_remove">Odstrani vse dodane iz %1$s</string>
+    <string name="audience_send_privately">Pošlji kot zasebno</string>
+    <string name="audience_sheet_title">Dodaj ljudi</string>
+    <string name="audience_sheet_search">Išči ljudi in sezname</string>
+    <string name="audience_sheet_no_lists">Nimate še seznamov oseb ali paketov sledenja. Za neposredno dodajanje nekoga uporabite zgornje iskanje.</string>
+    <string name="audience_count_with_private">%1$d \u00b7 %2$d zasebno</string>
+    <string name="audience_over_limit">Preko limita</string>
+    <string name="audience_badge_already_added">Že dodano</string>
+    <string name="audience_badge_muted">Utišano</string>
+    <string name="audience_badge_private_member">Zasebni član</string>
+    <string name="audience_recipients_are_visible">Vsi, ki so navedeni v tem zapisku, lahko vidijo celoten seznam prejemnikov.</string>
+    <plurals name="audience_summary_others">
+        <item quantity="one">%1$s, %2$s in še %3$d drug</item>
+        <item quantity="two">%1$s, %2$s in še %3$d druga</item>
+        <item quantity="few">%1$s, %2$s in še %3$d drugi</item>
+        <item quantity="other">%1$s, %2$s in še %3$d drugih</item>
+    </plurals>
+    <plurals name="audience_soft_cap_private">
+        <item quantity="one">To sporočilo bo šifrirano in dostavljeno %1$d-krat ločeno, enkrat za vsako osebo. Z zunanjim podpisnikom to pomeni po eno potrditev za vsako.</item>
+        <item quantity="two">To sporočilo bo šifrirano in dostavljeno %1$d-krat ločeno, enkrat za vsako osebo. Z zunanjim podpisnikom to pomeni po eno potrditev za vsako.</item>
+        <item quantity="few">To sporočilo bo šifrirano in dostavljeno %1$d-krat ločeno, enkrat za vsako osebo. Z zunanjim podpisnikom to pomeni po eno potrditev za vsako.</item>
+        <item quantity="other">To sporočilo bo šifrirano in dostavljeno %1$d-krat ločeno, enkrat za vsako osebo. Z zunanjim podpisnikom to pomeni po eno potrditev za vsako.</item>
+    </plurals>
+    <plurals name="audience_soft_cap_public">
+        <item quantity="one">%1$d oseba bo prejela obvestilo za to objavo.</item>
+        <item quantity="two">%1$d osebi bosta prejeli obvestilo za to objavo.</item>
+        <item quantity="few">%1$d osebe bodo prejele obvestilo za to objavo.</item>
+        <item quantity="other">%1$d oseb bo prejelo obvestilo za to objavo.</item>
+    </plurals>
+    <plurals name="audience_hard_cap">
+        <item quantity="one">To bi bila %1$d oseba. Amethyst doda največ %2$d hkrati – odznačite jih nekaj.</item>
+        <item quantity="two">To bi bili %1$d osebi. Amethyst doda največ %2$d hkrati – odznačite jih nekaj.</item>
+        <item quantity="few">To bi bile %1$d osebe. Amethyst doda največ %2$d hkrati – odznačite jih nekaj.</item>
+        <item quantity="other">To bi bilo %1$d oseb. Amethyst doda največ %2$d hkrati – odznačite jih nekaj.</item>
+    </plurals>
+    <plurals name="audience_add_people">
+        <item quantity="one">Dodaj %1$d osebo</item>
+        <item quantity="two">Dodaj %1$d osebi</item>
+        <item quantity="few">Dodaj %1$d osebe</item>
+        <item quantity="other">Dodaj %1$d oseb</item>
+    </plurals>
+    <plurals name="audience_add_anyway">
+        <item quantity="one">Vseeno dodaj %1$d osebo</item>
+        <item quantity="two">Vseeno dodaj %1$d osebi</item>
+        <item quantity="few">Vseeno dodaj %1$d osebe</item>
+        <item quantity="other">Vseeno dodaj %1$d oseb</item>
+    </plurals>
     <string name="notify_add_user">Dodaj</string>
     <string name="notify_remove_user">Odstrani uporabnika iz obvestil</string>
     <string name="notify_mute_user">Pošiljanje obvestil. Tapnite, da utišate obvestila za tega uporabnika</string>
@@ -2002,14 +2144,102 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     </plurals>
     <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
+    <plurals name="relay_purpose_line">
+        <item quantity="one">%1$s \u00b7 %2$d rele</item>
+        <item quantity="two">%1$s \u00b7 %2$d releja</item>
+        <item quantity="few">%1$s \u00b7 %2$d releji</item>
+        <item quantity="other">%1$s \u00b7 %2$d relejev</item>
+    </plurals>
+    <string name="relay_purpose_browsing">Brskanje</string>
+    <string name="relay_purpose_media">Medijske vsebine</string>
+    <string name="relay_purpose_tags">Ključniki</string>
+    <string name="relay_purpose_topics">Teme</string>
+    <string name="relay_purpose_thread">Pogovor</string>
+    <string name="relay_purpose_search">Iskanje</string>
+    <string name="relay_purpose_referenced">Iskanje pogrešanih dogodkov</string>
+    <string name="relay_purpose_engagement">Opazovani dogodki</string>
+    <string name="relay_explain_referenced">Pridobi dogodke po ID-ju, na katere se sklicuje nekaj na vašem zaslonu, a jih še nimate — citat, starševsko sporočilo odgovora ali začetek objav.</string>
+    <string name="relay_explain_engagement">Spremlja trenutno prikazane dogodke za nove odgovore, reakcije, ponovne objave, zappe in prijave, da se števci posodabljajo med branjem.</string>
+    <string name="relay_purpose_add_ons">Dodatki</string>
+    <string name="relay_purpose_relay_info">Informacije releja</string>
+    <string name="relay_purpose_other">Drugo</string>
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
          their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_relay_list_finder">Iskalnik seznama relejev</string>
+    <string name="relay_purpose_observing_profiles">Opazovani profili</string>
+    <string name="relay_purpose_your_account">Podatki računa</string>
+    <string name="relay_purpose_home_feed">Domače vsebine</string>
+    <string name="relay_purpose_relay_groups">Skupine relejev</string>
+    <plurals name="active_subs_groups">
+        <item quantity="one">%1$d skupina</item>
+        <item quantity="two">%1$d skupini</item>
+        <item quantity="few">%1$d skupine</item>
+        <item quantity="other">%1$d skupin</item>
+    </plurals>
+    <string name="relay_purpose_ephemeral_chats">Minljivi klepeti</string>
+    <string name="relay_purpose_geohash_chats">Lokacijski klepeti</string>
+    <string name="relay_purpose_live_chat">Klepet v živo</string>
+    <string name="relay_explain_relay_groups">Skupine NIP-29, ki ste se jim pridružili. Vsaka skupina gostuje na enem gostiteljskem releju, zato se aplikacija poveže z vsakim relejem, ki gostuje vašo skupino.</string>
+    <string name="relay_explain_ephemeral_chats">Klepetalnice, ki ne hranijo zgodovine — sporočila obstajajo le, dokler ste povezani, zato ostanejo naročene, da sploh prejmejo karkoli.</string>
+    <string name="relay_explain_geohash_chats">Sobe glede na lokacijo za območja, ki jim sledite, z zahtevo do relejev, ki jih prenašajo.</string>
+    <string name="relay_explain_live_chat">Cilji klepetov in zappov pri odprtih ali sledenih prenosih v živo.</string>
+    <string name="relay_purpose_dm_inbox">Zasebna sporočila</string>
+    <string name="relay_purpose_your_wallet">Denarnica</string>
+    <string name="relay_purpose_nutzap_inbox">Nutzap nabiralnik</string>
+    <string name="relay_purpose_mint_directory">Mapa kovnice</string>
+    <string name="relay_purpose_nwc">Wallet Connect</string>
+    <string name="relay_purpose_community_chats">Klepeti skupnosti</string>
+    <string name="relay_purpose_community_feeds">Objave skupnosti</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
+    <string name="relay_explain_notifications">Releji vaše pošte vhodnih relejev in manjši spremenljivi vzorec relejev, na katere objavljajo osebe, ki jim sledite — na primer, če je bila omemba dostavljena kam drugam.</string>
+    <string name="relay_explain_direct_messages">Vaši vhodni releji za zasebna sporočila, kamor se dostavljajo šifrirana sporočila.</string>
+    <string name="relay_explain_public_chats">Domači rele vsakega klepeta katerega ste odprli ali pridružili.</string>
+    <string name="relay_explain_community_chats">Releji, kamor vsaka skupnost objavlja svoje načrte.</string>
+    <string name="relay_explain_encrypted_groups">Skupinska sporočila in ključni paketi na relejih posameznih skupin.</string>
+    <string name="relay_explain_live_rooms">Releji sobe, dokler je ta odprta.</string>
+    <string name="relay_explain_account_data">Vaš profil, nastavitve in osnutki na vaših domačih relejih.</string>
+    <string name="relay_explain_profiles">Profili trenutno prikazanih oseb.</string>
+    <string name="relay_explain_relay_lists">Najde releje objav vsake osebe za prenos z ustreznega mesta.</string>
+    <string name="relay_explain_follows">Seznami sledenj za oblikovanje vira objav in mreže zaupanja.</string>
+    <string name="relay_explain_moderation">Prijave vaših sledenih oseb o trenutno prikazanih profilih, poslane relejem, na katere te osebe objavljajo.</string>
+    <string name="relay_purpose_reports_from_follows">Prijave vaših sledenih oseb</string>
+    <string name="relay_explain_wallet">Dogodki vaša denarnice, prebrani z vaših objavitvenih relejev.</string>
+    <string name="relay_explain_nutzap_inbox">Spremlja vaše nutzap releje ter vhodne releje in releje ZS, da nobeno plačilo ne ostane neopaženo.</string>
+    <string name="relay_explain_mint_directory">Preverja releje in išče, katere kovnice (mints) obstajajo ter katere ljudje priporočajo.</string>
+    <string name="relay_explain_nwc">Opozorila iz povezane denarnice</string>
+    <string name="active_subs_title">Aktivne rele naročnine</string>
     <!-- Two countable nouns, so two plurals composed at the call site rather than one string with
          two %d in it: filter and relay decline independently in Slavic/Baltic/Semitic languages. -->
+    <plurals name="active_subs_filters">
+        <item quantity="one">%1$d filter</item>
+        <item quantity="two">%1$d filtra</item>
+        <item quantity="few">%1$d filtri</item>
+        <item quantity="other">%1$d filtrov</item>
+    </plurals>
+    <plurals name="active_subs_relays">
+        <item quantity="one">%1$d rele</item>
+        <item quantity="two">%1$d releja</item>
+        <item quantity="few">%1$d releji</item>
+        <item quantity="other">%1$d relejev</item>
+    </plurals>
+    <plurals name="active_subs_untagged">
+        <item quantity="one">%1$d filter še ni dodeljen</item>
+        <item quantity="two">%1$d filtra še nista dodeljena</item>
+        <item quantity="few">%1$d filtri še niso dodeljeni</item>
+        <item quantity="other">%1$d filtrov še ni dodeljenih</item>
+    </plurals>
+    <string name="active_subs_pair">%1$s \u00b7 %2$s</string>
+    <string name="active_subs_unattributed">Brez pripisanega računa</string>
+    <string name="active_subs_no_entity">Vse</string>
+    <string name="active_subs_scope_global">Vsi</string>
+    <string name="active_subs_scope_follows">Ljudje katerim sledite</string>
+    <string name="active_subs_scope_authors">Izbran seznam ljudi</string>
+    <string name="active_subs_scope_muted">Utišani ljudje</string>
+    <string name="active_subs_scope_all_communities">Vaše skupnost</string>
+    <string name="active_subs_scope_algo"></string>
     <string name="always_on_notif_connecting">Povezovanje vhodnih relejev\u2026</string>
     <string name="always_on_notif_setting_title">Vedno aktivna obvestila</string>
     <string name="always_on_notif_setting_description">Ohranja stalno povezavo z vašimi releji za takojšnjo dostavo obvestil. Prikazuje trajno obvestilo. Porabi več baterije, a zagotavlja, da ne zamudite nobenega sporočila.</string>
@@ -2416,7 +2646,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_create_confirm">Ustvari</string>
     <string name="relay_group_invite_title">Povabi ljudi</string>
     <string name="relay_group_invite_description">Delite to kodo, da se lahko ljudje pridružijo skupini.</string>
-    <string name="relay_group_invite_generating">Ustvari povabilo…</string>
+    <string name="relay_group_invite_generating">Ustvarjam povabilo…</string>
     <string name="relay_group_invite_copied">Koda povabila kopirana</string>
     <string name="relay_group_invite_code_label">Koda povabila (samo za to \"samo s povabilom\" skupino)</string>
     <string name="relay_group_join_title">Pridruži se skupini</string>
@@ -2524,6 +2754,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_no_messages_yet">Ni sporočil</string>
     <string name="channel_invite_title">Dodano v: %1$s</string>
     <string name="channel_invite_unknown_actor">Nekdo</string>
+    <string name="channel_invite_added_you">so vas dodali v ta kanal</string>
+    <string name="channel_invite_row_added_you_by">%1$s vas je dodal v ta kanal</string>
+    <string name="channel_invite_row_added_you">Bili ste dodani v ta kanal</string>
     <string name="channel_invite_ignore">Prezri</string>
     <string name="channel_invite_leave">Zapusti</string>
     <string name="relay_group_join_to_post">Pridružite se tej skupini, da boste lahko pošiljali sporočila.</string>
@@ -4699,7 +4932,7 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="buzz_workflow_picker_choose">Izberite potek dela (workflow)</string>
     <string name="buzz_workflow_new_definition">Nova definicija…</string>
     <string name="buzz_workflow_def_title">Nova definicija poteka dela</string>
-    <string name="buzz_workflow_def_desc">Poimenuje ga za kanal in objavi njegov recept YAML (tip \"kind\" 30620). Pravi Buzz posrednik (relay) zažene YAML. Samostojno gostujoči izvajalec izvede svoj nastavljeni ukaz — tukaj definicija le poimenuje in popiše zagon.</string>
+    <string name="buzz_workflow_def_desc">Poimenuje ga za kanal in objavi njegov recept YAML (tip \"kind\" 30620). Pravi Buzz rele  zažene YAML. Samostojno gostujoči izvajalec izvede svoj nastavljeni ukaz — tukaj definicija le poimenuje in popiše zagon.</string>
     <string name="buzz_workflow_def_name">Ime</string>
     <string name="buzz_workflow_def_name_hint">zgradi-in-testiraj</string>
     <string name="buzz_workflow_def_yaml">YAML recept</string>
