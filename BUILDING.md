@@ -533,7 +533,7 @@ reads an optional per-release changelog from
 
 ## Bootstrap runbook (one-time)
 
-> **Status as of v1.14.0: neither Homebrew nor Winget has been bootstrapped.**
+> **Status as of v1.14.0:** Winget has been submitted — [microsoft/winget-pkgs#422752](https://github.com/microsoft/winget-pkgs/pull/422752), pending CLA + review. Neither Homebrew package (`amethyst-nostr` cask, `amy` formula) has been submitted yet.
 > `https://formulae.brew.sh/api/cask/amethyst-nostr.json` and
 > `microsoft/winget-pkgs/manifests/v/VitorPamplona/Amethyst` both 404, so
 > **Amethyst does not currently ship through either channel.** The bump
@@ -618,15 +618,33 @@ that is needed.
 
 ### Homebrew cask (one-time initial PR)
 
+> `brew bump-cask-pr` **cannot** do this step. It *updates* an existing cask —
+> against a name that isn't in the tap yet it fails outright:
+> `Error: Cask 'amethyst-nostr' is unavailable: No Cask with this name exists.`
+> The first submission is a **new-cask** PR, which is a different flow:
+
 ```bash
-brew bump-cask-pr amethyst-nostr \
-  --version 1.12.1 \
-  --url "https://github.com/vitorpamplona/amethyst/releases/download/v1.12.1/amethyst-desktop-1.12.1-macos-arm64.dmg"
+# 1. Scaffold from the published DMG (macOS arm64 — there is no Intel DMG)
+brew create --cask \
+  https://github.com/vitorpamplona/amethyst/releases/download/v1.14.0/amethyst-desktop-1.14.0-macos-arm64.dmg \
+  --set-name amethyst-nostr
+
+# 2. Fill in the cask body, then audit as a NEW cask (stricter than a bump)
+brew audit --new --cask amethyst-nostr
+brew install --cask amethyst-nostr        # verify it actually installs
+brew uninstall --cask amethyst-nostr
+
+# 3. Open the PR against Homebrew/homebrew-cask by hand
 ```
+
+The DMG **must be notarized and stapled** or Homebrew will reject it; verify
+with `spctl -a -t open --context context:primary-signature -v <dmg>` before
+submitting.
 
 The cask filename is `amethyst-nostr` (not `amethyst` — that's taken by a
 tiling window manager). After the first PR is merged, `bump-homebrew.yml`
-auto-submits new version bumps on each stable release.
+auto-submits new version bumps on each stable release — *that* is where
+`brew bump-cask-pr` applies.
 
 > **The desktop app is already on mainline Homebrew.** `homebrew/cask` *is* the
 > mainline cask repo — GUI apps live in homebrew-**cask**, CLIs in
