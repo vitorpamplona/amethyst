@@ -2905,9 +2905,6 @@
     <string name="relay_members_removed">%1$d a\'zo relay dan chiqarildi</string>
     <string name="relay_join_request">Relay ga qo\'shilish so\'rovi</string>
     <string name="relay_leave_request">Relay dan chiqish so\'rovi</string>
-    <string name="ai_writing_help">AI yozish yordami</string>
-    <string name="ai_writing_setting_title">Matn yaxshilanishlarini taklif qilish</string>
-    <string name="ai_writing_setting_description">Matn tuzatishlar va ohang o\'zgarishlarini taklif qilish uchun qurilmadagi AI modelidan foydalanadi.</string>
     <string name="tracked_broadcasts_setting_title">Kuzatilgan translyatsiyalar</string>
     <string name="tracked_broadcasts_setting_description">Hodisalarni yuborishda kuzatilgan translyator dan foydalaning. Translyatsiya vaqtida jonli holat va har bir relay holati ko\'rsatiladi.</string>
     <string name="suggest_workouts_setting_title">Ulashish uchun mashg\'ulotlar taklif qilish</string>
@@ -2915,15 +2912,6 @@
     <string name="compose_settings">Yozish sozlamalari</string>
     <string name="auto_create_drafts_setting_title">Avtomatik qoralamalar yaratish</string>
     <string name="auto_create_drafts_setting_description">Yozsangiz yoki yuborilmagan matn bilan kompositordan chiqib ketsangiz qoralama hodisasini avtomatik saqlaydi va shaxsiy chiqish relay laringizga yuboradi.</string>
-    <string name="ai_writing_use_this">Buni ishlatish</string>
-    <string name="ai_writing_dismiss">Yopish</string>
-    <string name="ai_tone_correct">To\'g\'rilash</string>
-    <string name="ai_tone_rephrase">Qayta ifodalash</string>
-    <string name="ai_tone_shorter">Qisqaroq</string>
-    <string name="ai_tone_elaborate">Batafsil</string>
-    <string name="ai_tone_friendly">Do\'stona</string>
-    <string name="ai_tone_more_direct">To\'g\'riroq</string>
-    <string name="ai_tone_punchy">Ifodali</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji to\'plamlari</string>
     <string name="emoji_pack_management_title">Emoji ro\'yxatiga qo\'shish</string>

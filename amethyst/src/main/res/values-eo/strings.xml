@@ -2727,9 +2727,6 @@
 <string name="relay_members_removed">%1$d membroj forigitaj el relay</string>
 <string name="relay_join_request">Peto pri aliĝo al relay</string>
 <string name="relay_leave_request">Peto pri foriro el relay</string>
-<string name="ai_writing_help">Helpo pri AI-Skribado</string>
-<string name="ai_writing_setting_title">Proponi tekstajn plibonigojn</string>
-<string name="ai_writing_setting_description">Uzas aparatan AI-modelon por proponi tekstajn korektojn kaj tondoŝanĝojn.</string>
 <string name="tracked_broadcasts_setting_title">Spurataj dissendoj</string>
 <string name="tracked_broadcasts_setting_description">Uzu la spuratan dissendanton kiam vi sendas eventojn. Montras vivan progreson kaj relay-specifan staton dum dissendado.</string>
 <string name="suggest_workouts_setting_title">Sugesti trejnadojn por dividi</string>
@@ -2737,17 +2734,6 @@
 <string name="compose_settings">Agordoj de Verkado</string>
 <string name="auto_create_drafts_setting_title">Aŭtomate krei skizojn</string>
 <string name="auto_create_drafts_setting_description">Konservas skizon aŭtomate kiam vi tajpas aŭ forlasas verkiston kun nesendita teksto kaj sendas al viaj privataj eligaj relay-oj.</string>
-<string name="ai_writing_use_this">Uzi Ĉi Tion</string>
-<string name="ai_writing_dismiss">Ignori</string>
-<string name="ai_tone_correct">Korekti</string>
-<string name="ai_tone_rephrase">Reformuligi</string>
-<string name="ai_tone_shorter">Pli Mallonga</string>
-<string name="ai_tone_elaborate">Plidetali</string>
-<string name="ai_tone_friendly">Amika</string>
-<string name="ai_tone_professional">Profesia</string>
-<string name="ai_tone_more_direct">Pli Rekta</string>
-<string name="ai_tone_punchy">Trafa</string>
-<string name="ai_tone_emojify">+ Emodžio</string>
 <string name="emoji_packs_title">Emodžio-Pakaj</string>
 <string name="emoji_pack_management_title">Aldoni al Emodžio-Listo</string>
 <string name="add_to_emoji_list">Aldoni al mia emodžio-listo</string>

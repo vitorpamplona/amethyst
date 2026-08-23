@@ -2947,9 +2947,6 @@
     <string name="relay_members_removed">%1$d dalībnieki noņemti no relay servera</string>
     <string name="relay_join_request">Relay pievienošanās pieprasījums</string>
     <string name="relay_leave_request">Relay aiziešanas pieprasījums</string>
-    <string name="ai_writing_help">MI rakstīšanas palīdzība</string>
-    <string name="ai_writing_setting_title">Piedāvāt teksta uzlabojumus</string>
-    <string name="ai_writing_setting_description">Izmanto ierīcē esošu MI modeli, lai piedāvātu teksta labojumus un toņa izmaiņas.</string>
     <string name="tracked_broadcasts_setting_title">Izsekotās pārraides</string>
     <string name="tracked_broadcasts_setting_description">Izmantot izsekoto raidītāju, sūtot notikumus. Parāda tiešraides progresu un katra relay statusa informāciju pārraides laikā.</string>
     <string name="suggest_workouts_setting_title">Ieteikt kopīgojamas treniņu sesijas</string>
@@ -2957,16 +2954,6 @@
     <string name="compose_settings">Rakstīšanas iestatījumi</string>
     <string name="auto_create_drafts_setting_title">Automātiski izveidot melnrakstus</string>
     <string name="auto_create_drafts_setting_description">Automātiski saglabā melnrakstu, kad rakstāt vai atstājat redaktoru ar nesūtītu tekstu, un nosūta uz jūsu privātajiem izejas relay serveriem.</string>
-    <string name="ai_writing_use_this">Izmantot šo</string>
-    <string name="ai_writing_dismiss">Noraidīt</string>
-    <string name="ai_tone_correct">Labot</string>
-    <string name="ai_tone_rephrase">Pārfrāzēt</string>
-    <string name="ai_tone_shorter">Īsāk</string>
-    <string name="ai_tone_elaborate">Izvērst</string>
-    <string name="ai_tone_friendly">Draudzīgi</string>
-    <string name="ai_tone_professional">Profesionāli</string>
-    <string name="ai_tone_more_direct">Tiešāk</string>
-    <string name="ai_tone_punchy">Izteiksmīgi</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji pakotnes</string>
     <string name="emoji_pack_management_title">Pievienot emoji sarakstam</string>

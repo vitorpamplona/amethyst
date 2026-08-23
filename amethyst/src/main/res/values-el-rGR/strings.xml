@@ -2862,9 +2862,6 @@
     <string name="relay_members_removed">%1$d μέλη αφαιρέθηκαν από το relay</string>
     <string name="relay_join_request">Αίτηση συμμετοχής σε relay</string>
     <string name="relay_leave_request">Αίτηση αποχώρησης από relay</string>
-    <string name="ai_writing_help">Βοήθεια Συγγραφής AI</string>
-    <string name="ai_writing_setting_title">Πρόταση βελτιώσεων κειμένου</string>
-    <string name="ai_writing_setting_description">Χρησιμοποιεί ένα τοπικό μοντέλο AI για να προτείνει διορθώσεις κειμένου και αλλαγές τόνου.</string>
     <string name="tracked_broadcasts_setting_title">Παρακολουθούμενες μεταδόσεις</string>
     <string name="tracked_broadcasts_setting_description">Χρήση του παρακολουθούμενου αναμεταδότη κατά την αποστολή συμβάντων. Εμφανίζει ζωντανή πρόοδο και κατάσταση ανά relay κατά τη μετάδοση.</string>
     <string name="suggest_workouts_setting_title">Πρόταση προπονήσεων για κοινοποίηση</string>
@@ -2872,16 +2869,6 @@
     <string name="compose_settings">Ρυθμίσεις Σύνταξης</string>
     <string name="auto_create_drafts_setting_title">Αυτόματη δημιουργία προχείρων</string>
     <string name="auto_create_drafts_setting_description">Αποθηκεύει αυτόματα ένα προχείρο συμβάν όταν πληκτρολογείτε ή εγκαταλείπετε ένα παράθυρο σύνταξης με μη αποσταλμένο κείμενο και το αποστέλλει στα ιδιωτικά outbox relay σας.</string>
-    <string name="ai_writing_use_this">Χρήση Αυτού</string>
-    <string name="ai_writing_dismiss">Απόρριψη</string>
-    <string name="ai_tone_correct">Διόρθωση</string>
-    <string name="ai_tone_rephrase">Αναδιατύπωση</string>
-    <string name="ai_tone_shorter">Συντομότερο</string>
-    <string name="ai_tone_elaborate">Επεξεργασία</string>
-    <string name="ai_tone_friendly">Φιλικό</string>
-    <string name="ai_tone_professional">Επαγγελματικό</string>
-    <string name="ai_tone_more_direct">Πιο Άμεσο</string>
-    <string name="ai_tone_punchy">Δυναμικό</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Πακέτα Emoji</string>
     <string name="emoji_pack_management_title">Προσθήκη στη Λίστα Emoji</string>
