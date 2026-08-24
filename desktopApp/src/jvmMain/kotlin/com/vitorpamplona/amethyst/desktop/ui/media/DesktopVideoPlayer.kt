@@ -90,6 +90,14 @@ fun DesktopVideoPlayer(
         }
     }
 
+    // Surface playback errors to the log — kdroidFilter reports these only via state, so without
+    // this a stream that fails to start ("live doesn't start") leaves no trace.
+    LaunchedEffect(isActiveVideo, videoState.errorReason) {
+        if (isActiveVideo && videoState.errorReason != null) {
+            println("DesktopVideoPlayer ERROR url=$url reason=${videoState.errorReason}")
+        }
+    }
+
     if (isActiveVideo && videoState.aspectRatio != 16f / 9f) {
         aspectRatio = videoState.aspectRatio
     }

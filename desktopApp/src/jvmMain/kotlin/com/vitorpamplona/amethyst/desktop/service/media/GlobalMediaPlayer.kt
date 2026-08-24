@@ -73,6 +73,11 @@ object GlobalMediaPlayer {
 
     @Volatile private var audioPlayer: VideoPlayerState? = null
 
+    // In-flight `openUri` for the current video track. Cancelled before a new open so two rapid
+    // track switches (e.g. opening one live stream while another is still loading) can't interleave
+    // openUri calls on the single shared engine — that race left the player stuck / black.
+    @Volatile private var videoOpenJob: Job? = null
+
     private val initLock = Any()
 
     /**
@@ -120,11 +125,17 @@ object GlobalMediaPlayer {
                 return
             }
 
-        if (current.url == url) {
+        // Reuse the engine only when it's already on this URL AND healthy. If the last attempt
+        // errored (a common transient for live HLS — a dead segment, a 403, a stream that just
+        // went live), fall through and re-open instead of leaving a stuck/errored surface.
+        if (current.url == url && current.errorReason == null) {
+            println("GlobalMediaPlayer.playVideo REUSE url=$url isPlaying=${current.isPlaying}")
             if (seekPosition > 0f) player.seekTo(seekPosition * 1000f)
             if (!current.isPlaying) player.play()
             return
         }
+
+        println("GlobalMediaPlayer.playVideo OPEN url=$url (was=${current.url} err=${current.errorReason})")
 
         // Reset engine volume to match the UI's default for the new track. The
         // kdroidFilter player retains `volume` across openUri calls, so a mute
@@ -134,17 +145,20 @@ object GlobalMediaPlayer {
 
         _videoState.value = MediaPlaybackState(url = url, type = MediaType.VIDEO, isBuffering = true)
 
-        scope.launch(Dispatchers.IO) {
-            player.openUri(url)
-            // openUri auto-plays per InitialPlayerState.PLAY default. For an
-            // initial seek we wait for the first hasMedia=true emission then
-            // stop collecting (Flow.first terminates the collector cleanly,
-            // unlike `return@collect` which only exits the lambda).
-            if (seekPosition > 0f) {
-                snapshotFlow { player.hasMedia }.first { it }
-                player.seekTo(seekPosition * 1000f)
+        // Cancel any in-flight open so a rapid switch can't interleave openUri on the shared engine.
+        videoOpenJob?.cancel()
+        videoOpenJob =
+            scope.launch(Dispatchers.IO) {
+                player.openUri(url)
+                // openUri auto-plays per InitialPlayerState.PLAY default. For an
+                // initial seek we wait for the first hasMedia=true emission then
+                // stop collecting (Flow.first terminates the collector cleanly,
+                // unlike `return@collect` which only exits the lambda).
+                if (seekPosition > 0f) {
+                    snapshotFlow { player.hasMedia }.first { it }
+                    player.seekTo(seekPosition * 1000f)
+                }
             }
-        }
     }
 
     fun playAudio(url: String) {

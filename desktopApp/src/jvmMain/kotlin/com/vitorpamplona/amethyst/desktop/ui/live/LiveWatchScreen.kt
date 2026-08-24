@@ -99,6 +99,14 @@ fun LiveWatchScreen(
             Address.parse(address)?.let { cache.getOrCreateLiveActivityChannel(it) }
         }
 
+    LaunchedEffect(address, channel?.info) {
+        val info = channel?.info
+        println(
+            "LiveWatchScreen open address=$address status=${info?.status()} " +
+                "streaming=${info?.streaming() ?: "<none>"} recording=${info?.recording() ?: "<none>"}",
+        )
+    }
+
     Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
         if (channel == null) {
             WatchError("This stream could not be opened.", onClose)
