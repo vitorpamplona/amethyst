@@ -137,6 +137,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscr
 import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.live.LiveNowBar
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.DesktopPollCard
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
@@ -580,6 +581,7 @@ fun FeedScreen(
     onZapFeedback: (ZapFeedback) -> Unit = {},
     onNavigateToRelays: () -> Unit = {},
     onSearchClick: () -> Unit = {},
+    onOpenLive: (String) -> Unit = {},
 ) {
     val feedSearchActiveState = com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive.current
     var searchActive by feedSearchActiveState
@@ -967,6 +969,18 @@ fun FeedScreen(
         ReadingColumn {
             // Reserve space for the header card that floats above the feed.
             Spacer(Modifier.height(headerSpacerHeight))
+
+            // Pinned "live now" bar, scoped to this column's audience (Following / Global only).
+            if (feedMode == FeedMode.FOLLOWING || feedMode == FeedMode.GLOBAL) {
+                val liveBarPadding = LocalReadingSidePadding.current
+                LiveNowBar(
+                    cache = localCache,
+                    relayManager = relayManager,
+                    scopeAuthors = if (feedMode == FeedMode.FOLLOWING) followedUsers.toList() else null,
+                    onOpenLive = onOpenLive,
+                    modifier = Modifier.padding(horizontal = liveBarPadding),
+                )
+            }
 
             // Feed content based on FeedState
             when (val state = feedState) {
