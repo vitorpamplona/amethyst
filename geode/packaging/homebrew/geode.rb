@@ -21,6 +21,20 @@
 # Note: geode is a long-running relay daemon. Homebrew is a convenient way to
 # INSTALL it on a workstation for local testing; for a production deployment
 # prefer the Docker image or the .deb/.rpm + systemd unit (see geode/README.md).
+#
+# BLOCKER (verified 2026-08-24): this formula CANNOT be submitted to
+# homebrew-core under the name `geode`. That name is permanently reserved —
+# homebrew-core's `formula_renames.json` maps "geode" -> "apache-geode"
+# (Apache Geode's old name), so `brew info --formula geode` resolves to that
+# package. Submitting would need a different token, e.g. `geode-relay` or
+# `amethyst-geode`, which also means renaming the binary's Homebrew-facing name
+# and updating .github/workflows/bump-homebrew-geode-formula.yml. Until that is
+# decided this file is a reference for a personal tap only, where the name does
+# not collide.
+#
+# As with amy.rb, do NOT strip the `livecheck` block or the comments to match
+# the amethyst-nostr cask — homebrew-core conventions differ from
+# homebrew-cask's, and `livecheck` is what drives automated version bumps.
 class Geode < Formula
   desc "Standalone Nostr relay from the Amethyst project"
   homepage "https://github.com/vitorpamplona/amethyst"
@@ -42,7 +56,7 @@ class Geode < Formula
     libexec.install Dir["*"]
     # Wrapper on PATH that pins JAVA_HOME to Homebrew's openjdk so geode runs
     # regardless of the user's own Java setup.
-    (bin/"geode").write_env_script libexec/"bin/geode", JAVA_HOME: Formula["openjdk"].opt_prefix
+    (bin/"geode").write_env_script libexec/"bin/geode", JAVA_HOME: formula_opt_prefix("openjdk")
   end
 
   test do
