@@ -58,11 +58,11 @@ the copy-paste steps (create the `geode` user, drop your config in
 ### Homebrew
 
 ```bash
-brew install vitorpamplona/tap/geode    # from the tap, once published
+brew install vitorpamplona/tap/geode-relay    # from the tap, once published
 ```
 
 The formula depends on `openjdk` and installs the no-JRE jar bundle. Reference
-formula: [`packaging/homebrew/geode.rb`](packaging/homebrew/geode.rb).
+formula: [`packaging/homebrew/geode-relay.rb`](packaging/homebrew/geode-relay.rb).
 
 ### Portable tarball (any Linux/macOS, no system Java)
 

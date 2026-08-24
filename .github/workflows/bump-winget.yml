@@ -2,7 +2,7 @@ name: Sync Winget Manifest Reference
 
 # Fourth sibling of the three Homebrew sync workflows, same shape:
 #   bump-homebrew-formula.yml       -> Formula `amy`
-#   bump-homebrew-geode-formula.yml -> Formula `geode`
+#   bump-homebrew-geode-formula.yml -> Formula `geode-relay`
 #   bump-homebrew.yml               -> Cask    `amethyst-nostr`
 #   this workflow                   -> Winget  `VitorPamplona.Amethyst`
 #

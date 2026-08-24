@@ -3,11 +3,11 @@ name: Bump Homebrew Formula (geode relay)
 # Sibling of bump-homebrew-formula.yml (the amy CLI). Same mechanism, different
 # artifact:
 #   - bump-homebrew-formula.yml       -> Formula `amy`   (the headless CLI)
-#   - this workflow                   -> Formula `geode` (the standalone relay)
+#   - this workflow                   -> Formula `geode-relay` (the standalone relay)
 #
 # After a stable release, download the published `geode-<version>-jvm.tar.gz`
 # bundle, compute its sha256, and open a PR that syncs
-# `geode/packaging/homebrew/geode.rb`'s url + sha256 to that release. Keeping the
+# `geode/packaging/homebrew/geode-relay.rb`'s url + sha256 to that release. Keeping the
 # in-repo reference formula accurate makes the eventual homebrew-core submission a
 # copy-paste.
 #
@@ -101,7 +101,7 @@ jobs:
       - name: Update reference formula
         run: |
           set -euo pipefail
-          FORMULA=geode/packaging/homebrew/geode.rb
+          FORMULA=geode/packaging/homebrew/geode-relay.rb
           URL="${{ steps.asset.outputs.url }}"
           SHA="${{ steps.asset.outputs.sha256 }}"
           # Rewrite the two indented lines in the formula block. Anchoring on the
@@ -119,11 +119,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: main
           branch: chore/bump-geode-formula-${{ steps.rel.outputs.tag }}
-          add-paths: geode/packaging/homebrew/geode.rb
+          add-paths: geode/packaging/homebrew/geode-relay.rb
           commit-message: 'chore: sync geode Homebrew formula to ${{ steps.rel.outputs.tag }}'
           title: 'chore: sync geode Homebrew formula to ${{ steps.rel.outputs.tag }}'
           body: |
-            Auto-synced `geode/packaging/homebrew/geode.rb` to the
+            Auto-synced `geode/packaging/homebrew/geode-relay.rb` to the
             `${{ steps.rel.outputs.tag }}` release:
 
             - `url`    -> `${{ steps.asset.outputs.url }}`
@@ -158,7 +158,7 @@ jobs:
                 ``,
                 `Recovery options:`,
                 `1. Re-run the workflow once the underlying issue is fixed`,
-                `2. Manually update \`geode/packaging/homebrew/geode.rb\` (url + sha256) from the release asset`,
+                `2. Manually update \`geode/packaging/homebrew/geode-relay.rb\` (url + sha256) from the release asset`,
                 `3. Check the release actually published \`geode-${tag.replace(/^v/, '')}-jvm.tar.gz\``
               ].join('\n'),
               labels: ['release-ops', 'bug']
