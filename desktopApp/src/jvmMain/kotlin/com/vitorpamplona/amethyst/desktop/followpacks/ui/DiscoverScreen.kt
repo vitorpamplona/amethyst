@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.desktop.followpacks.subscribeMetadataFor
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.live.LivesSection
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import kotlinx.coroutines.launch
 import java.awt.Toolkit
@@ -86,6 +87,7 @@ fun DiscoverScreen(
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     @Suppress("UNUSED_PARAMETER") onZapFeedback: (ZapFeedback) -> Unit,
+    onOpenLive: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val featured by state.featuredPack.collectAsState()
@@ -192,6 +194,15 @@ fun DiscoverScreen(
                     }
                 }
             }
+
+            // ---- Live now (NIP-53) ----
+            Spacer(Modifier.height(24.dp))
+            LivesSection(
+                cache = cache,
+                relayManager = relayManager,
+                followSet = followedAuthors.authors,
+                onOpenLive = onOpenLive,
+            )
 
             // ---- Topic chips ----
             val chipTags = remember(current) { current?.let { state.hashtagsFor(it) } ?: emptyList() }
