@@ -169,7 +169,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="send_payment_receipt_section">Potrdilo o zapu</string>
     <string name="send_payment_receipt_clink">Neposredno Lightning plačilo — potrdilo o zapu se ne objavi na Nostru.</string>
     <string name="send_payment_receipt_onchain">Na Nostru se objavi on-chain potrdilo o zapu, da lahko prejemnik najde plačilo.</string>
-    <string name="send_payment_receipt_onchain_address">Izvede neposredno plačilo na bitcoin naslov profila (%1$s) prek tvoje on-chain denarnice — brez objave potrdila o zapu.</string>
+    <string name="send_payment_receipt_onchain_address">Izvede neposredno plačilo na Bitcoin naslov profila (%1$s) prek vaše on-chain denarnice — brez objave potrdila o zapu.</string>
     <string name="send_payment_receipt_cashu">Nutzap dogodek prenaša sam ecash, zato je vedno javno objavljen.</string>
     <string name="send_payment_requesting_invoice">Pridobivanje računa…</string>
     <string name="send_payment_requesting_invoice_nostr">Pridobivanje računa preko Nostra…</string>
@@ -277,7 +277,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="known">Poznani</string>
     <string name="new_requests">Nova prošnja</string>
     <string name="blocked_users">Blokirani uporabniki</string>
-    <string name="new_threads">Nove nizi objav</string>
+    <string name="new_threads">Novi nizi objav</string>
     <string name="conversations">Razprave</string>
     <string name="feed">Vir vsebin</string>
     <string name="mod_queue">Čakalna vrsta mod</string>
@@ -532,11 +532,12 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="mark_all_new_as_read">Označi vse nove kot prebrane</string>
     <string name="mark_all_as_read">Označi vse kot prebrane</string>
     <string name="backup_keys">Varnostna kopija ključev</string>
-    <string name="account_backup_tips2_md" tools:ignore="Typos">        ## Varnostna kopija ključev in varnostni nasveti
-        \n\nTvoj račun je zaščiten z privatnim ključem. Ta ključ ima dolgo sekvenco znakov kateri se začnejo z **nsec1**. Kdorkoli ima dostop, do tega privatnega ključa, lahko pošiljajo zapiske in spremenijo tvojo digitalno identiteto.
+    <string name="account_backup_tips2_md" tools:ignore="Typos">
+        ## Varnostna kopija ključev in varnostni nasveti
+        \n\nVaš račun je zaščiten z privatnim ključem. Ta ključ ima dolgo sekvenco znakov kateri se začnejo z **nsec1**. Kdorkoli ima dostop, do tega privatnega ključa, lahko pošiljajo zapiske in spremenijo vašo digitalno identiteto.
         \n\n- Nikoli in **Nikdar** ne vpisuj svojega privatnega ključa v spletne strani in aplikacije katerim ne zaupaš.
-        \n- Amethyst ustvarjalci te ne bojo **nikoli** vprašali po tvojem privatnem ključu.
-        \n- Ustvari **varnostno kopijo** svojega privatnega ključa, za obnovitev računa. Priporoča se uporaba upravljalnika gesel (password manegerja).
+        \n- Amethyst ustvarjalci vas ne bojo **nikoli** vprašali po vašem privatnem ključu.
+        \n- Ustvari **varnostno kopijo** svojega privatnega ključa, za obnovitev računa. Priporoča se uporaba upravljalnika gesel.
     </string>
     <string name="account_backup_tips3_md" tools:ignore="Typos">        Za dodatno varnost, lahko šifriraš svoj ključ z dodatnim geslom. Ta ključ se začne z **ncryptsec1** in ne more bit uporabljen brez dodatnega gesla.
         \n\nČe izgubiš geslo, obnova ključa ni več mogoča.
@@ -613,11 +614,11 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="report_dialog_impersonation">Zlonamerno lažno predstavljanje</string>
     <string name="report_dialog_nudity">Golota ali grafična vsebina</string>
     <string name="report_dialog_illegal">Nelegalno obnašanje</string>
-    <string name="report_dialog_blocking_a_user">Blokiranje uporabnika bo skrilo njegove objave v tvoji aplikaciji. Tvoji zapiski še vedno ostajajo javno dostopni. Blokirani uporabniki so vidni v Varnost in filtri.</string>
+    <string name="report_dialog_blocking_a_user">Blokiranje uporabnika bo skrilo njegove objave v vaši aplikaciji. Vaši zapiski še vedno ostajajo javno dostopni. Blokirani uporabniki so vidni v varnost in filtri.</string>
     <string name="report_dialog_block_hide_user_btn"><![CDATA[Blokiraj in skrij uporabnika]]></string>
     <string name="report_dialog_report_btn">Prijavi zlorabo</string>
     <string name="report_dialog_reminder_public">Vse poslane prijave bojo javno vidne.</string>
-    <string name="report_dialog_additional_reason_placeholder">Poljubno lahko dodaš dodatna pojasnila glede tvoje prijave…</string>
+    <string name="report_dialog_additional_reason_placeholder">Poljubno lahko dodaš dodatna pojasnila glede vaše prijave…</string>
     <string name="report_dialog_additional_reason_label">Dodaten kontekst</string>
     <string name="report_dialog_select_reason_label">Razlog</string>
     <string name="report_dialog_select_reason_placeholder">Izberi razlog…</string>
@@ -627,7 +628,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="manual_zaps">Ročno razdeli zape</string>
     <string name="bookmarks">Zaznamki</string>
     <string name="bookmarks_title">Privzeti zaznamki</string>
-    <string name="bookmarks_explainer">Tvoje privzeti zaznamki, ki jih podpira veliko Nostr odjemalcev</string>
+    <string name="bookmarks_explainer">Vaš privzeti zaznamki, ki jih podpira veliko Nostr odjemalcev</string>
     <string name="old_bookmarks_title">Stari zaznamki</string>
     <string name="old_bookmarks_explainer">Vaši stari zaznamki</string>
     <string name="migrate_bookmarks_button">Premakni vse med nove zaznamke</string>
@@ -777,7 +778,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="profile_apps_header_empty">Aplikacije</string>
     <string name="profile_apps_empty_hint">Priporoči Nostr aplikacije, ki jih uporabljaš, da jih odkrijejo še drugi.</string>
     <string name="profile_app_recommendations_title">Priporočene aplikacije</string>
-    <string name="profile_app_recommendations_description">Izberi, katere Nostr aplikacije javno priporočaš. Priporočila bodo vidna na tvojem profilu in bodo pomagala drugim odkriti aplikacije za vsebino, ki je ta aplikacija ne more odpreti.</string>
+    <string name="profile_app_recommendations_description">Izberi, katere Nostr aplikacije javno priporočaš. Priporočila bodo vidna na vašem profilu in bodo pomagala drugim odkriti aplikacije za vsebino, ki je ta aplikacija ne more odpreti.</string>
     <string name="profile_app_recommendations_empty">Ni najdenih aplikacij. Pojavile se bodo tukaj, ko jih aplikacija odkrije na tvojih relejih.</string>
     <string name="profile_app_recommendations_search">Išči aplikacijo po imenu</string>
     <string name="profile_app_recommendations_search_empty">Ni zadetkov</string>
@@ -954,10 +955,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         <item quantity="other">Sledi %1$d novim računom</item>
     </plurals>
     <plurals name="napplet_consent_diff_follow_removed">
-        <item quantity="one">PRENEHA SLEDITI %1$d računu</item>
-        <item quantity="two">PRENEHA SLEDITI %1$d računoma</item>
-        <item quantity="few">PRENEHA SLEDITI %1$d računom</item>
-        <item quantity="other">PRENEHA SLEDITI %1$d računom</item>
+        <item quantity="one">ODSLEDI %1$d račun</item>
+        <item quantity="two">ODSLEDI %1$d računa</item>
+        <item quantity="few">ODSLEDI %1$d račune</item>
+        <item quantity="other">ODSLEDI %1$d računov</item>
     </plurals>
     <plurals name="napplet_consent_diff_relay_added">
         <item quantity="one">doda %1$d rele</item>
@@ -986,7 +987,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <!-- Single-account edits, by far the common case: name who it is instead of counting. %1$s is
          the display name, shown next to their avatar. -->
     <string name="napplet_consent_diff_follow_one">⚠ To sledi uporabniku %1$s.</string>
-    <string name="napplet_consent_diff_unfollow_one">⚠ To PRENEHA SLEDITI uporabniku %1$s.</string>
+    <string name="napplet_consent_diff_unfollow_one">⚠ To ODSLEDI uporabnika %1$s.</string>
     <string name="napplet_consent_diff_mute_one">⚠ To utiša uporabnika %1$s.</string>
     <string name="napplet_consent_diff_unmute_one">⚠ To PREKINE UTIŠANJE uporabnika %1$s.</string>
     <!-- %1$s is the joined change list, e.g. "follows 2 new accounts and UNFOLLOWS 130 accounts". -->
@@ -1049,7 +1050,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="napplet_op_sign_kind_named">podpiši za %1$s (kind: %2$d)</string>
     <string name="napplet_op_encrypt">Šifriraj sporočilo</string>
     <!-- Decrypt: the message is already decrypted by Amethyst; the permission is to expose it to the app -->
-    <string name="napplet_op_decrypt">berem tvoja zasebna sporočila</string>
+    <string name="napplet_op_decrypt">bere vaša zasebna sporočila</string>
     <!-- Decrypt scoped to one counterparty. %1$s is that person's name (or a shortened npub) -->
     <string name="napplet_op_decrypt_from">preberite zasebna sporočila z %1$s</string>
     <!-- Narrower "remember" choice offered next to "Always allow". %1$s is the counterparty's name -->
@@ -1400,7 +1401,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_create_schedule_toggle">Načrtovano za kasneje</string>
     <string name="nest_create_when">Izberi začetni čas</string>
     <string name="agent_console_title">Konzola za agente</string>
-    <string name="nests_servers_title">Strežniki gnezda</string>
+    <string name="nests_servers_title">Strežnii gnezda (nests)</string>
     <string name="nests_servers_explainer">Izberite strežnike MoQ, na katerih Amethyst objavlja vaša gnezda. Prvi vnos bo privzeto uporabljen ob začetku novega pogovora.</string>
     <string name="nests_servers_my_section">Vaši strežniki</string>
     <string name="nests_servers_my_explainer">Shranjeno kot zamenljiv dogodek kind-10112, da lahko vaše nastavitve berejo tudi drugi odjemalci.</string>
@@ -1747,7 +1748,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="custom_zaps_add_a_message">Dodaj javno sporočilo</string>
     <string name="custom_zaps_add_a_message_private">Dodaj privatno sporočilo</string>
     <string name="custom_zaps_add_a_message_nonzap">Dodaj sporočilo k fakturi</string>
-    <string name="custom_zaps_add_a_message_example">Hvala za vso tvoje delo!</string>
+    <string name="custom_zaps_add_a_message_example">Thank you for all your work!</string>
     <string name="lightning_create_and_add_invoice">Ustvari in dodaj</string>
     <string name="poll_author_no_vote">Avtorji anket ne morejo glasovati v svojih anketah.</string>
     <string name="hash_verification_info_title">Kaj to pomeni?</string>
@@ -2159,7 +2160,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_purpose_referenced">Iskanje pogrešanih dogodkov</string>
     <string name="relay_purpose_engagement">Opazovani dogodki</string>
     <string name="relay_explain_referenced">Pridobi dogodke po ID-ju, na katere se sklicuje nekaj na vašem zaslonu, a jih še nimate — citat, starševsko sporočilo odgovora ali začetek objav.</string>
-    <string name="relay_explain_engagement">Spremlja trenutno prikazane dogodke za nove odgovore, reakcije, ponovne objave, zappe in prijave, da se števci posodabljajo med branjem.</string>
+    <string name="relay_explain_engagement">Spremlja trenutno prikazane dogodke za nove odgovore, odzive, ponovne objave, zape in prijave, da se števci posodabljajo med branjem.</string>
     <string name="relay_purpose_add_ons">Dodatki</string>
     <string name="relay_purpose_relay_info">Informacije releja</string>
     <string name="relay_purpose_other">Drugo</string>
@@ -2240,6 +2241,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="active_subs_scope_muted">Utišani ljudje</string>
     <string name="active_subs_scope_all_communities">Vaše skupnost</string>
     <string name="active_subs_scope_algo"></string>
+    <string name="active_subs_share">%1$d%% od vseh</string>
+    <string name="active_subs_search_keywords">naročnine, filtri, releji, zahteve, povezave, zakaj, diagnostika</string>
+    <string name="relay_explain_home">Objave oseb, ki jim sledite, prebrane z relejev, na katere objavlja posamezna od njih.</string>
     <string name="always_on_notif_connecting">Povezovanje vhodnih relejev\u2026</string>
     <string name="always_on_notif_setting_title">Vedno aktivna obvestila</string>
     <string name="always_on_notif_setting_description">Ohranja stalno povezavo z vašimi releji za takojšnjo dostavo obvestil. Prikazuje trajno obvestilo. Porabi več baterije, a zagotavlja, da ne zamudite nobenega sporočila.</string>
@@ -2436,6 +2440,30 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="settings_section_tor_routing">Usmeri preko Tor</string>
     <string name="settings_section_profile_sections">Odseki in viri vsebin</string>
     <string name="settings_section_home_tabs">Vidni zavihki</string>
+    <string name="settings_section_home_content_types">Vsebina v viru vsebin</string>
+    <string name="home_content_type_text_notes">Besedilni zapiski</string>
+    <string name="home_content_type_reposts">Preposlane objave</string>
+    <string name="home_content_type_comments">Komentarji in odgovori</string>
+    <string name="home_content_type_pictures">Fotografije</string>
+    <string name="home_content_type_videos">Video</string>
+    <string name="home_content_type_shorts">Kratki videoposnetki</string>
+    <string name="home_content_type_articles">Članki</string>
+    <string name="home_content_type_wiki">Wiki strani</string>
+    <string name="home_content_type_highlights">Poudarki</string>
+    <string name="home_content_type_polls">Ankete</string>
+    <string name="home_content_type_classifieds">Oglasi</string>
+    <string name="home_content_type_torrents">Torenti</string>
+    <string name="home_content_type_voice">Glasovna sporočila</string>
+    <string name="home_content_type_live_activities">Aktivnosti v živo</string>
+    <string name="home_content_type_ephemeral_chat">Minljivi klepeti</string>
+    <string name="home_content_type_interactive_stories">Interaktivne zgodbe</string>
+    <string name="home_content_type_chess">Šahovske igre</string>
+    <string name="home_content_type_birds">Opazovanja ptic</string>
+    <string name="home_content_type_attestations">Overitve</string>
+    <string name="home_content_type_nips">NIP osnutki</string>
+    <string name="home_content_type_music">Video in zvok</string>
+    <string name="home_content_type_podcasts">Podkasti</string>
+    <string name="home_content_type_fundraisers">Zbiranje sredstev</string>
     <string name="settings_section_reminders">Opomniki</string>
     <string name="wallet_connect">Wallet Connect</string>
     <string name="language">Jezik</string>
@@ -2497,8 +2525,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="geohash_exclusive">Lokacijsko-ekskluzivna objava</string>
     <string name="geohash_exclusive_explainer">To bodo videli samo sledilci lokacije. Vaši splošni sledilci tega ne bodo videli.</string>
     <string name="hashtag_exclusive">Ekskluzivna objava ključnika</string>
+    <string name="external_content_title">Zunanje vsebine</string>
     <string name="external_url_scope">Komentiraj na spletni strani</string>
     <string name="external_id_scope">Komentiraj na zunanjem viru</string>
+    <string name="url_preview_open_in_browser">Odpri v brskalniku</string>
     <string name="long_form_reading_minutes">%1$d min branja</string>
     <plurals name="music_playlist_track_count">
         <item quantity="one">%1$d skladba</item>
@@ -2519,7 +2549,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="music_track_cover_upload_cta">Dodaj naslovno sliko</string>
     <string name="music_track_cover_upload_hint">Izberi kvadratno sliko za naslovnico te skladbe.</string>
     <string name="music_track_audio_upload_cta">Naloži zvočno datoteko</string>
-    <string name="music_track_audio_upload_hint">Izberi MP3, WAV ali FLAC. Ob shranjevanju bo naložen na tvoj medijski strežnik.</string>
+    <string name="music_track_audio_upload_hint">Izberi MP3, WAV ali FLAC. Ob shranjevanju bo naložen na vaš medijski strežnik.</string>
     <string name="music_track_audio_picked">Zvočna datoteka je pripravljena za nalaganje.</string>
     <string name="music_track_uploading_banner">Nalaganje naslovnice in zvoka ter objavljanje. Postopek se bo nadaljeval, tudi če zapustiš ta zaslon.</string>
     <string name="edit_music_playlist">Uredi seznam predvajanja</string>
@@ -2529,7 +2559,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="music_playlist_notes_label">Zapiski (neobvezno)</string>
     <string name="music_playlist_cover_upload_cta">Naloži prikazno sliko</string>
     <string name="music_playlist_cover_upload_hint">Izberi kvadratno sliko za naslovnico tega seznama predvajanja.</string>
-    <string name="music_playlist_private_hint">Skrij seznam predvajanja iz tvojega javnega profila.</string>
+    <string name="music_playlist_private_hint">Skrij seznam predvajanja iz vašega javnega profila.</string>
     <string name="music_playlist_collaborative_hint">Dovoli drugim, da dodajo skladbe v ta seznam predvajanja.</string>
     <string name="music_playlist_delete">Izbriši ta seznam predvajanja</string>
     <string name="music_playlist_delete_confirm">Objavi zahtevo za izbris NIP-09 za ta seznam predvajanja?</string>
@@ -2634,6 +2664,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_create_title">Ustvari skupino</string>
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
     <string name="buzz_channel_create_title">Nov kanal</string>
+    <string name="buzz_forum_create_title">Nov forum</string>
     <string name="buzz_channel_flag_private">Zasebni kanal</string>
     <string name="buzz_channel_flag_private_desc">Skrito s seznama kanalov in dostopno le z vabilom. Ko je možnost izklopljena, lahko kanal poišče in se mu pridruži vsakdo na tem releju.</string>
     <string name="buzz_channel_flag_forum">Kanal foruma</string>
@@ -2672,6 +2703,12 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_group_edit_confirm">Shrani</string>
     <string name="relay_group_menu_members">Člani</string>
     <string name="relay_group_menu_edit">Uredi skupino</string>
+    <string name="relay_group_delete">Izbriši skupino</string>
+    <string name="relay_group_delete_confirm">Želite izbrisati »%1$s«? S tem boste skupino in njeno zgodovino odstranili za vse. Dejanja ni mogoče razveljaviti.</string>
+    <string name="buzz_channel_delete">Izbriši kanal</string>
+    <string name="buzz_channel_delete_confirm">Želite izbrisati »%1$s«? S tem boste kanal in njegova sporočila odstranili za vse. Dejanja ni mogoče razveljaviti.</string>
+    <string name="buzz_channel_archive">Arhiviraj kanal</string>
+    <string name="buzz_channel_unarchive">Obnovi kanal</string>
     <string name="relay_group_threads_title">Nizi objav</string>
     <string name="relay_group_pin_message">Pripni sporočilo</string>
     <string name="relay_group_unpin_message">Odpni sporočilo</string>
@@ -2827,6 +2864,17 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="share_target_as_dm">Pošlji kot ZS</string>
     <string name="share_to_dm_title">Pošlji k…</string>
     <string name="share_to_dm_start_new">Novo sporočilo</string>
+    <string name="share_target_as_highlight">Nov poudarek</string>
+    <string name="share_target_as_picture">Nova slika</string>
+    <string name="share_target_as_short_video">Nov kratek videoposnetek</string>
+    <string name="share_target_as_video">Nov video</string>
+    <string name="new_highlight_title">Nov poudarek</string>
+    <string name="new_highlight_passage_label">Poudarjeno besedilo</string>
+    <string name="new_highlight_passage_placeholder">Kaj te je pritegnilo?</string>
+    <string name="new_highlight_source_label">URL vira</string>
+    <string name="new_highlight_note_label">Vaš zapisek (neobvezno)</string>
+    <string name="new_highlight_note_placeholder">Dodajte svoje misli…</string>
+    <string name="highlight_action">Poudari</string>
     <string name="copy_url_to_clipboard">Kopiraj URL v odložišče</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiraj ID zapiska v odložišče</string>
     <string name="add_media_to_gallery">Dodaj medijsko vsebino v galerijo</string>
@@ -2893,7 +2941,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Napačen znesek fakture (%1$s sat) od %2$s. Moral bi biti %3$s</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Ni mogoče ustvariti lightning fakture pred plačilom. Lightning denarnica prejemnika je poslala naslednjo napako: %1$s</string>
     <string name="read_only_user">Uporabnik samo za branje</string>
-    <string name="no_reactions_setup">Ni nastavitev za reakcije</string>
+    <string name="no_reactions_setup">Ni nastavitev za odzive</string>
     <string name="notification_settings">Obvestila</string>
     <string name="notification_settings_section_delivery">Dostava</string>
     <string name="notification_settings_section_display">Prikaz v aplikaciji</string>
@@ -3069,10 +3117,13 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="cashu_remove_mint">Odstrani kovnico</string>
     <string name="cashu_add_mint">Dodaj kovnico</string>
     <string name="cashu_history">Zgodovina</string>
+    <string name="cashu_history_loading_older">Naloži starejše transakcije</string>
+    <string name="cashu_history_all_loaded">Ni starejših transakcij</string>
+    <string name="cashu_history_some_relays_unreachable">Ni starejših transakcij z relejev, ki so se odzvali — nekateri so bili nedostopni</string>
     <string name="cashu_wallet_autosaves">Vaša denarnica se samodejno shrani ob dodajanju ali odstranjevanju kovnic (mints). Ob prvem dodajanju kovnice se za vas ustvari ključ nutzap.</string>
     <string name="cashu_wallet_saving">Shranjujem…</string>
     <string name="cashu_p2pk_section">Ključ Nutzap (napredno)</string>
-    <string name="cashu_p2pk_explainer">Ločen zasebni ključ, uporabljen le za prejemanje NIP-61 nutzapov. To ni tvoj ključ identitete Nostr.</string>
+    <string name="cashu_p2pk_explainer">Ločen zasebni ključ, uporabljen le za prejemanje NIP-61 nutzapov. To ni vaš ključ identitete Nostr.</string>
     <string name="cashu_p2pk_autogen">Generiraj nov ključ</string>
     <string name="cashu_p2pk_manual_label">Zasebni ključ P2PK (hex)</string>
     <string name="wallet_edit_cashu_title">Urejanje denarnice Cashu</string>
@@ -3118,12 +3169,12 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="cashu_settings_delete_confirm_body">Objavi zahtevek za izbris priporočila vrste kind:38000 za %1$s. Releji, ki podpirajo NIP-09, ga bodo odstranili.</string>
     <string name="cashu_settings_add_recommendation">Priporoči kovnico</string>
     <string name="cashu_settings_restore_title">Obnovi s seed geslom</string>
-    <string name="cashu_settings_restore_subtitle">Ponovno ustvari vse pretekle skrivnosti in od kovnic zahtevaj oslepljene podpise, ki so še na voljo. Funkcija je koristna, če izgubiš napravo ali če releji izbrišejo podatke o tvojih žetonih.</string>
+    <string name="cashu_settings_restore_subtitle">Ponovno ustvari vse pretekle skrivnosti in od kovnic zahtevaj oslepljene podpise, ki so še na voljo. Funkcija je koristna, če izgubiš napravo ali če releji izbrišejo podatke o vaših žetonih.</string>
     <string name="cashu_settings_restore_running">Preverjanje kovnic…</string>
     <string name="cashu_settings_restore_nothing_found">Ni najdenih dokazil za obnovo.</string>
     <string name="cashu_settings_restore_result">Uspešno obnovljenih %1$s satov skozi %2$s dokazil.</string>
     <string name="cashu_settings_stop_nutzaps">Ustavi prejemanje nutzapov</string>
-    <string name="cashu_settings_stop_nutzaps_subtitle">Umakni svojo objavo vrste 10019, da ti drugi ne morejo več pošiljati nutzapov. Tvoja denarnica in stanje ostaneta nespremenjena.</string>
+    <string name="cashu_settings_stop_nutzaps_subtitle">Umakni svojo objavo vrste 10019, da vam drugi ne morejo več pošiljati nutzapov. Tvoja denarnica in stanje ostaneta nespremenjena.</string>
     <string name="cashu_settings_stop_nutzaps_confirm_title">Ustavim prejemanje nutzapov?</string>
     <string name="cashu_settings_stop_nutzaps_confirm_body">Nadomestili bomo vašo objavo o nutzapih s prazno in zahtevali njen izbris. Uporabniki vam ne bodo več mogli pošiljati nutzapov. To lahko kadar koli ponovno vklopite v urejanju denarnice. Stanje vaše denarnice ostaja nespremenjeno.</string>
     <string name="cashu_settings_recreate_key">Ponovno ustvari ključ za nutzape</string>
@@ -3179,9 +3230,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="wallet_onchain_pending">V čakanju</string>
     <string name="wallet_onchain_public_chip">Javno</string>
     <string name="wallet_onchain_public_dialog_title">Ta denarnica je javna</string>
-    <string name="wallet_onchain_public_dialog_body">Tvoj Taproot naslov je izpeljan iz tvojega javnega Nostr ključa (npub..), kar pomeni, da lahko vsakdo, ki pozna tvoj npub, vidi stanje te denarnice in zgodovino transakcij na bločni verigi.
-
-Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, kot so borze. Teh sredstev nikoli ne mešaj s svojimi hladnimi denarnicami in z njimi ravnaj kot z denarjem, ki ga lahko izgubiš, saj lahko vsakdo, ki ima nadzor nad tvojim zasebnim ključem (nsec...), ta sredstva tudi porabi.</string>
+    <string name="wallet_onchain_public_dialog_body">Vaš Taproot naslov je izpeljan iz vašega javnega Nostr ključa (npub..), kar pomeni, da lahko vsakdo, ki pozna vaš npub, vidi stanje te denarnice in zgodovino transakcij na bločni verigi.\n\nZa ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, kot so borze. Teh sredstev nikoli ne mešaj s svojimi hladnimi denarnicami in z njimi ravnaj kot z denarjem, ki ga lahko izgubiš, saj lahko vsakdo, ki ima nadzor nad vašim zasebnim ključem (nsec...), ta sredstva tudi porabi.</string>
     <string name="wallet_onchain_public_dialog_confirm">Razumem</string>
     <string name="wallet_onchain_copy_dialog_confirm">Kopiraj naslov</string>
     <!-- Onchain zap send dialog -->
@@ -3404,7 +3453,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="zap_description">Zap</string>
     <string name="onchain_zap_description">On-chain Bitcoin zap</string>
     <string name="onchain_zap_pending">V potrjevanju</string>
-    <string name="change_reaction">Spremeni hitre reakcije</string>
+    <string name="change_reaction">Spremeni hitre odzive</string>
     <string name="bottom_bar_settings">Spodnja navigacijska vrstica</string>
     <string name="bottom_bar_settings_description">Povlecite za spremembo vrstnega reda. Preklopite za dodajanje ali odstranjevanje elementov s spodnje vrstice. Če ni izbran noben element, je spodnja vrstica skrita.</string>
     <string name="bottom_bar_settings_available">Dostopno</string>
@@ -3425,6 +3474,21 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="bottom_bar_category_feeds">Viri vsebin</string>
     <string name="bottom_bar_category_apps">Aplikacije in Splet</string>
     <string name="bottom_bar_category_other">Drugo</string>
+    <string name="drawer_settings">Stranski meni</string>
+    <string name="drawer_settings_title">Stranski meni</string>
+    <string name="drawer_settings_description">Odprite razdelek in izklopite vrstice, ki jih nikoli ne uporabljate. Nastavitve ostanejo vedno vidne, da se lahko kadarkoli vrnete sem. Vrstni red razdelkov je nespremenljiv.</string>
+    <string name="drawer_settings_sections">Sekcije</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d skrit</item>
+        <item quantity="two">%1$d skrita</item>
+        <item quantity="few">%1$d skriti</item>
+        <item quantity="other">%1$d skritih</item>
+    </plurals>
+    <string name="drawer_settings_visible">Vidno</string>
+    <string name="drawer_settings_hidden">Skrito</string>
+    <string name="drawer_settings_always_on">Vedno vklopljeno</string>
+    <string name="drawer_settings_show_all">Prikaži vse</string>
+    <string name="drawer_settings_hide_all">Skrij vse</string>
     <string name="home_tabs_settings">Domači zavihki</string>
     <string name="home_tabs_settings_description">Izberite zavihke, ki se prikažejo na začetnem zaslonu. Če je aktiven le en zavihek, je vrstica z zavihki skrita.</string>
     <string name="home_tab_everything">Vse</string>
@@ -3604,6 +3668,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="buzz_import_empty_body">Videti je, da na tem releju še nisi član nobenega kanala. Najprej v brskalniku sprejmi vabilo v delovni prostor in poskusite znova.</string>
     <string name="relay_group_section_channels">Kanali</string>
     <string name="relay_group_section_forums">Forumi</string>
+    <string name="relay_group_section_archived">Arhivirano</string>
     <string name="buzz_agent_working">Delam…</string>
     <string name="relay_group_add_member">Dodaj člana</string>
     <string name="buzz_community_add_people">Dodaj ljudi v ta delovni prostor</string>
@@ -3616,6 +3681,12 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="buzz_pin">Pripni kanal</string>
     <string name="buzz_unpin">Odpni kanal</string>
     <string name="buzz_dm_section_empty">Še ni pogovorov</string>
+    <plurals name="buzz_dm_hidden_count">
+        <item quantity="one">%1$d skrit pogovor</item>
+        <item quantity="two">%1$d skrita pogovora</item>
+        <item quantity="few">%1$d skriti pogovori</item>
+        <item quantity="other">%1$d skritih pogovorov</item>
+    </plurals>
     <plurals name="buzz_dm_see_all_count">
         <item quantity="one">Prikaži še %1$d pogovor</item>
         <item quantity="two">Prikaži še %1$d pogovora</item>
@@ -3797,6 +3868,11 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="git_repo_settings_topics">Teme (ločene z vejicami)</string>
     <string name="git_repo_settings_save">Shrani</string>
     <string name="git_repositories">Git repozitoriji</string>
+    <string name="highlights">Poudarki</string>
+    <string name="git_repositories_search_open">Filtriraj repozitorij</string>
+    <string name="git_repositories_search_close">Zapri filter</string>
+    <string name="git_repositories_search_placeholder">Filtriraj po imenu, temi, gostitelju, upravljalcu…</string>
+    <string name="git_repositories_search_no_results">Noben repozitorij v trenutnem viru ne ustreza temu iskanju.</string>
     <string name="nsite_title">Statična spletna stran: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_permissions">Dovoljenja:</string>
@@ -4029,6 +4105,8 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="resource_usage_send_section">Pošlji razvijalcem</string>
     <string name="resource_usage_send_explanation">Če Amethyst porablja preveč baterije ali podatkov, lahko to poročilo pošljete razvijalcem v šifriranem neposrednem sporočilu (DM). Vsebuje le številke s tega zaslona in tehnične števce za njimi – brez objav, stikov ali podrobnosti o brskanju. Nič ne bo poslano, dokler na zaslonu s sporočilom ne tapnete Pošlji.</string>
     <string name="resource_usage_send_button">Pošlji poročilo prek ZS</string>
+    <string name="resource_usage_copy_button">Kopiraj</string>
+    <string name="resource_usage_share_button">Deli</string>
     <string name="resource_usage_alert_title">Zaznana visoka poraba virov</string>
     <string name="resource_usage_alert_message">Aplikacija Amethyst je nedavno porabila več virov kot pričakovano: %1$s. Želite razvijalcem poslati poročilo o uporabi v šifriranem zasebnem sporočilu (ZS)? Preden bo karkoli poslano, boste videli celotno poročilo.</string>
     <string name="resource_usage_reason_bg_data">%1$s mobilnih podatkov v ozadju v enem dnevu</string>
@@ -4109,6 +4187,59 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="social_proof">Družbeno dokazilo</string>
     <string name="poll_submit">Oddaj</string>
     <string name="poll_view_results">Preglej rezultate</string>
+    <string name="poll_results_title">Rezultati ankete</string>
+    <string name="poll_results_loading">Nalagam anketo…</string>
+    <string name="poll_results_open">Odpri</string>
+    <string name="poll_results_closes_in">Zapre se čez %1$s</string>
+    <string name="poll_results_ended">Končano %1$s nazaj</string>
+    <string name="poll_results_all_options">Vse možnosti</string>
+    <string name="poll_results_your_pick">Vaš glas</string>
+    <plurals name="poll_results_selections">
+        <item quantity="one">%1$d izbira</item>
+        <item quantity="two">%1$d izbiri</item>
+        <item quantity="few">%1$d izbire</item>
+        <item quantity="other">%1$d izbir</item>
+    </plurals>
+    <string name="poll_results_no_votes">Ni oddanih glasov</string>
+    <string name="poll_results_checking_completeness">Preverjanje števila glasov…</string>
+    <string name="poll_results_partial">Naloženih %1$d od %2$d odzivov iz %3$d relejev.</string>
+    <string name="poll_results_partial_approx">%1$d od približno %2$d odzivov iz %3$d relejev.</string>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d glas</item>
+        <item quantity="two">%1$d glasova</item>
+        <item quantity="few">%1$d glasovi</item>
+        <item quantity="other">%1$d glasov</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d volivec</item>
+        <item quantity="two">%1$d volivca</item>
+        <item quantity="few">%1$d volivci</item>
+        <item quantity="other">%1$d volivcev</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d glas je prispel po zaprtju zato ne bo upoštevan.</item>
+        <item quantity="two">%1$d glasova sta prispela po zaprtju zato ne bosta upoštevana.</item>
+        <item quantity="few">%1$d glasovi so prispeli po zaprtju zato ne bojo upoštevani.</item>
+        <item quantity="other">%1$d glasov je prispelo po zaprtju zato ne bojo upoštevani.</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d glas je zabeležen pred objavo glasovanja in je zato izključen.</item>
+        <item quantity="two">%1$d glasova sta zabeležena pred objavo glasovanja in sta zato izključena.</item>
+        <item quantity="few">%1$d glasovi so zabeleženi pred objavo glasovanja in so zato izključeni.</item>
+        <item quantity="other">%1$d glasov je zabeleženih pred objavo glasovanja in so zato izključeni.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d odziv ni izbral veljavne možnosti in bo zato izključen.</item>
+        <item quantity="two">%1$d odziva nista izbrala veljavne možnosti in bosta zato izključena.</item>
+        <item quantity="few">%1$d odzivi niso izbrali veljavne možnosti in bojo zato izključeni.</item>
+        <item quantity="other">%1$d odzivov ni izbralo veljavne možnosti in bojo zato izključeni.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d volivec je skrit na vašem seznamu utišanih uporabnikov.</item>
+        <item quantity="two">%1$d volivca sta skrita na vašem seznamu utišanih uporabnikov.</item>
+        <item quantity="few">%1$d volivci so skriti na vašem seznamu utišanih uporabnikov.</item>
+        <item quantity="other">%1$d volivcev je skritih na vašem seznamu utišanih uporabnikov.</item>
+    </plurals>
     <string name="restart">Ponovno zaženi</string>
     <string name="chess_accept">Sprejmi</string>
     <string name="chess_decline">Zavrni</string>
@@ -4605,7 +4736,7 @@ Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, 
     <string name="suggest_workouts_setting_description">Prebere opravljene vadbe iz aplikacije Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) in predlaga objavo. Dovoljenje je zahtevano le ob povezavi.</string>
     <string name="compose_settings">Nastavitve urejevalnika</string>
     <string name="auto_create_drafts_setting_title">Samodejno ustvari osnutke</string>
-    <string name="auto_create_drafts_setting_description">Samodejno shrani osnutek, ko tipkaš ali zapustiš urejevalnik z neposlanim besedilom, in ga pošlje v tvoje zasebne odhodne releje.</string>
+    <string name="auto_create_drafts_setting_description">Samodejno shrani osnutek, ko tipkaš ali zapustiš urejevalnik z neodposlanim besedilom, in ga pošlje v vaše zasebne odhodne releje.</string>
     <string name="compose_signature_setting_title">Podpis</string>
     <string name="compose_signature_setting_description">Doda se na konec sporočila pri ustvarjanju nove objave, odgovora, citata ali članka. Pustite prazno, da onemogočite.</string>
     <string name="compose_signature_setting_hint">Vaš podpis</string>
