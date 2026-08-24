@@ -118,4 +118,18 @@ object LiveActivityRanking {
     fun isLive(channel: LiveActivitiesChannel): Boolean = channel.info?.status() == StatusTag.STATUS.LIVE
 
     fun isPlanned(channel: LiveActivitiesChannel): Boolean = channel.info?.status() == StatusTag.STATUS.PLANNED
+
+    /**
+     * True only when the stream is genuinely live right now: `status=live` AND its 30311 is fresh
+     * (re-published within the freshness window). Used to keep the "LIVE NOW" surfaces free of
+     * ended/planned/zombie streams.
+     */
+    fun isLiveNow(
+        channel: LiveActivitiesChannel,
+        now: Long = TimeUtils.now(),
+        isOfflineNow: Boolean = false,
+    ): Boolean {
+        val info = channel.info ?: return false
+        return LiveActivitySorting.isLiveAndFresh(info.status(), info.createdAt, now, isOfflineNow)
+    }
 }

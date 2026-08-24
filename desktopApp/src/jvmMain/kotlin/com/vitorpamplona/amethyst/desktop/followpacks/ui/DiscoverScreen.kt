@@ -87,7 +87,10 @@ fun DiscoverScreen(
     onNavigateToProfile: (String) -> Unit,
     onNavigateToThread: (String) -> Unit,
     @Suppress("UNUSED_PARAMETER") onZapFeedback: (ZapFeedback) -> Unit,
-    onOpenLive: (String) -> Unit = {},
+    onOpenLive: (String) -> Unit = {
+        com.vitorpamplona.amethyst.desktop.ui.live.LiveWatchController
+            .open(it)
+    },
     modifier: Modifier = Modifier,
 ) {
     val featured by state.featuredPack.collectAsState()

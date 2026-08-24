@@ -581,7 +581,10 @@ fun FeedScreen(
     onZapFeedback: (ZapFeedback) -> Unit = {},
     onNavigateToRelays: () -> Unit = {},
     onSearchClick: () -> Unit = {},
-    onOpenLive: (String) -> Unit = {},
+    onOpenLive: (String) -> Unit = {
+        com.vitorpamplona.amethyst.desktop.ui.live.LiveWatchController
+            .open(it)
+    },
 ) {
     val feedSearchActiveState = com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive.current
     var searchActive by feedSearchActiveState
@@ -973,13 +976,15 @@ fun FeedScreen(
             // Pinned "live now" bar, scoped to this column's audience (Following / Global only).
             if (feedMode == FeedMode.FOLLOWING || feedMode == FeedMode.GLOBAL) {
                 val liveBarPadding = LocalReadingSidePadding.current
+                Spacer(Modifier.height(8.dp))
                 LiveNowBar(
                     cache = localCache,
                     relayManager = relayManager,
                     scopeAuthors = if (feedMode == FeedMode.FOLLOWING) followedUsers.toList() else null,
                     onOpenLive = onOpenLive,
-                    modifier = Modifier.padding(horizontal = liveBarPadding),
+                    modifier = Modifier.padding(horizontal = liveBarPadding + 12.dp),
                 )
+                Spacer(Modifier.height(4.dp))
             }
 
             // Feed content based on FeedState

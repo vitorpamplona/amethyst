@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowOverflow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -99,14 +100,16 @@ fun LivesSection(
     val version by cache.liveActivityVersion.collectAsState()
     var query by rememberSaveable { mutableStateOf("") }
 
+    // "LIVE NOW" shows only streams that are genuinely live right now — never planned or ended.
     val ranked =
         remember(version, query, followSet) {
+            val liveOnly = cache.snapshotLiveActivities().filter { LiveActivityRanking.isLiveNow(it) }
             LiveActivityRanking
-                .rankForDiscover(cache.snapshotLiveActivities(), followSet)
+                .rankForDiscover(liveOnly, followSet)
                 .filter { LiveActivityRanking.matchesQuery(it, query) }
         }
 
-    // Hide the whole section until at least one stream is known (keeps Discover clean when empty).
+    // Hide the whole section when nothing is live (keeps Discover clean; no empty band).
     if (ranked.isEmpty() && query.isBlank()) return
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -137,9 +140,13 @@ fun LivesSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
+            // Cap at two rows so the rest of Discover ("From the pack" etc.) stays visible; extra
+            // live streams are still reachable via the search box and the per-column live bar.
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
+                maxLines = 2,
+                overflow = FlowRowOverflow.Clip,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 ranked.forEach { channel ->
