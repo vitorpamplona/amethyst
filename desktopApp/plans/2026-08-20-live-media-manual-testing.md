@@ -1,158 +1,150 @@
 # Manual Testing Sheet — Desktop Live Media (NIP-53) v1
 
 **Plan:** `docs/plans/2026-08-20-feat-desktop-live-media-plan.md`
-**Branch:** `feat/desktop-live-media`
+**Branch / worktree:** `feat/desktop-live-media` · `.claude/worktrees/feat-desktop-live-media`
 **Run:** `./gradlew :desktopApp:run`
 
-This is the acceptance test for the whole v1 feature. Check items off as the corresponding phase
-lands. Sections are ordered by implementation phase so you can start testing the earliest layers
-before the watch screen exists.
+Acceptance test for the whole v1 feature. Each section is tagged with its current build state so you
+know what will actually work today:
 
-**Legend:** ✅ pass · ❌ fail (note what happened) · ⏭️ blocked/not-yet-built
+- **🟢 LIVE** — built & compiling; test it now.
+- **🟡 PARTIAL** — built but with a known gap (called out inline).
+- **⚪ PENDING** — not built yet; skip until its commit lands.
 
-> **Good test streams:** open <https://zap.stream> in a browser to see who is currently live on
-> Nostr, then find the same hosts in Amethyst. zap.stream streams are real kind-30311 events with
-> live HLS `.m3u8` URLs and active kind-1311 chat — ideal for end-to-end testing. Have at least one
-> **live**, one **planned/scheduled**, and one **ended-with-recording** stream in view.
+**Legend for results:** ✅ pass · ❌ fail (write what happened) · ⏭️ skipped/blocked
 
 ---
 
-## Pre-flight
-- [ ] App launches, you are logged in with an account that **follows at least one host who streams**
-      (follow a couple of zap.stream regulars if not).
-- [ ] Relays connected (no persistent offline banner).
-- [ ] (Optional, for zap tests) an NWC wallet is connected under Wallet.
+## Setup (do once)
+- [ ] Open **<https://zap.stream>** in a browser — this shows who is live on Nostr right now with real
+      kind-30311 streams + kind-1311 chat. Keep it handy as your source of truth.
+- [ ] Log into Amethyst Desktop with an account that **follows ≥1 host who streams** (follow a couple of
+      the zap.stream front-page hosts if not).
+- [ ] Confirm relays are connected (no persistent "offline" banner).
+- [ ] (For later zap tests) connect an NWC wallet under **Wallet**.
+
+> **Tip:** live streams come and go. If a section says "nobody is live," check zap.stream — if the front
+> page is also empty, wait for a stream to start rather than recording a failure.
 
 ---
 
-## Phase 1 — Data layer (no UI yet; verify via logs / debugging)
-These have no user-facing surface; they're validated indirectly once Phase 2 UI exists. If you build
-with debug logging, confirm:
-- [ ] Kind **30311** events arriving from relays are stored (one entry per stream address; a
-      re-published 30311 **replaces** the old one, doesn't duplicate).
-- [ ] Kind **1311** chat events attach to their stream's channel (grouped by the root `a` tag).
-- [ ] Memory doesn't grow unbounded while a busy stream's chat streams in (channel chat is capped
-      at ~500 messages).
+## 1. Discover → "Live now"  🟢 LIVE
 
-*(Unit tests already cover the ordering/freshness logic: `./gradlew :commons:jvmTest --tests
-"*.LiveActivitySortingTest"` — should be green.)*
+Open the **Discover** destination. Scroll to the **LIVE NOW** section (below the featured pack hero).
 
----
-
-## Phase 2 — Discovery & the "live now" bar
-
-### Discover → Lives
-- [ ] Open **Discover**. A **Lives** section appears when ≥1 stream is known.
-- [ ] Live streams show first (LIVE badge), then planned ("starts in…"), then ended.
-- [ ] Within LIVE, streams with more of **your follows** participating rank higher; among those,
-      higher viewer count ranks higher.
-- [ ] A `status=live` stream whose video is actually dead is **not** shown as live (sinks/hidden).
-- [ ] Each card shows: thumbnail/image, title, host, LIVE/scheduled badge, viewer count when present.
-- [ ] **Search box** filters the Lives grid live by **title**, **host name**, and **hashtag** as you type.
-- [ ] Empty states read sensibly: no lives at all; search with no matches.
-
-### Per-column "live now" bar
-- [ ] Open a **Following** feed column. When a followed host is live, a compact pinned bar appears at
-      the **top of that column**, above the feed.
-- [ ] The bar shows **one** host (the one with the most viewers) with a red LIVE indicator + title,
-      and a **"+N live ›"** affordance when more than one is live.
-- [ ] Tapping **"+N live ›"** reveals/leads to the rest of the currently-live set.
-- [ ] Open a **Global** feed column — the bar reflects the **global** live set (different from Following).
-- [ ] When nobody in a column's audience is live, the bar is **hidden** (no empty bar).
-- [ ] Scrolling the feed does not cause the bar to flicker/recompute visibly; scrolling is smooth.
+| # | Step | Expected | Result |
+|---|------|----------|--------|
+| 1.1 | Open Discover with ≥1 stream live on the network | A **LIVE NOW** section appears with a red dot header + a search box + a grid of cards | |
+| 1.2 | Look at card order | **Live** streams first, then **planned** ("starts in…"), then ended; within live, streams where **more of your follows** participate rank higher, then higher **viewer count** | |
+| 1.3 | Inspect a live card | Shows thumbnail image, a red **LIVE** badge, the **title**, the **host** name, and **"N watching"** when the host reports a viewer count | |
+| 1.4 | Inspect a planned card | Shows a **"in 2h / in 30m / SCHEDULED"** badge instead of LIVE | |
+| 1.5 | Type a host's name in the search box | Grid filters live to matching streams as you type | |
+| 1.6 | Type part of a stream **title** | Filters to matching titles | |
+| 1.7 | Type a **hashtag** that a live stream uses (e.g. `bitcoin`) | Filters to streams tagged with it | |
+| 1.8 | Type gibberish (`zzzzz`) | Shows **"No live streams match "zzzzz.""** (grid empty, section still visible) | |
+| 1.9 | Clear the search | Full ranked grid returns | |
+| 1.10 | Open Discover when **nothing** is live network-wide | The LIVE NOW section is **absent** (not an empty box) | |
+| 1.11 | **Known gap:** click a card | Nothing happens yet — the watch screen isn't wired (see §3). Not a bug today. | |
 
 ---
 
-## Phase 3 — Watch screen (player + chat + zap)
+## 2. Per-column "live now" bar  🟢 LIVE
 
-### Opening / layout
-- [ ] Click a live card (from Discover or the bar). A **full-window watch screen** opens: video on the
-      **left**, live chat on the **right**, host/metadata below/around.
-- [ ] Header shows: title, host (avatar+name), participant roles (Host/Speaker/…), viewer count, and a
-      **LIVE** status pill.
-- [ ] Closing the watch screen returns to where you were (deck/single-pane) and **stops playback**.
+| # | Step | Expected | Result |
+|---|------|----------|--------|
+| 2.1 | Open a **Following** feed column while a **followed** host is live | A compact pinned bar sits at the **top of that column**, above the feed: red dot + **"<host> is live"** | |
+| 2.2 | Have **2+** followed hosts live at once | The bar shows the **most-watched** one, plus a **"+N live ›"** link | |
+| 2.3 | Click **"+N live ›"** | A dropdown lists all currently-live streams in scope; each entry is clickable | |
+| 2.4 | Open a **Global** feed column | The bar reflects the **global** live set (typically different/larger than Following) | |
+| 2.5 | Scroll the feed | The bar stays **pinned** at the top (doesn't scroll away) and the feed scrolls smoothly beneath it | |
+| 2.6 | Open a column where **nobody in scope** is live | **No bar** is shown (Following bar hidden when no followed host is live) | |
+| 2.7 | Open a **hashtag / list / search / notifications** column | **No bar** (by design — v1 scopes the bar to Following + Global only) | |
+| 2.8 | **Known gap:** click the bar / a dropdown entry | No-op today (watch screen pending, §3) | |
 
-### Video playback (live)
+---
+
+## 3. Watch screen — player + chat + zap  ⚪ PENDING
+
+*Not built yet. These are the target checks for when the watch commit lands; skip for now.*
+
+### Open / layout
+- [ ] Clicking a live card or the bar opens a **full-window** watch screen: video **left**, chat **right**, host/metadata below.
+- [ ] Header shows title, host (avatar + name), participant roles, viewer count, and a **LIVE** pill.
+- [ ] Closing returns to the prior view and **stops playback**.
+
+### Video (live)
 - [ ] The live stream plays (audio + video).
-- [ ] **No seek bar** is shown in live mode (a "● LIVE" pill instead of a scrubber).
-- [ ] Play/pause and volume work; fullscreen works.
-- [ ] Pull your network briefly / stop the source: the player shows **"Reconnecting…"** (not a frozen
-      frame), then recovers when the stream returns, or shows an **offline + Retry** state if it stays down.
-- [ ] A stream that is offline when you open it shows an **offline placeholder**, never an endless spinner.
+- [ ] **No seek bar** in live mode (a "● LIVE" pill instead).
+- [ ] Play/pause, volume, fullscreen work.
+- [ ] Kill the source briefly → **"Reconnecting…"** (not a frozen frame) → recovers, or an **offline + Retry** state if it stays down.
+- [ ] Opening an already-offline stream → offline placeholder, never an endless spinner.
 
-### Video playback (VOD / recording)
-- [ ] Open an **ended** stream that has a recording. It plays the **recording** with a **normal seekable**
-      seek bar (VOD mode), scrubbing works.
-- [ ] An **ended stream with no recording** shows a "Stream ended — no recording" state (non-playable),
-      both in the grid and if opened.
+### Video (VOD / recording)
+- [ ] An **ended** stream with a recording plays the recording with a **normal seekable** bar.
+- [ ] An ended stream with **no recording** shows "Stream ended — no recording" (non-playable).
 
-### Live chat (read)
-- [ ] Chat messages (kind 1311) for **this** stream appear on the right, newest at the bottom.
-- [ ] The list auto-scrolls to the newest message **only while you're at the bottom**.
-- [ ] Scroll up: auto-scroll pauses and a **"↓ N new messages"** pill appears; clicking it snaps to bottom.
-- [ ] Hovering the chat pauses auto-scroll (mouse-first); moving away resumes.
-- [ ] Messages from **muted/blocked** users do **not** appear; muting someone mid-stream hides their
-      existing messages immediately.
-- [ ] A very busy stream stays smooth (no UI jank/freeze); messages may batch slightly (expected).
+### Chat (read)
+- [ ] Kind-1311 messages for this stream appear, newest at bottom.
+- [ ] Auto-scrolls to newest **only while at the bottom**; scrolling up shows a **"↓ N new"** pill.
+- [ ] Hovering chat pauses auto-scroll; leaving resumes.
+- [ ] **Muted/blocked** users' messages don't appear; muting mid-stream hides existing ones immediately.
+- [ ] A busy stream stays smooth (messages may batch slightly).
 
-### Live chat (post)
-- [ ] Type a message and send. It appears in the chat (as a kind-1311 with the correct stream `a` tag),
-      visible to other clients (verify on zap.stream if possible).
-- [ ] Sending with **no relays connected** / **logged out** shows a clear disabled reason, not a silent failure.
-- [ ] When the stream **ends** while you're watching: an "ended" banner shows, the composer is **disabled**
-      ("stream ended"), chat stays **readable**, and a **"Play recording"** action appears if a recording exists.
-      The window does **not** auto-close.
+### Chat (post)
+- [ ] Sending posts a kind-1311 with the correct stream `a` tag (verify it shows on zap.stream).
+- [ ] Composer is **disabled with a reason** when logged out / no relays / stream ended (draft preserved).
 
-### Zapping the stream
-- [ ] A **Zap** action is available for the stream. Zapping opens the amount dialog and sends via NWC.
-- [ ] Zap is **disabled with a reason** when the recipient has no lightning address, or when no NWC wallet
-      is connected (routes you to connect).
-- [ ] Zap receipt is attributed to the **stream** (30311), and the amount reflects in the stream's totals.
-      *(Per-message chat zap + a top-zappers leaderboard are **deferred to v1.5** — not expected here.)*
+### Zap
+- [ ] **Zap** the stream → amount dialog → sends via NWC; receipt attributed to the 30311.
+- [ ] Zap **disabled with reason** when the host has no lightning address or no NWC wallet is connected.
+- [ ] *(Per-message chat zap + top-zappers leaderboard are v1.5 — not expected.)*
 
-### Mid-watch transitions & re-entry
-- [ ] Host edits the title/adds participants mid-stream (30311 re-published): the header updates live.
-- [ ] While watching one stream, open a **second** stream from the bar/Discover: the first tears down
-      cleanly (video + chat stop) and the second starts — no double audio, no leaked chat.
-- [ ] Open a stream via a **direct naddr/nevent link**: it resolves, shows a loading state, then the live/
-      ended/offline branch. An unknown/not-found address shows a clear message (never hangs).
+### Lifecycle / re-entry
+- [ ] Host edits title/participants mid-stream → header updates live.
+- [ ] Stream ends mid-watch → "ended" banner, composer disabled, "Play recording" offered; window does **not** auto-close.
+- [ ] Opening a **second** stream tears down the first cleanly (no double audio, no leaked chat).
+- [ ] Opening via a direct **naddr/nevent** link resolves + loads; unknown → clear message, no hang.
 
 ---
 
-## Phase 4 — Profile Streams tab & planned streams
-- [ ] Open a streaming host's **profile**. A **Streams** tab lists their streams (live + past).
-- [ ] A live stream in the tab is marked LIVE and opens the watch screen; a past one with a recording
-      plays VOD.
-- [ ] A **planned** stream anywhere shows a **"starts in…" badge**. *(A "Remind me" action is **deferred**
-      — not expected in v1.)*
-- [ ] A planned stream whose start time passed long ago and never went live is relabeled/downranked
-      (not stuck showing "starts in -3h").
+## 4. Profile "Streams" tab  ⚪ PENDING
+- [ ] A streaming host's **profile** has a **Streams** tab listing their live + past streams.
+- [ ] A live entry opens the watch screen; a past one with a recording plays VOD.
+
+## 5. Planned streams  🟡 PARTIAL
+- [ ] Planned streams show a **"starts in…"** badge in the Discover grid.  🟢 (works now)
+- [ ] A planned stream whose start passed long ago and never went live is relabeled/downranked.  ⚪ (pending online/overdue wiring)
+- [ ] *(No "Remind me" in v1 — badge only, by design.)*
+
+## 6. Online-probe / dead streams  ⚪ PENDING
+- [ ] A `status=live` stream whose `.m3u8` is actually dead is **not** shown as live (sinks/hidden).
+      *Today all `status=live` are treated as online — this downgrade is not wired yet.*
 
 ---
 
-## Cross-cutting / regression
-- [ ] **Security:** the app only plays `https` stream URLs; a stream with a `file://`/`smb://`/custom-scheme
-      URL is refused (no OS handler is invoked, incl. the "open in default player" fallback).
-- [ ] **Privacy:** the app does not probe stream URLs you never chose to interact with beyond what's needed
-      to show live/offline for visible cards (no drive-by HEAD storm to every stream in the cache).
-- [ ] **Chat safety:** a chat message containing bidirectional/control unicode renders without reordering
-      surrounding UI text.
-- [ ] Existing feed video (NowPlayingBar) still works; opening a live takes over playback and closing it
-      leaves the player in a clean state (no stale live position leaking into later feed/VOD video).
-- [ ] No new crashes; `./gradlew :commons:jvmTest :desktopApp:test` green; `./gradlew spotlessApply` clean.
+## 7. Cross-cutting / security & regression  🟡 PARTIAL (mostly pending)
+- [ ] ⚪ App only plays `https` stream URLs; `file://`/`smb://`/custom-scheme URLs are refused (incl. the "open in default player" fallback).
+- [ ] ⚪ No drive-by HEAD probing of every cached stream URL (probe only what's needed for visible cards).
+- [ ] ⚪ Chat messages with bidirectional/control unicode render without reordering surrounding UI.
+- [ ] 🟢 Existing feed video (NowPlayingBar) still works; existing feeds/Discover unaffected by the new section.
+- [ ] 🟢 `./gradlew :commons:jvmTest --tests "*.LiveActivitySortingTest"` passes.
+- [ ] ⚪ Full build green: `./gradlew :desktopApp:compileKotlin :amethyst:compileDebugKotlin` + `spotlessApply` clean.
 
 ---
 
 ## Platform notes
-- **macOS** (AVFoundation): primary test target.
-- **Linux** (GStreamer): must be installed at runtime; live HLS reconnection behaviour differs — spot-check.
-- **Windows** (Media Foundation): native live HLS is weakest; verify the stall watchdog/reconnect carries it.
+- **macOS** (AVFoundation): primary target for the video tests.
+- **Linux** (GStreamer): must be installed at runtime; live-HLS reconnection differs — spot-check when watch lands.
+- **Windows** (Media Foundation): weakest native live HLS — the stall watchdog/reconnect must carry it.
+
+## Known v1 limitations (by design — not bugs)
+No broadcasting; no audio rooms / raids / clips; no per-message chat zap or leaderboard (v1.5); no OS
+notifications / "Remind me" (badge only); live bar only on Following + Global columns.
 
 ---
 
-## Known v1 limitations (by design — not bugs)
-- No broadcasting / going live.
-- No audio rooms / Nests, raids, or clips.
-- No per-message chat zap or top-zappers leaderboard (v1.5).
-- No OS-level notifications / "Remind me" for planned streams (badge only).
-- Live bar only on **Following** and **Global** columns (not hashtag/list/search columns).
+### Quick "test right now" path (today's build)
+1. `./gradlew :desktopApp:run`, log in, ensure ≥1 stream is live (check zap.stream).
+2. **Discover → LIVE NOW**: see the grid, confirm ranking (§1.2), try search (§1.5–1.9).
+3. **Home → Following** and **Global**: confirm the pinned live bar + "+N live ›" (§2).
+4. Everything in §3–§7 marked ⚪/🟡-pending is expected **not** to work yet — that's the next build.
