@@ -63,6 +63,7 @@ fun DesktopVideoPlayer(
     viewMode: ViewMode = ViewMode.DEFAULT,
     onViewModeChange: ((ViewMode) -> Unit)? = null,
     trailingControls: @Composable (() -> Unit)? = null,
+    isLive: Boolean = false,
 ) {
     val videoState by GlobalMediaPlayer.videoState.collectAsState()
     val isActiveVideo = videoState.url == url
@@ -86,6 +87,14 @@ fun DesktopVideoPlayer(
     LaunchedEffect(url, autoPlay) {
         if (autoPlay) {
             GlobalMediaPlayer.playVideo(url, initialSeekPosition)
+        }
+    }
+
+    // Surface playback errors to the log — kdroidFilter reports these only via state, so without
+    // this a stream that fails to start ("live doesn't start") leaves no trace.
+    LaunchedEffect(isActiveVideo, videoState.errorReason) {
+        if (isActiveVideo && videoState.errorReason != null) {
+            println("DesktopVideoPlayer ERROR url=$url reason=${videoState.errorReason}")
         }
     }
 
@@ -167,6 +176,7 @@ fun DesktopVideoPlayer(
                     },
                 onViewModeChange = onViewModeChange,
                 trailingControls = trailingControls,
+                isLive = isLive,
             )
         }
     }

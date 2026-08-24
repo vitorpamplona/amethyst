@@ -74,6 +74,44 @@ fun createFollowingFeedSubscription(
 }
 
 /**
+ * Creates a subscription config for NIP-53 live streams (kind 30311). Pass [authors] to scope to a
+ * set of hosts (e.g. the user's follows); null fetches globally for discovery.
+ */
+fun createLiveActivitiesSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    authors: List<String>? = null,
+    limit: Int = 100,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig =
+    SubscriptionConfig(
+        subId = generateSubId("live-activities"),
+        filters = listOf(FilterBuilders.liveActivities(authors = authors, limit = limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+
+/**
+ * Creates a subscription config for the live chat (kind 1311) of a single stream, keyed by the
+ * stream's 30311 address (`kind:pubkey:d`).
+ */
+fun createLiveChatSubscription(
+    relays: Set<NormalizedRelayUrl>,
+    streamAddress: String,
+    limit: Int = 200,
+    onEvent: (Event, Boolean, NormalizedRelayUrl, List<Filter>?) -> Unit,
+    onEose: (NormalizedRelayUrl, List<Filter>?) -> Unit = { _, _ -> },
+): SubscriptionConfig =
+    SubscriptionConfig(
+        subId = generateSubId("live-chat-${streamAddress.take(24)}"),
+        filters = listOf(FilterBuilders.liveActivityChat(streamAddress, limit = limit)),
+        relays = relays,
+        onEvent = onEvent,
+        onEose = onEose,
+    )
+
+/**
  * Creates a subscription config for contact list (kind 3).
  */
 fun createContactListSubscription(
