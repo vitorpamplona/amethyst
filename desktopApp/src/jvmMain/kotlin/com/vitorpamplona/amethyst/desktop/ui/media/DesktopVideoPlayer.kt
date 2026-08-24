@@ -63,6 +63,7 @@ fun DesktopVideoPlayer(
     viewMode: ViewMode = ViewMode.DEFAULT,
     onViewModeChange: ((ViewMode) -> Unit)? = null,
     trailingControls: @Composable (() -> Unit)? = null,
+    isLive: Boolean = false,
 ) {
     val videoState by GlobalMediaPlayer.videoState.collectAsState()
     val isActiveVideo = videoState.url == url
@@ -167,6 +168,7 @@ fun DesktopVideoPlayer(
                     },
                 onViewModeChange = onViewModeChange,
                 trailingControls = trailingControls,
+                isLive = isLive,
             )
         }
     }

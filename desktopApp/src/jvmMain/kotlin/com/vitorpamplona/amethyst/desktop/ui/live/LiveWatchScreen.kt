@@ -124,12 +124,12 @@ fun LiveWatchScreen(
             // Top bar
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 16.dp, bottom = 8.dp),
             ) {
                 IconButton(onClick = onClose) {
                     SymbolIcon(symbol = MaterialSymbols.Close, contentDescription = "Close")
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(4.dp))
                 Text(
                     text = channel.toBestDisplayName(),
                     style = MaterialTheme.typography.titleMedium,
@@ -148,6 +148,7 @@ fun LiveWatchScreen(
                         DesktopVideoPlayer(
                             url = streamUrl,
                             autoPlay = true,
+                            isLive = channel.info?.status() == StatusTag.STATUS.LIVE,
                             modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)),
                         )
                     } else {
