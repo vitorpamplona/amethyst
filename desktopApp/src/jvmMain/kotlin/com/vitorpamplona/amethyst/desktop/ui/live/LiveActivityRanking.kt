@@ -79,18 +79,27 @@ object LiveActivityRanking {
         followSet: Set<String>?,
         now: Long = TimeUtils.now(),
         isOfflineNow: (LiveActivitiesChannel) -> Boolean = { false },
-    ): List<LiveActivitiesChannel> =
-        channels
-            .filter { channel ->
+    ): List<LiveActivitiesChannel> {
+        val eligible =
+            channels.filter { channel ->
                 val info = channel.info ?: return@filter false
                 val fresh = LiveActivitySorting.isLiveAndFresh(info.status(), info.createdAt, now, isOfflineNow(channel))
-                if (!fresh) return@filter false
-                followSet == null || involvesFollow(channel, followSet)
-            }.sortedWith(
-                compareByDescending<LiveActivitiesChannel> { it.info?.currentParticipants() ?: 0 }
-                    .thenByDescending { it.info?.createdAt ?: 0L }
-                    .thenBy { it.address.toValue() },
+                fresh && (followSet == null || involvesFollow(channel, followSet))
+            }
+        // Rank by viewers (current_participants), then recency. MUST go through sortDescending so the
+        // keys are snapshotted once — channel.info is a var swapped from relay threads, and reading it
+        // lazily inside a comparator violates TimSort's contract and crashes the feed column.
+        return LiveActivitySorting.sortDescending(eligible) { channel ->
+            val info = channel.info
+            LiveActivityRank(
+                statusOrder = LiveActivitySorting.ORDER_LIVE,
+                followParticipants = 0,
+                totalParticipants = info?.currentParticipants() ?: 0,
+                startOrCreated = info?.createdAt ?: 0L,
+                idHex = channel.address.toValue(),
             )
+        }
+    }
 
     private fun involvesFollow(
         channel: LiveActivitiesChannel,

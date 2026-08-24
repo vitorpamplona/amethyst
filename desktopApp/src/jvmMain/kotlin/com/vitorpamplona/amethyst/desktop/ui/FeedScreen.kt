@@ -980,7 +980,7 @@ fun FeedScreen(
                 LiveNowBar(
                     cache = localCache,
                     relayManager = relayManager,
-                    scopeAuthors = if (feedMode == FeedMode.FOLLOWING) followedUsers.toList() else null,
+                    scopeAuthors = if (feedMode == FeedMode.FOLLOWING) followedUsers else null,
                     onOpenLive = onOpenLive,
                     modifier = Modifier.padding(horizontal = liveBarPadding + 12.dp),
                 )

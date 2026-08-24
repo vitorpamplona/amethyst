@@ -250,6 +250,7 @@ object GlobalMediaPlayer {
     }
 
     fun stopVideo() {
+        videoOpenJob?.cancel()
         videoPlayer?.stop()
         _videoState.value = MediaPlaybackState()
         _isFullscreen.value = false

@@ -2369,7 +2369,6 @@ fun MainContent(
                     cache = localCache,
                     relayManager = relayManager,
                     account = account,
-                    onNavigateToProfile = {},
                     onClose = {
                         com.vitorpamplona.amethyst.desktop.ui.live.LiveWatchController
                             .close()

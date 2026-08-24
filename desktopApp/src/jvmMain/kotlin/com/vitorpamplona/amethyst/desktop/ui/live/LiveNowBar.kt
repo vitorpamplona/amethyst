@@ -63,19 +63,21 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 fun LiveNowBar(
     cache: DesktopLocalCache,
     relayManager: RelayConnectionManager,
-    scopeAuthors: List<String>?,
+    scopeAuthors: Set<String>?,
     onOpenLive: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val connectedRelays by relayManager.connectedRelays.collectAsState()
 
+    // Keyed on the Set (stable identity from the account state holder) — not a fresh list per
+    // recomposition — so the subscription and the snapshot below don't churn on unrelated recomposes.
     rememberSubscription(connectedRelays, scopeAuthors, relayManager = relayManager) {
         if (connectedRelays.isEmpty()) {
             null
         } else {
             createLiveActivitiesSubscription(
                 relays = connectedRelays,
-                authors = scopeAuthors,
+                authors = scopeAuthors?.toList(),
                 onEvent = { event, _, relay, _ -> cache.consume(event, relay) },
             )
         }
@@ -84,7 +86,7 @@ fun LiveNowBar(
     val version by cache.liveActivityVersion.collectAsState()
     val liveNow =
         remember(version, scopeAuthors) {
-            LiveActivityRanking.liveNowForBar(cache.snapshotLiveActivities(), scopeAuthors?.toSet())
+            LiveActivityRanking.liveNowForBar(cache.snapshotLiveActivities(), scopeAuthors)
         }
 
     if (liveNow.isEmpty()) return

@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.desktop.ui.live
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.subscriptions.createLiveChatSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
@@ -91,7 +92,6 @@ fun LiveWatchScreen(
     cache: DesktopLocalCache,
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn?,
-    onNavigateToProfile: (String) -> Unit,
     onClose: () -> Unit,
 ) {
     val channel =
@@ -105,6 +105,13 @@ fun LiveWatchScreen(
             "LiveWatchScreen open address=$address status=${info?.status()} " +
                 "streaming=${info?.streaming() ?: "<none>"} recording=${info?.recording() ?: "<none>"}",
         )
+    }
+
+    // Stop playback when the watch overlay closes (leaves composition) so audio/decoding doesn't
+    // keep running in the background. Switching to another stream keeps the overlay composed (only
+    // `address` changes), so this fires only on a real close.
+    DisposableEffect(Unit) {
+        onDispose { GlobalMediaPlayer.stopVideo() }
     }
 
     Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
@@ -174,7 +181,7 @@ fun LiveWatchScreen(
                     }
 
                     Spacer(Modifier.height(12.dp))
-                    WatchHeader(channel = channel, onNavigateToProfile = onNavigateToProfile)
+                    WatchHeader(channel = channel)
                 }
 
                 VerticalDivider()
@@ -192,7 +199,6 @@ fun LiveWatchScreen(
                         channel = channel,
                         account = account,
                         relayManager = relayManager,
-                        onNavigateToProfile = onNavigateToProfile,
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
                 }
@@ -202,10 +208,7 @@ fun LiveWatchScreen(
 }
 
 @Composable
-private fun WatchHeader(
-    channel: com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel,
-    onNavigateToProfile: (String) -> Unit,
-) {
+private fun WatchHeader(channel: com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel) {
     val info = channel.info
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         if (info?.status() == StatusTag.STATUS.LIVE) {
@@ -215,18 +218,11 @@ private fun WatchHeader(
             Spacer(Modifier.width(12.dp))
         }
         val host = channel.creatorName()
-        val hostHex = channel.creator?.pubkeyHex
         if (host != null) {
             Text(
                 text = host,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                modifier =
-                    if (hostHex != null) {
-                        Modifier.clickable { onNavigateToProfile(hostHex) }
-                    } else {
-                        Modifier
-                    },
             )
         }
         Spacer(Modifier.weight(1f))
@@ -247,7 +243,6 @@ private fun ChatColumn(
     channel: com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel,
     account: AccountState.LoggedIn?,
     relayManager: DesktopRelayConnectionManager,
-    onNavigateToProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val notesState by channel
@@ -265,7 +260,9 @@ private fun ChatColumn(
 
     val listState = rememberLazyListState()
     // Auto-stick to the newest message while the user is at the bottom (index 0 in reverseLayout).
-    LaunchedEffect(messages.size) {
+    // Keyed on the newest message id (not size) so it still fires once the 500-cap prune keeps size
+    // flat (drop-one/add-one) on a busy stream.
+    LaunchedEffect(messages.firstOrNull()?.idHex) {
         if (messages.isNotEmpty() && listState.firstVisibleItemIndex <= 1) {
             listState.animateScrollToItem(0)
         }
@@ -281,9 +278,7 @@ private fun ChatColumn(
             items(messages, key = { it.idHex }) { note ->
                 ChatMessageRow(
                     author = note.author?.toBestDisplayName() ?: "anon",
-                    authorHex = note.author?.pubkeyHex,
                     content = note.event?.content.orEmpty(),
-                    onNavigateToProfile = onNavigateToProfile,
                 )
             }
         }
@@ -295,9 +290,7 @@ private fun ChatColumn(
 @Composable
 private fun ChatMessageRow(
     author: String,
-    authorHex: String?,
     content: String,
-    onNavigateToProfile: (String) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -307,12 +300,6 @@ private fun ChatMessageRow(
             color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier =
-                if (authorHex != null) {
-                    Modifier.clickable { onNavigateToProfile(authorHex) }
-                } else {
-                    Modifier
-                },
         )
         Text(text = content, style = MaterialTheme.typography.bodyMedium)
     }
