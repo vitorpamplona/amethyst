@@ -58,9 +58,14 @@ class WebFileChooserActivity : ComponentActivity() {
             return
         }
 
-        // A recreated instance (rotation) already has its pick in flight; launching again would stack a
-        // second picker on top of the first.
-        if (savedInstanceState != null) return
+        // A recreated instance has lost the in-flight request that its result would be matched against
+        // (configChanges keeps this rare — a system kill, not a rotation), and relaunching would stack a
+        // second picker on the first. Release the page's input now rather than let it wait on a result
+        // that can no longer be routed anywhere.
+        if (savedInstanceState != null) {
+            finish()
+            return
+        }
 
         chooser.launch(
             acceptTypes = ask.acceptTypes,
@@ -74,6 +79,18 @@ class WebFileChooserActivity : ComponentActivity() {
     override fun finish() {
         report(null)
         super.finish()
+    }
+
+    /**
+     * The system can destroy this host without ever calling [finish] — a low-memory kill while the
+     * picker is on top. Without this the page's file input would wait on a result nobody is left to
+     * send, dead for the life of the page, and the coordinator would hold the reply callback (and the
+     * controller behind it) forever.
+     */
+    override fun onDestroy() {
+        chooser.teardown()
+        report(null)
+        super.onDestroy()
     }
 
     private fun report(uris: Array<String>?) {

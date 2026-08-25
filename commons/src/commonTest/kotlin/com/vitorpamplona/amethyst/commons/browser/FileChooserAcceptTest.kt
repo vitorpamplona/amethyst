@@ -126,6 +126,16 @@ class FileChooserAcceptTest {
         assertEquals(listOf("image/jpeg"), resolved.mimeTypes)
     }
 
+    @Test
+    fun malformedMimeTokenDoesNotBecomeTheFilter() {
+        // A half-written MIME would go straight into Intent.setType and match no provider at all, so the
+        // user gets an empty picker with no way out. Treat it as unnameable and show everything.
+        assertEquals(FileChooserAccept.ANY, resolve("image/").primaryType)
+        assertEquals(FileChooserAccept.ANY, resolve("/png").primaryType)
+        assertEquals(FileChooserAccept.ANY, resolve("/").primaryType)
+        assertEquals(emptyList(), resolve("image/").mimeTypes)
+    }
+
     private fun capture(vararg accept: String) = FileChooserAccept.captureMedia(accept.toList(), map::get)
 
     @Test

@@ -98,6 +98,10 @@ class WebFileChooserLauncher(
     private fun open(cameraAllowed: Boolean) {
         val pending = ask ?: return onResult(null)
         ask = null
+        // A second file input can ask before the first pick returns. The page's own callback is already
+        // released by PendingFileChooser, but the superseded request still owns scratch files and camera
+        // grants that nothing else would ever come back for.
+        abandonInFlight()
 
         val built =
             NappletFileChooser.buildRequest(
@@ -120,6 +124,19 @@ class WebFileChooserLauncher(
                 onResult(null)
             }
     }
+
+    /** Releases the scratch files and camera grants of a request whose result will never be read. */
+    private fun abandonInFlight() {
+        val stale = request ?: return
+        request = null
+        NappletFileChooser.parseResult(activity, stale, Activity.RESULT_CANCELED, null)
+    }
+
+    /**
+     * Called when the host is going away with a pick still open, so the request's scratch files and
+     * camera grants are not left behind for the stale sweep to find a day later.
+     */
+    fun teardown() = abandonInFlight()
 
     private fun hasCameraPermission() = ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 

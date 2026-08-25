@@ -62,10 +62,12 @@ object NappletCaptureFiles {
     ): Pair<File, Uri>? =
         runCatching {
             val dir = File(context.cacheDir, DIR).apply { mkdirs() }
-            // Not createTempFile's random name: a stable, sortable prefix makes the sweep below able to
-            // recognise our own files and nothing else.
-            val file = File(dir, "capture-${System.currentTimeMillis()}-${counter++}.$extension")
-            file.createNewFile()
+            // createTempFile, not a name built from a clock and a per-object sequence: the main and
+            // `:napplet` processes each hold their OWN copy of this object, so those sequences run
+            // independently and two picks started in the same millisecond could name the same file —
+            // one capture would then silently overwrite the other. The extension is what FileProvider
+            // types the URI from, so it has to survive into the suffix.
+            val file = File.createTempFile("capture-", ".$extension", dir)
             file to FileProvider.getUriForFile(context, authority(context), file)
         }.onFailure { Log.w(TAG, "Could not create a capture file", it) }
             .getOrNull()
@@ -132,6 +134,4 @@ object NappletCaptureFiles {
     }
 
     private const val GRANT_FLAGS = Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION
-
-    private var counter = 0
 }

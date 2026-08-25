@@ -74,10 +74,9 @@ object FileChooserAccept {
 
         val mimes = mutableListOf<String>()
         for (token in tokens) {
-            val mime = if (token.contains('/')) token else extensionToMime(token.removePrefix("."))
             // One name we can't translate means we cannot express this page's filter faithfully. Show
             // everything rather than a filter that silently excludes part of what it asked for.
-            if (mime.isNullOrEmpty()) return Resolved(ANY, emptyList())
+            val mime = mimeOf(token, extensionToMime) ?: return Resolved(ANY, emptyList())
             if (mime !in mimes) mimes.add(mime)
         }
 
@@ -115,13 +114,30 @@ object FileChooserAccept {
         val media = mutableSetOf<CaptureMedia>()
         for (token in tokens) {
             if (token == ANY) return setOf(CaptureMedia.IMAGE, CaptureMedia.VIDEO)
-            val mime = if (token.contains('/')) token else extensionToMime(token.removePrefix("."))
-            when (mime?.substringBefore('/')) {
+            when (mimeOf(token, extensionToMime)?.substringBefore('/')) {
                 "image" -> media.add(CaptureMedia.IMAGE)
                 "video" -> media.add(CaptureMedia.VIDEO)
             }
         }
         return media
+    }
+
+    /**
+     * One `accept` entry as a MIME type, or null when it cannot be turned into one.
+     *
+     * A token with a slash is taken as a MIME type, but only when both halves are actually there: a
+     * page that writes `accept="image/"` would otherwise put that straight into `Intent.setType`, where
+     * it matches no provider and leaves the user staring at an empty picker with no way out. Everything
+     * else is an extension, with or without its leading dot.
+     */
+    private fun mimeOf(
+        token: String,
+        extensionToMime: (String) -> String?,
+    ): String? {
+        if (!token.contains('/')) return extensionToMime(token.removePrefix(".")).takeIf { !it.isNullOrEmpty() }
+        val type = token.substringBefore('/')
+        val subtype = token.substringAfter('/')
+        return token.takeIf { type.isNotEmpty() && subtype.isNotEmpty() && !subtype.contains('/') }
     }
 
     /**

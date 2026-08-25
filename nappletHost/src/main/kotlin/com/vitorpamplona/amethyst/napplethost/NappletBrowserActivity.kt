@@ -302,6 +302,7 @@ class NappletBrowserActivity : ComponentActivity() {
         runCatching { unbindService(brokerConnection) }
         // A picker still up when the browser is torn down would otherwise leave its callback unanswered.
         pendingFileChooser.cancel()
+        fileChooserLauncher.teardown()
         if (this::webView.isInitialized) {
             // Detach from the view tree BEFORE destroy(). Destroying a WebView while it is still attached to
             // the window corrupts the SHARED multiprocess renderer/network state, which then breaks the OTHER

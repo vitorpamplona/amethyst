@@ -461,6 +461,7 @@ class NappletHostActivity : ComponentActivity() {
         keyActions.clear()
         // A picker still up when the applet is torn down would otherwise leave its callback unanswered.
         pendingFileChooser.cancel()
+        fileChooserLauncher.teardown()
         if (this::webView.isInitialized) {
             // Detach before destroy(): destroying an attached WebView corrupts the shared multiprocess
             // renderer/network state and breaks the other (embedded) WebViews in this `:napplet` process
