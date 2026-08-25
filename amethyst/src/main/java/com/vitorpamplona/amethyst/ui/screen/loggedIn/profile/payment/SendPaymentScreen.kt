@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
@@ -74,7 +75,7 @@ import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.clink.pointers.OfferPriceType
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
@@ -355,6 +356,12 @@ private fun SendPaymentLoaded(
     val clinkNoResponseLabel = stringRes(R.string.clink_debit_no_response)
     val invoiceErrorLabel = stringRes(R.string.error_dialog_pay_invoice_error)
     val parsingErrorLabel = stringRes(R.string.error_parsing_error_message)
+    val unreadableResponseLabel = stringRes(R.string.wallet_connect_unreadable_response_error)
+    val noResponseLabel =
+        stringRes(
+            R.string.wallet_connect_no_response_error,
+            NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
+        )
 
     // Payment callbacks arrive on IO/relay threads. Snapshot state writes are
     // thread-safe, but every other payment flow in the app marshals UI state
@@ -382,18 +389,21 @@ private fun SendPaymentLoaded(
         when (val source = pickedSource) {
             is PaymentSource.Nwc -> {
                 postStage(PaymentFlowStage.InProgress(stringRes(context, R.string.send_payment_paying_via, source.name)))
-                accountViewModel.sendZapPaymentRequestFor(invoice, null) { response ->
+                accountViewModel.sendZapPaymentRequestFor(
+                    bolt11 = invoice,
+                    zappedNote = null,
+                    onTimeout = { postStage(PaymentFlowStage.Failure(noResponseLabel)) },
+                ) { response ->
                     when (response) {
                         is PayInvoiceSuccessResponse -> postStage(PaymentFlowStage.Success(successTitle))
-                        is PayInvoiceErrorResponse ->
+                        // IErrorResponseLike, not PayInvoiceErrorResponse: a wallet that
+                        // omits `result_type` on an error still deserializes to something
+                        // renderable, and the narrower check dropped it silently.
+                        is IErrorResponseLike ->
                             postStage(
-                                PaymentFlowStage.Failure(
-                                    response.error?.message
-                                        ?: response.error?.code?.toString()
-                                        ?: parsingErrorLabel,
-                                ),
+                                PaymentFlowStage.Failure(response.errorMessage() ?: parsingErrorLabel),
                             )
-                        else -> {}
+                        else -> postStage(PaymentFlowStage.Failure(unreadableResponseLabel))
                     }
                 }
             }

@@ -30,11 +30,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 
 /**
@@ -85,16 +86,31 @@ fun InvoicePaymentDispatcher(
         onConfirm = {
             when (source) {
                 is PaymentSource.Nwc ->
-                    accountViewModel.sendZapPaymentRequestFor(bolt11, null) { response ->
+                    accountViewModel.sendZapPaymentRequestFor(
+                        bolt11 = bolt11,
+                        zappedNote = null,
+                        onTimeout = {
+                            onError(
+                                stringRes(
+                                    context,
+                                    R.string.wallet_connect_no_response_error,
+                                    NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
+                                ),
+                            )
+                        },
+                    ) { response ->
                         when (response) {
                             is PayInvoiceSuccessResponse -> onSuccess()
-                            is PayInvoiceErrorResponse ->
+                            // IErrorResponseLike, not PayInvoiceErrorResponse: a wallet that
+                            // omits `result_type` on an error still deserializes to something
+                            // renderable, and the narrower check dropped it silently.
+                            is IErrorResponseLike ->
                                 onError(
-                                    response.error?.message
-                                        ?: response.error?.code?.toString()
+                                    response.errorMessage()
                                         ?: stringRes(context, R.string.error_parsing_error_message),
                                 )
-                            else -> {}
+                            else ->
+                                onError(stringRes(context, R.string.wallet_connect_unreadable_response_error))
                         }
                     }
 

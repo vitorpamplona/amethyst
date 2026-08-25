@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -159,15 +160,28 @@ class V4VPaymentHandler(
                     tlvRecords = tlvRecords,
                 )
 
-            account.zaps.sendNwcRequest(request) { response: Response? ->
-                if (response is IErrorResponseLike) {
+            account.zaps.sendNwcRequest(
+                request = request,
+                onResponse = { response: Response? ->
+                    if (response is IErrorResponseLike) {
+                        onError(
+                            stringRes(context, R.string.error_dialog_pay_invoice_error),
+                            response.errorMessage()
+                                ?: stringRes(context, R.string.error_parsing_error_message),
+                        )
+                    }
+                },
+                onTimeout = {
                     onError(
                         stringRes(context, R.string.error_dialog_pay_invoice_error),
-                        response.errorMessage()
-                            ?: stringRes(context, R.string.error_parsing_error_message),
+                        stringRes(
+                            context,
+                            R.string.wallet_connect_no_response_error,
+                            NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
+                        ),
                     )
-                }
-            }
+                },
+            )
         }
     }
 
@@ -250,15 +264,29 @@ class V4VPaymentHandler(
             is PaymentSource.Nwc -> {
                 var done = 0
                 payables.forEach { payable ->
-                    account.zaps.sendZapPaymentRequestFor(payable.invoice, zappedNote) { response ->
-                        if (response is IErrorResponseLike) {
+                    account.zaps.sendZapPaymentRequestFor(
+                        bolt11 = payable.invoice,
+                        zappedNote = zappedNote,
+                        onResponse = { response ->
+                            if (response is IErrorResponseLike) {
+                                onError(
+                                    stringRes(context, R.string.error_dialog_pay_invoice_error),
+                                    response.errorMessage()
+                                        ?: stringRes(context, R.string.error_parsing_error_message),
+                                )
+                            }
+                        },
+                        onTimeout = {
                             onError(
                                 stringRes(context, R.string.error_dialog_pay_invoice_error),
-                                response.errorMessage()
-                                    ?: stringRes(context, R.string.error_parsing_error_message),
+                                stringRes(
+                                    context,
+                                    R.string.wallet_connect_no_response_error,
+                                    NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
+                                ),
                             )
-                        }
-                    }
+                        },
+                    )
                     done++
                     onProgress(done.toFloat() / payables.size)
                 }

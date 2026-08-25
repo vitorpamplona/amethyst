@@ -3055,6 +3055,8 @@
     <string name="error_unable_to_fetch_invoice">Unable to fetch invoice from receiver\'s servers</string>
 
     <string name="wallet_connect_pay_invoice_error_error">Your wallet connect provider returned the following error: %1$s</string>
+    <string name="wallet_connect_no_response_error">Your wallet did not respond within %1$d seconds. The payment may or may not have gone through — check your wallet before retrying.</string>
+    <string name="wallet_connect_unreadable_response_error">Your wallet connect provider sent a reply Amethyst could not read.</string>
 
     <string name="tor_connection_failed_title">Tor isn\'t connecting</string>
     <string name="tor_connection_failed_body">Amethyst couldn\'t finish bootstrapping Tor. Use a regular (non-Tor) connection so the feed can load? We\'ll remember this choice for the next hour and re-try Tor after that.</string>
@@ -3210,6 +3212,7 @@
     <string name="wallet_incoming">Received</string>
     <string name="wallet_outgoing">Sent</string>
     <string name="wallet_refresh">Refresh</string>
+    <string name="wallet_transactions_load_failed">Could not load transactions</string>
     <string name="wallet_filter_all">All</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Non-Zaps</string>

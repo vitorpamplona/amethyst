@@ -41,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -89,6 +90,7 @@ fun WalletTransactionsScreen(
     val isLoadingMore by walletViewModel.isLoadingMore.collectAsState()
     val hasMore by walletViewModel.hasMoreTransactions.collectAsState()
     val currentFilter by walletViewModel.transactionFilter.collectAsState()
+    val error by walletViewModel.error.collectAsState()
 
     val listState = rememberLazyListState()
 
@@ -132,6 +134,7 @@ fun WalletTransactionsScreen(
             )
         },
     ) { padding ->
+        val currentError = error
         if (isLoading && transactions.isEmpty()) {
             Column(
                 modifier =
@@ -147,6 +150,34 @@ fun WalletTransactionsScreen(
                     stringRes(R.string.wallet_loading),
                     style = MaterialTheme.typography.bodyLarge,
                 )
+            }
+        } else if (currentError != null && transactions.isEmpty()) {
+            // A wallet refusal (e.g. RESTRICTED) leaves the list empty. Without this
+            // branch the screen would claim "no transactions yet" and hide the reason.
+            Column(
+                modifier =
+                    Modifier
+                        .padding(padding)
+                        .fillMaxSize()
+                        .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = stringRes(R.string.wallet_transactions_load_failed),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = currentError,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextButton(onClick = { walletViewModel.fetchTransactions() }) {
+                    Text(stringRes(R.string.wallet_refresh))
+                }
             }
         } else if (transactions.isEmpty()) {
             Column(
@@ -168,6 +199,21 @@ fun WalletTransactionsScreen(
                 modifier = Modifier.padding(padding),
                 state = listState,
             ) {
+                if (currentError != null) {
+                    // Already-loaded transactions stay visible; the banner explains why
+                    // the latest refresh or page load did not land.
+                    item {
+                        Text(
+                            text = currentError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                }
                 item {
                     TransactionFilterRow(currentFilter) { walletViewModel.setTransactionFilter(it) }
                 }

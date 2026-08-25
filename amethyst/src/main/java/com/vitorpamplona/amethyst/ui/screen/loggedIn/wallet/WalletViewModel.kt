@@ -533,6 +533,7 @@ class WalletViewModel : ViewModel() {
         val walletUri = getWalletUri(walletId) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
+            _error.value = null
             _hasMoreTransactions.value = true
             var requestId: HexKey? = null
             val timeoutJob = launchTimeout({ requestId }) { _isLoading.value = false }
@@ -611,6 +612,7 @@ class WalletViewModel : ViewModel() {
                                     } else {
                                         newTxs.size >= pageSize
                                     }
+                                _error.value = null
                             }
 
                             is NwcErrorResponse -> {

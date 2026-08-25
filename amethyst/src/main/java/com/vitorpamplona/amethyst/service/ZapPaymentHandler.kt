@@ -28,11 +28,13 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -419,18 +421,41 @@ class ZapPaymentHandler(
                     zappedNote = note,
                     onResponse = { response ->
                         progress.step()
-                        if (response is PayInvoiceErrorResponse) {
+                        // Matched on IErrorResponseLike rather than PayInvoiceErrorResponse:
+                        // a wallet that omits `result_type` on an error (NIP-47 does not
+                        // require it) deserializes to the generic NwcErrorResponse, and the
+                        // narrower check dropped those refusals without a word.
+                        if (response is IErrorResponseLike) {
                             onError(
                                 stringRes(context, R.string.error_dialog_pay_invoice_error),
                                 stringRes(
                                     context,
                                     R.string.wallet_connect_pay_invoice_error_error,
-                                    response.error?.message
-                                        ?: response.error?.code?.toString() ?: "Error parsing error message",
+                                    response.errorMessage()
+                                        ?: stringRes(context, R.string.error_parsing_error_message),
                                 ),
                                 payable.info.user,
                             )
+                        } else if (response !is PayInvoiceSuccessResponse) {
+                            // Undecryptable (null) or a shape we cannot read. Say so rather
+                            // than leaving the zap looking like it silently worked.
+                            onError(
+                                stringRes(context, R.string.error_dialog_pay_invoice_error),
+                                stringRes(context, R.string.wallet_connect_unreadable_response_error),
+                                payable.info.user,
+                            )
                         }
+                    },
+                    onTimeout = {
+                        onError(
+                            stringRes(context, R.string.error_dialog_pay_invoice_error),
+                            stringRes(
+                                context,
+                                R.string.wallet_connect_no_response_error,
+                                NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
+                            ),
+                            payable.info.user,
+                        )
                     },
                 )
 
