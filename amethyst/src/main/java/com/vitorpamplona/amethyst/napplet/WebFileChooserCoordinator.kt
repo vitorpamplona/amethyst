@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.napplet
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.vitorpamplona.amethyst.napplethost.NappletFileChooser
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -34,9 +33,9 @@ import java.util.concurrent.ConcurrentHashMap
  * and [NappletHostService][com.vitorpamplona.amethyst.napplethost.NappletHostService]) host their
  * WebView in the keyless `:napplet` process as a windowless Service, so when a page taps
  * `<input type="file">` there is no Activity there to start a picker from. They send the *description*
- * of the request over Messenger instead; this builds the Intent here in the main process, launches
- * [WebFileChooserActivity] to collect the result, and hands the picked URIs back to the caller, which
- * relays them to the sandbox.
+ * of the request over Messenger instead; this holds it here in the main process and launches
+ * [WebFileChooserActivity], which runs the picker (and the camera, and the CAMERA permission prompt
+ * that a `capture` input needs) and reports back to the caller, which relays the URIs to the sandbox.
  *
  * Mirrors [NappletConsentCoordinator]: the pending request is keyed by a one-time token so the
  * throwaway Activity carries nothing but that token. Every request completes exactly once — a
@@ -46,27 +45,32 @@ import java.util.concurrent.ConcurrentHashMap
  * WebView in `:napplet` without any re-granting.
  */
 object WebFileChooserCoordinator {
-    private class Pending(
-        val chooser: Intent,
+    /** The request as it arrived from the sandbox, plus where to send the answer. */
+    class Pending(
+        val acceptTypes: List<String>,
+        val allowMultiple: Boolean,
+        val captureEnabled: Boolean,
+        val pageTitle: String?,
         val onResult: (Array<String>?) -> Unit,
     )
 
     private val pending = ConcurrentHashMap<String, Pending>()
 
     /**
-     * Shows a picker filtered by [acceptTypes] (raw HTML `accept` entries) and calls [onResult] with the
-     * picked URIs as strings, or null when the user cancelled. [onResult] always runs, including when no
-     * picker could be started at all — the page is waiting on it.
+     * Shows a picker for [acceptTypes] and calls [onResult] with the picked URIs as strings, or null
+     * when nothing was chosen. [onResult] always runs, including when no picker host could be started
+     * at all — the page's file input is waiting on it.
      */
     fun request(
         context: Context,
         acceptTypes: List<String>,
         allowMultiple: Boolean,
+        captureEnabled: Boolean,
         pageTitle: String?,
         onResult: (Array<String>?) -> Unit,
     ) {
         val token = UUID.randomUUID().toString()
-        pending[token] = Pending(NappletFileChooser.buildIntent(context, acceptTypes, allowMultiple, pageTitle), onResult)
+        pending[token] = Pending(acceptTypes, allowMultiple, captureEnabled, pageTitle, onResult)
 
         val launch =
             Intent(context, WebFileChooserActivity::class.java)
@@ -80,10 +84,10 @@ object WebFileChooserCoordinator {
             }
     }
 
-    /** Called by [WebFileChooserActivity] to get the picker it should launch. */
-    fun chooserFor(token: String): Intent? = pending[token]?.chooser
+    /** Called by [WebFileChooserActivity] to learn what to ask the user for. */
+    fun pendingFor(token: String): Pending? = pending[token]
 
-    /** Called by [WebFileChooserActivity] with the outcome; null = cancelled. Resolves at most once. */
+    /** Called by [WebFileChooserActivity] with the outcome; null = nothing chosen. Resolves at most once. */
     fun complete(
         token: String,
         uris: Array<String>?,

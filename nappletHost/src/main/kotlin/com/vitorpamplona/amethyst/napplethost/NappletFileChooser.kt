@@ -20,12 +20,16 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import android.webkit.WebChromeClient.FileChooserParams
 import com.vitorpamplona.amethyst.commons.browser.FileChooserAccept
+import java.io.File
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 /**
@@ -33,29 +37,56 @@ import com.vitorpamplona.amethyst.commons.R as CommonsR
  *
  * A WebView shows no picker of its own: unless the app overrides
  * `WebChromeClient.onShowFileChooser`, tapping a file input is a silent no-op. Every host here does
- * override it, and they all build their Intent through this so the browser, the full-screen napplet /
- * nSite sandbox, and both embedded surfaces filter and multi-select identically.
+ * override it, and they all build their request through this so the browser, the full-screen napplet /
+ * nSite sandbox, and both embedded surfaces filter, multi-select and capture identically.
  *
- * The request is described by plain data (accept list, multi-select, title) rather than by a
+ * A request is described by plain data (accept list, multi-select, capture, title) rather than by a
  * ready-made Intent, because the two embedded hosts have no Activity of their own and must ask the
- * main process to launch the picker for them. Shipping data keeps the keyless `:napplet` process
- * unable to hand the trusted process an arbitrary Intent to start — it can only ask for a file picker.
+ * main process to run the picker for them. Shipping data keeps the keyless `:napplet` process unable
+ * to hand the trusted process an arbitrary Intent to start — it can only ask for a file picker.
  */
 object NappletFileChooser {
     /**
-     * Builds the picker for a request described by [acceptTypes] / [allowMultiple].
+     * A built picker, plus the capture files behind whatever camera options it offers.
      *
-     * `ACTION_GET_CONTENT` (rather than `ACTION_OPEN_DOCUMENT`) so gallery and camera-roll apps that
-     * are not document providers still show up — the same trade-off Chrome makes; the page only ever
-     * needs to read the bytes once, not to hold a persistable grant. [pageTitle] is the page-supplied
-     * chooser title, used when it set one.
+     * The capture files have to outlive the Intent: a camera writes to `EXTRA_OUTPUT` and returns a
+     * result with no data at all, so the only way to learn what was shot is to look at the files
+     * afterwards ([parseResult]).
      */
-    fun buildIntent(
+    class Request internal constructor(
+        val intent: Intent,
+        internal val captures: List<Capture>,
+    )
+
+    /** One camera option's output file, its content URI, and who was granted access to write it. */
+    class Capture internal constructor(
+        internal val file: File,
+        internal val uri: Uri,
+        internal val grantedTo: List<String>,
+    )
+
+    /**
+     * Builds the picker for a request described by [acceptTypes] / [allowMultiple] / [captureEnabled].
+     *
+     * `ACTION_GET_CONTENT` (rather than `ACTION_OPEN_DOCUMENT`) so gallery apps that are not document
+     * providers still show up — the same trade-off Chrome makes; the page only needs to read the bytes
+     * once, not hold a persistable grant. When the page accepts photos or video, the matching camera is
+     * offered alongside the file sources, which is what makes an image-accepting input behave the way it
+     * does in a mobile browser instead of only reaching already-saved files.
+     *
+     * [cameraAllowed] must be the caller's live CAMERA-permission state: `ACTION_IMAGE_CAPTURE` throws
+     * `SecurityException` for an app that declares the CAMERA permission without holding it, and
+     * Amethyst declares it. Callers request it first when the page asked for a camera outright
+     * ([captureEnabled]); see [wantsCamera].
+     */
+    fun buildRequest(
         context: Context,
         acceptTypes: List<String>,
         allowMultiple: Boolean,
+        captureEnabled: Boolean,
+        cameraAllowed: Boolean,
         pageTitle: CharSequence? = null,
-    ): Intent {
+    ): Request {
         val mimeMap = MimeTypeMap.getSingleton()
         val resolved = FileChooserAccept.resolve(acceptTypes) { ext -> mimeMap.getMimeTypeFromExtension(ext) }
 
@@ -74,21 +105,44 @@ object NappletFileChooser {
         }
         if (allowMultiple) pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
 
+        val captures = if (cameraAllowed) buildCaptureOptions(context, acceptTypes) else emptyList()
+
         val title = pageTitle?.takeIf { it.isNotBlank() } ?: context.getString(CommonsR.string.browser_file_chooser_title)
-        return Intent.createChooser(pick, title)
+        val chooser = Intent.createChooser(pick, title)
+
+        if (captures.isNotEmpty()) {
+            // At most two entries (stills + video), which is also all the system chooser will display
+            // from EXTRA_INITIAL_INTENTS — anything beyond that would be silently dropped.
+            chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, captures.map { it.first }.toTypedArray())
+        }
+
+        return Request(chooser, captures.map { it.second })
     }
 
     /** Convenience overload for the two Activity hosts, which hold the real [FileChooserParams]. */
-    fun buildIntent(
+    fun buildRequest(
         context: Context,
         params: FileChooserParams,
-    ): Intent =
-        buildIntent(
+        cameraAllowed: Boolean,
+    ): Request =
+        buildRequest(
             context = context,
             acceptTypes = params.acceptTypes?.toList().orEmpty(),
             allowMultiple = allowsMultiple(params.mode),
+            captureEnabled = params.isCaptureEnabled,
+            cameraAllowed = cameraAllowed,
             pageTitle = params.title,
         )
+
+    /**
+     * Whether a picker for [acceptTypes] would offer a camera at all — i.e. whether it is worth holding
+     * (or asking for) the CAMERA permission. False for a page that only accepts documents, so opening a
+     * PDF upload never triggers a camera prompt.
+     */
+    fun wantsCamera(acceptTypes: List<String>): Boolean {
+        val mimeMap = MimeTypeMap.getSingleton()
+        return FileChooserAccept.captureMedia(acceptTypes) { ext -> mimeMap.getMimeTypeFromExtension(ext) }.isNotEmpty()
+    }
 
     /**
      * Whether [mode] should let the user pick more than one file.
@@ -103,11 +157,74 @@ object NappletFileChooser {
     fun allowsMultiple(mode: Int): Boolean = mode == FileChooserParams.MODE_OPEN_MULTIPLE || mode == FileChooserParams.MODE_OPEN_FOLDER
 
     /**
-     * Turns an activity result into the array the page's `filePathCallback` expects, or null when the
-     * user backed out. Handles both the single-URI and the `ClipData` multi-select shapes.
+     * Turns an activity result into the array the page's `filePathCallback` expects, or null when
+     * nothing was chosen. Handles the single-URI and `ClipData` multi-select shapes, and the camera
+     * shape — where the result carries no URI at all and the evidence of a capture is a scratch file
+     * that now has bytes in it. Every capture file this request created and did not return is deleted
+     * here, so a cancelled or unused camera option leaves nothing behind.
      */
     fun parseResult(
+        context: Context,
+        request: Request,
         resultCode: Int,
         data: Intent?,
-    ): Array<Uri>? = FileChooserParams.parseResult(resultCode, data)
+    ): Array<Uri>? {
+        val picked = FileChooserParams.parseResult(resultCode, data)?.takeIf { it.isNotEmpty() }
+
+        // A camera returns no URI at all — it reports success by filling the file we handed it, so an
+        // empty one means it was dismissed. Only consulted when the picker returned nothing of its own.
+        val captured =
+            if (picked != null || resultCode != Activity.RESULT_OK) {
+                null
+            } else {
+                request.captures.firstOrNull { it.file.length() > 0 }
+            }
+
+        request.captures.forEach { capture ->
+            // Every camera app was granted write access up front because none of them could be ruled
+            // out yet. The outcome is known now, so none of them needs it any more — including for the
+            // photo being returned, which this app reads back through its own provider.
+            NappletCaptureFiles.releaseGrants(context, capture.grantedTo, capture.uri)
+            if (capture !== captured) NappletCaptureFiles.discard(context, capture.file)
+        }
+
+        return picked ?: captured?.let { arrayOf(it.uri) }
+    }
+
+    /**
+     * One camera option per medium the page accepts, each with its own output file. Media with no
+     * installed handler are skipped so the chooser never shows an entry that dead-ends.
+     */
+    private fun buildCaptureOptions(
+        context: Context,
+        acceptTypes: List<String>,
+    ): List<Pair<Intent, Capture>> {
+        val mimeMap = MimeTypeMap.getSingleton()
+        val media = FileChooserAccept.captureMedia(acceptTypes) { ext -> mimeMap.getMimeTypeFromExtension(ext) }
+        if (media.isEmpty()) return emptyList()
+
+        NappletCaptureFiles.sweepStale(context)
+
+        return media.mapNotNull { medium ->
+            val (action, extension) =
+                when (medium) {
+                    FileChooserAccept.CaptureMedia.IMAGE -> MediaStore.ACTION_IMAGE_CAPTURE to "jpg"
+                    FileChooserAccept.CaptureMedia.VIDEO -> MediaStore.ACTION_VIDEO_CAPTURE to "mp4"
+                }
+
+            val handlers = context.packageManager.queryIntentActivities(Intent(action), PackageManager.MATCH_DEFAULT_ONLY)
+            if (handlers.isEmpty()) return@mapNotNull null
+
+            val (file, uri) = NappletCaptureFiles.create(context, extension) ?: return@mapNotNull null
+            val packages = handlers.map { it.activityInfo.packageName }.distinct()
+            NappletCaptureFiles.grantTo(context, packages, uri)
+
+            val intent =
+                Intent(action)
+                    .putExtra(MediaStore.EXTRA_OUTPUT, uri)
+                    .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+            intent to Capture(file, uri, packages)
+        }
+    }
 }

@@ -420,6 +420,7 @@ class NappletBrowserService : Service() {
                         putLong(NappletBrowserContract.KEY_FILE_CHOOSER_ID, id)
                         putStringArray(NappletBrowserContract.KEY_FILE_CHOOSER_ACCEPT, params.acceptTypes ?: emptyArray())
                         putBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_MULTIPLE, NappletFileChooser.allowsMultiple(params.mode))
+                        putBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_CAPTURE, params.isCaptureEnabled)
                         putString(NappletBrowserContract.KEY_FILE_CHOOSER_TITLE, params.title?.toString())
                     }
             }

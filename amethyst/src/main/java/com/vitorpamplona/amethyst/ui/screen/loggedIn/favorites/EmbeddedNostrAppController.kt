@@ -257,6 +257,7 @@ class EmbeddedNostrAppController(
                     context = appContext,
                     acceptTypes = data.getStringArray(NappletEmbedContract.KEY_FILE_CHOOSER_ACCEPT)?.toList().orEmpty(),
                     allowMultiple = data.getBoolean(NappletEmbedContract.KEY_FILE_CHOOSER_MULTIPLE, false),
+                    captureEnabled = data.getBoolean(NappletEmbedContract.KEY_FILE_CHOOSER_CAPTURE, false),
                     pageTitle = data.getString(NappletEmbedContract.KEY_FILE_CHOOSER_TITLE),
                 ) { uris ->
                     send(NappletEmbedContract.MSG_FILE_CHOOSER_RESULT) {

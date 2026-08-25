@@ -56,7 +56,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
@@ -108,10 +107,7 @@ class NappletHostActivity : ComponentActivity() {
     // Registered as a field so it exists before onCreate returns (registerForActivityResult's contract).
     private val pendingFileChooser = PendingFileChooser()
 
-    private val fileChooserLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            pendingFileChooser.deliver(NappletFileChooser.parseResult(result.resultCode, result.data))
-        }
+    private val fileChooserLauncher = WebFileChooserLauncher(this) { uris -> pendingFileChooser.deliver(uris) }
 
     private val paths = mutableListOf<PathTag>()
     private val servers = mutableListOf<String>()
@@ -703,12 +699,12 @@ class NappletHostActivity : ComponentActivity() {
         params: WebChromeClient.FileChooserParams,
     ): Boolean {
         pendingFileChooser.start(filePathCallback)
-        runCatching { fileChooserLauncher.launch(NappletFileChooser.buildIntent(this, params)) }
-            .onFailure { e ->
-                Log.w(TAG, "No activity available to pick a file", e)
-                pendingFileChooser.cancel()
-                Toast.makeText(this, getString(CommonsR.string.browser_file_chooser_unavailable), Toast.LENGTH_LONG).show()
-            }
+        fileChooserLauncher.launch(
+            acceptTypes = params.acceptTypes?.toList().orEmpty(),
+            allowMultiple = NappletFileChooser.allowsMultiple(params.mode),
+            captureEnabled = params.isCaptureEnabled,
+            pageTitle = params.title,
+        )
         return true
     }
 

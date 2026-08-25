@@ -265,6 +265,7 @@ class EmbeddedWebAppController(
                     context = appContext,
                     acceptTypes = data.getStringArray(NappletBrowserContract.KEY_FILE_CHOOSER_ACCEPT)?.toList().orEmpty(),
                     allowMultiple = data.getBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_MULTIPLE, false),
+                    captureEnabled = data.getBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_CAPTURE, false),
                     pageTitle = data.getString(NappletBrowserContract.KEY_FILE_CHOOSER_TITLE),
                 ) { uris ->
                     send(NappletBrowserContract.MSG_FILE_CHOOSER_RESULT) {

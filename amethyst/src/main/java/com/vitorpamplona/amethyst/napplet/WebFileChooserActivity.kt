@@ -21,28 +21,26 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.ActivityResultContracts
-import com.vitorpamplona.amethyst.napplethost.NappletFileChooser
-import com.vitorpamplona.amethyst.commons.R as CommonsR
+import com.vitorpamplona.amethyst.napplethost.WebFileChooserLauncher
 
 /**
  * Invisible main-process host for one file pick made on behalf of an **embedded** WebView surface.
  *
- * The surface renders from the keyless `:napplet` process, which has no Activity to start a picker
- * from, so [WebFileChooserCoordinator] launches this instead. It exists only long enough to run the
- * picker and report the result, and it reports on every exit — a chosen file, a cancel, a system
- * teardown — because the page's `<input type="file">` stays busy until it hears something back.
+ * The surface renders from the keyless `:napplet` process, which has no Activity to start a picker or
+ * a permission prompt from, so [WebFileChooserCoordinator] launches this instead. It exists only long
+ * enough to run the pick and report the result, and it reports on every exit — a chosen file, a
+ * cancel, a system teardown — because the page's `<input type="file">` stays busy until it hears
+ * something back.
  */
 class WebFileChooserActivity : ComponentActivity() {
     private var token: String? = null
     private var reported = false
 
-    private val picker =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            report(NappletFileChooser.parseResult(result.resultCode, result.data)?.map { it.toString() }?.toTypedArray())
+    // Field, not a local: registerForActivityResult must run before this activity reaches STARTED.
+    private val chooser =
+        WebFileChooserLauncher(this) { uris ->
+            report(uris?.map { it.toString() }?.toTypedArray())
             finish()
         }
 
@@ -51,26 +49,25 @@ class WebFileChooserActivity : ComponentActivity() {
 
         val token = intent.getStringExtra(WebFileChooserCoordinator.EXTRA_TOKEN)
         this.token = token
-        val chooser = token?.let { WebFileChooserCoordinator.chooserFor(it) }
-        if (chooser == null) {
-            // No pending request under this token: the surface went away, or the process was restarted
-            // and the request died with it. Nothing to report to.
+        val ask = token?.let { WebFileChooserCoordinator.pendingFor(it) }
+        if (ask == null) {
+            // No pending request under this token: the surface went away, or the process restarted and
+            // the request died with it. Nothing to report to.
             reported = true
             finish()
             return
         }
 
-        // A recreated instance (rotation) already has its pick in flight; re-launching would stack a
+        // A recreated instance (rotation) already has its pick in flight; launching again would stack a
         // second picker on top of the first.
         if (savedInstanceState != null) return
 
-        runCatching { picker.launch(chooser) }
-            .onFailure { e ->
-                Log.w(TAG, "No activity available to pick a file", e)
-                Toast.makeText(this, getString(CommonsR.string.browser_file_chooser_unavailable), Toast.LENGTH_LONG).show()
-                report(null)
-                finish()
-            }
+        chooser.launch(
+            acceptTypes = ask.acceptTypes,
+            allowMultiple = ask.allowMultiple,
+            captureEnabled = ask.captureEnabled,
+            pageTitle = ask.pageTitle,
+        )
     }
 
     /** Fail-open toward the page: any unreported teardown still releases its file input. */
@@ -83,9 +80,5 @@ class WebFileChooserActivity : ComponentActivity() {
         if (reported) return
         reported = true
         token?.let { WebFileChooserCoordinator.complete(it, uris) }
-    }
-
-    private companion object {
-        private const val TAG = "WebFileChooser"
     }
 }

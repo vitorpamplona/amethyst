@@ -84,6 +84,46 @@ object FileChooserAccept {
         return Resolved(primaryType = commonType(mimes), mimeTypes = mimes)
     }
 
+    /** A camera a file input can plausibly be satisfied by. */
+    enum class CaptureMedia {
+        IMAGE,
+        VIDEO,
+    }
+
+    /**
+     * Which cameras to offer for an input accepting [acceptTypes], mirroring what a mobile browser
+     * shows: a bare `<input type="file">` offers both stills and video, an image-only accept offers
+     * just the camera, and `accept="application/pdf"` offers neither.
+     *
+     * Unlike [resolve], an extension the platform can't name contributes nothing instead of widening —
+     * widening here would put a camera in front of a page that never asked for one. [extensionToMime]
+     * is the same lookup [resolve] takes.
+     */
+    fun captureMedia(
+        acceptTypes: List<String>,
+        extensionToMime: (String) -> String?,
+    ): Set<CaptureMedia> {
+        val tokens =
+            acceptTypes
+                .flatMap { it.split(',') }
+                .map { it.trim().lowercase() }
+                .filter { it.isNotEmpty() }
+
+        // No accept at all: the page takes anything, so both cameras are fair game.
+        if (tokens.isEmpty()) return setOf(CaptureMedia.IMAGE, CaptureMedia.VIDEO)
+
+        val media = mutableSetOf<CaptureMedia>()
+        for (token in tokens) {
+            if (token == ANY) return setOf(CaptureMedia.IMAGE, CaptureMedia.VIDEO)
+            val mime = if (token.contains('/')) token else extensionToMime(token.removePrefix("."))
+            when (mime?.substringBefore('/')) {
+                "image" -> media.add(CaptureMedia.IMAGE)
+                "video" -> media.add(CaptureMedia.VIDEO)
+            }
+        }
+        return media
+    }
+
     /**
      * The narrowest single type covering [mimes]: the type itself when there is only one, the shared
      * family's wildcard when they all belong to one family, and [ANY] when they span families (or the

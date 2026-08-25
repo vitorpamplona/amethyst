@@ -588,6 +588,7 @@
             android:name=".napplet.WebFileChooserActivity"
             android:exported="false"
             android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- First-connect "Connect to Nostr" dialog. -->
         <activity

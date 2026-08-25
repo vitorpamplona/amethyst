@@ -463,6 +463,7 @@ class NappletHostService : Service() {
                         putLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID, id)
                         putStringArray(NappletEmbedContract.KEY_FILE_CHOOSER_ACCEPT, params.acceptTypes ?: emptyArray())
                         putBoolean(NappletEmbedContract.KEY_FILE_CHOOSER_MULTIPLE, NappletFileChooser.allowsMultiple(params.mode))
+                        putBoolean(NappletEmbedContract.KEY_FILE_CHOOSER_CAPTURE, params.isCaptureEnabled)
                         putString(NappletEmbedContract.KEY_FILE_CHOOSER_TITLE, params.title?.toString())
                     }
             }

@@ -126,6 +126,45 @@ class FileChooserAcceptTest {
         assertEquals(listOf("image/jpeg"), resolved.mimeTypes)
     }
 
+    private fun capture(vararg accept: String) = FileChooserAccept.captureMedia(accept.toList(), map::get)
+
+    @Test
+    fun bareFileInputOffersBothCameras() {
+        // A page that takes anything: a mobile browser offers stills and video there.
+        assertEquals(setOf(FileChooserAccept.CaptureMedia.IMAGE, FileChooserAccept.CaptureMedia.VIDEO), capture())
+        assertEquals(setOf(FileChooserAccept.CaptureMedia.IMAGE, FileChooserAccept.CaptureMedia.VIDEO), capture("*/*"))
+    }
+
+    @Test
+    fun imageAcceptOffersOnlyTheCamera() {
+        assertEquals(setOf(FileChooserAccept.CaptureMedia.IMAGE), capture("image/png"))
+        assertEquals(setOf(FileChooserAccept.CaptureMedia.IMAGE), capture(".jpg"))
+    }
+
+    @Test
+    fun videoAcceptOffersOnlyTheCamcorder() {
+        assertEquals(setOf(FileChooserAccept.CaptureMedia.VIDEO), capture(".mp4"))
+    }
+
+    @Test
+    fun bothMediaOfferBothCameras() {
+        assertEquals(setOf(FileChooserAccept.CaptureMedia.IMAGE, FileChooserAccept.CaptureMedia.VIDEO), capture("image/png", "video/mp4"))
+    }
+
+    @Test
+    fun documentAcceptOffersNoCamera() {
+        // Opening a PDF upload must never put a camera — or a camera permission prompt — in the way.
+        assertEquals(emptySet(), capture("application/pdf"))
+        assertEquals(emptySet(), capture(".pdf"))
+    }
+
+    @Test
+    fun unknownExtensionOffersNoCamera() {
+        // resolve() widens to */* here, but widening the CAMERA decision would show a camera to a page
+        // that never asked for one.
+        assertEquals(emptySet(), capture(".sqlite3"))
+    }
+
     @Test
     fun caseAndWhitespaceAreNormalized() {
         val resolved = resolve(" IMAGE/PNG ", ".PNG")

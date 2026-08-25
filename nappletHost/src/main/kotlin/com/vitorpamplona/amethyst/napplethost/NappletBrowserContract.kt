@@ -116,6 +116,13 @@ object NappletBrowserContract {
     const val KEY_FILE_CHOOSER_ID = "fileChooserId"
     const val KEY_FILE_CHOOSER_ACCEPT = "fileChooserAccept"
     const val KEY_FILE_CHOOSER_MULTIPLE = "fileChooserMultiple"
+
+    /**
+     * The input's `capture` attribute: the page wants a camera, not a stored file. It decides
+     * whether the main process may ask for the CAMERA permission on this request, so it has to
+     * cross with it rather than being re-derived from the accept list.
+     */
+    const val KEY_FILE_CHOOSER_CAPTURE = "fileChooserCapture"
     const val KEY_FILE_CHOOSER_TITLE = "fileChooserTitle"
     const val KEY_FILE_CHOOSER_URIS = "fileChooserUris"
 
