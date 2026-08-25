@@ -33,6 +33,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import coil3.network.CacheStrategy
+import coil3.network.ConcurrentRequestStrategy
 import coil3.network.ConnectivityChecker
 import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.NetworkFetcher
@@ -60,7 +61,7 @@ class ImageLoaderSetup {
 
         val debugLogger = if (isDebug) MyDebugLogger() else null
 
-        @OptIn(DelicateCoilApi::class)
+        @OptIn(DelicateCoilApi::class, ExperimentalCoilApi::class)
         fun setup(
             app: Context,
             diskCache: () -> DiskCache,
@@ -70,6 +71,15 @@ class ImageLoaderSetup {
             thumbnailCache: ThumbnailDiskCache,
             backgroundScope: CoroutineScope,
         ) {
+            // ONE strategy for the whole ImageLoader. DeDupeConcurrentRequestStrategy
+            // coordinates through a map of in-flight fetches that it owns, so it only
+            // works when every fetcher shares the same instance -- a fresh one per
+            // request can never see anybody else's fetch and the de-dupe silently
+            // no-ops. Shared across all three network-backed factories so a feed
+            // image and the same blob reached through `blossom:` (or a profile
+            // picture) still collapse onto one download.
+            val concurrentRequests = DeDupeConcurrentRequestStrategy()
+
             SingletonImageLoader.setUnsafe(
                 ImageLoader
                     .Builder(app)
@@ -87,13 +97,13 @@ class ImageLoaderSetup {
                         add(Base64Fetcher.Factory)
                         add(BlurHashFetcher.Factory)
                         add(ThumbHashFetcher.Factory)
-                        add(BlossomFetcher.Factory(blossomServerResolver, callFactory))
-                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope))
+                        add(BlossomFetcher.Factory(blossomServerResolver, callFactory, concurrentRequests))
+                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, concurrentRequests))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)
                         add(ThumbHashFetcher.TKeyer)
                         add(ProfilePictureFetcher.BKeyer)
-                        add(OkHttpFactory(callFactory))
+                        add(OkHttpFactory(callFactory, concurrentRequests))
                     }.build(),
             )
         }
@@ -132,9 +142,11 @@ class MyDebugLogger(
 @OptIn(ExperimentalCoilApi::class)
 class OkHttpFactory(
     val networkClient: (url: String) -> Call.Factory,
+    concurrentRequestStrategy: ConcurrentRequestStrategy,
 ) : Fetcher.Factory<Uri> {
     private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
     private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
+    private val concurrentRequestStrategyLazy = lazyOf(concurrentRequestStrategy)
 
     override fun create(
         data: Uri,
@@ -152,7 +164,7 @@ class OkHttpFactory(
             diskCache = lazy { imageLoader.diskCache },
             cacheStrategy = cacheStrategyLazy,
             connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-            concurrentRequestStrategy = lazy { DeDupeConcurrentRequestStrategy() },
+            concurrentRequestStrategy = concurrentRequestStrategyLazy,
         )
     }
 

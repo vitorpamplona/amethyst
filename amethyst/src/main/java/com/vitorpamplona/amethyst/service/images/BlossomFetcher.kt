@@ -27,8 +27,8 @@ import coil3.annotation.ExperimentalCoilApi
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.network.CacheStrategy
+import coil3.network.ConcurrentRequestStrategy
 import coil3.network.ConnectivityChecker
-import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
@@ -57,8 +57,14 @@ class BlossomFetcher(
     class Factory(
         val blossomServerResolver: () -> BlossomServerResolver,
         val networkClient: (url: String) -> Call.Factory,
+        // Shared with every other network-backed factory on this ImageLoader --
+        // see the note in ImageLoaderSetup.setup(): the de-dupe only works when
+        // all fetchers coordinate through the same instance.
+        concurrentRequestStrategy: ConcurrentRequestStrategy,
     ) : Fetcher.Factory<Uri> {
+        private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
         private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
+        private val concurrentRequestStrategyLazy = lazyOf(concurrentRequestStrategy)
 
         override fun create(
             data: Uri,
@@ -72,9 +78,9 @@ class BlossomFetcher(
                     options = options,
                     networkClient = lazy { networkClient(url).asNetworkClient() },
                     diskCache = lazy { imageLoader.diskCache },
-                    cacheStrategy = lazy { CacheStrategy.DEFAULT },
+                    cacheStrategy = cacheStrategyLazy,
                     connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-                    concurrentRequestStrategy = lazy { DeDupeConcurrentRequestStrategy() },
+                    concurrentRequestStrategy = concurrentRequestStrategyLazy,
                 )
             }
         }
