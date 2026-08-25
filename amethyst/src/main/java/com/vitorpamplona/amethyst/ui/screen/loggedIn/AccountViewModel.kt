@@ -2894,6 +2894,7 @@ class AccountViewModel(
                         .findServers(it)
                         ?.serverUrl
                 },
+                ipfsGateway = account.settings.ipfsGateway.value,
                 onSuccess = {
                     Handler(Looper.getMainLooper()).post {
                         Toast

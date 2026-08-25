@@ -58,10 +58,11 @@ class PlaybackService : MediaSessionService() {
         videoCache: VideoCache,
         okHttpClient: DynamicCallFactory,
         blossomServerResolver: BlossomServerResolver,
+        ipfsGateway: () -> String?,
     ): MediaSessionPool {
         val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
 
-        val resolvingDataSourceFactory: DataSource.Factory =
+        val blossomResolvingDataSourceFactory: DataSource.Factory =
             ResolvingDataSource.Factory(
                 dataSourceFactory,
                 ResolvingDataSource.Resolver { dataSpec: DataSpec ->
@@ -79,6 +80,8 @@ class PlaybackService : MediaSessionService() {
                     dataSpec
                 },
             )
+        val resolvingDataSourceFactory: DataSource.Factory =
+            IpfsDataSource.Factory(blossomResolvingDataSourceFactory, ipfsGateway)
 
         // The device's concurrent-decoder ceiling bounds both how many players may be checked out
         // at once (the session cache) and how many the pool may retain, since a session and a warm
@@ -115,7 +118,7 @@ class PlaybackService : MediaSessionService() {
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
             // creates new
-            newPool(videoCache, okHttpClient, blossomServerResolver)
+            newPool(videoCache, okHttpClient, blossomServerResolver, ::activeIpfsGateway)
                 .also {
                     poolNoProxy = it
                     // Kick off the player pool warmup as soon as we know this pool is being used.
@@ -134,7 +137,7 @@ class PlaybackService : MediaSessionService() {
             val videoCache = Amethyst.instance.videoCache
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
-            newPool(videoCache, okHttpClient, blossomServerResolver)
+            newPool(videoCache, okHttpClient, blossomServerResolver, ::activeIpfsGateway)
                 .also {
                     poolWithProxy = it
                     it.exoPlayerPool.create(applicationContext)
@@ -146,6 +149,13 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         Log.d("PlaybackService", "PlaybackService.onCreate")
     }
+
+    private fun activeIpfsGateway(): String? =
+        Amethyst.instance.sessionManager
+            .loggedInAccount()
+            ?.settings
+            ?.ipfsGateway
+            ?.value
 
     override fun onStartCommand(
         intent: Intent?,

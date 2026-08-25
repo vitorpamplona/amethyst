@@ -66,6 +66,7 @@ class ImageLoaderSetup {
             diskCache: () -> DiskCache,
             memoryCache: () -> MemoryCache,
             blossomServerResolver: () -> BlossomServerResolver,
+            ipfsGateway: () -> String?,
             callFactory: (url: String) -> Call.Factory,
             thumbnailCache: ThumbnailDiskCache,
             backgroundScope: CoroutineScope,
@@ -88,7 +89,8 @@ class ImageLoaderSetup {
                         add(BlurHashFetcher.Factory)
                         add(ThumbHashFetcher.Factory)
                         add(BlossomFetcher.Factory(blossomServerResolver, callFactory))
-                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope))
+                        add(IpfsFetcher.Factory(ipfsGateway, callFactory))
+                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, ipfsGateway))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)
                         add(ThumbHashFetcher.TKeyer)

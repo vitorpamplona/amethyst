@@ -167,6 +167,11 @@ fun AllMediaBody(
         }
 
         item {
+            SectionLabel(title = stringRes(id = R.string.ipfs_gateway_section))
+            IpfsGatewaySection(accountViewModel)
+        }
+
+        item {
             SectionLabel(title = stringRes(id = R.string.media_servers_cache_section))
             MediaCacheSection(accountViewModel)
         }

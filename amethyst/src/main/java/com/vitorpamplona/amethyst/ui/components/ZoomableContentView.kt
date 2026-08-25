@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaPreloadedContent
@@ -1259,8 +1260,17 @@ private fun verifyHash(content: MediaUrlContent): Boolean? {
     val keys = mutableListOf(content.url)
     val bridged = content.toCoilModel(true)
     if (bridged != content.url) keys.add(bridged)
+    if (IpfsGatewayResolver.isIpfsUri(content.url)) {
+        val gateway =
+            Amethyst.instance.sessionManager
+                .loggedInAccount()
+                ?.settings
+                ?.ipfsGateway
+                ?.value
+        keys.addAll(IpfsGatewayResolver.getAllCandidateUrls(content.url, gateway))
+    }
 
-    for (key in keys) {
+    for (key in keys.distinct()) {
         Amethyst.instance.diskCache.openSnapshot(key)?.use { snapshot ->
             val (hashBytes, _) = sha256StreamWithCount(snapshot.data.toFile().inputStream())
             return hashBytes.toHexKey() == content.hash

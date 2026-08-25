@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntr
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -198,6 +199,7 @@ class AccountSettings(
     var stripLocationOnUpload: Boolean = true,
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val ipfsGateway: MutableStateFlow<String> = MutableStateFlow(IpfsGatewayResolver.DEFAULT_GATEWAY),
     /**
      * BUD-04: after uploading a blob to the primary Blossom server, replicate it to
      * the user's other configured servers (kind 10063) for redundancy.
@@ -741,6 +743,15 @@ class AccountSettings(
             localBlossomCacheProfilePicturesOnly.tryEmit(enabled)
             saveAccountSettings()
         }
+    }
+
+    fun changeIpfsGateway(gateway: String): Boolean {
+        val normalized = IpfsGatewayResolver.normalizeGatewayUrl(gateway) ?: return false
+        if (ipfsGateway.value != normalized) {
+            ipfsGateway.tryEmit(normalized)
+            saveAccountSettings()
+        }
+        return true
     }
 
     fun changeMirrorUploadsToAllServers(enabled: Boolean) {

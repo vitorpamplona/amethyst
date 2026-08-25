@@ -1078,6 +1078,13 @@ class AppModules(
             diskCache = { diskCache },
             memoryCache = { memoryCache },
             blossomServerResolver = { blossomResolver },
+            ipfsGateway = {
+                sessionManager
+                    .loggedInAccount()
+                    ?.settings
+                    ?.ipfsGateway
+                    ?.value
+            },
             // Through the role builder (not raw getHttpClient) so Coil's image
             // traffic carries the "image" ledger tag. Same Tor decision inside.
             callFactory = { roleBasedHttpClientBuilder.okHttpClientForImage(it) },

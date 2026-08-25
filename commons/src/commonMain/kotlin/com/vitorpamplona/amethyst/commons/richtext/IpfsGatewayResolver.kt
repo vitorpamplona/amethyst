@@ -21,65 +21,113 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 object IpfsGatewayResolver {
-    const val PRIMARY_GATEWAY = "https://dweb.link/ipfs/"
-    const val SECONDARY_GATEWAY = "https://ipfs.io/ipfs/"
+    const val DEFAULT_GATEWAY = "https://dweb.link/"
+    const val SECONDARY_GATEWAY = "https://ipfs.io/"
 
     val DEFAULT_GATEWAYS =
         listOf(
-            PRIMARY_GATEWAY,
+            DEFAULT_GATEWAY,
             SECONDARY_GATEWAY,
         )
 
-    fun isIpfsUri(url: String): Boolean =
-        url.startsWith("ipfs://", ignoreCase = true) ||
-            url.startsWith("ipfs:", ignoreCase = true)
-
-    /**
-     * Resolves an `ipfs://...` or `ipfs:...` URI into an HTTP gateway URL.
-     * Default gateway is https://dweb.link/ipfs/
-     */
-    fun toHttpUrl(
-        ipfsUri: String,
-        gateway: String = PRIMARY_GATEWAY,
-    ): String {
-        if (!isIpfsUri(ipfsUri)) return ipfsUri
-
-        val cleanPath =
-            ipfsUri
-                .removePrefix("ipfs://")
-                .removePrefix("IPFS://")
-                .removePrefix("ipfs:")
-                .removePrefix("IPFS:")
-                .removePrefix("/")
-
-        val base = if (gateway.endsWith("/")) gateway else "$gateway/"
-        return "$base$cleanPath"
+    fun isIpfsUri(url: String): Boolean {
+        val separator = url.indexOf(':')
+        return separator == IPFS_SCHEME.length &&
+            url.regionMatches(0, IPFS_SCHEME, 0, IPFS_SCHEME.length, ignoreCase = true)
     }
 
     /**
-     * Returns candidate HTTP URLs for failover fetching (primary -> secondary).
+     * Resolves an `ipfs://<cid>/...` or `ipfs:<cid>/...` URI into an HTTP path-gateway URL.
+     *
+     * [gateway] is the path-gateway server root, not its `/ipfs/` endpoint. A pasted path-gateway
+     * URL ending in `/ipfs` is accepted and normalized so the path is never duplicated.
+     */
+    fun toHttpUrl(
+        ipfsUri: String,
+        gateway: String = DEFAULT_GATEWAY,
+    ): String {
+        val ipfsPath = extractIpfsPath(ipfsUri) ?: return ipfsUri
+        val gatewayRoot = normalizeGatewayUrl(gateway) ?: return ipfsUri
+        return "$gatewayRoot/ipfs/$ipfsPath"
+    }
+
+    /**
+     * Returns distinct HTTP candidates in caller preference order.
      */
     fun getAllCandidateUrls(
         ipfsUri: String,
         customGateway: String? = null,
-    ): List<String> {
-        val cleanPath =
-            ipfsUri
-                .removePrefix("ipfs://")
-                .removePrefix("IPFS://")
-                .removePrefix("ipfs:")
-                .removePrefix("IPFS:")
-                .removePrefix("/")
+    ): List<String> =
+        buildList {
+            customGateway?.let(::add)
+            addAll(DEFAULT_GATEWAYS)
+        }.mapNotNull { gateway ->
+            toHttpUrl(ipfsUri, gateway).takeUnless { it == ipfsUri }
+        }.distinct()
 
-        val list = mutableListOf<String>()
-        if (!customGateway.isNullOrBlank()) {
-            val base = if (customGateway.endsWith("/")) customGateway else "$customGateway/"
-            list.add("$base$cleanPath")
-        }
-        DEFAULT_GATEWAYS.forEach { gw ->
-            val base = if (gw.endsWith("/")) gw else "$gw/"
-            list.add("$base$cleanPath")
-        }
-        return list.distinct()
+    /**
+     * Normalizes a user-entered IPFS path-gateway root.
+     *
+     * HTTP is intentionally accepted for a node on localhost or the user's LAN. Remote cleartext
+     * gateways remain subject to Android's normal network-security policy.
+     */
+    fun normalizeGatewayUrl(gateway: String): String? {
+        val trimmed = gateway.trim().trimEnd('/')
+        val schemeEnd =
+            when {
+                trimmed.startsWith("https://", ignoreCase = true) -> HTTPS_PREFIX.length
+                trimmed.startsWith("http://", ignoreCase = true) -> HTTP_PREFIX.length
+                else -> return null
+            }
+        val withoutIpfsPath = trimmed.removeSuffixIgnoreCase("/ipfs").trimEnd('/')
+        val authority = withoutIpfsPath.substring(schemeEnd).substringBefore('/')
+        if (authority.isBlank() || authority == "." || authority == "..") return null
+        if (withoutIpfsPath.any { it.isWhitespace() || it == '\\' }) return null
+        if ('?' in withoutIpfsPath || '#' in withoutIpfsPath) return null
+        if (withoutIpfsPath.substring(schemeEnd).substringAfter('/', "").split('/').any(::isDotSegment)) return null
+        return withoutIpfsPath
     }
+
+    private fun extractIpfsPath(ipfsUri: String): String? {
+        if (!isIpfsUri(ipfsUri)) return null
+        val path = ipfsUri.substringAfter(':').removePrefix("//").trimStart('/')
+        if (path.isBlank()) return null
+
+        val cid = path.substringBefore('/').substringBefore('?').substringBefore('#')
+        if (cid.isBlank() || isDotSegment(cid) || !cid.all(::isUnreservedAscii)) return null
+
+        val resourcePath = path.substringBefore('?').substringBefore('#')
+        if (resourcePath.split('/').any(::isDotSegment)) return null
+        return path
+    }
+
+    private fun isDotSegment(segment: String): Boolean {
+        val normalized = segment.lowercase()
+        return normalized == "." ||
+            normalized == ".." ||
+            normalized == "%2e" ||
+            normalized == "%2e%2e" ||
+            normalized == ".%2e" ||
+            normalized == "%2e."
+    }
+
+    private fun isUnreservedAscii(char: Char): Boolean =
+        char in 'a'..'z' ||
+            char in 'A'..'Z' ||
+            char in '0'..'9' ||
+            char == '-' ||
+            char == '.' ||
+            char == '_' ||
+            char == '~'
+
+    private fun String.removeSuffixIgnoreCase(suffix: String): String =
+        if (endsWith(suffix, ignoreCase = true)) {
+            dropLast(suffix.length)
+        } else {
+            this
+        }
+
+    private const val IPFS_SCHEME = "ipfs"
+    private const val HTTP_PREFIX = "http://"
+    private const val HTTPS_PREFIX = "https://"
 }

@@ -35,6 +35,7 @@ import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -95,6 +96,7 @@ class ProfilePictureFetcher(
         private val thumbnailCache: ThumbnailDiskCache,
         private val networkClient: (url: String) -> Call.Factory,
         private val backgroundScope: CoroutineScope,
+        private val ipfsGateway: () -> String?,
     ) : Fetcher.Factory<ProfilePictureUrl> {
         private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
 
@@ -105,16 +107,26 @@ class ProfilePictureFetcher(
         ): Fetcher {
             val diskCacheLazy = lazy { imageLoader.diskCache }
 
-            val netFetcher =
+            fun networkFetcher(url: String): Fetcher =
                 NetworkFetcher(
-                    url = data.url,
+                    url = url,
                     options = options,
-                    networkClient = lazy { networkClient(data.url).asNetworkClient() },
+                    networkClient = lazy { networkClient(url).asNetworkClient() },
                     diskCache = diskCacheLazy,
                     cacheStrategy = lazy { CacheStrategy.DEFAULT },
                     connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
                     concurrentRequestStrategy = lazy { DeDupeConcurrentRequestStrategy() },
                 )
+
+            val netFetcher =
+                if (IpfsGatewayResolver.isIpfsUri(data.url)) {
+                    IpfsFetcher(
+                        candidates = IpfsGatewayResolver.getAllCandidateUrls(data.url, ipfsGateway()),
+                        networkFetcher = ::networkFetcher,
+                    )
+                } else {
+                    networkFetcher(data.url)
+                }
 
             return ProfilePictureFetcher(
                 data.url,

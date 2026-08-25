@@ -272,29 +272,17 @@ class MediaUrlContentExtTest {
     }
 
     @Test
-    fun toCoilModelResolvesIpfsUri() {
+    fun toCoilModelPreservesIpfsUriForFetcherResolution() {
         val ipfsUrl = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png"
         val image = MediaUrlImage(url = ipfsUrl)
-        assertEquals(
-            "https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png",
-            image.toCoilModel(useLocalBlossomBridge = false),
-        )
-        assertEquals(
-            "https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png",
-            image.toCoilModel(useLocalBlossomBridge = true),
-        )
+        assertEquals(ipfsUrl, image.toCoilModel(useLocalBlossomBridge = false))
+        assertEquals(ipfsUrl, image.toCoilModel(useLocalBlossomBridge = true))
     }
 
     @Test
-    fun bridgeProfilePictureUrlResolvesIpfsUri() {
+    fun bridgeProfilePictureUrlPreservesIpfsUriForFetcherResolution() {
         val ipfsUrl = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg"
-        assertEquals(
-            "https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg",
-            bridgeProfilePictureUrl(ipfsUrl, useBridge = false),
-        )
-        assertEquals(
-            "https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg",
-            bridgeProfilePictureUrl(ipfsUrl, useBridge = true),
-        )
+        assertEquals(ipfsUrl, bridgeProfilePictureUrl(ipfsUrl, useBridge = false))
+        assertEquals(ipfsUrl, bridgeProfilePictureUrl(ipfsUrl, useBridge = true))
     }
 }

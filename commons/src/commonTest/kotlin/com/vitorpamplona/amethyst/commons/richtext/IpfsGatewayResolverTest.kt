@@ -30,6 +30,7 @@ class IpfsGatewayResolverTest {
     fun isIpfsUriMatchesCorrectly() {
         assertTrue(IpfsGatewayResolver.isIpfsUri("ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
         assertTrue(IpfsGatewayResolver.isIpfsUri("IPFS://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
+        assertTrue(IpfsGatewayResolver.isIpfsUri("IpFs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
         assertTrue(IpfsGatewayResolver.isIpfsUri("ipfs:bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
         assertFalse(IpfsGatewayResolver.isIpfsUri("https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
         assertFalse(IpfsGatewayResolver.isIpfsUri("blossom:bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
@@ -52,17 +53,50 @@ class IpfsGatewayResolverTest {
     fun toHttpUrlWithCustomGateway() {
         val cid = "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco"
         assertEquals(
-            "https://ipfs.io/ipfs/$cid",
-            IpfsGatewayResolver.toHttpUrl("ipfs://$cid", IpfsGatewayResolver.SECONDARY_GATEWAY),
+            "http://localhost:3232/ipfs/$cid",
+            IpfsGatewayResolver.toHttpUrl("ipfs://$cid", "http://localhost:3232"),
+        )
+        assertEquals(
+            "http://localhost:3232/ipfs/$cid",
+            IpfsGatewayResolver.toHttpUrl("ipfs://$cid", "http://localhost:3232/ipfs/"),
         )
     }
 
     @Test
-    fun getAllCandidateUrlsIncludesBothGateways() {
+    fun getAllCandidateUrlsPrefersCustomGatewayThenDefaults() {
         val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
-        val candidates = IpfsGatewayResolver.getAllCandidateUrls("ipfs://$cid")
-        assertEquals(2, candidates.size)
-        assertEquals("https://dweb.link/ipfs/$cid", candidates[0])
-        assertEquals("https://ipfs.io/ipfs/$cid", candidates[1])
+        val candidates = IpfsGatewayResolver.getAllCandidateUrls("ipfs://$cid", "http://localhost:3232/")
+        assertEquals(3, candidates.size)
+        assertEquals("http://localhost:3232/ipfs/$cid", candidates[0])
+        assertEquals("https://dweb.link/ipfs/$cid", candidates[1])
+        assertEquals("https://ipfs.io/ipfs/$cid", candidates[2])
+    }
+
+    @Test
+    fun toHttpUrlHandlesMixedCaseAndRejectsMalformedInput() {
+        val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        assertEquals(
+            "https://dweb.link/ipfs/$cid/image.png?download=1#preview",
+            IpfsGatewayResolver.toHttpUrl("IpFs://$cid/image.png?download=1#preview"),
+        )
+        assertEquals("ipfs://", IpfsGatewayResolver.toHttpUrl("ipfs://"))
+        assertEquals("ipfs://$cid/../status", IpfsGatewayResolver.toHttpUrl("ipfs://$cid/../status"))
+        assertEquals(
+            "ipfs://$cid",
+            IpfsGatewayResolver.toHttpUrl("ipfs://$cid", "ftp://gateway.example"),
+        )
+    }
+
+    @Test
+    fun normalizeGatewayUrlAcceptsOriginAndIpfsEndpoint() {
+        assertEquals(
+            "https://originless.gupt.app",
+            IpfsGatewayResolver.normalizeGatewayUrl(" https://originless.gupt.app/ipfs/ "),
+        )
+        assertEquals(
+            "http://127.0.0.1:3232",
+            IpfsGatewayResolver.normalizeGatewayUrl("http://127.0.0.1:3232/"),
+        )
+        assertEquals(null, IpfsGatewayResolver.normalizeGatewayUrl("originless.gupt.app"))
     }
 }

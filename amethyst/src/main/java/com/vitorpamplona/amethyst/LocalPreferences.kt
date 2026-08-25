@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewM
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.HomeFeedType
 import com.vitorpamplona.amethyst.model.TopFilter
@@ -115,6 +116,7 @@ private object PrefKeys {
     const val STRIP_LOCATION_ON_UPLOAD = "stripLocationOnUpload"
     const val USE_LOCAL_BLOSSOM_CACHE = "useLocalBlossomCache"
     const val LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY = "localBlossomCacheProfilePicturesOnly"
+    const val IPFS_GATEWAY = "ipfsGateway"
     const val MIRROR_UPLOADS_TO_ALL_SERVERS = "mirrorUploadsToAllServers"
     const val OPTIMIZE_MEDIA_ON_UPLOAD = "optimizeMediaOnUpload"
     const val HIDE_COMMUNITY_RULES_VIOLATIONS = "hideCommunityRulesViolations"
@@ -514,6 +516,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, settings.stripLocationOnUpload)
                     putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
                     putBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, settings.localBlossomCacheProfilePicturesOnly.value)
+                    putString(PrefKeys.IPFS_GATEWAY, settings.ipfsGateway.value)
                     putBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, settings.mirrorUploadsToAllServers.value)
                     putBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, settings.optimizeMediaOnUpload.value)
                     putBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, settings.hideCommunityRulesViolations.value)
@@ -770,6 +773,10 @@ object LocalPreferences {
                     val stripLocationOnUpload = getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, true)
                     val useLocalBlossomCache = getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, true)
                     val localBlossomCacheProfilePicturesOnly = getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
+                    val ipfsGateway =
+                        getString(PrefKeys.IPFS_GATEWAY, IpfsGatewayResolver.DEFAULT_GATEWAY)
+                            ?.let(IpfsGatewayResolver::normalizeGatewayUrl)
+                            ?: IpfsGatewayResolver.DEFAULT_GATEWAY
                     val mirrorUploadsToAllServers = getBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, true)
                     val optimizeMediaOnUpload = getBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, false)
                     val hideCommunityRulesViolations = getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
@@ -963,6 +970,7 @@ object LocalPreferences {
                         stripLocationOnUpload = stripLocationOnUpload,
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),
+                        ipfsGateway = MutableStateFlow(ipfsGateway),
                         mirrorUploadsToAllServers = MutableStateFlow(mirrorUploadsToAllServers),
                         optimizeMediaOnUpload = MutableStateFlow(optimizeMediaOnUpload),
                         hideCommunityRulesViolations = MutableStateFlow(hideCommunityRulesViolations),

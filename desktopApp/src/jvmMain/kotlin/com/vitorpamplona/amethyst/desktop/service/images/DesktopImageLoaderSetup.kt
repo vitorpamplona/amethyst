@@ -37,6 +37,7 @@ import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
 import coil3.size.Precision
 import coil3.svg.SvgDecoder
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import okhttp3.Call
 import okio.Path.Companion.toOkioPath
@@ -125,10 +126,16 @@ private class TorAwareOkHttpFactory(
         options: Options,
         imageLoader: ImageLoader,
     ): Fetcher? {
-        if (data.scheme != "http" && data.scheme != "https") return null
+        val sourceUrl = data.toString()
+        val resolvedUrl =
+            when {
+                data.scheme == "http" || data.scheme == "https" -> sourceUrl
+                IpfsGatewayResolver.isIpfsUri(sourceUrl) -> IpfsGatewayResolver.toHttpUrl(sourceUrl)
+                else -> return null
+            }
 
         return NetworkFetcher(
-            url = data.toString(),
+            url = resolvedUrl,
             options = options,
             networkClient = lazy { clientProvider().asNetworkClient() },
             diskCache = lazy { imageLoader.diskCache },

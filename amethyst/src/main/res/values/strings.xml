@@ -1754,6 +1754,12 @@
 
     <string name="media_servers">Media Servers</string>
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
+    <string name="ipfs_gateway_section">IPFS gateway</string>
+    <string name="ipfs_gateway">Preferred gateway</string>
+    <string name="ipfs_gateway_caption">Resolve ipfs:// media through this IPFS path gateway. dweb.link and ipfs.io are the default fallbacks; self-hosted and local HTTP servers are supported.</string>
+    <string name="ipfs_gateway_invalid">Enter a complete HTTP or HTTPS server URL.</string>
+    <string name="ipfs_gateway_save">Save gateway</string>
+    <string name="ipfs_gateway_reset">Use default</string>
 
     <string name="use_local_blossom_cache">Use local Blossom cache</string>
     <string name="use_local_blossom_cache_caption">When a Blossom cache is running on this device (port 24242), route image and video downloads through it.</string>
