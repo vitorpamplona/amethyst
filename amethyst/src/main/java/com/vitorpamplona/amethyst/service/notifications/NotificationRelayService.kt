@@ -92,6 +92,11 @@ class NotificationRelayService : Service() {
         // Keeps notification updates well under Android's rate limit (~10/s).
         private const val NOTIFICATION_REFRESH_MS = 1000L
 
+        // Toggles the expanded per-job breakdown on and off. Fired by the notification's own
+        // action button, so the details are always something the user asked for.
+        private const val ACTION_SHOW_DETAILS = "com.vitorpamplona.amethyst.SHOW_NOTIFICATION_SERVICE_DETAILS"
+        private const val ACTION_HIDE_DETAILS = "com.vitorpamplona.amethyst.HIDE_NOTIFICATION_SERVICE_DETAILS"
+
         const val ACTION_AUTO_RESTART = "com.vitorpamplona.amethyst.AUTO_RESTART_NOTIFICATION_SERVICE"
 
         fun start(context: Context) {
@@ -149,6 +154,9 @@ class NotificationRelayService : Service() {
     /** Last non-empty per-job breakdown, kept so a reconnect does not blank the expanded view. */
     private var lastBreakdown: List<String> = emptyList()
 
+    /** Whether the user asked for the per-job breakdown. Off until they tap "show details". */
+    private var detailsExpanded = false
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -165,6 +173,13 @@ class NotificationRelayService : Service() {
         startId: Int,
     ): Int {
         Log.d(TAG, "Starting service")
+        // The details toggle re-enters here through the notification's action button. It only
+        // flips the flag; the rebuild happens in the ensureForeground() below, which reposts the
+        // notification with (or without) the breakdown.
+        when (intent?.action) {
+            ACTION_SHOW_DETAILS -> detailsExpanded = true
+            ACTION_HIDE_DETAILS -> detailsExpanded = false
+        }
         // Every startForegroundService() call re-arms Android's "must call
         // startForeground() within the timeout" requirement — including the repeated
         // calls MainActivity.onResume fires on each resume, even when the service is
@@ -359,9 +374,12 @@ class NotificationRelayService : Service() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
-        // Expanded only. The collapsed line stays the bare count it has always been — that is all
-        // most people want from an ongoing notification — and the per-job breakdown appears solely
-        // when someone deliberately expands it to ask why the phone is talking to N relays.
+        // Opt-in, never automatic. Android auto-expands a notification when it is the only one in
+        // the shade, and there is no way to opt out of that — so attaching the breakdown as a
+        // BigTextStyle up front made the per-job list the *default* view for anyone whose shade was
+        // otherwise empty, which is the opposite of what it is for. The card is therefore built
+        // with no expanded style at all until someone taps "show details"; that reposts it with the
+        // breakdown and a "hide details" action that puts it back to the bare count.
         //
         // Held across reconnects rather than recomputed blindly: the breakdown is derived from the
         // *connected* relays, so a drop to zero (the "connecting…" state) would otherwise empty it and
@@ -369,9 +387,37 @@ class NotificationRelayService : Service() {
         // looking at it. What each connection is *for* does not change while it is re-establishing,
         // so the last known answer is still the right one; only the count above it goes stale, and
         // that count is already labelled "connecting".
-        val fresh = RelayPurposeSummary.lines(this)
-        if (fresh.isNotEmpty()) lastBreakdown = fresh
-        val breakdown = fresh.ifEmpty { lastBreakdown }.takeIf { it.isNotEmpty() }
+        //
+        // Computed only while expanded: walking every connected relay's active requests once a
+        // second is wasted work when nobody has asked to see the result.
+        val breakdown =
+            if (detailsExpanded) {
+                val fresh = RelayPurposeSummary.lines(this)
+                if (fresh.isNotEmpty()) lastBreakdown = fresh
+                lastBreakdown.takeIf { it.isNotEmpty() }
+            } else {
+                null
+            }
+
+        val detailsIntent =
+            Intent(this, NotificationRelayService::class.java).apply {
+                action = if (detailsExpanded) ACTION_HIDE_DETAILS else ACTION_SHOW_DETAILS
+            }
+        val detailsPendingIntent =
+            PendingIntent.getService(
+                this,
+                if (detailsExpanded) 4 else 3,
+                detailsIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val detailsLabel =
+            getString(
+                if (detailsExpanded) {
+                    R.string.always_on_notif_hide_details
+                } else {
+                    R.string.always_on_notif_show_details
+                },
+            )
 
         // Deliberately left ungrouped. This notification is ongoing and IMPORTANCE_LOW, so it
         // sits in the shade's Silent section next to the low-importance content kinds
@@ -396,7 +442,8 @@ class NotificationRelayService : Service() {
                             .bigText(contentText + "\n\n" + it.joinToString("\n")),
                     )
                 }
-            }.setSmallIcon(R.drawable.amethyst_service)
+            }.addAction(0, detailsLabel, detailsPendingIntent)
+            .setSmallIcon(R.drawable.amethyst_service)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setSilent(true)

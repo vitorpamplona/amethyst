@@ -32,9 +32,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 /**
  * The per-job breakdown behind the always-on notification's relay count.
  *
- * **Only ever shown expanded.** The collapsed line stays exactly what it was — a count — because
- * that is all most people ever want from an ongoing notification. This is for the moment someone
- * taps to ask *why* their phone is talking to 40 relays.
+ * **Only ever shown on request.** The card stays exactly what it was — a count — because that is all
+ * most people ever want from an ongoing notification. This is for the moment someone taps
+ * "show details" to ask *why* their phone is talking to 40 relays. It is not attached to the
+ * notification otherwise: Android auto-expands a lone notification, so anything hung off the
+ * expanded view alone would be the default view rather than an opt-in one.
  *
  * A relay usually serves several jobs at once (measured: a typical relay carries four), so these
  * counts deliberately **overlap and sum to more than the relay count**. They answer "how many relays

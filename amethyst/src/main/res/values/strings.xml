@@ -2167,7 +2167,9 @@
         <item quantity="one">Connected to %1$d relay</item>
         <item quantity="other">Connected to %1$d relays</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <string name="always_on_notif_show_details">Show details</string>
+    <string name="always_on_notif_hide_details">Hide details</string>
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d relay</item>
