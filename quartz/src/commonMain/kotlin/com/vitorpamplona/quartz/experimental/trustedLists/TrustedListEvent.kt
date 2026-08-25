@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
  * Base of the Tapestry Trusted List family: an addressable event that
@@ -58,7 +59,17 @@ abstract class TrustedListEvent(
     tags: TagArray,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+    SearchableEvent {
+    /**
+     * The list's label, and nothing else -- it is the only human-authored text
+     * the family carries. `content` is a machine echo of the membership and the
+     * member tags are hex ids, so neither belongs in a full-text index; `metric`
+     * and `d` are computation and list identifiers, not prose. Inherited by
+     * every kind in the family, so all four index the same field.
+     */
+    override fun indexableContent() = title() ?: ""
+
     /** The addressable identity of this list. Deterministic per list. */
     fun listId() = dTag()
 
