@@ -279,9 +279,11 @@ private fun PdfViewerContent(
             }
         }
 
-        // Two rows over the same strip: the buttons keep the edges, and the counter stays centred
-        // on the screen rather than on whatever space the buttons leave -- otherwise it slides
-        // sideways every time the asymmetric button groups fade out from under it.
+        // The buttons hold the top edge; the page counter lives along the bottom. Keeping them on
+        // one strip meant the counter sat dead centre under the display cutout on punch-hole
+        // devices, which is exactly where a front camera is. Down here it is clear of the cutout,
+        // stays centred on the screen rather than on whatever space the asymmetric button groups
+        // leave behind, and reads as wayfinding rather than as another control.
         ViewerControlsRow(modifier = Modifier.align(Alignment.TopCenter)) {
             AnimatedVisibility(visible = controlsVisible.value, enter = fadeIn(), exit = fadeOut()) {
                 ViewerBackButton(onDismiss)
@@ -302,8 +304,9 @@ private fun PdfViewerContent(
 
         if (handle != null && handle.pageCount > 0) {
             ViewerControlsRow(
-                modifier = Modifier.align(Alignment.TopCenter),
+                modifier = Modifier.align(Alignment.BottomCenter),
                 horizontalArrangement = Arrangement.Center,
+                atBottom = true,
             ) {
                 AnimatedVisibility(
                     visible = controlsVisible.value || pageJustChanged,

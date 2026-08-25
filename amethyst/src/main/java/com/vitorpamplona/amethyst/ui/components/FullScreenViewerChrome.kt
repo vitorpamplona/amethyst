@@ -24,6 +24,9 @@ import android.Manifest
 import android.os.Build
 import android.view.Window
 import android.widget.Toast
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -31,12 +34,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
-import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -45,13 +49,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewModelScope
@@ -69,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -76,6 +86,17 @@ import kotlinx.coroutines.withTimeoutOrNull
 // Chrome shared by the full-screen media viewers -- the zoomable image/video dialog and the PDF
 // viewer. Both are opened the same way (tap a media card in a feed), so they immerse, auto-hide,
 // and lay their controls out identically.
+
+// Opening churn -- insets arriving, then the bars being hidden -- must not look like a user
+// gesture, so the row snaps through it and only animates afterwards.
+private const val CONTROLS_SETTLE_BEFORE_ANIMATING_MS = 350L
+
+// Roughly the system bars' own show/hide duration, so the row travels with them rather than
+// trailing after they have already arrived.
+private const val CONTROLS_SLIDE_MS = 200
+
+// Keeps the row off the screen edge -- and off the rounded corners -- while the bars are hidden.
+private val VIEWER_CHROME_EDGE_GAP = 16.dp
 
 // How long the controls stay up before the viewer fades them out on its own.
 private const val CONTROLS_AUTO_HIDE_DELAY_MS = 2000L
@@ -90,7 +111,7 @@ fun ImmersiveSystemBarsEffect(window: Window?) {
     DisposableEffect(window, view) {
         val controller = window?.let { WindowInsetsControllerCompat(it, view) }
         controller?.apply {
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             hide(WindowInsetsCompat.Type.systemBars())
         }
         onDispose { controller?.show(WindowInsetsCompat.Type.systemBars()) }
@@ -133,31 +154,77 @@ fun rememberViewerControlsVisibility(
 }
 
 /**
- * Lays the viewer's control row along the top edge.
+ * How far the viewer chrome sits from a screen edge: the system bar's own height while the bar is
+ * on screen, and a thin constant once it is hidden -- so the chrome follows the bar instead of
+ * reserving space for one that is not there.
  *
- * The viewers hide the system bars, which drops statusBarsPadding() to zero and lands the controls
- * against the screen edge. That strip stays owned by the system while
- * BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE is set -- it is the area watching for the swipe that peeks
- * the bars back, and there is no API to turn it off -- so touches there never reach the buttons and
- * only their lower halves respond. Reserving the space the bars would take even while they are
- * hidden keeps the whole button out of that strip, and keeps the controls from jumping when the
- * user swipes the bars back in.
+ * This only works because the viewer asks for BEHAVIOR_DEFAULT rather than transient bars. Under
+ * BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE a peeked bar is painted over the content and dispatches no
+ * insets at all -- `systemBars` stays 0 and `isVisible` stays false the whole time it is on screen
+ * -- so nothing here could react to it.
+ *
+ * The value is animated, but snapped for [CONTROLS_SETTLE_BEFORE_ANIMATING_MS] after the chrome
+ * appears. Opening moves the inset twice for reasons the user did not cause: the window has not
+ * been told its insets yet (they read 0), and ImmersiveSystemBarsEffect hides the bars from a
+ * DisposableEffect that runs after composition. Animating either would play a slide on open.
+ */
+@Composable
+fun animatedViewerChromeInset(atBottom: Boolean): Dp {
+    val density = LocalDensity.current
+    val bars = WindowInsets.systemBars
+    val barPx = if (atBottom) bars.getBottom(density) else bars.getTop(density)
+    val target = with(density) { maxOf(barPx, VIEWER_CHROME_EDGE_GAP.roundToPx()).toDp() }
+
+    var settled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(CONTROLS_SETTLE_BEFORE_ANIMATING_MS)
+        settled = true
+    }
+
+    val animated by animateDpAsState(
+        targetValue = target,
+        animationSpec = if (settled) tween(durationMillis = CONTROLS_SLIDE_MS) else snap(),
+        label = "viewerChromeInset",
+    )
+    return animated
+}
+
+/**
+ * Lays a viewer control row along a screen edge -- the top by default, the bottom when [atBottom].
+ *
+ * The viewer hides the system bars, so the row would otherwise sit against the screen edge. It
+ * takes its distance from [animatedViewerChromeInset], which follows the bar on and off screen
+ * rather than permanently reserving room for it.
+ *
+ * Horizontal display-cutout insets are still applied outright: a landscape notch eats into the
+ * sides whatever the bars are doing. The top cutout is deliberately not applied, because on a
+ * punch-hole device it is a centred hole that the edge-anchored buttons are nowhere near -- and
+ * honouring it as a full-width top inset would push them down by the height of a camera they do
+ * not overlap.
  *
  * The row also holds a button's height whatever it carries, so content that outlives the buttons
- * (a page counter) doesn't shift as they come and go.
+ * doesn't shift as they come and go.
  */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 fun ViewerControlsRow(
     modifier: Modifier = Modifier,
     horizontalArrangement: Arrangement.Horizontal = spacedBy(Size10dp),
+    atBottom: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
+    // systemBars is visibility-aware under BEHAVIOR_DEFAULT: 0 while the bars are hidden, and the
+    // real bar size once the user swipes them in -- so the controls follow them instead of sitting
+    // under a bar or reserving space for one that is not there. The 16dp floor keeps them clear of
+    // the rounded corners while hidden. Animated so the row slides rather than jumps.
+    val animatedInset = animatedViewerChromeInset(atBottom)
     Row(
         modifier =
             modifier
-                .windowInsetsPadding(
-                    WindowInsets.systemBarsIgnoringVisibility.union(WindowInsets.displayCutout),
+                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                .padding(
+                    top = if (atBottom) 0.dp else animatedInset,
+                    bottom = if (atBottom) animatedInset else 0.dp,
                 ).padding(horizontal = Size15dp, vertical = Size10dp)
                 .fillMaxWidth()
                 .heightIn(min = ButtonDefaults.MinHeight),
