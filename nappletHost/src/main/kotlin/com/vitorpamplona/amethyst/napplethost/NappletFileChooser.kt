@@ -86,9 +86,21 @@ object NappletFileChooser {
         buildIntent(
             context = context,
             acceptTypes = params.acceptTypes?.toList().orEmpty(),
-            allowMultiple = params.mode == FileChooserParams.MODE_OPEN_MULTIPLE,
+            allowMultiple = allowsMultiple(params.mode),
             pageTitle = params.title,
         )
+
+    /**
+     * Whether [mode] should let the user pick more than one file.
+     *
+     * `MODE_OPEN_FOLDER` is a `webkitdirectory` input. Android has no picker that hands a WebView the
+     * files of a directory — `ACTION_OPEN_DOCUMENT_TREE` returns a tree handle, not the file URIs the
+     * page's callback takes — so the closest honest answer is to let the user select the files
+     * themselves. They lose `webkitRelativePath`, but they can complete the upload instead of being
+     * limited to one file. The two embedded providers resolve this before sending the request, so all
+     * four surfaces agree on it.
+     */
+    fun allowsMultiple(mode: Int): Boolean = mode == FileChooserParams.MODE_OPEN_MULTIPLE || mode == FileChooserParams.MODE_OPEN_FOLDER
 
     /**
      * Turns an activity result into the array the page's `filePathCallback` expects, or null when the

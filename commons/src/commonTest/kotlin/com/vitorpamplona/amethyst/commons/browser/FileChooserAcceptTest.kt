@@ -71,11 +71,29 @@ class FileChooserAcceptTest {
     }
 
     @Test
-    fun unknownExtensionContributesNothing() {
+    fun unknownExtensionShowsEverything() {
         // Narrowing the picker to a type the platform can't name would hide every file the user has.
         val resolved = resolve(".sqlite3")
         assertEquals(FileChooserAccept.ANY, resolved.primaryType)
         assertEquals(emptyList(), resolved.mimeTypes)
+    }
+
+    @Test
+    fun oneUnknownExtensionWidensTheWholeFilter() {
+        // MimeTypeMap is a fixed table and misses extensions pages do use. Filtering to just the half we
+        // could name would leave the user staring at a picker with the wanted file missing, and `accept`
+        // is only a hint in HTML — so an unnameable entry means show everything.
+        val resolved = resolve(".png", ".sqlite3")
+        assertEquals(FileChooserAccept.ANY, resolved.primaryType)
+        assertEquals(emptyList(), resolved.mimeTypes)
+    }
+
+    @Test
+    fun knownExtensionsStillFilterWhenAllResolve() {
+        // The widening above must not swallow the normal case.
+        val resolved = resolve(".png", ".jpg")
+        assertEquals("image/*", resolved.primaryType)
+        assertEquals(listOf("image/png", "image/jpeg"), resolved.mimeTypes)
     }
 
     @Test

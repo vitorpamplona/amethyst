@@ -419,7 +419,7 @@ class NappletBrowserService : Service() {
                     Bundle().apply {
                         putLong(NappletBrowserContract.KEY_FILE_CHOOSER_ID, id)
                         putStringArray(NappletBrowserContract.KEY_FILE_CHOOSER_ACCEPT, params.acceptTypes ?: emptyArray())
-                        putBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_MULTIPLE, params.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE)
+                        putBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_MULTIPLE, NappletFileChooser.allowsMultiple(params.mode))
                         putString(NappletBrowserContract.KEY_FILE_CHOOSER_TITLE, params.title?.toString())
                     }
             }

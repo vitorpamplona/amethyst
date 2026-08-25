@@ -54,27 +54,32 @@ object FileChooserAccept {
      * Resolves [acceptTypes] (raw `accept` entries) into a picker filter.
      *
      * [extensionToMime] maps a lower-case extension with no leading dot (`"heic"`) to a MIME type, or
-     * null when the platform doesn't know it — an unknown extension simply contributes nothing rather
-     * than narrowing the picker to something the user can't satisfy.
+     * null when the platform doesn't know it. Android's `MimeTypeMap` is a fixed table and does not
+     * know every extension a page might list, so a token that fails to resolve widens the filter to
+     * [ANY] instead of being dropped: `accept` is a hint in HTML, never an enforced restriction, and a
+     * partially-resolved list would otherwise hide exactly the files the page cannot name — the user
+     * would see a picker with the wanted file missing and no way to reach it.
      */
     fun resolve(
         acceptTypes: List<String>,
         extensionToMime: (String) -> String?,
     ): Resolved {
-        val mimes =
+        val tokens =
             acceptTypes
                 // A page may write accept="image/*,video/*" and some WebView versions pass that through
                 // as ONE entry, so split again on the separator the attribute itself uses.
                 .flatMap { it.split(',') }
                 .map { it.trim().lowercase() }
                 .filter { it.isNotEmpty() }
-                .mapNotNull { token ->
-                    when {
-                        token.contains('/') -> token
-                        else -> extensionToMime(token.removePrefix("."))
-                    }
-                }.filter { it.isNotEmpty() }
-                .distinct()
+
+        val mimes = mutableListOf<String>()
+        for (token in tokens) {
+            val mime = if (token.contains('/')) token else extensionToMime(token.removePrefix("."))
+            // One name we can't translate means we cannot express this page's filter faithfully. Show
+            // everything rather than a filter that silently excludes part of what it asked for.
+            if (mime.isNullOrEmpty()) return Resolved(ANY, emptyList())
+            if (mime !in mimes) mimes.add(mime)
+        }
 
         return Resolved(primaryType = commonType(mimes), mimeTypes = mimes)
     }

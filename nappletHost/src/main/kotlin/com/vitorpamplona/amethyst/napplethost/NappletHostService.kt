@@ -462,7 +462,7 @@ class NappletHostService : Service() {
                     Bundle().apply {
                         putLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID, id)
                         putStringArray(NappletEmbedContract.KEY_FILE_CHOOSER_ACCEPT, params.acceptTypes ?: emptyArray())
-                        putBoolean(NappletEmbedContract.KEY_FILE_CHOOSER_MULTIPLE, params.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE)
+                        putBoolean(NappletEmbedContract.KEY_FILE_CHOOSER_MULTIPLE, NappletFileChooser.allowsMultiple(params.mode))
                         putString(NappletEmbedContract.KEY_FILE_CHOOSER_TITLE, params.title?.toString())
                     }
             }
