@@ -111,3 +111,24 @@ val template =
         minRank(2)
     }
 ```
+
+## Search
+
+`TrustedListEvent` implements `SearchableEvent`, so all four kinds are indexed
+for NIP-50 — and they index **`title` alone**:
+
+```kotlin
+override fun indexableContent() = title() ?: ""
+```
+
+Nothing else in the family is human-authored prose. `metric` is the name of a
+computation and `d` is the list identifier — machine ids, kept out so a search
+for a common word in one of them doesn't return every list that ran the same
+job. The member tags are hex ids and `content` is a JSON echo of the same
+membership, so indexing either would put thousands of identifiers into the
+full-text index for no lookup a `#p`/`#e`/`#a`/`#i` filter doesn't already
+serve better. A list with no `title` indexes the empty string rather than
+throwing — `indexableContent()` runs inside the store's insert transaction.
+
+Stores built before this was added keep their old rows unindexed until
+`IEventStore.reindexFullTextSearch()` runs.
