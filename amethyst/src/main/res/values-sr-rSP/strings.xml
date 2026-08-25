@@ -2918,9 +2918,6 @@
     <string name="relay_members_removed">%1$d članova uklonjeno iz relay-a</string>
     <string name="relay_join_request">Zahtev za pridruživanje relay-u</string>
     <string name="relay_leave_request">Zahtev za napuštanje relay-a</string>
-    <string name="ai_writing_help">Pomoć AI pri pisanju</string>
-    <string name="ai_writing_setting_title">Predloži poboljšanja teksta</string>
-    <string name="ai_writing_setting_description">Koristi AI model na uređaju za predlaganje ispravki teksta i promena tona.</string>
     <string name="tracked_broadcasts_setting_title">Praćena emitovanja</string>
     <string name="tracked_broadcasts_setting_description">Koristite praćeni emiter pri slanju događaja. Prikazuje uživo napredak i status po relay-u tokom emitovanja.</string>
     <string name="suggest_workouts_setting_title">Predloži treninge za deljenje</string>
@@ -2928,16 +2925,6 @@
     <string name="compose_settings">Postavke pisanja</string>
     <string name="auto_create_drafts_setting_title">Automatski kreiraj nacrte</string>
     <string name="auto_create_drafts_setting_description">Automatski čuva nacrt kada kucate ili napustite editor sa neposlat im tekstom i šalje na vaše privatne odlazne relay-e.</string>
-    <string name="ai_writing_use_this">Koristi ovo</string>
-    <string name="ai_writing_dismiss">Odbaci</string>
-    <string name="ai_tone_correct">Ispravi</string>
-    <string name="ai_tone_rephrase">Preformuliši</string>
-    <string name="ai_tone_shorter">Kraće</string>
-    <string name="ai_tone_elaborate">Razradi</string>
-    <string name="ai_tone_friendly">Prijateljski</string>
-    <string name="ai_tone_professional">Profesionalno</string>
-    <string name="ai_tone_more_direct">Direktnije</string>
-    <string name="ai_tone_punchy">Upečatljivo</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji paketi</string>
     <string name="emoji_pack_management_title">Dodaj na emoji listu</string>

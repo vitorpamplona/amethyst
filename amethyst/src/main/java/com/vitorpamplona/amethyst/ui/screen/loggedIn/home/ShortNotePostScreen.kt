@@ -103,7 +103,6 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.ui.note.creators.aihelp.AiWritingHelpPanel
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
@@ -179,10 +178,6 @@ fun ShortNotePostScreen(
     val context = LocalContext.current
     val activity = context.getActivity()
     val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        postViewModel.initWritingAssistant(context)
-    }
 
     LaunchedEffect(postViewModel, accountViewModel) {
         val baseReplyTo = baseReplyToId?.let { accountViewModel.getNoteIfExists(it) }
@@ -713,15 +708,6 @@ private fun NewPostScreenBody(
                 modifier = SuggestionListDefaultHeightPage,
             )
         }
-
-        AiWritingHelpPanel(
-            isVisible = postViewModel.showAiPanel,
-            readyResults = postViewModel.aiResults,
-            selectedResult = postViewModel.aiSelectedResult,
-            onToneSelected = postViewModel::selectAiResult,
-            onApply = postViewModel::applyAiResult,
-            onDismiss = postViewModel::dismissAiResult,
-        )
 
         val alwaysOnEnabled by accountViewModel.account.settings.alwaysOnNotificationService
             .collectAsStateWithLifecycle()

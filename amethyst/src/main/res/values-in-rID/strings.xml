@@ -2822,9 +2822,6 @@ Seharusnya %3$s</string>
     <string name="relay_members_removed">%1$d anggota dihapus dari relay</string>
     <string name="relay_join_request">Permintaan bergabung relay</string>
     <string name="relay_leave_request">Permintaan keluar relay</string>
-    <string name="ai_writing_help">Bantuan Penulisan AI</string>
-    <string name="ai_writing_setting_title">Usulkan perbaikan teks</string>
-    <string name="ai_writing_setting_description">Menggunakan model AI di perangkat untuk mengusulkan koreksi teks dan perubahan nada.</string>
     <string name="tracked_broadcasts_setting_title">Siaran terlacak</string>
     <string name="tracked_broadcasts_setting_description">Gunakan penyiar terlacak saat mengirim acara. Menampilkan progres langsung dan status per-relay saat menyiarkan.</string>
     <string name="suggest_workouts_setting_title">Sarankan latihan untuk dibagikan</string>
@@ -2832,16 +2829,6 @@ Seharusnya %3$s</string>
     <string name="compose_settings">Pengaturan Compose</string>
     <string name="auto_create_drafts_setting_title">Buat draf secara otomatis</string>
     <string name="auto_create_drafts_setting_description">Menyimpan acara draf secara otomatis saat Anda mengetik atau meninggalkan composer dengan teks yang belum dikirim dan mengirimnya ke relay outbox privat Anda.</string>
-    <string name="ai_writing_use_this">Gunakan Ini</string>
-    <string name="ai_writing_dismiss">Tutup</string>
-    <string name="ai_tone_correct">Koreksi</string>
-    <string name="ai_tone_rephrase">Ungkapkan Ulang</string>
-    <string name="ai_tone_shorter">Lebih Singkat</string>
-    <string name="ai_tone_elaborate">Elaborasi</string>
-    <string name="ai_tone_friendly">Ramah</string>
-    <string name="ai_tone_professional">Profesional</string>
-    <string name="ai_tone_more_direct">Lebih Langsung</string>
-    <string name="ai_tone_punchy">Tegas</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Paket Emoji</string>
     <string name="emoji_pack_management_title">Tambah ke Daftar Emoji</string>

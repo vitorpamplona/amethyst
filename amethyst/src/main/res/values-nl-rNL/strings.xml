@@ -4502,9 +4502,6 @@
     <string name="relay_members_removed">%1$d leden verwijderd van relay</string>
     <string name="relay_join_request">Relay-lidmaatschapsverzoek</string>
     <string name="relay_leave_request">Relay-opzegverzoek</string>
-    <string name="ai_writing_help">AI-schrijfassistent</string>
-    <string name="ai_writing_setting_title">Tekstverbeteringen voorstellen</string>
-    <string name="ai_writing_setting_description">Gebruikt een on-device AI-model om tekstcorrecties en toonwijzigingen voor te stellen.</string>
     <string name="tracked_broadcasts_setting_title">Getrackte uitzendingen</string>
     <string name="tracked_broadcasts_setting_description">Gebruik de tracked broadcaster bij het verzenden van events. Toont live voortgang en per-relay-status tijdens uitzenden.</string>
     <string name="suggest_workouts_setting_title">Workouts voorstellen om te delen</string>
@@ -4599,17 +4596,6 @@
     <string name="pow_publish_failed_retry">Je %1$s is klaar met mijnen maar kon niet worden gepubliceerd. Het wordt opnieuw geprobeerd de volgende keer dat de app start.</string>
     <string name="pow_kind_chat_message">Chatbericht</string>
     <string name="pow_kind_report">Melding</string>
-    <string name="ai_writing_use_this">Gebruik dit</string>
-    <string name="ai_writing_dismiss">Sluiten</string>
-    <string name="ai_tone_correct">Corrigeren</string>
-    <string name="ai_tone_rephrase">Herschrijven</string>
-    <string name="ai_tone_shorter">Korter</string>
-    <string name="ai_tone_elaborate">Uitbreiden</string>
-    <string name="ai_tone_friendly">Vriendelijk</string>
-    <string name="ai_tone_professional">Professioneel</string>
-    <string name="ai_tone_more_direct">Directer</string>
-    <string name="ai_tone_punchy">Kort en krachtig</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-pakketten</string>
     <string name="emoji_pack_management_title">Toevoegen aan emoji-lijst</string>

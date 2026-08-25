@@ -2933,9 +2933,6 @@
     <string name="relay_members_removed">%1$d عضو از relay حذف شد</string>
     <string name="relay_join_request">درخواست پیوستن به relay</string>
     <string name="relay_leave_request">درخواست خروج از relay</string>
-    <string name="ai_writing_help">کمک نوشتاری هوش مصنوعی</string>
-    <string name="ai_writing_setting_title">پیشنهاد بهبود متن</string>
-    <string name="ai_writing_setting_description">از یک مدل هوش مصنوعی روی دستگاه برای پیشنهاد اصلاحات متن و تغییر لحن استفاده می‌کند.</string>
     <string name="tracked_broadcasts_setting_title">پخش‌های ردیابی‌شده</string>
     <string name="tracked_broadcasts_setting_description">هنگام ارسال رویدادها از پخش‌کننده ردیابی‌شده استفاده کنید. پیشرفت زنده و وضعیت هر relay را در حین پخش نشان می‌دهد.</string>
     <string name="suggest_workouts_setting_title">پیشنهاد اشتراک‌گذاری تمرینات</string>
@@ -2943,17 +2940,6 @@
     <string name="compose_settings">تنظیمات نوشتن</string>
     <string name="auto_create_drafts_setting_title">ایجاد خودکار پیش‌نویس</string>
     <string name="auto_create_drafts_setting_description">هنگام تایپ یا خروج از یک ناحیه نوشتن با متن ارسال‌نشده، به‌طور خودکار یک رویداد پیش‌نویس ذخیره می‌کند و آن را به relay‌های صندوق خروجی خصوصی شما ارسال می‌کند.</string>
-    <string name="ai_writing_use_this">استفاده از این</string>
-    <string name="ai_writing_dismiss">رد کردن</string>
-    <string name="ai_tone_correct">تصحیح</string>
-    <string name="ai_tone_rephrase">بازنویسی</string>
-    <string name="ai_tone_shorter">کوتاه‌تر</string>
-    <string name="ai_tone_elaborate">بسط دادن</string>
-    <string name="ai_tone_friendly">دوستانه</string>
-    <string name="ai_tone_professional">حرفه‌ای</string>
-    <string name="ai_tone_more_direct">مستقیم‌تر</string>
-    <string name="ai_tone_punchy">تأثیرگذار</string>
-    <string name="ai_tone_emojify">+ ایموجی</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">بسته‌های ایموجی</string>
     <string name="emoji_pack_management_title">افزودن به فهرست ایموجی</string>
