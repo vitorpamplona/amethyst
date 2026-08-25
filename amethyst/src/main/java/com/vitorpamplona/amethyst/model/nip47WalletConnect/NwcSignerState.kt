@@ -204,7 +204,7 @@ class NwcSignerState(
      */
     suspend fun sendNwcRequest(
         request: Request,
-        onTimeout: (() -> Unit)? = null,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> = sendNwcRequestToWallet(defaultWalletUri.value, request, onTimeout, onResponse)
 
@@ -214,7 +214,7 @@ class NwcSignerState(
     suspend fun sendNwcRequestToWallet(
         walletUri: Nip47WalletConnect.Nip47URINorm?,
         request: Request,
-        onTimeout: (() -> Unit)? = null,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = walletUri ?: throw IllegalArgumentException("No NIP47 setup")
@@ -237,15 +237,7 @@ class NwcSignerState(
         // be missed.
         assembler.subscribeAndFlush(filter)
 
-        // Safety net: drop the filter after the timeout if the wallet never replies.
-        // The happy path (response arrives) cancels this job and unsubscribes
-        // through assembler.unsubscribeSoon, which debounces.
-        val timeoutJob =
-            scope.launch(Dispatchers.IO) {
-                delay(NWC_RESPONSE_TIMEOUT_MS)
-                assembler.unsubscribe(filter)
-                giveUpWaiting(event.id, onTimeout)
-            }
+        val timeoutJob = launchGiveUpTimer(assembler, filter, event.id, onTimeout)
 
         val responseCache = NostrWalletConnectResponseCache(walletSigner)
         cache.consume(event, null, true, walletService.relayUri) {
@@ -263,7 +255,7 @@ class NwcSignerState(
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
-        onTimeout: (() -> Unit)? = null,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = defaultWalletUri.value ?: throw IllegalArgumentException("No NIP47 setup")
@@ -283,15 +275,7 @@ class NwcSignerState(
         // See sendNwcRequestToWallet above for the rationale.
         assembler.subscribeAndFlush(filter)
 
-        // Safety net: drop the filter after the timeout if the wallet never replies.
-        // The happy path (response arrives) cancels this job and instead
-        // hands off to assembler.unsubscribeSoon, which debounces.
-        val timeoutJob =
-            scope.launch(Dispatchers.IO) {
-                delay(NWC_RESPONSE_TIMEOUT_MS)
-                assembler.unsubscribe(filter)
-                giveUpWaiting(event.id, onTimeout)
-            }
+        val timeoutJob = launchGiveUpTimer(assembler, filter, event.id, onTimeout)
 
         cache.consume(event, zappedNote, true, walletService.relayUri) {
             timeoutJob.cancel()
@@ -300,6 +284,22 @@ class NwcSignerState(
         }
 
         return Pair(event, walletService.relayUri)
+    }
+
+    /**
+     * Safety net for a wallet that never replies: drops the subscription filter and retires
+     * the request. The happy path cancels this job and unsubscribes through
+     * [NWCPaymentFilterAssembler.unsubscribeSoon] instead, which debounces.
+     */
+    private fun launchGiveUpTimer(
+        assembler: NWCPaymentFilterAssembler,
+        filter: NWCPaymentQueryState,
+        requestId: HexKey,
+        onTimeout: () -> Unit,
+    ) = scope.launch(Dispatchers.IO) {
+        delay(NWC_RESPONSE_TIMEOUT_MS)
+        assembler.unsubscribe(filter)
+        giveUpWaiting(requestId, onTimeout)
     }
 
     /**
@@ -313,24 +313,24 @@ class NwcSignerState(
      */
     private fun giveUpWaiting(
         requestId: HexKey,
-        onTimeout: (() -> Unit)?,
+        onTimeout: () -> Unit,
     ) {
         val wasStillPending = cache.paymentTracker.cleanup(requestId)
         if (wasStillPending) {
             Log.w("NwcSignerState") {
                 "No NIP-47 response for request $requestId after ${NWC_RESPONSE_TIMEOUT_MS}ms; giving up and dropping the subscription."
             }
-            onTimeout?.invoke()
+            onTimeout()
         }
     }
 
     companion object {
         /**
          * How long a NIP-47 request waits for its kind-23195 reply before the client
-         * gives up. Exposed so the UI can name the number it shows the user.
+         * gives up. Exposed in seconds so the UI can name the number it shows the user.
          */
-        const val NWC_RESPONSE_TIMEOUT_MS = 60000L
+        const val NWC_RESPONSE_TIMEOUT_SECONDS = 60
 
-        val NWC_RESPONSE_TIMEOUT_SECONDS = (NWC_RESPONSE_TIMEOUT_MS / 1000).toInt()
+        const val NWC_RESPONSE_TIMEOUT_MS = NWC_RESPONSE_TIMEOUT_SECONDS * 1000L
     }
 }

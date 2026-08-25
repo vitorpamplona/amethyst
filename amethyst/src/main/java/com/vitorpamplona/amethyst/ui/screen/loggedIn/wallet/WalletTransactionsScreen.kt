@@ -41,7 +41,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -59,6 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -154,31 +154,13 @@ fun WalletTransactionsScreen(
         } else if (currentError != null && transactions.isEmpty()) {
             // A wallet refusal (e.g. RESTRICTED) leaves the list empty. Without this
             // branch the screen would claim "no transactions yet" and hide the reason.
-            Column(
-                modifier =
-                    Modifier
-                        .padding(padding)
-                        .fillMaxSize()
-                        .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = stringRes(R.string.wallet_transactions_load_failed),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = currentError,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                TextButton(onClick = { walletViewModel.fetchTransactions() }) {
-                    Text(stringRes(R.string.wallet_refresh))
-                }
-            }
+            EmptyState(
+                title = stringRes(R.string.wallet_transactions_load_failed),
+                modifier = Modifier.padding(padding).padding(24.dp),
+                description = currentError,
+                onRefresh = { walletViewModel.fetchTransactions() },
+                refreshLabel = stringRes(R.string.wallet_refresh),
+            )
         } else if (transactions.isEmpty()) {
             Column(
                 modifier =

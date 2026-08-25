@@ -30,13 +30,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
+import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 
 /**
  * Pays a single BOLT-11 from an in-post card (offer card, invoice card) through the
@@ -89,30 +88,12 @@ fun InvoicePaymentDispatcher(
                     accountViewModel.sendZapPaymentRequestFor(
                         bolt11 = bolt11,
                         zappedNote = null,
-                        onTimeout = {
-                            onError(
-                                stringRes(
-                                    context,
-                                    R.string.wallet_connect_no_response_error,
-                                    NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
-                                ),
-                            )
+                        onTimeout = { onError(nwcTimeoutMessage(context)) },
+                        onResponse = { response ->
+                            val failure = response.nwcFailureDetail(context)
+                            if (failure == null) onSuccess() else onError(failure)
                         },
-                    ) { response ->
-                        when (response) {
-                            is PayInvoiceSuccessResponse -> onSuccess()
-                            // IErrorResponseLike, not PayInvoiceErrorResponse: a wallet that
-                            // omits `result_type` on an error still deserializes to something
-                            // renderable, and the narrower check dropped it silently.
-                            is IErrorResponseLike ->
-                                onError(
-                                    response.errorMessage()
-                                        ?: stringRes(context, R.string.error_parsing_error_message),
-                                )
-                            else ->
-                                onError(stringRes(context, R.string.wallet_connect_unreadable_response_error))
-                        }
-                    }
+                    )
 
                 is PaymentSource.ClinkDebit ->
                     accountViewModel.payInvoiceViaClinkDebit(source.wallet.pointer, bolt11) { response ->

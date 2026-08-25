@@ -25,11 +25,11 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
+import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.TlvRecord
@@ -163,23 +163,12 @@ class V4VPaymentHandler(
             account.zaps.sendNwcRequest(
                 request = request,
                 onResponse = { response: Response? ->
-                    if (response is IErrorResponseLike) {
-                        onError(
-                            stringRes(context, R.string.error_dialog_pay_invoice_error),
-                            response.errorMessage()
-                                ?: stringRes(context, R.string.error_parsing_error_message),
-                        )
+                    response.nwcFailureDetail(context)?.let { detail ->
+                        onError(stringRes(context, R.string.error_dialog_pay_invoice_error), detail)
                     }
                 },
                 onTimeout = {
-                    onError(
-                        stringRes(context, R.string.error_dialog_pay_invoice_error),
-                        stringRes(
-                            context,
-                            R.string.wallet_connect_no_response_error,
-                            NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
-                        ),
-                    )
+                    onError(stringRes(context, R.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
                 },
             )
         }
@@ -268,23 +257,12 @@ class V4VPaymentHandler(
                         bolt11 = payable.invoice,
                         zappedNote = zappedNote,
                         onResponse = { response ->
-                            if (response is IErrorResponseLike) {
-                                onError(
-                                    stringRes(context, R.string.error_dialog_pay_invoice_error),
-                                    response.errorMessage()
-                                        ?: stringRes(context, R.string.error_parsing_error_message),
-                                )
+                            response.nwcFailureDetail(context)?.let { detail ->
+                                onError(stringRes(context, R.string.error_dialog_pay_invoice_error), detail)
                             }
                         },
                         onTimeout = {
-                            onError(
-                                stringRes(context, R.string.error_dialog_pay_invoice_error),
-                                stringRes(
-                                    context,
-                                    R.string.wallet_connect_no_response_error,
-                                    NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
-                                ),
-                            )
+                            onError(stringRes(context, R.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
                         },
                     )
                     done++

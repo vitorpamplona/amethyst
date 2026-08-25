@@ -588,6 +588,7 @@ class WalletViewModel : ViewModel() {
         val currentOffset = allTransactions.value.size
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingMore.value = true
+            _error.value = null
             var requestId: HexKey? = null
             val timeoutJob = launchTimeout({ requestId }) { _isLoadingMore.value = false }
             try {

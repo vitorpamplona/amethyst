@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -66,6 +65,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
+import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -77,8 +78,6 @@ import com.vitorpamplona.amethyst.ui.theme.SimpleImage75Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
@@ -404,32 +403,12 @@ fun DvmPaymentActions(
                         onSent = {
                             onStatusUpdate(nwcPaymentRequest)
                         },
-                        onTimeout = {
-                            onStatusUpdate(
-                                stringRes(
-                                    context,
-                                    R.string.wallet_connect_no_response_error,
-                                    NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
-                                ),
-                            )
-                        },
+                        onTimeout = { onStatusUpdate(nwcTimeoutMessage(context)) },
                         onResponse = { response ->
                             onStatusUpdate(
-                                when (response) {
-                                    is PayInvoiceSuccessResponse -> thankYou
-                                    // IErrorResponseLike, not PayInvoiceErrorResponse: a wallet
-                                    // that omits `result_type` on an error still deserializes to
-                                    // something renderable, and the narrower check thanked the
-                                    // user for a payment that had just been refused.
-                                    is IErrorResponseLike ->
-                                        stringRes(
-                                            context,
-                                            R.string.wallet_connect_pay_invoice_error_error,
-                                            response.errorMessage()
-                                                ?: stringRes(context, R.string.error_parsing_error_message),
-                                        )
-                                    else -> stringRes(context, R.string.wallet_connect_unreadable_response_error)
-                                },
+                                response.nwcFailureDetail(context)?.let { detail ->
+                                    stringRes(context, R.string.wallet_connect_pay_invoice_error_error, detail)
+                                } ?: thankYou,
                             )
                         },
                     )

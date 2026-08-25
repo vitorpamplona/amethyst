@@ -99,7 +99,7 @@ class AccountZapActions(
 
     suspend fun sendNwcRequest(
         request: Request,
-        onTimeout: (() -> Unit)? = null,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ) {
         val (event, relay) = account.nip47SignerState.sendNwcRequest(request, onTimeout, onResponse)
@@ -109,7 +109,7 @@ class AccountZapActions(
     suspend fun sendNwcRequestToWallet(
         walletUri: Nip47WalletConnect.Nip47URINorm,
         request: Request,
-        onTimeout: (() -> Unit)? = null,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ): HexKey {
         val (event, relay) = account.nip47SignerState.sendNwcRequestToWallet(walletUri, request, onTimeout, onResponse)
@@ -138,7 +138,7 @@ class AccountZapActions(
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
-        onTimeout: (() -> Unit)? = null,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ) {
         val (event, relay) = account.nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onTimeout, onResponse)
