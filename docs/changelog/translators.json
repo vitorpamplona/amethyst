@@ -75,22 +75,13 @@
     "rchk": ""
   },
   "sinceLastTag": {
-    "tag": "v1.13.1",
-    "since": "2026-07-28T23:17:02-04:00",
+    "tag": "v1.14.0",
+    "since": "2026-08-22T13:13:30-04:00",
     "translators": [
       {
-        "user": "vitorpamplona",
+        "user": "StellarStoic",
         "languages": [
-          "Chinese Simplified",
-          "Czech",
-          "Dutch",
-          "German",
-          "Hindi",
-          "Hungarian",
-          "Polish",
-          "Portuguese, Brazilian",
-          "Slovenian",
-          "Swedish"
+          "Slovenian"
         ]
       },
       {
@@ -100,30 +91,16 @@
         ]
       },
       {
-        "user": "summoner001",
+        "user": "vitorpamplona",
         "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "rajs19420616",
-        "languages": [
-          "Hindi"
+          "Polish",
+          "Slovenian"
         ]
       },
       {
         "user": "maxblake2015",
         "languages": [
           "Polish"
-        ]
-      },
-      {
-        "user": "davotoula",
-        "languages": [
-          "Czech",
-          "German",
-          "Portuguese, Brazilian",
-          "Swedish"
         ]
       },
       {
@@ -195,6 +172,10 @@
         "languages": []
       },
       {
+        "user": "davotoula",
+        "languages": []
+      },
+      {
         "user": "crackadoo",
         "languages": []
       },
@@ -259,6 +240,10 @@
         "languages": []
       },
       {
+        "user": "rajs19420616",
+        "languages": []
+      },
+      {
         "user": "Maxblake",
         "languages": []
       },
@@ -275,11 +260,11 @@
         "languages": []
       },
       {
-        "user": "StellarStoic",
+        "user": "D4rkFIow",
         "languages": []
       },
       {
-        "user": "D4rkFIow",
+        "user": "summoner001",
         "languages": []
       },
       {

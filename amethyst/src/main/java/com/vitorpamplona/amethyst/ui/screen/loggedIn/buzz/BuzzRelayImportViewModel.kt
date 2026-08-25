@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupDeletions
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.model.Account
@@ -104,7 +103,7 @@ class BuzzRelayImportViewModel : ViewModel() {
 
         // The user came here to import from THIS relay: remember it as a joined workspace (persisted,
         // marks the Buzz dialect) and pre-approve NIP-42 auth so the `#p=me` read below is served.
-        val newlyJoined = BuzzWorkspaces.join(normalized)
+        val newlyJoined = account.buzzWorkspaces.join(normalized)
         viewModelScope.launch { account.relayAuthLedger.setDecision(normalized.url, RelayAuthDecision.ALLOW) }
 
         // Unlocks the persistent group-roster (39002) subscription — see [reconnectPoolAfterJoin].

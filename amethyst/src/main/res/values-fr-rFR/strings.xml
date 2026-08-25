@@ -1430,7 +1430,7 @@
         <item quantity="one">Connecté à %1$d relais</item>
         <item quantity="other">Connecté à %1$d relais</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
@@ -3190,9 +3190,6 @@
     <string name="relay_members_removed">%1$d membres retirés du relais</string>
     <string name="relay_join_request">Demande d\'adhésion au relais</string>
     <string name="relay_leave_request">Demande de départ du relais</string>
-    <string name="ai_writing_help">Aide à la rédaction IA</string>
-    <string name="ai_writing_setting_title">Proposer des améliorations de texte</string>
-    <string name="ai_writing_setting_description">Utilise un modèle IA embarqué pour proposer des corrections de texte et des changements de ton.</string>
     <string name="tracked_broadcasts_setting_title">Diffusions suivies</string>
     <string name="tracked_broadcasts_setting_description">Utilise le diffuseur suivi lors de l\'envoi d\'événements. Affiche la progression en direct et l\'état par relais pendant la diffusion.</string>
     <string name="suggest_workouts_setting_title">Suggérer des entraînements à partager</string>
@@ -3213,17 +3210,6 @@
     <string name="pow_time_left_soon">à tout moment maintenant</string>
     <string name="pow_publish_failed">Votre %1$s a fini de miner mais n\'a pas pu être publié : %2$s</string>
     <string name="pow_kind_report">Signaler</string>
-    <string name="ai_writing_use_this">Utiliser ceci</string>
-    <string name="ai_writing_dismiss">Ignorer</string>
-    <string name="ai_tone_correct">Corriger</string>
-    <string name="ai_tone_rephrase">Reformuler</string>
-    <string name="ai_tone_shorter">Plus court</string>
-    <string name="ai_tone_elaborate">Développer</string>
-    <string name="ai_tone_friendly">Amical</string>
-    <string name="ai_tone_professional">Professionnel</string>
-    <string name="ai_tone_more_direct">Plus direct</string>
-    <string name="ai_tone_punchy">Percutant</string>
-    <string name="ai_tone_emojify">+ Émoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Packs d\'emojis</string>
     <string name="emoji_pack_management_title">Ajouter à la liste d\'emojis</string>

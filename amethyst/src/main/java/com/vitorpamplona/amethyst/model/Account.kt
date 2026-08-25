@@ -34,7 +34,10 @@ import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzHeldAttestations
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
@@ -64,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
@@ -74,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
 import com.vitorpamplona.amethyst.model.bolt12Offers.Bolt12OfferListState
+import com.vitorpamplona.amethyst.model.buzz.ChannelInvitesState
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.ForwardKind0ToLocalRelayState
@@ -147,6 +152,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
+import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthSessionGrants
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthVenues
 import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDeliveryTracker
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyRequestsCache
@@ -406,6 +412,28 @@ class Account(
     // answered without a disk read. Backed by a per-account file (see AccountCacheState).
     val relayAuthPermissions = RelayAuthPermissionCache(relayAuthPermissionStore, scope)
 
+    // The `block/buzz` workspaces THIS account joined. Per account, not per device: the invite was
+    // redeemed by this key and the relay grants membership to it alone — and this set makes the
+    // relay first-party for NIP-42 (see AuthCoordinator.isFirstParty), so a device-global set would
+    // hand every other logged-in account an automatic login on a workspace it never joined.
+    // Restored/persisted per account by BuzzWorkspacePreferences (see AccountCacheState).
+    val buzzWorkspaces = BuzzWorkspaces()
+
+    // The Buzz channels THIS account pinned. A star says which channels this user wants at the top
+    // of the community view, so a shared set let one account reorder and badge every other one's
+    // channel list. Restored/persisted per account by BuzzChannelStarPreferences.
+    val buzzChannelStars = BuzzChannelStars()
+
+    // The NIP-OA attestation an owner issued to THIS account's key, attached to its Buzz-relay
+    // AUTH so the relay grants virtual membership. Restored/persisted per account by
+    // BuzzAttestationPreferences.
+    val buzzAttestation = BuzzHeldAttestations(pubKey)
+
+    // The relays this account approved by answering the NIP-42 prompt *without* the "remember"
+    // switch. Deliberately in-memory only: it dies with this Account (i.e. with the process, or at
+    // logout), which is what makes it a session grant rather than a stored ALLOW.
+    val relayAuthSessionGrants = RelayAuthSessionGrants()
+
     // Per-account NIP-42 policy evaluator (blocked → per-relay override → global policy → prompt),
     // reading THIS account's own toggles, relay lists and follow graph. Cached here so every AUTH
     // path (foreground screen + background notification consumer) shares one instance, and so an
@@ -414,6 +442,7 @@ class Account(
         RelayAuthPermissionLedger(
             store = relayAuthPermissions,
             globalPolicy = { settings.defaultRelayAuthPolicy.value },
+            sessionGrants = relayAuthSessionGrants,
             customToggles = {
                 RelayAuthCustomToggles(
                     myRelaysAndVenues = settings.relayAuthTrustMyRelaysAndVenues.value,
@@ -433,6 +462,27 @@ class Account(
             },
             isVenueHostRelay = { relayUrl -> relayUrl.normalizeRelayUrlOrNull()?.let { it in venueHostRelays() } ?: false },
         )
+
+    /**
+     * Sets the global NIP-42 policy, dropping every session grant when it becomes
+     * [RelayAuthPolicy.NEVER].
+     *
+     * The two halves belong together, which is why they live here instead of in the settings screen
+     * that used to pair them: a session grant outranks the policy (see
+     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthResolver]), so "never log in" only
+     * means what it says if the casual one-tap answers go with it. As a composable's `onClick` that
+     * was a property of one screen rather than of the account, and any other caller of
+     * [AccountSettings.changeDefaultRelayAuthPolicy] silently reintroduced grants that outlive the
+     * switch-it-all-off answer.
+     *
+     * Stored Always/Never exceptions are deliberately left alone: those outrank the policy by
+     * design, and the settings screen lists them, so they are a standing answer rather than a
+     * casual one.
+     */
+    fun changeDefaultRelayAuthPolicy(policy: RelayAuthPolicy) {
+        settings.changeDefaultRelayAuthPolicy(policy)
+        if (policy == RelayAuthPolicy.NEVER) relayAuthSessionGrants.clear()
+    }
 
     /**
      * Relays that exist here because *this account* joined a room on them: the host of every NIP-29
@@ -551,6 +601,21 @@ class Account(
 
     val relayGroupListDecryptionCache = RelayGroupListDecryptionCache(signer)
     val relayGroupList = RelayGroupListState(signer, cache, relayGroupListDecryptionCache, scope, settings)
+
+    /**
+     * Buzz channels somebody else added me to that I haven't answered yet, projected from the cached
+     * kind-44100/44101 verdicts. Account state rather than screen state because the notifications DAL
+     * reads it to decide whether a cached 44100 is still a live question.
+     */
+    val channelInvites =
+        ChannelInvitesState(
+            me = signer.pubKey,
+            cache = cache,
+            buzzWorkspaces = buzzWorkspaces,
+            relayGroupList = relayGroupList,
+            dismissed = settings.dismissedChannelInvites,
+            scope = scope,
+        )
 
     val concordChannelList = ConcordChannelListState(signer, cache, scope, settings)
 
@@ -704,11 +769,18 @@ class Account(
     // the history loader ([AccountNotificationsHistoryEoseManager]) binds its orchestrator to these.
     val notificationHistory = RelayLoadingCursors()
 
+    // Per-relay backward-paging cursors for the NIP-60 spending history (kind:7376): how far back each
+    // outbox relay has been paged by until+limit. Same lifetime rule as notificationHistory — held here
+    // so paging progress survives leaving and re-entering the wallet screen; the history loader
+    // ([CashuWalletHistoryEoseManager]) binds its orchestrator to these.
+    val cashuHistory = RelayLoadingCursors()
+
     val cashuWalletState =
         com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState(
             pubKey = signer.pubKey,
             signer = signer,
             cache = cache,
+            client = client,
             scope = scope,
             outboxRelaysFlow = outboxRelays.flow,
             inboxRelaysFlow = notificationRelays.flow,
@@ -1031,6 +1103,15 @@ class Account(
 
     suspend fun toggleChatroomPin(room: ChatroomKey) {
         settings.toggleChatroomPin(room)
+        sendNewAppSpecificData()
+    }
+
+    /**
+     * Local state first, then publish. The local write is what every suppression point
+     * reads, so it must not wait on the signer — publishing is best-effort sync.
+     */
+    suspend fun toggleMutedPublicChat(channelId: String) {
+        settings.toggleMutedPublicChat(channelId)
         sendNewAppSpecificData()
     }
 
@@ -3542,6 +3623,20 @@ class Account(
 
     init {
         Log.d("AccountRegisterObservers", "Init")
+
+        // Blocking a relay has to forget any "just for now" login to it, or unblocking later would
+        // silently resume authenticating off an answer given before the block. Blocking is the
+        // strongest signal available here — the weaker "never allow" already drops the grant via
+        // RelayAuthPermissionLedger.setDecision, so it would be odd for the stronger one not to.
+        //
+        // Observed rather than hooked onto the local block action because the kind-10006 list is
+        // shared: a block published by another client arrives as a flow update with no call of ours
+        // behind it.
+        scope.launch {
+            blockedRelayList.flow.collect { blocked ->
+                relayAuthLedger.revokeSessionGrantsFor(blocked.map { it.url })
+            }
+        }
 
         // Start the Cashu wallet state observers AFTER all field initializers
         // complete — auto-redeem can fire as soon as start() returns, and it

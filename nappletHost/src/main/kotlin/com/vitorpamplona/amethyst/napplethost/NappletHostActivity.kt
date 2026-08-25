@@ -78,6 +78,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.lang.ref.WeakReference
 import java.util.concurrent.Executor
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
@@ -140,7 +141,26 @@ class NappletHostActivity : ComponentActivity() {
 
     // Messenger to the main-process broker, bound lazily; requests queue until connected.
     private var brokerMessenger: Messenger? = null
-    private val replyMessenger = Messenger(Handler(Looper.getMainLooper(), ::onBrokerReply))
+
+    /**
+     * Reply channel handed to the broker. It MUST NOT hold this Activity strongly — a [Messenger] sent
+     * over IPC is a binder, so while the main process holds it ART keeps a JNI global reference to the
+     * backing [Handler] here in `:napplet`. With a bound method reference as the handler callback, that
+     * one retained binder pins Activity → window → WebView past `onDestroy`, reclaimable only by killing
+     * the process. See [NappletBrowserActivity.replyMessenger] for the measured case.
+     */
+    private val replyMessenger = Messenger(WeakBrokerReplyHandler(this))
+
+    private class WeakBrokerReplyHandler(
+        activity: NappletHostActivity,
+    ) : Handler(Looper.getMainLooper()) {
+        private val ref = WeakReference(activity)
+
+        override fun handleMessage(msg: Message) {
+            ref.get()?.onBrokerReply(msg)
+        }
+    }
+
     private val pendingRequests = mutableListOf<Message>()
     private var bridgeReplyProxy: JavaScriptReplyProxy? = null
 
@@ -389,7 +409,23 @@ class NappletHostActivity : ComponentActivity() {
         foregroundHeartbeat = null
     }
 
+    /**
+     * Asks the broker to drop every reference it holds to [replyMessenger] (inc-bus subscriptions and this
+     * surface's foreground lease). Sent directly rather than through [sendToBroker], which queues while
+     * unbound — we are being destroyed, so a queued release would never leave.
+     */
+    private fun releaseFromBroker() {
+        val broker = brokerMessenger ?: return
+        val msg =
+            Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply {
+                replyTo = replyMessenger
+                data = Bundle().apply { putString(NappletIpc.KEY_LAUNCH_TOKEN, launchToken) }
+            }
+        runCatching { broker.send(msg) }
+    }
+
     /** Reports this surface's foreground state to the broker so it can hold the main process resumed. */
+
     private fun setBrokerForeground(foreground: Boolean) {
         val msg =
             Message.obtain(null, NappletIpc.MSG_SET_FOREGROUND).apply {
@@ -407,6 +443,9 @@ class NappletHostActivity : ComponentActivity() {
 
     override fun onDestroy() {
         uiScope.cancel()
+        // Drop the broker's references to our reply Messenger BEFORE unbinding — a retained Messenger is a
+        // binder and would pin this Activity (and its WebView) for the life of the `:napplet` process.
+        releaseFromBroker()
         // unbind is in runCatching: if the index never resolved we never bound the broker.
         runCatching { unbindService(brokerConnection) }
         keyActions.clear()

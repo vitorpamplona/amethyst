@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
+import com.vitorpamplona.quartz.experimental.trustedLists.metric
+import com.vitorpamplona.quartz.experimental.trustedLists.title
+import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMemberTag
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -188,6 +192,33 @@ class SearchTest : BaseDBTest() {
             db.assertQuery(repo, Filter(search = "uniqname"))
             db.assertQuery(repo, Filter(search = "uniqdesc"))
             db.assertQuery(repo, Filter(kinds = listOf(GitRepositoryEvent.KIND), search = "uniqdesc"))
+        }
+
+    @Test
+    fun testTrustedListsAreSearchableByTitleAlone() =
+        forEachDB { db ->
+            val memberKey = "b83a28b7e4e5d20bd960c5faeb6625f95529166b8bdb045d42634a2f35919450"
+            val list =
+                signer.sign(
+                    UserTrustedListEvent.build(
+                        listId = "tl-pin-uniqlist",
+                        members = listOf(PubKeyMemberTag(memberKey, score = 99)),
+                        content = "{\"members\":[{\"pubkey\":\"$memberKey\",\"score\":99}]}",
+                    ) {
+                        title("uniqpodcaster")
+                        metric("uniqmetric-membership")
+                    },
+                )
+            db.store.insertEvent(list)
+
+            db.assertQuery(list, Filter(search = "uniqpodcaster"))
+            db.assertQuery(list, Filter(kinds = listOf(UserTrustedListEvent.KIND), search = "uniqpodcaster"))
+
+            // the computation name, the list id and the membership -- tags and
+            // the JSON echo in content alike -- are machine data, never indexed
+            db.assertQuery(null, Filter(search = "uniqmetric"))
+            db.assertQuery(null, Filter(search = "uniqlist"))
+            db.assertQuery(null, Filter(search = memberKey))
         }
 
     @Test

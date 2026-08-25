@@ -46,6 +46,8 @@
     <string name="violence">Geweld</string>
     <string name="unknown_author">Onbekende auteur</string>
     <string name="copy_text">Tekst kopiëren</string>
+    <string name="copy_text_original">Origineel kopiëren</string>
+    <string name="copy_text_translated">Vertaling kopiëren</string>
     <string name="copy_user_pubkey">Auteur-ID kopiëren</string>
     <string name="copy_note_id">Note-ID kopiëren</string>
     <string name="copy_raw_json">Raw JSON kopiëren</string>
@@ -310,6 +312,18 @@
     <string name="concord_invite_failed_invalid">Deze uitnodigingslink is ongeldig of kan niet met dit account worden geopend.</string>
     <string name="concord_invite_failed_incompatible">Deze uitnodigingslink kan niet worden geopend. Hij is mogelijk verouderd of al vervangen door een nieuwere, of gemaakt met een nieuwere versie van de app. Vraag om een nieuwe uitnodigingslink.</string>
     <string name="concord_invite_failed_revoked">Deze uitnodigingslink is ingetrokken en kan niet meer worden gebruikt. Vraag om een nieuwe.</string>
+    <string name="concord_invite_failed_banned">Deze community heeft je verwijderd. De link werkt nog, maar de ledenlijst laat je niet toe.</string>
+    <string name="concord_invite_links_title">Uitnodigingslinks</string>
+    <string name="concord_invite_links_action">Uitnodigingslinks…</string>
+    <string name="concord_invite_links_created">Aangemaakt %1$s</string>
+    <string name="concord_invite_links_empty">Je hebt nog geen uitnodigingslinks voor deze community aangemaakt. Links die andere admins hebben aangemaakt, worden op hun eigen apparaat beheerd.</string>
+    <string name="concord_invite_links_unreadable">Je uitnodigingslinks konden niet geladen worden, dus je kunt er nu geen intrekken. Controleer je verbinding en probeer het opnieuw.</string>
+    <string name="concord_invite_revoke_action">Link intrekken</string>
+    <string name="concord_invite_revoke_title">Deze link intrekken?</string>
+    <string name="concord_invite_revoke_explainer">Iedereen die deze link nog heeft, kan er niet meer mee toetreden. Mensen die er al mee zijn toegetreden, blijven in de community. Dit kan niet ongedaan worden gemaakt.</string>
+    <string name="concord_invite_revoke_confirm">Intrekken</string>
+    <string name="concord_invite_revoked_ok">Uitnodigingslink ingetrokken.</string>
+    <string name="concord_invite_revoked_failed">De link kon niet ingetrokken worden. Controleer je verbinding en probeer het opnieuw.</string>
     <string name="concord_invite_failed_expired">Deze uitnodigingslink is verlopen en kan niet meer worden gebruikt. Vraag om een nieuwe link.</string>
     <string name="concord_invite_preview_unknown_name">De naam van de community wordt pas zichtbaar nadat je deelneemt</string>
     <string name="concord_invite_preview_explainer">Deelnemen maakt verbinding met de relays van deze uitnodiging, publiceert een aankondiging van deelname die met jouw account is ondertekend, en voegt de community toe aan je lijst. Er wordt niets verzonden totdat je op Deelnemen tikt.</string>
@@ -484,6 +498,11 @@
     <string name="backup_keys">Back-up sleutels</string>
     <string name="account_backup_tips2_md" tools:ignore="Typos">## Sleutelback-up en veiligheidstips\n\nJe account wordt beveiligd door een privésleutel (begint met **nsec1**). Iedereen met deze sleutel kan namens jou posten.\n\n- Voer je privésleutel **nooit** in op een website of app die je niet volledig vertrouwt.\n- Amethyst-ontwikkelaars zullen **nooit** om je privésleutel vragen.\n- Maak een veilige back-up van je privésleutel (bijvoorbeeld in een wachtwoordmanager).</string>
     <string name="account_backup_tips3_md" tools:ignore="Typos">Voor extra veiligheid kun je je sleutel versleutelen met een wachtwoord. Deze versleutelde sleutel begint met **ncryptsec1** en kan alleen met je wachtwoord worden gebruikt.\n\nAls je het wachtwoord vergeet, kun je de sleutel niet meer herstellen.</string>
+    <string name="backup_keys_nudge_title">Maak een back-up van je sleutels</string>
+    <string name="backup_keys_nudge_body">Je geheime sleutel is de enige manier om bij dit account te komen. Raak je hem kwijt, dan is hij nooit meer te herstellen. Sla hem nu op een veilige plek op.</string>
+    <string name="backup_keys_nudge_backup_now">Nu back-uppen</string>
+    <string name="backup_keys_nudge_already_saved">Ik heb ze opgeslagen</string>
+    <string name="backup_keys_nudge_dismiss">Sluiten</string>
     <string name="failed_to_encrypt_key">Versleutelen van privésleutel mislukt</string>
     <string name="secret_key_copied_to_clipboard">Privésleutel (nsec) gekopieerd naar klembord</string>
     <string name="copy_my_secret_key">Mijn privésleutel kopiëren</string>
@@ -541,6 +560,9 @@
     <string name="quick_action_block">Blokkeren</string>
     <string name="quick_action_mute_thread">Discussie dempen</string>
     <string name="quick_action_unmute_thread">Discussie dempen opheffen</string>
+    <string name="mute_notifications">Meldingen dempen</string>
+    <string name="unmute_notifications">Meldingen ontdempen</string>
+    <string name="muted_chat_content_description">Meldingen zijn gedempt voor deze chat</string>
     <string name="quick_action_report">Rapporteren</string>
     <string name="quick_action_dont_show_again_button">Niet meer tonen</string>
     <string name="report_dialog_spam">Spam of oplichting</string>
@@ -1077,12 +1099,72 @@
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
+    <string name="relay_auth_auto_login_when">Aanmelden zonder te vragen wanneer\u2026</string>
+    <string name="relay_auth_auto_my_relays_and_venues">\u2026het mijn relay is, of een ruimte waar ik lid van ben of die ik volg</string>
+    <string name="relay_auth_auto_read_follows">\u2026ik iemand lees die ik volg</string>
+    <string name="relay_auth_auto_message_follows">\u2026ik iemand bericht die ik volg</string>
+    <string name="relay_auth_auto_message_strangers">\u2026ik iemand anders bericht</string>
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <string name="relay_auth_login_as">Aanmelden als %1$s?</string>
+    <string name="relay_auth_relay_asks">vraagt wie je bent</string>
+    <string name="relay_auth_why_send_dm">Deze relay accepteert je bericht voor %1$s niet tenzij je je aanmeldt.</string>
+    <string name="relay_auth_why_notify_inbox">%1$s hoort niets over je antwoord tenzij je je aanmeldt.</string>
+    <string name="relay_auth_why_read_outbox">Deze relay levert geen posts van %1$s tenzij je je aanmeldt.</string>
+    <string name="relay_auth_why_post_venue">Deze relay accepteert je post in %1$s niet tenzij je je aanmeldt.</string>
+    <string name="relay_auth_why_read_venue">Deze relay levert %1$s niet tenzij je je aanmeldt.</string>
+    <string name="relay_auth_why_my_inbox">Deze relay levert geen antwoorden, zaps en berichten die naar jou zijn gestuurd tenzij je je aanmeldt.</string>
+    <string name="relay_auth_why_thread">Deze relay levert de rest van dit gesprek niet tenzij je je aanmeldt.</string>
+    <string name="relay_auth_why_thread_with">Deze relay levert de rest van je gesprek met %1$s niet tenzij je je aanmeldt.</string>
+    <string name="relay_auth_why_my_own_relay">Dit is een van je eigen relays, en hij vraagt iedereen om zich aan te melden.</string>
+    <string name="relay_auth_why_other">Deze relay vraagt iedereen om zich aan te melden. Amethyst kan niet zien wat hij achterhoudt.</string>
+    <string name="relay_auth_someone_unloaded">iemand die je nog niet geladen hebt</string>
+    <plurals name="relay_auth_name_and_n_others">
+        <item quantity="one">%1$s en %2$d andere</item>
+        <item quantity="other">%1$s en %2$d anderen</item>
+    </plurals>
+    <plurals name="relay_auth_also_holding_back">
+        <item quantity="one">Hij houdt ook nog %1$d ander ding achter.</item>
+        <item quantity="other">Hij houdt ook nog %1$d andere dingen achter.</item>
+    </plurals>
+    <string name="relay_auth_remember_relay">Onthouden voor deze relay</string>
+    <string name="relay_auth_log_in">Aanmelden</string>
+    <string name="relay_auth_not_now">Niet nu</string>
+    <string name="relay_auth_never_allow">Nooit toestaan</string>
+    <string name="relay_auth_how_we_decide">Hoe Amethyst beslist</string>
     <!-- Settings: three lists that each hold what their header says. -->
+    <string name="relay_auth_exceptions">Uitzonderingen</string>
+    <string name="relay_auth_no_exceptions">Nog geen uitzonderingen. Elke relay volgt de regels hierboven.</string>
+    <string name="relay_auth_exception_always">Altijd, door jou ingesteld</string>
+    <string name="relay_auth_exception_never">Nooit, door jou ingesteld</string>
+    <string name="relay_auth_segment_always">Altijd</string>
+    <string name="relay_auth_segment_never">Nooit</string>
+    <string name="relay_auth_remove_exception">Uitzondering verwijderen</string>
+    <string name="relay_auth_exception_removed_undo">Uitzondering verwijderd. %1$s volgt je regels weer.</string>
+    <string name="relay_auth_undo">Ongedaan maken</string>
+    <string name="relay_auth_session_section">Alleen voor nu</string>
+    <string name="relay_auth_session_row_desc">Aangemeld totdat je Amethyst herstart</string>
+    <string name="relay_auth_forget_session">Deze aanmelding vergeten</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s vraagt het opnieuw zodra hij je weer nodig heeft.</string>
+    <string name="relay_auth_session_undo_blocked">Niet hersteld. “Nooit authenticeren” staat aan, dus Amethyst meldt zich niet aan bij %1$s.</string>
+    <string name="relay_auth_blocked_section">Geblokkeerd door je blokkeerlijst</string>
+    <string name="relay_auth_blocked_row_desc">Amethyst meldt zich nooit aan bij geblokkeerde relays.</string>
+    <string name="relay_auth_no_blocked">Niets geblokkeerd. Bij relays die je blokkeert wordt nooit aangemeld, wat je hier ook instelt.</string>
+    <string name="relay_auth_recent_section">Recente aanmeldingen</string>
+    <string name="relay_auth_no_recent">Nog geen enkele relay heeft je gevraagd je aan te melden.</string>
+    <string name="relay_auth_ago">%1$s geleden</string>
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
+    <string name="relay_auth_purpose_send_dm">je berichten</string>
+    <string name="relay_auth_purpose_notify_inbox">je antwoorden</string>
+    <string name="relay_auth_purpose_read_outbox">mensen die je leest</string>
+    <string name="relay_auth_purpose_post_venue">een ruimte waarin je plaatst</string>
+    <string name="relay_auth_purpose_read_venue">een ruimte die je leest</string>
+    <string name="relay_auth_purpose_my_inbox">je inbox</string>
+    <string name="relay_auth_purpose_thread">een gesprek</string>
+    <string name="relay_auth_purpose_my_own_relay">je eigen relay</string>
+    <string name="relay_auth_purpose_other">deze relay</string>
     <string name="nip82_repository_label">Bron: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Downloaden</string>
@@ -1451,6 +1533,46 @@
     <string name="private_note_visible_to">Zichtbaar voor</string>
     <string name="private_note_no_receivers">Nog geen ontvangers: alleen jij kunt deze note zien. Voeg mensen toe om te delen.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
+    <string name="audience_manage">Beheer wie dit ziet</string>
+    <string name="audience_empty_private">Alleen jij \u2014 kies wie dit nog meer kan zien</string>
+    <string name="audience_empty_public">Voeg mensen toe die een melding krijgen</string>
+    <string name="audience_summary_two">%1$s en %2$s</string>
+    <string name="audience_group_chip">%1$s \u00b7 %2$s</string>
+    <string name="audience_group_remove">Verwijder iedereen die via %1$s is toegevoegd</string>
+    <string name="audience_send_privately">Privé verzenden</string>
+    <string name="audience_sheet_title">Mensen toevoegen</string>
+    <string name="audience_sheet_search">Zoek mensen en lijsten</string>
+    <string name="audience_sheet_no_lists">Je hebt nog geen mensenlijsten of volgpakketten. Zoek hierboven om iemand direct toe te voegen.</string>
+    <string name="audience_count_with_private">%1$d \u00b7 %2$d privé</string>
+    <string name="audience_over_limit">Boven de limiet</string>
+    <string name="audience_badge_already_added">Al toegevoegd</string>
+    <string name="audience_badge_muted">Gedempt</string>
+    <string name="audience_badge_private_member">Privélid</string>
+    <string name="audience_recipients_are_visible">Iedereen op deze note kan de volledige ontvangerslijst zien.</string>
+    <plurals name="audience_summary_others">
+        <item quantity="one">%1$s, %2$s en %3$d andere</item>
+        <item quantity="other">%1$s, %2$s en %3$d anderen</item>
+    </plurals>
+    <plurals name="audience_soft_cap_private">
+        <item quantity="one">Deze note wordt %1$d keer apart versleuteld en afgeleverd, één keer per persoon. Met een externe signer is dat elke keer een aparte goedkeuring.</item>
+        <item quantity="other">Deze note wordt %1$d keer apart versleuteld en afgeleverd, één keer per persoon. Met een externe signer is dat elke keer een aparte goedkeuring.</item>
+    </plurals>
+    <plurals name="audience_soft_cap_public">
+        <item quantity="one">%1$d persoon krijgt een melding van deze post.</item>
+        <item quantity="other">%1$d mensen krijgen een melding van deze post.</item>
+    </plurals>
+    <plurals name="audience_hard_cap">
+        <item quantity="one">Dat zou %1$d persoon zijn. Amethyst voegt er maximaal %2$d tegelijk toe \u2014 deselecteer er een paar.</item>
+        <item quantity="other">Dat zouden %1$d mensen zijn. Amethyst voegt er maximaal %2$d tegelijk toe \u2014 deselecteer er een paar.</item>
+    </plurals>
+    <plurals name="audience_add_people">
+        <item quantity="one">%1$d persoon toevoegen</item>
+        <item quantity="other">%1$d mensen toevoegen</item>
+    </plurals>
+    <plurals name="audience_add_anyway">
+        <item quantity="one">Toch %1$d persoon toevoegen</item>
+        <item quantity="other">Toch %1$d mensen toevoegen</item>
+    </plurals>
     <string name="notify_add_user">Toevoegen</string>
     <string name="notify_remove_user">Gebruiker verwijderen uit meldingen</string>
     <string name="notify_mute_user">Meldingen aan. Tik om de melding voor deze gebruiker te dempen</string>
@@ -1897,7 +2019,7 @@
         <item quantity="one">Verbonden met %1$d relay</item>
         <item quantity="other">Verbonden met %1$d relays</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d relay</item>
@@ -2531,6 +2653,9 @@
     <string name="relay_group_no_messages_yet">Nog geen berichten</string>
     <string name="channel_invite_title">Toegevoegd aan %1$s</string>
     <string name="channel_invite_unknown_actor">Iemand</string>
+    <string name="channel_invite_added_you">heeft je toegevoegd aan dit kanaal</string>
+    <string name="channel_invite_row_added_you_by">%1$s heeft je toegevoegd aan dit kanaal</string>
+    <string name="channel_invite_row_added_you">Je bent toegevoegd aan dit kanaal</string>
     <string name="channel_invite_ignore">Negeren</string>
     <string name="channel_invite_leave">Verlaten</string>
     <string name="relay_group_join_to_post">Neem deel aan deze groep om berichten te sturen.</string>
@@ -2834,6 +2959,9 @@
     <string name="cashu_remove_mint">Mint verwijderen</string>
     <string name="cashu_add_mint">Mint toevoegen</string>
     <string name="cashu_history">Geschiedenis</string>
+    <string name="cashu_history_loading_older">Oudere transacties laden…</string>
+    <string name="cashu_history_all_loaded">Geen oudere transacties</string>
+    <string name="cashu_history_some_relays_unreachable">Geen oudere transacties van de relays die antwoordden — sommige waren niet bereikbaar</string>
     <string name="cashu_wallet_autosaves">Je wallet slaat automatisch op terwijl je mints toevoegt of verwijdert. De eerste keer dat je een mint toevoegt, wordt er een nutzap-sleutel voor je aangemaakt.</string>
     <string name="cashu_wallet_saving">Opslaan…</string>
     <string name="cashu_p2pk_section">Nutzap-sleutel (geavanceerd)</string>
@@ -3168,6 +3296,19 @@
     <string name="bottom_bar_category_feeds">Feeds</string>
     <string name="bottom_bar_category_apps">Apps &amp; web</string>
     <string name="bottom_bar_category_other">Overig</string>
+    <string name="drawer_settings">Zijmenu</string>
+    <string name="drawer_settings_title">Jouw zijmenu</string>
+    <string name="drawer_settings_description">Open een sectie en zet de rijen uit die je nooit gebruikt. Instellingen blijft altijd zichtbaar, zodat je hier altijd terug kunt komen. De volgorde van de secties ligt vast.</string>
+    <string name="drawer_settings_sections">Secties</string>
+    <plurals name="drawer_settings_hidden_count">
+        <item quantity="one">%1$d verborgen</item>
+        <item quantity="other">%1$d verborgen</item>
+    </plurals>
+    <string name="drawer_settings_visible">Zichtbaar</string>
+    <string name="drawer_settings_hidden">Verborgen</string>
+    <string name="drawer_settings_always_on">Altijd aan</string>
+    <string name="drawer_settings_show_all">Alles tonen</string>
+    <string name="drawer_settings_hide_all">Alles verbergen</string>
     <string name="home_tabs_settings">Start-tabbladen</string>
     <string name="home_tabs_settings_description">Kies welke tabbladen op het startscherm verschijnen. Wanneer slechts één tab actief is, wordt de tabbalk verborgen.</string>
     <string name="home_tab_everything">Alles</string>
@@ -3541,6 +3682,10 @@
     <string name="git_repo_settings_save">Opslaan</string>
     <string name="git_repositories">Git-repositories</string>
     <string name="highlights">Highlights</string>
+    <string name="git_repositories_search_open">Repositories filteren</string>
+    <string name="git_repositories_search_close">Filter sluiten</string>
+    <string name="git_repositories_search_placeholder">Filter op naam, onderwerp, host, beheerder…</string>
+    <string name="git_repositories_search_no_results">Geen repositories in de huidige feed komen overeen met deze zoekopdracht.</string>
     <string name="nsite_title">Statische website: %1$s</string>
     <string name="napplet_card_title">nApplet %1$s</string>
     <string name="napplet_card_permissions">Machtigingen:</string>
@@ -3771,6 +3916,8 @@
     <string name="resource_usage_send_section">Delen met de ontwikkelaars</string>
     <string name="resource_usage_send_explanation">Als Amethyst batterij of data lijkt te verbruiken, kun je dit rapport in een versleutelde DM naar de ontwikkelaars sturen. Het bevat alleen de cijfers op dit scherm en de technische tellers erachter — geen berichten, contacten of browsegegevens. Er wordt niets verzonden totdat je op Verzenden tikt in het berichtenscherm.</string>
     <string name="resource_usage_send_button">Rapport via DM verzenden</string>
+    <string name="resource_usage_copy_button">Kopiëren</string>
+    <string name="resource_usage_share_button">Delen</string>
     <string name="resource_usage_alert_title">Hoog resourcegebruik gedetecteerd</string>
     <string name="resource_usage_alert_message">Amethyst heeft recentelijk meer verbruikt dan verwacht: %1$s. Wil je een gebruiksrapport in een versleutelde DM naar de ontwikkelaars sturen? Je ziet het volledige rapport voordat er iets wordt verzonden.</string>
     <string name="resource_usage_reason_bg_data">%1$s aan mobiele data op de achtergrond op één dag</string>
@@ -3847,6 +3994,45 @@
     <string name="social_proof">Social proof</string>
     <string name="poll_submit">Indienen</string>
     <string name="poll_view_results">Resultaten bekijken</string>
+    <string name="poll_results_title">Pollresultaten</string>
+    <string name="poll_results_loading">Poll laden…</string>
+    <string name="poll_results_open">Open</string>
+    <string name="poll_results_closes_in">Sluit over %1$s</string>
+    <string name="poll_results_ended">Gesloten %1$s geleden</string>
+    <string name="poll_results_all_options">Alle opties</string>
+    <string name="poll_results_your_pick">Jouw stem</string>
+    <plurals name="poll_results_selections">
+        <item quantity="one">· %1$d selectie</item>
+        <item quantity="other">· %1$d selecties</item>
+    </plurals>
+    <string name="poll_results_no_votes">Nog geen stemmen</string>
+    <string name="poll_results_checking_completeness">Controleren hoeveel stemmen er zijn…</string>
+    <string name="poll_results_partial">%1$d van %2$d reacties geladen van %3$d relays.</string>
+    <string name="poll_results_partial_approx">%1$d van ongeveer %2$d reacties geladen van %3$d relays.</string>
+    <plurals name="poll_results_vote_count_link">
+        <item quantity="one">%1$d stem ›</item>
+        <item quantity="other">%1$d stemmen ›</item>
+    </plurals>
+    <plurals name="poll_results_option_count">
+        <item quantity="one">%1$d stemmer</item>
+        <item quantity="other">%1$d stemmers</item>
+    </plurals>
+    <plurals name="poll_results_late_votes">
+        <item quantity="one">%1$d stem kwam binnen nadat de poll gesloten was en telt niet mee.</item>
+        <item quantity="other">%1$d stemmen kwamen binnen nadat de poll gesloten was en tellen niet mee.</item>
+    </plurals>
+    <plurals name="poll_results_backdated_votes">
+        <item quantity="one">%1$d stem is gedateerd vóór de poll werd gepubliceerd en telt niet mee.</item>
+        <item quantity="other">%1$d stemmen zijn gedateerd vóór de poll werd gepubliceerd en tellen niet mee.</item>
+    </plurals>
+    <plurals name="poll_results_ignored_votes">
+        <item quantity="one">%1$d reactie koos geen geldige optie en telt niet mee.</item>
+        <item quantity="other">%1$d reacties kozen geen geldige optie en tellen niet mee.</item>
+    </plurals>
+    <plurals name="poll_results_hidden_voters">
+        <item quantity="one">%1$d stemmer is verborgen door je dempingslijst.</item>
+        <item quantity="other">%1$d stemmers zijn verborgen door je dempingslijst.</item>
+    </plurals>
     <string name="restart">Opnieuw starten</string>
     <string name="chess_accept">Accepteren</string>
     <string name="chess_decline">Weigeren</string>
@@ -4316,9 +4502,6 @@
     <string name="relay_members_removed">%1$d leden verwijderd van relay</string>
     <string name="relay_join_request">Relay-lidmaatschapsverzoek</string>
     <string name="relay_leave_request">Relay-opzegverzoek</string>
-    <string name="ai_writing_help">AI-schrijfassistent</string>
-    <string name="ai_writing_setting_title">Tekstverbeteringen voorstellen</string>
-    <string name="ai_writing_setting_description">Gebruikt een on-device AI-model om tekstcorrecties en toonwijzigingen voor te stellen.</string>
     <string name="tracked_broadcasts_setting_title">Getrackte uitzendingen</string>
     <string name="tracked_broadcasts_setting_description">Gebruik de tracked broadcaster bij het verzenden van events. Toont live voortgang en per-relay-status tijdens uitzenden.</string>
     <string name="suggest_workouts_setting_title">Workouts voorstellen om te delen</string>
@@ -4413,17 +4596,6 @@
     <string name="pow_publish_failed_retry">Je %1$s is klaar met mijnen maar kon niet worden gepubliceerd. Het wordt opnieuw geprobeerd de volgende keer dat de app start.</string>
     <string name="pow_kind_chat_message">Chatbericht</string>
     <string name="pow_kind_report">Melding</string>
-    <string name="ai_writing_use_this">Gebruik dit</string>
-    <string name="ai_writing_dismiss">Sluiten</string>
-    <string name="ai_tone_correct">Corrigeren</string>
-    <string name="ai_tone_rephrase">Herschrijven</string>
-    <string name="ai_tone_shorter">Korter</string>
-    <string name="ai_tone_elaborate">Uitbreiden</string>
-    <string name="ai_tone_friendly">Vriendelijk</string>
-    <string name="ai_tone_professional">Professioneel</string>
-    <string name="ai_tone_more_direct">Directer</string>
-    <string name="ai_tone_punchy">Kort en krachtig</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-pakketten</string>
     <string name="emoji_pack_management_title">Toevoegen aan emoji-lijst</string>

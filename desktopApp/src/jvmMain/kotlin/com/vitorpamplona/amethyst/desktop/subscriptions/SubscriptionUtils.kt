@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Represents an active relay subscription that can be unsubscribed.
@@ -122,4 +123,9 @@ fun rememberSubscription(
 /**
  * Generates a unique subscription ID with timestamp.
  */
-fun generateSubId(prefix: String): String = "$prefix-${System.currentTimeMillis()}"
+private val subIdCounter = AtomicLong(0)
+
+// Append a monotonic per-process counter so two subscriptions created in the same millisecond
+// (e.g. the live bar + the Discover Lives section on the same frame) can't collide on subId — a
+// collision would make one's unsubscribe tear down the other's REQ.
+fun generateSubId(prefix: String): String = "$prefix-${System.currentTimeMillis()}-${subIdCounter.incrementAndGet()}"

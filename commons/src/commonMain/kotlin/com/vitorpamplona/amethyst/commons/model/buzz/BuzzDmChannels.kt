@@ -85,6 +85,35 @@ object BuzzDmChannels {
             true
         }
 
+    /**
+     * Sets [viewer]'s whole DM set at once, replacing whatever was there.
+     *
+     * This is what discovery uses, because its input is a *recomputation* from the cache rather than a
+     * stream of deltas: every pass sees the complete membership picture, so declaring the result is both
+     * simpler and idempotent. Incremental [record]/[remove] against a recomputed set would ping-pong —
+     * classification removes a named channel, the next pass re-derives it from the same kind-44100 and
+     * re-adds it, and the flow churns forever with nothing having changed.
+     *
+     * Returns true when the set actually moved, so callers can skip work on a no-op pass.
+     */
+    fun replace(
+        viewer: HexKey,
+        channels: Map<String, NormalizedRelayUrl>,
+    ): Boolean =
+        lock.withLock {
+            val current = byViewer[viewer]
+            if (current == null && channels.isEmpty()) return@withLock false
+            if (current != null && current == channels) return@withLock false
+
+            if (channels.isEmpty()) {
+                byViewer.remove(viewer)
+            } else {
+                byViewer[viewer] = channels.toMutableMap()
+            }
+            mutableFlow.value = snapshot()
+            true
+        }
+
     /** The DM channels [viewer] is in (`channelId` -> relay), possibly empty. */
     fun channelsFor(viewer: HexKey): Map<String, NormalizedRelayUrl> = mutableFlow.value[viewer] ?: emptyMap()
 

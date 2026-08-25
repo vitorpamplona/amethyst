@@ -571,6 +571,9 @@
     <string name="quick_action_block">Blockieren</string>
     <string name="quick_action_mute_thread">Thread stummschalten</string>
     <string name="quick_action_unmute_thread">Thread entdämpfen</string>
+    <string name="mute_notifications">Benachrichtigungen stummschalten</string>
+    <string name="unmute_notifications">Stummschaltung der Benachrichtigungen aufheben</string>
+    <string name="muted_chat_content_description">Benachrichtigungen für diesen Chat sind stummgeschaltet</string>
     <string name="quick_action_report">Melden</string>
     <string name="quick_action_dont_show_again_button">Nicht erneut anzeigen</string>
     <string name="report_dialog_spam">Spam oder Betrug</string>
@@ -1110,7 +1113,7 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Ohne Nachfrage anmelden, wenn…</string>
-    <string name="relay_auth_auto_my_relays">…es mein Relay ist oder ein Raum, dem ich beigetreten bin</string>
+    <string name="relay_auth_auto_my_relays_and_venues">…es ist mein Relay oder ein Raum, dem ich beigetreten bin oder dem ich folge</string>
     <string name="relay_auth_auto_read_follows">…ich jemanden lese, dem ich folge</string>
     <string name="relay_auth_auto_message_follows">…ich jemandem schreibe, dem ich folge</string>
     <string name="relay_auth_auto_message_strangers">…ich jemand anderem schreibe</string>
@@ -1154,6 +1157,11 @@
     <string name="relay_auth_remove_exception">Ausnahme entfernen</string>
     <string name="relay_auth_exception_removed_undo">Ausnahme entfernt. %1$s folgt wieder deinen Regeln.</string>
     <string name="relay_auth_undo">Rückgängig</string>
+    <string name="relay_auth_session_section">Nur für jetzt</string>
+    <string name="relay_auth_session_row_desc">Angemeldet, bis du Amethyst neu startest</string>
+    <string name="relay_auth_forget_session">Diese Anmeldung vergessen</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s fragt beim nächsten Mal wieder, wenn es dich braucht.</string>
+    <string name="relay_auth_session_undo_blocked">Nicht wiederhergestellt. “Nie authentifizieren” ist aktiv, daher meldet sich Amethyst nicht bei %1$s an.</string>
     <string name="relay_auth_blocked_section">Von deiner Blockliste blockiert</string>
     <string name="relay_auth_blocked_row_desc">Amethyst meldet sich nie bei blockierten Relays an.</string>
     <string name="relay_auth_no_blocked">Nichts blockiert. Bei Relays, die du blockierst, meldet sich Amethyst nie an — egal, was du hier einstellst.</string>
@@ -2024,7 +2032,7 @@
         <item quantity="one">Mit %1$d Relay verbunden</item>
         <item quantity="other">Mit %1$d Relays verbunden</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d Relay</item>
@@ -2658,6 +2666,9 @@
     <string name="relay_group_no_messages_yet">Noch keine Nachrichten</string>
     <string name="channel_invite_title">Zu %1$s hinzugefügt</string>
     <string name="channel_invite_unknown_actor">Jemand</string>
+    <string name="channel_invite_added_you">hat dich zu diesem Kanal hinzugefügt</string>
+    <string name="channel_invite_row_added_you_by">%1$s hat dich zu diesem Kanal hinzugefügt</string>
+    <string name="channel_invite_row_added_you">Du wurdest zu diesem Kanal hinzugefügt</string>
     <string name="channel_invite_ignore">Ignorieren</string>
     <string name="channel_invite_leave">Verlassen</string>
     <string name="relay_group_join_to_post">Tritt dieser Gruppe bei, um Nachrichten zu senden.</string>
@@ -2970,6 +2981,9 @@
     <string name="cashu_remove_mint">Mint entfernen</string>
     <string name="cashu_add_mint">Mint hinzufügen</string>
     <string name="cashu_history">Verlauf</string>
+    <string name="cashu_history_loading_older">Ältere Transaktionen werden geladen…</string>
+    <string name="cashu_history_all_loaded">Keine älteren Transaktionen</string>
+    <string name="cashu_history_some_relays_unreachable">Keine älteren Transaktionen von den Relays, die geantwortet haben — einige waren nicht erreichbar</string>
     <string name="cashu_wallet_autosaves">Deine Wallet wird automatisch gespeichert, während du Mints hinzufügst oder entfernst. Ein Nutzap-Schlüssel wird für dich erstellt, sobald du das erste Mint hinzufügst.</string>
     <string name="cashu_wallet_saving">Wird gespeichert…</string>
     <string name="cashu_p2pk_section">Nutzap-Schlüssel (erweitert)</string>
@@ -4510,9 +4524,6 @@
     <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
-    <string name="ai_writing_help">KI-Schreibhilfe</string>
-    <string name="ai_writing_setting_title">Textverbesserungen vorschlagen</string>
-    <string name="ai_writing_setting_description">Verwendet ein KI-Modell auf dem Gerät, um Textkorrekturen und Tonänderungen vorzuschlagen.</string>
     <string name="tracked_broadcasts_setting_title">Verfolgte Übertragungen</string>
     <string name="tracked_broadcasts_setting_description">Verwende den verfolgten Broadcaster beim Senden von Ereignissen. Zeigt Live-Fortschritt und Status pro Relay während der Übertragung.</string>
     <string name="suggest_workouts_setting_title">Workouts zum Teilen vorschlagen</string>
@@ -4607,17 +4618,6 @@
     <string name="pow_publish_failed_retry">Dein %1$s wurde fertig geschürft, konnte aber nicht veröffentlicht werden. Es wird beim nächsten Start der App erneut versucht.</string>
     <string name="pow_kind_chat_message">Chat-Nachricht</string>
     <string name="pow_kind_report">Meldung</string>
-    <string name="ai_writing_use_this">Verwenden</string>
-    <string name="ai_writing_dismiss">Schließen</string>
-    <string name="ai_tone_correct">Korrigieren</string>
-    <string name="ai_tone_rephrase">Umformulieren</string>
-    <string name="ai_tone_shorter">Kürzer</string>
-    <string name="ai_tone_elaborate">Ausführen</string>
-    <string name="ai_tone_friendly">Freundlich</string>
-    <string name="ai_tone_professional">Professionell</string>
-    <string name="ai_tone_more_direct">Direkter</string>
-    <string name="ai_tone_punchy">Prägnant</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-Pakete</string>
     <string name="emoji_pack_management_title">Zur Emoji-Liste hinzufügen</string>

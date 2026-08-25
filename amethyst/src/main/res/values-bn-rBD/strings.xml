@@ -1290,7 +1290,7 @@
         <item quantity="one">%1$d টি relay-তে সংযুক্ত</item>
         <item quantity="other">%1$d টি relay-তে সংযুক্ত</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
@@ -2918,9 +2918,6 @@
     <string name="relay_members_removed">Relay থেকে %1$d জন সদস্য সরানো হয়েছে</string>
     <string name="relay_join_request">Relay যোগ দেওয়ার অনুরোধ</string>
     <string name="relay_leave_request">Relay ছেড়ে যাওয়ার অনুরোধ</string>
-    <string name="ai_writing_help">AI লেখার সহায়তা</string>
-    <string name="ai_writing_setting_title">পাঠ্য উন্নতির প্রস্তাব দিন</string>
-    <string name="ai_writing_setting_description">পাঠ্য সংশোধন এবং সুরের পরিবর্তন প্রস্তাব করতে ডিভাইসে AI মডেল ব্যবহার করে।</string>
     <string name="tracked_broadcasts_setting_title">ট্র্যাকড সম্প্রচার</string>
     <string name="tracked_broadcasts_setting_description">ইভেন্ট পাঠানোর সময় ট্র্যাকড ব্রডকাস্টার ব্যবহার করুন। সম্প্রচার করার সময় লাইভ অগ্রগতি এবং প্রতি-relay অবস্থা দেখায়।</string>
     <string name="suggest_workouts_setting_title">শেয়ার করার জন্য ওয়ার্কআউট সুপারিশ করুন</string>
@@ -2928,17 +2925,6 @@
     <string name="compose_settings">কম্পোজ সেটিংস</string>
     <string name="auto_create_drafts_setting_title">স্বয়ংক্রিয়ভাবে খসড়া তৈরি করুন</string>
     <string name="auto_create_drafts_setting_description">আপনি টাইপ করলে বা না-পাঠানো পাঠ্য সহ কম্পোজার ছেড়ে গেলে স্বয়ংক্রিয়ভাবে একটি খসড়া ইভেন্ট সংরক্ষণ করে এবং আপনার ব্যক্তিগত আউটবক্স relay-গুলোতে পাঠায়।</string>
-    <string name="ai_writing_use_this">এটি ব্যবহার করুন</string>
-    <string name="ai_writing_dismiss">বাতিল করুন</string>
-    <string name="ai_tone_correct">সংশোধন</string>
-    <string name="ai_tone_rephrase">পুনরায় বলুন</string>
-    <string name="ai_tone_shorter">সংক্ষিপ্ত</string>
-    <string name="ai_tone_elaborate">বিস্তারিত</string>
-    <string name="ai_tone_friendly">বন্ধুত্বপূর্ণ</string>
-    <string name="ai_tone_professional">পেশাদার</string>
-    <string name="ai_tone_more_direct">আরো সরাসরি</string>
-    <string name="ai_tone_punchy">প্রভাবশালী</string>
-    <string name="ai_tone_emojify">+ ইমোজি</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">ইমোজি প্যাক</string>
     <string name="emoji_pack_management_title">ইমোজি তালিকায় যোগ করুন</string>

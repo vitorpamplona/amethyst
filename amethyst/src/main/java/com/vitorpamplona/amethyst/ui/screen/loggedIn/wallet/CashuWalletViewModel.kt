@@ -216,16 +216,30 @@ class CashuWalletViewModel : ViewModel() {
     }
 
     /**
-     * Reconcile every mint we hold tokens at against its NUT-07 `/checkstate`
-     * — not just the mint a spend targets. Wired to the wallet screen opening
-     * so a balance auto-redeemed from a mint we never configured (e.g. a
-     * nutzap on a mint not in our kind:10019) still gets its stale proofs
-     * swept. Safe to call repeatedly; no-ops when nothing is stale or the
-     * wallet hasn't started yet.
+     * Bring the wallet's view of its own money up to date, in the two ways it
+     * can be behind.
+     *
+     * First re-page the proof set off the relays: the live subscription takes
+     * whatever one uncapped REQ returns, so proofs older than the relay's cap
+     * are simply absent, and the balance quietly reads low (see
+     * [CashuWalletState.resyncProofsFromRelays]). `force` because the user
+     * opening the wallet is a direct request for a current number, and the
+     * startup walk may have run before the relay list was known.
+     *
+     * Then reconcile every mint we hold tokens at against its NUT-07
+     * `/checkstate` — not just the mint a spend targets — so a balance
+     * auto-redeemed from a mint we never configured (e.g. a nutzap on a mint
+     * not in our kind:10019) still gets its stale proofs swept. Safe to call
+     * repeatedly; no-ops when nothing is stale or the wallet hasn't started.
      */
     fun refresh() {
         val vm = accountViewModel ?: return
         vm.launchSigner {
+            try {
+                state.resyncProofsFromRelays(force = true)
+            } catch (e: Exception) {
+                Log.w("CashuWallet", "wallet proof re-page failed", e)
+            }
             try {
                 state.syncAllMints()
             } catch (e: Exception) {

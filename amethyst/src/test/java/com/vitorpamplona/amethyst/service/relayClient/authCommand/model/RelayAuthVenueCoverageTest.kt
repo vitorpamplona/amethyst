@@ -62,6 +62,7 @@ class RelayAuthVenueCoverageTest {
         RelayAuthPermissionLedger(
             store = NoStore(),
             globalPolicy = { RelayAuthPolicy.CUSTOM },
+            sessionGrants = RelayAuthSessionGrants(),
             customToggles = { toggles },
             isTrustedVenue = { _, venueId -> venueId == joinedGroupId || venueId == joinedCommunityId },
             isVenueHostRelay = { it == groupRelay || it == concordRelay },

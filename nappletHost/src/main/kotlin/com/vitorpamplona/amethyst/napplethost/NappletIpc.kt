@@ -106,6 +106,20 @@ object NappletIpc {
      */
     const val MSG_OPEN_PERMISSIONS = 12
 
+    /**
+     * Host → broker: this surface is being destroyed — drop every reference the broker holds to its
+     * `replyTo` [android.os.Messenger] (inc-bus topic subscriptions, and its foreground lease when
+     * [KEY_LAUNCH_TOKEN] is supplied).
+     *
+     * A `Messenger` handed to the broker is a **binder**, so the main process holding it keeps a JNI
+     * global reference alive in `:napplet`. Because the sandbox's reply handler is a bound method
+     * reference on the Activity, that one retained Messenger pins the whole Activity → window → WebView,
+     * and no GC in the sandbox can ever reclaim it (only process death can). Sending this on destroy is
+     * the release half of the fix; the reply handler holding the Activity weakly is the other half, so a
+     * missed or dropped release can never pin a surface again. Fire-and-forget; no reply needed.
+     */
+    const val MSG_RELEASE_CLIENT = 13
+
     const val KEY_REQUEST_ID = "requestId"
     const val KEY_PAYLOAD = "payload"
 

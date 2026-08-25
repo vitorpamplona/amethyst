@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
@@ -115,6 +116,15 @@ fun routeFor(
     val relayGroup = note.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }
     if (relayGroup != null) {
         return routeFor(relayGroup)
+    }
+
+    // A channel invite (kind-44100) has two destinations and gives each its own target: the room block
+    // inside the card carries its own click and opens the room, so the rest of the row — the header, the
+    // body around the block, the space below the author — opens the reply page instead. Replying is the
+    // one thing you can do with an invite that the card itself doesn't already offer a button for, and
+    // the generic thread view has nothing to show for a relay-signed notification nobody replied to yet.
+    if (note.event is MemberAddedNotificationEvent) {
+        return Route.GenericCommentPost(replyTo = note.idHex)
     }
 
     // Concord channel content (kind 9 chat, 1111 reply, 7 reaction) lands in LocalCache as a real

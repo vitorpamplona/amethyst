@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.desktop.ImageCompressionStore
 fun ImageCompressionSettings(modifier: Modifier = Modifier) {
     val quality by ImageCompressionStore.quality.collectAsState()
     val stripExif by ImageCompressionStore.stripExif.collectAsState()
+    val encryptedMediaRealType by ImageCompressionStore.encryptedMediaRealType.collectAsState()
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -102,6 +103,41 @@ fun ImageCompressionSettings(modifier: Modifier = Modifier) {
             Switch(
                 checked = stripExif,
                 onCheckedChange = ImageCompressionStore::setStripExif,
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Reveal media type on encrypted DM uploads",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Off (recommended): private DM attachments upload as opaque data, so the media " +
+                        "server can't tell an image from a video or a voice note. This needs a server " +
+                        "that accepts opaque uploads — the default (nostr.download) does.\n\n" +
+                        "Turn on only if your media server rejects opaque uploads with a 415 error. " +
+                        "It declares the real file type so those servers accept the upload, at the " +
+                        "cost of the server seeing the media category (image / video / audio). File " +
+                        "contents stay encrypted either way.\n\n" +
+                        "Note: some servers (e.g. blossom.band) inspect the bytes and reject the " +
+                        "encrypted blob in BOTH modes — they can't host private DM files at all. Use " +
+                        "nostr.download for those.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(0.dp))
+            Switch(
+                checked = encryptedMediaRealType,
+                onCheckedChange = ImageCompressionStore::setEncryptedMediaRealType,
             )
         }
     }

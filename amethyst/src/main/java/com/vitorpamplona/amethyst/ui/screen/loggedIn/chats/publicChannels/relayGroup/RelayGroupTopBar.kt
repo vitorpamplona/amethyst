@@ -255,7 +255,7 @@ fun RelayGroupTopBar(
                     // Pin/Unpin moved here off the community-list row. A local favorite, so it's offered
                     // for any Buzz channel/forum regardless of membership; DMs are never pinned.
                     if (isBuzzRelay && !isDm) {
-                        BuzzPinDropdownItem(channel.groupId) { menuOpen = false }
+                        BuzzPinDropdownItem(channel.groupId, accountViewModel) { menuOpen = false }
                     }
                     // A DM's Add/Remove-from-Messages, moved off the DM list row. It rides the per-viewer
                     // 30622 hide snapshot (kind-41012 hide / re-open), not the kind-10009 list, and is

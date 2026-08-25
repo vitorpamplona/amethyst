@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -72,6 +73,7 @@ fun VideoControls(
     viewMode: ViewMode = ViewMode.DEFAULT,
     onViewModeChange: ((ViewMode) -> Unit)? = null,
     trailingControls: @Composable (() -> Unit)? = null,
+    isLive: Boolean = false,
 ) {
     var hovering by remember { mutableStateOf(false) }
 
@@ -128,18 +130,21 @@ fun VideoControls(
                         .background(Color.Black.copy(alpha = 0.6f))
                         .padding(horizontal = 8.dp),
             ) {
-                // Seek slider (full width, no horizontal competition)
-                Slider(
-                    value = position,
-                    onValueChange = onSeek,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        SliderDefaults.colors(
-                            thumbColor = Color.White,
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-                        ),
-                )
+                // Seek slider (full width, no horizontal competition). Hidden for live streams —
+                // the underlying HLS is non-seekable, so a scrubber would be inert and misleading.
+                if (!isLive) {
+                    Slider(
+                        value = position,
+                        onValueChange = onSeek,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            SliderDefaults.colors(
+                                thumbColor = Color.White,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+                            ),
+                    )
+                }
 
                 // Buttons row
                 Row(
@@ -159,11 +164,32 @@ fun VideoControls(
                         )
                     }
 
-                    Text(
-                        text = "${formatTime(currentTime)} / ${formatTime(duration)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                    )
+                    if (isLive) {
+                        // Live: a single "elapsed since you started watching" timer + a LIVE dot —
+                        // no total duration (the stream has no fixed end).
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(8.dp)
+                                    .background(Color(0xFFD32F2F), shape = CircleShape),
+                        )
+                        Text(
+                            text = "LIVE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFFF5252),
+                        )
+                        Text(
+                            text = formatTime(currentTime),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                        )
+                    } else {
+                        Text(
+                            text = "${formatTime(currentTime)} / ${formatTime(duration)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                        )
+                    }
 
                     // Spacer pushes right-side controls to the end
                     Box(Modifier.weight(1f))

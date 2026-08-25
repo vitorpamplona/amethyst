@@ -188,7 +188,7 @@ private fun RelayGroupThreads(
                             )
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            BuzzPinDropdownItem(channel.groupId) { menuOpen = false }
+                            BuzzPinDropdownItem(channel.groupId, accountViewModel) { menuOpen = false }
                             RelayGroupMessagesDropdownItem(channel, accountViewModel) { menuOpen = false }
                             if (isAdmin) {
                                 val archived = channel.isArchived()

@@ -529,6 +529,11 @@
     <string name="account_backup_tips3_md" tools:ignore="Typos">        Dla dodatkowego bezpieczeństwa możesz zaszyfrować swój klucz hasłem. Ten klucz zaczyna się od **ncryptsec1** i nie może być użyty bez hasła.
         \n\nJeśli zgubisz hasło, nie będziesz w stanie odzyskać swojego klucza.
     </string>
+    <string name="backup_keys_nudge_title">Kopia zapasowa kluczy</string>
+    <string name="backup_keys_nudge_body">Twój tajny klucz jest jedynym sposobem na dostęp do tego konta. Jeśli go zgubisz, nigdy nie będzie można go odzyskać. Zapisz go w bezpiecznym miejscu.</string>
+    <string name="backup_keys_nudge_backup_now">Utwórz kopię zapasową</string>
+    <string name="backup_keys_nudge_already_saved">Zapisałem(am)</string>
+    <string name="backup_keys_nudge_dismiss">Ignoruj</string>
     <string name="failed_to_encrypt_key">Nie udało się zaszyfrować Twojego klucza prywatnego</string>
     <string name="secret_key_copied_to_clipboard">Tajny klucz (nsec) skopiowany do schowka</string>
     <string name="copy_my_secret_key">Kopiuj mój tajny klucz</string>
@@ -586,6 +591,9 @@
     <string name="quick_action_block">Zablokuj</string>
     <string name="quick_action_mute_thread">Zablokuj wątek</string>
     <string name="quick_action_unmute_thread">Odblokuj wątek</string>
+    <string name="mute_notifications">Wycisz powiadomienia</string>
+    <string name="unmute_notifications">Wyłącz wyciszenie powiadomień</string>
+    <string name="muted_chat_content_description">Powiadomienia są wyciszone dla tego czatu</string>
     <string name="quick_action_report">Zgłoś</string>
     <string name="quick_action_dont_show_again_button">Nie pokazuj więcej</string>
     <string name="report_dialog_spam">Spam lub oszustwa</string>
@@ -1165,12 +1173,76 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <!-- The group header carries the grammar; each toggle is a completion of the sentence, so these
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
+    <string name="relay_auth_auto_login_when">Zaloguj się bez pytania, kiedy\u2026</string>
+    <string name="relay_auth_auto_my_relays_and_venues">\u2026to mój transmiter lub pokój, do którego dołączyłem lub który obserwuję</string>
+    <string name="relay_auth_auto_read_follows">Czytam wpis osoby, którą obserwuję</string>
+    <string name="relay_auth_auto_message_follows">\u2026wysyłam wiadomość do osoby, którą obserwuję</string>
+    <string name="relay_auth_auto_message_strangers">\u2026piszę do wszystkich pozostałych</string>
     <!-- The AUTH prompt. The title is constant and names the account whose npub would be revealed;
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <string name="relay_auth_login_as">Zaloguj się jako %1$s?</string>
+    <string name="relay_auth_relay_asks">pyta kim jesteś</string>
+    <string name="relay_auth_why_send_dm">Nie zaakceptuje Twojej wiadomości dla %1$s , chyba że się zalogujesz.</string>
+    <string name="relay_auth_why_notify_inbox">%1$s nie otrzyma Twojej odpowiedzi, dopóki się nie zalogujesz.</string>
+    <string name="relay_auth_why_read_outbox">Nie będzie obsługiwać postów z %1$s dopóki się nie zalogujesz.</string>
+    <string name="relay_auth_why_post_venue">Nie zaakceptuje Twojego posta w %1$s , chyba że się zalogujesz.</string>
+    <string name="relay_auth_why_read_venue">Nie obsłuży %1$s, dopóki się nie zalogujesz.</string>
+    <string name="relay_auth_why_my_inbox">Serwis nie wyświetli odpowiedzi, powiadomień ani wiadomości wysłanych do Ciebie, dopóki się nie zalogujesz.</string>
+    <string name="relay_auth_why_thread">Dalsza część tej rozmowy nie będzie dostępna, dopóki się nie zalogujesz.</string>
+    <string name="relay_auth_why_thread_with">Nie wyświetli dalszej części rozmowy z %1$s, dopóki się nie zalogujesz.</string>
+    <string name="relay_auth_why_my_own_relay">To jest jeden z twoich własnych transmiterów i prosi wszystkich o zalogowanie.</string>
+    <string name="relay_auth_why_other">Prosi wszystkich o zalogowanie się. Amethyst nie potrafi stwierdzić, co go powstrzymuje.</string>
+    <string name="relay_auth_someone_unloaded">ktoś, kto  jeszcze się nie załadował</string>
+    <plurals name="relay_auth_name_and_n_others">
+        <item quantity="one">%1$s i %2$d inny</item>
+        <item quantity="few">%1$s i %2$d innych</item>
+        <item quantity="many">%1$s i %2$d innych</item>
+        <item quantity="other">%1$s i %2$d inne</item>
+    </plurals>
+    <plurals name="relay_auth_also_holding_back">
+        <item quantity="one">Trzyma również %1$d inną rzecz.</item>
+        <item quantity="few">Trzyma również %1$d innych rzeczy.</item>
+        <item quantity="many">Trzyma także %1$d innych rzeczy.</item>
+        <item quantity="other">Trzyma również %1$d inne rzeczy.</item>
+    </plurals>
+    <string name="relay_auth_remember_relay">Zapamiętaj ten transmiter</string>
+    <string name="relay_auth_log_in">Zaloguj się</string>
+    <string name="relay_auth_not_now">Nie teraz</string>
+    <string name="relay_auth_never_allow">Nigdy nie zezwalaj</string>
+    <string name="relay_auth_how_we_decide">Jak zadecyduje Ametyst</string>
     <!-- Settings: three lists that each hold what their header says. -->
+    <string name="relay_auth_exceptions">Wyjątki</string>
+    <string name="relay_auth_no_exceptions">Brak wyjątków. Każdy transmiter przestrzega powyższych zasad.</string>
+    <string name="relay_auth_exception_always">Zawsze, ustawione przez Ciebie</string>
+    <string name="relay_auth_exception_never">Nigdy, ustawione przez Ciebie</string>
+    <string name="relay_auth_segment_always">Zawsze</string>
+    <string name="relay_auth_segment_never">Nigdy</string>
+    <string name="relay_auth_remove_exception">Usuń wyjątek</string>
+    <string name="relay_auth_exception_removed_undo">Wyjątek usunięty. %1$s ponownie postępuje zgodnie z twoimi zasadami.</string>
+    <string name="relay_auth_undo">Cofnij</string>
+    <string name="relay_auth_session_section">Na chwilę obecną</string>
+    <string name="relay_auth_session_row_desc">Zalogowano do czasu ponownego uruchomienia Amethyst</string>
+    <string name="relay_auth_forget_session">Zapomnij o tym logowaniu</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s zapyta ponownie, gdy następnym razem będzie cię potrzebował.</string>
+    <string name="relay_auth_session_undo_blocked">Nie zostało przywrócone. Opcja „Nigdy nie loguj się” jest włączona, więc Amethyst nie zaloguje się do %1$s.</string>
+    <string name="relay_auth_blocked_section">Zablokowane przez Twoją listę zablokowanych</string>
+    <string name="relay_auth_blocked_row_desc">Amethyst nigdy nie loguje się do zablokowanych transmiterów.</string>
+    <string name="relay_auth_no_blocked">Nic nie zablokowano. Transmitery, które blokujesz, nigdy nie będą zalogowane, bez względu na to, co tu ustawisz.</string>
+    <string name="relay_auth_recent_section">Ostatnie logowania</string>
+    <string name="relay_auth_no_recent">Żaden transmiter nie poprosił Cię o zalogowanie się.</string>
+    <string name="relay_auth_ago">%1$s temu</string>
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
+    <string name="relay_auth_purpose_send_dm">twoje wiadomości</string>
+    <string name="relay_auth_purpose_notify_inbox">twoje odpowiedzi</string>
+    <string name="relay_auth_purpose_read_outbox">osoby, które czytasz</string>
+    <string name="relay_auth_purpose_post_venue">pokój, w którym publikujesz posty</string>
+    <string name="relay_auth_purpose_read_venue">pokój, który czytasz</string>
+    <string name="relay_auth_purpose_my_inbox">twoja skrzynka odbiorcza</string>
+    <string name="relay_auth_purpose_thread">konwersacja</string>
+    <string name="relay_auth_purpose_my_own_relay">twój własny transmiter</string>
+    <string name="relay_auth_purpose_other">ten transmiter</string>
     <string name="nip82_repository_label">Źródło: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Pobierz</string>
@@ -1549,6 +1621,58 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="private_note_visible_to">Widoczny dla</string>
     <string name="private_note_no_receivers">Nie ma jeszcze odbiorców: ten wpis zobaczysz tylko Ty. Dodaj osoby, którym chcesz go udostępnić.</string>
     <!-- Composer audience control (Notify / "Visible to") -->
+    <string name="audience_manage">Zdecyduj, kto może to zobaczyć</string>
+    <string name="audience_empty_private">Tylko Ty \u2014 zdecyduj, kto jeszcze może to zobaczyć</string>
+    <string name="audience_empty_public">Dodaj osoby, które mają otrzymać powiadomienie</string>
+    <string name="audience_summary_two">%1$s i %2$s</string>
+    <string name="audience_group_chip">%1$s \u00b7 %2$s</string>
+    <string name="audience_group_remove">Usuń wszystkich dodanych z %1$s</string>
+    <string name="audience_send_privately">Wyślij prywatnie</string>
+    <string name="audience_sheet_title">Dodaj osoby</string>
+    <string name="audience_sheet_search">Wyszukaj osoby i listy</string>
+    <string name="audience_sheet_no_lists">Nie masz jeszcze żadnych list użytkowników ani grup obserwowanych. Wyszukaj powyżej, aby dodać kogoś bezpośrednio.</string>
+    <string name="audience_count_with_private">%1$d \u00b7 %2$d prywatne</string>
+    <string name="audience_over_limit">Powyżej limitu</string>
+    <string name="audience_badge_already_added">Już dodany</string>
+    <string name="audience_badge_muted">Wyciszono</string>
+    <string name="audience_badge_private_member">Prywatny użytkownik</string>
+    <string name="audience_recipients_are_visible">Każdy wymieniony w tej notatce może zapoznać się z pełną listą odbiorców.</string>
+    <plurals name="audience_summary_others">
+        <item quantity="one">%1$s, %2$s i %3$d inny</item>
+        <item quantity="few">%1$s, %2$s i %3$d innych</item>
+        <item quantity="many">%1$s, %2$s i %3$d innych</item>
+        <item quantity="other">%1$s, %2$s i %3$d inne</item>
+    </plurals>
+    <plurals name="audience_soft_cap_private">
+        <item quantity="one">Ta wiadomość zostanie zaszyfrowana i dostarczona %1$d jednorazowo, po jednym razie na osobę. W przypadku zewnętrznego sygnatariusza oznacza to po jednym zatwierdzeniu na osobę.</item>
+        <item quantity="few">Ta wiadomość zostanie zaszyfrowana i dostarczona %1$d razy, po jednym egzemplarzu na osobę. W przypadku zewnętrznego sygnatariusza oznacza to po jednym zatwierdzeniu na osobę.</item>
+        <item quantity="many">Ta wiadomość zostanie zaszyfrowana i dostarczona %1$d razy, po jednym egzemplarzu na osobę. W przypadku zewnętrznego sygnatariusza oznacza to po jednym zatwierdzeniu na osobę.</item>
+        <item quantity="other">Ta wiadomość zostanie zaszyfrowana i dostarczona %1$d razy, po jednym egzemplarzu na osobę. W przypadku zewnętrznego sygnatariusza oznacza to po jednym zatwierdzeniu na osobę.</item>
+    </plurals>
+    <plurals name="audience_soft_cap_public">
+        <item quantity="one">%1$d osoba otrzyma powiadomienie o tym poście.</item>
+        <item quantity="few">%1$d osób otrzyma powiadomienie o tym poście.</item>
+        <item quantity="many">%1$d osób otrzyma powiadomienie o tym poście.</item>
+        <item quantity="other">%1$d osoby otrzymają powiadomienie o tym poście.</item>
+    </plurals>
+    <plurals name="audience_hard_cap">
+        <item quantity="one">To byłaby %1$d osoba. Ametyst dodaje maksymalnie %2$d na raz \u2014 odznacz kilka.</item>
+        <item quantity="few">To daje %1$d osób. Ametyst dodaje maksymalnie %2$d osób na raz \u2014 odznacz kilka z nich.</item>
+        <item quantity="many">To daje %1$d osób. Ametyst dodaje maksymalnie %2$d osób na raz \u2014 odznacz kilka z nich.</item>
+        <item quantity="other">To daje %1$d osób. Ametyst dodaje maksymalnie %2$d osób na raz \u2014 odznacz kilka z nich.</item>
+    </plurals>
+    <plurals name="audience_add_people">
+        <item quantity="one">Dodaj %1$d osobę</item>
+        <item quantity="few">Dodaj %1$d osób</item>
+        <item quantity="many">Dodaj %1$d osób</item>
+        <item quantity="other">Dodaj %1$d osoby</item>
+    </plurals>
+    <plurals name="audience_add_anyway">
+        <item quantity="one">Dodaj i tak %1$d osobę</item>
+        <item quantity="few">Dodaj mimo wszystko %1$d osób</item>
+        <item quantity="many">Dodaj mimo wszystko %1$d osób</item>
+        <item quantity="other">Dodaj mimo to %1$d osoby</item>
+    </plurals>
     <string name="notify_add_user">Dodaj</string>
     <string name="notify_remove_user">Usuń użytkownika z powiadomień</string>
     <string name="notify_mute_user">Powiadomienie. Kliknij, aby wyciszyć powiadomienie od tego użytkownika</string>
@@ -2007,7 +2131,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="many">Podłączono do %1$d transmiterów</item>
         <item quantity="other">Podłączono do %1$d transmiterów</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d transmiter</item>
@@ -2655,6 +2779,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_group_no_messages_yet">Brak wiadomości</string>
     <string name="channel_invite_title">Dodano do %1$s</string>
     <string name="channel_invite_unknown_actor">Ktoś</string>
+    <string name="channel_invite_added_you">dodał Cię do tego kanału</string>
+    <string name="channel_invite_row_added_you_by">%1$s dodał Cię do tego kanału</string>
+    <string name="channel_invite_row_added_you">Zostałeś dodany do tego kanału</string>
     <string name="channel_invite_ignore">Ignoruj</string>
     <string name="channel_invite_leave">Wyjdź</string>
     <string name="relay_group_join_to_post">Dołącz do tej grupy, aby wysyłać wiadomości.</string>
@@ -2893,7 +3020,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="edit_draft">Edytuj wersję roboczą</string>
     <string name="login_with_qr_code">Zaloguj się przy użyciu QR kodu</string>
     <string name="route_home">Start</string>
-    <string name="route_discover">Odkryj</string>
+    <string name="route_discover">Eksploracja</string>
     <string name="route_messages">Wiadomości</string>
     <string name="route_notifications">Powiadomienia</string>
     <string name="route_video">Filmiki</string>
@@ -2978,6 +3105,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="cashu_remove_mint">Usuń Minta</string>
     <string name="cashu_add_mint">Dodaj mint</string>
     <string name="cashu_history">Historia</string>
+    <string name="cashu_history_loading_older">Ładowanie starszych transakcji…</string>
+    <string name="cashu_history_all_loaded">Brak starszych transakcji</string>
+    <string name="cashu_history_some_relays_unreachable">Brak starszych transakcji z transmiterów, które odpowiedziały — z niektórymi nie udało się nawiązać połączenia</string>
     <string name="cashu_wallet_autosaves">Twój portfel zapisuje dane automatycznie w miarę dodawania lub usuwania mintów. Klucz Nutzap jest generowany automatycznie przy pierwszym dodaniu minta.</string>
     <string name="cashu_wallet_saving">Zapisywanie…</string>
     <string name="cashu_p2pk_section">Klucz Nutzap (zaawansowany)</string>
@@ -4584,9 +4714,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_members_removed">%1$d użytkowników usuniętych z transmitera</string>
     <string name="relay_join_request">Prośba o dołączenie do transmitera</string>
     <string name="relay_leave_request">Żądanie opuszczenia transmitera</string>
-    <string name="ai_writing_help">Pomoc w pisaniu z użyciem AI</string>
-    <string name="ai_writing_setting_title">Zaproponuj poprawki w tekście</string>
-    <string name="ai_writing_setting_description">Używa modelu sztucznej inteligencji wbudowanego w urządzenie, proponując poprawki tekstu i zmiany tonu wypowiedzi.</string>
     <string name="tracked_broadcasts_setting_title">Monitorowane transmisje</string>
     <string name="tracked_broadcasts_setting_description">Podczas wysyłania zdarzeń korzystaj z monitora transmisji. Pokazuje postęp na żywo i status transmisji podczas nadawania.</string>
     <string name="suggest_workouts_setting_title">Zaproponuj treningi, którymi warto się podzielić</string>
@@ -4699,17 +4826,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="pow_publish_failed_retry">Twój %1$s zakończył wydobywanie, ale nie udało się go opublikować. Próba zostanie powtórzona przy następnym uruchomieniu aplikacji.</string>
     <string name="pow_kind_chat_message">Wiadomość Czatu</string>
     <string name="pow_kind_report">Zgłoś</string>
-    <string name="ai_writing_use_this">Użyj tego</string>
-    <string name="ai_writing_dismiss">Ignoruj</string>
-    <string name="ai_tone_correct">Popraw</string>
-    <string name="ai_tone_rephrase">Przeformułuj</string>
-    <string name="ai_tone_shorter">Krócej</string>
-    <string name="ai_tone_elaborate">Rozwiń</string>
-    <string name="ai_tone_friendly">Przyjazny</string>
-    <string name="ai_tone_professional">Profesjonalny</string>
-    <string name="ai_tone_more_direct">Bardziej bezpośredni</string>
-    <string name="ai_tone_punchy">Mocny</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Pakiety emotikonów</string>
     <string name="emoji_pack_management_title">Dodaj do listy emotikonów</string>

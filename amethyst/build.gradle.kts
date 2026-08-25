@@ -85,7 +85,7 @@ android {
                 .get()
                 .toInt()
         versionName = generateVersionName(libs.versions.app.get(), rootDir)
-        buildConfigField("String", "RELEASE_NOTES_ID", "\"f54843af6397f78e39fa75dbe3b7f7de14eb18c4f9c56e60e7825a2c6715719b\"")
+        buildConfigField("String", "RELEASE_NOTES_ID", "\"00d306e01792e48b93638b73b57a7eb8b89622a338b1b4f529622150d46cd710\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -530,11 +530,6 @@ dependencies {
 
     // Google services model the translate text
     "playImplementation"(libs.google.mlkit.translate)
-
-    // On-device AI writing assistance (Gemini Nano via AICore)
-    "playImplementation"(libs.google.mlkit.genai.proofreading)
-    "playImplementation"(libs.google.mlkit.genai.prompt)
-    "playImplementation"(libs.google.mlkit.genai.rewriting)
 
     // On-device alt-text suggestions: genai image description (preferred, descriptive sentences)
     // with image-labeling as a keyword-join fallback for devices without AICore.

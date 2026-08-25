@@ -123,6 +123,7 @@ fun RelayAuthSettingsScreen(
 
     val globalPolicy by account.settings.defaultRelayAuthPolicy.collectAsState()
     val blockedRelays by account.blockedRelayList.flow.collectAsState()
+    val sessionGrants by account.relayAuthSessionGrants.grants.collectAsState()
 
     var exceptions by remember { mutableStateOf<Map<String, RelayAuthDecision>>(emptyMap()) }
     var rationales by remember { mutableStateOf<Map<String, Map<AuthPurposeKind, Set<HexKey>>>>(emptyMap()) }
@@ -139,15 +140,46 @@ fun RelayAuthSettingsScreen(
 
     val exceptionUrls = remember(exceptions) { exceptions.keys.sorted() }
     val blockedUrls = remember(blockedRelays) { blockedRelays.map { it.url }.sorted() }
+    // Answers given to the prompt without the "remember" switch. Any relay that also carries a rule
+    // above is shown there instead — the rule is what actually decides it.
+    val sessionUrls =
+        remember(sessionGrants, exceptions, blockedUrls) {
+            (sessionGrants - exceptions.keys - blockedUrls.toSet()).sorted()
+        }
     // The log is everything we have a record of that is not already stated above as a rule.
     val logUrls =
-        remember(exceptions, rationales, lastUsed, blockedUrls) {
-            ((rationales.keys + lastUsed.keys) - exceptions.keys - blockedUrls.toSet())
+        remember(exceptions, rationales, lastUsed, blockedUrls, sessionUrls) {
+            ((rationales.keys + lastUsed.keys) - exceptions.keys - blockedUrls.toSet() - sessionUrls.toSet())
                 .sortedByDescending { lastUsed[it] ?: 0L }
         }
 
     val removedLabel = stringResource(R.string.relay_auth_exception_removed_undo)
+    val sessionForgottenLabel = stringResource(R.string.relay_auth_session_forgotten_undo)
+    val sessionUndoBlockedLabel = stringResource(R.string.relay_auth_session_undo_blocked)
     val undoLabel = stringResource(R.string.relay_auth_undo)
+
+    fun forgetSessionGrant(url: String) {
+        ledger.revokeSessionGrant(url)
+        scope.launch {
+            val display = url.normalizeRelayUrlOrNull()?.displayUrl() ?: url
+            val result =
+                snackbarHostState.showSnackbar(
+                    message = sessionForgottenLabel.format(display),
+                    actionLabel = undoLabel,
+                    withDismissAction = true,
+                )
+            // An action label makes Material3 show this indefinitely, so the undo can be tapped long
+            // after the fact — including after the policy above was switched to "Never log in", which
+            // clears every grant. The ledger refuses to write a new one in that state; report that
+            // instead of leaving a tapped undo looking like it silently did nothing.
+            if (result == SnackbarResult.ActionPerformed && !ledger.grantForSession(url)) {
+                snackbarHostState.showSnackbar(
+                    message = sessionUndoBlockedLabel.format(display),
+                    withDismissAction = true,
+                )
+            }
+        }
+    }
 
     fun removeException(url: String) {
         scope.launch {
@@ -209,7 +241,10 @@ fun RelayAuthSettingsScreen(
                                     selected = globalPolicy == policy,
                                     title = stringResource(titleRes),
                                     description = stringResource(descRes),
-                                    onClick = { account.settings.changeDefaultRelayAuthPolicy(policy) },
+                                    // Account, not settings: choosing "never log in" also drops this
+                                    // session's grants, and that pairing is the account's rule rather
+                                    // than this screen's. See Account.changeDefaultRelayAuthPolicy.
+                                    onClick = { account.changeDefaultRelayAuthPolicy(policy) },
                                 )
                             }
                         }
@@ -232,7 +267,7 @@ fun RelayAuthSettingsScreen(
                             ) {
                                 SettingsSwitchTile(
                                     icon = MaterialSymbols.Dns,
-                                    title = R.string.relay_auth_auto_my_relays,
+                                    title = R.string.relay_auth_auto_my_relays_and_venues,
                                     checked = myRelays,
                                     onCheckedChange = { account.settings.changeRelayAuthTrustMyRelaysAndVenues(it) },
                                 )
@@ -283,6 +318,32 @@ fun RelayAuthSettingsScreen(
                                 }
                             },
                             onRemove = { removeException(url) },
+                        )
+                    }
+                }
+            }
+
+            // Only rendered when something is granted: an empty card here would advertise a list the
+            // user has no way to add to from this screen.
+            if (sessionUrls.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(20.dp))
+                    GroupHeader(stringResource(R.string.relay_auth_session_section))
+                    Spacer(Modifier.height(8.dp))
+                }
+                itemsIndexed(sessionUrls, key = { _, url -> "session:$url" }) { index, url ->
+                    GroupedRow(index, sessionUrls.size) {
+                        SessionGrantRow(
+                            url = url,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onPromote = { next ->
+                                scope.launch {
+                                    ledger.setDecision(url, next)
+                                    reloadKey++
+                                }
+                            },
+                            onForget = { forgetSessionGrant(url) },
                         )
                     }
                 }
@@ -470,6 +531,42 @@ private fun ExceptionRow(
             DecisionSegments(decision, onDecision)
             IconButton(onClick = onRemove) {
                 Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_remove_exception))
+            }
+        },
+    )
+}
+
+/**
+ * A relay the user logged in to from the prompt without asking to remember it. It behaves like an
+ * ALLOW exception for the rest of this run and then disappears, so it gets its own group rather than
+ * sitting in "Exceptions" — nothing here survives a restart.
+ */
+@Composable
+private fun SessionGrantRow(
+    url: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onPromote: (RelayAuthDecision) -> Unit,
+    onForget: () -> Unit,
+) {
+    RelayRowFrame(
+        url = url,
+        accountViewModel = accountViewModel,
+        nav = nav,
+        subtitle = {
+            Text(
+                text = stringResource(R.string.relay_auth_session_row_desc),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        },
+        trailing = {
+            // Neither segment is selected: a session grant is not an override, and promoting it to
+            // one is exactly what these two buttons are for.
+            DecisionSegments(current = null, onDecision = onPromote)
+            IconButton(onClick = onForget) {
+                Icon(MaterialSymbols.Close, contentDescription = stringResource(R.string.relay_auth_forget_session))
             }
         },
     )

@@ -20,9 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
-import android.Manifest
 import android.content.Context
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.WindowManager
@@ -35,31 +33,22 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -71,22 +60,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
@@ -101,19 +81,11 @@ import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size15dp
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import net.engawapg.lib.zoomable.ZoomState
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
@@ -211,18 +183,9 @@ fun ZoomableImageDialog(
             dialogWindow.attributes = attributes
         }
 
-        // Go fully immersive while the full-screen media viewer is open: hide both OS bars and
-        // restore them when the dialog closes. BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE lets the user
-        // swipe to peek the bars. Applies to full-screen images and video alike (shared dialog).
-        val dialogView = LocalView.current
-        DisposableEffect(dialogWindow, dialogView) {
-            val controller = dialogWindow?.let { WindowInsetsControllerCompat(it, dialogView) }
-            controller?.apply {
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                hide(WindowInsetsCompat.Type.systemBars())
-            }
-            onDispose { controller?.show(WindowInsetsCompat.Type.systemBars()) }
-        }
+        // Go fully immersive while the full-screen media viewer is open. Applies to full-screen
+        // images and video alike (shared dialog), and matches the PDF viewer.
+        ImmersiveSystemBarsEffect(dialogWindow)
 
         Box(modifier = Modifier.fillMaxSize()) {
             // Background surface that fades in as the content grows to fullscreen.
@@ -250,7 +213,6 @@ fun ZoomableImageDialog(
 }
 
 @Composable
-@OptIn(ExperimentalPermissionsApi::class)
 private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
@@ -264,29 +226,13 @@ private fun DialogContent(
     accountViewModel: AccountViewModel,
 ) {
     val pagerState: PagerState = rememberPagerState { allImages.size }
-    val controllerVisible = remember { mutableStateOf(true) }
     val sharePopupExpanded = remember { mutableStateOf(false) }
+    val controllerVisible = rememberViewerControlsVisibility(holdOpen = sharePopupExpanded.value)
 
     LaunchedEffect(key1 = pagerState, key2 = imageUrl) {
-        launch {
-            val page = allImages.indexOf(imageUrl)
-            if (page > -1) {
-                pagerState.scrollToPage(page)
-            }
-        }
-        launch {
-            delay(2000)
-            if (!sharePopupExpanded.value) {
-                controllerVisible.value = false
-            }
-        }
-    }
-
-    // Re-trigger auto-hide after the share dialog is dismissed
-    LaunchedEffect(sharePopupExpanded.value) {
-        if (!sharePopupExpanded.value && controllerVisible.value) {
-            delay(2000)
-            controllerVisible.value = false
+        val page = allImages.indexOf(imageUrl)
+        if (page > -1) {
+            pagerState.scrollToPage(page)
         }
     }
 
@@ -390,100 +336,20 @@ private fun DialogContent(
             // Also fade with the grow animation so controls appear/disappear alongside it.
             modifier = Modifier.graphicsLayer { alpha = progress().coerceIn(0f, 1f) },
         ) {
-            Row(
-                modifier =
-                    Modifier
-                        .padding(horizontal = Size15dp, vertical = Size10dp)
-                        .statusBarsPadding()
-                        .systemBarsPadding()
-                        .fillMaxWidth(),
-                horizontalArrangement = spacedBy(Size10dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    contentPadding = PaddingValues(horizontal = Size5dp),
-                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                        contentDescription = stringRes(R.string.back),
-                    )
-                }
+            ViewerControlsRow {
+                ViewerBackButton(onDismiss)
 
                 Spacer(modifier = Modifier.weight(1f))
 
                 allImages.getOrNull(pagerState.currentPage)?.let { myContent ->
                     if (myContent is MediaUrlImage || myContent is MediaLocalImage) {
-                        OutlinedButton(
-                            onClick = { sharePopupExpanded.value = true },
-                            contentPadding = PaddingValues(horizontal = Size5dp),
-                            colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-                        ) {
-                            Icon(
-                                symbol = MaterialSymbols.Share,
-                                modifier = Size20Modifier,
-                                contentDescription = stringRes(R.string.quick_action_share),
-                            )
-
-                            ShareMediaAction(accountViewModel = accountViewModel, popupExpanded = sharePopupExpanded, myContent, onDismiss = { sharePopupExpanded.value = false })
-                        }
+                        ViewerShareButton(myContent, sharePopupExpanded, accountViewModel)
                     }
 
                     val isPdfOrStaticImage = myContent is MediaUrlImage || myContent is MediaLocalImage || myContent is MediaUrlPdf
                     val isNotLiveStream = myContent !is MediaUrlContent || !isHlsMedia(myContent.url, myContent.mimeType)
                     if (isPdfOrStaticImage && isNotLiveStream) {
-                        val localContext = LocalContext.current
-
-                        val scope = rememberCoroutineScope()
-
-                        val writeStoragePermissionState =
-                            rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                                if (isGranted) {
-                                    scope.launch {
-                                        saveMediaToGallery(myContent, localContext, accountViewModel)
-                                    }
-                                    scope.launch {
-                                        Toast
-                                            .makeText(
-                                                localContext,
-                                                stringRes(localContext, R.string.media_download_has_started_toast),
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                    }
-                                }
-                            }
-
-                        OutlinedButton(
-                            onClick = {
-                                if (
-                                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                                    writeStoragePermissionState.status.isGranted
-                                ) {
-                                    scope.launch(Dispatchers.IO) {
-                                        saveMediaToGallery(myContent, localContext, accountViewModel)
-                                    }
-                                    scope.launch {
-                                        Toast
-                                            .makeText(
-                                                localContext,
-                                                stringRes(localContext, R.string.media_download_has_started_toast),
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
-                                    }
-                                } else {
-                                    writeStoragePermissionState.launchPermissionRequest()
-                                }
-                            },
-                            contentPadding = PaddingValues(horizontal = Size5dp),
-                            colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-                        ) {
-                            Icon(
-                                symbol = MaterialSymbols.Download,
-                                modifier = Size20Modifier,
-                                contentDescription = stringRes(R.string.download_to_phone),
-                            )
-                        }
+                        ViewerSaveToGalleryButton(myContent, accountViewModel)
                     }
                 }
             }

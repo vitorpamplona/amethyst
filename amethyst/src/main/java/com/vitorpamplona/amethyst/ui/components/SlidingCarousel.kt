@@ -26,7 +26,6 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -61,14 +60,15 @@ fun SlidingCarousel(
     ) {
         HorizontalPager(state = pagerState) { page -> itemContent(page) }
 
-        // you can remove the surface in case you don't want
-        // the transparent bacground
+        // The dots ride the same animated inset as the rest of the viewer chrome, so they slide
+        // with the navigation bar instead of snapping the moment it appears. navigationBarsPadding()
+        // tracks the bar correctly but moves in one frame, which reads as a jump next to the
+        // controls sliding at the top.
         Surface(
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = animatedViewerChromeInset(atBottom = true) + 8.dp),
             shape = CircleShape,
             color = Color.Black.copy(alpha = 0.5f),
         ) {
