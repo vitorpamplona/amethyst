@@ -38,6 +38,10 @@ import android.os.Messenger
 import android.os.SystemClock
 import android.util.Log
 import android.view.View
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -46,6 +50,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.createBitmap
+import androidx.core.net.toUri
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
@@ -107,6 +112,10 @@ class NappletHostService : Service() {
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
 
+        // The in-flight `<input type="file">` pick for this surface. The picker itself runs in the main
+        // process (this provider is windowless), so the callback waits here for MSG_FILE_CHOOSER_RESULT.
+        val fileChooser = PendingFileChooser()
+
         // Last main-frame error state, pushed to the client so it can show an error/retry overlay over the
         // surface (the embedded surface has no error page of its own).
         var loadFailed = false
@@ -148,6 +157,7 @@ class NappletHostService : Service() {
             brokerBound = false
         }
         tabs.values.forEach {
+            it.fileChooser.cancel()
             it.contentServer?.close()
             it.webView?.destroy()
         }
@@ -183,6 +193,15 @@ class NappletHostService : Service() {
                 tab.bridgeReplyProxy?.postMessage(payload)
             }
             NappletEmbedContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
+            NappletEmbedContract.MSG_FILE_CHOOSER_RESULT -> {
+                val tab = tabFor(msg) ?: return true
+                val data = msg.data ?: return true
+                val id = data.getLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID)
+                // Absent array = the user cancelled; PendingFileChooser turns that into the null the page
+                // needs to see so its file input becomes tappable again.
+                val uris = data.getStringArray(NappletEmbedContract.KEY_FILE_CHOOSER_URIS)?.map(String::toUri)
+                tab.fileChooser.deliver(id, uris?.toTypedArray())
+            }
             else -> return false
         }
         return true
@@ -328,6 +347,8 @@ class NappletHostService : Service() {
     fun onSessionClosed(sessionId: String) {
         val tab = tabs.remove(sessionId) ?: return
         tab.bridgeReplyProxy = null
+        // Release a picker still waiting on this surface before its WebView goes away.
+        tab.fileChooser.cancel()
         tab.contentServer?.close()
         tab.contentServer = null
         tab.webView?.destroy()
@@ -363,6 +384,90 @@ class NappletHostService : Service() {
         wv.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
         wv.webViewClient = HostClient(tab)
+        wv.webChromeClient = HostChromeClient(tab)
+    }
+
+    /**
+     * The applet's file picker. This surface has no other need for a chrome client — console output and
+     * the loading bar are drawn by the main process from [NappletEmbedContract.MSG_LOAD_STATE] — but
+     * without one WebView silently ignores every `<input type="file">`.
+     */
+    private inner class HostChromeClient(
+        private val tab: NappletTab,
+    ) : WebChromeClient() {
+        override fun onShowFileChooser(
+            webView: WebView,
+            filePathCallback: ValueCallback<Array<Uri>>,
+            fileChooserParams: FileChooserParams,
+        ): Boolean = requestFileChooser(tab, filePathCallback, fileChooserParams)
+
+        // Setting a chrome client at all is what opts this WebView into the default JS-dialog handling,
+        // and this one is built from a Service context — there is no window token to attach a dialog to,
+        // and an applet's alert() must not be able to draw over the main app's trusted chrome anyway.
+        // Dismiss all three so the page's JS resumes instead of blocking on a dialog that never appears.
+        override fun onJsAlert(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean {
+            result.cancel()
+            return true
+        }
+
+        override fun onJsConfirm(
+            view: WebView,
+            url: String?,
+            message: String?,
+            result: JsResult,
+        ): Boolean {
+            result.cancel()
+            return true
+        }
+
+        override fun onJsPrompt(
+            view: WebView,
+            url: String?,
+            message: String?,
+            defaultValue: String?,
+            result: JsPromptResult,
+        ): Boolean {
+            result.cancel()
+            return true
+        }
+    }
+
+    /**
+     * Asks the client (main process) to run the picker for [tab] and holds the callback until the
+     * matching [NappletEmbedContract.MSG_FILE_CHOOSER_RESULT] arrives. A surface with no client to ask
+     * releases the input immediately rather than leaving it stuck on a reply that can never come.
+     *
+     * The user names the one file that crosses into the sandbox by picking it, so this needs no
+     * capability of its own — same user-mediated grant a browser gives a page.
+     */
+    private fun requestFileChooser(
+        tab: NappletTab,
+        filePathCallback: ValueCallback<Array<Uri>>,
+        params: WebChromeClient.FileChooserParams,
+    ): Boolean {
+        val client = tab.clientMessenger
+        if (client == null) {
+            filePathCallback.onReceiveValue(null)
+            return true
+        }
+        val id = tab.fileChooser.start(filePathCallback)
+        val msg =
+            Message.obtain(null, NappletEmbedContract.MSG_FILE_CHOOSER_REQUEST).apply {
+                data =
+                    Bundle().apply {
+                        putLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID, id)
+                        putStringArray(NappletEmbedContract.KEY_FILE_CHOOSER_ACCEPT, params.acceptTypes ?: emptyArray())
+                        putBoolean(NappletEmbedContract.KEY_FILE_CHOOSER_MULTIPLE, params.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE)
+                        putString(NappletEmbedContract.KEY_FILE_CHOOSER_TITLE, params.title?.toString())
+                    }
+            }
+        if (runCatching { client.send(msg) }.isFailure) tab.fileChooser.cancel()
+        return true
     }
 
     private fun applyWebViewProxy(port: Int) {

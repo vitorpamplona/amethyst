@@ -94,6 +94,31 @@ object NappletBrowserContract {
      */
     const val MSG_MAGNIFIER_FRAME = 13
 
+    /**
+     * Provider → client: the page tapped an HTML file input and needs the system picker. The keyless
+     * `:napplet` process has no Activity of its own (this provider is windowless), and its streamed
+     * surface can't host one, so the main process runs the picker and sends the chosen URIs back.
+     *
+     * Carries the request description as data — [KEY_FILE_CHOOSER_ID], [KEY_FILE_CHOOSER_ACCEPT] (the raw `accept` entries),
+     * [KEY_FILE_CHOOSER_MULTIPLE] and [KEY_FILE_CHOOSER_TITLE] — never a ready-made Intent, so the sandbox can ask the trusted
+     * process for a file picker and for nothing else.
+     */
+    const val MSG_FILE_CHOOSER_REQUEST = 14
+
+    /**
+     * Client → provider: the picker for [KEY_FILE_CHOOSER_ID] finished. [KEY_FILE_CHOOSER_URIS] holds the picked
+     * `content://` URIs, or is absent when the user cancelled — the page's file input stays busy until
+     * one of the two arrives, so this is sent on every outcome. URI read grants are per-UID, so the URIs
+     * the main process was granted are readable by the WebView here without re-granting.
+     */
+    const val MSG_FILE_CHOOSER_RESULT = 15
+
+    const val KEY_FILE_CHOOSER_ID = "fileChooserId"
+    const val KEY_FILE_CHOOSER_ACCEPT = "fileChooserAccept"
+    const val KEY_FILE_CHOOSER_MULTIPLE = "fileChooserMultiple"
+    const val KEY_FILE_CHOOSER_TITLE = "fileChooserTitle"
+    const val KEY_FILE_CHOOSER_URIS = "fileChooserUris"
+
     const val KEY_MAG_X = "magX"
     const val KEY_MAG_Y = "magY"
     const val KEY_MAG_BOX_W = "magBoxW"

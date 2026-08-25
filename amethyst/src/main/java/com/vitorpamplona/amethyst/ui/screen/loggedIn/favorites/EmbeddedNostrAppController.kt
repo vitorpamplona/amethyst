@@ -39,6 +39,7 @@ import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
+import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletEmbedContract
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedImeBridge
@@ -245,6 +246,24 @@ class EmbeddedNostrAppController(
                 val isLoading = msg.data?.getBoolean(NappletEmbedContract.KEY_IS_LOADING, false) ?: false
                 val failed = msg.data?.getBoolean(NappletEmbedContract.KEY_LOAD_FAILED, false) ?: false
                 onLoadState(isLoading, failed)
+            }
+            NappletEmbedContract.MSG_FILE_CHOOSER_REQUEST -> {
+                val data = msg.data ?: return true
+                val requestId = data.getLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID)
+                // The sandbox has no Activity to run a picker from, so the main process runs it here and
+                // ships the URIs back. The reply is sent on every outcome (a cancel included) — the page's
+                // file input stays busy until it hears something.
+                WebFileChooserCoordinator.request(
+                    context = appContext,
+                    acceptTypes = data.getStringArray(NappletEmbedContract.KEY_FILE_CHOOSER_ACCEPT)?.toList().orEmpty(),
+                    allowMultiple = data.getBoolean(NappletEmbedContract.KEY_FILE_CHOOSER_MULTIPLE, false),
+                    pageTitle = data.getString(NappletEmbedContract.KEY_FILE_CHOOSER_TITLE),
+                ) { uris ->
+                    send(NappletEmbedContract.MSG_FILE_CHOOSER_RESULT) {
+                        putLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID, requestId)
+                        uris?.let { putStringArray(NappletEmbedContract.KEY_FILE_CHOOSER_URIS, it) }
+                    }
+                }
             }
             NappletEmbedContract.MSG_MAGNIFIER_FRAME -> {
                 val data = msg.data ?: return true

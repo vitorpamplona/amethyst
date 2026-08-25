@@ -38,6 +38,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -52,6 +53,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
@@ -105,6 +107,17 @@ class NappletBrowserActivity : ComponentActivity() {
     private var pendingMainFrameUrl: String? = null
     private var mainFrameLoadFailed = false
     private var lastIconHost: String? = null
+
+    // ---- HTML file input (`<input type="file">`) ----
+    // Registered as a field so it is in place before onCreate returns, which is what
+    // registerForActivityResult requires. This activity hosts its WebView directly, so it can run the
+    // picker itself; the embedded surfaces have no Activity and route theirs through the main process.
+    private val pendingFileChooser = PendingFileChooser()
+
+    private val fileChooserLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            pendingFileChooser.deliver(NappletFileChooser.parseResult(result.resultCode, result.data))
+        }
 
     // ---- broker bridge (per-origin NIP-07 tokens; identical to NappletBrowserService) ----
     private var brokerMessenger: Messenger? = null
@@ -291,6 +304,8 @@ class NappletBrowserActivity : ComponentActivity() {
         // life of the process. `unbindService` alone does not release it. See [replyMessenger].
         releaseFromBroker()
         runCatching { unbindService(brokerConnection) }
+        // A picker still up when the browser is torn down would otherwise leave its callback unanswered.
+        pendingFileChooser.cancel()
         if (this::webView.isInitialized) {
             // Detach from the view tree BEFORE destroy(). Destroying a WebView while it is still attached to
             // the window corrupts the SHARED multiprocess renderer/network state, which then breaks the OTHER
@@ -364,8 +379,19 @@ class NappletBrowserActivity : ComponentActivity() {
         wv.webChromeClient = BrowserChromeClient()
     }
 
-    /** Captures favicon and console output, and drives the top loading bar; all come from the WebChromeClient. */
+    /** Captures favicon and console output, drives the top loading bar, and opens the file picker. */
     private inner class BrowserChromeClient : WebChromeClient() {
+        /**
+         * Without this override the base implementation returns false and WebView shows nothing at all, so
+         * every `<input type="file">` in the browser is a dead tap. Always returns true: we take ownership
+         * of the callback, and [showFileChooser] guarantees it is answered on every path.
+         */
+        override fun onShowFileChooser(
+            webView: WebView,
+            filePathCallback: ValueCallback<Array<Uri>>,
+            fileChooserParams: FileChooserParams,
+        ): Boolean = showFileChooser(filePathCallback, fileChooserParams)
+
         override fun onProgressChanged(
             view: WebView,
             newProgress: Int,
@@ -396,6 +422,26 @@ class NappletBrowserActivity : ComponentActivity() {
             controlSheet?.updateConsoleCount(panel.entryCount)
             return true
         }
+    }
+
+    /**
+     * Opens the system picker for a page's file input and routes the pick back to it. Returns true
+     * unconditionally: the callback is ours from here on, and it is delivered on every path — a real
+     * pick, a cancel, or a device with no app that can return a file (the input is released with null so
+     * the user can tap it again after installing one).
+     */
+    private fun showFileChooser(
+        filePathCallback: ValueCallback<Array<Uri>>,
+        params: WebChromeClient.FileChooserParams,
+    ): Boolean {
+        pendingFileChooser.start(filePathCallback)
+        runCatching { fileChooserLauncher.launch(NappletFileChooser.buildIntent(this, params)) }
+            .onFailure { e ->
+                Log.w(TAG, "No activity available to pick a file", e)
+                pendingFileChooser.cancel()
+                Toast.makeText(this, getString(CommonsR.string.browser_file_chooser_unavailable), Toast.LENGTH_LONG).show()
+            }
+        return true
     }
 
     private inner class BrowserClient : WebViewClient() {

@@ -40,6 +40,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -55,6 +56,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ProxyConfig
@@ -98,6 +100,18 @@ import com.vitorpamplona.amethyst.commons.R as CommonsR
  */
 class NappletHostActivity : ComponentActivity() {
     private lateinit var webView: WebView
+
+    // ---- HTML file input (`<input type="file">`) ----
+    // The applet picks the file through the system picker, so the user names exactly which file crosses
+    // into the sandbox — the same user-mediated grant a browser gives a web page. Nothing extra is
+    // brokered: the applet gets the bytes of the one file that was chosen and no path around it.
+    // Registered as a field so it exists before onCreate returns (registerForActivityResult's contract).
+    private val pendingFileChooser = PendingFileChooser()
+
+    private val fileChooserLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            pendingFileChooser.deliver(NappletFileChooser.parseResult(result.resultCode, result.data))
+        }
 
     private val paths = mutableListOf<PathTag>()
     private val servers = mutableListOf<String>()
@@ -449,6 +463,8 @@ class NappletHostActivity : ComponentActivity() {
         // unbind is in runCatching: if the index never resolved we never bound the broker.
         runCatching { unbindService(brokerConnection) }
         keyActions.clear()
+        // A picker still up when the applet is torn down would otherwise leave its callback unanswered.
+        pendingFileChooser.cancel()
         if (this::webView.isInitialized) {
             // Detach before destroy(): destroying an attached WebView corrupts the shared multiprocess
             // renderer/network state and breaks the other (embedded) WebViews in this `:napplet` process
@@ -649,8 +665,19 @@ class NappletHostActivity : ComponentActivity() {
         }
     }
 
-    /** Drives the top loading bar and forwards the applet/site's `console.*` output to the console panel. */
+    /** Drives the top loading bar, opens the file picker, and forwards `console.*` output to the panel. */
     private inner class NappletWebChromeClient : WebChromeClient() {
+        /**
+         * Without this override WebView's base implementation returns false and shows no picker at all, so
+         * every `<input type="file">` in an applet or nSite is a dead tap. Always returns true: the
+         * callback is ours, and [showFileChooser] answers it on every path.
+         */
+        override fun onShowFileChooser(
+            webView: WebView,
+            filePathCallback: ValueCallback<Array<Uri>>,
+            fileChooserParams: FileChooserParams,
+        ): Boolean = showFileChooser(filePathCallback, fileChooserParams)
+
         override fun onProgressChanged(
             view: WebView,
             newProgress: Int,
@@ -664,6 +691,25 @@ class NappletHostActivity : ComponentActivity() {
             controlSheet?.updateConsoleCount(panel.entryCount)
             return true
         }
+    }
+
+    /**
+     * Opens the system picker for the applet's file input and routes the pick back to it. Returns true
+     * unconditionally: the callback is ours from here on, and it is answered on every path — a real pick,
+     * a cancel, or a device with no app that can return a file.
+     */
+    private fun showFileChooser(
+        filePathCallback: ValueCallback<Array<Uri>>,
+        params: WebChromeClient.FileChooserParams,
+    ): Boolean {
+        pendingFileChooser.start(filePathCallback)
+        runCatching { fileChooserLauncher.launch(NappletFileChooser.buildIntent(this, params)) }
+            .onFailure { e ->
+                Log.w(TAG, "No activity available to pick a file", e)
+                pendingFileChooser.cancel()
+                Toast.makeText(this, getString(CommonsR.string.browser_file_chooser_unavailable), Toast.LENGTH_LONG).show()
+            }
+        return true
     }
 
     /** Shows the thin top bar at [progress]% while loading, hiding it once the page is fully loaded. */
