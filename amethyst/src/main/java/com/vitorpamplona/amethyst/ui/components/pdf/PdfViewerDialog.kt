@@ -23,24 +23,23 @@ package com.vitorpamplona.amethyst.ui.components.pdf
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,21 +61,22 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.createBitmap
 import coil3.disk.DiskCache
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
-import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
+import com.vitorpamplona.amethyst.ui.components.ImmersiveSystemBarsEffect
+import com.vitorpamplona.amethyst.ui.components.ViewerBackButton
+import com.vitorpamplona.amethyst.ui.components.ViewerControlsRow
+import com.vitorpamplona.amethyst.ui.components.ViewerSaveToGalleryButton
+import com.vitorpamplona.amethyst.ui.components.ViewerShareButton
+import com.vitorpamplona.amethyst.ui.components.getDialogWindow
+import com.vitorpamplona.amethyst.ui.components.rememberViewerControlsVisibility
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size15dp
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -105,6 +105,10 @@ private const val HI_RES_DEBOUNCE_MS = 200L
 // Zoom level the viewer animates to when the user double-taps. Matches the
 // threshold region where we swap in the hi-res bitmap.
 private const val DOUBLE_TAP_ZOOM_SCALE = 2.5f
+
+// How long the page counter stays up on its own after a page turn, once the reader has hidden the
+// chrome. Long enough to read "7 / 24" without putting the controls back on top of the page.
+private const val PAGE_INDICATOR_FLASH_MS = 1500L
 
 // How many recently-rendered pages to keep around. Pager already pre-composes the
 // current page plus one neighbor; this just speeds up small back/forward swipes.
@@ -165,6 +169,9 @@ fun PdfViewerDialog(
                 decorFitsSystemWindows = false,
             ),
     ) {
+        // Go fully immersive while the viewer is open, exactly like the image/video dialog.
+        ImmersiveSystemBarsEffect(getDialogWindow())
+
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
             PdfViewerContent(
                 content = content,
@@ -219,31 +226,44 @@ private fun PdfViewerContent(
     }
 
     val sharePopupExpanded = remember { mutableStateOf(false) }
-
-    ShareMediaAction(
-        accountViewModel = accountViewModel,
-        popupExpanded = sharePopupExpanded,
-        content = content,
-        onDismiss = { sharePopupExpanded.value = false },
-    )
-
     val handle = handleState
-    if (handle == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Color.White)
-        }
-    } else if (handle.pageCount == 0) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "Unable to open PDF",
-                color = Color.White,
-            )
-        }
-    } else {
-        val pagerState = rememberPagerState { handle.pageCount }
-        val pageCache = remember(handle) { PageBitmapCache(PAGE_CACHE_SIZE) }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+    // A PDF that takes longer than the auto-hide delay to fetch would otherwise reveal its first
+    // page with the chrome already gone, and nothing left to re-arm the timer.
+    val controlsVisible =
+        rememberViewerControlsVisibility(
+            holdOpen = sharePopupExpanded.value,
+            armed = handle != null,
+        )
+
+    val pagerState = rememberPagerState { handle?.pageCount ?: 0 }
+    val pageCache = remember(handle) { PageBitmapCache(PAGE_CACHE_SIZE) }
+
+    // The page counter is wayfinding rather than a control, so it outlives the buttons for a
+    // moment after every page turn -- a reader who tapped the chrome away still sees where a
+    // swipe landed.
+    var pageJustChanged by remember { mutableStateOf(false) }
+    LaunchedEffect(pagerState.currentPage) {
+        pageJustChanged = true
+        delay(PAGE_INDICATOR_FLASH_MS)
+        pageJustChanged = false
+    }
+
+    val toggleControls = { if (!sharePopupExpanded.value) controlsVisible.value = !controlsVisible.value }
+
+    Box(modifier = Modifier.fillMaxSize().clickable(onClick = toggleControls)) {
+        if (handle == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color.White)
+            }
+        } else if (handle.pageCount == 0) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "Unable to open PDF",
+                    color = Color.White,
+                )
+            }
+        } else {
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
@@ -252,53 +272,54 @@ private fun PdfViewerContent(
                     handle = handle,
                     pageIndex = pageIndex,
                     cache = pageCache,
+                    // The zoomable page consumes the tap before the box underneath ever sees it,
+                    // so the toggle has to hang off the gesture detector that owns it.
+                    onTap = toggleControls,
                 )
             }
+        }
 
-            Row(
-                modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .systemBarsPadding()
-                        .padding(horizontal = Size15dp, vertical = Size10dp),
-                horizontalArrangement = spacedBy(Size10dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    contentPadding = PaddingValues(horizontal = Size5dp),
-                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                        contentDescription = stringRes(R.string.back),
-                    )
+        // The buttons hold the top edge; the page counter lives along the bottom. Keeping them on
+        // one strip meant the counter sat dead centre under the display cutout on punch-hole
+        // devices, which is exactly where a front camera is. Down here it is clear of the cutout,
+        // stays centred on the screen rather than on whatever space the asymmetric button groups
+        // leave behind, and reads as wayfinding rather than as another control.
+        ViewerControlsRow(modifier = Modifier.align(Alignment.TopCenter)) {
+            AnimatedVisibility(visible = controlsVisible.value, enter = fadeIn(), exit = fadeOut()) {
+                ViewerBackButton(onDismiss)
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            if (handle != null) {
+                AnimatedVisibility(visible = controlsVisible.value, enter = fadeIn(), exit = fadeOut()) {
+                    Row(horizontalArrangement = spacedBy(Size10dp)) {
+                        ViewerShareButton(content, sharePopupExpanded, accountViewModel)
+
+                        ViewerSaveToGalleryButton(content, accountViewModel)
+                    }
                 }
+            }
+        }
 
-                Spacer(modifier = Modifier.weight(1f))
-
-                Text(
-                    text = "${pagerState.currentPage + 1} / ${handle.pageCount}",
-                    color = Color.White,
-                    modifier =
-                        Modifier
-                            .background(Color.Black.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small)
-                            .padding(horizontal = Size10dp, vertical = Size5dp),
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                OutlinedButton(
-                    onClick = { sharePopupExpanded.value = true },
-                    contentPadding = PaddingValues(horizontal = Size5dp),
-                    colors = ButtonDefaults.outlinedButtonColors().copy(containerColor = MaterialTheme.colorScheme.background),
+        if (handle != null && handle.pageCount > 0) {
+            ViewerControlsRow(
+                modifier = Modifier.align(Alignment.BottomCenter),
+                horizontalArrangement = Arrangement.Center,
+                atBottom = true,
+            ) {
+                AnimatedVisibility(
+                    visible = controlsVisible.value || pageJustChanged,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
                 ) {
-                    Icon(
-                        symbol = MaterialSymbols.Share,
-                        modifier = Size20Modifier,
-                        contentDescription = stringRes(R.string.quick_action_share),
+                    Text(
+                        text = "${pagerState.currentPage + 1} / ${handle.pageCount}",
+                        color = Color.White,
+                        modifier =
+                            Modifier
+                                .background(Color.Black.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small)
+                                .padding(horizontal = Size10dp, vertical = Size5dp),
                     )
                 }
             }
@@ -312,6 +333,7 @@ private fun PdfPageView(
     handle: PdfDocumentHandle,
     pageIndex: Int,
     cache: PageBitmapCache,
+    onTap: () -> Unit,
 ) {
     val cached = cache.get(pageIndex)
 
@@ -373,6 +395,7 @@ private fun PdfPageView(
                         .fillMaxSize()
                         .zoomable(
                             zoomState = zoomState,
+                            onTap = { onTap() },
                             onDoubleTap = { position ->
                                 zoomState.toggleScale(targetScale = DOUBLE_TAP_ZOOM_SCALE, position = position)
                             },
