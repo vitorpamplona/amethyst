@@ -29,6 +29,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -225,46 +226,44 @@ private fun PdfViewerContent(
     }
 
     val sharePopupExpanded = remember { mutableStateOf(false) }
-    val controlsVisible = rememberViewerControlsVisibility(holdOpen = sharePopupExpanded.value)
-
     val handle = handleState
-    if (handle == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Color.White)
-        }
-    } else if (handle.pageCount == 0) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "Unable to open PDF",
-                color = Color.White,
-            )
-        }
-    } else {
-        val pagerState = rememberPagerState { handle.pageCount }
-        val pageCache = remember(handle) { PageBitmapCache(PAGE_CACHE_SIZE) }
 
-        // The page counter is wayfinding rather than a control, so it outlives the buttons for a
-        // moment after every page turn -- a reader who tapped the chrome away still sees where a
-        // swipe landed.
-        var pageJustChanged by remember { mutableStateOf(false) }
-        LaunchedEffect(pagerState.currentPage) {
-            pageJustChanged = true
-            delay(PAGE_INDICATOR_FLASH_MS)
-            pageJustChanged = false
-        }
+    // A PDF that takes longer than the auto-hide delay to fetch would otherwise reveal its first
+    // page with the chrome already gone, and nothing left to re-arm the timer.
+    val controlsVisible =
+        rememberViewerControlsVisibility(
+            holdOpen = sharePopupExpanded.value,
+            armed = handle != null,
+        )
 
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        onClick = {
-                            if (!sharePopupExpanded.value) {
-                                controlsVisible.value = !controlsVisible.value
-                            }
-                        },
-                    ),
-        ) {
+    val pagerState = rememberPagerState { handle?.pageCount ?: 0 }
+    val pageCache = remember(handle) { PageBitmapCache(PAGE_CACHE_SIZE) }
+
+    // The page counter is wayfinding rather than a control, so it outlives the buttons for a
+    // moment after every page turn -- a reader who tapped the chrome away still sees where a
+    // swipe landed.
+    var pageJustChanged by remember { mutableStateOf(false) }
+    LaunchedEffect(pagerState.currentPage) {
+        pageJustChanged = true
+        delay(PAGE_INDICATOR_FLASH_MS)
+        pageJustChanged = false
+    }
+
+    val toggleControls = { if (!sharePopupExpanded.value) controlsVisible.value = !controlsVisible.value }
+
+    Box(modifier = Modifier.fillMaxSize().clickable(onClick = toggleControls)) {
+        if (handle == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color.White)
+            }
+        } else if (handle.pageCount == 0) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "Unable to open PDF",
+                    color = Color.White,
+                )
+            }
+        } else {
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
@@ -273,16 +272,39 @@ private fun PdfViewerContent(
                     handle = handle,
                     pageIndex = pageIndex,
                     cache = pageCache,
+                    // The zoomable page consumes the tap before the box underneath ever sees it,
+                    // so the toggle has to hang off the gesture detector that owns it.
+                    onTap = toggleControls,
                 )
             }
+        }
 
-            ViewerControlsRow(modifier = Modifier.align(Alignment.TopCenter)) {
+        // Two rows over the same strip: the buttons keep the edges, and the counter stays centred
+        // on the screen rather than on whatever space the buttons leave -- otherwise it slides
+        // sideways every time the asymmetric button groups fade out from under it.
+        ViewerControlsRow(modifier = Modifier.align(Alignment.TopCenter)) {
+            AnimatedVisibility(visible = controlsVisible.value, enter = fadeIn(), exit = fadeOut()) {
+                ViewerBackButton(onDismiss)
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            if (handle != null) {
                 AnimatedVisibility(visible = controlsVisible.value, enter = fadeIn(), exit = fadeOut()) {
-                    ViewerBackButton(onDismiss)
+                    Row(horizontalArrangement = spacedBy(Size10dp)) {
+                        ViewerShareButton(content, sharePopupExpanded, accountViewModel)
+
+                        ViewerSaveToGalleryButton(content, accountViewModel)
+                    }
                 }
+            }
+        }
 
-                Spacer(modifier = Modifier.weight(1f))
-
+        if (handle != null && handle.pageCount > 0) {
+            ViewerControlsRow(
+                modifier = Modifier.align(Alignment.TopCenter),
+                horizontalArrangement = Arrangement.Center,
+            ) {
                 AnimatedVisibility(
                     visible = controlsVisible.value || pageJustChanged,
                     enter = fadeIn(),
@@ -297,16 +319,6 @@ private fun PdfViewerContent(
                                 .padding(horizontal = Size10dp, vertical = Size5dp),
                     )
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                AnimatedVisibility(visible = controlsVisible.value, enter = fadeIn(), exit = fadeOut()) {
-                    Row(horizontalArrangement = spacedBy(Size10dp)) {
-                        ViewerShareButton(content, sharePopupExpanded, accountViewModel)
-
-                        ViewerSaveToGalleryButton(content, accountViewModel)
-                    }
-                }
             }
         }
     }
@@ -318,6 +330,7 @@ private fun PdfPageView(
     handle: PdfDocumentHandle,
     pageIndex: Int,
     cache: PageBitmapCache,
+    onTap: () -> Unit,
 ) {
     val cached = cache.get(pageIndex)
 
@@ -379,6 +392,7 @@ private fun PdfPageView(
                         .fillMaxSize()
                         .zoomable(
                             zoomState = zoomState,
+                            onTap = { onTap() },
                             onDoubleTap = { position ->
                                 zoomState.toggleScale(targetScale = DOUBLE_TAP_ZOOM_SCALE, position = position)
                             },

@@ -24,6 +24,7 @@ import android.Manifest
 import android.os.Build
 import android.view.Window
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,13 +47,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.viewModelScope
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -67,8 +69,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size15dp
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 // Chrome shared by the full-screen media viewers -- the zoomable image/video dialog and the PDF
 // viewer. Both are opened the same way (tap a media card in a feed), so they immerse, auto-hide,
@@ -99,18 +102,31 @@ fun ImmersiveSystemBarsEffect(window: Window?) {
  * [CONTROLS_AUTO_HIDE_DELAY_MS], and the caller flips the returned state on tap.
  *
  * [holdOpen] freezes the timer while something anchored to the controls -- the share sheet, say --
- * is up, and re-arms it once that closes. A tap that brings the controls back deliberately gets no
- * timer: the user asked for them, so they stay until tapped away.
+ * is up, and re-arms it once that closes. [armed] withholds the countdown until there is something
+ * to look at, so a viewer that spends three seconds fetching its media doesn't reveal the first
+ * frame with the controls already gone.
+ *
+ * A tap that brings the controls back deliberately gets no timer: the user asked for them, so they
+ * stay until tapped away. That is why the countdown races the controls going away rather than just
+ * sleeping -- a timer left over from an earlier show would otherwise wipe controls the user tapped
+ * back up in the meantime.
  */
 @Composable
-fun rememberViewerControlsVisibility(holdOpen: Boolean): MutableState<Boolean> {
+fun rememberViewerControlsVisibility(
+    holdOpen: Boolean,
+    armed: Boolean = true,
+): MutableState<Boolean> {
     val visible = remember { mutableStateOf(true) }
 
-    LaunchedEffect(holdOpen) {
-        if (!holdOpen && visible.value) {
-            delay(CONTROLS_AUTO_HIDE_DELAY_MS)
-            visible.value = false
-        }
+    LaunchedEffect(armed, holdOpen) {
+        if (!armed || holdOpen) return@LaunchedEffect
+
+        val hiddenFirst =
+            withTimeoutOrNull(CONTROLS_AUTO_HIDE_DELAY_MS) {
+                snapshotFlow { visible.value }.first { !it }
+            }
+
+        if (hiddenFirst == null) visible.value = false
     }
 
     return visible
@@ -134,6 +150,7 @@ fun rememberViewerControlsVisibility(holdOpen: Boolean): MutableState<Boolean> {
 @OptIn(ExperimentalLayoutApi::class)
 fun ViewerControlsRow(
     modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = spacedBy(Size10dp),
     content: @Composable RowScope.() -> Unit,
 ) {
     Row(
@@ -144,7 +161,7 @@ fun ViewerControlsRow(
                 ).padding(horizontal = Size15dp, vertical = Size10dp)
                 .fillMaxWidth()
                 .heightIn(min = ButtonDefaults.MinHeight),
-        horizontalArrangement = spacedBy(Size10dp),
+        horizontalArrangement = horizontalArrangement,
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
@@ -202,8 +219,12 @@ fun ViewerSaveToGalleryButton(
     content: BaseMediaContent,
     accountViewModel: AccountViewModel,
 ) {
-    val localContext = LocalContext.current
-    val scope = rememberCoroutineScope()
+    // The application context and the view model's scope, never the composition's: this button
+    // lives inside the AnimatedVisibility that the auto-hide collapses two seconds after the tap
+    // that started the download, and a rememberCoroutineScope job would be cancelled with it --
+    // killing the save with no file and no error. Matches the download row in ShareMediaAction.
+    val localContext = LocalContext.current.applicationContext
+    val scope = accountViewModel.viewModelScope
 
     val writeStoragePermissionState =
         rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
