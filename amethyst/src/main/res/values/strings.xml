@@ -3055,7 +3055,6 @@
     <string name="error_unable_to_fetch_invoice">Unable to fetch invoice from receiver\'s servers</string>
 
     <string name="wallet_connect_pay_invoice_error_error">Your wallet connect provider returned the following error: %1$s</string>
-    <string name="wallet_connect_no_response_error">Your wallet did not respond within %1$d seconds. The payment may or may not have gone through — check your wallet before retrying.</string>
     <string name="wallet_connect_unreadable_response_error">Your wallet connect provider sent a reply Amethyst could not read.</string>
 
     <string name="tor_connection_failed_title">Tor isn\'t connecting</string>
@@ -3213,6 +3212,14 @@
     <string name="wallet_outgoing">Sent</string>
     <string name="wallet_refresh">Refresh</string>
     <string name="wallet_transactions_load_failed">Could not load transactions</string>
+    <string name="wallet_transactions_load_more_failed">Could not load more transactions</string>
+    <string name="wallet_balance_request_failed">Could not load your balance</string>
+    <string name="wallet_invoice_creation_failed">Could not create the invoice</string>
+    <string name="wallet_no_invoice_returned">Your wallet did not return an invoice</string>
+    <string name="wallet_request_timed_out">Wallet request timed out</string>
+    <string name="wallet_request_failed">Could not reach your wallet: %1$s</string>
+    <string name="wallet_connect_unrecognized_reply">Your wallet replied with something Amethyst does not recognise (%1$s)</string>
+    <string name="wallet_connect_decrypt_failed">Amethyst could not decrypt your wallet\'s reply — the wallet may be using a different key</string>
     <string name="wallet_filter_all">All</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Non-Zaps</string>
@@ -5084,6 +5091,14 @@
     <plurals name="marmot_member_count">
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
+    </plurals>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Your wallet did not respond within %1$d second. The payment may or may not have gone through — check your wallet before retrying.</item>
+        <item quantity="other">Your wallet did not respond within %1$d seconds. The payment may or may not have gone through — check your wallet before retrying.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Wallet request timed out — %1$d reply was rejected because it was signed by an unexpected key. Your relay may be untrusted.</item>
+        <item quantity="other">Wallet request timed out — %1$d replies were rejected because they were signed by an unexpected key. Your relay may be untrusted.</item>
     </plurals>
     <string name="marmot_group_name">Group name</string>
     <string name="marmot_group_name_placeholder">Enter group name</string>

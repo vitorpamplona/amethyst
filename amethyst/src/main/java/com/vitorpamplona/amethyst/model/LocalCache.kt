@@ -3102,6 +3102,16 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         wasVerified: Boolean,
     ): Boolean {
         val requestId = event.requestId()
+
+        // Duplicate delivery, checked before the tracker so the warnings below mean one
+        // thing each. Some NWC relays replay every cached kind-23195 whenever the REQ
+        // filter changes (see NWCPaymentFilterAssembler), so an already-answered response
+        // arrives again and again. Its first copy consumed the pending request, so the
+        // replays would otherwise be reported as "no pending request is registered" —
+        // the same line a genuinely late response produces, which made the two
+        // indistinguishable in the field.
+        if (getNoteIfExists(event.id)?.event != null) return false
+
         val pending =
             when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
                 is NwcPaymentTracker.MatchResult.Matched -> {
@@ -3121,9 +3131,12 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 }
 
                 NwcPaymentTracker.MatchResult.NoMatch -> {
+                    // Not a replay — those are filtered above — so this is the first time we
+                    // have seen this response and nothing is waiting for it.
                     Log.w("LocalCache") {
                         "NWC response ${event.id} from ${event.pubKey} references request e=$requestId but no pending request is registered. " +
-                            "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag."
+                            "The response arrived after the client gave up waiting, the user holds a stale subscription, " +
+                            "or the wallet service set the wrong e tag."
                     }
                     return false
                 }
@@ -3137,7 +3150,8 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
 
-        // Already processed this event.
+        // Backstop for a concurrent delivery that loaded the event between the replay
+        // check above and here. Same outcome, no warning: it is not a protocol problem.
         if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {

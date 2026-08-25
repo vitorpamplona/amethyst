@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.nwc
 import android.content.Context
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
@@ -33,9 +34,10 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 
 /** Shown when no kind-23195 reply arrived before the client gave up waiting. */
 fun nwcTimeoutMessage(context: Context): String =
-    stringRes(
+    pluralStringRes(
         context,
-        R.string.wallet_connect_no_response_error,
+        R.plurals.wallet_connect_no_response_error,
+        NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
         NwcSignerState.NWC_RESPONSE_TIMEOUT_SECONDS,
     )
 
