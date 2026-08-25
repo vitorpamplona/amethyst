@@ -2032,7 +2032,7 @@
         <item quantity="one">Mit %1$d Relay verbunden</item>
         <item quantity="other">Mit %1$d Relays verbunden</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d Relay</item>

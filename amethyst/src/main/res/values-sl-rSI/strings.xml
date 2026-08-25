@@ -2143,7 +2143,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         <item quantity="few">Povezano z %1$d releji</item>
         <item quantity="other">Povezano z %1$d releji</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d rele</item>
