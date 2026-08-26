@@ -32,4 +32,18 @@ sealed class TorServiceStatus {
     data class Error(
         val message: String,
     ) : TorServiceStatus()
+
+    /**
+     * Where to send bytes, or null. Mirrors the Android status class so callers express intent
+     * rather than matching variants. No `Bootstrapping` here on purpose: the desktop backend drives
+     * an external Tor, so it never observes the routable-but-not-yet-bootstrapped window that the
+     * in-process Arti client has, and a variant nothing emits is dead weight (see [Error], which is
+     * only ever constructed by `DesktopTorManager`).
+     */
+    val socksPort: Int?
+        get() = (this as? Active)?.port
+
+    /** Tor can build circuits right now. */
+    val isFullyBootstrapped: Boolean
+        get() = this is Active
 }

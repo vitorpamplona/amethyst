@@ -130,7 +130,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorService
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -282,7 +281,7 @@ class AppModules(
         UiSettingsState(uiPrefs.value, connManager.isMobileOrFalse, applicationIOScope)
     }
 
-    private val torService = TorService(appContext)
+    private val torService = TorService(appContext, applicationIOScope)
     val torManager = TorManager(torPrefs, torService, applicationIOScope)
 
     // Network identity change (wifi↔cellular, regained from offline, captive portal
@@ -414,7 +413,11 @@ class AppModules(
     init {
         applicationIOScope.launch {
             torService.status
-                .map { it is TorServiceStatus.Active }
+                // Battery ledger: Tor is doing work from the moment the client exists — the
+                // directory download is the most expensive part of a launch — so this tracks
+                // "running", not "bootstrapped". Keying it on Active alone would silently omit the
+                // 12-34s download from every cold start.
+                .map { it.socksPort != null }
                 .distinctUntilChanged()
                 .collect { torSession.setActive(it) }
         }
@@ -647,7 +650,7 @@ class AppModules(
             // proxy during bootstrap. RelayProxyClientConnector reconnects them (with
             // ignoreRetryDelays=true) the instant Tor flips to Active.
             canDial = { url ->
-                !torEvaluatorFlow.shouldUseTorForRelay(url) || torManager.isSocksReady()
+                !torEvaluatorFlow.shouldUseTorForRelay(url) || torManager.isTorReady()
             },
         )
 
@@ -716,7 +719,7 @@ class AppModules(
         TorCircuitHealthTracker(
             client = client,
             isTorRouted = { torEvaluatorFlow.shouldUseTorForRelay(it) },
-            isTorActive = { torManager.isSocksReady() },
+            isTorActive = { torManager.isTorReady() },
             isConnectivityActive = { connManager.status.value is ConnectivityStatus.Active },
             onCircuitsDead = { torManager.onTorCircuitsDead() },
         ).also { it.register() }

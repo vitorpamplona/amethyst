@@ -152,7 +152,7 @@ class RelayProxyClientConnector(
                     onTrigger(UsageKeys.TRIGGER_OFF)
                     client.disconnect()
                 }
-                if (infra.torStatus is TorServiceStatus.Active) {
+                if (infra.torStatus.isFullyBootstrapped) {
                     Log.d("ManageRelayServices", "Connectivity off, Tor idle")
                 }
                 // disconnect() already cleared every relay's backoff. Forget the network
@@ -163,7 +163,7 @@ class RelayProxyClientConnector(
             infra.connectivity is ConnectivityStatus.Active && !client.isActive() -> {
                 Log.d("ManageRelayServices", "Connectivity On: Resuming Relay Services")
 
-                if (infra.torStatus is TorServiceStatus.Active) {
+                if (infra.torStatus.isFullyBootstrapped) {
                     Log.d("ManageRelayServices", "Connectivity resumed, Tor active")
                 }
 

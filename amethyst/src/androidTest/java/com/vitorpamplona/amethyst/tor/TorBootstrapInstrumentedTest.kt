@@ -25,7 +25,10 @@ import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vitorpamplona.amethyst.ui.tor.TorService
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -58,7 +61,7 @@ import kotlin.system.measureTimeMillis
  *   3. `./gradlew :amethyst:connectedPlayDebugAndroidTest -P android.testInstrumentationRunnerArguments.class=com.vitorpamplona.amethyst.tor.TorBootstrapInstrumentedTest`
  *
  * **What it covers that [TorManagerTest] does not:**
- *   - Real `ArtiNative.initialize` → `create_bootstrapped` → SOCKS listener bind.
+ *   - Real `ArtiNative.initialize` → `create_unbootstrapped_async` → SOCKS listener bind.
  *   - Real rustls `CryptoProvider` install (regression check after the arti-v2.3.0 bump).
  *   - Real `destroy()` releasing the state file lock so a second `initialize()` succeeds.
  *   - OkHttp routing traffic through the SOCKS port and Arti exiting through the
@@ -73,7 +76,14 @@ import kotlin.system.measureTimeMillis
 @Ignore("Tier-3 integration test — requires on-device network access to Tor. See class kdoc to enable.")
 class TorBootstrapInstrumentedTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
-    private val torService = TorService(context)
+
+    /**
+     * [TorService] promotes Bootstrapping -> Active from a coroutine on this scope, so the test
+     * must own one and cancel it — without a live scope `status` would never reach Active and every
+     * assertion below would hang until its timeout.
+     */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val torService = TorService(context, scope)
 
     @After
     fun tearDown() =
@@ -81,11 +91,12 @@ class TorBootstrapInstrumentedTest {
             // Drop the native client so this test's state file lock doesn't bleed into
             // the next instrumented run on the same device.
             torService.reset()
+            scope.cancel()
         }
 
     /**
      * Cold-start bootstrap. The whole point of the custom Arti build is that this
-     * works at all — if create_bootstrapped panics (e.g., because we forgot to install
+     * works at all — if client creation panics (e.g., because we forgot to install
      * a rustls CryptoProvider after an arti bump) the test catches it.
      */
     @Test
