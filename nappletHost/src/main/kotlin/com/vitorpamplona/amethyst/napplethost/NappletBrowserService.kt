@@ -38,6 +38,7 @@ import android.os.Messenger
 import android.os.SystemClock
 import android.util.Log
 import android.webkit.ConsoleMessage
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -47,6 +48,7 @@ import android.webkit.WebViewClient
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
+import androidx.core.net.toUri
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
@@ -94,6 +96,10 @@ class NappletBrowserService : Service() {
         var webView: WebView? = null
         var bridgeReplyProxy: JavaScriptReplyProxy? = null
         var fireSeq = 0
+
+        // The in-flight `<input type="file">` pick for this surface. The picker itself runs in the main
+        // process (this provider is windowless), so the callback waits here for MSG_FILE_CHOOSER_RESULT.
+        val fileChooser = PendingFileChooser()
 
         // Last main-frame error state, pushed to the client so it can show an error/retry overlay over
         // the surface (the embedded surface has no error page of its own).
@@ -146,7 +152,10 @@ class NappletBrowserService : Service() {
             runCatching { unbindService(brokerConnection) }
             brokerBound = false
         }
-        tabs.values.forEach { it.webView?.destroy() }
+        tabs.values.forEach {
+            it.fileChooser.cancel()
+            it.webView?.destroy()
+        }
         tabs.clear()
         super.onDestroy()
     }
@@ -195,6 +204,15 @@ class NappletBrowserService : Service() {
                 applyWebViewProxy(if (tab.useTor) tab.proxyPort else -1) { tab.webView?.reload() }
             }
             NappletBrowserContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
+            NappletBrowserContract.MSG_FILE_CHOOSER_RESULT -> {
+                val tab = tabFor(msg) ?: return true
+                val data = msg.data ?: return true
+                val id = data.getLong(NappletBrowserContract.KEY_FILE_CHOOSER_ID)
+                // Absent array = the user cancelled; PendingFileChooser turns that into the null the page
+                // needs to see so its file input becomes tappable again.
+                val uris = data.getStringArray(NappletBrowserContract.KEY_FILE_CHOOSER_URIS)?.map(String::toUri)
+                tab.fileChooser.deliver(id, uris?.toTypedArray())
+            }
             else -> return false
         }
         return true
@@ -295,6 +313,8 @@ class NappletBrowserService : Service() {
     fun onSessionClosed(sessionId: String) {
         val tab = tabs.remove(sessionId) ?: return
         tab.bridgeReplyProxy = null
+        // Release a picker still waiting on this surface before its WebView goes away.
+        tab.fileChooser.cancel()
         tab.webView?.destroy()
         tab.webView = null
     }
@@ -337,6 +357,17 @@ class NappletBrowserService : Service() {
         private val tab: BrowserTab?,
     ) : WebChromeClient() {
         /**
+         * Hands the page's `<input type="file">` to the main process, which owns the only Activity that
+         * can run a picker. Always returns true: the callback is ours now, and [requestFileChooser]
+         * answers it on every path — otherwise the input would stay dead for the life of the page.
+         */
+        override fun onShowFileChooser(
+            webView: WebView,
+            filePathCallback: ValueCallback<Array<Uri>>,
+            fileChooserParams: FileChooserParams,
+        ): Boolean = requestFileChooser(tab, filePathCallback, fileChooserParams)
+
+        /**
          * The embedded surface captures favicons just like the full-screen browser does — a site pinned
          * to a tab but never opened full-screen would otherwise never contribute an icon at all.
          */
@@ -363,6 +394,38 @@ class NappletBrowserService : Service() {
             )
             return true
         }
+    }
+
+    /**
+     * Asks the client (main process) to run the picker for [tab] and remembers the callback until the
+     * matching [NappletBrowserContract.MSG_FILE_CHOOSER_RESULT] comes back. A surface with no client to
+     * ask — a torn-down tab, a dead Messenger — releases the input immediately instead of leaving it
+     * stuck waiting for a reply that can never arrive.
+     */
+    private fun requestFileChooser(
+        tab: BrowserTab?,
+        filePathCallback: ValueCallback<Array<Uri>>,
+        params: WebChromeClient.FileChooserParams,
+    ): Boolean {
+        val client = tab?.clientMessenger
+        if (client == null) {
+            filePathCallback.onReceiveValue(null)
+            return true
+        }
+        val id = tab.fileChooser.start(filePathCallback)
+        val msg =
+            Message.obtain(null, NappletBrowserContract.MSG_FILE_CHOOSER_REQUEST).apply {
+                data =
+                    Bundle().apply {
+                        putLong(NappletBrowserContract.KEY_FILE_CHOOSER_ID, id)
+                        putStringArray(NappletBrowserContract.KEY_FILE_CHOOSER_ACCEPT, params.acceptTypes ?: emptyArray())
+                        putBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_MULTIPLE, NappletFileChooser.allowsMultiple(params.mode))
+                        putBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_CAPTURE, params.isCaptureEnabled)
+                        putString(NappletBrowserContract.KEY_FILE_CHOOSER_TITLE, params.title?.toString())
+                    }
+            }
+        if (runCatching { client.send(msg) }.isFailure) tab.fileChooser.cancel()
+        return true
     }
 
     private fun pushConsoleLog(

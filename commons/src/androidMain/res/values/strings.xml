@@ -5,4 +5,8 @@
     <string name="browser_console_title">Console (%1$d)</string>
     <string name="browser_console_clear">Clear</string>
     <string name="napplet_untitled">Untitled nApplet</string>
+    <!-- Title of the system picker opened for an HTML file input inside the in-app browser. -->
+    <string name="browser_file_chooser_title">Choose a file</string>
+    <!-- Shown when the device has no app that can hand a file back to the page. -->
+    <string name="browser_file_chooser_unavailable">No app available to pick a file</string>
 </resources>

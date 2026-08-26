@@ -40,6 +40,7 @@ import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
+import com.vitorpamplona.amethyst.napplet.WebFileChooserCoordinator
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleBridge
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.ConsoleLogEntry
@@ -253,6 +254,25 @@ class EmbeddedWebAppController(
                 val line = msg.data?.getInt(NappletBrowserContract.KEY_CONSOLE_LINE, 0) ?: 0
                 if (consoleLogs.size >= MAX_CONSOLE_LOGS) consoleLogs.removeAt(0)
                 consoleLogs.add(ConsoleLogEntry(level, message, source, line))
+            }
+            NappletBrowserContract.MSG_FILE_CHOOSER_REQUEST -> {
+                val data = msg.data ?: return true
+                val requestId = data.getLong(NappletBrowserContract.KEY_FILE_CHOOSER_ID)
+                // The sandbox has no Activity to run a picker from, so the main process runs it here and
+                // ships the URIs back. The reply is sent on every outcome (a cancel included) — the page's
+                // file input stays busy until it hears something.
+                WebFileChooserCoordinator.request(
+                    context = appContext,
+                    acceptTypes = data.getStringArray(NappletBrowserContract.KEY_FILE_CHOOSER_ACCEPT)?.toList().orEmpty(),
+                    allowMultiple = data.getBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_MULTIPLE, false),
+                    captureEnabled = data.getBoolean(NappletBrowserContract.KEY_FILE_CHOOSER_CAPTURE, false),
+                    pageTitle = data.getString(NappletBrowserContract.KEY_FILE_CHOOSER_TITLE),
+                ) { uris ->
+                    send(NappletBrowserContract.MSG_FILE_CHOOSER_RESULT) {
+                        putLong(NappletBrowserContract.KEY_FILE_CHOOSER_ID, requestId)
+                        uris?.let { putStringArray(NappletBrowserContract.KEY_FILE_CHOOSER_URIS, it) }
+                    }
+                }
             }
             NappletBrowserContract.MSG_MAGNIFIER_FRAME -> {
                 val data = msg.data ?: return true
