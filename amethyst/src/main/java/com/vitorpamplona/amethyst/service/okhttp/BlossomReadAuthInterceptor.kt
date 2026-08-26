@@ -49,22 +49,27 @@ import java.util.concurrent.ConcurrentHashMap
  *  - and at most one retry (an application interceptor's second `chain.proceed`
  *    runs the downstream chain again, it does not re-enter this interceptor).
  *
- * [authHeaderProvider] is `(host, sha256) -> header?`. It is synchronous by
- * contract (the caller bridges the suspend signer), returns `null` when no
- * signer is available or signing times out, and is only consulted on a real
- * `401`, so an unauthenticated user simply keeps seeing the broken image
- * rather than paying any signing cost.
+ * This interceptor never signs and never waits. [cachedHeaderProvider] is a
+ * pure cache read and [onAuthRequired] is fire-and-forget: `intercept` runs on
+ * an OkHttp dispatcher thread, where blocking would hold one of the 16 per-host
+ * slots for the whole signing window and stall every other image from that
+ * host. The signed *retry* therefore lives one layer up, in
+ * `BlossomReadAuthFetcher`, which is `suspend` and can await the signature
+ * without occupying a slot.
  *
- * The first blob from an auth-gated host costs an extra round trip (anonymous
- * `GET` → `401` → signed retry), but that host is then remembered in
- * [knownAuthHosts] so every later blob from it is signed **up front** — one
- * round trip, not two. This matters on a Buzz community feed where nearly every
- * image comes from the same gated host: without it each image would keep paying
- * the wasted 401 probe. The learned host also short-circuits to anonymous when
- * no signer is available, so a logged-out user never re-probes needlessly.
+ * The first blob from an auth-gated host still costs an extra round trip
+ * (anonymous `GET` -> `401` -> signed retry by the fetcher), but the host is
+ * then remembered in [knownAuthHosts] so every later blob from it is signed
+ * **up front** from the cache — one round trip, not two. This matters on a Buzz
+ * community feed where nearly every image comes from the same gated host.
+ * Callers that cannot retry (e.g. the media3 video datasource) get the token on
+ * their next request, once [onAuthRequired] has landed it in the cache.
  */
 class BlossomReadAuthInterceptor(
-    private val authHeaderProvider: (host: String, sha256: HexKey) -> String?,
+    /** Pure cache read — must not sign, must not block. */
+    private val cachedHeaderProvider: (host: String) -> String?,
+    /** Fire-and-forget: starts a signature for a host we just learned is gated. */
+    private val onAuthRequired: (host: String, sha256: HexKey) -> Unit,
 ) : Interceptor {
     // Hosts observed to answer 401 to an anonymous Blossom GET. Small (a user
     // follows a handful of auth-gated servers at most) and shared across all
@@ -88,7 +93,7 @@ class BlossomReadAuthInterceptor(
         // Falls through to anonymous only when we can't produce a token (no
         // signer / timeout) — the server would 401 either way.
         if (host in knownAuthHosts) {
-            authHeaderProvider(host, sha256)?.let { header ->
+            cachedHeaderProvider(host)?.let { header ->
                 return chain.proceed(request.withAuth(header))
             }
         }
@@ -99,12 +104,12 @@ class BlossomReadAuthInterceptor(
         // Learn the host so its next blob is signed up front.
         knownAuthHosts.add(host)
 
-        val header = authHeaderProvider(host, sha256) ?: return response
+        // Start the signature but do not wait for it: this thread holds a
+        // per-host dispatcher slot. BlossomReadAuthFetcher performs the signed
+        // retry for this very request from a coroutine.
+        onAuthRequired(host, sha256)
 
-        // Close the 401 body before replaying so the connection can be reused.
-        response.close()
-
-        return chain.proceed(request.withAuth(header))
+        return response
     }
 
     private fun Request.withAuth(header: String) =

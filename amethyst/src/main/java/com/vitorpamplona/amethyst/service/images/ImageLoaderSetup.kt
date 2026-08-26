@@ -44,6 +44,7 @@ import coil3.svg.SvgDecoder
 import coil3.util.Logger
 import coil3.video.VideoFrameDecoder
 import com.vitorpamplona.amethyst.isDebug
+import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -70,6 +71,9 @@ class ImageLoaderSetup {
             callFactory: (url: String) -> Call.Factory,
             thumbnailCache: ThumbnailDiskCache,
             backgroundScope: CoroutineScope,
+            // Signs the BUD-01 retry when a gated host answers 401. Null keeps every
+            // fetch anonymous (tests, pre-configuration call sites).
+            readAuth: BlossomReadAuthTokenProvider? = null,
         ) {
             // ONE strategy for the whole ImageLoader. DeDupeConcurrentRequestStrategy
             // coordinates through a map of in-flight fetches that it owns, so it only
@@ -97,13 +101,13 @@ class ImageLoaderSetup {
                         add(Base64Fetcher.Factory)
                         add(BlurHashFetcher.Factory)
                         add(ThumbHashFetcher.Factory)
-                        add(BlossomFetcher.Factory(blossomServerResolver, callFactory, concurrentRequests))
-                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, concurrentRequests))
+                        add(BlossomFetcher.Factory(blossomServerResolver, callFactory, concurrentRequests, readAuth))
+                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, concurrentRequests, readAuth))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)
                         add(ThumbHashFetcher.TKeyer)
                         add(ProfilePictureFetcher.BKeyer)
-                        add(OkHttpFactory(callFactory, concurrentRequests))
+                        add(OkHttpFactory(callFactory, concurrentRequests, readAuth))
                     }.build(),
             )
         }
@@ -143,6 +147,7 @@ class MyDebugLogger(
 class OkHttpFactory(
     val networkClient: (url: String) -> Call.Factory,
     concurrentRequestStrategy: ConcurrentRequestStrategy,
+    private val readAuth: BlossomReadAuthTokenProvider? = null,
 ) : Fetcher.Factory<Uri> {
     private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
     private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
@@ -157,15 +162,17 @@ class OkHttpFactory(
 
         val url = data.toString()
 
-        return NetworkFetcher(
-            url = url,
-            options = options,
-            networkClient = lazy { networkClient(url).asNetworkClient() },
-            diskCache = lazy { imageLoader.diskCache },
-            cacheStrategy = cacheStrategyLazy,
-            connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-            concurrentRequestStrategy = concurrentRequestStrategyLazy,
-        )
+        return readAuthAware(url, readAuth) { authHeader ->
+            NetworkFetcher(
+                url = url,
+                options = options.withAuthHeader(authHeader),
+                networkClient = lazy { networkClient(url).asNetworkClient() },
+                diskCache = lazy { imageLoader.diskCache },
+                cacheStrategy = cacheStrategyLazy,
+                connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
+                concurrentRequestStrategy = concurrentRequestStrategyLazy,
+            )
+        }
     }
 
     private fun isApplicable(data: Uri): Boolean = data.scheme == "http" || data.scheme == "https"
