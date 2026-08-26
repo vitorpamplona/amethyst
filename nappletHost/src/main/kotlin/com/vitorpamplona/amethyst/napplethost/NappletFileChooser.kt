@@ -192,24 +192,43 @@ object NappletFileChooser {
                 null
             }?.takeIf { it.isNotEmpty() }
 
-        // A camera returns no URI at all — it reports success by filling the file we handed it, so an
+        // Not every camera reports a capture the same way. `ACTION_IMAGE_CAPTURE` returns no URI and
+        // simply fills the file, but `ACTION_VIDEO_CAPTURE` on at least GoogleCamera echoes the
+        // EXTRA_OUTPUT URI straight back in the result — including when the recording was abandoned
+        // and nothing was ever written. Taken at face value that hands the page a 0-byte file and the
+        // upload silently succeeds with no content. An echoed URI is therefore only worth anything if
+        // the file behind it actually has bytes; when it does not, drop it and let the emptiness rules
+        // below treat the request as dismissed. URIs that are not ours are never second-guessed.
+        val usable =
+            picked
+                ?.filter { uri ->
+                    val own = request.captures.firstOrNull { it.uri == uri }
+                    own == null || own.file.length() > 0
+                }?.toTypedArray()
+                ?.takeIf { it.isNotEmpty() }
+
+        // A camera that returns no URI at all reports success by filling the file we handed it, so an
         // empty one means it was dismissed. Only consulted when the picker returned nothing of its own.
         val captured =
-            if (picked != null || resultCode != Activity.RESULT_OK) {
+            if (usable != null || resultCode != Activity.RESULT_OK) {
                 null
             } else {
                 request.captures.firstOrNull { it.file.length() > 0 }
             }
+
+        // A capture whose URI is being handed to the page has to outlive this call, whether it got
+        // there by being echoed back ([usable]) or by being the filled file ([captured]).
+        val returned = usable?.toSet().orEmpty()
 
         request.captures.forEach { capture ->
             // Every camera app was granted write access up front because none of them could be ruled
             // out yet. The outcome is known now, so none of them needs it any more — including for the
             // photo being returned, which this app reads back through its own provider.
             NappletCaptureFiles.releaseGrants(context, capture.grantedTo, capture.uri)
-            if (capture !== captured) NappletCaptureFiles.discard(context, capture.file)
+            if (capture !== captured && capture.uri !in returned) NappletCaptureFiles.discard(context, capture.file)
         }
 
-        return picked ?: captured?.let { arrayOf(it.uri) }
+        return usable ?: captured?.let { arrayOf(it.uri) }
     }
 
     /**
