@@ -502,11 +502,12 @@ class UploadOrchestrator {
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
+        val quality = compressionQuality.forServer(server.type)
+        val compressed = compressIfNeeded(uri, mimeType, quality, context, useH265, convertGifToMp4)
 
         val finalUri =
             try {
-                stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                stripAfterCompression(uri, compressed, mimeType, quality, stripMetadata, onStrippingFailed, context)
             } catch (e: AvifMetadataNotVerifiableException) {
                 return error(R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
                     deleteTempUri(compressed.uri, uri)
@@ -545,11 +546,12 @@ class UploadOrchestrator {
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
+        val quality = compressionQuality.forServer(server.type)
+        val compressed = compressIfNeeded(uri, mimeType, quality, context, useH265, convertGifToMp4)
 
         val finalUri =
             try {
-                stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                stripAfterCompression(uri, compressed, mimeType, quality, stripMetadata, onStrippingFailed, context)
             } catch (e: AvifMetadataNotVerifiableException) {
                 return error(R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
                     deleteTempUri(compressed.uri, uri)

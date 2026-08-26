@@ -35,6 +35,15 @@ enum class ServerType {
     NIP95,
     NIP96,
     Originless,
+    ;
+
+    /**
+     * Originless pins the original bytes and returns `ipfs://CID`. Client JPEG/video
+     * transcoding would change those bytes (and the CID), so Media Quality is not shown
+     * and uploads stay uncompressed.
+     */
+    val usesClientMediaCompression: Boolean
+        get() = this != Originless
 }
 
 fun originlessServer(url: String = OriginlessUrls.DEFAULT_SERVER): ServerName = ServerName("Originless", OriginlessUrls.normalizeBase(url), ServerType.Originless)
