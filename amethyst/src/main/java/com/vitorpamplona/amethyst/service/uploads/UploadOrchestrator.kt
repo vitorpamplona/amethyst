@@ -471,7 +471,7 @@ class UploadOrchestrator {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
                 ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
-                ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
+                ServerType.Blossom, ServerType.Originless -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
             }
         } finally {
             deleteTempUri(finalUri, uri)
@@ -516,7 +516,7 @@ class UploadOrchestrator {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
                 ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
-                ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
+                ServerType.Blossom, ServerType.Originless -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
             }
         } finally {
             deleteTempUri(encrypted.uri, uri)

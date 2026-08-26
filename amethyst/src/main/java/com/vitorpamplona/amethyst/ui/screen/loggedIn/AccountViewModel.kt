@@ -2788,9 +2788,10 @@ class AccountViewModel(
         bolt11: String,
         zappedNote: Note?,
         onSent: () -> Unit = {},
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ) = launchSigner {
-        account.zaps.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
+        account.zaps.sendZapPaymentRequestFor(bolt11, zappedNote, onTimeout, onResponse)
         onSent()
     }
 
@@ -2895,6 +2896,7 @@ class AccountViewModel(
                         ?.serverUrl
                 },
                 ipfsGateway = account.settings.ipfsGateway.value,
+                extraIpfsGateways = account.blossomServers.originlessGateways(),
                 onSuccess = {
                     Handler(Looper.getMainLooper()).post {
                         Toast

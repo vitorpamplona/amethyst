@@ -12,12 +12,11 @@
  * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.vitorpamplona.amethyst.service.playback.service
 
@@ -41,6 +40,7 @@ import java.io.IOException
 class IpfsDataSource(
     private val upstreamFactory: DataSource.Factory,
     private val gateway: () -> String?,
+    private val extraGateways: () -> List<String> = { emptyList() },
 ) : DataSource {
     private val transferListeners = mutableListOf<TransferListener>()
     private var upstream: DataSource? = null
@@ -56,7 +56,7 @@ class IpfsDataSource(
             return openUpstream(dataSpec)
         }
 
-        val candidates = IpfsGatewayResolver.getAllCandidateUrls(original, gateway())
+        val candidates = IpfsGatewayResolver.getAllCandidateUrls(original, gateway(), extraGateways())
         if (candidates.isEmpty()) throw IOException("Unable to resolve IPFS URI $original")
 
         var lastFailure: IOException? = null
@@ -101,7 +101,8 @@ class IpfsDataSource(
     class Factory(
         private val upstreamFactory: DataSource.Factory,
         private val gateway: () -> String?,
+        private val extraGateways: () -> List<String> = { emptyList() },
     ) : DataSource.Factory {
-        override fun createDataSource(): DataSource = IpfsDataSource(upstreamFactory, gateway)
+        override fun createDataSource(): DataSource = IpfsDataSource(upstreamFactory, gateway, extraGateways)
     }
 }

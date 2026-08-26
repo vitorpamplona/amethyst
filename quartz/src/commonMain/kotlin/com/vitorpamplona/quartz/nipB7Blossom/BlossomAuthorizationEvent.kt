@@ -36,25 +36,48 @@ class BlossomAuthorizationEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    /** Base64 of this event's JSON, as carried in the `Authorization` header value. */
-    fun rawToken() = Base64.encode(toJson().encodeToByteArray())
+    /**
+     * This event's JSON as Base64url without padding, per BUD-11: "the
+     * authorization token MUST be encoded as Base64 URL-safe without padding
+     * (Base64url, as used by JWTs)".
+     *
+     * Deliberately NOT the same encoder as NIP-98's
+     * [com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent.rawToken],
+     * which stays on standard Base64 because NIP-98 does not specify a variant.
+     * In practice the alphabets coincide here — a token's JSON is printable
+     * ASCII, and a sextet can only reach 62/63 when the third byte of its group
+     * is `>`, `~`, `?` or DEL — so the observable change is the dropped `=`.
+     */
+    fun rawToken() = BASE64URL.encode(toJson().encodeToByteArray())
 
     /**
-     * The full `Authorization` header value for a BUD-01/BUD-02 request:
-     * `Nostr <base64-event>`. Mirrors NIP-98's
-     * [com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent.toAuthToken],
-     * which Blossom auth reuses.
+     * The full `Authorization` header value for a Blossom request:
+     * `Nostr <base64url-event>` (BUD-11, HTTP Authorization Header).
      */
     fun toAuthorizationHeader() = "$AUTH_HEADER_SCHEME${rawToken()}"
 
     companion object {
         const val KIND = 24242
 
-        /** Scheme prefix for the `Authorization` header value (BUD-01). */
+        /** Scheme prefix for the `Authorization` header value (BUD-11). */
         const val AUTH_HEADER_SCHEME = "Nostr "
 
+        /** BUD-11's required token encoding: URL-safe alphabet, no `=` padding. */
+        val BASE64URL = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
+
+        /**
+         * BUD-11 `t=get` read authorization.
+         *
+         * [hash] is optional because BUD-11 lists the `x` tag as *optional* for
+         * `GET /<sha256>`, and its Tag scoping rule is strict about what adding
+         * one means: "When `x` tags are present, the token is only valid for
+         * operations on the specified blob hashes." So pass a hash only for a
+         * token used to fetch that one blob; pass null for a token that will be
+         * reused across blobs on a host, and let the `server` tag scope it.
+         * A hash-scoped token replayed for a different blob is invalid.
+         */
         suspend fun createGetAuth(
-            hash: HexKey,
+            hash: HexKey?,
             alt: String,
             signer: NostrSigner,
             servers: List<String> = emptyList(),

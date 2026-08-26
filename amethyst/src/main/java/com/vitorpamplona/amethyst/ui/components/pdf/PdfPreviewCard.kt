@@ -158,6 +158,7 @@ private fun LoadedPdfPreviewCard(
                     .fetchSnapshot(
                         url = content.url,
                         ipfsGateway = accountViewModel.account.settings.ipfsGateway.value,
+                        extraIpfsGateways = accountViewModel.account.blossomServers.originlessGateways(),
                     ) { url ->
                         accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
                     }.use { snapshot ->

@@ -99,18 +99,20 @@ class AccountZapActions(
 
     suspend fun sendNwcRequest(
         request: Request,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ) {
-        val (event, relay) = account.nip47SignerState.sendNwcRequest(request, onResponse)
+        val (event, relay) = account.nip47SignerState.sendNwcRequest(request, onTimeout, onResponse)
         account.client.publish(event, setOf(relay))
     }
 
     suspend fun sendNwcRequestToWallet(
         walletUri: Nip47WalletConnect.Nip47URINorm,
         request: Request,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ): HexKey {
-        val (event, relay) = account.nip47SignerState.sendNwcRequestToWallet(walletUri, request, onResponse)
+        val (event, relay) = account.nip47SignerState.sendNwcRequestToWallet(walletUri, request, onTimeout, onResponse)
         account.client.publish(event, setOf(relay))
         return event.id
     }
@@ -127,12 +129,19 @@ class AccountZapActions(
      */
     fun cleanupNwcRequest(requestId: HexKey) = LocalCache.paymentTracker.cleanup(requestId)
 
+    /**
+     * @param onTimeout invoked when no kind-23195 reply arrives before
+     *   [NwcSignerState.NWC_RESPONSE_TIMEOUT_MS]. Pass one on any path with a user
+     *   watching: without it a response lost in transit is indistinguishable from
+     *   the action never having happened.
+     */
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ) {
-        val (event, relay) = account.nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
+        val (event, relay) = account.nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onTimeout, onResponse)
         account.client.publish(event, setOf(relay))
     }
 

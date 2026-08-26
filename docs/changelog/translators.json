@@ -93,8 +93,18 @@
       {
         "user": "vitorpamplona",
         "languages": [
+          "Czech",
+          "German",
           "Polish",
-          "Slovenian"
+          "Portuguese, Brazilian",
+          "Slovenian",
+          "Swedish"
+        ]
+      },
+      {
+        "user": "rajs19420616",
+        "languages": [
+          "Hindi"
         ]
       },
       {
@@ -237,10 +247,6 @@
       },
       {
         "user": "flobstr",
-        "languages": []
-      },
-      {
-        "user": "rajs19420616",
         "languages": []
       },
       {

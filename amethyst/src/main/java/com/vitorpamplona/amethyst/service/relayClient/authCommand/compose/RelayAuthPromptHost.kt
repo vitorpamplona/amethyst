@@ -265,8 +265,8 @@ private fun RelayHeader(
         horizontalArrangement = Arrangement.spacedBy(11.dp),
     ) {
         RobohashFallbackAsyncImage(
-            robot = info?.id ?: prompt.relayUrl.displayUrl(),
-            model = info?.icon,
+            robot = info.id ?: prompt.relayUrl.displayUrl(),
+            model = info.icon,
             contentDescription = null,
             colorFilter = RelayIconFilter,
             modifier = Modifier.size(34.dp).clip(MaterialTheme.shapes.small),

@@ -61,7 +61,7 @@ object HlsBlobUploaderFactory {
         context: Context,
     ): HlsBlobUploader =
         when (server.type) {
-            ServerType.Blossom -> {
+            ServerType.Blossom, ServerType.Originless -> {
                 blossomAdapter(server.baseUrl, account, context)
             }
 

@@ -30,13 +30,14 @@ import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.network.CacheStrategy
+import coil3.network.ConcurrentRequestStrategy
 import coil3.network.ConnectivityChecker
-import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
+import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import okhttp3.Call
@@ -96,9 +97,18 @@ class ProfilePictureFetcher(
         private val thumbnailCache: ThumbnailDiskCache,
         private val networkClient: (url: String) -> Call.Factory,
         private val backgroundScope: CoroutineScope,
+        // Shared with every other network-backed factory on this ImageLoader --
+        // see the note in ImageLoaderSetup.setup(). Avatars repeat constantly
+        // down a feed, so this is where a per-request instance cost the most:
+        // every row holding the same author's picture downloaded it again.
+        concurrentRequestStrategy: ConcurrentRequestStrategy,
+        private val readAuth: BlossomReadAuthTokenProvider? = null,
         private val ipfsGateway: () -> String?,
+        private val extraGateways: () -> List<String> = { emptyList() },
     ) : Fetcher.Factory<ProfilePictureUrl> {
+        private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
         private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
+        private val concurrentRequestStrategyLazy = lazyOf(concurrentRequestStrategy)
 
         override fun create(
             data: ProfilePictureUrl,
@@ -107,25 +117,36 @@ class ProfilePictureFetcher(
         ): Fetcher {
             val diskCacheLazy = lazy { imageLoader.diskCache }
 
-            fun networkFetcher(url: String): Fetcher =
-                NetworkFetcher(
-                    url = url,
-                    options = options,
-                    networkClient = lazy { networkClient(url).asNetworkClient() },
-                    diskCache = diskCacheLazy,
-                    cacheStrategy = lazy { CacheStrategy.DEFAULT },
-                    connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-                    concurrentRequestStrategy = lazy { DeDupeConcurrentRequestStrategy() },
-                )
-
             val netFetcher =
                 if (IpfsGatewayResolver.isIpfsUri(data.url)) {
                     IpfsFetcher(
-                        candidates = IpfsGatewayResolver.getAllCandidateUrls(data.url, ipfsGateway()),
-                        networkFetcher = ::networkFetcher,
+                        candidates = IpfsGatewayResolver.getAllCandidateUrls(data.url, ipfsGateway(), extraGateways()),
+                        networkFetcher = { url ->
+                            readAuthAware(url, readAuth) { authHeader ->
+                                NetworkFetcher(
+                                    url = url,
+                                    options = options.withAuthHeader(authHeader),
+                                    networkClient = lazy { networkClient(url).asNetworkClient() },
+                                    diskCache = diskCacheLazy,
+                                    cacheStrategy = cacheStrategyLazy,
+                                    connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
+                                    concurrentRequestStrategy = concurrentRequestStrategyLazy,
+                                )
+                            }
+                        },
                     )
                 } else {
-                    networkFetcher(data.url)
+                    readAuthAware(data.url, readAuth) { authHeader ->
+                        NetworkFetcher(
+                            url = data.url,
+                            options = options.withAuthHeader(authHeader),
+                            networkClient = lazy { networkClient(data.url).asNetworkClient() },
+                            diskCache = diskCacheLazy,
+                            cacheStrategy = cacheStrategyLazy,
+                            connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
+                            concurrentRequestStrategy = concurrentRequestStrategyLazy,
+                        )
+                    }
                 }
 
             return ProfilePictureFetcher(

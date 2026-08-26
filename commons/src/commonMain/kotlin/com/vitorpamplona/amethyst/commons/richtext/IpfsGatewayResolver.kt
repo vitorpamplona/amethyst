@@ -53,12 +53,18 @@ object IpfsGatewayResolver {
 
     /**
      * Returns distinct HTTP candidates in caller preference order.
+     *
+     * [extraGateways] are prepended before [customGateway] and the built-in
+     * public gateways. An Originless server URL listed here will be tried first,
+     * letting the user resolve IPFS content through their own node.
      */
     fun getAllCandidateUrls(
         ipfsUri: String,
         customGateway: String? = null,
+        extraGateways: List<String> = emptyList(),
     ): List<String> =
         buildList {
+            addAll(extraGateways)
             customGateway?.let(::add)
             addAll(DEFAULT_GATEWAYS)
         }.mapNotNull { gateway ->
@@ -84,7 +90,14 @@ object IpfsGatewayResolver {
         if (authority.isBlank() || authority == "." || authority == "..") return null
         if (withoutIpfsPath.any { it.isWhitespace() || it == '\\' }) return null
         if ('?' in withoutIpfsPath || '#' in withoutIpfsPath) return null
-        if (withoutIpfsPath.substring(schemeEnd).substringAfter('/', "").split('/').any(::isDotSegment)) return null
+        if (withoutIpfsPath
+                .substring(schemeEnd)
+                .substringAfter('/', "")
+                .split('/')
+                .any(::isDotSegment)
+        ) {
+            return null
+        }
         return withoutIpfsPath
     }
 

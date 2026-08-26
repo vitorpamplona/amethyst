@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -70,6 +69,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
@@ -246,7 +246,7 @@ fun CalendarEventDetailScreen(
                         top = pad.calculateTopPadding(),
                         bottom = pad.calculateBottomPadding(),
                     ).consumeWindowInsets(pad)
-                    .imePadding()
+                    .imePaddingSafe()
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
         ) {

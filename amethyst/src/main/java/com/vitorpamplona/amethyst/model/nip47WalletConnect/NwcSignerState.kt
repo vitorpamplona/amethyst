@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -203,8 +204,9 @@ class NwcSignerState(
      */
     suspend fun sendNwcRequest(
         request: Request,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
-    ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> = sendNwcRequestToWallet(defaultWalletUri.value, request, onResponse)
+    ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> = sendNwcRequestToWallet(defaultWalletUri.value, request, onTimeout, onResponse)
 
     /**
      * Sends a generic NIP-47 request to a specific wallet.
@@ -212,6 +214,7 @@ class NwcSignerState(
     suspend fun sendNwcRequestToWallet(
         walletUri: Nip47WalletConnect.Nip47URINorm?,
         request: Request,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = walletUri ?: throw IllegalArgumentException("No NIP47 setup")
@@ -234,14 +237,7 @@ class NwcSignerState(
         // be missed.
         assembler.subscribeAndFlush(filter)
 
-        // Safety net: drop the filter after 60s if the wallet never replies.
-        // The happy path (response arrives) cancels this job and unsubscribes
-        // through assembler.unsubscribeSoon, which debounces.
-        val timeoutJob =
-            scope.launch(Dispatchers.IO) {
-                delay(60000)
-                assembler.unsubscribe(filter)
-            }
+        val timeoutJob = launchGiveUpTimer(assembler, filter, event.id, onTimeout)
 
         val responseCache = NostrWalletConnectResponseCache(walletSigner)
         cache.consume(event, null, true, walletService.relayUri) {
@@ -259,6 +255,7 @@ class NwcSignerState(
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = defaultWalletUri.value ?: throw IllegalArgumentException("No NIP47 setup")
@@ -278,14 +275,7 @@ class NwcSignerState(
         // See sendNwcRequestToWallet above for the rationale.
         assembler.subscribeAndFlush(filter)
 
-        // Safety net: drop the filter after 60s if the wallet never replies.
-        // The happy path (response arrives) cancels this job and instead
-        // hands off to assembler.unsubscribeSoon, which debounces.
-        val timeoutJob =
-            scope.launch(Dispatchers.IO) {
-                delay(60000) // waits 1 minute to complete payment.
-                assembler.unsubscribe(filter)
-            }
+        val timeoutJob = launchGiveUpTimer(assembler, filter, event.id, onTimeout)
 
         cache.consume(event, zappedNote, true, walletService.relayUri) {
             timeoutJob.cancel()
@@ -294,5 +284,53 @@ class NwcSignerState(
         }
 
         return Pair(event, walletService.relayUri)
+    }
+
+    /**
+     * Safety net for a wallet that never replies: drops the subscription filter and retires
+     * the request. The happy path cancels this job and unsubscribes through
+     * [NWCPaymentFilterAssembler.unsubscribeSoon] instead, which debounces.
+     */
+    private fun launchGiveUpTimer(
+        assembler: NWCPaymentFilterAssembler,
+        filter: NWCPaymentQueryState,
+        requestId: HexKey,
+        onTimeout: () -> Unit,
+    ) = scope.launch(Dispatchers.IO) {
+        delay(NWC_RESPONSE_TIMEOUT_MS)
+        assembler.unsubscribe(filter)
+        giveUpWaiting(requestId, onTimeout)
+    }
+
+    /**
+     * Retires a request whose response never arrived: removes the tracker entry so it
+     * does not leak, and tells the caller so the user hears about it. A silent give-up
+     * is the worst outcome for a payment UI — the action just appears not to have
+     * happened, which is indistinguishable from a refusal the wallet did send.
+     *
+     * A `cleanup` that returns false means a response beat us to the tracker entry,
+     * so the response path is already reporting and this must stay quiet.
+     */
+    private fun giveUpWaiting(
+        requestId: HexKey,
+        onTimeout: () -> Unit,
+    ) {
+        val wasStillPending = cache.paymentTracker.cleanup(requestId)
+        if (wasStillPending) {
+            Log.w("NwcSignerState") {
+                "No NIP-47 response for request $requestId after ${NWC_RESPONSE_TIMEOUT_MS}ms; giving up and dropping the subscription."
+            }
+            onTimeout()
+        }
+    }
+
+    companion object {
+        /**
+         * How long a NIP-47 request waits for its kind-23195 reply before the client
+         * gives up. Exposed in seconds so the UI can name the number it shows the user.
+         */
+        const val NWC_RESPONSE_TIMEOUT_SECONDS = 60
+
+        const val NWC_RESPONSE_TIMEOUT_MS = NWC_RESPONSE_TIMEOUT_SECONDS * 1000L
     }
 }

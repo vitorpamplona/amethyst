@@ -42,12 +42,13 @@ object PdfFetcher {
     suspend fun fetchSnapshot(
         url: String,
         ipfsGateway: String = IpfsGatewayResolver.DEFAULT_GATEWAY,
+        extraIpfsGateways: List<String> = emptyList(),
         okHttpClient: (String) -> OkHttpClient,
     ): DiskCache.Snapshot =
         withContext(Dispatchers.IO) {
             val candidates =
                 if (IpfsGatewayResolver.isIpfsUri(url)) {
-                    IpfsGatewayResolver.getAllCandidateUrls(url, ipfsGateway)
+                    IpfsGatewayResolver.getAllCandidateUrls(url, ipfsGateway, extraIpfsGateways)
                 } else {
                     listOf(url)
                 }

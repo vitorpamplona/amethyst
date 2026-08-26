@@ -59,6 +59,7 @@ class PlaybackService : MediaSessionService() {
         okHttpClient: DynamicCallFactory,
         blossomServerResolver: BlossomServerResolver,
         ipfsGateway: () -> String?,
+        extraIpfsGateways: () -> List<String> = { emptyList() },
     ): MediaSessionPool {
         val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
 
@@ -81,7 +82,7 @@ class PlaybackService : MediaSessionService() {
                 },
             )
         val resolvingDataSourceFactory: DataSource.Factory =
-            IpfsDataSource.Factory(blossomResolvingDataSourceFactory, ipfsGateway)
+            IpfsDataSource.Factory(blossomResolvingDataSourceFactory, ipfsGateway, extraIpfsGateways)
 
         // The device's concurrent-decoder ceiling bounds both how many players may be checked out
         // at once (the session cache) and how many the pool may retain, since a session and a warm
@@ -118,7 +119,7 @@ class PlaybackService : MediaSessionService() {
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
             // creates new
-            newPool(videoCache, okHttpClient, blossomServerResolver, ::activeIpfsGateway)
+            newPool(videoCache, okHttpClient, blossomServerResolver, ::activeIpfsGateway, ::activeExtraIpfsGateways)
                 .also {
                     poolNoProxy = it
                     // Kick off the player pool warmup as soon as we know this pool is being used.
@@ -137,7 +138,7 @@ class PlaybackService : MediaSessionService() {
             val videoCache = Amethyst.instance.videoCache
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
-            newPool(videoCache, okHttpClient, blossomServerResolver, ::activeIpfsGateway)
+            newPool(videoCache, okHttpClient, blossomServerResolver, ::activeIpfsGateway, ::activeExtraIpfsGateways)
                 .also {
                     poolWithProxy = it
                     it.exoPlayerPool.create(applicationContext)
@@ -156,6 +157,13 @@ class PlaybackService : MediaSessionService() {
             ?.settings
             ?.ipfsGateway
             ?.value
+
+    private fun activeExtraIpfsGateways(): List<String> =
+        Amethyst.instance.sessionManager
+            .loggedInAccount()
+            ?.blossomServers
+            ?.originlessGateways()
+            ?: emptyList()
 
     override fun onStartCommand(
         intent: Intent?,

@@ -31,12 +31,14 @@ data class ServerName(
 
 enum class ServerType {
     Blossom,
+    Originless,
     NIP95,
     NIP96,
 }
 
 val DEFAULT_MEDIA_SERVERS: List<ServerName> =
     listOf(
+        ServerName("Originless", "https://originless.gupt.app", ServerType.Originless),
         ServerName("Nostr.Build", "https://blossom.band/", ServerType.Blossom),
         ServerName("Nostrcheck.me", "https://cdn.nostrcheck.me", ServerType.Blossom),
         ServerName("24242.io", "https://24242.io/", ServerType.Blossom),

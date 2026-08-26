@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.bottombars
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
+import com.vitorpamplona.amethyst.ui.insets.SafeImeInsets
+import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
 
 enum class KeyboardState {
     Opened,
@@ -34,22 +34,27 @@ enum class KeyboardState {
 }
 
 /**
- * Whether the soft keyboard is currently on screen, derived from [WindowInsets.ime].
+ * Whether the soft keyboard is currently on screen, derived from the IME inset.
  *
- * This intentionally reads the same animated IME inset that drives `Modifier.imePadding()`
- * everywhere else in the app, so the two can never disagree. The previous implementation
- * measured `View.getWindowVisibleDisplayFrame` from a `ViewTreeObserver` global-layout
- * listener — a pre-edge-to-edge heuristic. Under `enableEdgeToEdge()`
- * (`decorFitsSystemWindows = false`) the window content no longer resizes for the IME, so
- * that listener fired when the keyboard appeared but frequently never fired again when it
- * closed, latching the state at [Opened] even though the keyboard was gone (leaving the
- * bottom navigation bar hidden and a stranded gap at the bottom). The IME inset always
- * animates back to zero on the persistent root view, so this reading can't get stuck.
+ * This intentionally reads the same [SafeImeInsets] that drives `Modifier.imePaddingSafe()`
+ * everywhere else in the app, so the two can never disagree about whether the keyboard is up.
+ *
+ * The original implementation measured `View.getWindowVisibleDisplayFrame` from a
+ * `ViewTreeObserver` global-layout listener — a pre-edge-to-edge heuristic. Under
+ * `enableEdgeToEdge()` (`decorFitsSystemWindows = false`) the window content no longer resizes for
+ * the IME, so that listener fired when the keyboard appeared but frequently never fired again when
+ * it closed, latching the state at [Opened] even though the keyboard was gone and leaving the
+ * bottom navigation bar hidden behind a stranded gap.
+ *
+ * Reading `WindowInsets.ime` fixed that, but has a latch of its own: Compose stops updating the
+ * inset entirely once its insets listener is left mid-animation, which pins this back at [Opened]
+ * in exactly the same way. [SafeImeInsets] is what closes that last hole, which is why this reads
+ * the corrected inset rather than the raw one.
  */
 @Composable
 fun keyboardAsState(): State<KeyboardState> {
     val density = LocalDensity.current
-    val imeInsets = WindowInsets.ime
+    val imeInsets = rememberSafeImeInsets()
     return remember(density, imeInsets) {
         derivedStateOf {
             if (imeInsets.getBottom(density) > 0) KeyboardState.Opened else KeyboardState.Closed

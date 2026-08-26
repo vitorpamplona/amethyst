@@ -2032,6 +2032,8 @@
         <item quantity="one">संयोजित %1$d पुनःप्रसारक के साथ</item>
         <item quantity="other">संयोजित %1$d पुनःप्रसारकों के साथ</item>
     </plurals>
+    <string name="always_on_notif_show_details">विवरण दिखाएँ</string>
+    <string name="always_on_notif_hide_details">विवरण छिपाएँ</string>
     <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">

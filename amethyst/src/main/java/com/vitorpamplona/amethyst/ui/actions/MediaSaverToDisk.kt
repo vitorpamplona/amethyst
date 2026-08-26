@@ -57,6 +57,7 @@ object MediaSaverToDisk {
         localContext: Context,
         resolveBlossom: suspend (String) -> String? = { null },
         ipfsGateway: String = IpfsGatewayResolver.DEFAULT_GATEWAY,
+        extraIpfsGateways: List<String> = emptyList(),
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) = withContext(Dispatchers.IO) {
@@ -83,6 +84,7 @@ object MediaSaverToDisk {
                     context = localContext,
                     resolveBlossom = resolveBlossom,
                     ipfsGateway = ipfsGateway,
+                    extraIpfsGateways = extraIpfsGateways,
                     onSuccess = onSuccess,
                     onError = onError,
                 )
@@ -109,6 +111,7 @@ object MediaSaverToDisk {
         context: Context,
         resolveBlossom: suspend (String) -> String? = { null },
         ipfsGateway: String = IpfsGatewayResolver.DEFAULT_GATEWAY,
+        extraIpfsGateways: List<String> = emptyList(),
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
@@ -122,7 +125,8 @@ object MediaSaverToDisk {
                         )
                     }
                     IpfsGatewayResolver.isIpfsUri(url) -> {
-                        IpfsGatewayResolver.getAllCandidateUrls(url, ipfsGateway)
+                        IpfsGatewayResolver
+                            .getAllCandidateUrls(url, ipfsGateway, extraIpfsGateways)
                             .ifEmpty { throw IOException("Could not resolve IPFS URI $url") }
                     }
                     else -> listOf(url)

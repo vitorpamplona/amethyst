@@ -208,6 +208,19 @@ class AppModules(
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
+    /**
+     * Mints and caches BUD-01 read-auth tokens for auth-gated Blossom hosts.
+     * Shared by the OkHttp interceptor (which only reads the cache) and Coil's
+     * [com.vitorpamplona.amethyst.service.images.BlossomReadAuthFetcher] (which
+     * awaits a signature), so both see one token and one in-flight signature per
+     * host. Signing runs on [applicationIOScope], never on an OkHttp thread.
+     */
+    val blossomReadAuthTokens =
+        BlossomReadAuthTokenProvider(
+            signerProvider = { sessionManager.loggedInAccount()?.signer },
+            scope = applicationIOScope,
+        )
+
     private val _trimLevelEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val trimLevelEvents = _trimLevelEvents.asSharedFlow()
 
@@ -448,9 +461,8 @@ class AppModules(
             // tracks the logged-in account.
             blossomReadAuth =
                 BlossomReadAuthInterceptor(
-                    BlossomReadAuthTokenProvider(
-                        signerProvider = { sessionManager.loggedInAccount()?.signer },
-                    )::authHeader,
+                    cachedHeaderProvider = blossomReadAuthTokens::cachedHeader,
+                    onAuthRequired = blossomReadAuthTokens::warm,
                 ),
         )
 
@@ -1090,6 +1102,14 @@ class AppModules(
             callFactory = { roleBasedHttpClientBuilder.okHttpClientForImage(it) },
             thumbnailCache = thumbnailDiskCache,
             backgroundScope = applicationIOScope,
+            readAuth = blossomReadAuthTokens,
+            extraIpfsGateways = {
+                sessionManager
+                    .loggedInAccount()
+                    ?.blossomServers
+                    ?.originlessGateways()
+                    ?: emptyList()
+            },
         )
     }
 

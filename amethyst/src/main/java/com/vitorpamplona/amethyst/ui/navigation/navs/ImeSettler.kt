@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.navigation.navs
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.vitorpamplona.amethyst.ui.insets.SafeImeInsets
+import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -42,8 +42,10 @@ const val IME_SETTLE_TIMEOUT_MS = 700L
  * On release builds — fast enough that the window animation wins — the IME
  * [WindowInsetsAnimationCompat][androidx.core.view.WindowInsetsAnimationCompat] is cancelled before
  * its terminal (zero) frame reaches Compose. `WindowInsets.ime` is a single app-wide holder, so it
- * stays "animating" and every `Modifier.imePadding()` in the app — not just the screen being left —
- * freezes at the keyboard height until some later inset pass happens to rebalance it.
+ * stays "animating" and every IME padding in the app — not just the screen being left — freezes at
+ * the keyboard height. [SafeImeInsets] is the backstop for when that freeze turns out to be
+ * permanent; this is the prevention, and it is the cheaper of the two because it keeps the padding
+ * from ever being wrong.
  *
  * This is not a composer-screen problem, which is why it lives here rather than in the screens.
  * Any destination that can hold focus in a text field can strand the padding on the way out, by any
@@ -61,8 +63,10 @@ fun interface ImeSettler {
 }
 
 /**
- * Reads the same animated `WindowInsets.ime` that drives `Modifier.imePadding()`, so the settler
- * and the padding can never disagree about whether the keyboard is gone.
+ * Reads the same [SafeImeInsets] that drives `Modifier.imePaddingSafe()`, so the settler and the
+ * padding can never disagree about whether the keyboard is gone. Reading the raw `WindowInsets.ime`
+ * here would make every navigation burn the full [IME_SETTLE_TIMEOUT_MS] once the inset is stranded,
+ * waiting on a value that is never going to move again.
  *
  * Focus is cleared before hiding so nothing re-requests the IME as it retracts. The wait is bounded
  * by [IME_SETTLE_TIMEOUT_MS] — if the inset never reports zero, which is precisely the failure this
@@ -71,7 +75,7 @@ fun interface ImeSettler {
 @Composable
 fun rememberImeSettler(): ImeSettler {
     val density = LocalDensity.current
-    val imeInsets = WindowInsets.ime
+    val imeInsets = rememberSafeImeInsets()
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 

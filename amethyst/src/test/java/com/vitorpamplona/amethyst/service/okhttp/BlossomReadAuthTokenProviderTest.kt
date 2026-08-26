@@ -21,7 +21,18 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
@@ -33,59 +44,170 @@ class BlossomReadAuthTokenProviderTest {
     private val host = "nosfabrica.communities.buzz.xyz"
     private val signer = NostrSignerInternal(KeyPair())
 
-    @Test
-    fun signsAndFormatsHeader() {
-        val provider = BlossomReadAuthTokenProvider(signerProvider = { signer })
-        val header = provider.authHeader(host, sha)
-        assertTrue("expected a Nostr auth header, got $header", header!!.startsWith("Nostr "))
-    }
+    // A real dispatcher, not runTest's virtual clock: the concurrency test below
+    // measures wall time, which virtual time would collapse to zero.
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    @After
+    fun tearDown() = scope.cancel()
 
     @Test
-    fun returnsNullWhenNoSigner() {
-        val provider = BlossomReadAuthTokenProvider(signerProvider = { null })
-        assertNull(provider.authHeader(host, sha))
-    }
+    fun signsAndFormatsHeader() =
+        runBlocking {
+            val provider = BlossomReadAuthTokenProvider({ signer }, scope)
+            val header = provider.header(host)
+            assertTrue("expected a Nostr auth header, got $header", header!!.startsWith("Nostr "))
+        }
 
     @Test
-    fun cachesPerHostWithinTtl() {
-        // signerProvider is consulted only on a cache miss, so its invocation
-        // count is the number of times a fresh token was signed.
-        var lookups = 0
-        val provider =
-            BlossomReadAuthTokenProvider(
-                signerProvider = {
+    fun returnsNullWhenNoSigner() =
+        runBlocking {
+            val provider = BlossomReadAuthTokenProvider({ null }, scope)
+            assertNull(provider.header(host))
+        }
+
+    @Test
+    fun cachedHeaderNeverSigns() =
+        runBlocking {
+            var lookups = 0
+            val provider =
+                BlossomReadAuthTokenProvider({
                     lookups++
                     signer
-                },
-                clock = { 0L },
+                }, scope)
+
+            // Nothing minted yet, so the pure read must miss without signing.
+            assertNull(provider.cachedHeader(host))
+            assertEquals(0, lookups)
+
+            val minted = provider.header(host)
+            assertEquals(minted, provider.cachedHeader(host))
+        }
+
+    @Test
+    fun cachesPerHostWithinTtl() =
+        runBlocking {
+            var lookups = 0
+            val provider =
+                BlossomReadAuthTokenProvider({
+                    lookups++
+                    signer
+                }, scope, clock = { 0L })
+
+            val first = provider.header(host)
+            val second = provider.header(host)
+
+            assertEquals("second call must be served from cache", first, second)
+            assertEquals("signer must be resolved only once for the same host", 1, lookups)
+        }
+
+    @Test
+    fun differentHostSignsSeparately() =
+        runBlocking {
+            val provider = BlossomReadAuthTokenProvider({ signer }, scope, clock = { 0L })
+            val a = provider.header(host)
+            val b = provider.header("other.example.com")
+            assertNotEquals(a, b)
+        }
+
+    @Test
+    fun refreshesAfterExpiry() =
+        runBlocking {
+            var now = 0L
+            val provider = BlossomReadAuthTokenProvider({ signer }, scope, clock = { now })
+
+            val first = provider.header(host)
+            now += 56L * 60L * 1000L
+            assertNull("token must be gone from the pure read once expired", provider.cachedHeader(host))
+            val second = provider.header(host)
+
+            assertNotEquals("an expired token must be re-signed", first, second)
+        }
+
+    @Test
+    fun warmPopulatesTheCacheWithoutTheCallerWaiting() =
+        runBlocking {
+            val provider = BlossomReadAuthTokenProvider({ signer }, scope)
+
+            provider.warm(host)
+
+            // warm() returns immediately; the token lands shortly after.
+            withTimeout(5_000) {
+                while (provider.cachedHeader(host) == null) {
+                    kotlinx.coroutines.delay(5)
+                }
+            }
+            assertTrue(provider.cachedHeader(host)!!.startsWith("Nostr "))
+        }
+
+    /**
+     * End-to-end BUD-11 check on the token this path actually mints: reused
+     * across every blob on the host, so it must be `server`-scoped and carry no
+     * `x` tag ("When `x` tags are present, the token is only valid for
+     * operations on the specified blob hashes"), and be Base64url without
+     * padding.
+     */
+    @Test
+    fun mintedTokenIsAReusableBud11GetToken() =
+        runBlocking {
+            val provider = BlossomReadAuthTokenProvider({ signer }, scope)
+
+            val token =
+                provider.header(host)!!.removePrefix(BlossomAuthorizationEvent.AUTH_HEADER_SCHEME)
+            assertTrue("token must be base64url without padding, got: $token", token.none { it == '=' || it == '+' || it == '/' })
+
+            val event = BlossomAuthorizationEvent.BASE64URL.decode(token).decodeToString()
+            val parsed = JacksonMapper.fromJson(event) as BlossomAuthorizationEvent
+
+            assertEquals(BlossomAuthorizationEvent.KIND, parsed.kind)
+            assertEquals("get", parsed.tags.first { it[0] == "t" }[1])
+            assertEquals(host, parsed.tags.first { it[0] == "server" }[1])
+            assertTrue("a host-cached token must not be blob-scoped", parsed.tags.none { it[0] == "x" })
+            assertTrue(
+                "BUD-11 requires an expiration in the future",
+                parsed.tags.first { it[0] == "expiration" }[1].toLong() > parsed.createdAt,
+            )
+        }
+
+    /**
+     * The single-flight guarantee. Before it existed the token cache was only
+     * populated *after* a signature returned, so a cold burst of N images from a
+     * gated host all missed and all signed — N signatures, and with a NIP-55
+     * external signer N IPC round trips.
+     */
+    @Test
+    fun concurrentCallersShareOneSignature() =
+        runBlocking {
+            val slow = DelayingTestSigner(delayMs = SIGN_MS)
+            val provider = BlossomReadAuthTokenProvider({ slow }, scope)
+
+            val startedAt = System.nanoTime()
+            val results =
+                (1..CONCURRENT_CALLERS)
+                    .map { async(Dispatchers.Default) { provider.header(host) } }
+                    .awaitAll()
+            val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
+
+            println(
+                "[measure] callers=$CONCURRENT_CALLERS  signatures=${slow.signatures}  " +
+                    "one-signature=${SIGN_MS}ms  all-callers-done=${elapsedMs}ms",
             )
 
-        val first = provider.authHeader(host, sha)
-        val second = provider.authHeader(host, sha)
+            assertEquals("exactly one signature for $CONCURRENT_CALLERS callers", 1, slow.signatures)
+            assertEquals("every caller must get the same token", 1, results.toSet().size)
+            assertTrue("first token must be non-null", results.first() != null)
+            assertTrue(
+                "$CONCURRENT_CALLERS callers should share one ~${SIGN_MS}ms signature, took ${elapsedMs}ms",
+                elapsedMs < SIGN_MS * 3,
+            )
+        }
 
-        assertEquals("second call must be served from cache", first, second)
-        assertEquals("signer must run only once for the same host", 1, lookups)
-    }
+    private companion object {
+        // Matches OkHttpClientFactory's maxRequestsPerHost: the worst realistic
+        // burst is one gated host filling every per-host dispatcher slot.
+        const val CONCURRENT_CALLERS = 16
 
-    @Test
-    fun differentHostSignsSeparately() {
-        val provider = BlossomReadAuthTokenProvider(signerProvider = { signer }, clock = { 0L })
-
-        val a = provider.authHeader(host, sha)
-        val b = provider.authHeader("other.example.com", sha)
-
-        assertNotEquals(a, b)
-    }
-
-    @Test
-    fun refreshesAfterExpiry() {
-        var now = 0L
-        val provider = BlossomReadAuthTokenProvider(signerProvider = { signer }, clock = { now })
-
-        val first = provider.authHeader(host, sha)
-        now += 60L * 60L * 1000L // one hour later — past the 55-min TTL
-        val second = provider.authHeader(host, sha)
-
-        assertNotEquals("expired token must be re-signed", first, second)
+        // How long one signature takes in the concurrency test.
+        const val SIGN_MS = 300L
     }
 }

@@ -82,6 +82,17 @@ class BlossomServerListState(
 
     fun mergeServerList(blossom: List<String>?): List<ServerName> = blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS } ?: DEFAULT_MEDIA_SERVERS
 
+    /**
+     * Extracts Originless (or compatible IPFS-native) server URLs from the
+     * configured server list. These double as IPFS path-gateways because they
+     * expose `/ipfs/{cid}`.  Used by the IPFS resolver to try the user's own
+     * node before falling back to public gateways.
+     */
+    fun originlessGateways(): List<String> =
+        flow.value
+            .filter { url -> IS_ORIGINLESS.containsMatchIn(url) }
+            .map { it.trimEnd('/') }
+
     val hostNameFlow: StateFlow<List<ServerName>> =
         flow
             .map { blossoms ->
@@ -163,3 +174,9 @@ fun resetTargetOrNull(
     } else {
         null
     }
+
+/**
+ * Matches Originless server URLs. Any host containing "originless" is treated
+ * as an IPFS-native server whose `/ipfs/{cid}` endpoint can serve as a gateway.
+ */
+private val IS_ORIGINLESS: Regex = Regex("originless", RegexOption.IGNORE_CASE)
