@@ -50,8 +50,8 @@ class BlossomServerListResetTest {
     }
 
     @Test
-    fun originlessCurrentIsNeverReset() {
-        val originless = ServerName("Originless", "https://originless.gupt.app", ServerType.Originless)
+    fun originlessCurrentIsNeverResetWhileAnyOriginlessRemains() {
+        val originless = ServerName("originless.gupt.app", "https://originless.gupt.app", ServerType.Originless)
         val result =
             resetTargetOrNull(
                 rawList = listOf("a.example", "b.example"),
@@ -60,6 +60,19 @@ class BlossomServerListResetTest {
             )
 
         assertNull(result)
+    }
+
+    @Test
+    fun originlessCurrentResetsWhenListIsEmpty() {
+        val originless = ServerName("originless.gupt.app", "https://originless.gupt.app", ServerType.Originless)
+        val result =
+            resetTargetOrNull(
+                rawList = listOf("a.example", "b.example", "c.example"),
+                merged = listOf(a, b, c),
+                current = originless,
+            )
+
+        assertEquals(a, result)
     }
 
     @Test

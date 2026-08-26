@@ -38,11 +38,39 @@ class OriginlessUrlsTest {
     fun uploadAndGatewayUrls() {
         val base = "https://originless.gupt.app"
         assertEquals("https://originless.gupt.app/upload", OriginlessUrls.uploadUrl(base))
+        assertEquals("https://originless.gupt.app/media", OriginlessUrls.mediaUrl(base))
+        assertEquals("https://originless.gupt.app/health", OriginlessUrls.healthUrl(base))
         assertEquals("https://originless.gupt.app/ipfs/", OriginlessUrls.gatewayPrefix(base))
         assertEquals(
             "https://originless.gupt.app/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
             OriginlessUrls.gatewayUrl(base, "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"),
         )
+    }
+
+    @Test
+    fun normalizeListDedupesAndDropsBlanks() {
+        assertEquals(emptyList(), OriginlessUrls.normalizeList(emptyList()))
+        assertEquals(emptyList(), OriginlessUrls.normalizeList(listOf("  ", "")))
+        assertEquals(
+            listOf("https://originless.gupt.app", "https://originless.example"),
+            OriginlessUrls.normalizeList(
+                listOf(
+                    "https://originless.gupt.app/",
+                    "originless.gupt.app",
+                    "https://originless.example/",
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun isMediaEndpointType() {
+        assertTrue(OriginlessUrls.isMediaEndpointType("image/jpeg"))
+        assertTrue(OriginlessUrls.isMediaEndpointType("image/png; charset=utf-8"))
+        assertTrue(OriginlessUrls.isMediaEndpointType("image/webp"))
+        assertFalse(OriginlessUrls.isMediaEndpointType("image/avif"))
+        assertFalse(OriginlessUrls.isMediaEndpointType("video/mp4"))
+        assertFalse(OriginlessUrls.isMediaEndpointType(null))
     }
 
     @Test

@@ -46,7 +46,22 @@ enum class ServerType {
         get() = this != Originless
 }
 
-fun originlessServer(url: String = OriginlessUrls.DEFAULT_SERVER): ServerName = ServerName("Originless", OriginlessUrls.normalizeBase(url), ServerType.Originless)
+fun originlessServer(url: String = OriginlessUrls.DEFAULT_SERVER): ServerName {
+    val base = OriginlessUrls.normalizeBase(url)
+    val host =
+        base
+            .removePrefix("https://")
+            .removePrefix("http://")
+            .substringBefore('/')
+            .substringBefore(':')
+            .ifBlank { "Originless" }
+    return ServerName(host, base, ServerType.Originless)
+}
+
+val DEFAULT_ORIGINLESS_SERVERS: List<ServerName> =
+    listOf(
+        originlessServer(OriginlessUrls.DEFAULT_SERVER),
+    )
 
 val DEFAULT_MEDIA_SERVERS: List<ServerName> =
     listOf(

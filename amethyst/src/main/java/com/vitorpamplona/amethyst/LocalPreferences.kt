@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.originlessServer
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -114,6 +116,7 @@ private object PrefKeys {
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
     const val ORIGINLESS_SERVER_URL = "originlessServerUrl"
+    const val ORIGINLESS_SERVER_URLS = "originlessServerUrls"
     const val STRIP_LOCATION_ON_UPLOAD = "stripLocationOnUpload"
     const val USE_LOCAL_BLOSSOM_CACHE = "useLocalBlossomCache"
     const val LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY = "localBlossomCacheProfilePicturesOnly"
@@ -512,7 +515,7 @@ object LocalPreferences {
                         PrefKeys.DEFAULT_FILE_SERVER,
                         JsonMapper.toJson(settings.defaultFileServer),
                     )
-                    putString(PrefKeys.ORIGINLESS_SERVER_URL, settings.originlessServerUrl.value)
+                    putString(PrefKeys.ORIGINLESS_SERVER_URLS, JsonMapper.toJson(settings.originlessServerUrls.value))
 
                     putBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, settings.stripLocationOnUpload)
                     putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
@@ -807,6 +810,7 @@ object LocalPreferences {
                     val defaultPaymentSourceIdStr = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null)
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
                     val originlessServerUrlStr = getString(PrefKeys.ORIGINLESS_SERVER_URL, null)
+                    val originlessServerUrlsStr = getString(PrefKeys.ORIGINLESS_SERVER_URLS, null)
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
                     val latestUserMetadataStr = getString(PrefKeys.LATEST_USER_METADATA, null)
@@ -869,9 +873,18 @@ object LocalPreferences {
                         async {
                             parseOrNull<List<ClinkDebitWalletEntry>>(clinkDebitWalletsStr)?.mapNotNull { it.normalize() } ?: emptyList()
                         }
-                    val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
-                    val originlessServerUrl =
-                        OriginlessUrls.normalizeBase(originlessServerUrlStr?.ifBlank { null } ?: OriginlessUrls.DEFAULT_SERVER)
+                    val defaultFileServer =
+                        async {
+                            val parsed = parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0]
+                            if (parsed.type == ServerType.Originless) originlessServer(parsed.baseUrl) else parsed
+                        }
+                    val parsedOriginlessList = parseOrNull<List<String>>(originlessServerUrlsStr)
+                    val originlessServerUrls =
+                        when {
+                            parsedOriginlessList != null -> OriginlessUrls.normalizeList(parsedOriginlessList)
+                            !originlessServerUrlStr.isNullOrBlank() -> listOf(OriginlessUrls.normalizeBase(originlessServerUrlStr))
+                            else -> listOf(OriginlessUrls.DEFAULT_SERVER)
+                        }
 
                     val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
                     val pendingAttestations = async { parseOrNull<Map<HexKey, String>>(pendingAttestationsStr) ?: mapOf() }
@@ -966,7 +979,7 @@ object LocalPreferences {
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServerResolved,
-                        originlessServerUrl = MutableStateFlow(originlessServerUrl),
+                        originlessServerUrls = MutableStateFlow(originlessServerUrls),
                         stripLocationOnUpload = stripLocationOnUpload,
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),

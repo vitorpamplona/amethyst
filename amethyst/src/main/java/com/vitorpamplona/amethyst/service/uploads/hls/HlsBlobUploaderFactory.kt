@@ -71,7 +71,7 @@ object HlsBlobUploaderFactory {
             }
 
             ServerType.Originless -> {
-                originlessAdapter(server.baseUrl, context)
+                originlessAdapter(account, context)
             }
 
             ServerType.NIP95 -> {
@@ -131,18 +131,18 @@ object HlsBlobUploaderFactory {
         }
 
     private fun originlessAdapter(
-        serverBaseUrl: String,
+        account: Account,
         context: Context,
     ): HlsBlobUploader =
         HlsBlobUploader { file, contentType, onProgress ->
             val totalBytes = file.length()
-            OriginlessUploader().upload(
+            OriginlessUploader().uploadToAll(
                 uri = file.toUri(),
                 contentType = contentType,
                 size = totalBytes,
                 alt = null,
                 sensitiveContent = null,
-                serverBaseUrl = serverBaseUrl,
+                serverBaseUrls = account.settings.originlessServerUrls.value,
                 okHttpClient = ::okHttpClientForHlsUploads,
                 onProgress = { percentage ->
                     val written =
@@ -152,6 +152,7 @@ object HlsBlobUploaderFactory {
                     onProgress(written, totalBytes)
                 },
                 context = context,
+                useMedia = account.settings.optimizeMediaOnUpload.value,
             )
         }
 }

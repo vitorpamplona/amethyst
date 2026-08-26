@@ -62,16 +62,19 @@ object DefaultFileServerUploader {
                     context = context,
                 )
             ServerType.Originless ->
-                OriginlessUploader().upload(
+                OriginlessUploader().uploadToAll(
                     uri = uri,
                     contentType = contentType,
                     size = size,
                     alt = alt,
                     sensitiveContent = sensitiveContent,
-                    serverBaseUrl = server.baseUrl,
+                    serverBaseUrls =
+                        account.settings.originlessServerUrls.value
+                            .ifEmpty { listOf(server.baseUrl) },
                     okHttpClient = okHttpClient,
                     onProgress = onProgress,
                     context = context,
+                    useMedia = account.settings.optimizeMediaOnUpload.value,
                 )
             ServerType.Blossom,
             ServerType.NIP95,

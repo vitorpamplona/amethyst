@@ -30,7 +30,7 @@ import kotlin.test.assertTrue
 class IpfsGatewayResolverTest {
     @AfterTest
     fun restoreDefaultGateway() {
-        IpfsGatewayResolver.currentServerBase = OriginlessUrls.DEFAULT_SERVER
+        IpfsGatewayResolver.currentServerBases = listOf(OriginlessUrls.DEFAULT_SERVER)
     }
 
     @Test
@@ -71,6 +71,21 @@ class IpfsGatewayResolverTest {
         assertEquals(
             "https://originless.example/ipfs/$cid",
             IpfsGatewayResolver.toHttpUrl("ipfs://$cid"),
+        )
+    }
+
+    @Test
+    fun getAllCandidateUrlsUsesEveryConfiguredNode() {
+        val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        IpfsGatewayResolver.currentServerBases =
+            listOf("https://originless.gupt.app", "https://originless.example")
+        val candidates = IpfsGatewayResolver.getAllCandidateUrls("ipfs://$cid")
+        assertEquals(
+            listOf(
+                "https://originless.gupt.app/ipfs/$cid",
+                "https://originless.example/ipfs/$cid",
+            ),
+            candidates,
         )
     }
 

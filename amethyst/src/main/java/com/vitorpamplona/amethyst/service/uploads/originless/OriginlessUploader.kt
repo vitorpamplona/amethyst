@@ -38,6 +38,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -48,10 +51,17 @@ import okhttp3.coroutines.executeAsync
 import okio.BufferedSink
 import okio.source
 import java.io.InputStream
+import kotlin.coroutines.cancellation.CancellationException
+
+/** `/media` is missing or rejected this type; caller should retry `POST /upload`. */
+internal class OriginlessMediaUnsupportedException(
+    val status: Int,
+) : RuntimeException("Originless /media unsupported ($status)")
 
 /**
- * NIP-96-style Originless client: multipart `POST {base}/upload` with field `file`
- * and no auth. The note URL is `ipfs://{cid}`; fetches go through `{base}/ipfs/{cid}`.
+ * NIP-96-style Originless client: multipart `POST {base}/upload` (or `POST {base}/media`
+ * to strip EXIF) with field `file` and no auth. The note URL is `ipfs://{cid}`;
+ * fetches go through `{base}/ipfs/{cid}`.
  */
 class OriginlessUploader {
     fun ContentResolver.querySize(uri: Uri) =
@@ -63,6 +73,75 @@ class OriginlessUploader {
 
     fun fileSize(uri: Uri) = runCatching { uri.toFile().length() }.getOrNull()
 
+    /**
+     * Pins [uri] on every Originless node in [serverBaseUrls]. Succeeds when at least
+     * one node returns a CID; remaining uploads keep running so the file is widely pinned.
+     */
+    suspend fun uploadToAll(
+        uri: Uri,
+        contentType: String?,
+        size: Long?,
+        alt: String?,
+        sensitiveContent: String?,
+        serverBaseUrls: List<String>,
+        okHttpClient: (String) -> OkHttpClient,
+        onProgress: (percentage: Float) -> Unit,
+        context: Context,
+        useMedia: Boolean = false,
+    ): MediaUploadResult {
+        val targets = OriginlessUrls.normalizeList(serverBaseUrls)
+        if (targets.isEmpty()) {
+            throw RuntimeException(stringRes(context, R.string.originless_no_servers))
+        }
+        if (targets.size == 1) {
+            return upload(
+                uri = uri,
+                contentType = contentType,
+                size = size,
+                alt = alt,
+                sensitiveContent = sensitiveContent,
+                serverBaseUrl = targets.first(),
+                okHttpClient = okHttpClient,
+                onProgress = onProgress,
+                context = context,
+                useMedia = useMedia,
+            )
+        }
+
+        return coroutineScope {
+            val results =
+                targets
+                    .mapIndexed { index, base ->
+                        async(Dispatchers.IO) {
+                            try {
+                                Result.success(
+                                    upload(
+                                        uri = uri,
+                                        contentType = contentType,
+                                        size = size,
+                                        alt = alt,
+                                        sensitiveContent = sensitiveContent,
+                                        serverBaseUrl = base,
+                                        okHttpClient = okHttpClient,
+                                        onProgress = if (index == 0) onProgress else { _ -> },
+                                        context = context,
+                                        useMedia = useMedia,
+                                    ),
+                                )
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                Result.failure(e)
+                            }
+                        }
+                    }.awaitAll()
+
+            results.firstOrNull { it.isSuccess }?.getOrThrow()
+                ?: throw results.first().exceptionOrNull()
+                    ?: RuntimeException(stringRes(context, R.string.originless_no_servers))
+        }
+    }
+
     suspend fun upload(
         uri: Uri,
         contentType: String?,
@@ -73,30 +152,40 @@ class OriginlessUploader {
         okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
         context: Context,
+        useMedia: Boolean = false,
     ): MediaUploadResult {
         checkNotInMainThread()
 
         val contentResolver = context.contentResolver
         val myContentType = contentType ?: contentResolver.getType(uri)
         val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: 0
-
         val localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType)
-        val imageInputStream = contentResolver.openInputStream(uri)
 
-        checkNotNull(imageInputStream) { "Can't open the image input stream" }
-
-        return imageInputStream
-            .use { stream ->
-                upload(
-                    stream,
-                    length,
-                    myContentType,
-                    serverBaseUrl,
-                    okHttpClient,
-                    onProgress,
-                    context,
-                )
-            }.mergeLocalMetadata(localMetadata)
+        val endpoints = endpointUrls(serverBaseUrl, myContentType, useMedia)
+        var lastError: Exception? = null
+        for (apiUrl in endpoints) {
+            val imageInputStream = contentResolver.openInputStream(uri)
+            checkNotNull(imageInputStream) { "Can't open the image input stream" }
+            try {
+                return imageInputStream
+                    .use { stream ->
+                        postFile(
+                            stream,
+                            length,
+                            myContentType,
+                            apiUrl,
+                            okHttpClient,
+                            onProgress,
+                            context,
+                        )
+                    }.mergeLocalMetadata(localMetadata)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: OriginlessMediaUnsupportedException) {
+                lastError = e
+            }
+        }
+        throw lastError ?: RuntimeException(stringRes(context, R.string.failed_to_upload_media))
     }
 
     suspend fun upload(
@@ -104,6 +193,32 @@ class OriginlessUploader {
         length: Long,
         contentType: String?,
         serverBaseUrl: String,
+        okHttpClient: (String) -> OkHttpClient,
+        onProgress: (percentage: Float) -> Unit,
+        context: Context,
+        useMedia: Boolean = false,
+    ): MediaUploadResult {
+        val apiUrl = endpointUrls(serverBaseUrl, contentType, useMedia).first()
+        return postFile(inputStream, length, contentType, apiUrl, okHttpClient, onProgress, context)
+    }
+
+    private fun endpointUrls(
+        serverBaseUrl: String,
+        contentType: String?,
+        useMedia: Boolean,
+    ): List<String> =
+        buildList {
+            if (useMedia && OriginlessUrls.isMediaEndpointType(contentType)) {
+                add(OriginlessUrls.mediaUrl(serverBaseUrl))
+            }
+            add(OriginlessUrls.uploadUrl(serverBaseUrl))
+        }
+
+    private suspend fun postFile(
+        inputStream: InputStream,
+        length: Long,
+        contentType: String?,
+        apiUrl: String,
         okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
         context: Context,
@@ -116,7 +231,6 @@ class OriginlessUploader {
                 MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: extensionFromMimeType(it)
             } ?: ""
 
-        val apiUrl = OriginlessUrls.uploadUrl(serverBaseUrl)
         val client = okHttpClient(apiUrl)
 
         val requestBody: RequestBody =
@@ -169,6 +283,8 @@ class OriginlessUploader {
                         size = result.size ?: length,
                         ipfs = OriginlessUrls.toIpfsUri(cid),
                     )
+                } else if (apiUrl.endsWith("/media") && (response.code == 404 || response.code == 405 || response.code == 415)) {
+                    throw OriginlessMediaUnsupportedException(response.code)
                 } else {
                     val explanation = HttpStatusMessages.resourceIdFor(response.code)
                     val parsedMessage = runCatching { parseResponse(body).errorMessage() }.getOrNull()

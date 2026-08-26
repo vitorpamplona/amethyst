@@ -81,7 +81,8 @@ class ImageDownloader {
     suspend fun waitAndVerifyStream(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
-    ): StreamVerification? = retryWithDelay { tryStreamAndVerify(imageUrl, okHttpClient) }
+        maxAttempts: Int = 15,
+    ): StreamVerification? = retryWithDelay(maxAttempts = maxAttempts) { tryStreamAndVerify(imageUrl, okHttpClient) }
 
     suspend fun waitAndGetImage(
         imageUrl: String,

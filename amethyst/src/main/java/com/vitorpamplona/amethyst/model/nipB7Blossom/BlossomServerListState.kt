@@ -84,17 +84,18 @@ class BlossomServerListState(
 
     fun mergeServerList(
         blossom: List<String>?,
-        originlessUrl: String = settings.originlessServerUrl.value,
+        originlessUrls: List<String> = settings.originlessServerUrls.value,
     ): List<ServerName> {
         val blossomServers = blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS } ?: DEFAULT_MEDIA_SERVERS
-        return listOf(originlessServer(originlessUrl)) + blossomServers
+        val originlessServers = originlessUrls.map { originlessServer(it) }
+        return originlessServers + blossomServers
     }
 
     val hostNameFlow: StateFlow<List<ServerName>> =
-        combine(flow, settings.originlessServerUrl) { blossoms, originlessUrl ->
-            mergeServerList(blossoms, originlessUrl)
+        combine(flow, settings.originlessServerUrls) { blossoms, originlessUrls ->
+            mergeServerList(blossoms, originlessUrls)
         }.onStart {
-            emit(mergeServerList(flow.value, settings.originlessServerUrl.value))
+            emit(mergeServerList(flow.value, settings.originlessServerUrls.value))
         }.onEach { servers ->
             resetTargetOrNull(flow.value, servers, settings.defaultFileServer)?.let {
                 settings.changeDefaultFileServer(it)
@@ -103,7 +104,7 @@ class BlossomServerListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                mergeServerList(emptyList(), settings.originlessServerUrl.value),
+                mergeServerList(emptyList(), settings.originlessServerUrls.value),
             )
 
     suspend fun saveBlossomServersList(servers: List<String>): BlossomServersEvent {
@@ -166,7 +167,11 @@ fun resetTargetOrNull(
     current: ServerName,
 ): ServerName? =
     if (current.type == ServerType.Originless) {
-        null
+        if (merged.any { it.type == ServerType.Originless }) {
+            null
+        } else {
+            merged.firstOrNull { it.type != ServerType.Originless } ?: DEFAULT_MEDIA_SERVERS[0]
+        }
     } else if (rawList.isNotEmpty() && merged.none { it == current }) {
         merged.firstOrNull { it.type != ServerType.Originless } ?: merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
     } else {

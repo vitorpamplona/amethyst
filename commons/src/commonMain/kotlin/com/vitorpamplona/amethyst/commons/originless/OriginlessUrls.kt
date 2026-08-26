@@ -28,6 +28,15 @@ package com.vitorpamplona.amethyst.commons.originless
 object OriginlessUrls {
     const val DEFAULT_SERVER = "https://originless.gupt.app"
 
+    private val mediaTypes =
+        setOf(
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+        )
+
     fun normalizeBase(url: String): String {
         val trimmed = url.trim()
         if (trimmed.isEmpty()) return DEFAULT_SERVER
@@ -42,7 +51,33 @@ object OriginlessUrls {
         return withScheme.trimEnd('/')
     }
 
+    /**
+     * Dedupes and normalizes a user-configured Originless list. Empty input
+     * stays empty — there is no implied upload target.
+     */
+    fun normalizeList(urls: List<String>): List<String> {
+        val seen = mutableListOf<String>()
+        urls.forEach { raw ->
+            val trimmed = raw.trim()
+            if (trimmed.isNotEmpty()) {
+                val normalized = normalizeBase(trimmed)
+                if (normalized !in seen) seen.add(normalized)
+            }
+        }
+        return seen
+    }
+
     fun uploadUrl(base: String): String = "${normalizeBase(base)}/upload"
+
+    /** Originless `POST /media` — strips EXIF/GPS/XMP from JPEG/PNG/GIF/WebP, then pins. */
+    fun mediaUrl(base: String): String = "${normalizeBase(base)}/media"
+
+    fun healthUrl(base: String): String = "${normalizeBase(base)}/health"
+
+    fun isMediaEndpointType(contentType: String?): Boolean {
+        val type = contentType?.substringBefore(';')?.trim()?.lowercase() ?: return false
+        return type in mediaTypes
+    }
 
     fun gatewayPrefix(base: String): String = "${normalizeBase(base)}/ipfs/"
 

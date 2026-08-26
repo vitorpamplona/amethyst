@@ -200,10 +200,11 @@ class AccountSettings(
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
     /**
-     * Local Originless node URL (NIP-96-simple: `POST /upload`, `GET /ipfs/{cid}`).
-     * Not a kind-10063 list — one server, used both to upload and as the `ipfs://` gateway.
+     * Local Originless node URLs (NIP-96-simple: `POST /upload` or `POST /media`,
+     * `GET /ipfs/{cid}`). Not a kind-10063 list. Uploads pin to every entry;
+     * `ipfs://` fetches try each gateway until one succeeds.
      */
-    val originlessServerUrl: MutableStateFlow<String> = MutableStateFlow(OriginlessUrls.DEFAULT_SERVER),
+    val originlessServerUrls: MutableStateFlow<List<String>> = MutableStateFlow(listOf(OriginlessUrls.DEFAULT_SERVER)),
     var stripLocationOnUpload: Boolean = true,
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -695,13 +696,19 @@ class AccountSettings(
         }
     }
 
-    fun changeOriginlessServerUrl(url: String) {
-        val normalized = OriginlessUrls.normalizeBase(url)
-        if (originlessServerUrl.value != normalized) {
-            originlessServerUrl.tryEmit(normalized)
-            IpfsGatewayResolver.currentServerBase = normalized
+    fun changeOriginlessServerUrls(urls: List<String>) {
+        val normalized = OriginlessUrls.normalizeList(urls)
+        if (originlessServerUrls.value != normalized) {
+            originlessServerUrls.tryEmit(normalized)
+            IpfsGatewayResolver.currentServerBases = normalized
             if (defaultFileServer.type == ServerType.Originless) {
-                defaultFileServer = originlessServer(normalized)
+                val currentBase = OriginlessUrls.normalizeBase(defaultFileServer.baseUrl)
+                defaultFileServer =
+                    when {
+                        normalized.isEmpty() -> DEFAULT_MEDIA_SERVERS[0]
+                        currentBase in normalized -> originlessServer(currentBase)
+                        else -> originlessServer(normalized.first())
+                    }
             }
             saveAccountSettings()
         }

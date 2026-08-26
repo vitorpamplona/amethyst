@@ -1756,9 +1756,12 @@
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
 
     <string name="originless_section">Originless</string>
-    <string name="originless_section_caption">Uploads go to this node with no login. Notes store ipfs://CID and Amethyst fetches the file from this node\'s gateway.</string>
+    <string name="originless_section_caption">Uploads pin to every Originless node you add. Notes store ipfs://CID; Amethyst fetches from these gateways and tries the next if one fails.</string>
     <string name="originless_server_url">Originless server</string>
     <string name="originless_server_placeholder" translatable="false">https://originless.gupt.app</string>
+    <string name="add_an_originless_server">Add an Originless server</string>
+    <string name="no_originless_server_message">You have no Originless servers set. Add one below to upload with ipfs://.</string>
+    <string name="originless_no_servers">Add an Originless server first, then try uploading again.</string>
 
     <string name="use_local_blossom_cache">Use local Blossom cache</string>
     <string name="use_local_blossom_cache_caption">When a Blossom cache is running on this device (port 24242), route image and video downloads through it.</string>

@@ -39,22 +39,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,7 +62,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -80,12 +73,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.warningColor
-import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.utils.Rfc3986
 
 /** Vibrant palette for server monograms; picked deterministically from the host name. */
@@ -104,28 +94,39 @@ private val MonogramColors =
 @Composable
 fun AllMediaBody(
     blossomServersViewModel: BlossomServersViewModel,
+    originlessServersViewModel: OriginlessServersViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
     val blossomServersState by blossomServersViewModel.fileServers.collectAsStateWithLifecycle()
     val healthState by blossomServersViewModel.health.collectAsStateWithLifecycle()
+    val originlessServersState by originlessServersViewModel.fileServers.collectAsStateWithLifecycle()
+    val originlessHealthState by originlessServersViewModel.health.collectAsStateWithLifecycle()
 
     val dragState =
         rememberRelayDragState(
             onMove = { from, to -> blossomServersViewModel.moveServer(from, to) },
             itemCount = { blossomServersState.size },
         )
+    val originlessDragState =
+        rememberRelayDragState(
+            onMove = { from, to -> originlessServersViewModel.moveServer(from, to) },
+            itemCount = { originlessServersState.size },
+        )
 
     // Auto-save the reordering once the drag finishes, rather than on every intermediate swap.
     LaunchedEffect(dragState.isDragging) {
         if (!dragState.isDragging) blossomServersViewModel.persistPending()
     }
+    LaunchedEffect(originlessDragState.isDragging) {
+        if (!originlessDragState.isDragging) originlessServersViewModel.persistPending()
+    }
 
     LazyColumn(
         modifier = modifier,
         contentPadding = FeedPadding,
-        userScrollEnabled = !dragState.isDragging,
+        userScrollEnabled = !dragState.isDragging && !originlessDragState.isDragging,
     ) {
         item {
             SectionLabel(
@@ -133,7 +134,35 @@ fun AllMediaBody(
                 caption = stringRes(id = R.string.originless_section_caption),
                 topPadding = 4.dp,
             )
-            OriginlessServerSection(accountViewModel)
+        }
+
+        if (originlessServersState.isEmpty()) {
+            item {
+                Text(
+                    text = stringRes(id = R.string.no_originless_server_message),
+                    modifier = DoubleVertPadding,
+                )
+            }
+        } else {
+            itemsIndexed(
+                originlessServersState,
+                key = { _, server -> "originless" + server.baseUrl },
+            ) { index, entry ->
+                MediaServerRow(
+                    index = index,
+                    serverEntry = entry,
+                    health = originlessHealthState[entry.baseUrl] ?: ServerHealth.Unknown,
+                    dragState = originlessDragState,
+                    onDelete = { originlessServersViewModel.removeServer(serverUrl = it) },
+                )
+            }
+        }
+
+        item {
+            OriginlessAddServerSection(
+                addedHosts = originlessServersState.mapTo(HashSet()) { it.name },
+                onAddServer = { originlessServersViewModel.addServer(it) },
+            )
         }
 
         item {
@@ -192,54 +221,6 @@ fun AllMediaBody(
 
         item {
             Spacer(DoubleHorzSpacer)
-        }
-    }
-}
-
-@Composable
-private fun OriginlessServerSection(accountViewModel: AccountViewModel) {
-    val currentUrl by accountViewModel.account.settings.originlessServerUrl
-        .collectAsStateWithLifecycle()
-    var draft by remember(currentUrl) { mutableStateOf(currentUrl) }
-    val valid by remember { derivedStateOf { HttpUrlFormatter.isValidUrl(draft) } }
-    val changed = OriginlessUrls.normalizeBase(draft) != currentUrl
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(Size10dp),
-    ) {
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { draft = it },
-            label = { Text(text = stringRes(R.string.originless_server_url)) },
-            placeholder = {
-                Text(
-                    text = stringRes(R.string.originless_server_placeholder),
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 1,
-                )
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Button(
-                onClick = {
-                    accountViewModel.account.settings.changeOriginlessServerUrl(draft)
-                },
-                enabled = valid && changed,
-            ) {
-                Text(text = stringRes(id = R.string.save))
-            }
         }
     }
 }
@@ -442,6 +423,49 @@ fun MediaServerRow(
             )
         }
     }
+}
+
+/**
+ * Inline "add a server" area: a URL field followed by the recommended servers as a
+ * horizontal strip of add-chips (already-added ones read as done).
+ */
+@Composable
+private fun OriginlessAddServerSection(
+    addedHosts: Set<String>,
+    onAddServer: (String) -> Unit,
+) {
+    Text(
+        text = stringRes(id = R.string.media_servers_recommended_label),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.grayText,
+        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+    )
+
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 4.dp),
+    ) {
+        items(
+            DEFAULT_ORIGINLESS_SERVERS,
+            key = { it.baseUrl },
+        ) { server ->
+            val host = runCatching { Rfc3986.host(server.baseUrl) }.getOrNull()
+            RecommendedChip(
+                serverEntry = server,
+                added = host != null && host in addedHosts,
+                onAdd = { onAddServer(server.baseUrl) },
+            )
+        }
+    }
+
+    Text(
+        text = stringRes(id = R.string.media_servers_add_url_label),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.grayText,
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+    )
+    MediaServerEditField(R.string.add_an_originless_server) { onAddServer(it) }
 }
 
 /**

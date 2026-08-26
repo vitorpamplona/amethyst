@@ -3625,7 +3625,7 @@ class Account(
     init {
         Log.d("AccountRegisterObservers", "Init")
 
-        IpfsGatewayResolver.currentServerBase = settings.originlessServerUrl.value
+        IpfsGatewayResolver.currentServerBases = settings.originlessServerUrls.value
 
         // Blocking a relay has to forget any "just for now" login to it, or unblocking later would
         // silently resume authenticating off an answer given before the block. Blocking is the

@@ -25,12 +25,23 @@ import kotlin.concurrent.Volatile
 
 object IpfsGatewayResolver {
     /**
-     * Originless node used as the HTTP gateway for `ipfs://` fetches.
-     * Written from account settings; Coil/PdfFetcher read it here so they
-     * don't need to thread the URL through every media call site.
+     * Originless nodes used as HTTP gateways for `ipfs://` fetches.
+     * Written from account settings; Coil/PdfFetcher/OkHttp read them here so they
+     * don't need to thread the list through every media call site.
+     * Fetches try each base in order until one serves the CID.
      */
     @Volatile
-    var currentServerBase: String = OriginlessUrls.DEFAULT_SERVER
+    var currentServerBases: List<String> = listOf(OriginlessUrls.DEFAULT_SERVER)
+
+    /**
+     * First configured Originless node. Kept so existing call sites and tests
+     * that assign a single URL still work; writes replace [currentServerBases].
+     */
+    var currentServerBase: String
+        get() = currentServerBases.firstOrNull() ?: OriginlessUrls.DEFAULT_SERVER
+        set(value) {
+            currentServerBases = listOf(OriginlessUrls.normalizeBase(value))
+        }
 
     fun primaryGateway(): String = OriginlessUrls.gatewayPrefix(currentServerBase)
 
@@ -40,7 +51,7 @@ object IpfsGatewayResolver {
 
     /**
      * Resolves an `ipfs://...` or `ipfs:...` URI into an HTTP gateway URL
-     * on the configured Originless node (`{base}/ipfs/{cid}`).
+     * on the first configured Originless node (`{base}/ipfs/{cid}`).
      */
     fun toHttpUrl(
         ipfsUri: String,
@@ -54,9 +65,9 @@ object IpfsGatewayResolver {
     }
 
     /**
-     * Returns candidate HTTP URLs for failover fetching. Originless `/ipfs`
-     * only serves pins on that node, so the configured node is the source of
-     * truth; [customGateway] is tried first when the caller already has one.
+     * Returns candidate HTTP URLs for failover fetching. Each configured
+     * Originless node is tried in list order; [customGateway] is tried first
+     * when the caller already has one.
      */
     fun getAllCandidateUrls(
         ipfsUri: String,
@@ -68,9 +79,10 @@ object IpfsGatewayResolver {
             val base = if (customGateway.endsWith("/")) customGateway else "$customGateway/"
             list.add("$base$cleanPath")
         }
-        val primary = primaryGateway()
-        val base = if (primary.endsWith("/")) primary else "$primary/"
-        list.add("$base$cleanPath")
+        val servers = currentServerBases.ifEmpty { listOf(OriginlessUrls.DEFAULT_SERVER) }
+        servers.forEach { server ->
+            list.add(OriginlessUrls.gatewayUrl(server, cleanPath))
+        }
         return list.distinct()
     }
 
