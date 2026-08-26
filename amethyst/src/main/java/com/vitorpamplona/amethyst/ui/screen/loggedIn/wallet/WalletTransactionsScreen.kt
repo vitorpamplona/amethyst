@@ -58,6 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -89,6 +90,7 @@ fun WalletTransactionsScreen(
     val isLoadingMore by walletViewModel.isLoadingMore.collectAsState()
     val hasMore by walletViewModel.hasMoreTransactions.collectAsState()
     val currentFilter by walletViewModel.transactionFilter.collectAsState()
+    val error by walletViewModel.error.collectAsState()
 
     val listState = rememberLazyListState()
 
@@ -132,6 +134,7 @@ fun WalletTransactionsScreen(
             )
         },
     ) { padding ->
+        val currentError = error
         if (isLoading && transactions.isEmpty()) {
             Column(
                 modifier =
@@ -148,6 +151,16 @@ fun WalletTransactionsScreen(
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
+        } else if (currentError != null && transactions.isEmpty()) {
+            // A wallet refusal (e.g. RESTRICTED) leaves the list empty. Without this
+            // branch the screen would claim "no transactions yet" and hide the reason.
+            EmptyState(
+                title = stringRes(R.string.wallet_transactions_load_failed),
+                modifier = Modifier.padding(padding).padding(24.dp),
+                description = currentError,
+                onRefresh = { walletViewModel.fetchTransactions() },
+                refreshLabel = stringRes(R.string.wallet_refresh),
+            )
         } else if (transactions.isEmpty()) {
             Column(
                 modifier =
@@ -168,6 +181,21 @@ fun WalletTransactionsScreen(
                 modifier = Modifier.padding(padding),
                 state = listState,
             ) {
+                if (currentError != null) {
+                    // Already-loaded transactions stay visible; the banner explains why
+                    // the latest refresh or page load did not land.
+                    item {
+                        Text(
+                            text = currentError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                }
                 item {
                     TransactionFilterRow(currentFilter) { walletViewModel.setTransactionFilter(it) }
                 }

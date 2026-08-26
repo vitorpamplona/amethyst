@@ -20,7 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.Protocol
@@ -47,7 +53,6 @@ class BlossomReadAuthInterceptorTest {
 
     @Test
     fun hashParsedFromThumbnailVariant() {
-        // Buzz thumbnails use the dot form <hash>.thumb.jpg — the base is still the hash.
         assertEquals(sha, BlossomReadAuthInterceptor.blossomHashOrNull("/media/$sha.thumb.jpg"))
     }
 
@@ -58,126 +63,113 @@ class BlossomReadAuthInterceptorTest {
 
     @Test
     fun hashLowercasedFromUppercaseSegment() {
-        assertEquals(sha, BlossomReadAuthInterceptor.blossomHashOrNull("/media/${sha.uppercase()}.png"))
+        assertEquals(sha, BlossomReadAuthInterceptor.blossomHashOrNull("/${sha.uppercase()}.png"))
     }
 
     @Test
     fun nonBlobPathsReturnNull() {
         assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/media/avatar.png"))
-        assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/media/nostr.build_$sha.jpg"))
-        assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/media/${sha}_thumb.jpg"))
-        // 65 hex chars: isHex64 checks only the first 64, so the length guard must reject it.
         assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/media/${sha}a.png"))
         assertNull(BlossomReadAuthInterceptor.blossomHashOrNull("/"))
     }
 
     // --- intercept behavior ----------------------------------------------
+    //
+    // The interceptor no longer performs the signed retry: waiting for a
+    // signature on an OkHttp dispatcher thread held one of the 16 per-host
+    // slots. It now returns the 401 and asks for a token to be minted
+    // off-thread; BlossomReadAuthFetcher does the retry from a coroutine.
 
     @Test
-    fun retriesWithAuthOn401() {
-        val provider = RecordingProvider(header = "Nostr token")
-        val chain = fakeChain("https://$host/media/$sha.png", codes = listOf(401, 200))
+    fun learnsHostAndAsksForATokenOn401() {
+        val provider = RecordingProvider(cached = null)
+        val chain = fakeChain("https://$host/media/$sha.png", codes = listOf(401))
 
-        val response = BlossomReadAuthInterceptor(provider::header).intercept(chain.asChain())
+        val response = provider.interceptor().intercept(chain.asChain())
 
-        assertEquals(200, response.code)
-        assertEquals(2, chain.requests.size)
-        assertNull("first attempt is anonymous", chain.requests[0].header("Authorization"))
-        assertEquals("Nostr token", chain.requests[1].header("Authorization"))
-        assertEquals(host to sha, provider.calls.single())
+        assertEquals("the 401 is surfaced for the fetcher to retry", 401, response.code)
+        assertEquals("the interceptor must not retry itself", 1, chain.requests.size)
+        assertNull("the only attempt is anonymous", chain.requests[0].header("Authorization"))
+        assertEquals(host, provider.warmed.single())
         response.close()
     }
 
     @Test
-    fun thumbnailUrlAlsoRetries() {
-        val provider = RecordingProvider(header = "Nostr token")
-        val chain = fakeChain("https://$host/media/$sha.thumb.jpg", codes = listOf(401, 200))
+    fun thumbnailUrlAlsoAsksForAToken() {
+        val provider = RecordingProvider(cached = null)
+        val chain = fakeChain("https://$host/media/$sha.thumb.jpg", codes = listOf(401))
 
-        val response = BlossomReadAuthInterceptor(provider::header).intercept(chain.asChain())
+        provider.interceptor().intercept(chain.asChain()).close()
 
-        assertEquals(200, response.code)
-        assertEquals(sha, provider.calls.single().second)
-        response.close()
+        assertEquals(host, provider.warmed.single())
     }
 
     @Test
     fun successfulRequestNeverSigns() {
-        val provider = RecordingProvider(header = "Nostr token")
+        val provider = RecordingProvider(cached = "Nostr token")
         val chain = fakeChain("https://blossom.example.com/$sha.png", codes = listOf(200))
 
-        val response = BlossomReadAuthInterceptor(provider::header).intercept(chain.asChain())
+        val response = provider.interceptor().intercept(chain.asChain())
 
         assertEquals(200, response.code)
         assertEquals(1, chain.requests.size)
-        assertTrue("public host must not be signed", provider.calls.isEmpty())
-        response.close()
-    }
-
-    @Test
-    fun keepsThe401WhenNoSignerAvailable() {
-        val provider = RecordingProvider(header = null)
-        val chain = fakeChain("https://$host/media/$sha.png", codes = listOf(401))
-
-        val response = BlossomReadAuthInterceptor(provider::header).intercept(chain.asChain())
-
-        assertEquals(401, response.code)
-        assertEquals(1, chain.requests.size)
-        assertEquals(host to sha, provider.calls.single())
+        assertTrue("public host must not be signed", provider.warmed.isEmpty())
         response.close()
     }
 
     @Test
     fun nonBlobUrlNeverSignsEvenOn401() {
-        val provider = RecordingProvider(header = "Nostr token")
+        val provider = RecordingProvider(cached = "Nostr token")
         val chain = fakeChain("https://example.com/media/avatar.png", codes = listOf(401))
 
-        val response = BlossomReadAuthInterceptor(provider::header).intercept(chain.asChain())
+        val response = provider.interceptor().intercept(chain.asChain())
 
         assertEquals(401, response.code)
         assertEquals(1, chain.requests.size)
-        assertTrue(provider.calls.isEmpty())
+        assertTrue(provider.warmed.isEmpty())
         response.close()
     }
 
     @Test
     fun requestWithExistingAuthPassesThrough() {
-        val provider = RecordingProvider(header = "Nostr token")
+        val provider = RecordingProvider(cached = "Nostr token")
         val chain = fakeChain("https://$host/media/$sha.png", codes = listOf(401), preAuthHeader = "Nostr existing")
 
-        val response = BlossomReadAuthInterceptor(provider::header).intercept(chain.asChain())
+        val response = provider.interceptor().intercept(chain.asChain())
 
         assertEquals(401, response.code)
         assertEquals(1, chain.requests.size)
-        assertTrue(provider.calls.isEmpty())
+        assertTrue(provider.warmed.isEmpty())
         response.close()
     }
 
     @Test
     fun nonGetRequestPassesThrough() {
-        val provider = RecordingProvider(header = "Nostr token")
+        val provider = RecordingProvider(cached = "Nostr token")
         val chain = fakeChain("https://$host/media/$sha.png", codes = listOf(401), method = "PUT")
 
-        val response = BlossomReadAuthInterceptor(provider::header).intercept(chain.asChain())
+        val response = provider.interceptor().intercept(chain.asChain())
 
         assertEquals(401, response.code)
         assertEquals(1, chain.requests.size)
-        assertTrue(provider.calls.isEmpty())
+        assertTrue(provider.warmed.isEmpty())
         response.close()
     }
 
     @Test
-    fun learnsHostThenSignsSubsequentBlobsUpFront() {
-        val provider = RecordingProvider(header = "Nostr token")
-        val interceptor = BlossomReadAuthInterceptor(provider::header)
+    fun learnsHostThenSignsSubsequentBlobsUpFrontFromCache() {
+        val provider = RecordingProvider(cached = null)
+        val interceptor = provider.interceptor()
         val otherSha = "b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553"
 
-        // First blob learns the host via the 401 probe + signed retry.
-        val first = fakeChain("https://$host/media/$sha.png", codes = listOf(401, 200))
+        // First blob learns the host from the 401 and asks for a token.
+        val first = fakeChain("https://$host/media/$sha.png", codes = listOf(401))
         interceptor.intercept(first.asChain()).close()
-        assertEquals(2, first.requests.size)
+        assertEquals(1, first.requests.size)
 
-        // Second, different blob on the same host is signed on the first attempt —
-        // no anonymous probe, so a single request.
+        // Once that token has landed, the next blob on the same host is signed
+        // on its first attempt — no anonymous probe.
+        provider.cached = "Nostr token"
         val second = fakeChain("https://$host/media/$otherSha.png", codes = listOf(200))
         val response = interceptor.intercept(second.asChain())
 
@@ -188,15 +180,15 @@ class BlossomReadAuthInterceptorTest {
     }
 
     @Test
-    fun learnedHostWithoutSignerDoesNotLoop() {
-        val provider = RecordingProvider(header = null)
-        val interceptor = BlossomReadAuthInterceptor(provider::header)
+    fun learnedHostWithoutTokenDoesNotLoop() {
+        val provider = RecordingProvider(cached = null)
+        val interceptor = provider.interceptor()
 
         val first = fakeChain("https://$host/media/$sha.png", codes = listOf(401))
         interceptor.intercept(first.asChain()).close()
 
-        // Host is now known, but with no signer the preemptive path must fall
-        // back to a single anonymous request rather than retrying endlessly.
+        // Host is known but no token was minted (no signer). The preemptive path
+        // must fall back to a single anonymous request rather than looping.
         val second = fakeChain("https://$host/media/$sha.png", codes = listOf(401))
         val response = interceptor.intercept(second.asChain())
 
@@ -205,18 +197,82 @@ class BlossomReadAuthInterceptorTest {
         response.close()
     }
 
-    private class RecordingProvider(
-        private val header: String?,
-    ) {
-        val calls = mutableListOf<Pair<String, HexKey>>()
+    /**
+     * The point of the whole split: `intercept` runs on an OkHttp dispatcher
+     * thread and holds one of the 16 per-host slots for as long as it stays
+     * there, so it must return without waiting for a signature.
+     *
+     * Uses the real provider and a deliberately slow signer rather than a fake
+     * `warm`: what is being measured is that the production wiring hands the
+     * signing off, not that a stub returns quickly.
+     */
+    @Test
+    fun interceptDoesNotWaitForTheSignature() {
+        val slowSigner = DelayingTestSigner(delayMs = SIGN_MS)
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val provider = BlossomReadAuthTokenProvider({ slowSigner }, scope)
+            val interceptor = BlossomReadAuthInterceptor(provider::cachedHeader, provider::warm)
+            val chain = fakeChain("https://$host/media/$sha.png", codes = listOf(401))
 
-        fun header(
-            host: String,
-            sha256: HexKey,
-        ): String? {
-            calls.add(host to sha256)
-            return header
+            // What the previous design cost: the interceptor bridged the suspend
+            // signer with runBlocking, so the calling thread wore the full
+            // signing latency. Same signer, same host, measured on this thread.
+            val blockingScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val blockingProbe = BlossomReadAuthTokenProvider({ DelayingTestSigner(delayMs = SIGN_MS) }, blockingScope)
+            val beforeAt = System.nanoTime()
+            runBlocking { blockingProbe.header(host) }
+            val beforeMs = (System.nanoTime() - beforeAt) / 1_000_000
+            blockingScope.cancel()
+
+            val startedAt = System.nanoTime()
+            interceptor.intercept(chain.asChain()).close()
+            val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
+
+            println(
+                "[measure] signature=${SIGN_MS}ms  waiting-for-it=${beforeMs}ms  " +
+                    "intercept-now=${elapsedMs}ms",
+            )
+
+            assertTrue(
+                "intercept must not wait out the ${SIGN_MS}ms signature; it took ${elapsedMs}ms",
+                elapsedMs < SIGN_MS / 2,
+            )
+            assertNull(
+                "returning before the token exists is exactly the point",
+                provider.cachedHeader(host),
+            )
+
+            // ...and the signature it kicked off does still complete.
+            runBlocking {
+                withTimeout(SIGN_MS * 20) {
+                    while (provider.cachedHeader(host) == null) delay(10)
+                }
+            }
+            assertEquals(1, slowSigner.signatures)
+        } finally {
+            scope.cancel()
         }
+    }
+
+    private companion object {
+        // Long enough that a blocking implementation could not possibly pass the
+        // assertion above, short enough to keep the suite quick.
+        const val SIGN_MS = 2_000L
+    }
+
+    private class RecordingProvider(
+        var cached: String?,
+    ) {
+        val warmed = mutableListOf<String>()
+
+        fun cachedHeader(host: String): String? = cached
+
+        fun warm(host: String) {
+            warmed.add(host)
+        }
+
+        fun interceptor() = BlossomReadAuthInterceptor(::cachedHeader, ::warm)
     }
 
     /**

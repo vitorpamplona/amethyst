@@ -2030,6 +2030,8 @@
         <item quantity="one">Conectado a %1$d relay</item>
         <item quantity="other">Conectado a %1$d relays</item>
     </plurals>
+    <string name="always_on_notif_show_details">Mostrar detalhes</string>
+    <string name="always_on_notif_hide_details">Ocultar detalhes</string>
     <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
@@ -2792,6 +2794,7 @@
     <string name="cashu_no_wallet_found">Nenhuma carteira Cashu compatível encontrada no sistema</string>
     <string name="error_unable_to_fetch_invoice">Não foi possível obter a fatura dos servidores do destinatário</string>
     <string name="wallet_connect_pay_invoice_error_error">Seu provedor de Wallet Connect retornou o seguinte erro: %1$s</string>
+    <string name="wallet_connect_unreadable_response_error">Seu provedor Wallet Connect enviou uma resposta que o Amethyst não conseguiu ler.</string>
     <string name="tor_connection_failed_title">O Tor não está conectando</string>
     <string name="tor_connection_failed_body">O Amethyst não conseguiu concluir a inicialização do Tor. Usar uma conexão normal (sem Tor) para que o feed possa carregar? Vamos lembrar dessa escolha pela próxima hora e tentar o Tor novamente depois.</string>
     <string name="tor_continue_without_for_session">Usar conexão normal</string>
@@ -2921,6 +2924,15 @@
     <string name="wallet_incoming">Recebido</string>
     <string name="wallet_outgoing">Enviado</string>
     <string name="wallet_refresh">Atualizar</string>
+    <string name="wallet_transactions_load_failed">Não foi possível carregar as transações</string>
+    <string name="wallet_transactions_load_more_failed">Não foi possível carregar mais transações</string>
+    <string name="wallet_balance_request_failed">Não foi possível carregar seu saldo</string>
+    <string name="wallet_invoice_creation_failed">Não foi possível criar a fatura</string>
+    <string name="wallet_no_invoice_returned">Sua carteira não retornou uma fatura</string>
+    <string name="wallet_request_timed_out">Tempo esgotado na solicitação à carteira</string>
+    <string name="wallet_request_failed">Não foi possível acessar sua carteira: %1$s</string>
+    <string name="wallet_connect_unrecognized_reply">Sua carteira respondeu com algo que o Amethyst não reconhece (%1$s)</string>
+    <string name="wallet_connect_decrypt_failed">O Amethyst não conseguiu descriptografar a resposta da sua carteira — a carteira pode estar usando uma chave diferente</string>
     <string name="wallet_filter_all">Todos</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Outros</string>
@@ -4695,6 +4707,14 @@
     <plurals name="marmot_member_count">
         <item quantity="one">%1$d membro</item>
         <item quantity="other">%1$d membros</item>
+    </plurals>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Sua carteira não respondeu em %1$d segundo. O pagamento pode ou não ter sido concluído — verifique sua carteira antes de tentar novamente.</item>
+        <item quantity="other">Sua carteira não respondeu em %1$d segundos. O pagamento pode ou não ter sido concluído — verifique sua carteira antes de tentar novamente.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Tempo esgotado na solicitação à carteira — %1$d resposta foi rejeitada porque foi assinada por uma chave inesperada. Seu relay pode não ser confiável.</item>
+        <item quantity="other">Tempo esgotado na solicitação à carteira — %1$d respostas foram rejeitadas porque foram assinadas por uma chave inesperada. Seu relay pode não ser confiável.</item>
     </plurals>
     <string name="marmot_group_name">Nome do grupo</string>
     <string name="marmot_group_name_placeholder">Insira o nome do grupo</string>

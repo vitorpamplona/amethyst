@@ -41,6 +41,10 @@ import org.junit.Test
  * visual result: every transition must settle the keyboard *first*.
  *
  * Without the settle calls in [Nav] each of these records only "navigate" and fails.
+ *
+ * This is the prevention half. The system's own back gesture never reaches [Nav] — the first back
+ * press with a keyboard up is consumed by the IME — so it can still cancel an animation and freeze
+ * the inset. `SafeImeInsets` is the backstop for that; see `SafeImeInsetsTest`.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class NavImeSettleTest {

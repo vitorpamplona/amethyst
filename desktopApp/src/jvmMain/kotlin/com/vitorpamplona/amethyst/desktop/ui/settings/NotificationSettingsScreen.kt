@@ -120,6 +120,8 @@ fun NotificationSettingsScreen(onBack: (() -> Unit)? = null) {
             var testStatus by remember { mutableStateOf<String?>(null) }
             var requestingPermission by remember { mutableStateOf(false) }
             var sendingTest by remember { mutableStateOf(false) }
+            val lastRequestError by dispatcher?.lastRequestError?.collectAsState()
+                ?: remember { mutableStateOf<String?>(null) }
 
             // Re-sync permission state whenever this screen enters composition
             // and whenever the window regains focus — user may have toggled
@@ -219,9 +221,11 @@ fun NotificationSettingsScreen(onBack: (() -> Unit)? = null) {
                                     testStatus =
                                         when (newState) {
                                             PermissionState.Granted -> "Permission granted. Notifications are on — try the test toast below."
-                                            PermissionState.Denied -> "Permission denied. Enable in System Settings if you change your mind."
+                                            PermissionState.Denied ->
+                                                dispatcher?.lastRequestError?.value
+                                                    ?: "Permission denied. Enable in System Settings if you change your mind."
                                             PermissionState.BundleRequired -> "Notifications need a bundled app — run `./gradlew :desktopApp:runDistributable`."
-                                            else -> null
+                                            else -> dispatcher?.lastRequestError?.value
                                         }
                                 }
                             },
@@ -310,6 +314,36 @@ fun NotificationSettingsScreen(onBack: (() -> Unit)? = null) {
                                 }
                             },
                         ) { Text("Open System Settings") }
+                        // When the OS refused the request outright (no prompt
+                        // ever shown — e.g. UNErrorDomain "Notifications are
+                        // not allowed for this application"), Amethyst never
+                        // gets a System Settings entry, so the deep link above
+                        // is a dead end. Offer a retry alongside it: on recent
+                        // macOS the permission prompt is an auto-dismissing
+                        // banner, and a fresh request re-surfaces it.
+                        OutlinedButton(
+                            onClick = {
+                                if (requestingPermission) return@OutlinedButton
+                                coroutineScope.launch {
+                                    requestingPermission = true
+                                    testStatus = "Waiting for OS prompt…"
+                                    val newState =
+                                        try {
+                                            dispatcher?.requestPermission() ?: PermissionState.Denied
+                                        } finally {
+                                            requestingPermission = false
+                                        }
+                                    testStatus =
+                                        when (newState) {
+                                            PermissionState.Granted -> "Permission granted. Try the test toast below."
+                                            else ->
+                                                dispatcher?.lastRequestError?.value
+                                                    ?: "Permission denied. Enable in System Settings if you change your mind."
+                                        }
+                                }
+                            },
+                            enabled = dispatcher != null && !requestingPermission,
+                        ) { Text(if (requestingPermission) "Requesting…" else "Ask again") }
                         Text(
                             "Enable in System Settings → Notifications → Amethyst",
                             style = MaterialTheme.typography.bodySmall,

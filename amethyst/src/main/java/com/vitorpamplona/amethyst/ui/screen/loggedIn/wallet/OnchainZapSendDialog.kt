@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -83,6 +82,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
@@ -280,7 +280,7 @@ fun OnchainZapSendDialog(
                 Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    .imePadding()
+                    .imePaddingSafe()
                     .navigationBarsPadding(),
         ) {
             Header(onClose = { if (!sending) onDismiss() })

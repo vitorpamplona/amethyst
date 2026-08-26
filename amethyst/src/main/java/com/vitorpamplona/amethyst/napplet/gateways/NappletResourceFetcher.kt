@@ -46,7 +46,6 @@ import okhttp3.Authenticator
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.CookieJar
-import okhttp3.Dns
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -54,6 +53,7 @@ import okhttp3.Request
 import okhttp3.Response
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.io.InterruptedIOException
 import java.net.InetAddress
 import java.net.URLDecoder
@@ -112,15 +112,13 @@ class NappletResourceFetcher(
             .authenticator(Authenticator.NONE)
             .proxyAuthenticator(Authenticator.NONE)
             .callTimeout(FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .dns(
-                Dns { hostname ->
-                    baseClient.dns.lookup(hostname).also { addresses ->
-                        if (addresses.isEmpty() || !addresses.all(::isPublicAddress)) {
-                            throw BlockedResourceException("Resolved address is not public.")
-                        }
+            .dns { hostname ->
+                baseClient.dns.lookup(hostname).also { addresses ->
+                    if (addresses.isEmpty() || !addresses.all(::isPublicAddress)) {
+                        throw BlockedResourceException("Resolved address is not public.")
                     }
-                },
-            ).addNetworkInterceptor { chain ->
+                }
+            }.addNetworkInterceptor { chain ->
                 chain.proceed(
                     chain
                         .request()
@@ -193,7 +191,7 @@ class NappletResourceFetcher(
                 is NProfile -> resolveReplaceable(0, entity.hex)
                 else -> null
             } ?: return null
-        return NappletResource(event.toJson().encodeToByteArray(), "application/json")
+        return NappletResource(event.toJson().encodeToByteArray(), MIME_JSON)
     }
 
     /** A non-replaceable event by id: local cache first, then a bounded relay fetch. */
@@ -300,7 +298,7 @@ class NappletResourceFetcher(
             meta
                 .removeSuffix(";base64")
                 .substringBefore(';')
-                .ifEmpty { "text/plain" }
+                .ifEmpty { MIME_PLAIN_TEXT }
                 .lowercase()
         val bytes =
             if (isBase64) {
@@ -323,8 +321,8 @@ class NappletResourceFetcher(
         val type =
             when {
                 sniffed in ALLOWED_SNIFFED_TYPES -> sniffed
-                declaredType == "application/json" && isJson(bytes) -> "application/json"
-                declaredType == "text/plain" && isPlainText(bytes) -> "text/plain"
+                declaredType == MIME_JSON && isJson(bytes) -> MIME_JSON
+                declaredType == MIME_PLAIN_TEXT && isPlainText(bytes) -> MIME_PLAIN_TEXT
                 else -> null
             } ?: return failure(ERROR_DECODE_FAILED, "Resource MIME is not in the runtime allowlist.")
         return success(NappletResource(bytes, type))
@@ -353,7 +351,7 @@ class NappletResourceFetcher(
         message: String? = null,
     ): NappletResourceResult = NappletResourceResult.Failure(error, message)
 
-    private fun readBounded(input: java.io.InputStream): ByteArray? {
+    private fun readBounded(input: InputStream): ByteArray? {
         input.use { source ->
             val output = ByteArrayOutputStream()
             val buffer = ByteArray(8 * 1024)
@@ -417,6 +415,8 @@ class NappletResourceFetcher(
         private const val ERROR_UNSUPPORTED_SCHEME = "unsupported-scheme"
         private const val ERROR_DECODE_FAILED = "decode-failed"
         private const val ERROR_NETWORK = "network-error"
+        private const val MIME_JSON = "application/json"
+        private const val MIME_PLAIN_TEXT = "text/plain"
         private val SHA256 = Regex("^[0-9a-f]{64}$")
         private val ALLOWED_SNIFFED_TYPES =
             setOf(
@@ -432,5 +432,5 @@ class NappletResourceFetcher(
 
     private class BlockedResourceException(
         message: String,
-    ) : java.io.IOException(message)
+    ) : IOException(message)
 }

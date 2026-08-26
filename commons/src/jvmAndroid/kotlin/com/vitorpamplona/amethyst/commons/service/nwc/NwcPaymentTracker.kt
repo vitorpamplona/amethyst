@@ -142,10 +142,13 @@ class NwcPaymentTracker {
 
     /**
      * Manually removes a pending request (e.g., on timeout).
+     *
+     * Returns true when this call is the one that removed it. Callers racing a
+     * response use that to decide who reports the outcome: the response path
+     * consumes the entry through [onResponseReceived], so a timeout that gets
+     * false must stay quiet rather than overwrite a real wallet answer.
      */
-    fun cleanup(requestId: HexKey) {
-        awaitingRequests.remove(requestId)
-    }
+    fun cleanup(requestId: HexKey): Boolean = awaitingRequests.remove(requestId) != null
 
     /**
      * Returns count of pending requests (for debugging/monitoring).

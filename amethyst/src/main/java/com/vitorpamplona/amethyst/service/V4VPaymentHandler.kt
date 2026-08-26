@@ -26,9 +26,10 @@ import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
+import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.TlvRecord
@@ -159,15 +160,17 @@ class V4VPaymentHandler(
                     tlvRecords = tlvRecords,
                 )
 
-            account.zaps.sendNwcRequest(request) { response: Response? ->
-                if (response is IErrorResponseLike) {
-                    onError(
-                        stringRes(context, R.string.error_dialog_pay_invoice_error),
-                        response.errorMessage()
-                            ?: stringRes(context, R.string.error_parsing_error_message),
-                    )
-                }
-            }
+            account.zaps.sendNwcRequest(
+                request = request,
+                onResponse = { response: Response? ->
+                    response.nwcFailureDetail(context)?.let { detail ->
+                        onError(stringRes(context, R.string.error_dialog_pay_invoice_error), detail)
+                    }
+                },
+                onTimeout = {
+                    onError(stringRes(context, R.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                },
+            )
         }
     }
 
@@ -250,15 +253,18 @@ class V4VPaymentHandler(
             is PaymentSource.Nwc -> {
                 var done = 0
                 payables.forEach { payable ->
-                    account.zaps.sendZapPaymentRequestFor(payable.invoice, zappedNote) { response ->
-                        if (response is IErrorResponseLike) {
-                            onError(
-                                stringRes(context, R.string.error_dialog_pay_invoice_error),
-                                response.errorMessage()
-                                    ?: stringRes(context, R.string.error_parsing_error_message),
-                            )
-                        }
-                    }
+                    account.zaps.sendZapPaymentRequestFor(
+                        bolt11 = payable.invoice,
+                        zappedNote = zappedNote,
+                        onResponse = { response ->
+                            response.nwcFailureDetail(context)?.let { detail ->
+                                onError(stringRes(context, R.string.error_dialog_pay_invoice_error), detail)
+                            }
+                        },
+                        onTimeout = {
+                            onError(stringRes(context, R.string.error_dialog_pay_invoice_error), nwcTimeoutMessage(context))
+                        },
+                    )
                     done++
                     onProgress(done.toFloat() / payables.size)
                 }

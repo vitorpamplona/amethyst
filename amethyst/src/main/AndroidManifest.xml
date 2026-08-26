@@ -579,6 +579,17 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Invisible host that runs the system file picker for an embedded WebView surface. The
+             `:napplet` providers are windowless services with no Activity of their own, so the main
+             process collects the pick and relays the URIs back to the sandbox. -->
+        <!-- Standard launch mode on purpose: two embedded surfaces can each have a pick in flight, and
+             singleTop would collapse the second onto the first and strand its page's file input. -->
+        <activity
+            android:name=".napplet.WebFileChooserActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- First-connect "Connect to Nostr" dialog. -->
         <activity
             android:name=".connectedApps.consent.SignerConnectActivity"

@@ -65,6 +65,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
+import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -76,7 +78,6 @@ import com.vitorpamplona.amethyst.ui.theme.SimpleImage75Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.NIP90ContentDiscoveryResponseEvent
@@ -402,18 +403,12 @@ fun DvmPaymentActions(
                         onSent = {
                             onStatusUpdate(nwcPaymentRequest)
                         },
+                        onTimeout = { onStatusUpdate(nwcTimeoutMessage(context)) },
                         onResponse = { response ->
                             onStatusUpdate(
-                                if (response is PayInvoiceErrorResponse) {
-                                    stringRes(
-                                        context,
-                                        R.string.wallet_connect_pay_invoice_error_error,
-                                        response.error?.message
-                                            ?: response.error?.code?.toString() ?: "Error parsing error message",
-                                    )
-                                } else {
-                                    thankYou
-                                },
+                                response.nwcFailureDetail(context)?.let { detail ->
+                                    stringRes(context, R.string.wallet_connect_pay_invoice_error_error, detail)
+                                } ?: thankYou,
                             )
                         },
                     )
