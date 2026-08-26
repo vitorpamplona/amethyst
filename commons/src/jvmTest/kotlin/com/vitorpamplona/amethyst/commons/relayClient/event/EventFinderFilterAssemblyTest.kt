@@ -147,7 +147,7 @@ class EventFinderFilterAssemblyTest {
 
         override fun checkGetOrCreateNote(hexKey: HexKey): Note? = null
 
-        override fun getOrCreateAddressableNote(key: Address): AddressableNote = error("unused")
+        override fun getOrCreateAddressableNote(address: Address): AddressableNote = error("unused")
 
         override fun getEventStream(): ICacheEventStream = error("unused")
 

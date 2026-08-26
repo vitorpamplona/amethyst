@@ -140,13 +140,13 @@ object RelayAuthPurposeDeriver {
                     // `e` tags — take whichever we get so the prompt can say whose conversation.
                     AuthPurposeKind.THREAD -> {
                         readsThread = true
-                        explained?.entityIds?.let(readThreadNotes::addAll)
+                        explained.entityIds?.let(readThreadNotes::addAll)
                         filter.tags?.get("e")?.let(readThreadNotes::addAll)
                     }
                     // Declared, but the *who*/*what* still comes from the filter. Prefer the entity
                     // ids the assembler named over sniffing tags, and fall back when it named none.
                     AuthPurposeKind.READ_VENUE -> {
-                        val declared = explained?.entityIds.orEmpty()
+                        val declared = explained.entityIds.orEmpty()
                         if (declared.isNotEmpty()) readVenues.addAll(declared) else readVenues.addAll(filter.venueTags())
                     }
                     AuthPurposeKind.READ_OUTBOX -> {
