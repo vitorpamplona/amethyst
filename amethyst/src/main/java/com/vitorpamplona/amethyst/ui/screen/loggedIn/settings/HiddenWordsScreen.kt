@@ -110,8 +110,9 @@ fun HiddenWordsScreen(
         bottomBar = {
             Surface(
                 tonalElevation = 3.dp,
-                // The corrected IME inset, not WindowInsets.ime: a union with a stranded inset keeps
-                // this bar floating a keyboard's height above the nav bar. See SafeImeInsets.
+                // Reached through a union rather than imePaddingSafe(), which is why a grep for
+                // imePadding() misses it: a stranded inset here keeps this bar floating a
+                // keyboard's height above the nav bar. See SafeImeInsets.
                 modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars.union(rememberSafeImeInsets())),
             ) {
                 AddMuteWordTextField(accountViewModel)
