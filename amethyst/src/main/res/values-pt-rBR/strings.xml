@@ -4868,4 +4868,22 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
+    <string name="wallet_balance_request_failed">Não foi possível carregar seu saldo</string>
+    <string name="wallet_connect_decrypt_failed">O Amethyst não conseguiu descriptografar a resposta da sua carteira — a carteira pode estar usando uma chave diferente</string>
+    <string name="wallet_connect_unreadable_response_error">Seu provedor Wallet Connect enviou uma resposta que o Amethyst não conseguiu ler.</string>
+    <string name="wallet_connect_unrecognized_reply">Sua carteira respondeu com algo que o Amethyst não reconhece (%1$s)</string>
+    <string name="wallet_invoice_creation_failed">Não foi possível criar a fatura</string>
+    <string name="wallet_no_invoice_returned">Sua carteira não retornou uma fatura</string>
+    <string name="wallet_request_failed">Não foi possível acessar sua carteira: %1$s</string>
+    <string name="wallet_request_timed_out">Tempo esgotado na solicitação à carteira</string>
+    <string name="wallet_transactions_load_failed">Não foi possível carregar as transações</string>
+    <string name="wallet_transactions_load_more_failed">Não foi possível carregar mais transações</string>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Sua carteira não respondeu em %1$d segundo. O pagamento pode ou não ter sido concluído — verifique sua carteira antes de tentar novamente.</item>
+        <item quantity="other">Sua carteira não respondeu em %1$d segundos. O pagamento pode ou não ter sido concluído — verifique sua carteira antes de tentar novamente.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Tempo esgotado na solicitação à carteira — %1$d resposta foi rejeitada porque foi assinada por uma chave inesperada. Seu relay pode não ser confiável.</item>
+        <item quantity="other">Tempo esgotado na solicitação à carteira — %1$d respostas foram rejeitadas porque foram assinadas por uma chave inesperada. Seu relay pode não ser confiável.</item>
+    </plurals>
 </resources>

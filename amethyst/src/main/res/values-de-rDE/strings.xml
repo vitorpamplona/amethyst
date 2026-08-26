@@ -4870,4 +4870,22 @@
     <string name="buzz_persona_avatar">Avatar-URL (optional)</string>
     <string name="buzz_persona_publishing">Wird veröffentlicht…</string>
     <string name="buzz_persona_publish">Persona veröffentlichen</string>
+    <string name="wallet_balance_request_failed">Guthaben konnte nicht geladen werden</string>
+    <string name="wallet_connect_decrypt_failed">Amethyst konnte die Antwort deiner Wallet nicht entschlüsseln — die Wallet verwendet möglicherweise einen anderen Schlüssel</string>
+    <string name="wallet_connect_unreadable_response_error">Dein Wallet-Connect-Anbieter hat eine Antwort gesendet, die Amethyst nicht lesen konnte.</string>
+    <string name="wallet_connect_unrecognized_reply">Deine Wallet hat mit etwas geantwortet, das Amethyst nicht kennt (%1$s)</string>
+    <string name="wallet_invoice_creation_failed">Rechnung konnte nicht erstellt werden</string>
+    <string name="wallet_no_invoice_returned">Deine Wallet hat keine Rechnung zurückgegeben</string>
+    <string name="wallet_request_failed">Deine Wallet konnte nicht erreicht werden: %1$s</string>
+    <string name="wallet_request_timed_out">Zeitüberschreitung bei der Wallet-Anfrage</string>
+    <string name="wallet_transactions_load_failed">Transaktionen konnten nicht geladen werden</string>
+    <string name="wallet_transactions_load_more_failed">Weitere Transaktionen konnten nicht geladen werden</string>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Deine Wallet hat nicht innerhalb von %1$d Sekunde geantwortet. Die Zahlung ist möglicherweise trotzdem erfolgt — prüfe deine Wallet, bevor du es erneut versuchst.</item>
+        <item quantity="other">Deine Wallet hat nicht innerhalb von %1$d Sekunden geantwortet. Die Zahlung ist möglicherweise trotzdem erfolgt — prüfe deine Wallet, bevor du es erneut versuchst.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Zeitüberschreitung bei der Wallet-Anfrage — %1$d Antwort wurde abgelehnt, weil sie mit einem unerwarteten Schlüssel signiert war. Dein Relay ist möglicherweise nicht vertrauenswürdig.</item>
+        <item quantity="other">Zeitüberschreitung bei der Wallet-Anfrage — %1$d Antworten wurden abgelehnt, weil sie mit einem unerwarteten Schlüssel signiert waren. Dein Relay ist möglicherweise nicht vertrauenswürdig.</item>
+    </plurals>
 </resources>

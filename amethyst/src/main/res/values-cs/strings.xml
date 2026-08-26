@@ -5080,4 +5080,26 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
+    <string name="wallet_balance_request_failed">Nepodařilo se načíst váš zůstatek</string>
+    <string name="wallet_connect_decrypt_failed">Amethyst nedokázal dešifrovat odpověď vaší peněženky — peněženka možná používá jiný klíč</string>
+    <string name="wallet_connect_unreadable_response_error">Váš poskytovatel Wallet Connect odeslal odpověď, kterou Amethyst nedokázal přečíst.</string>
+    <string name="wallet_connect_unrecognized_reply">Vaše peněženka odpověděla něčím, co Amethyst nezná (%1$s)</string>
+    <string name="wallet_invoice_creation_failed">Nepodařilo se vytvořit fakturu</string>
+    <string name="wallet_no_invoice_returned">Vaše peněženka nevrátila fakturu</string>
+    <string name="wallet_request_failed">Nepodařilo se spojit s vaší peněženkou: %1$s</string>
+    <string name="wallet_request_timed_out">Vypršel časový limit požadavku na peněženku</string>
+    <string name="wallet_transactions_load_failed">Nepodařilo se načíst transakce</string>
+    <string name="wallet_transactions_load_more_failed">Nepodařilo se načíst další transakce</string>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Vaše peněženka neodpověděla do %1$d sekundy. Platba mohla, ale nemusela proběhnout — před opakováním zkontrolujte svou peněženku.</item>
+        <item quantity="few">Vaše peněženka neodpověděla do %1$d sekund. Platba mohla, ale nemusela proběhnout — před opakováním zkontrolujte svou peněženku.</item>
+        <item quantity="many">Vaše peněženka neodpověděla do %1$d sekund. Platba mohla, ale nemusela proběhnout — před opakováním zkontrolujte svou peněženku.</item>
+        <item quantity="other">Vaše peněženka neodpověděla do %1$d sekund. Platba mohla, ale nemusela proběhnout — před opakováním zkontrolujte svou peněženku.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Vypršel časový limit požadavku na peněženku — %1$d odpověď byla odmítnuta, protože ji podepsal neočekávaný klíč. Vaše relé nemusí být důvěryhodné.</item>
+        <item quantity="few">Vypršel časový limit požadavku na peněženku — %1$d odpovědi byly odmítnuty, protože je podepsal neočekávaný klíč. Vaše relé nemusí být důvěryhodné.</item>
+        <item quantity="many">Vypršel časový limit požadavku na peněženku — %1$d odpovědí bylo odmítnuto, protože je podepsal neočekávaný klíč. Vaše relé nemusí být důvěryhodné.</item>
+        <item quantity="other">Vypršel časový limit požadavku na peněženku — %1$d odpovědí bylo odmítnuto, protože je podepsal neočekávaný klíč. Vaše relé nemusí být důvěryhodné.</item>
+    </plurals>
 </resources>

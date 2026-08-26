@@ -4868,4 +4868,22 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
+    <string name="wallet_balance_request_failed">Kunde inte läsa in ditt saldo</string>
+    <string name="wallet_connect_decrypt_failed">Amethyst kunde inte dekryptera plånbokens svar — plånboken kanske använder en annan nyckel</string>
+    <string name="wallet_connect_unreadable_response_error">Din Wallet Connect-leverantör skickade ett svar som Amethyst inte kunde läsa.</string>
+    <string name="wallet_connect_unrecognized_reply">Din plånbok svarade med något som Amethyst inte känner igen (%1$s)</string>
+    <string name="wallet_invoice_creation_failed">Kunde inte skapa fakturan</string>
+    <string name="wallet_no_invoice_returned">Din plånbok returnerade ingen faktura</string>
+    <string name="wallet_request_failed">Kunde inte nå din plånbok: %1$s</string>
+    <string name="wallet_request_timed_out">Tidsgränsen för plånboksförfrågan överskreds</string>
+    <string name="wallet_transactions_load_failed">Kunde inte läsa in transaktioner</string>
+    <string name="wallet_transactions_load_more_failed">Kunde inte läsa in fler transaktioner</string>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Din plånbok svarade inte inom %1$d sekund. Betalningen kan ha gått igenom ändå — kontrollera din plånbok innan du försöker igen.</item>
+        <item quantity="other">Din plånbok svarade inte inom %1$d sekunder. Betalningen kan ha gått igenom ändå — kontrollera din plånbok innan du försöker igen.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Tidsgränsen för plånboksförfrågan överskreds — %1$d svar avvisades eftersom det signerades med en oväntad nyckel. Ditt relä kanske inte är betrott.</item>
+        <item quantity="other">Tidsgränsen för plånboksförfrågan överskreds — %1$d svar avvisades eftersom de signerades med en oväntad nyckel. Ditt relä kanske inte är betrott.</item>
+    </plurals>
 </resources>
