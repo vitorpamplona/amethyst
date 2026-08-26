@@ -59,8 +59,10 @@ class BlossomReadAuthFetcher(
             if (e.response.code != HTTP_UNAUTHORIZED) throw e
 
             val httpUrl = url.toHttpUrlOrNull() ?: throw e
-            val sha256 = BlossomReadAuthInterceptor.blossomHashOrNull(httpUrl.encodedPath) ?: throw e
-            val header = auth.header(httpUrl.host, sha256) ?: throw e
+            // Gate only: read-auth applies to Blossom blob URLs, but the token is
+            // scoped to the host (BUD-11 `server` tag) and carries no `x` tag.
+            BlossomReadAuthInterceptor.blossomHashOrNull(httpUrl.encodedPath) ?: throw e
+            val header = auth.header(httpUrl.host) ?: throw e
 
             return build(header).fetch()
         }

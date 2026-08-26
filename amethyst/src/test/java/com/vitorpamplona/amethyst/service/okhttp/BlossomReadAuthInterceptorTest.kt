@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -91,7 +90,7 @@ class BlossomReadAuthInterceptorTest {
         assertEquals("the 401 is surfaced for the fetcher to retry", 401, response.code)
         assertEquals("the interceptor must not retry itself", 1, chain.requests.size)
         assertNull("the only attempt is anonymous", chain.requests[0].header("Authorization"))
-        assertEquals(host to sha, provider.warmed.single())
+        assertEquals(host, provider.warmed.single())
         response.close()
     }
 
@@ -102,7 +101,7 @@ class BlossomReadAuthInterceptorTest {
 
         provider.interceptor().intercept(chain.asChain()).close()
 
-        assertEquals(sha, provider.warmed.single().second)
+        assertEquals(host, provider.warmed.single())
     }
 
     @Test
@@ -222,7 +221,7 @@ class BlossomReadAuthInterceptorTest {
             val blockingScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
             val blockingProbe = BlossomReadAuthTokenProvider({ DelayingTestSigner(delayMs = SIGN_MS) }, blockingScope)
             val beforeAt = System.nanoTime()
-            runBlocking { blockingProbe.header(host, sha) }
+            runBlocking { blockingProbe.header(host) }
             val beforeMs = (System.nanoTime() - beforeAt) / 1_000_000
             blockingScope.cancel()
 
@@ -265,15 +264,12 @@ class BlossomReadAuthInterceptorTest {
     private class RecordingProvider(
         var cached: String?,
     ) {
-        val warmed = mutableListOf<Pair<String, HexKey>>()
+        val warmed = mutableListOf<String>()
 
         fun cachedHeader(host: String): String? = cached
 
-        fun warm(
-            host: String,
-            sha256: HexKey,
-        ) {
-            warmed.add(host to sha256)
+        fun warm(host: String) {
+            warmed.add(host)
         }
 
         fun interceptor() = BlossomReadAuthInterceptor(::cachedHeader, ::warm)

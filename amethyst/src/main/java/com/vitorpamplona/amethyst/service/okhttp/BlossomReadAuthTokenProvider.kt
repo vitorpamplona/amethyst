@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -48,11 +47,19 @@ import kotlin.coroutines.cancellation.CancellationException
  * [inFlight] is what collapses them; the leader signs and every follower awaits
  * the same [CompletableDeferred].
  *
- * Tokens are cached per host, not per blob. A BUD-11 `server`-scoped token
- * grants reads for every blob on the host (thumbnails included), so one signed
- * event covers a whole feed's worth of images from an auth-gated host for the
- * life of the token. The blob hash of the request that first triggered signing
- * is still included as the `x` tag for BUD-01 servers that check it.
+ * Tokens are cached per host, not per blob, and are therefore minted with a
+ * BUD-11 `server` tag and **no** `x` tag. BUD-11 lists `x` as optional for
+ * `GET /<sha256>` but is strict about what including one means: "When `x` tags
+ * are present, the token is only valid for operations on the specified blob
+ * hashes." A token carrying the hash of whichever blob happened to trigger
+ * signing would therefore be invalid for every other blob it was reused for.
+ * Server-scoped and hash-free, one signed event legitimately covers a whole
+ * feed's worth of images from the host for the life of the token.
+ *
+ * The tradeoff that buys: the token authorizes reading any blob on that host
+ * until it expires, rather than one. It is only ever sent to that host, over
+ * TLS, and BUD-11 sanctions the shape — but it is a wider grant than a
+ * per-blob token, which is the price of caching at all.
  */
 class BlossomReadAuthTokenProvider(
     private val signerProvider: () -> NostrSigner?,
@@ -78,12 +85,9 @@ class BlossomReadAuthTokenProvider(
      * blocking, so the caller must already be in a coroutine — on the image path
      * that is Coil's `Fetcher.fetch()`.
      */
-    suspend fun header(
-        host: String,
-        sha256: HexKey,
-    ): String? {
+    suspend fun header(host: String): String? {
         cachedHeader(host)?.let { return it }
-        return signOnce(host, sha256)?.await()
+        return signOnce(host)?.await()
     }
 
     /**
@@ -91,12 +95,9 @@ class BlossomReadAuthTokenProvider(
      * cannot suspend (the interceptor) and only need the token to exist by the
      * time some later request needs it.
      */
-    fun warm(
-        host: String,
-        sha256: HexKey,
-    ) {
+    fun warm(host: String) {
         if (cachedHeader(host) != null) return
-        signOnce(host, sha256)
+        signOnce(host)
     }
 
     /**
@@ -108,10 +109,7 @@ class BlossomReadAuthTokenProvider(
      * that finishes immediately would run that removal *inside* the mapping
      * function, which `ConcurrentHashMap` forbids.
      */
-    private fun signOnce(
-        host: String,
-        sha256: HexKey,
-    ): CompletableDeferred<String?>? {
+    private fun signOnce(host: String): CompletableDeferred<String?>? {
         inFlight[host]?.let { return it }
 
         val signer = signerProvider() ?: return null
@@ -125,7 +123,9 @@ class BlossomReadAuthTokenProvider(
                     try {
                         withTimeoutOrNull(SIGN_TIMEOUT_MS) {
                             BlossomAuth.createGetAuth(
-                                hash = sha256,
+                                // No `x` tag: this token is reused for every blob
+                                // on the host. See the class kdoc.
+                                hash = null,
                                 alt = "Downloading media from $host",
                                 signer = signer,
                                 servers = listOf(host),

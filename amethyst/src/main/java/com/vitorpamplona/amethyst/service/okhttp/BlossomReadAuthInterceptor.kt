@@ -69,7 +69,7 @@ class BlossomReadAuthInterceptor(
     /** Pure cache read — must not sign, must not block. */
     private val cachedHeaderProvider: (host: String) -> String?,
     /** Fire-and-forget: starts a signature for a host we just learned is gated. */
-    private val onAuthRequired: (host: String, sha256: HexKey) -> Unit,
+    private val onAuthRequired: (host: String) -> Unit,
 ) : Interceptor {
     // Hosts observed to answer 401 to an anonymous Blossom GET. Small (a user
     // follows a handful of auth-gated servers at most) and shared across all
@@ -86,7 +86,9 @@ class BlossomReadAuthInterceptor(
             return chain.proceed(request)
         }
 
-        val sha256 = blossomHashOrNull(request.url.encodedPath) ?: return chain.proceed(request)
+        // The hash is a gate, not an input: read-auth applies only to Blossom
+        // blob URLs. The token itself is host-scoped and carries no `x` tag.
+        blossomHashOrNull(request.url.encodedPath) ?: return chain.proceed(request)
         val host = request.url.host
 
         // Known-gated host: skip the anonymous probe and sign the first attempt.
@@ -107,7 +109,7 @@ class BlossomReadAuthInterceptor(
         // Start the signature but do not wait for it: this thread holds a
         // per-host dispatcher slot. BlossomReadAuthFetcher performs the signed
         // retry for this very request from a coroutine.
-        onAuthRequired(host, sha256)
+        onAuthRequired(host)
 
         return response
     }

@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,7 +55,7 @@ class BlossomReadAuthTokenProviderTest {
     fun signsAndFormatsHeader() =
         runBlocking {
             val provider = BlossomReadAuthTokenProvider({ signer }, scope)
-            val header = provider.header(host, sha)
+            val header = provider.header(host)
             assertTrue("expected a Nostr auth header, got $header", header!!.startsWith("Nostr "))
         }
 
@@ -61,7 +63,7 @@ class BlossomReadAuthTokenProviderTest {
     fun returnsNullWhenNoSigner() =
         runBlocking {
             val provider = BlossomReadAuthTokenProvider({ null }, scope)
-            assertNull(provider.header(host, sha))
+            assertNull(provider.header(host))
         }
 
     @Test
@@ -78,7 +80,7 @@ class BlossomReadAuthTokenProviderTest {
             assertNull(provider.cachedHeader(host))
             assertEquals(0, lookups)
 
-            val minted = provider.header(host, sha)
+            val minted = provider.header(host)
             assertEquals(minted, provider.cachedHeader(host))
         }
 
@@ -92,8 +94,8 @@ class BlossomReadAuthTokenProviderTest {
                     signer
                 }, scope, clock = { 0L })
 
-            val first = provider.header(host, sha)
-            val second = provider.header(host, sha)
+            val first = provider.header(host)
+            val second = provider.header(host)
 
             assertEquals("second call must be served from cache", first, second)
             assertEquals("signer must be resolved only once for the same host", 1, lookups)
@@ -103,8 +105,8 @@ class BlossomReadAuthTokenProviderTest {
     fun differentHostSignsSeparately() =
         runBlocking {
             val provider = BlossomReadAuthTokenProvider({ signer }, scope, clock = { 0L })
-            val a = provider.header(host, sha)
-            val b = provider.header("other.example.com", sha)
+            val a = provider.header(host)
+            val b = provider.header("other.example.com")
             assertNotEquals(a, b)
         }
 
@@ -114,10 +116,10 @@ class BlossomReadAuthTokenProviderTest {
             var now = 0L
             val provider = BlossomReadAuthTokenProvider({ signer }, scope, clock = { now })
 
-            val first = provider.header(host, sha)
+            val first = provider.header(host)
             now += 56L * 60L * 1000L
             assertNull("token must be gone from the pure read once expired", provider.cachedHeader(host))
-            val second = provider.header(host, sha)
+            val second = provider.header(host)
 
             assertNotEquals("an expired token must be re-signed", first, second)
         }
@@ -127,7 +129,7 @@ class BlossomReadAuthTokenProviderTest {
         runBlocking {
             val provider = BlossomReadAuthTokenProvider({ signer }, scope)
 
-            provider.warm(host, sha)
+            provider.warm(host)
 
             // warm() returns immediately; the token lands shortly after.
             withTimeout(5_000) {
@@ -136,6 +138,35 @@ class BlossomReadAuthTokenProviderTest {
                 }
             }
             assertTrue(provider.cachedHeader(host)!!.startsWith("Nostr "))
+        }
+
+    /**
+     * End-to-end BUD-11 check on the token this path actually mints: reused
+     * across every blob on the host, so it must be `server`-scoped and carry no
+     * `x` tag ("When `x` tags are present, the token is only valid for
+     * operations on the specified blob hashes"), and be Base64url without
+     * padding.
+     */
+    @Test
+    fun mintedTokenIsAReusableBud11GetToken() =
+        runBlocking {
+            val provider = BlossomReadAuthTokenProvider({ signer }, scope)
+
+            val token =
+                provider.header(host)!!.removePrefix(BlossomAuthorizationEvent.AUTH_HEADER_SCHEME)
+            assertTrue("token must be base64url without padding, got: $token", token.none { it == '=' || it == '+' || it == '/' })
+
+            val event = BlossomAuthorizationEvent.BASE64URL.decode(token).decodeToString()
+            val parsed = JacksonMapper.fromJson(event) as BlossomAuthorizationEvent
+
+            assertEquals(BlossomAuthorizationEvent.KIND, parsed.kind)
+            assertEquals("get", parsed.tags.first { it[0] == "t" }[1])
+            assertEquals(host, parsed.tags.first { it[0] == "server" }[1])
+            assertTrue("a host-cached token must not be blob-scoped", parsed.tags.none { it[0] == "x" })
+            assertTrue(
+                "BUD-11 requires an expiration in the future",
+                parsed.tags.first { it[0] == "expiration" }[1].toLong() > parsed.createdAt,
+            )
         }
 
     /**
@@ -153,7 +184,7 @@ class BlossomReadAuthTokenProviderTest {
             val startedAt = System.nanoTime()
             val results =
                 (1..CONCURRENT_CALLERS)
-                    .map { async(Dispatchers.Default) { provider.header(host, sha) } }
+                    .map { async(Dispatchers.Default) { provider.header(host) } }
                     .awaitAll()
             val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
 
