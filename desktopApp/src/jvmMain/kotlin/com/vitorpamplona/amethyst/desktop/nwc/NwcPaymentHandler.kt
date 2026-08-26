@@ -32,9 +32,9 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import kotlinx.coroutines.launch
@@ -181,8 +181,11 @@ class NwcPaymentHandler(
                 PaymentResult.Success(response.result?.preimage)
             }
 
-            is PayInvoiceErrorResponse -> {
-                PaymentResult.Error(response.error?.message ?: "Unknown error")
+            // IErrorResponseLike, not PayInvoiceErrorResponse: a wallet that omits
+            // `result_type` on an error deserializes to the generic shape, and the
+            // narrower check reported "unexpected response type" instead of the reason.
+            is IErrorResponseLike -> {
+                PaymentResult.Error(response.errorMessage() ?: "Unknown error")
             }
 
             else -> {

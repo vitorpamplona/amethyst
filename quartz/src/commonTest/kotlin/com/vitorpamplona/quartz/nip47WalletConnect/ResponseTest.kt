@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionSuccessRe
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceSuccessResponse
@@ -442,6 +443,57 @@ class ResponseTest {
         val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
         assertIs<PayInvoiceErrorResponse>(response)
         assertEquals(NwcErrorCode.EXPIRED, response.error?.code)
+    }
+
+    // --- Every refusal must be renderable (IErrorResponseLike) ---
+    //
+    // Field report, BrollyZapper 2026-08-25: a QUOTA_EXCEEDED on pay_invoice and a
+    // RESTRICTED on list_transactions both reached the phone and showed nothing.
+    // These pin the two payloads to a branch the UI can render.
+
+    @Test
+    fun testQuotaExceededPayInvoiceIsRenderable() {
+        val json =
+            """{"result_type":"pay_invoice","error":{"code":"QUOTA_EXCEEDED",""" +
+                """"message":"this payment would exceed the connection's budget for this period"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<PayInvoiceErrorResponse>(response)
+        assertIs<IErrorResponseLike>(response)
+        assertEquals(NwcErrorCode.QUOTA_EXCEEDED, response.error?.code)
+        assertEquals(
+            "this payment would exceed the connection's budget for this period",
+            (response as IErrorResponseLike).errorMessage(),
+        )
+    }
+
+    @Test
+    fun testRestrictedListTransactionsIsRenderable() {
+        val json = """{"result_type":"list_transactions","error":{"code":"RESTRICTED","message":"sending is disabled on this node"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        // Not a pay_invoice, so the deserializer yields the generic shape. It must
+        // still be renderable, or the transactions screen shows "no transactions yet".
+        assertIs<NwcErrorResponse>(response)
+        assertIs<IErrorResponseLike>(response)
+        assertEquals("sending is disabled on this node", (response as IErrorResponseLike).errorMessage())
+    }
+
+    @Test
+    fun testErrorWithoutResultTypeIsRenderable() {
+        // NIP-47 does not require a wallet to echo result_type on an error.
+        val json = """{"error":{"code":"RESTRICTED","message":"sending is disabled on this node"}}"""
+        val response = OptimizedJsonMapper.fromJsonTo<Response>(json)
+        assertIs<NwcErrorResponse>(response)
+        assertEquals("sending is disabled on this node", (response as IErrorResponseLike).errorMessage())
+    }
+
+    @Test
+    fun testErrorMessageFallsBackToCodeNameWhenMessageMissing() {
+        // `message` is optional in NIP-47; `code` alone must still produce text.
+        val payInvoice = OptimizedJsonMapper.fromJsonTo<Response>("""{"result_type":"pay_invoice","error":{"code":"QUOTA_EXCEEDED"}}""")
+        assertEquals("QUOTA_EXCEEDED", (payInvoice as IErrorResponseLike).errorMessage())
+
+        val generic = OptimizedJsonMapper.fromJsonTo<Response>("""{"result_type":"list_transactions","error":{"code":"RESTRICTED"}}""")
+        assertEquals("RESTRICTED", (generic as IErrorResponseLike).errorMessage())
     }
 
     // --- Null/missing result ---

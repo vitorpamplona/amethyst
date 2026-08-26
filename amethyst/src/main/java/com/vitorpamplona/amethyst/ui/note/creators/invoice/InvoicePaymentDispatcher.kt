@@ -31,11 +31,11 @@ import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
+import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 
 /**
  * Pays a single BOLT-11 from an in-post card (offer card, invoice card) through the
@@ -85,18 +85,15 @@ fun InvoicePaymentDispatcher(
         onConfirm = {
             when (source) {
                 is PaymentSource.Nwc ->
-                    accountViewModel.sendZapPaymentRequestFor(bolt11, null) { response ->
-                        when (response) {
-                            is PayInvoiceSuccessResponse -> onSuccess()
-                            is PayInvoiceErrorResponse ->
-                                onError(
-                                    response.error?.message
-                                        ?: response.error?.code?.toString()
-                                        ?: stringRes(context, R.string.error_parsing_error_message),
-                                )
-                            else -> {}
-                        }
-                    }
+                    accountViewModel.sendZapPaymentRequestFor(
+                        bolt11 = bolt11,
+                        zappedNote = null,
+                        onTimeout = { onError(nwcTimeoutMessage(context)) },
+                        onResponse = { response ->
+                            val failure = response.nwcFailureDetail(context)
+                            if (failure == null) onSuccess() else onError(failure)
+                        },
+                    )
 
                 is PaymentSource.ClinkDebit ->
                     accountViewModel.payInvoiceViaClinkDebit(source.wallet.pointer, bolt11) { response ->
