@@ -1269,7 +1269,7 @@
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="other">%1$d개의 relay에 연결됨</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
@@ -2864,9 +2864,6 @@
     <string name="relay_members_removed">Relay에서 %1$d명의 멤버가 제거되었습니다</string>
     <string name="relay_join_request">Relay 가입 요청</string>
     <string name="relay_leave_request">Relay 탈퇴 요청</string>
-    <string name="ai_writing_help">AI 작성 도우미</string>
-    <string name="ai_writing_setting_title">텍스트 개선 제안</string>
-    <string name="ai_writing_setting_description">기기 내 AI 모델을 사용하여 텍스트 수정 및 톤 변경을 제안합니다.</string>
     <string name="tracked_broadcasts_setting_title">추적된 방송</string>
     <string name="tracked_broadcasts_setting_description">이벤트를 전송할 때 추적 브로드캐스터를 사용합니다. 방송하는 동안 실시간 진행 상황 및 relay별 상태를 표시합니다.</string>
     <string name="suggest_workouts_setting_title">운동 공유 제안</string>
@@ -2874,16 +2871,6 @@
     <string name="compose_settings">작성 설정</string>
     <string name="auto_create_drafts_setting_title">자동으로 임시 저장</string>
     <string name="auto_create_drafts_setting_description">텍스트를 입력하거나 전송하지 않은 텍스트가 있는 작성 화면을 떠날 때 자동으로 임시 저장 이벤트를 저장하고 개인 outbox relay로 전송합니다.</string>
-    <string name="ai_writing_use_this">이것 사용</string>
-    <string name="ai_writing_dismiss">닫기</string>
-    <string name="ai_tone_correct">교정</string>
-    <string name="ai_tone_rephrase">다시 표현</string>
-    <string name="ai_tone_shorter">더 짧게</string>
-    <string name="ai_tone_elaborate">자세히</string>
-    <string name="ai_tone_friendly">친근하게</string>
-    <string name="ai_tone_professional">전문적으로</string>
-    <string name="ai_tone_more_direct">더 직접적으로</string>
-    <string name="ai_tone_punchy">임팩트 있게</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji 팩</string>
     <string name="emoji_pack_management_title">Emoji 목록에 추가</string>

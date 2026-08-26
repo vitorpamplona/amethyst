@@ -4093,11 +4093,8 @@
     
     <string name="relay_leave_request">Relay 退出リクエスト</string>
     
-    <string name="ai_writing_help">AI ライティングサポート</string>
     
-    <string name="ai_writing_setting_title">テキストの改善を提案</string>
 
-    <string name="ai_writing_setting_description">デバイス上のAIモデルを使用して、テキストの修正やトーンの変更を提案します。</string>
     
     <string name="tracked_broadcasts_setting_title">追跡ブロードキャスト</string>
     
@@ -4113,27 +4110,16 @@
     
     <string name="auto_create_drafts_setting_description">入力中または未送信のテキストがある状態でコンポーザーを離れると、下書きイベントを自動的に保存し、プライベートのアウトボックスrelayに送信します。</string>
     
-    <string name="ai_writing_use_this">これを使用する</string>
     
-    <string name="ai_writing_dismiss">閉じる</string>
     
-    <string name="ai_tone_correct">修正する</string>
     
-    <string name="ai_tone_rephrase">言い換える</string>
     
-    <string name="ai_tone_shorter">短くする</string>
     
-    <string name="ai_tone_elaborate">詳しく書く</string>
     
-    <string name="ai_tone_friendly">フレンドリーに</string>
     
-    <string name="ai_tone_professional">プロフェッショナルに</string>
     
-    <string name="ai_tone_more_direct">より直接的に</string>
     
-    <string name="ai_tone_punchy">パンチを効かせる</string>
     
-    <string name="ai_tone_emojify">+ 絵文字</string>
     
     <string name="emoji_packs_title">絵文字パック</string>
     

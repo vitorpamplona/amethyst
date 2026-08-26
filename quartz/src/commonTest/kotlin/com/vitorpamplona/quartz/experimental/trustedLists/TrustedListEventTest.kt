@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.experimental.trustedLists.tags.ListStatus
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -395,6 +396,59 @@ class TrustedListEventTest {
         assertEquals(event.members().size, event.memberCount())
         assertEquals(event.members().map { it.memberValue }, event.memberValues())
         assertEquals(1, event.memberCount(), "only the well-formed p tag is a member")
+    }
+
+    private fun listWithTitle(
+        kind: Int,
+        title: String?,
+    ): Event =
+        EventFactory.create<Event>(
+            id = "00".repeat(32),
+            pubKey = "a68dbf561cfe3da1b76f1e65c7d4d9cc116f79921b38a815fd75cb5460b4b599",
+            createdAt = 1_787_253_028L,
+            kind = kind,
+            tags =
+                listOfNotNull(
+                    arrayOf("d", "tl"),
+                    arrayOf("metric", "pinned-tag-membership"),
+                    title?.let { arrayOf("title", it) },
+                ).toTypedArray(),
+            content = "",
+            sig = dummySig,
+        )
+
+    @Test
+    fun everyKindInTheFamilyIsSearchable() {
+        listOf(
+            UserTrustedListEvent.KIND,
+            EventTrustedListEvent.KIND,
+            AddressableTrustedListEvent.KIND,
+            ExternalIdTrustedListEvent.KIND,
+        ).forEach { kind ->
+            val event = listWithTitle(kind, "Podcaster")
+            assertIs<SearchableEvent>(event, "kind $kind should be searchable")
+            assertEquals("Podcaster", event.indexableContent(), "kind $kind should index its title")
+        }
+    }
+
+    @Test
+    fun indexesTheTitleAndNothingElse() {
+        val event = podcasterList()
+        assertIs<SearchableEvent>(event)
+
+        // not the metric, not the list id, not the membership, and not the
+        // JSON echo in content -- none of those are human-authored prose
+        assertEquals("Podcaster", event.indexableContent())
+    }
+
+    @Test
+    fun aTitlelessListIndexesEmptyRatherThanThrowing() {
+        // indexableContent() runs inside the store's insert transaction, where
+        // a throw would abort the write
+        val event = listWithTitle(UserTrustedListEvent.KIND, null)
+        assertIs<SearchableEvent>(event)
+
+        assertEquals("", event.indexableContent())
     }
 
     @Test

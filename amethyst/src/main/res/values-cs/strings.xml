@@ -2130,7 +2130,7 @@
         <item quantity="many">Připojeno k %1$d relay</item>
         <item quantity="other">Připojeno k %1$d relays</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d relay</item>
@@ -4712,9 +4712,6 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
-    <string name="ai_writing_help">Asistent psaní s AI</string>
-    <string name="ai_writing_setting_title">Navrhovat vylepšení textu</string>
-    <string name="ai_writing_setting_description">Používá AI model běžící v zařízení k navrhování oprav textu a změn tónu.</string>
     <string name="tracked_broadcasts_setting_title">Sledovaná vysílání</string>
     <string name="tracked_broadcasts_setting_description">Použít sledovaného vysílače při odesílání událostí. Zobrazuje živý průběh a stav jednotlivých relayů během vysílání.</string>
     <string name="suggest_workouts_setting_title">Navrhovat tréninky ke sdílení</string>
@@ -4827,17 +4824,6 @@
     <string name="pow_publish_failed_retry">Váš %1$s dokončil těžbu, ale nepodařilo se jej publikovat. Bude to zkuseno znovu při příštím spuštění aplikace.</string>
     <string name="pow_kind_chat_message">Chatová zpráva</string>
     <string name="pow_kind_report">Nahlášení</string>
-    <string name="ai_writing_use_this">Použít toto</string>
-    <string name="ai_writing_dismiss">Zavřít</string>
-    <string name="ai_tone_correct">Opravit</string>
-    <string name="ai_tone_rephrase">Přeformulovat</string>
-    <string name="ai_tone_shorter">Kratší</string>
-    <string name="ai_tone_elaborate">Rozvést</string>
-    <string name="ai_tone_friendly">Přátelský</string>
-    <string name="ai_tone_professional">Profesionální</string>
-    <string name="ai_tone_more_direct">Přímější</string>
-    <string name="ai_tone_punchy">Úderný</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji balíčky</string>
     <string name="emoji_pack_management_title">Přidat do seznamu emoji</string>

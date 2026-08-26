@@ -39,7 +39,6 @@ class UiSettingsFlow(
     val dontAskForNotificationPermissions: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val featureSet: MutableStateFlow<FeatureSetType> = MutableStateFlow(FeatureSetType.SIMPLIFIED),
     val gallerySet: MutableStateFlow<ProfileGalleryType> = MutableStateFlow(ProfileGalleryType.CLASSIC),
-    val automaticallyProposeAiImprovements: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val useTrackedBroadcasts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val automaticallyCreateDrafts: MutableStateFlow<BooleanType> = MutableStateFlow(BooleanType.ALWAYS),
     val showHomeNewThreadsTab: MutableStateFlow<Boolean> = MutableStateFlow(true),
@@ -71,7 +70,6 @@ class UiSettingsFlow(
             dontAskForNotificationPermissions,
             featureSet,
             gallerySet,
-            automaticallyProposeAiImprovements,
             useTrackedBroadcasts,
             automaticallyCreateDrafts,
             showHomeNewThreadsTab,
@@ -109,7 +107,7 @@ class UiSettingsFlow(
                 flows[11] as ProfileGalleryType,
                 flows[12] as BooleanType,
                 flows[13] as BooleanType,
-                flows[14] as BooleanType,
+                flows[14] as Boolean,
                 flows[15] as Boolean,
                 flows[16] as Boolean,
                 flows[17] as Boolean,
@@ -117,13 +115,12 @@ class UiSettingsFlow(
                 flows[19] as Boolean,
                 flows[20] as Boolean,
                 flows[21] as Boolean,
-                flows[22] as Boolean,
-                flows[23] as BooleanType,
-                flows[24] as AccentColorType,
-                flows[25] as FontFamilyType,
-                flows[26] as FontSizeType,
-                flows[27] as String,
-                flows[28] as Boolean,
+                flows[22] as BooleanType,
+                flows[23] as AccentColorType,
+                flows[24] as FontFamilyType,
+                flows[25] as FontSizeType,
+                flows[26] as String,
+                flows[27] as Boolean,
             )
         }
 
@@ -141,7 +138,6 @@ class UiSettingsFlow(
             dontAskForNotificationPermissions.value,
             featureSet.value,
             gallerySet.value,
-            automaticallyProposeAiImprovements.value,
             useTrackedBroadcasts.value,
             automaticallyCreateDrafts.value,
             showHomeNewThreadsTab.value,
@@ -209,10 +205,6 @@ class UiSettingsFlow(
         }
         if (gallerySet.value != torSettings.gallerySet) {
             gallerySet.tryEmit(torSettings.gallerySet)
-            any = true
-        }
-        if (automaticallyProposeAiImprovements.value != torSettings.automaticallyProposeAiImprovements) {
-            automaticallyProposeAiImprovements.tryEmit(torSettings.automaticallyProposeAiImprovements)
             any = true
         }
         if (useTrackedBroadcasts.value != torSettings.useTrackedBroadcasts) {
@@ -316,7 +308,6 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.dontAskForNotificationPermissions),
                 MutableStateFlow(uiSettings.featureSet),
                 MutableStateFlow(uiSettings.gallerySet),
-                MutableStateFlow(uiSettings.automaticallyProposeAiImprovements),
                 MutableStateFlow(uiSettings.useTrackedBroadcasts),
                 MutableStateFlow(uiSettings.automaticallyCreateDrafts),
                 MutableStateFlow(uiSettings.showHomeNewThreadsTab),
