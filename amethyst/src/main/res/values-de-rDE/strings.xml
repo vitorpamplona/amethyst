@@ -4868,6 +4868,4 @@
     <string name="buzz_persona_avatar">Avatar-URL (optional)</string>
     <string name="buzz_persona_publishing">Wird veröffentlicht…</string>
     <string name="buzz_persona_publish">Persona veröffentlichen</string>
-    <string name="always_on_notif_show_details">Details anzeigen</string>
-    <string name="always_on_notif_hide_details">Details ausblenden</string>
 </resources>
