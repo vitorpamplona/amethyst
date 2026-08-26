@@ -162,6 +162,17 @@ object NappletFileChooser {
      * shape — where the result carries no URI at all and the evidence of a capture is a scratch file
      * that now has bytes in it. Every capture file this request created and did not return is deleted
      * here, so a cancelled or unused camera option leaves nothing behind.
+     *
+     * The URIs are read off the Intent here rather than through
+     * [FileChooserParams.parseResult][android.webkit.WebChromeClient.FileChooserParams.parseResult],
+     * which is a WebView *static*: calling it boots Chromium in whatever process calls it. This runs
+     * in the main process too — [com.vitorpamplona.amethyst.napplet.WebFileChooserActivity] is the
+     * chooser host for the embedded surfaces and declares no `android:process` — while `:napplet`
+     * already holds the WebView data directory. That second init throws
+     * `Using WebView from more than one process at once with the same data directory is not
+     * supported` out of `AwDataDirLock` and takes the whole app down on every completed embedded
+     * pick. The platform implementation reads exactly these two fields, so this is behaviour-for-
+     * behaviour identical without dragging WebView into a process that must not have it.
      */
     fun parseResult(
         context: Context,
@@ -169,7 +180,17 @@ object NappletFileChooser {
         resultCode: Int,
         data: Intent?,
     ): Array<Uri>? {
-        val picked = FileChooserParams.parseResult(resultCode, data)?.takeIf { it.isNotEmpty() }
+        val picked =
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                val clip = data.clipData
+                if (clip != null && clip.itemCount > 0) {
+                    Array(clip.itemCount) { clip.getItemAt(it).uri }
+                } else {
+                    data.data?.let { arrayOf(it) }
+                }
+            } else {
+                null
+            }?.takeIf { it.isNotEmpty() }
 
         // A camera returns no URI at all — it reports success by filling the file we handed it, so an
         // empty one means it was dismissed. Only consulted when the picker returned nothing of its own.
