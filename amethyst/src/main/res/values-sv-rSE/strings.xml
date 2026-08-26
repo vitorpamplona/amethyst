@@ -4866,4 +4866,6 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
+    <string name="always_on_notif_show_details">Visa detaljer</string>
+    <string name="always_on_notif_hide_details">Dölj detaljer</string>
 </resources>

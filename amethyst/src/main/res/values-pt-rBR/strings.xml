@@ -4866,4 +4866,6 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
+    <string name="always_on_notif_show_details">Mostrar detalhes</string>
+    <string name="always_on_notif_hide_details">Ocultar detalhes</string>
 </resources>
