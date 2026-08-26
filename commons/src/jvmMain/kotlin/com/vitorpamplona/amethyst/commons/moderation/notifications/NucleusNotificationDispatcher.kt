@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.coroutines.resume
 
@@ -53,6 +54,15 @@ class NucleusNotificationDispatcher(
 ) : NotificationDispatcher {
     private val host: HostOs = detectHostOs()
 
+    private companion object {
+        const val PERMISSION_REQUEST_TIMEOUT_MS = 90_000L
+        const val SEND_ACK_TIMEOUT_MS = 10_000L
+        const val TIMEOUT_ERROR_MESSAGE =
+            "macOS never answered the permission request. The permission banner may have " +
+                "auto-dismissed — click again and watch the top-right of the screen for the " +
+                "Amethyst banner, then click Allow."
+    }
+
     // Nucleus module availability probed once at construction. Native lib load
     // is triggered by the first class access — wrap in Throwable catch so a
     // missing JAR or unsatisfied link doesn't crash the app.
@@ -61,6 +71,22 @@ class NucleusNotificationDispatcher(
 
     private val _permission = MutableStateFlow<PermissionState>(initialPermissionState())
     override val permission: StateFlow<PermissionState> = _permission.asStateFlow()
+
+    /**
+     * Human-readable error from the most recent [requestPermission] call, or
+     * null if the last request succeeded / none has run yet. macOS can refuse
+     * the authorization request outright (e.g. UNErrorDomain
+     * "Notifications are not allowed for this application" when the system
+     * blocks the app before any prompt), which is NOT the same as the user
+     * clicking "Don't Allow" — the recovery for each is different, and the
+     * settings UI needs the raw OS message to show actionable guidance.
+     * A timeout marker is also written here when the OS never invokes the
+     * completion handler (the permission banner can be auto-dismissed on
+     * recent macOS versions without firing the callback, which previously
+     * left the request coroutine suspended forever).
+     */
+    private val _lastRequestError = MutableStateFlow<String?>(null)
+    override val lastRequestError: StateFlow<String?> = _lastRequestError.asStateFlow()
 
     @Volatile
     private var winInitialized: Boolean = false
@@ -98,25 +124,42 @@ class NucleusNotificationDispatcher(
             _permission.value = PermissionState.BundleRequired
             return _permission.value
         }
-        val granted =
+        val outcome =
             withContext(Dispatchers.IO) {
-                suspendCancellableCoroutine<Boolean> { cont ->
-                    try {
-                        io.github.kdroidfilter.nucleus.notification.NotificationCenter
-                            .requestAuthorization(
-                                options =
-                                    setOf(
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationOption.ALERT,
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationOption.SOUND,
-                                        io.github.kdroidfilter.nucleus.notification.AuthorizationOption.BADGE,
-                                    ),
-                                callback = { granted, _ -> cont.resume(granted) },
-                            )
-                    } catch (t: Throwable) {
-                        cont.resume(false)
+                // Hard timeout: recent macOS versions present the permission
+                // request as an auto-dismissing banner; if the user misses it
+                // the completion handler may never fire, which would
+                // otherwise leave this coroutine (and the settings UI's
+                // "Requesting…" spinner) suspended forever.
+                withTimeoutOrNull(PERMISSION_REQUEST_TIMEOUT_MS) {
+                    suspendCancellableCoroutine<Pair<Boolean, String?>> { cont ->
+                        try {
+                            io.github.kdroidfilter.nucleus.notification.NotificationCenter
+                                .requestAuthorization(
+                                    options =
+                                        setOf(
+                                            io.github.kdroidfilter.nucleus.notification.AuthorizationOption.ALERT,
+                                            io.github.kdroidfilter.nucleus.notification.AuthorizationOption.SOUND,
+                                            io.github.kdroidfilter.nucleus.notification.AuthorizationOption.BADGE,
+                                        ),
+                                    callback = { granted, error -> cont.resume(granted to error) },
+                                )
+                        } catch (t: Throwable) {
+                            cont.resume(false to (t.message ?: t::class.simpleName))
+                        }
                     }
                 }
             }
+        if (outcome == null) {
+            _lastRequestError.value = TIMEOUT_ERROR_MESSAGE
+            // Leave _permission at its current value: the OS never answered,
+            // so we genuinely don't know the state. A follow-up
+            // refreshPermission() (window focus / settings re-entry) will
+            // reconcile it if the user did grant via the banner.
+            return _permission.value
+        }
+        val (granted, osError) = outcome
+        _lastRequestError.value = if (granted) null else osError
         _permission.value =
             if (granted) PermissionState.Granted else PermissionState.Denied
         return _permission.value
@@ -202,7 +245,7 @@ class NucleusNotificationDispatcher(
         }
     }
 
-    private fun sendMac(spec: NotificationSpec): SendResult {
+    private suspend fun sendMac(spec: NotificationSpec): SendResult {
         val content =
             io.github.kdroidfilter.nucleus.notification.NotificationContent(
                 title = spec.title,
@@ -220,9 +263,30 @@ class NucleusNotificationDispatcher(
                 identifier = UUID.randomUUID().toString(),
                 content = content,
             )
-        io.github.kdroidfilter.nucleus.notification.NotificationCenter
-            .add(request)
-        return SendResult.Delivered
+        // Nucleus delivers add() asynchronously; the optional callback carries
+        // the OS error string (null on success). Without it, a rejected
+        // notification (e.g. unauthorized at send time) is silently swallowed
+        // and the caller logs a phantom "Delivered". The Result wrapper
+        // disambiguates "callback fired with null error" from "callback never
+        // fired" (timeout — treat as delivered, since UNUserNotificationCenter
+        // still posts the request in that case on some macOS versions).
+        val addOutcome =
+            withTimeoutOrNull(SEND_ACK_TIMEOUT_MS) {
+                suspendCancellableCoroutine<Result<String?>> { cont ->
+                    try {
+                        io.github.kdroidfilter.nucleus.notification.NotificationCenter
+                            .add(request) { error -> cont.resume(Result.success(error)) }
+                    } catch (t: Throwable) {
+                        cont.resume(Result.success(t.message ?: t::class.simpleName))
+                    }
+                }
+            }
+        val addError = addOutcome?.getOrNull()
+        return when {
+            addOutcome == null -> SendResult.Delivered // no ack from OS; request was queued
+            addError.isNullOrBlank() -> SendResult.Delivered
+            else -> SendResult.Failed(IllegalStateException("UNUserNotificationCenter.add failed: $addError"))
+        }
     }
 
     // ---------- Windows ----------

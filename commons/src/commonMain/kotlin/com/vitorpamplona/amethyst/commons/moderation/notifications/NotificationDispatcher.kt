@@ -40,6 +40,18 @@ interface NotificationDispatcher {
     val nativeAvailable: StateFlow<Boolean>
 
     /**
+     * Human-readable error from the most recent [requestPermission] call,
+     * or null if the last request succeeded / none has run yet. macOS can
+     * refuse an authorization request outright (UNErrorDomain "Notifications
+     * are not allowed for this application") without ever showing a prompt —
+     * a different failure from the user clicking "Don't Allow", with a
+     * different recovery. The settings UI surfaces this so the user gets
+     * the real OS message instead of a generic "denied".
+     */
+    val lastRequestError: StateFlow<String?>
+        get() = kotlinx.coroutines.flow.MutableStateFlow(null)
+
+    /**
      * Trigger the OS-level permission prompt (macOS only — no-op elsewhere).
      * Suspends until the user answers. Updates [permission] as a side effect.
      */
