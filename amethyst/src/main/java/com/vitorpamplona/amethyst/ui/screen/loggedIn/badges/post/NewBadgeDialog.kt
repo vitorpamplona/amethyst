@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -73,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -148,7 +148,7 @@ fun NewBadgeDialog(
                     Modifier
                         .padding(pad)
                         .consumeWindowInsets(pad)
-                        .imePadding(),
+                        .imePaddingSafe(),
             ) {
                 Column(
                     Modifier

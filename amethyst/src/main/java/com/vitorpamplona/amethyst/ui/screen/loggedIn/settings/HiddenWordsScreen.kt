@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.union
@@ -64,6 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.ShowUserButton
 import com.vitorpamplona.amethyst.ui.note.elements.AddButton
@@ -110,7 +110,10 @@ fun HiddenWordsScreen(
         bottomBar = {
             Surface(
                 tonalElevation = 3.dp,
-                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
+                // Reached through a union rather than imePaddingSafe(), which is why a grep for
+                // imePadding() misses it: a stranded inset here keeps this bar floating a
+                // keyboard's height above the nav bar. See SafeImeInsets.
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars.union(rememberSafeImeInsets())),
             ) {
                 AddMuteWordTextField(accountViewModel)
             }
