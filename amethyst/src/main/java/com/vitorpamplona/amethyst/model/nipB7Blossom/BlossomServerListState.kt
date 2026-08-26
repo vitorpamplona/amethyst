@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.originlessServer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
@@ -36,6 +37,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -80,23 +82,28 @@ class BlossomServerListState(
                 emptyList(),
             )
 
-    fun mergeServerList(blossom: List<String>?): List<ServerName> = blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS } ?: DEFAULT_MEDIA_SERVERS
+    fun mergeServerList(
+        blossom: List<String>?,
+        originlessUrl: String = settings.originlessServerUrl.value,
+    ): List<ServerName> {
+        val blossomServers = blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS } ?: DEFAULT_MEDIA_SERVERS
+        return listOf(originlessServer(originlessUrl)) + blossomServers
+    }
 
     val hostNameFlow: StateFlow<List<ServerName>> =
-        flow
-            .map { blossoms ->
-                mergeServerList(blossoms)
-            }.onStart {
-                emit(mergeServerList(flow.value))
-            }.onEach { servers ->
-                resetTargetOrNull(flow.value, servers, settings.defaultFileServer)?.let {
-                    settings.changeDefaultFileServer(it)
-                }
-            }.flowOn(Dispatchers.IO)
+        combine(flow, settings.originlessServerUrl) { blossoms, originlessUrl ->
+            mergeServerList(blossoms, originlessUrl)
+        }.onStart {
+            emit(mergeServerList(flow.value, settings.originlessServerUrl.value))
+        }.onEach { servers ->
+            resetTargetOrNull(flow.value, servers, settings.defaultFileServer)?.let {
+                settings.changeDefaultFileServer(it)
+            }
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                DEFAULT_MEDIA_SERVERS,
+                mergeServerList(emptyList(), settings.originlessServerUrl.value),
             )
 
     suspend fun saveBlossomServersList(servers: List<String>): BlossomServersEvent {
@@ -158,8 +165,10 @@ fun resetTargetOrNull(
     merged: List<ServerName>,
     current: ServerName,
 ): ServerName? =
-    if (rawList.isNotEmpty() && merged.none { it == current }) {
-        merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
+    if (current.type == ServerType.Originless) {
+        null
+    } else if (rawList.isNotEmpty() && merged.none { it == current }) {
+        merged.firstOrNull { it.type != ServerType.Originless } ?: merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
     } else {
         null
     }

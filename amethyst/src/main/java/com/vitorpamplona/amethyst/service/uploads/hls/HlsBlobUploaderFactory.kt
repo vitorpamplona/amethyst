@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.service.uploads.originless.OriginlessUploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import okhttp3.OkHttpClient
@@ -67,6 +68,10 @@ object HlsBlobUploaderFactory {
 
             ServerType.NIP96 -> {
                 nip96Adapter(server.baseUrl, account, context)
+            }
+
+            ServerType.Originless -> {
+                originlessAdapter(server.baseUrl, context)
             }
 
             ServerType.NIP95 -> {
@@ -121,6 +126,31 @@ object HlsBlobUploaderFactory {
                     onProgress(written, totalBytes)
                 },
                 httpAuth = account::createHTTPAuthorization,
+                context = context,
+            )
+        }
+
+    private fun originlessAdapter(
+        serverBaseUrl: String,
+        context: Context,
+    ): HlsBlobUploader =
+        HlsBlobUploader { file, contentType, onProgress ->
+            val totalBytes = file.length()
+            OriginlessUploader().upload(
+                uri = file.toUri(),
+                contentType = contentType,
+                size = totalBytes,
+                alt = null,
+                sensitiveContent = null,
+                serverBaseUrl = serverBaseUrl,
+                okHttpClient = ::okHttpClientForHlsUploads,
+                onProgress = { percentage ->
+                    val written =
+                        (percentage * totalBytes)
+                            .toLong()
+                            .coerceIn(0L, totalBytes)
+                    onProgress(written, totalBytes)
+                },
                 context = context,
             )
         }

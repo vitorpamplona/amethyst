@@ -276,11 +276,11 @@ class MediaUrlContentExtTest {
         val ipfsUrl = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png"
         val image = MediaUrlImage(url = ipfsUrl)
         assertEquals(
-            "https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png",
+            "https://originless.gupt.app/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png",
             image.toCoilModel(useLocalBlossomBridge = false),
         )
         assertEquals(
-            "https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png",
+            "https://originless.gupt.app/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png",
             image.toCoilModel(useLocalBlossomBridge = true),
         )
     }
@@ -289,11 +289,11 @@ class MediaUrlContentExtTest {
     fun bridgeProfilePictureUrlResolvesIpfsUri() {
         val ipfsUrl = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg"
         assertEquals(
-            "https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg",
+            "https://originless.gupt.app/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg",
             bridgeProfilePictureUrl(ipfsUrl, useBridge = false),
         )
         assertEquals(
-            "https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg",
+            "https://originless.gupt.app/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg",
             bridgeProfilePictureUrl(ipfsUrl, useBridge = true),
         )
     }

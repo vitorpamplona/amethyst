@@ -48,15 +48,13 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.service.uploads.DefaultFileServerUploader
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.MediaUploadTracker
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
@@ -476,32 +474,13 @@ class LongFormPostViewModel :
 
         return try {
             val result =
-                if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                    Nip96Uploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        onProgress = {},
-                        httpAuth = account::createHTTPAuthorization,
-                        context = context,
-                    )
-                } else {
-                    BlossomUploader().upload(
-                        uri = compResult.uri,
-                        contentType = compResult.contentType,
-                        size = compResult.size,
-                        alt = null,
-                        sensitiveContent = null,
-                        serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                        okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        httpAuth = account::createBlossomUploadAuth,
-                        context = context,
-                    )
-                }
+                DefaultFileServerUploader.upload(
+                    account = account,
+                    uri = compResult.uri,
+                    contentType = compResult.contentType,
+                    size = compResult.size,
+                    context = context,
+                )
 
             if (result.url == null) {
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), stringRes(context, R.string.server_did_not_provide_a_url_after_uploading))

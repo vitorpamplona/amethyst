@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.HomeFeedType
@@ -112,6 +113,7 @@ private object PrefKeys {
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
+    const val ORIGINLESS_SERVER_URL = "originlessServerUrl"
     const val STRIP_LOCATION_ON_UPLOAD = "stripLocationOnUpload"
     const val USE_LOCAL_BLOSSOM_CACHE = "useLocalBlossomCache"
     const val LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY = "localBlossomCacheProfilePicturesOnly"
@@ -510,6 +512,7 @@ object LocalPreferences {
                         PrefKeys.DEFAULT_FILE_SERVER,
                         JsonMapper.toJson(settings.defaultFileServer),
                     )
+                    putString(PrefKeys.ORIGINLESS_SERVER_URL, settings.originlessServerUrl.value)
 
                     putBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, settings.stripLocationOnUpload)
                     putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
@@ -803,6 +806,7 @@ object LocalPreferences {
                     val clinkDebitWalletsStr = getString(PrefKeys.CLINK_DEBIT_WALLETS, null)
                     val defaultPaymentSourceIdStr = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null)
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
+                    val originlessServerUrlStr = getString(PrefKeys.ORIGINLESS_SERVER_URL, null)
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
                     val latestUserMetadataStr = getString(PrefKeys.LATEST_USER_METADATA, null)
@@ -866,6 +870,8 @@ object LocalPreferences {
                             parseOrNull<List<ClinkDebitWalletEntry>>(clinkDebitWalletsStr)?.mapNotNull { it.normalize() } ?: emptyList()
                         }
                     val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
+                    val originlessServerUrl =
+                        OriginlessUrls.normalizeBase(originlessServerUrlStr?.ifBlank { null } ?: OriginlessUrls.DEFAULT_SERVER)
 
                     val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
                     val pendingAttestations = async { parseOrNull<Map<HexKey, String>>(pendingAttestationsStr) ?: mapOf() }
@@ -960,6 +966,7 @@ object LocalPreferences {
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServerResolved,
+                        originlessServerUrl = MutableStateFlow(originlessServerUrl),
                         stripLocationOnUpload = stripLocationOnUpload,
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),

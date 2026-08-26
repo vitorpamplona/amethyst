@@ -20,66 +20,65 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-object IpfsGatewayResolver {
-    const val PRIMARY_GATEWAY = "https://dweb.link/ipfs/"
-    const val SECONDARY_GATEWAY = "https://ipfs.io/ipfs/"
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
+import kotlin.concurrent.Volatile
 
-    val DEFAULT_GATEWAYS =
-        listOf(
-            PRIMARY_GATEWAY,
-            SECONDARY_GATEWAY,
-        )
+object IpfsGatewayResolver {
+    /**
+     * Originless node used as the HTTP gateway for `ipfs://` fetches.
+     * Written from account settings; Coil/PdfFetcher read it here so they
+     * don't need to thread the URL through every media call site.
+     */
+    @Volatile
+    var currentServerBase: String = OriginlessUrls.DEFAULT_SERVER
+
+    fun primaryGateway(): String = OriginlessUrls.gatewayPrefix(currentServerBase)
 
     fun isIpfsUri(url: String): Boolean =
         url.startsWith("ipfs://", ignoreCase = true) ||
             url.startsWith("ipfs:", ignoreCase = true)
 
     /**
-     * Resolves an `ipfs://...` or `ipfs:...` URI into an HTTP gateway URL.
-     * Default gateway is https://dweb.link/ipfs/
+     * Resolves an `ipfs://...` or `ipfs:...` URI into an HTTP gateway URL
+     * on the configured Originless node (`{base}/ipfs/{cid}`).
      */
     fun toHttpUrl(
         ipfsUri: String,
-        gateway: String = PRIMARY_GATEWAY,
+        gateway: String = primaryGateway(),
     ): String {
         if (!isIpfsUri(ipfsUri)) return ipfsUri
 
-        val cleanPath =
-            ipfsUri
-                .removePrefix("ipfs://")
-                .removePrefix("IPFS://")
-                .removePrefix("ipfs:")
-                .removePrefix("IPFS:")
-                .removePrefix("/")
-
+        val cleanPath = cidPath(ipfsUri)
         val base = if (gateway.endsWith("/")) gateway else "$gateway/"
         return "$base$cleanPath"
     }
 
     /**
-     * Returns candidate HTTP URLs for failover fetching (primary -> secondary).
+     * Returns candidate HTTP URLs for failover fetching. Originless `/ipfs`
+     * only serves pins on that node, so the configured node is the source of
+     * truth; [customGateway] is tried first when the caller already has one.
      */
     fun getAllCandidateUrls(
         ipfsUri: String,
         customGateway: String? = null,
     ): List<String> {
-        val cleanPath =
-            ipfsUri
-                .removePrefix("ipfs://")
-                .removePrefix("IPFS://")
-                .removePrefix("ipfs:")
-                .removePrefix("IPFS:")
-                .removePrefix("/")
-
+        val cleanPath = cidPath(ipfsUri)
         val list = mutableListOf<String>()
         if (!customGateway.isNullOrBlank()) {
             val base = if (customGateway.endsWith("/")) customGateway else "$customGateway/"
             list.add("$base$cleanPath")
         }
-        DEFAULT_GATEWAYS.forEach { gw ->
-            val base = if (gw.endsWith("/")) gw else "$gw/"
-            list.add("$base$cleanPath")
-        }
+        val primary = primaryGateway()
+        val base = if (primary.endsWith("/")) primary else "$primary/"
+        list.add("$base$cleanPath")
         return list.distinct()
     }
+
+    private fun cidPath(ipfsUri: String): String =
+        ipfsUri
+            .removePrefix("ipfs://")
+            .removePrefix("IPFS://")
+            .removePrefix("ipfs:")
+            .removePrefix("IPFS:")
+            .removePrefix("/")
 }

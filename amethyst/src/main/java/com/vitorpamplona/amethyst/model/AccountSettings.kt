@@ -33,11 +33,15 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewM
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.originlessServer
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
@@ -195,6 +199,11 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
+    /**
+     * Local Originless node URL (NIP-96-simple: `POST /upload`, `GET /ipfs/{cid}`).
+     * Not a kind-10063 list — one server, used both to upload and as the `ipfs://` gateway.
+     */
+    val originlessServerUrl: MutableStateFlow<String> = MutableStateFlow(OriginlessUrls.DEFAULT_SERVER),
     var stripLocationOnUpload: Boolean = true,
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -682,6 +691,18 @@ class AccountSettings(
     fun changeDefaultFileServer(server: ServerName) {
         if (defaultFileServer != server) {
             defaultFileServer = server
+            saveAccountSettings()
+        }
+    }
+
+    fun changeOriginlessServerUrl(url: String) {
+        val normalized = OriginlessUrls.normalizeBase(url)
+        if (originlessServerUrl.value != normalized) {
+            originlessServerUrl.tryEmit(normalized)
+            IpfsGatewayResolver.currentServerBase = normalized
+            if (defaultFileServer.type == ServerType.Originless) {
+                defaultFileServer = originlessServer(normalized)
+            }
             saveAccountSettings()
         }
     }

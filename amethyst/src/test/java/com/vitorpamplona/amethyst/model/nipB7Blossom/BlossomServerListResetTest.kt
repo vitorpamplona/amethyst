@@ -50,12 +50,25 @@ class BlossomServerListResetTest {
     }
 
     @Test
-    fun loadedListWithoutCurrentResetsToFirst() {
-        // The user removed their current default from the published list -> reset.
+    fun originlessCurrentIsNeverReset() {
+        val originless = ServerName("Originless", "https://originless.gupt.app", ServerType.Originless)
+        val result =
+            resetTargetOrNull(
+                rawList = listOf("a.example", "b.example"),
+                merged = listOf(originless, a, b, c),
+                current = originless,
+            )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun loadedListWithoutCurrentResetsToFirstBlossomNotOriginless() {
+        val originless = ServerName("Originless", "https://originless.gupt.app", ServerType.Originless)
         val result =
             resetTargetOrNull(
                 rawList = listOf("a.example", "b.example", "c.example"),
-                merged = listOf(a, b, c),
+                merged = listOf(originless, a, b, c),
                 current = custom,
             )
 

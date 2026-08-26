@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -33,7 +34,10 @@ enum class ServerType {
     Blossom,
     NIP95,
     NIP96,
+    Originless,
 }
+
+fun originlessServer(url: String = OriginlessUrls.DEFAULT_SERVER): ServerName = ServerName("Originless", OriginlessUrls.normalizeBase(url), ServerType.Originless)
 
 val DEFAULT_MEDIA_SERVERS: List<ServerName> =
     listOf(
