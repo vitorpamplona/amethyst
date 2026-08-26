@@ -26,14 +26,18 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 
 object BlossomAuth {
     /**
-     * BUD-01 read auth (`t=get`). Servers that gate downloads (e.g. Buzz's
-     * private media relay) require this on `GET /<sha256>`. The [servers] list
-     * adds BUD-11 `server` tags so a single token can be scoped to a whole host
-     * (which also covers derived blobs like `.thumb.jpg` whose hash differs
-     * from [hash]).
+     * BUD-11 read auth (`t=get`). Servers that gate downloads (e.g. Buzz's
+     * private media relay) require this on `GET /<sha256>`.
+     *
+     * [servers] adds BUD-11 `server` tags, scoping the token to those hosts.
+     * [hash] adds an `x` tag, scoping it to that one blob — pass null to leave
+     * it off, which is what makes a token reusable for every blob on the host
+     * (derived blobs like `.thumb.jpg` included). BUD-11 allows either for
+     * `GET`, but a token that carries `x` is valid *only* for that hash. See
+     * [BlossomAuthorizationEvent.createGetAuth].
      */
     suspend fun createGetAuth(
-        hash: HexKey,
+        hash: HexKey?,
         alt: String,
         signer: NostrSigner,
         servers: List<String> = emptyList(),
