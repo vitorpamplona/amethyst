@@ -825,6 +825,12 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
             false
         }
 
+    /**
+     * Checks if a kind-5 event from the addressable's own author has deleted this
+     * address. Works for empty addressable shells whose event is not loaded yet.
+     */
+    fun hasBeenDeleted(address: Address): Boolean = deletionIndex.hasBeenDeleted(address, address.pubKeyHex)
+
     fun getOrAddAliasNote(
         idHex: String,
         note: Note,
