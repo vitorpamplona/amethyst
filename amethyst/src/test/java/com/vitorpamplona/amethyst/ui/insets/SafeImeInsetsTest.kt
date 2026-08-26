@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.insets
 
+import android.view.View
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,6 +35,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 /**
@@ -238,5 +242,49 @@ class SafeImeInsetsTest {
 
         insets.isStranded = true
         assertEquals(keyboardHeight, insets.getBottom(density))
+    }
+
+    // --- one flag per window ---
+
+    @Test
+    fun everyCallSiteInAWindowGetsTheSameInstance() {
+        // isStranded describes the window's insets listener, not a layout. Two instances would run
+        // two independent grace timers and could hold different answers across a frame — which is
+        // exactly the case DisappearingScaffold hits, padding with one reading and subtracting the
+        // other.
+        val view = mockk<View>(relaxed = true)
+
+        val first = SafeImeInsets.forView(view, FixedInsets(0), FixedInsets(0))
+        val second = SafeImeInsets.forView(view, FixedInsets(keyboardHeight), FixedInsets(0))
+
+        assertSame("a second call site must not build its own flag", first, second)
+    }
+
+    @Test
+    fun aDialogWindowGetsItsOwnInstance() {
+        // A Dialog composes against its own window, so it must not inherit the host activity's
+        // reading. Keying on the view is what buys that; a CompositionLocal would not.
+        val activity = mockk<View>(relaxed = true)
+        val dialog = mockk<View>(relaxed = true)
+
+        assertNotSame(
+            SafeImeInsets.forView(activity, FixedInsets(0), FixedInsets(0)),
+            SafeImeInsets.forView(dialog, FixedInsets(0), FixedInsets(0)),
+        )
+    }
+
+    @Test
+    fun theStrandedFlagSurvivesACallSiteBeingRebuilt() {
+        // DisappearingScaffold rebuilds its group when canHideBars toggles. Before the per-window
+        // cache that dropped isStranded back to false and put the stale gap back on screen until a
+        // fresh watchdog re-detected it.
+        val view = mockk<View>(relaxed = true)
+        val insets = SafeImeInsets.forView(view, FixedInsets(keyboardHeight), FixedInsets(0))
+        insets.isStranded = true
+
+        val afterRebuild = SafeImeInsets.forView(view, FixedInsets(keyboardHeight), FixedInsets(0))
+
+        assertEquals("the correction must not be forgotten", true, afterRebuild.isStranded)
+        assertEquals(0, afterRebuild.getBottom(Density(1f)))
     }
 }

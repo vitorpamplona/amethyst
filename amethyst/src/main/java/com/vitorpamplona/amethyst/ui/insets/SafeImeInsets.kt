@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.insets
 
+import android.view.View
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
@@ -35,11 +36,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import java.util.WeakHashMap
 
 /**
  * How long the animated IME inset may disagree with the IME's animation target, without emitting
@@ -92,7 +95,7 @@ const val IME_STRAND_GRACE_MS = 120L
  * either way.
  */
 @Stable
-class SafeImeInsets(
+class SafeImeInsets internal constructor(
     private val animated: WindowInsets,
     private val target: WindowInsets,
 ) : WindowInsets {
@@ -119,6 +122,32 @@ class SafeImeInsets(
     ) = source().getRight(density, layoutDirection)
 
     override fun getBottom(density: Density) = source().getBottom(density)
+
+    /** The pair the watchdog decides on. Taken here so every watcher reads the same two sources. */
+    internal fun sample(density: Density) = ImeInsetSample(animated.getBottom(density), target.getBottom(density))
+
+    internal companion object {
+        /**
+         * One instance per window, keyed the same way Compose keys `WindowInsetsHolder` itself.
+         *
+         * [isStranded] describes the window's insets listener, not any one layout, so every call
+         * site in a window has to read the same flag. Two instances would each run their own
+         * [IME_STRAND_GRACE_MS] timer and could hold different answers across a frame — which
+         * matters where one reading pads a layout and another is subtracted from it, as in
+         * `DisappearingScaffold`. A `CompositionLocal` cannot do this job: a `Dialog` composes
+         * against its own window and must get its own instance, which falls out of keying on the
+         * view for free.
+         *
+         * Weak keys, and nothing here holds the view: the entry dies with the window.
+         */
+        private val perView = WeakHashMap<View, SafeImeInsets>()
+
+        fun forView(
+            view: View,
+            animated: WindowInsets,
+            target: WindowInsets,
+        ): SafeImeInsets = synchronized(perView) { perView.getOrPut(view) { SafeImeInsets(animated, target) } }
+    }
 }
 
 /** One reading of the animated IME inset next to the target it is animating towards. */
@@ -155,11 +184,13 @@ internal suspend fun watchForStrandedIme(
  * The IME inset to lay out against, in place of [WindowInsets.ime]. See [SafeImeInsets] for why the
  * raw one can't be trusted for the lifetime of the activity.
  *
- * Remembered per call site rather than shared through a `CompositionLocal` on purpose: the insets
- * are a property of the window, and a `Dialog` composes against its own one. A shared instance would
- * hand every dialog the host activity's insets. The watchdog is idle whenever the two readings agree
- * — that is, always, apart from the length of an IME animation — so the per-site cost is a state
- * object and a parked coroutine.
+ * One instance per window, shared by every call site in it — see [SafeImeInsets.forView]. Each call
+ * site still parks its own watchdog, which is redundant but harmless: they all decide from the same
+ * two sources and write the same shared flag, so they cannot disagree. Collapsing them to a single
+ * watchdog would need either a scope outliving every call site (which would strongly hold the view
+ * and defeat the weak cache) or a hand-off when the owning call site leaves the composition; both
+ * cost more than the coroutine they save, since a watchdog is idle whenever the two readings agree
+ * — that is, always, apart from the length of an IME animation.
  *
  * `imeAnimationTarget` is still marked experimental, but it is the whole point of this file: it is
  * the only IME reading Compose keeps current while its listener is wedged, because
@@ -177,18 +208,15 @@ internal suspend fun watchForStrandedIme(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun rememberSafeImeInsets(): SafeImeInsets {
+    val view = LocalView.current
     val density = LocalDensity.current
     val animated = WindowInsets.ime
     val target = WindowInsets.imeAnimationTarget
 
-    val insets = remember(animated, target) { SafeImeInsets(animated, target) }
+    val insets = remember(view, animated, target) { SafeImeInsets.forView(view, animated, target) }
 
     LaunchedEffect(insets, density) {
-        watchForStrandedIme(
-            snapshotFlow { ImeInsetSample(animated.getBottom(density), target.getBottom(density)) },
-        ) {
-            insets.isStranded = it
-        }
+        watchForStrandedIme(snapshotFlow { insets.sample(density) }) { insets.isStranded = it }
     }
 
     return insets

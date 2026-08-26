@@ -60,7 +60,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingBarState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberDisappearingBarState
 import com.vitorpamplona.amethyst.ui.components.getActivityWindow
-import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
+import com.vitorpamplona.amethyst.ui.insets.SafeImeInsets
 import com.vitorpamplona.amethyst.ui.insets.rememberSafeImeInsets
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -125,11 +125,16 @@ fun DisappearingScaffold(
     // The outer Surface provides the Material container color + onBackground as
     // LocalContentColor, matching M3 Scaffold's behaviour (without it, default text
     // color falls back to Color.Black and is invisible on the dark theme).
+    // Hoisted above the branch: imePaddingSafe() inside both arms would put the call in two
+    // different composition groups, so toggling canHideBars (a window-size-class change) would
+    // dispose and rebuild it. Resolved once here, and handed to ScaffoldLayout below so the value
+    // this pads with is the same object the nav-bar subtraction reads.
+    val imeInsets = rememberSafeImeInsets()
     val baseModifier =
         if (canHideBars) {
-            Modifier.imePaddingSafe().nestedScroll(connection)
+            Modifier.windowInsetsPadding(imeInsets).nestedScroll(connection)
         } else {
-            Modifier.imePaddingSafe()
+            Modifier.windowInsetsPadding(imeInsets)
         }
     val rootModifier =
         baseModifier
@@ -147,6 +152,7 @@ fun DisappearingScaffold(
             topBar = topBar,
             bottomBar = bottomBar,
             floatingButton = floatingButton,
+            imeInsets = imeInsets,
             mainContent = mainContent,
         )
     }
@@ -158,12 +164,10 @@ private fun ScaffoldLayout(
     topBar: (@Composable () -> Unit)?,
     bottomBar: (@Composable () -> Unit)?,
     floatingButton: (@Composable () -> Unit)?,
+    imeInsets: SafeImeInsets,
     mainContent: @Composable (padding: PaddingValues) -> Unit,
 ) {
     val navBarInsets = WindowInsets.navigationBars
-    // The corrected inset, matching the imePaddingSafe() on the root modifier above — the two
-    // have to agree or this subtraction reserves the wrong amount of nav bar.
-    val imeInsets = rememberSafeImeInsets()
     SubcomposeLayout { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
