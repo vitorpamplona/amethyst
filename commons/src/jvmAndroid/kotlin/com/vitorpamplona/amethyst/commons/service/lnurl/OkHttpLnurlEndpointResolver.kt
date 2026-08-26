@@ -24,11 +24,14 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointResolver
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -40,17 +43,44 @@ import kotlin.coroutines.cancellation.CancellationException
  * `/.well-known/lnurlp/<user>` endpoint, parses `nostrPubkey` + `allowsNostr`,
  * caches the result, and returns it. Returns null on HTTP / parse failure;
  * callers should treat that as "validation unavailable" rather than "invalid".
+ *
+ * Fetches are single-flighted per URL. A feed carrying twenty receipts for one
+ * lightning address hands us twenty concurrent [resolve] calls before the first
+ * fetch can populate the cache; without this, that is twenty requests to a
+ * stranger's unthrottled `/.well-known/` endpoint for one user action.
  */
 class OkHttpLnurlEndpointResolver(
     private val okHttpClient: (String) -> OkHttpClient,
 ) : LnurlEndpointResolver {
     private val mapper = jacksonObjectMapper()
 
+    /**
+     * Fetches in progress, keyed the same way [LnurlEndpointCache] keys itself so
+     * two spellings of one address share a flight. An entry lives only for the
+     * duration of its fetch: the winner removes it in a `finally`, so a failed
+     * fetch is retried by the next caller rather than being remembered as null.
+     */
+    private val inFlight = ConcurrentHashMap<String, CompletableDeferred<LnurlEndpointInfo?>>()
+
     override suspend fun resolve(lnurlpUrl: String): LnurlEndpointInfo? {
         LnurlEndpointCache.get(lnurlpUrl)?.let { return it }
 
-        val info = fetch(lnurlpUrl) ?: return null
-        LnurlEndpointCache.put(lnurlpUrl, info)
+        val key = LnurlForm.normalizeUrl(lnurlpUrl)
+        val ours = CompletableDeferred<LnurlEndpointInfo?>()
+        // Whoever wins putIfAbsent owns the fetch; everyone else awaits its result.
+        inFlight.putIfAbsent(key, ours)?.let { return it.await() }
+
+        var info: LnurlEndpointInfo? = null
+        try {
+            info = fetch(lnurlpUrl)
+            if (info != null) LnurlEndpointCache.put(lnurlpUrl, info)
+        } finally {
+            // Cache first, then release, so a caller arriving in between reads the
+            // cache rather than starting a second flight. Non-suspending, so it
+            // still runs — and still unblocks the awaiters — if we are cancelled.
+            inFlight.remove(key, ours)
+            ours.complete(info)
+        }
         return info
     }
 
