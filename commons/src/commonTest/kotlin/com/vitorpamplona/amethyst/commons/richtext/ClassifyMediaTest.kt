@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,6 +40,37 @@ class ClassifyMediaTest {
                 "application/x-webxdc",
             ),
         )
+    }
+
+    @Test
+    fun extensionlessIpfsUriDefaultsToImage() {
+        val cidV0 = "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX"
+        val cidV1 = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        assertEquals(MediaContentKind.IMAGE, RichTextParser.classifyMedia(cidV0, null))
+        assertEquals(MediaContentKind.IMAGE, RichTextParser.classifyMedia(cidV1, null))
+        assertTrue(RichTextParser.isImageUrl(cidV0))
+        assertTrue(RichTextParser.isImageOrVideoUrl(cidV0))
+
+        assertEquals(MediaContentKind.VIDEO, RichTextParser.classifyMedia(cidV0, "video/mp4"))
+        assertEquals(MediaContentKind.PDF, RichTextParser.classifyMedia(cidV0, "application/pdf"))
+        assertEquals(
+            MediaContentKind.IMAGE,
+            RichTextParser.classifyMedia("$cidV1/image.png", null),
+        )
+        assertEquals(
+            MediaContentKind.VIDEO,
+            RichTextParser.classifyMedia("$cidV1/clip.mp4", null),
+        )
+    }
+
+    @Test
+    fun parseTextRendersBareIpfsCidAsImage() {
+        val cid = "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX"
+        val state = RichTextParser().parseText("Test\n\n$cid", EmptyTagList, null)
+        assertEquals(cid, state.urlSet.withScheme.single())
+        val media = state.mediaList.single()
+        assertTrue(media is MediaUrlImage)
+        assertEquals(cid, media.url)
     }
 
     @Test
@@ -199,6 +231,8 @@ class ClassifyMediaTest {
                 "https://x.com/clip.mpg" to "mpeg",
                 "data:image/png;base64,AAAA" to null,
                 "data:application/zip;base64,AAAAmp4" to null,
+                "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX" to null,
+                "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX" to "video/mp4",
             )
 
         cases.forEach { (url, mime) ->

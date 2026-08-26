@@ -272,6 +272,16 @@ class MediaUrlContentExtTest {
     }
 
     @Test
+    fun toCoilModelResolvesIpfsCidV0() {
+        val ipfsUrl = "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX"
+        val image = MediaUrlImage(url = ipfsUrl)
+        assertEquals(
+            "https://originless.gupt.app/ipfs/QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX",
+            image.toCoilModel(useLocalBlossomBridge = false),
+        )
+    }
+
+    @Test
     fun toCoilModelResolvesIpfsUri() {
         val ipfsUrl = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png"
         val image = MediaUrlImage(url = ipfsUrl)

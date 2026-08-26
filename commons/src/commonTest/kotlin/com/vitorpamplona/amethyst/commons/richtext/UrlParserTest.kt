@@ -390,6 +390,12 @@ class UrlParserTest {
     }
 
     @Test
+    fun testIpfsCidV0() {
+        val ipfs = "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX"
+        test(ipfs, Urls(withScheme = setOf(ipfs)))
+    }
+
+    @Test
     fun testIpfsUrl() {
         val ipfs = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
         test(ipfs, Urls(withScheme = setOf(ipfs)))
