@@ -35,7 +35,7 @@ import java.io.IOException
  * the first is down or never pinned that CID.
  */
 class OriginlessGatewayFailoverInterceptor(
-    private val bases: () -> List<String> = { IpfsGatewayResolver.currentServerBases },
+    private val bases: () -> List<String> = { IpfsGatewayResolver.fetchBases() },
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()

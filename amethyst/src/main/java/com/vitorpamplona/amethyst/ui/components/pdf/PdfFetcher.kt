@@ -44,8 +44,8 @@ object PdfFetcher {
         okHttpClient: (String) -> OkHttpClient,
     ): DiskCache.Snapshot =
         withContext(Dispatchers.IO) {
-            val candidates = IpfsGatewayResolver.httpFetchUrls(url)
-            if (candidates.isEmpty()) throw IOException("Unable to resolve PDF URL $url")
+            val fetchUrl = IpfsGatewayResolver.toHttpUrl(url)
+            if (fetchUrl.isBlank()) throw IOException("Unable to resolve PDF URL $url")
 
             val diskCache = Amethyst.instance.diskCache
             // Covers the cache-hit fast path too, not just the download below it. openSnapshot()
@@ -57,33 +57,22 @@ object PdfFetcher {
 
             val editor = diskCache.openEditor(url) ?: throw IOException("Unable to open cache editor for $url")
             try {
-                var lastFailure: IOException? = null
-                var downloaded = false
-                for (candidate in candidates) {
-                    try {
-                        val request =
-                            Request
-                                .Builder()
-                                .url(candidate)
-                                .get()
-                                .build()
+                val request =
+                    Request
+                        .Builder()
+                        .url(fetchUrl)
+                        .get()
+                        .build()
 
-                        okHttpClient(candidate).newCall(request).executeAsync().use { response ->
-                            if (!response.isSuccessful) {
-                                throw IOException("PDF download failed from $candidate: ${response.code}")
-                            }
-                            diskCache.fileSystem.write(editor.data) {
-                                val bytes = writeAll(response.body.source())
-                                if (bytes == 0L) throw IOException("PDF download failed from $candidate: empty response body")
-                            }
-                        }
-                        downloaded = true
-                        break
-                    } catch (e: IOException) {
-                        lastFailure = e
+                okHttpClient(fetchUrl).newCall(request).executeAsync().use { response ->
+                    if (!response.isSuccessful) {
+                        throw IOException("PDF download failed from $fetchUrl: ${response.code}")
+                    }
+                    diskCache.fileSystem.write(editor.data) {
+                        val bytes = writeAll(response.body.source())
+                        if (bytes == 0L) throw IOException("PDF download failed from $fetchUrl: empty response body")
                     }
                 }
-                if (!downloaded) throw lastFailure ?: IOException("PDF download failed for $url")
 
                 editor.commitAndOpenSnapshot() ?: throw IOException("Unable to commit cache editor for $url")
             } catch (t: Throwable) {

@@ -115,36 +115,24 @@ class ProfilePictureFetcher(
         ): Fetcher {
             val diskCacheLazy = lazy { imageLoader.diskCache }
 
-            val netFetcher =
+            val url =
                 if (IpfsGatewayResolver.isIpfsUri(data.url)) {
-                    IpfsFetcher(
-                        candidates = IpfsGatewayResolver.getAllCandidateUrls(data.url),
-                        networkFetcher = { url ->
-                            readAuthAware(url, readAuth) { authHeader ->
-                                NetworkFetcher(
-                                    url = url,
-                                    options = options.withAuthHeader(authHeader),
-                                    networkClient = lazy { networkClient(url).asNetworkClient() },
-                                    diskCache = diskCacheLazy,
-                                    cacheStrategy = cacheStrategyLazy,
-                                    connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-                                    concurrentRequestStrategy = concurrentRequestStrategyLazy,
-                                )
-                            }
-                        },
-                    )
+                    IpfsGatewayResolver.toHttpUrl(data.url)
                 } else {
-                    readAuthAware(data.url, readAuth) { authHeader ->
-                        NetworkFetcher(
-                            url = data.url,
-                            options = options.withAuthHeader(authHeader),
-                            networkClient = lazy { networkClient(data.url).asNetworkClient() },
-                            diskCache = diskCacheLazy,
-                            cacheStrategy = cacheStrategyLazy,
-                            connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-                            concurrentRequestStrategy = concurrentRequestStrategyLazy,
-                        )
-                    }
+                    data.url
+                }
+
+            val netFetcher =
+                readAuthAware(url, readAuth) { authHeader ->
+                    NetworkFetcher(
+                        url = url,
+                        options = options.withAuthHeader(authHeader),
+                        networkClient = lazy { networkClient(url).asNetworkClient() },
+                        diskCache = diskCacheLazy,
+                        cacheStrategy = cacheStrategyLazy,
+                        connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
+                        concurrentRequestStrategy = concurrentRequestStrategyLazy,
+                    )
                 }
 
             return ProfilePictureFetcher(

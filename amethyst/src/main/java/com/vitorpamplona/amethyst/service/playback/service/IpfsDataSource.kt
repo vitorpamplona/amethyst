@@ -31,10 +31,10 @@ import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import java.io.IOException
 
 /**
- * Media3 data source that keeps `ipfs:` as the cache key while fetching bytes from IPFS gateways.
- *
- * A fresh upstream is created for every candidate so an HTTP failure cannot leave a partially
- * opened OkHttp data source attached to the retry.
+ * Media3 data source that keeps `ipfs:` as the cache key while fetching bytes from
+ * the first Originless gateway. Failover is [okhttp3.Interceptor]
+ * [com.vitorpamplona.amethyst.commons.originless.OriginlessGatewayFailoverInterceptor]
+ * on the upstream OkHttp DataSource.
  */
 @OptIn(UnstableApi::class)
 class IpfsDataSource(
@@ -53,20 +53,7 @@ class IpfsDataSource(
         if (!IpfsGatewayResolver.isIpfsUri(original)) {
             return openUpstream(dataSpec)
         }
-
-        val candidates = IpfsGatewayResolver.getAllCandidateUrls(original)
-        if (candidates.isEmpty()) throw IOException("Unable to resolve IPFS URI $original")
-
-        var lastFailure: IOException? = null
-        for (candidate in candidates) {
-            try {
-                return openUpstream(dataSpec.withUri(candidate.toUri()))
-            } catch (e: IOException) {
-                lastFailure = e
-                runCatching { closeUpstream() }
-            }
-        }
-        throw lastFailure ?: IOException("Unable to open IPFS URI $original")
+        return openUpstream(dataSpec.withUri(IpfsGatewayResolver.toHttpUrl(original).toUri()))
     }
 
     override fun read(

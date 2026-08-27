@@ -25,25 +25,14 @@ import kotlin.concurrent.Volatile
 
 object IpfsGatewayResolver {
     /**
-     * Originless nodes used as HTTP gateways for `ipfs://` fetches.
-     * Written from account settings; Coil/PdfFetcher/OkHttp read them here so they
-     * don't need to thread the list through every media call site.
-     * Fetches try each base in order until one serves the CID.
+     * Live Originless node list for singleton Coil/OkHttp. Bound once from the
+     * session manager to the current account's `originlessServerUrls` flow.
+     * Empty means the public [OriginlessUrls.DEFAULT_SERVER] fetch fallback.
      */
     @Volatile
-    var currentServerBases: List<String> = listOf(OriginlessUrls.DEFAULT_SERVER)
+    var serverBasesProvider: () -> List<String> = { emptyList() }
 
-    /**
-     * First configured Originless node. Kept so existing call sites and tests
-     * that assign a single URL still work; writes replace [currentServerBases].
-     */
-    var currentServerBase: String
-        get() = currentServerBases.firstOrNull() ?: OriginlessUrls.DEFAULT_SERVER
-        set(value) {
-            currentServerBases = listOf(OriginlessUrls.normalizeBase(value))
-        }
-
-    fun primaryGateway(): String = OriginlessUrls.gatewayPrefix(currentServerBase)
+    fun fetchBases(): List<String> = OriginlessUrls.normalizeList(serverBasesProvider()).ifEmpty { listOf(OriginlessUrls.DEFAULT_SERVER) }
 
     fun isIpfsUri(url: String): Boolean =
         url.startsWith("ipfs://", ignoreCase = true) ||
@@ -55,7 +44,7 @@ object IpfsGatewayResolver {
      */
     fun toHttpUrl(
         ipfsUri: String,
-        gateway: String = primaryGateway(),
+        gateway: String = OriginlessUrls.gatewayPrefix(fetchBases().firstOrNull() ?: OriginlessUrls.DEFAULT_SERVER),
     ): String {
         if (!isIpfsUri(ipfsUri)) return ipfsUri
 
@@ -72,6 +61,7 @@ object IpfsGatewayResolver {
     fun getAllCandidateUrls(
         ipfsUri: String,
         customGateway: String? = null,
+        serverBases: List<String> = fetchBases(),
     ): List<String> {
         val cleanPath = cidPath(ipfsUri)
         val list = mutableListOf<String>()
@@ -79,8 +69,7 @@ object IpfsGatewayResolver {
             val base = if (customGateway.endsWith("/")) customGateway else "$customGateway/"
             list.add("$base$cleanPath")
         }
-        val servers = currentServerBases.ifEmpty { listOf(OriginlessUrls.DEFAULT_SERVER) }
-        servers.forEach { server ->
+        serverBases.ifEmpty { listOf(OriginlessUrls.DEFAULT_SERVER) }.forEach { server ->
             list.add(OriginlessUrls.gatewayUrl(server, cleanPath))
         }
         return list.distinct()
@@ -90,7 +79,10 @@ object IpfsGatewayResolver {
      * HTTP URLs to try for a fetch. `ipfs://` expands to every configured
      * Originless gateway; anything else is returned as a single-item list.
      */
-    fun httpFetchUrls(url: String): List<String> = if (isIpfsUri(url)) getAllCandidateUrls(url) else listOf(url)
+    fun httpFetchUrls(
+        url: String,
+        serverBases: List<String> = fetchBases(),
+    ): List<String> = if (isIpfsUri(url)) getAllCandidateUrls(url, serverBases = serverBases) else listOf(url)
 
     /**
      * Inverse of [toHttpUrl]: an `ipfs://` / `ipfs:` URI, or an HTTP
@@ -116,12 +108,16 @@ object IpfsGatewayResolver {
     /**
      * URLs that must share an AES key for NIP-17 encrypted media. Kind 15
      * stores `ipfs://CID`; Coil/OkHttp fetch `{gateway}/ipfs/{CID}`, so the
-     * decryptor has to recognize both.
+     * decryptor has to recognize both. Callers register every alias on the
+     * string-to-cipher map; the cache itself stays URL-exact.
      */
-    fun decryptionKeyUrls(url: String): List<String> {
+    fun decryptionKeyUrls(
+        url: String,
+        serverBases: List<String> = fetchBases(),
+    ): List<String> {
         val ipfs = ipfsUriFromGatewayUrl(url)
         if (ipfs == null) return listOf(url)
-        return (listOf(url, ipfs) + httpFetchUrls(ipfs)).distinct()
+        return (listOf(url, ipfs) + httpFetchUrls(ipfs, serverBases)).distinct()
     }
 
     private fun cidPath(ipfsUri: String): String =

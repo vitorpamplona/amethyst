@@ -25,7 +25,6 @@ import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
-import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.model.Account
@@ -371,22 +370,11 @@ class UploadOrchestrator {
 
         updateState(0.6, UploadingState.Downloading)
 
-        val urlsToVerify =
-            if (IpfsGatewayResolver.isIpfsUri(uploadResult.url)) {
-                IpfsGatewayResolver.getAllCandidateUrls(uploadResult.url)
-            } else {
-                listOf(uploadResult.url)
-            }
-
         // Use streaming verification for memory efficiency with large files.
-        // Originless may have pinned on a later node; try each gateway briefly.
-        val maxAttempts = if (urlsToVerify.size > 1) 3 else 15
-        var verification: ImageDownloader.StreamVerification? = null
-        for (urlToVerify in urlsToVerify) {
-            verification = ImageDownloader().waitAndVerifyStream(urlToVerify, okHttpClient, maxAttempts)
-            if (verification != null) break
-        }
-        verification ?: return error(R.string.could_not_download_from_the_server)
+        // Originless failover across configured nodes is the OkHttp interceptor.
+        val verification =
+            ImageDownloader().waitAndVerifyStream(uploadResult.url, okHttpClient)
+                ?: return error(R.string.could_not_download_from_the_server)
 
         updateState(0.8, UploadingState.Hashing)
 

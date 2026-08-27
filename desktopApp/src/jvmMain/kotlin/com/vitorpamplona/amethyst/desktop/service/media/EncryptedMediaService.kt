@@ -53,30 +53,22 @@ object EncryptedMediaService {
         cache[url]?.let { return it }
 
         return withContext(Dispatchers.IO) {
-            val candidates = IpfsGatewayResolver.httpFetchUrls(url)
-            var lastError: IOException? = null
-            for (fetchUrl in candidates) {
-                try {
-                    val request = Request.Builder().url(fetchUrl).build()
-                    val response = httpClient.newCall(request).executeAsync()
-                    val encryptedBytes =
-                        response.use {
-                            if (!it.isSuccessful) throw IOException("Download failed: ${it.code}")
-                            it.body.bytes()
-                        }
-                    val decrypted = AESGCM(keyBytes, nonce).decrypt(encryptedBytes)
-
-                    // Evict oldest entries if cache is full
-                    if (cache.size >= MAX_CACHE_ENTRIES) {
-                        cache.keys.firstOrNull()?.let { cache.remove(it) }
-                    }
-                    cache[url] = decrypted
-                    return@withContext decrypted
-                } catch (e: IOException) {
-                    lastError = e
+            val fetchUrl = IpfsGatewayResolver.toHttpUrl(url)
+            val request = Request.Builder().url(fetchUrl).build()
+            val response = httpClient.newCall(request).executeAsync()
+            val encryptedBytes =
+                response.use {
+                    if (!it.isSuccessful) throw IOException("Download failed: ${it.code}")
+                    it.body.bytes()
                 }
+            val decrypted = AESGCM(keyBytes, nonce).decrypt(encryptedBytes)
+
+            // Evict oldest entries if cache is full
+            if (cache.size >= MAX_CACHE_ENTRIES) {
+                cache.keys.firstOrNull()?.let { cache.remove(it) }
             }
-            throw lastError ?: IOException("Download failed")
+            cache[url] = decrypted
+            decrypted
         }
     }
 }

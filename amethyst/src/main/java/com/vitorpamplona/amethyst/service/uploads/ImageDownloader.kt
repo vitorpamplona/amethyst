@@ -29,8 +29,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import java.net.HttpURLConnection
-import java.net.URL
+import okhttp3.Request
+import okhttp3.coroutines.executeAsync
 
 class ImageDownloader {
     class Blob(
@@ -84,100 +84,40 @@ class ImageDownloader {
         okHttpClient: (url: String) -> OkHttpClient,
         maxAttempts: Int = 15,
     ): StreamVerification? {
-        val urls = IpfsGatewayResolver.httpFetchUrls(imageUrl)
-        val attemptsPerUrl = if (urls.size > 1) minOf(maxAttempts, 3) else maxAttempts
-        for (url in urls) {
-            val result = retryWithDelay(maxAttempts = attemptsPerUrl) { tryStreamAndVerify(url, okHttpClient) }
-            if (result != null) return result
-        }
-        return null
+        val url = IpfsGatewayResolver.toHttpUrl(imageUrl)
+        return retryWithDelay(maxAttempts = maxAttempts) { tryStreamAndVerify(url, okHttpClient) }
     }
 
     suspend fun waitAndGetImage(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
     ): Blob? {
-        val urls = IpfsGatewayResolver.httpFetchUrls(imageUrl)
-        val attemptsPerUrl = if (urls.size > 1) 3 else 15
-        for (url in urls) {
-            val result = retryWithDelay(maxAttempts = attemptsPerUrl) { tryGetTheImage(url, okHttpClient) }
-            if (result != null) return result
-        }
-        return null
+        val url = IpfsGatewayResolver.toHttpUrl(imageUrl)
+        return retryWithDelay { tryGetTheImage(url, okHttpClient) }
     }
-
-    private data class HttpConnection(
-        val connection: HttpURLConnection,
-        val responseCode: Int,
-        val contentType: String?,
-    )
-
-    private suspend fun openHttpConnection(
-        imageUrl: String,
-        okHttpClient: (url: String) -> OkHttpClient,
-    ): HttpConnection =
-        withContext(Dispatchers.IO) {
-            // TODO: Migrate to OkHttp
-            HttpURLConnection.setFollowRedirects(true)
-            var url = URL(imageUrl)
-            var clientProxy = okHttpClient(imageUrl).proxy
-            var huc =
-                if (clientProxy != null) {
-                    url.openConnection(clientProxy) as HttpURLConnection
-                } else {
-                    url.openConnection() as HttpURLConnection
-                }
-            huc.instanceFollowRedirects = true
-            var responseCode = huc.responseCode
-
-            // Handle redirects
-            if (responseCode in 300..400) {
-                val newUrl: String = huc.getHeaderField("Location")
-
-                // open the new connection again
-                url = URL(newUrl)
-                clientProxy = okHttpClient(newUrl).proxy
-                huc =
-                    if (clientProxy != null) {
-                        url.openConnection(clientProxy) as HttpURLConnection
-                    } else {
-                        url.openConnection() as HttpURLConnection
-                    }
-                responseCode = huc.responseCode
-            }
-
-            return@withContext HttpConnection(
-                connection = huc,
-                responseCode = responseCode,
-                contentType = huc.headerFields.get("Content-Type")?.firstOrNull(),
-            )
-        }
 
     private suspend fun tryStreamAndVerify(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
     ): StreamVerification? =
         withContext(Dispatchers.IO) {
-            val httpConn = openHttpConnection(imageUrl, okHttpClient)
-
-            return@withContext try {
-                if (httpConn.responseCode in 200..300) {
-                    val (hash, totalBytes) =
-                        httpConn.connection.inputStream.use {
-                            sha256StreamWithCount(it)
-                        }
-
-                    StreamVerification(
-                        hash = hash.toHexKey(),
-                        size = totalBytes,
-                        contentType = httpConn.contentType,
-                    )
-                } else {
-                    null
-                }
-            } finally {
-                // Always disconnect to release connection resources
-                httpConn.connection.disconnect()
+            val request =
+                Request
+                    .Builder()
+                    .url(imageUrl)
+                    .get()
+                    .build()
+            okHttpClient(imageUrl).newCall(request).executeAsync().use { response ->
+                if (!response.isSuccessful) return@use null
+                val (hash, totalBytes) =
+                    response.body.byteStream().use {
+                        sha256StreamWithCount(it)
+                    }
+                StreamVerification(
+                    hash = hash.toHexKey(),
+                    size = totalBytes,
+                    contentType = response.header("Content-Type"),
+                )
             }
         }
 
@@ -186,19 +126,18 @@ class ImageDownloader {
         okHttpClient: (url: String) -> OkHttpClient,
     ): Blob? =
         withContext(Dispatchers.IO) {
-            val httpConn = openHttpConnection(imageUrl, okHttpClient)
-
-            return@withContext try {
-                if (httpConn.responseCode in 200..300) {
-                    Blob(
-                        httpConn.connection.inputStream.use { it.readBytes() },
-                        httpConn.contentType,
-                    )
-                } else {
-                    null
-                }
-            } finally {
-                httpConn.connection.disconnect()
+            val request =
+                Request
+                    .Builder()
+                    .url(imageUrl)
+                    .get()
+                    .build()
+            okHttpClient(imageUrl).newCall(request).executeAsync().use { response ->
+                if (!response.isSuccessful) return@use null
+                Blob(
+                    response.body.bytes(),
+                    response.header("Content-Type"),
+                )
             }
         }
 }

@@ -26,8 +26,8 @@ import coil3.annotation.ExperimentalCoilApi
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.network.CacheStrategy
+import coil3.network.ConcurrentRequestStrategy
 import coil3.network.ConnectivityChecker
-import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
@@ -36,32 +36,37 @@ import okhttp3.Call
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Resolves an `ipfs:` Coil model at fetch time through configured Originless nodes.
+ * Resolves an `ipfs:` Coil model at fetch time through the first configured
+ * Originless gateway. Failover across the rest of the node list is
+ * [com.vitorpamplona.amethyst.commons.originless.OriginlessGatewayFailoverInterceptor]
+ * — the same path Coil HTTP images and ExoPlayer use.
  *
- * Keeping the content-addressed URI as Coil's model gives every gateway the same memory-cache
- * identity. Nodes are tried in list order until one serves the CID.
+ * Keeping the content-addressed URI as Coil's model gives every gateway the
+ * same memory-cache identity.
  */
 class IpfsFetcher(
-    private val candidates: List<String>,
-    private val networkFetcher: (String) -> Fetcher,
+    private val data: Uri,
+    private val networkFetcher: (url: String) -> Fetcher,
 ) : Fetcher {
-    override suspend fun fetch(): FetchResult? {
-        for (candidate in candidates) {
-            try {
-                networkFetcher(candidate).fetch()?.let { return it }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
+    override suspend fun fetch(): FetchResult? =
+        try {
+            networkFetcher(IpfsGatewayResolver.toHttpUrl(data.toString())).fetch()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
         }
-        return null
-    }
 
     @OptIn(ExperimentalCoilApi::class)
     class Factory(
         private val networkClient: (url: String) -> Call.Factory,
+        // Shared with every other network-backed factory on this ImageLoader --
+        // see the note in ImageLoaderSetup.setup(): the de-dupe only works when
+        // all fetchers coordinate through the same instance.
+        concurrentRequestStrategy: ConcurrentRequestStrategy,
     ) : Fetcher.Factory<Uri> {
         private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
         private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
+        private val concurrentRequestStrategyLazy = lazyOf(concurrentRequestStrategy)
 
         override fun create(
             data: Uri,
@@ -71,10 +76,7 @@ class IpfsFetcher(
             val ipfsUri = data.toString()
             if (!IpfsGatewayResolver.isIpfsUri(ipfsUri)) return null
 
-            val candidates = IpfsGatewayResolver.getAllCandidateUrls(ipfsUri)
-            if (candidates.isEmpty()) return null
-
-            return IpfsFetcher(candidates) { url ->
+            return IpfsFetcher(data) { url ->
                 NetworkFetcher(
                     url = url,
                     options = options,
@@ -82,7 +84,7 @@ class IpfsFetcher(
                     diskCache = lazy { imageLoader.diskCache },
                     cacheStrategy = cacheStrategyLazy,
                     connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-                    concurrentRequestStrategy = lazy { DeDupeConcurrentRequestStrategy() },
+                    concurrentRequestStrategy = concurrentRequestStrategyLazy,
                 )
             }
         }

@@ -20,39 +20,21 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import android.util.LruCache
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 
 /**
- * Neither ExoPlayer nor Coil support passing key and nonce to the Interceptor via
- * Request.tag, which would be the right way to do this.
- *
- * This class is a string-to-cipher map for HTTP bodies that need decrypting.
- * URL aliases (ipfs://CID vs Originless `{gateway}/ipfs/{CID}`) are registered
- * by the caller via [addForMediaUrl]; lookups here stay exact.
+ * Registers [url] and every Originless gateway alias that [url] can fetch as,
+ * so [EncryptedBlobInterceptor] can look up the cipher by the HTTP URL Coil
+ * actually requests. [EncryptionKeyCache] itself stays a string-to-cipher map.
  */
-class EncryptionKeyCache {
-    val cache = LruCache<String, DecryptInformation>(100)
-
-    fun add(
-        url: String?,
-        decryptInformation: DecryptInformation,
-    ) {
-        if (url != null) {
-            cache.put(url, decryptInformation)
-        }
+fun EncryptionKeyCache.addForMediaUrl(
+    url: String?,
+    cipher: NostrCipher,
+    mimeType: String?,
+) {
+    if (url == null) return
+    IpfsGatewayResolver.decryptionKeyUrls(url).forEach { alias ->
+        add(alias, cipher, mimeType)
     }
-
-    fun add(
-        url: String?,
-        cipher: NostrCipher,
-        expectedMimeType: String?,
-    ) = add(url, DecryptInformation(cipher, expectedMimeType))
-
-    fun get(url: String): DecryptInformation? = cache.get(url)
 }
-
-class DecryptInformation(
-    val cipher: NostrCipher,
-    val mimeType: String?,
-)

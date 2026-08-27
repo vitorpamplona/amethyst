@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import com.vitorpamplona.amethyst.commons.originless.OriginlessGatewayFailoverInterceptor
-import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import okhttp3.Interceptor
 import okhttp3.Protocol
@@ -43,7 +42,7 @@ class OriginlessGatewayFailoverInterceptorTest {
 
     @After
     fun restore() {
-        IpfsGatewayResolver.currentServerBases = listOf(OriginlessUrls.DEFAULT_SERVER)
+        IpfsGatewayResolver.serverBasesProvider = { emptyList() }
     }
 
     @Test

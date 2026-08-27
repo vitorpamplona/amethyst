@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
-import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,7 +29,7 @@ import kotlin.test.assertTrue
 class IpfsGatewayResolverTest {
     @AfterTest
     fun restoreDefaultGateway() {
-        IpfsGatewayResolver.currentServerBases = listOf(OriginlessUrls.DEFAULT_SERVER)
+        IpfsGatewayResolver.serverBasesProvider = { emptyList() }
     }
 
     @Test
@@ -67,7 +66,7 @@ class IpfsGatewayResolverTest {
     @Test
     fun toHttpUrlUsesConfiguredOriginlessNode() {
         val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
-        IpfsGatewayResolver.currentServerBase = "https://originless.example"
+        IpfsGatewayResolver.serverBasesProvider = { listOf("https://originless.example") }
         assertEquals(
             "https://originless.example/ipfs/$cid",
             IpfsGatewayResolver.toHttpUrl("ipfs://$cid"),
@@ -75,10 +74,26 @@ class IpfsGatewayResolverTest {
     }
 
     @Test
+    fun fetchBasesTracksTheCurrentProviderNotTheLastWriter() {
+        val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        var currentAccount = listOf("https://account-a.example")
+        IpfsGatewayResolver.serverBasesProvider = { currentAccount }
+        assertEquals(
+            "https://account-a.example/ipfs/$cid",
+            IpfsGatewayResolver.toHttpUrl("ipfs://$cid"),
+        )
+        currentAccount = listOf("https://account-b.example")
+        assertEquals(
+            "https://account-b.example/ipfs/$cid",
+            IpfsGatewayResolver.toHttpUrl("ipfs://$cid"),
+        )
+    }
+
+    @Test
     fun getAllCandidateUrlsUsesEveryConfiguredNode() {
         val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
-        IpfsGatewayResolver.currentServerBases =
-            listOf("https://originless.gupt.app", "https://originless.example")
+        IpfsGatewayResolver.serverBasesProvider =
+            { listOf("https://originless.gupt.app", "https://originless.example") }
         val candidates = IpfsGatewayResolver.getAllCandidateUrls("ipfs://$cid")
         assertEquals(
             listOf(
@@ -106,8 +121,8 @@ class IpfsGatewayResolverTest {
     @Test
     fun httpFetchUrlsExpandsIpfsAcrossEveryConfiguredNode() {
         val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
-        IpfsGatewayResolver.currentServerBases =
-            listOf("https://originless.gupt.app", "https://originless.example")
+        IpfsGatewayResolver.serverBasesProvider =
+            { listOf("https://originless.gupt.app", "https://originless.example") }
         assertEquals(
             listOf(
                 "https://originless.gupt.app/ipfs/$cid",
@@ -136,8 +151,8 @@ class IpfsGatewayResolverTest {
     @Test
     fun decryptionKeyUrlsAliasIpfsAndEveryOriginlessGateway() {
         val cid = "QmNdEr3bMJ9fudJZ4hmXy3R63v8ia7XZaNVACMQF42pkhi"
-        IpfsGatewayResolver.currentServerBases =
-            listOf("https://originless.gupt.app", "https://originless.example")
+        IpfsGatewayResolver.serverBasesProvider =
+            { listOf("https://originless.gupt.app", "https://originless.example") }
         val aliases = IpfsGatewayResolver.decryptionKeyUrls("ipfs://$cid")
         assertEquals(
             listOf(

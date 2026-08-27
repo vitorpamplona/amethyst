@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.service.okhttp.addForMediaUrl
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
@@ -606,7 +607,7 @@ fun ShowImageUploadGallery(
     val isImage = data.result.mimeTypeBeforeEncryption?.startsWith("image/") == true || RichTextParser.isImageUrl(data.result.url)
 
     if (data.cipher != null) {
-        Amethyst.instance.keyCache.add(data.result.url, data.cipher, data.result.mimeTypeBeforeEncryption)
+        Amethyst.instance.keyCache.addForMediaUrl(data.result.url, data.cipher, data.result.mimeTypeBeforeEncryption)
     }
 
     val content by remember(data) {

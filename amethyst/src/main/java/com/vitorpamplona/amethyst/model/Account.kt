@@ -67,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
-import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
@@ -151,6 +150,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.model.uploads.UploadServerListState
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.okhttp.addForMediaUrl
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
@@ -670,7 +670,7 @@ class Account(
         val keyCache = Amethyst.instance.keyCache
         images.forEach { img ->
             if (img.algo == AESGCM.NAME) {
-                keyCache.add(img.url, AESGCM(img.key, img.nonce), img.mimeType)
+                keyCache.addForMediaUrl(img.url, AESGCM(img.key, img.nonce), img.mimeType)
             }
         }
     }
@@ -3633,14 +3633,6 @@ class Account(
 
     init {
         Log.d("AccountRegisterObservers", "Init")
-
-        // Originless nodes always resolve `ipfs://`, even when Originless uploads are off.
-        IpfsGatewayResolver.currentServerBases = settings.originlessServerUrls.value
-        scope.launch {
-            settings.originlessServerUrls.collect { urls ->
-                IpfsGatewayResolver.currentServerBases = urls
-            }
-        }
 
         // Blocking a relay has to forget any "just for now" login to it, or unblocking later would
         // silently resume authenticating off an answer given before the block. Blocking is the
