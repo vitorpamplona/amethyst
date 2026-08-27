@@ -236,9 +236,14 @@ class CallMediaManager(
     /**
      * Stops screen capture and restores the camera state from before sharing started. The
      * returned resources remain alive until the caller has replaced every [RtpSender] track.
+     *
+     * Pass `restoreCamera = false` when the whole session is going away — see [dispose]. Restoring
+     * a camera that is about to be torn down opens the device for a few hundred milliseconds
+     * (lighting the privacy indicator) and makes the following [stopCamera] block waiting for the
+     * capture session it just started.
      */
     @Synchronized
-    fun stopScreenShare(): ScreenShareResources? {
+    fun stopScreenShare(restoreCamera: Boolean = true): ScreenShareResources? {
         val track = screenVideoTrack ?: return null
         val source = requireNotNull(screenVideoSource)
         stoppingScreenShare = true
@@ -255,7 +260,7 @@ class CallMediaManager(
             screenVideoSource = null
             _isScreenSharing.value = false
 
-            if (cameraWasEnabledBeforeScreenShare) {
+            if (restoreCamera && cameraWasEnabledBeforeScreenShare) {
                 recreateCameraResources()
                 _isVideoEnabled.value = true
                 _localVideoTrackFlow.value = localVideoTrack
@@ -357,7 +362,9 @@ class CallMediaManager(
     }
 
     fun dispose() {
-        val screenResources = stopScreenShare()
+        // Everything below tears the camera down, so don't let the screen-share stop bring it back
+        // up first — that opened the device mid-hangup and made stopCamera() wait on it.
+        val screenResources = stopScreenShare(restoreCamera = false)
         disposeScreenShareResources(screenResources)
         try {
             stopCamera()
