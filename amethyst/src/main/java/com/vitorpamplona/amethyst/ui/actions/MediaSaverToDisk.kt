@@ -56,8 +56,6 @@ object MediaSaverToDisk {
         mimeType: String?,
         localContext: Context,
         resolveBlossom: suspend (String) -> String? = { null },
-        ipfsGateway: String = IpfsGatewayResolver.DEFAULT_GATEWAY,
-        extraIpfsGateways: List<String> = emptyList(),
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) = withContext(Dispatchers.IO) {
@@ -83,8 +81,6 @@ object MediaSaverToDisk {
                     okHttpClient = okHttpClient,
                     context = localContext,
                     resolveBlossom = resolveBlossom,
-                    ipfsGateway = ipfsGateway,
-                    extraIpfsGateways = extraIpfsGateways,
                     onSuccess = onSuccess,
                     onError = onError,
                 )
@@ -100,7 +96,9 @@ object MediaSaverToDisk {
      * http/https. When resolution fails the save reports an error instead of
      * crashing with "expected scheme http or https but was blossom".
      *
-     * `ipfs:` URIs use the account's preferred [ipfsGateway], then the app's public fallbacks.
+     * `ipfs://` URIs rewrite to the first configured Originless gateway; OkHttp
+     * [com.vitorpamplona.amethyst.commons.originless.OriginlessGatewayFailoverInterceptor]
+     * tries the rest of the list if that node is down.
      *
      * @see AMETHYST_SUBDIRECTORY
      */
@@ -110,83 +108,66 @@ object MediaSaverToDisk {
         okHttpClient: (String) -> OkHttpClient,
         context: Context,
         resolveBlossom: suspend (String) -> String? = { null },
-        ipfsGateway: String = IpfsGatewayResolver.DEFAULT_GATEWAY,
-        extraIpfsGateways: List<String> = emptyList(),
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
         try {
-            val downloadUrls =
+            val downloadUrl =
                 when {
                     url.startsWith(BLOSSOM_SCHEME, ignoreCase = true) -> {
-                        listOf(
-                            resolveBlossom(url)
-                                ?: throw IOException("Could not find a Blossom server that hosts $url"),
+                        resolveBlossom(url)
+                            ?: throw IOException("Could not find a Blossom server that hosts $url")
+                    }
+                    IpfsGatewayResolver.isIpfsUri(url) -> IpfsGatewayResolver.toHttpUrl(url)
+                    else -> url
+                }
+
+            val client = okHttpClient(downloadUrl)
+
+            val request =
+                Request
+                    .Builder()
+                    .get()
+                    .url(downloadUrl)
+                    .build()
+
+            client.newCall(request).executeAsync().use { response ->
+                withContext(Dispatchers.IO) {
+                    check(response.isSuccessful) {
+                        "Failed to download $downloadUrl: HTTP ${response.code} ${response.message}"
+                    }
+
+                    val trimmedUrl = trimInlineMetaData(downloadUrl)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val headerType =
+                            response
+                                .header("Content-Type")
+                                ?.substringBefore(";")
+                                ?.trim()
+
+                        val realType =
+                            headerType?.takeIf(::isSaveableMimeType)
+                                ?: mimeType?.takeIf(::isSaveableMimeType)
+                                ?: getMimeTypeFromExtension(trimmedUrl).takeIf(::isSaveableMimeType)
+                                ?: ""
+                        check(realType.isNotBlank()) { "Can't find out the content type" }
+
+                        saveContentQ(
+                            displayName = File(trimmedUrl).nameWithoutExtension,
+                            contentType = realType,
+                            contentSource = response.body.source(),
+                            contentResolver = context.contentResolver,
+                        )
+                    } else {
+                        saveContentDefault(
+                            fileName = File(trimmedUrl).name,
+                            contentSource = response.body.source(),
+                            context = context,
                         )
                     }
-                    IpfsGatewayResolver.isIpfsUri(url) -> {
-                        IpfsGatewayResolver
-                            .getAllCandidateUrls(url, ipfsGateway, extraIpfsGateways)
-                            .ifEmpty { throw IOException("Could not resolve IPFS URI $url") }
-                    }
-                    else -> listOf(url)
-                }
-
-            var lastFailure: Exception? = null
-            for (downloadUrl in downloadUrls) {
-                try {
-                    val client = okHttpClient(downloadUrl)
-                    val request =
-                        Request
-                            .Builder()
-                            .get()
-                            .url(downloadUrl)
-                            .build()
-
-                    client.newCall(request).executeAsync().use { response ->
-                        withContext(Dispatchers.IO) {
-                            check(response.isSuccessful) {
-                                "Failed to download $downloadUrl: HTTP ${response.code} ${response.message}"
-                            }
-
-                            val trimmedUrl = trimInlineMetaData(downloadUrl)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                val headerType =
-                                    response
-                                        .header("Content-Type")
-                                        ?.substringBefore(";")
-                                        ?.trim()
-
-                                val realType =
-                                    headerType?.takeIf(::isSaveableMimeType)
-                                        ?: mimeType?.takeIf(::isSaveableMimeType)
-                                        ?: getMimeTypeFromExtension(trimmedUrl).takeIf(::isSaveableMimeType)
-                                        ?: ""
-                                check(realType.isNotBlank()) { "Can't find out the content type" }
-
-                                saveContentQ(
-                                    displayName = File(trimmedUrl).nameWithoutExtension,
-                                    contentType = realType,
-                                    contentSource = response.body.source(),
-                                    contentResolver = context.contentResolver,
-                                )
-                            } else {
-                                saveContentDefault(
-                                    fileName = File(trimmedUrl).name,
-                                    contentSource = response.body.source(),
-                                    context = context,
-                                )
-                            }
-                        }
-                    }
                     onSuccess()
-                    return
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    lastFailure = e
                 }
             }
-            throw lastFailure ?: IOException("Failed to download $url")
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("MediaSaverToDisk", "Error parsing response", e)

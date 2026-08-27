@@ -36,10 +36,10 @@ import okhttp3.Call
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Resolves an `ipfs:` Coil model at fetch time through the active account's preferred gateway.
+ * Resolves an `ipfs:` Coil model at fetch time through configured Originless nodes.
  *
  * Keeping the content-addressed URI as Coil's model gives every gateway the same memory-cache
- * identity. If a custom gateway is unavailable, the app retries the default public gateways.
+ * identity. Nodes are tried in list order until one serves the CID.
  */
 class IpfsFetcher(
     private val candidates: List<String>,
@@ -58,9 +58,7 @@ class IpfsFetcher(
 
     @OptIn(ExperimentalCoilApi::class)
     class Factory(
-        private val gateway: () -> String?,
         private val networkClient: (url: String) -> Call.Factory,
-        private val extraGateways: () -> List<String> = { emptyList() },
     ) : Fetcher.Factory<Uri> {
         private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
         private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
@@ -73,7 +71,7 @@ class IpfsFetcher(
             val ipfsUri = data.toString()
             if (!IpfsGatewayResolver.isIpfsUri(ipfsUri)) return null
 
-            val candidates = IpfsGatewayResolver.getAllCandidateUrls(ipfsUri, gateway(), extraGateways())
+            val candidates = IpfsGatewayResolver.getAllCandidateUrls(ipfsUri)
             if (candidates.isEmpty()) return null
 
             return IpfsFetcher(candidates) { url ->

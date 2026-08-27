@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.network
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessGatewayFailoverInterceptor
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
@@ -143,12 +144,9 @@ class DesktopHttpClientTest {
     }
 
     @Test
-    fun directClient_hasBaseTimeouts() {
+    fun directClient_installsOriginlessGatewayFailover() {
         val httpClient = buildTorAwareClient(torPort = null)
         val client = httpClient.getNonProxyClient()
-
-        assertEquals(30_000, client.connectTimeoutMillis)
-        assertEquals(30_000, client.readTimeoutMillis)
-        assertEquals(30_000, client.writeTimeoutMillis)
+        assertTrue(client.interceptors.any { it is OriginlessGatewayFailoverInterceptor })
     }
 }

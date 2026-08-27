@@ -31,15 +31,17 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
-import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.HomeFeedType
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -113,10 +115,12 @@ private object PrefKeys {
     const val NOSTR_PUBKEY = "nostr_pubkey"
     const val LOCAL_RELAY_SERVERS = "localRelayServers"
     const val DEFAULT_FILE_SERVER = "defaultFileServer"
+    const val ORIGINLESS_SERVER_URL = "originlessServerUrl"
+    const val ORIGINLESS_SERVER_URLS = "originlessServerUrls"
+    const val ORIGINLESS_UPLOADS_ENABLED = "originlessUploadsEnabled"
     const val STRIP_LOCATION_ON_UPLOAD = "stripLocationOnUpload"
     const val USE_LOCAL_BLOSSOM_CACHE = "useLocalBlossomCache"
     const val LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY = "localBlossomCacheProfilePicturesOnly"
-    const val IPFS_GATEWAY = "ipfsGateway"
     const val MIRROR_UPLOADS_TO_ALL_SERVERS = "mirrorUploadsToAllServers"
     const val OPTIMIZE_MEDIA_ON_UPLOAD = "optimizeMediaOnUpload"
     const val HIDE_COMMUNITY_RULES_VIOLATIONS = "hideCommunityRulesViolations"
@@ -512,11 +516,12 @@ object LocalPreferences {
                         PrefKeys.DEFAULT_FILE_SERVER,
                         JsonMapper.toJson(settings.defaultFileServer),
                     )
+                    putString(PrefKeys.ORIGINLESS_SERVER_URLS, JsonMapper.toJson(settings.originlessServerUrls.value))
+                    putBoolean(PrefKeys.ORIGINLESS_UPLOADS_ENABLED, settings.originlessUploadsEnabled.value)
 
                     putBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, settings.stripLocationOnUpload)
                     putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
                     putBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, settings.localBlossomCacheProfilePicturesOnly.value)
-                    putString(PrefKeys.IPFS_GATEWAY, settings.ipfsGateway.value)
                     putBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, settings.mirrorUploadsToAllServers.value)
                     putBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, settings.optimizeMediaOnUpload.value)
                     putBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, settings.hideCommunityRulesViolations.value)
@@ -773,11 +778,8 @@ object LocalPreferences {
                     val stripLocationOnUpload = getBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, true)
                     val useLocalBlossomCache = getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, true)
                     val localBlossomCacheProfilePicturesOnly = getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
-                    val ipfsGateway =
-                        getString(PrefKeys.IPFS_GATEWAY, IpfsGatewayResolver.DEFAULT_GATEWAY)
-                            ?.let(IpfsGatewayResolver::normalizeGatewayUrl)
-                            ?: IpfsGatewayResolver.DEFAULT_GATEWAY
                     val mirrorUploadsToAllServers = getBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, true)
+                    val originlessPrefs = readOriginlessPrefs()
                     val optimizeMediaOnUpload = getBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, false)
                     val hideCommunityRulesViolations = getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
                     val nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false)
@@ -872,7 +874,11 @@ object LocalPreferences {
                         async {
                             parseOrNull<List<ClinkDebitWalletEntry>>(clinkDebitWalletsStr)?.mapNotNull { it.normalize() } ?: emptyList()
                         }
-                    val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
+                    val defaultFileServer =
+                        async {
+                            val parsed = parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0]
+                            if (parsed.type == ServerType.Originless) ORIGINLESS_UPLOAD_TARGET else parsed
+                        }
 
                     val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
                     val pendingAttestations = async { parseOrNull<Map<HexKey, String>>(pendingAttestationsStr) ?: mapOf() }
@@ -967,10 +973,11 @@ object LocalPreferences {
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServerResolved,
+                        originlessServerUrls = MutableStateFlow(originlessPrefs.serverUrls),
+                        originlessUploadsEnabled = MutableStateFlow(originlessPrefs.resolveUploadsEnabled(defaultFileServerResolved)),
                         stripLocationOnUpload = stripLocationOnUpload,
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),
-                        ipfsGateway = MutableStateFlow(ipfsGateway),
                         mirrorUploadsToAllServers = MutableStateFlow(mirrorUploadsToAllServers),
                         optimizeMediaOnUpload = MutableStateFlow(optimizeMediaOnUpload),
                         hideCommunityRulesViolations = MutableStateFlow(hideCommunityRulesViolations),
@@ -1090,6 +1097,31 @@ object LocalPreferences {
             Log.w("LocalPreferences", "Error Decoding TopFilter from Preferences", e)
             default
         }
+    }
+
+    private data class OriginlessPrefs(
+        val serverUrls: List<String>,
+        val uploadsEnabledStored: Boolean,
+        val uploadsEnabledRaw: Boolean,
+    ) {
+        fun resolveUploadsEnabled(defaultFileServer: ServerName): Boolean = if (uploadsEnabledStored) uploadsEnabledRaw else defaultFileServer.type == ServerType.Originless
+    }
+
+    private fun SharedPreferences.readOriginlessPrefs(): OriginlessPrefs {
+        val listStr = getString(PrefKeys.ORIGINLESS_SERVER_URLS, null)
+        val legacyUrl = getString(PrefKeys.ORIGINLESS_SERVER_URL, null)
+        val parsedList = parseOrNull<List<String>>(listStr)
+        val urls =
+            when {
+                parsedList != null -> OriginlessUrls.normalizeList(parsedList)
+                !legacyUrl.isNullOrBlank() -> listOf(OriginlessUrls.normalizeBase(legacyUrl))
+                else -> emptyList()
+            }
+        return OriginlessPrefs(
+            serverUrls = urls,
+            uploadsEnabledStored = contains(PrefKeys.ORIGINLESS_UPLOADS_ENABLED),
+            uploadsEnabledRaw = getBoolean(PrefKeys.ORIGINLESS_UPLOADS_ENABLED, false),
+        )
     }
 
     private data class FollowListPrefs(

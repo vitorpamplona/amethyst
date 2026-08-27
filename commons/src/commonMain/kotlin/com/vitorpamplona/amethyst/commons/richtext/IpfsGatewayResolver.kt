@@ -20,127 +20,115 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
+import kotlin.concurrent.Volatile
+
 object IpfsGatewayResolver {
-    const val DEFAULT_GATEWAY = "https://dweb.link/"
-    const val SECONDARY_GATEWAY = "https://ipfs.io/"
-
-    val DEFAULT_GATEWAYS =
-        listOf(
-            DEFAULT_GATEWAY,
-            SECONDARY_GATEWAY,
-        )
-
-    fun isIpfsUri(url: String): Boolean {
-        val separator = url.indexOf(':')
-        return separator == IPFS_SCHEME.length &&
-            url.regionMatches(0, IPFS_SCHEME, 0, IPFS_SCHEME.length, ignoreCase = true)
-    }
+    /**
+     * Originless nodes used as HTTP gateways for `ipfs://` fetches.
+     * Written from account settings; Coil/PdfFetcher/OkHttp read them here so they
+     * don't need to thread the list through every media call site.
+     * Fetches try each base in order until one serves the CID.
+     */
+    @Volatile
+    var currentServerBases: List<String> = listOf(OriginlessUrls.DEFAULT_SERVER)
 
     /**
-     * Resolves an `ipfs://<cid>/...` or `ipfs:<cid>/...` URI into an HTTP path-gateway URL.
-     *
-     * [gateway] is the path-gateway server root, not its `/ipfs/` endpoint. A pasted path-gateway
-     * URL ending in `/ipfs` is accepted and normalized so the path is never duplicated.
+     * First configured Originless node. Kept so existing call sites and tests
+     * that assign a single URL still work; writes replace [currentServerBases].
+     */
+    var currentServerBase: String
+        get() = currentServerBases.firstOrNull() ?: OriginlessUrls.DEFAULT_SERVER
+        set(value) {
+            currentServerBases = listOf(OriginlessUrls.normalizeBase(value))
+        }
+
+    fun primaryGateway(): String = OriginlessUrls.gatewayPrefix(currentServerBase)
+
+    fun isIpfsUri(url: String): Boolean =
+        url.startsWith("ipfs://", ignoreCase = true) ||
+            url.startsWith("ipfs:", ignoreCase = true)
+
+    /**
+     * Resolves an `ipfs://...` or `ipfs:...` URI into an HTTP gateway URL
+     * on the first configured Originless node (`{base}/ipfs/{cid}`).
      */
     fun toHttpUrl(
         ipfsUri: String,
-        gateway: String = DEFAULT_GATEWAY,
+        gateway: String = primaryGateway(),
     ): String {
-        val ipfsPath = extractIpfsPath(ipfsUri) ?: return ipfsUri
-        val gatewayRoot = normalizeGatewayUrl(gateway) ?: return ipfsUri
-        return "$gatewayRoot/ipfs/$ipfsPath"
+        if (!isIpfsUri(ipfsUri)) return ipfsUri
+
+        val cleanPath = cidPath(ipfsUri)
+        val base = if (gateway.endsWith("/")) gateway else "$gateway/"
+        return "$base$cleanPath"
     }
 
     /**
-     * Returns distinct HTTP candidates in caller preference order.
-     *
-     * [extraGateways] are prepended before [customGateway] and the built-in
-     * public gateways. An Originless server URL listed here will be tried first,
-     * letting the user resolve IPFS content through their own node.
+     * Returns candidate HTTP URLs for failover fetching. Each configured
+     * Originless node is tried in list order; [customGateway] is tried first
+     * when the caller already has one.
      */
     fun getAllCandidateUrls(
         ipfsUri: String,
         customGateway: String? = null,
-        extraGateways: List<String> = emptyList(),
-    ): List<String> =
-        buildList {
-            addAll(extraGateways)
-            customGateway?.let(::add)
-            addAll(DEFAULT_GATEWAYS)
-        }.mapNotNull { gateway ->
-            toHttpUrl(ipfsUri, gateway).takeUnless { it == ipfsUri }
-        }.distinct()
+    ): List<String> {
+        val cleanPath = cidPath(ipfsUri)
+        val list = mutableListOf<String>()
+        if (!customGateway.isNullOrBlank()) {
+            val base = if (customGateway.endsWith("/")) customGateway else "$customGateway/"
+            list.add("$base$cleanPath")
+        }
+        val servers = currentServerBases.ifEmpty { listOf(OriginlessUrls.DEFAULT_SERVER) }
+        servers.forEach { server ->
+            list.add(OriginlessUrls.gatewayUrl(server, cleanPath))
+        }
+        return list.distinct()
+    }
 
     /**
-     * Normalizes a user-entered IPFS path-gateway root.
-     *
-     * HTTP is intentionally accepted for a node on localhost or the user's LAN. Remote cleartext
-     * gateways remain subject to Android's normal network-security policy.
+     * HTTP URLs to try for a fetch. `ipfs://` expands to every configured
+     * Originless gateway; anything else is returned as a single-item list.
      */
-    fun normalizeGatewayUrl(gateway: String): String? {
-        val trimmed = gateway.trim().trimEnd('/')
-        val schemeEnd =
-            when {
-                trimmed.startsWith("https://", ignoreCase = true) -> HTTPS_PREFIX.length
-                trimmed.startsWith("http://", ignoreCase = true) -> HTTP_PREFIX.length
-                else -> return null
+    fun httpFetchUrls(url: String): List<String> = if (isIpfsUri(url)) getAllCandidateUrls(url) else listOf(url)
+
+    /**
+     * Inverse of [toHttpUrl]: an `ipfs://` / `ipfs:` URI, or an HTTP
+     * `{base}/ipfs/{cid}` gateway URL, becomes `ipfs://{cid}`.
+     */
+    fun ipfsUriFromGatewayUrl(url: String): String? {
+        val path =
+            if (isIpfsUri(url)) {
+                cidPath(url)
+            } else {
+                val marker = "/ipfs/"
+                val idx = url.indexOf(marker, ignoreCase = true)
+                if (idx < 0) return null
+                url
+                    .substring(idx + marker.length)
+                    .substringBefore('?')
+                    .substringBefore('#')
+                    .trimEnd('/')
             }
-        val withoutIpfsPath = trimmed.removeSuffixIgnoreCase("/ipfs").trimEnd('/')
-        val authority = withoutIpfsPath.substring(schemeEnd).substringBefore('/')
-        if (authority.isBlank() || authority == "." || authority == "..") return null
-        if (withoutIpfsPath.any { it.isWhitespace() || it == '\\' }) return null
-        if ('?' in withoutIpfsPath || '#' in withoutIpfsPath) return null
-        if (withoutIpfsPath
-                .substring(schemeEnd)
-                .substringAfter('/', "")
-                .split('/')
-                .any(::isDotSegment)
-        ) {
-            return null
-        }
-        return withoutIpfsPath
+        return path.takeIf { it.isNotEmpty() }?.let { "ipfs://$it" }
     }
 
-    private fun extractIpfsPath(ipfsUri: String): String? {
-        if (!isIpfsUri(ipfsUri)) return null
-        val path = ipfsUri.substringAfter(':').removePrefix("//").trimStart('/')
-        if (path.isBlank()) return null
-
-        val cid = path.substringBefore('/').substringBefore('?').substringBefore('#')
-        if (cid.isBlank() || isDotSegment(cid) || !cid.all(::isUnreservedAscii)) return null
-
-        val resourcePath = path.substringBefore('?').substringBefore('#')
-        if (resourcePath.split('/').any(::isDotSegment)) return null
-        return path
+    /**
+     * URLs that must share an AES key for NIP-17 encrypted media. Kind 15
+     * stores `ipfs://CID`; Coil/OkHttp fetch `{gateway}/ipfs/{CID}`, so the
+     * decryptor has to recognize both.
+     */
+    fun decryptionKeyUrls(url: String): List<String> {
+        val ipfs = ipfsUriFromGatewayUrl(url)
+        if (ipfs == null) return listOf(url)
+        return (listOf(url, ipfs) + httpFetchUrls(ipfs)).distinct()
     }
 
-    private fun isDotSegment(segment: String): Boolean {
-        val normalized = segment.lowercase()
-        return normalized == "." ||
-            normalized == ".." ||
-            normalized == "%2e" ||
-            normalized == "%2e%2e" ||
-            normalized == ".%2e" ||
-            normalized == "%2e."
-    }
-
-    private fun isUnreservedAscii(char: Char): Boolean =
-        char in 'a'..'z' ||
-            char in 'A'..'Z' ||
-            char in '0'..'9' ||
-            char == '-' ||
-            char == '.' ||
-            char == '_' ||
-            char == '~'
-
-    private fun String.removeSuffixIgnoreCase(suffix: String): String =
-        if (endsWith(suffix, ignoreCase = true)) {
-            dropLast(suffix.length)
-        } else {
-            this
-        }
-
-    private const val IPFS_SCHEME = "ipfs"
-    private const val HTTP_PREFIX = "http://"
-    private const val HTTPS_PREFIX = "https://"
+    private fun cidPath(ipfsUri: String): String =
+        ipfsUri
+            .removePrefix("ipfs://")
+            .removePrefix("IPFS://")
+            .removePrefix("ipfs:")
+            .removePrefix("IPFS:")
+            .removePrefix("/")
 }

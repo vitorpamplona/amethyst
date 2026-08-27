@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.amethyst.model.nipB7Blossom
 
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BlossomServerListResetTest {
@@ -50,16 +53,167 @@ class BlossomServerListResetTest {
     }
 
     @Test
-    fun loadedListWithoutCurrentResetsToFirst() {
-        // The user removed their current default from the published list -> reset.
+    fun originlessCurrentResetsToBlossomWhenUploadsAreOff() {
+        val originless = ServerName("originless.gupt.app", "https://originless.gupt.app", ServerType.Originless)
+        val result =
+            resetTargetOrNull(
+                rawList = listOf("a.example", "b.example"),
+                merged = listOf(a, b, c),
+                current = originless,
+                originlessUploadsEnabled = false,
+            )
+
+        assertEquals(a, result)
+    }
+
+    @Test
+    fun originlessUploadsOnKeepsMatchingOriginlessTarget() {
+        val result =
+            resetTargetOrNull(
+                rawList = listOf("a.example", "b.example"),
+                merged = listOf(ORIGINLESS_UPLOAD_TARGET),
+                current = ORIGINLESS_UPLOAD_TARGET,
+                originlessUploadsEnabled = true,
+            )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun originlessUploadsOnMigratesPerNodePickToAllNodesTarget() {
+        val originless = ServerName("originless.gupt.app", "https://originless.gupt.app", ServerType.Originless)
+        val result =
+            resetTargetOrNull(
+                rawList = listOf("a.example", "b.example"),
+                merged = listOf(ORIGINLESS_UPLOAD_TARGET),
+                current = originless,
+                originlessUploadsEnabled = true,
+            )
+
+        assertEquals(ORIGINLESS_UPLOAD_TARGET, result)
+    }
+
+    @Test
+    fun originlessUploadsOnResetsBlossomPickToAllNodesTarget() {
+        val result =
+            resetTargetOrNull(
+                rawList = listOf("a.example", "b.example", "c.example"),
+                merged = listOf(ORIGINLESS_UPLOAD_TARGET),
+                current = a,
+                originlessUploadsEnabled = true,
+            )
+
+        assertEquals(ORIGINLESS_UPLOAD_TARGET, result)
+    }
+
+    @Test
+    fun originlessCurrentResetsWhenListIsEmpty() {
+        val originless = ServerName("originless.gupt.app", "https://originless.gupt.app", ServerType.Originless)
         val result =
             resetTargetOrNull(
                 rawList = listOf("a.example", "b.example", "c.example"),
                 merged = listOf(a, b, c),
+                current = originless,
+            )
+
+        assertEquals(a, result)
+    }
+
+    @Test
+    fun loadedListWithoutCurrentResetsToFirstBlossomNotOriginless() {
+        val originless = ServerName("Originless", "https://originless.gupt.app", ServerType.Originless)
+        val result =
+            resetTargetOrNull(
+                rawList = listOf("a.example", "b.example", "c.example"),
+                merged = listOf(originless, a, b, c),
                 current = custom,
             )
 
         assertEquals(a, result)
+    }
+
+    @Test
+    fun mergeHidesBlossomWhenOriginlessUploadsAreOn() {
+        val result =
+            mergeUploadServerList(
+                blossom = listOf("https://a.example/"),
+                originlessUrls = listOf("https://originless.gupt.app"),
+                originlessUploadsEnabled = true,
+                host = { "a.example" },
+            )
+
+        assertEquals(listOf(ORIGINLESS_UPLOAD_TARGET), result)
+    }
+
+    @Test
+    fun mergeCollapsesEveryOriginlessNodeToOneUploadTarget() {
+        val result =
+            mergeUploadServerList(
+                blossom = listOf("https://a.example/"),
+                originlessUrls = listOf("https://originless.gupt.app", "https://originless.example"),
+                originlessUploadsEnabled = true,
+                host = { "a.example" },
+            )
+
+        assertEquals(listOf(ORIGINLESS_UPLOAD_TARGET), result)
+    }
+
+    @Test
+    fun originlessUploadsOffKeepsBlossomAndHidesOriginlessFromPicker() {
+        val result =
+            mergeUploadServerList(
+                blossom = listOf("https://a.example/"),
+                originlessUrls = listOf("https://originless.gupt.app", "https://originless.example"),
+                originlessUploadsEnabled = false,
+                host = { "a.example" },
+            )
+
+        assertEquals(1, result.size)
+        assertEquals(ServerType.Blossom, result[0].type)
+        assertTrue(result.none { it.type == ServerType.Originless })
+        assertTrue(result.none { it.type == ServerType.NIP96 })
+    }
+
+    @Test
+    fun originlessUploadsOnHidesBlossomAndNip96FromPicker() {
+        val result =
+            mergeUploadServerList(
+                blossom = listOf("https://a.example/", "https://b.example/"),
+                originlessUrls = listOf("https://originless.gupt.app"),
+                originlessUploadsEnabled = true,
+                host = { it },
+            )
+
+        assertEquals(listOf(ORIGINLESS_UPLOAD_TARGET), result)
+        assertTrue(result.none { it.type == ServerType.Blossom })
+        assertTrue(result.none { it.type == ServerType.NIP96 })
+    }
+
+    @Test
+    fun mergeFallsBackToDefaultBlossomWhenListEmptyAndUploadsOff() {
+        val result =
+            mergeUploadServerList(
+                blossom = emptyList(),
+                originlessUrls = listOf("https://originless.gupt.app"),
+                originlessUploadsEnabled = false,
+                host = { it },
+            )
+
+        assertEquals(DEFAULT_MEDIA_SERVERS, result)
+        assertTrue(result.none { it.type == ServerType.Originless })
+    }
+
+    @Test
+    fun mergeReturnsNoPickerTargetsWhenUploadsOnAndNodesEmpty() {
+        val result =
+            mergeUploadServerList(
+                blossom = listOf("https://a.example/"),
+                originlessUrls = emptyList(),
+                originlessUploadsEnabled = true,
+                host = { it },
+            )
+
+        assertEquals(emptyList<ServerName>(), result)
     }
 
     @Test

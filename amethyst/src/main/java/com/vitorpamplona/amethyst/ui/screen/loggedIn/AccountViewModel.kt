@@ -2895,8 +2895,6 @@ class AccountViewModel(
                         .findServers(it)
                         ?.serverUrl
                 },
-                ipfsGateway = account.settings.ipfsGateway.value,
-                extraIpfsGateways = account.blossomServers.originlessGateways(),
                 onSuccess = {
                     Handler(Looper.getMainLooper()).post {
                         Toast

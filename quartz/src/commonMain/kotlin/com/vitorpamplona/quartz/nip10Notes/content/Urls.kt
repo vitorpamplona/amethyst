@@ -35,6 +35,13 @@ val webSchemes =
         DualCase("https://"),
     )
 
+/** Originless / IPFS notes store `ipfs://CID` with no HTTP host or TLD. */
+val ipfsSchemes =
+    listOf(
+        DualCase("ipfs://"),
+        DualCase("ipfs:"),
+    )
+
 /**
  * True when the host's top-level domain begins with an ASCII letter.
  *
@@ -53,7 +60,8 @@ private fun Url.hasValidTopLevelDomain(): Boolean {
 }
 
 /**
- * Extracts the http(s) URLs mentioned in [text], for building `r` reference tags.
+ * Extracts URLs mentioned in [text], for building `r` reference tags and matching
+ * NIP-92 imeta attachments.
  *
  * The underlying [UrlDetector] is deliberately eager: to help the rich-text
  * renderer linkify a bare `example.com`, it also reports scheme-less "domains" —
@@ -64,16 +72,18 @@ private fun Url.hasValidTopLevelDomain(): Boolean {
  * every one of them used to become a bogus `r` tag on the published note.
  *
  * So a token qualifies as a reference only when the author actually wrote it with
- * an explicit http/https scheme and it carries a valid TLD. The renderer keeps
- * its own, looser parser ([com.vitorpamplona.amethyst.commons.richtext.UrlParser]),
- * so bare domains are still shown as links — they just no longer pollute the tags.
+ * an explicit http/https scheme and it carries a valid TLD, **or** an `ipfs://`
+ * URI (Originless pins have no TLD). The renderer keeps its own, looser parser
+ * ([com.vitorpamplona.amethyst.commons.richtext.UrlParser]), so bare domains are
+ * still shown as links — they just no longer pollute the tags.
  */
 fun findURLs(text: String): List<String> =
     UrlDetector(text).detect().mapNotNull { url ->
-        if (url.urlMarker.hasScheme() &&
-            url.originalUrl.startsWithAny(webSchemes) &&
-            url.hasValidTopLevelDomain()
-        ) {
+        if (!url.urlMarker.hasScheme()) {
+            null
+        } else if (url.originalUrl.startsWithAny(ipfsSchemes)) {
+            url.originalUrl
+        } else if (url.originalUrl.startsWithAny(webSchemes) && url.hasValidTopLevelDomain()) {
             url.originalUrl
         } else {
             null

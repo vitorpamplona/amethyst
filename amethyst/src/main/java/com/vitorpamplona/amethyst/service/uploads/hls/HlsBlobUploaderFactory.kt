@@ -23,9 +23,11 @@ package com.vitorpamplona.amethyst.service.uploads.hls
 import android.content.Context
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.service.uploads.originless.OriginlessUploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import okhttp3.OkHttpClient
@@ -61,12 +63,16 @@ object HlsBlobUploaderFactory {
         context: Context,
     ): HlsBlobUploader =
         when (server.type) {
-            ServerType.Blossom, ServerType.Originless -> {
+            ServerType.Blossom -> {
                 blossomAdapter(server.baseUrl, account, context)
             }
 
             ServerType.NIP96 -> {
                 nip96Adapter(server.baseUrl, account, context)
+            }
+
+            ServerType.Originless -> {
+                originlessAdapter(account, context)
             }
 
             ServerType.NIP95 -> {
@@ -122,6 +128,32 @@ object HlsBlobUploaderFactory {
                 },
                 httpAuth = account::createHTTPAuthorization,
                 context = context,
+            )
+        }
+
+    private fun originlessAdapter(
+        account: Account,
+        context: Context,
+    ): HlsBlobUploader =
+        HlsBlobUploader { file, contentType, onProgress ->
+            val totalBytes = file.length()
+            OriginlessUploader().uploadToAll(
+                uri = file.toUri(),
+                contentType = contentType,
+                size = totalBytes,
+                alt = null,
+                sensitiveContent = null,
+                serverBaseUrls = OriginlessUrls.uploadTargets(account.settings.originlessServerUrls.value),
+                okHttpClient = ::okHttpClientForHlsUploads,
+                onProgress = { percentage ->
+                    val written =
+                        (percentage * totalBytes)
+                            .toLong()
+                            .coerceIn(0L, totalBytes)
+                    onProgress(written, totalBytes)
+                },
+                context = context,
+                useMedia = account.settings.optimizeMediaOnUpload.value,
             )
         }
 }

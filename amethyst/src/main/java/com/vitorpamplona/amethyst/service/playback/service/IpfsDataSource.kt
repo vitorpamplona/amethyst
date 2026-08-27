@@ -39,8 +39,6 @@ import java.io.IOException
 @OptIn(UnstableApi::class)
 class IpfsDataSource(
     private val upstreamFactory: DataSource.Factory,
-    private val gateway: () -> String?,
-    private val extraGateways: () -> List<String> = { emptyList() },
 ) : DataSource {
     private val transferListeners = mutableListOf<TransferListener>()
     private var upstream: DataSource? = null
@@ -56,7 +54,7 @@ class IpfsDataSource(
             return openUpstream(dataSpec)
         }
 
-        val candidates = IpfsGatewayResolver.getAllCandidateUrls(original, gateway(), extraGateways())
+        val candidates = IpfsGatewayResolver.getAllCandidateUrls(original)
         if (candidates.isEmpty()) throw IOException("Unable to resolve IPFS URI $original")
 
         var lastFailure: IOException? = null
@@ -100,9 +98,7 @@ class IpfsDataSource(
 
     class Factory(
         private val upstreamFactory: DataSource.Factory,
-        private val gateway: () -> String?,
-        private val extraGateways: () -> List<String> = { emptyList() },
     ) : DataSource.Factory {
-        override fun createDataSource(): DataSource = IpfsDataSource(upstreamFactory, gateway, extraGateways)
+        override fun createDataSource(): DataSource = IpfsDataSource(upstreamFactory)
     }
 }

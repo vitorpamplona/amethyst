@@ -337,7 +337,8 @@ fun ImageVideoDescription(
             }
 
             // Hide privacy toggle when any selected video will be compressed (compression already strips metadata)
-            val isVideoWithCompression = uris.hasVideo() && mediaQualitySlider != 3
+            val showMediaQuality = selectedServer.type.usesClientMediaCompression
+            val isVideoWithCompression = showMediaQuality && uris.hasVideo() && mediaQualitySlider != 3
 
             if (!isVideoWithCompression) {
                 SettingSwitchItem(
@@ -352,7 +353,7 @@ fun ImageVideoDescription(
                 )
             }
 
-            if (uris.hasCompressible() && !convertGifToMp4) {
+            if (showMediaQuality && uris.hasCompressible() && !convertGifToMp4) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier =
@@ -403,7 +404,7 @@ fun ImageVideoDescription(
                 }
             }
 
-            if (uris.first().media.isVideo() == true && mediaQualitySlider != 3) {
+            if (showMediaQuality && uris.first().media.isVideo() == true && mediaQualitySlider != 3) {
                 SettingSwitchItem(
                     title = R.string.video_codec_h265_label,
                     description = R.string.video_codec_h265_description,
@@ -437,7 +438,8 @@ fun ImageVideoDescription(
                 enabled = !isUploading,
                 onClick = {
                     val effectiveStripMetadata = !isVideoWithCompression && stripMetadata
-                    onAdd(message, selectedServer, sensitiveContent, mediaQualitySlider, useH265Codec, effectiveStripMetadata, convertGifToMp4)
+                    val qualitySlider = if (showMediaQuality) mediaQualitySlider else 3
+                    onAdd(message, selectedServer, sensitiveContent, qualitySlider, showMediaQuality && useH265Codec, effectiveStripMetadata, convertGifToMp4)
                 },
                 shape = QuoteBorder,
                 colors =

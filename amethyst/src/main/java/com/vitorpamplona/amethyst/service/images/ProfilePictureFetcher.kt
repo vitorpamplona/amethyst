@@ -103,8 +103,6 @@ class ProfilePictureFetcher(
         // every row holding the same author's picture downloaded it again.
         concurrentRequestStrategy: ConcurrentRequestStrategy,
         private val readAuth: BlossomReadAuthTokenProvider? = null,
-        private val ipfsGateway: () -> String?,
-        private val extraGateways: () -> List<String> = { emptyList() },
     ) : Fetcher.Factory<ProfilePictureUrl> {
         private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
         private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
@@ -120,7 +118,7 @@ class ProfilePictureFetcher(
             val netFetcher =
                 if (IpfsGatewayResolver.isIpfsUri(data.url)) {
                     IpfsFetcher(
-                        candidates = IpfsGatewayResolver.getAllCandidateUrls(data.url, ipfsGateway(), extraGateways()),
+                        candidates = IpfsGatewayResolver.getAllCandidateUrls(data.url),
                         networkFetcher = { url ->
                             readAuthAware(url, readAuth) { authHeader ->
                                 NetworkFetcher(

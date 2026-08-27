@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -93,20 +94,49 @@ object MediaServerHealthProbe {
     suspend fun probe(
         baseUrl: String,
         clientForUrl: (String) -> OkHttpClient,
+    ): ServerHealth =
+        probeUrl(
+            url = BlossomServerUrl.upload(baseUrl),
+            cacheKey = baseUrl,
+            clientForUrl = clientForUrl,
+            method = "HEAD",
+        )
+
+    /**
+     * Reachability check for an Originless node. Originless publishes `GET /health`
+     * (see [OriginlessUrls.healthUrl]); any HTTP response counts as reachable.
+     */
+    suspend fun probeOriginless(
+        baseUrl: String,
+        clientForUrl: (String) -> OkHttpClient,
+    ): ServerHealth =
+        probeUrl(
+            url = OriginlessUrls.healthUrl(baseUrl),
+            cacheKey = baseUrl,
+            clientForUrl = clientForUrl,
+            method = "GET",
+        )
+
+    private suspend fun probeUrl(
+        url: String,
+        cacheKey: String,
+        clientForUrl: (String) -> OkHttpClient,
+        method: String,
     ): ServerHealth {
-        cached(baseUrl)?.let { return it }
-        val result = runProbe(baseUrl, clientForUrl)
-        cache[baseUrl] = CachedResult(result, TimeUtils.nowMillis())
+        cached(cacheKey)?.let { return it }
+        val result = runProbe(url, clientForUrl, method)
+        cache[cacheKey] = CachedResult(result, TimeUtils.nowMillis())
         return result
     }
 
     private suspend fun runProbe(
-        baseUrl: String,
+        url: String,
         clientForUrl: (String) -> OkHttpClient,
+        method: String,
     ): ServerHealth =
         try {
             val client =
-                clientForUrl(baseUrl)
+                clientForUrl(url)
                     .newBuilder()
                     .connectTimeout(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .readTimeout(PROBE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
@@ -116,20 +146,18 @@ object MediaServerHealthProbe {
             val request =
                 Request
                     .Builder()
-                    .url(BlossomServerUrl.upload(baseUrl))
-                    .head()
+                    .url(url)
+                    .method(method, null)
                     .build()
 
             val startedAt = TimeUtils.nowMillis()
             client.newCall(request).executeAsync().use {
-                // The status code doesn't matter — /upload commonly answers 401/404/405
-                // without auth. Getting any response back proves the host is reachable.
                 val elapsed = TimeUtils.nowMillis() - startedAt
                 if (elapsed > SLOW_THRESHOLD_MS) ServerHealth.Slow else ServerHealth.Online
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             ServerHealth.Offline
         }
 }

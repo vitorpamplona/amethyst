@@ -1261,10 +1261,7 @@ private fun verifyHash(content: MediaUrlContent): Boolean? {
     val bridged = content.toCoilModel(true)
     if (bridged != content.url) keys.add(bridged)
     if (IpfsGatewayResolver.isIpfsUri(content.url)) {
-        val account = Amethyst.instance.sessionManager.loggedInAccount()
-        val gateway = account?.settings?.ipfsGateway?.value
-        val extraGateways = account?.blossomServers?.originlessGateways() ?: emptyList()
-        keys.addAll(IpfsGatewayResolver.getAllCandidateUrls(content.url, gateway, extraGateways))
+        keys.addAll(IpfsGatewayResolver.getAllCandidateUrls(content.url))
     }
 
     for (key in keys.distinct()) {

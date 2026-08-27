@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.uploads
 
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
@@ -81,12 +82,29 @@ class ImageDownloader {
     suspend fun waitAndVerifyStream(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
-    ): StreamVerification? = retryWithDelay { tryStreamAndVerify(imageUrl, okHttpClient) }
+        maxAttempts: Int = 15,
+    ): StreamVerification? {
+        val urls = IpfsGatewayResolver.httpFetchUrls(imageUrl)
+        val attemptsPerUrl = if (urls.size > 1) minOf(maxAttempts, 3) else maxAttempts
+        for (url in urls) {
+            val result = retryWithDelay(maxAttempts = attemptsPerUrl) { tryStreamAndVerify(url, okHttpClient) }
+            if (result != null) return result
+        }
+        return null
+    }
 
     suspend fun waitAndGetImage(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
-    ): Blob? = retryWithDelay { tryGetTheImage(imageUrl, okHttpClient) }
+    ): Blob? {
+        val urls = IpfsGatewayResolver.httpFetchUrls(imageUrl)
+        val attemptsPerUrl = if (urls.size > 1) 3 else 15
+        for (url in urls) {
+            val result = retryWithDelay(maxAttempts = attemptsPerUrl) { tryGetTheImage(url, okHttpClient) }
+            if (result != null) return result
+        }
+        return null
+    }
 
     private data class HttpConnection(
         val connection: HttpURLConnection,

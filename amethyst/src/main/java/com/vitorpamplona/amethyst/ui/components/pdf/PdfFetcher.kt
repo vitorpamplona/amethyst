@@ -41,17 +41,10 @@ object PdfFetcher {
      */
     suspend fun fetchSnapshot(
         url: String,
-        ipfsGateway: String = IpfsGatewayResolver.DEFAULT_GATEWAY,
-        extraIpfsGateways: List<String> = emptyList(),
         okHttpClient: (String) -> OkHttpClient,
     ): DiskCache.Snapshot =
         withContext(Dispatchers.IO) {
-            val candidates =
-                if (IpfsGatewayResolver.isIpfsUri(url)) {
-                    IpfsGatewayResolver.getAllCandidateUrls(url, ipfsGateway, extraIpfsGateways)
-                } else {
-                    listOf(url)
-                }
+            val candidates = IpfsGatewayResolver.httpFetchUrls(url)
             if (candidates.isEmpty()) throw IOException("Unable to resolve PDF URL $url")
 
             val diskCache = Amethyst.instance.diskCache

@@ -404,8 +404,6 @@ internal suspend fun saveMediaToGallery(
                     .findServers(it)
                     ?.serverUrl
             },
-            ipfsGateway = accountViewModel.account.settings.ipfsGateway.value,
-            extraIpfsGateways = accountViewModel.account.blossomServers.originlessGateways(),
             onSuccess = {
                 showToastOnMain(localContext, success)
             },

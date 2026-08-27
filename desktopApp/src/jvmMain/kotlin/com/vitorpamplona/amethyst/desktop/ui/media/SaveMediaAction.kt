@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.media
 
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -59,7 +60,13 @@ object SaveMediaAction {
         // Download on IO
         return withContext(Dispatchers.IO) {
             try {
-                val request = Request.Builder().url(url).build()
+                val downloadUrl =
+                    if (IpfsGatewayResolver.isIpfsUri(url)) {
+                        IpfsGatewayResolver.toHttpUrl(url)
+                    } else {
+                        url
+                    }
+                val request = Request.Builder().url(downloadUrl).build()
                 val response = httpClient.newCall(request).executeAsync()
                 response.use { resp ->
                     if (!resp.isSuccessful) return@withContext null

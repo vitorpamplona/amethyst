@@ -1754,12 +1754,23 @@
 
     <string name="media_servers">Media Servers</string>
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
-    <string name="ipfs_gateway_section">IPFS gateway</string>
-    <string name="ipfs_gateway">Preferred gateway</string>
-    <string name="ipfs_gateway_caption">Resolve ipfs:// media through this IPFS path gateway. dweb.link and ipfs.io are the default fallbacks; self-hosted and local HTTP servers are supported.</string>
-    <string name="ipfs_gateway_invalid">Enter a complete HTTP or HTTPS server URL.</string>
-    <string name="ipfs_gateway_save">Save gateway</string>
-    <string name="ipfs_gateway_reset">Use default</string>
+
+    <string name="originless_settings_title">Originless</string>
+    <string name="originless_about_section">About</string>
+    <string name="originless_about_caption">Originless is a self-hosted IPFS pin node. Run it with Docker or install it on Umbrel, then add that node below.</string>
+    <string name="originless_github_title">Originless on GitHub</string>
+    <string name="originless_github_caption" translatable="false">github.com/besoeasy/Originless</string>
+    <string name="originless_section_caption">These nodes resolve ipfs:// links. Uploads pin to every node you add. Order is the fetch failover order.</string>
+    <string name="originless_uploads_section">Uploads</string>
+    <string name="originless_uploads_section_caption">Originless is optional for posting. Turning this on hides Blossom and NIP-96 from the upload picker.</string>
+    <string name="originless_uploads_switch">Upload with Originless</string>
+    <string name="originless_uploads_switch_caption">Files are pinned as ipfs://CID on every Originless node. Blossom and NIP-96 servers are not used while this is on. Add a node below first.</string>
+    <string name="originless_media_caption">POST /media strips EXIF/GPS from JPEG, PNG, GIF, and WebP before pinning. Other types still use /upload.</string>
+    <string name="originless_gateways_section">Nodes</string>
+    <string name="add_an_originless_server">Add an Originless server</string>
+    <string name="no_originless_server_message">You have no Originless nodes set. Add one below so ipfs:// links can load, and so uploads have somewhere to pin.</string>
+    <string name="originless_no_servers">Add an Originless server first, then try uploading again.</string>
+    <string name="originless_search_keywords" translatable="false">originless, ipfs, cid, gateway, umbrel, docker, github</string>
 
     <string name="use_local_blossom_cache">Use local Blossom cache</string>
     <string name="use_local_blossom_cache_caption">When a Blossom cache is running on this device (port 24242), route image and video downloads through it.</string>
@@ -2463,7 +2474,7 @@
     <string name="notification_settings_search_keywords" translatable="false">push, alerts, sounds, vibration</string>
     <string name="security_filters_search_keywords" translatable="false">spam, block, mute, filter, warnings</string>
     <string name="zaps_search_keywords" translatable="false">lightning, sats, tips, wallet, amount</string>
-    <string name="media_servers_search_keywords" translatable="false">blossom, uploads, images, photos, files, cdn, storage</string>
+    <string name="media_servers_search_keywords" translatable="false">blossom, uploads, images, photos, files, cdn, storage, nip96</string>
     <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
     <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>
     <string name="nests_servers_search_keywords" translatable="false">audio rooms, live, spaces, rooms</string>

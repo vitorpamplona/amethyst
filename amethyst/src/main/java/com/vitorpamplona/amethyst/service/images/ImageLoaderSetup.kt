@@ -68,15 +68,12 @@ class ImageLoaderSetup {
             diskCache: () -> DiskCache,
             memoryCache: () -> MemoryCache,
             blossomServerResolver: () -> BlossomServerResolver,
-            ipfsGateway: () -> String?,
             callFactory: (url: String) -> Call.Factory,
             thumbnailCache: ThumbnailDiskCache,
             backgroundScope: CoroutineScope,
             // Signs the BUD-01 retry when a gated host answers 401. Null keeps every
             // fetch anonymous (tests, pre-configuration call sites).
             readAuth: BlossomReadAuthTokenProvider? = null,
-            // Originless (or similar) server URLs used as first-priority IPFS gateways.
-            extraIpfsGateways: () -> List<String> = { emptyList() },
         ) {
             // ONE strategy for the whole ImageLoader. DeDupeConcurrentRequestStrategy
             // coordinates through a map of in-flight fetches that it owns, so it only
@@ -105,8 +102,8 @@ class ImageLoaderSetup {
                         add(BlurHashFetcher.Factory)
                         add(ThumbHashFetcher.Factory)
                         add(BlossomFetcher.Factory(blossomServerResolver, callFactory, concurrentRequests, readAuth))
-                        add(IpfsFetcher.Factory(ipfsGateway, callFactory, extraIpfsGateways))
-                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, concurrentRequests, readAuth, ipfsGateway, extraIpfsGateways))
+                        add(IpfsFetcher.Factory(callFactory))
+                        add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, concurrentRequests, readAuth))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)
                         add(ThumbHashFetcher.TKeyer)

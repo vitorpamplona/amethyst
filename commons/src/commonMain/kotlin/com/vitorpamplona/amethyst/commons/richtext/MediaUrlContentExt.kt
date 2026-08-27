@@ -28,9 +28,6 @@ private val blossomLastSegmentRegex = Regex("^([0-9a-fA-F]{64})(?:\\.[^./]+)?$")
 /**
  * Converts this media content into a Coil/ExoPlayer-friendly model string.
  *
- * `ipfs:` URIs stay intact so each platform's fetch layer can resolve them through the active
- * account's preferred gateway and public fallbacks without baking a hostname into cached state.
- *
  * When the local-Blossom-cache bridge is active and the content has a
  * known sha256 hash, returns a `blossom:<sha256>.<ext>?xs=<originalHostBase>&as=<authorPubKey>`
  * URI. The Coil pipeline recognises the scheme and routes the request
@@ -43,7 +40,7 @@ private val blossomLastSegmentRegex = Regex("^([0-9a-fA-F]{64})(?:\\.[^./]+)?$")
  */
 fun MediaUrlContent.toCoilModel(useLocalBlossomBridge: Boolean): String {
     if (IpfsGatewayResolver.isIpfsUri(url)) {
-        return url
+        return IpfsGatewayResolver.toHttpUrl(url)
     }
 
     return bridgeUrl(
@@ -78,7 +75,7 @@ fun bridgeProfilePictureUrl(
 ): String? {
     if (url == null) return null
     if (IpfsGatewayResolver.isIpfsUri(url)) {
-        return url
+        return IpfsGatewayResolver.toHttpUrl(url)
     }
     if (!useBridge) return url
     if (url.startsWith("blossom:", ignoreCase = true)) return url

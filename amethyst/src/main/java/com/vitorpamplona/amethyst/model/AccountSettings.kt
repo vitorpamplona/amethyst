@@ -33,12 +33,15 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewM
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
@@ -196,10 +199,23 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
+    /**
+     * Local Originless node URLs (NIP-96-simple: `POST /upload` or `POST /media`,
+     * `GET /ipfs/{cid}`). Not a kind-10063 list. Uploads pin to every entry;
+     * there is no default upload node. `ipfs://` fetches try each gateway until
+     * one succeeds, falling back to OriginlessUrls.DEFAULT_SERVER when this list
+     * is empty.
+     */
+    val originlessServerUrls: MutableStateFlow<List<String>> = MutableStateFlow(emptyList()),
+    /**
+     * When true, compose uploads go to Originless (`ipfs://`) and Blossom/NIP-96
+     * targets are hidden from the picker. `ipfs://` fetches always use
+     * [originlessServerUrls], even when this is false.
+     */
+    val originlessUploadsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
     var stripLocationOnUpload: Boolean = true,
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
-    val ipfsGateway: MutableStateFlow<String> = MutableStateFlow(IpfsGatewayResolver.DEFAULT_GATEWAY),
     /**
      * BUD-04: after uploading a blob to the primary Blossom server, replicate it to
      * the user's other configured servers (kind 10063) for redundancy.
@@ -688,6 +704,39 @@ class AccountSettings(
         }
     }
 
+    fun changeOriginlessServerUrls(urls: List<String>) {
+        val normalized = OriginlessUrls.normalizeList(urls)
+        if (originlessServerUrls.value != normalized) {
+            originlessServerUrls.tryEmit(normalized)
+            IpfsGatewayResolver.currentServerBases = normalized
+            if (normalized.isEmpty() && originlessUploadsEnabled.value) {
+                originlessUploadsEnabled.tryEmit(false)
+                defaultFileServer = DEFAULT_MEDIA_SERVERS[0]
+            } else if (defaultFileServer.type == ServerType.Originless) {
+                defaultFileServer =
+                    if (normalized.isEmpty()) {
+                        DEFAULT_MEDIA_SERVERS[0]
+                    } else {
+                        ORIGINLESS_UPLOAD_TARGET
+                    }
+            }
+            saveAccountSettings()
+        }
+    }
+
+    fun changeOriginlessUploadsEnabled(enabled: Boolean) {
+        if (enabled && originlessServerUrls.value.isEmpty()) return
+        if (originlessUploadsEnabled.value != enabled) {
+            originlessUploadsEnabled.tryEmit(enabled)
+            if (enabled) {
+                defaultFileServer = ORIGINLESS_UPLOAD_TARGET
+            } else if (defaultFileServer.type == ServerType.Originless) {
+                defaultFileServer = DEFAULT_MEDIA_SERVERS[0]
+            }
+            saveAccountSettings()
+        }
+    }
+
     fun changeStripLocationOnUpload(strip: Boolean) {
         if (stripLocationOnUpload != strip) {
             stripLocationOnUpload = strip
@@ -743,15 +792,6 @@ class AccountSettings(
             localBlossomCacheProfilePicturesOnly.tryEmit(enabled)
             saveAccountSettings()
         }
-    }
-
-    fun changeIpfsGateway(gateway: String): Boolean {
-        val normalized = IpfsGatewayResolver.normalizeGatewayUrl(gateway) ?: return false
-        if (ipfsGateway.value != normalized) {
-            ipfsGateway.tryEmit(normalized)
-            saveAccountSettings()
-        }
-        return true
     }
 
     fun changeMirrorUploadsToAllServers(enabled: Boolean) {

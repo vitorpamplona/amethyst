@@ -25,6 +25,7 @@ import android.graphics.Color
 import androidx.core.graphics.createBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
@@ -34,6 +35,7 @@ import com.vitorpamplona.amethyst.service.uploads.ImageDownloader
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.ServerInfoRetriever
+import com.vitorpamplona.amethyst.service.uploads.originless.OriginlessUploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
@@ -97,6 +99,8 @@ class ImageUploadTesting {
     private suspend fun testBase(server: ServerName) {
         if (server.type == ServerType.NIP96) {
             testNip96(server)
+        } else if (server.type == ServerType.Originless) {
+            testOriginless(server)
         } else {
             testBlossom(server)
         }
@@ -202,6 +206,35 @@ class ImageUploadTesting {
         // assertTrue(Nip96Uploader(account).delete(ox, contentType, serverInfo))
     }
 
+    private suspend fun testOriginless(server: ServerName) {
+        val payload = getBitmap()
+        val result =
+            OriginlessUploader().upload(
+                inputStream = payload.inputStream(),
+                length = payload.size.toLong(),
+                contentType = "image/png",
+                serverBaseUrl = server.baseUrl,
+                okHttpClient = { client },
+                onProgress = {},
+                context = InstrumentationRegistry.getInstrumentation().targetContext,
+            )
+
+        val url = result.url!!
+        Assert.assertTrue("${server.name}: Expected ipfs:// URL, got $url", url.startsWith("ipfs://"))
+
+        val gatewayUrl = IpfsGatewayResolver.toHttpUrl(url)
+        val imageData: ByteArray =
+            ImageDownloader().waitAndGetImage(gatewayUrl) { client }?.bytes
+                ?: run {
+                    fail("${server.name}: Should not be null")
+                    return
+                }
+
+        val downloadedHash = sha256(imageData).toHexKey()
+        val originalHash = sha256(payload).toHexKey()
+        assertEquals(server.baseUrl, originalHash, downloadedHash)
+    }
+
     @Test
     fun runTestOnDefaultServers() =
         runBlocking {
@@ -274,5 +307,12 @@ class ImageUploadTesting {
     fun testSatelliteBlossom() =
         runBlocking {
             testBase(ServerName("satellite", "https://cdn.satellite.earth", ServerType.Blossom))
+        }
+
+    @Test
+    @Ignore("Live Originless node; enable to verify POST /upload + GET /ipfs")
+    fun testOriginlessGupt() =
+        runBlocking {
+            testBase(ServerName("Originless", "https://originless.gupt.app", ServerType.Originless))
         }
 }
