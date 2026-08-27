@@ -151,6 +151,23 @@ class CallForegroundService : Service() {
      * it at 3 seconds as a safety net.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
+        val removed = rootIntent?.component?.className
+        Log.d(TAG) { "onTaskRemoved root=$removed" }
+
+        // Only the call's own task going away means the user dismissed the call. This callback
+        // fires for *every* task of the app, and MainActivity lives in a separate one (it is
+        // `singleInstance`, and CallActivity is launched with FLAG_ACTIVITY_NEW_TASK). Android
+        // reclaims that backgrounded MainActivity task on its own while a call is running —
+        // notably a few hundred ms after CallActivity enters picture-in-picture on HOME — and
+        // hanging up on it ended calls the user never touched.
+        //
+        // A null root intent leaves the source unknown; treat it as a dismissal so a genuinely
+        // swiped-away app can't leave a call running with no UI to end it.
+        if (removed != null && removed != CallActivity::class.java.name) {
+            super.onTaskRemoved(rootIntent)
+            return
+        }
+
         publishHangupBlocking()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.call
 
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
@@ -34,33 +36,61 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
  * whose lifetime is tied to the Activity's lifecycle.
  */
 object CallSessionBridge {
+    /** Account-scoped: survives MainActivity being destroyed mid-call. */
     var callManager: CallManager? = null
         private set
+
+    /** Account-scoped: everything [CallActivity] needs (signer, settings, signaling publish). */
+    var account: Account? = null
+        private set
+
+    /**
+     * Activity-scoped, and therefore nullable at any time: MainActivity can be destroyed while a
+     * call is still running. Only consumers that genuinely need ViewModel-level helpers should
+     * read this, and they must tolerate null.
+     */
     var accountViewModel: AccountViewModel? = null
         private set
 
     fun set(
         callManager: CallManager,
+        account: Account,
         accountViewModel: AccountViewModel,
     ) {
         this.callManager = callManager
+        this.account = account
         this.accountViewModel = accountViewModel
     }
 
     /**
-     * Resets call state and clears all references. Called from
-     * [AccountViewModel.onCleared] during logout or account switch.
+     * Drops only the Activity-scoped [accountViewModel] reference. Called from
+     * [AccountViewModel.onCleared], which fires on every MainActivity destruction — including
+     * while a call is in progress — so it must leave [callManager] and [account] intact.
+     *
+     * While a call is up the reference is kept: [CallActivity] still renders its UI from this
+     * ViewModel and holds a strong reference to it either way, so clearing here would free
+     * nothing and would only break the running call's UI. It is replaced wholesale by [set] as
+     * soon as MainActivity comes back, and dropped by [clear] on logout / account switch.
+     */
+    fun clearViewModel() {
+        if (callManager?.state?.value !is CallState.Idle) return
+        accountViewModel = null
+    }
+
+    /**
+     * Ends the current call and clears all references. Called on a real logout or account switch
+     * from `AccountSessionManager`, alongside `NestBridge.clear()`.
      *
      * Uses [CallManager.reset] (non-blocking, no mutex) instead of
      * [CallManager.hangup] to avoid deadlocking on `stateMutex` if
-     * a cancelled coroutine on the dying `viewModelScope` still holds
-     * it. Hangup signaling to the remote peer is the responsibility
-     * of [CallActivity.onDestroy] and [CallForegroundService], not
+     * a cancelled coroutine still holds it. Hangup signaling to the remote peer is the
+     * responsibility of [CallActivity.onDestroy] and [CallForegroundService], not
      * the bridge teardown.
      */
     fun clear() {
         callManager?.reset()
         callManager = null
+        account = null
         accountViewModel = null
     }
 }

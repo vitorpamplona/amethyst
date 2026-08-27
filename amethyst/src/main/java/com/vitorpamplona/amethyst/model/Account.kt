@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCa
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.ContactCardsState
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
@@ -846,6 +847,30 @@ class Account(
             .MarmotGroupList(signer.pubKey)
 
     val newNotesPreProcessor = EventProcessor(this, cache)
+
+    /**
+     * Owns the WebRTC call state machine.
+     *
+     * Account-scoped on purpose: a call outlives the main UI. It runs in its own
+     * [com.vitorpamplona.amethyst.ui.call.CallActivity] (a separate task, since MainActivity is
+     * `singleInstance`) backed by a foreground service, so Android is free to destroy the
+     * backgrounded MainActivity while the call is up — which it does routinely, e.g. a few hundred
+     * milliseconds after CallActivity enters picture-in-picture on HOME. While this lived on
+     * `AccountViewModel` (and ran on `viewModelScope`), that destruction cleared the ViewModel and
+     * reset the call to Idle, hanging up mid-conversation.
+     *
+     * Torn down with the account: [scope] is cancelled by
+     * `AccountCacheState.removeAccount`, which also calls [CallManager.dispose] for the
+     * independent watchdog scope.
+     */
+    val callManager =
+        CallManager(
+            signer = signer,
+            scope = scope,
+            isFollowing = { isFollowing(it) },
+            publishEvent = { wrap -> scope.launch { publishCallSignaling(wrap) } },
+            isCallsEnabled = { settings.callsEnabled.value },
+        )
 
     // Per-message publish acceptance (relay OKs), feeding the delivery ticks on
     // own chat bubbles.
@@ -3630,6 +3655,10 @@ class Account(
 
     init {
         Log.d("AccountRegisterObservers", "Init")
+
+        // Route incoming call signaling into the state machine as soon as the account exists, so
+        // offers are not missed while no UI is mounted.
+        newNotesPreProcessor.callManager = callManager
 
         // Blocking a relay has to forget any "just for now" login to it, or unblocking later would
         // silently resume authenticating off an answer given before the block. Blocking is the

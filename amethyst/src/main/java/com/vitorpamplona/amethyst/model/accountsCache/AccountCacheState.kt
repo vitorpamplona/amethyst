@@ -90,6 +90,9 @@ class AccountCacheState(
         accounts.update { existingAccounts ->
             val oldValue = existingAccounts[pubkey]
             oldValue?.scope?.cancel()
+            // CallManager keeps its own watchdog scope, independent of the account scope
+            // cancelled above, so it has to be disposed explicitly.
+            oldValue?.callManager?.dispose()
             // Unregisters the tracker's persistent listener from the shared
             // client; without this every removed account leaks a listener.
             oldValue?.chatDeliveryTracker?.destroy()
