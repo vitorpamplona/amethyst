@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import android.util.LruCache
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 
 /**
@@ -28,6 +29,10 @@ import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
  * Request.tag, which would be the right way to do this.
  *
  * This class serves as a key cache to decrypt the body of HTTP calls that need it.
+ *
+ * Kind 15 file messages store `ipfs://CID` while Coil rewrites that to an
+ * Originless `{base}/ipfs/{CID}` fetch. [add] / [get] register and look up
+ * both forms so [EncryptedBlobInterceptor] still finds the AES key.
  */
 class EncryptionKeyCache {
     val cache = LruCache<String, DecryptInformation>(100)
@@ -36,8 +41,11 @@ class EncryptionKeyCache {
         url: String?,
         decryptInformation: DecryptInformation,
     ) {
-        if (cache.get(url) == null) {
-            cache.put(url, decryptInformation)
+        if (url == null) return
+        IpfsGatewayResolver.decryptionKeyUrls(url).forEach { alias ->
+            if (cache.get(alias) == null) {
+                cache.put(alias, decryptInformation)
+            }
         }
     }
 
@@ -47,7 +55,17 @@ class EncryptionKeyCache {
         expectedMimeType: String?,
     ) = add(url, DecryptInformation(cipher, expectedMimeType))
 
-    fun get(url: String): DecryptInformation? = cache.get(url)
+    fun get(url: String): DecryptInformation? {
+        cache.get(url)?.let { return it }
+        IpfsGatewayResolver.decryptionKeyUrls(url).forEach { alias ->
+            val found = cache.get(alias)
+            if (found != null) {
+                cache.put(url, found)
+                return found
+            }
+        }
+        return null
+    }
 }
 
 class DecryptInformation(

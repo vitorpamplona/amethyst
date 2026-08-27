@@ -116,4 +116,40 @@ class IpfsGatewayResolverTest {
             IpfsGatewayResolver.httpFetchUrls("ipfs://$cid"),
         )
     }
+
+    @Test
+    fun ipfsUriFromGatewayUrlRoundTripsCidV0() {
+        val cid = "QmNdEr3bMJ9fudJZ4hmXy3R63v8ia7XZaNVACMQF42pkhi"
+        assertEquals("ipfs://$cid", IpfsGatewayResolver.ipfsUriFromGatewayUrl("ipfs://$cid"))
+        assertEquals("ipfs://$cid", IpfsGatewayResolver.ipfsUriFromGatewayUrl("ipfs:$cid"))
+        assertEquals(
+            "ipfs://$cid",
+            IpfsGatewayResolver.ipfsUriFromGatewayUrl("https://originless.gupt.app/ipfs/$cid"),
+        )
+        assertEquals(
+            "ipfs://$cid",
+            IpfsGatewayResolver.ipfsUriFromGatewayUrl("https://originless.example/ipfs/$cid?download=1"),
+        )
+        assertEquals(null, IpfsGatewayResolver.ipfsUriFromGatewayUrl("https://example.com/file.png"))
+    }
+
+    @Test
+    fun decryptionKeyUrlsAliasIpfsAndEveryOriginlessGateway() {
+        val cid = "QmNdEr3bMJ9fudJZ4hmXy3R63v8ia7XZaNVACMQF42pkhi"
+        IpfsGatewayResolver.currentServerBases =
+            listOf("https://originless.gupt.app", "https://originless.example")
+        val aliases = IpfsGatewayResolver.decryptionKeyUrls("ipfs://$cid")
+        assertEquals(
+            listOf(
+                "ipfs://$cid",
+                "https://originless.gupt.app/ipfs/$cid",
+                "https://originless.example/ipfs/$cid",
+            ),
+            aliases,
+        )
+        assertEquals(
+            aliases.toSet(),
+            IpfsGatewayResolver.decryptionKeyUrls("https://originless.gupt.app/ipfs/$cid").toSet(),
+        )
+    }
 }

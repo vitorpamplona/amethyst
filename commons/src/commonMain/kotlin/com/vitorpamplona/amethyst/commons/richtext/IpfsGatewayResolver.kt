@@ -92,6 +92,38 @@ object IpfsGatewayResolver {
      */
     fun httpFetchUrls(url: String): List<String> = if (isIpfsUri(url)) getAllCandidateUrls(url) else listOf(url)
 
+    /**
+     * Inverse of [toHttpUrl]: an `ipfs://` / `ipfs:` URI, or an HTTP
+     * `{base}/ipfs/{cid}` gateway URL, becomes `ipfs://{cid}`.
+     */
+    fun ipfsUriFromGatewayUrl(url: String): String? {
+        val path =
+            if (isIpfsUri(url)) {
+                cidPath(url)
+            } else {
+                val marker = "/ipfs/"
+                val idx = url.indexOf(marker, ignoreCase = true)
+                if (idx < 0) return null
+                url
+                    .substring(idx + marker.length)
+                    .substringBefore('?')
+                    .substringBefore('#')
+                    .trimEnd('/')
+            }
+        return path.takeIf { it.isNotEmpty() }?.let { "ipfs://$it" }
+    }
+
+    /**
+     * URLs that must share an AES key for NIP-17 encrypted media. Kind 15
+     * stores `ipfs://CID`; Coil/OkHttp fetch `{gateway}/ipfs/{CID}`, so the
+     * decryptor has to recognize both.
+     */
+    fun decryptionKeyUrls(url: String): List<String> {
+        val ipfs = ipfsUriFromGatewayUrl(url)
+        if (ipfs == null) return listOf(url)
+        return (listOf(url, ipfs) + httpFetchUrls(ipfs)).distinct()
+    }
+
     private fun cidPath(ipfsUri: String): String =
         ipfsUri
             .removePrefix("ipfs://")
