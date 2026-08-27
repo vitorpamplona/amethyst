@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.originless
 
 import kotlinx.serialization.Serializable
 
-/** JSON body from Originless `POST /upload`. */
+/** JSON body from Originless `POST /upload` or `POST /media`. Extra `/media` fields (stripped, anonymized, …) are ignored. */
 @Serializable
 data class OriginlessUploadResponse(
     val status: String? = null,

@@ -91,4 +91,15 @@ class OriginlessUrlsTest {
         assertEquals("image/png", parsed.type)
         assertTrue(parsed.pinned == true)
     }
+
+    @Test
+    fun parseMediaResponseKeepsCidAndIgnoresStripMetadata() {
+        val json =
+            """{"anonymized":true,"cid":"QmUs9u62eb9iyt8Dq1PhvkRdoVKQa595BkVvNChWFoZ5SM","filename":"photo.jpg","orientation":1,"originalSize":225,"pinned":true,"size":189,"status":"success","stripped":["exif","gps","xmp"],"transcoded":false,"type":"image/jpeg"}"""
+        val parsed = JsonMapper.fromJson<OriginlessUploadResponse>(json)
+        assertFalse(parsed.isError())
+        assertEquals("QmUs9u62eb9iyt8Dq1PhvkRdoVKQa595BkVvNChWFoZ5SM", parsed.requireCid())
+        assertEquals(189L, parsed.size)
+        assertEquals("image/jpeg", parsed.type)
+    }
 }
