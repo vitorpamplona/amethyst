@@ -96,7 +96,7 @@ class OriginlessServersViewModel : ViewModel() {
 
         _health.update { it + (serverUrl to ServerHealth.Checking) }
         viewModelScope.launch(Dispatchers.IO) {
-            val result = MediaServerHealthProbe.probe(serverUrl, builder::okHttpClientForPreview)
+            val result = MediaServerHealthProbe.probeOriginless(serverUrl, builder::okHttpClientForPreview)
             _health.update { it + (serverUrl to result) }
         }
     }

@@ -159,18 +159,34 @@ class BlossomServerListResetTest {
     }
 
     @Test
-    fun mergeKeepsBlossomWhenOriginlessUploadsAreOff() {
+    fun originlessUploadsOffKeepsBlossomAndHidesOriginlessFromPicker() {
         val result =
             mergeUploadServerList(
                 blossom = listOf("https://a.example/"),
-                originlessUrls = listOf("https://originless.gupt.app"),
+                originlessUrls = listOf("https://originless.gupt.app", "https://originless.example"),
                 originlessUploadsEnabled = false,
                 host = { "a.example" },
             )
 
         assertEquals(1, result.size)
         assertEquals(ServerType.Blossom, result[0].type)
-        assertEquals("https://a.example/", result[0].baseUrl)
+        assertTrue(result.none { it.type == ServerType.Originless })
+        assertTrue(result.none { it.type == ServerType.NIP96 })
+    }
+
+    @Test
+    fun originlessUploadsOnHidesBlossomAndNip96FromPicker() {
+        val result =
+            mergeUploadServerList(
+                blossom = listOf("https://a.example/", "https://b.example/"),
+                originlessUrls = listOf("https://originless.gupt.app"),
+                originlessUploadsEnabled = true,
+                host = { it },
+            )
+
+        assertEquals(listOf(ORIGINLESS_UPLOAD_TARGET), result)
+        assertTrue(result.none { it.type == ServerType.Blossom })
+        assertTrue(result.none { it.type == ServerType.NIP96 })
     }
 
     @Test
