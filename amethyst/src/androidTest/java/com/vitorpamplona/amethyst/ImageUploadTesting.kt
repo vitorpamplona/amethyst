@@ -71,7 +71,6 @@ class ImageUploadTesting {
                 signer = signer,
                 cache = cache,
                 scope = scope,
-                settings = accountSettings,
             )
     }
 

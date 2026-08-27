@@ -167,7 +167,7 @@ private fun VoiceReplyScreenBody(
 
         // Server selection
         val fileServers by
-            accountViewModel.account.blossomServers.hostNameFlow
+            accountViewModel.account.uploadServers.hostNameFlow
                 .collectAsState()
 
         FileServerSelectionRow(

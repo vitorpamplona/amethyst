@@ -335,8 +335,8 @@ class UploadOrchestrator {
         if (hash.length != 64) return
 
         // Only the user's *explicitly configured* kind-10063 servers (flow), NOT the
-        // DEFAULT_MEDIA_SERVERS fallback that hostNameFlow injects — we must never fan
-        // uploads out to public defaults the user never opted into.
+        // DEFAULT_MEDIA_SERVERS fallback that uploadServers.hostNameFlow injects — we
+        // must never fan uploads out to public defaults the user never opted into.
         val primaryDomain = BlossomServerUrl.domain(primaryServerBaseUrl)
         val targets =
             account.blossomServers.flow.value

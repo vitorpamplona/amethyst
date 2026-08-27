@@ -147,7 +147,7 @@ private fun ImageVideoPostChat(
     accountViewModel: AccountViewModel,
     isNip17: Boolean = false,
 ) {
-    val fileServers by accountViewModel.account.blossomServers.hostNameFlow
+    val fileServers by accountViewModel.account.uploadServers.hostNameFlow
         .collectAsState()
 
     val fileServerOptions =

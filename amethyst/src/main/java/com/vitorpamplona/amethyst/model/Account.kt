@@ -149,6 +149,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
+import com.vitorpamplona.amethyst.model.uploads.UploadServerListState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionCache
@@ -756,7 +757,8 @@ class Account(
 
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
 
-    val blossomServers = BlossomServerListState(signer, cache, scope, settings)
+    val blossomServers = BlossomServerListState(signer, cache, scope)
+    val uploadServers = UploadServerListState(blossomServers, settings, scope)
 
     val nestsServers =
         com.vitorpamplona.amethyst.model.nip53NestsServers

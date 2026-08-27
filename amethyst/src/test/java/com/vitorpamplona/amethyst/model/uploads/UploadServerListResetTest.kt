@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nipB7Blossom
+package com.vitorpamplona.amethyst.model.uploads
 
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
@@ -29,7 +29,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class BlossomServerListResetTest {
+class UploadServerListResetTest {
     private fun server(host: String) = ServerName(host, "https://$host/", ServerType.Blossom)
 
     private val a = server("a.example")
@@ -67,10 +67,37 @@ class BlossomServerListResetTest {
     }
 
     @Test
+    fun originlessCurrentSnapsToBlossomBefore10063LoadsWhenUploadsOff() {
+        val result =
+            resetTargetOrNull(
+                rawList = emptyList(),
+                merged = DEFAULT_MEDIA_SERVERS,
+                current = ORIGINLESS_UPLOAD_TARGET,
+                originlessUploadsEnabled = false,
+            )
+
+        assertEquals(DEFAULT_MEDIA_SERVERS[0], result)
+        assertTrue(result!!.type != ServerType.Originless)
+    }
+
+    @Test
     fun originlessUploadsOnKeepsMatchingOriginlessTarget() {
         val result =
             resetTargetOrNull(
                 rawList = listOf("a.example", "b.example"),
+                merged = listOf(ORIGINLESS_UPLOAD_TARGET),
+                current = ORIGINLESS_UPLOAD_TARGET,
+                originlessUploadsEnabled = true,
+            )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun originlessUploadsOnDoesNotClobberWhen10063Loads() {
+        val result =
+            resetTargetOrNull(
+                rawList = emptyList(),
                 merged = listOf(ORIGINLESS_UPLOAD_TARGET),
                 current = ORIGINLESS_UPLOAD_TARGET,
                 originlessUploadsEnabled = true,

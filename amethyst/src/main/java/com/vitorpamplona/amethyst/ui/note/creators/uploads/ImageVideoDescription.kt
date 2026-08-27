@@ -93,7 +93,7 @@ fun ImageVideoDescription(
     onCancel: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val fileServers by accountViewModel.account.blossomServers.hostNameFlow
+    val fileServers by accountViewModel.account.uploadServers.hostNameFlow
         .collectAsState()
 
     val fileServerOptions =

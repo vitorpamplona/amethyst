@@ -224,7 +224,7 @@ fun ShareNoteAsImageScreen(
     var captureComplete by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
 
-    val fileServers by account.blossomServers.hostNameFlow.collectAsState()
+    val fileServers by account.uploadServers.hostNameFlow.collectAsState()
 
     var selectedServer by remember(fileServers) {
         mutableStateOf(

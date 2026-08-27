@@ -91,7 +91,7 @@ open class NewHlsVideoViewModel : ViewModel() {
         this.account = account
         this.orchestrator = orchestrator
 
-        val initialServers = account.blossomServers.hostNameFlow.value
+        val initialServers = account.uploadServers.hostNameFlow.value
         _availableServers.value = initialServers
 
         if (selectedServer == null || initialServers.none { it == selectedServer }) {
@@ -104,7 +104,7 @@ open class NewHlsVideoViewModel : ViewModel() {
         serversJob?.cancel()
         serversJob =
             viewModelScope.launch {
-                account.blossomServers.hostNameFlow.collect { servers ->
+                account.uploadServers.hostNameFlow.collect { servers ->
                     _availableServers.value = servers
                     if (selectedServer == null || servers.none { it == selectedServer }) {
                         selectedServer = servers.firstOrNull() ?: DEFAULT_MEDIA_SERVERS.first()

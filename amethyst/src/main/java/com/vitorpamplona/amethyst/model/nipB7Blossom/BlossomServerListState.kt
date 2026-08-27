@@ -21,11 +21,9 @@
 package com.vitorpamplona.amethyst.model.nipB7Blossom
 
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -37,18 +35,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
 class BlossomServerListState(
     val signer: NostrSigner,
     val cache: ICacheProvider,
     val scope: CoroutineScope,
-    val settings: AccountSettings,
 ) {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val blossomListNote = cache.getOrCreateAddressableNote(getBlossomServersAddress())
@@ -82,26 +76,19 @@ class BlossomServerListState(
                 emptyList(),
             )
 
-    fun mergeServerList(
-        blossom: List<String>?,
-        originlessUrls: List<String> = settings.originlessServerUrls.value,
-        originlessUploadsEnabled: Boolean = settings.originlessUploadsEnabled.value,
-    ): List<ServerName> = mergeUploadServerList(blossom, originlessUrls, originlessUploadsEnabled, ::host)
-
+    /**
+     * Kind-10063 Blossom hosts only. Does not mutate the persisted default file
+     * server, so an Originless default is not snapped back when a 10063 event loads.
+     */
     val hostNameFlow: StateFlow<List<ServerName>> =
-        combine(flow, settings.originlessServerUrls, settings.originlessUploadsEnabled) { blossoms, originlessUrls, enabled ->
-            mergeServerList(blossoms, originlessUrls, enabled)
-        }.onStart {
-            emit(mergeServerList(flow.value, settings.originlessServerUrls.value, settings.originlessUploadsEnabled.value))
-        }.onEach { servers ->
-            resetTargetOrNull(flow.value, servers, settings.defaultFileServer, settings.originlessUploadsEnabled.value)?.let {
-                settings.changeDefaultFileServer(it)
-            }
-        }.flowOn(Dispatchers.IO)
+        flow
+            .map { servers ->
+                servers.map { ServerName(host(it), it, ServerType.Blossom) }.ifEmpty { DEFAULT_MEDIA_SERVERS }
+            }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                mergeServerList(emptyList(), settings.originlessServerUrls.value, settings.originlessUploadsEnabled.value),
+                DEFAULT_MEDIA_SERVERS,
             )
 
     suspend fun saveBlossomServersList(servers: List<String>): BlossomServersEvent {
@@ -145,53 +132,4 @@ class BlossomServerListState(
         alt: String,
         servers: List<String> = emptyList(),
     ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createListAuth(signer, alt, servers)
-}
-
-/**
- * Upload picker contents. Originless uploads replace Blossom/NIP-96 entirely
- * so `ipfs://` pinning is optional; `ipfs://` fetches still use the Originless
- * node list regardless of this switch.
- */
-fun mergeUploadServerList(
-    blossom: List<String>?,
-    originlessUrls: List<String>,
-    originlessUploadsEnabled: Boolean,
-    host: (String) -> String,
-): List<ServerName> {
-    if (originlessUploadsEnabled) {
-        return if (originlessUrls.isEmpty()) emptyList() else listOf(ORIGINLESS_UPLOAD_TARGET)
-    }
-    return blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS }
-        ?: DEFAULT_MEDIA_SERVERS
-}
-
-/**
- * Decides whether the persisted default file server must be reset, and to what.
- *
- * Returns the new default server, or `null` when no change should happen.
- *
- * The guard on [rawList] being non-empty is what prevents the startup race: before the user's
- * [BlossomServersEvent] (kind 10063) loads from cache/relay, [rawList] is empty and [merged] is the
- * transient [DEFAULT_MEDIA_SERVERS] fallback. Resetting against that fallback would clobber the
- * locally-saved pick on every launch. Only reset once a real, loaded list is in hand and it no
- * longer contains the current pick (e.g. the user removed it from their list).
- */
-fun resetTargetOrNull(
-    rawList: List<String>,
-    merged: List<ServerName>,
-    current: ServerName,
-    originlessUploadsEnabled: Boolean = false,
-): ServerName? {
-    if (originlessUploadsEnabled) {
-        val target = merged.firstOrNull { it.type == ServerType.Originless }
-        return if (current == target) null else target
-    }
-    if (current.type == ServerType.Originless) {
-        return merged.firstOrNull { it.type != ServerType.Originless } ?: DEFAULT_MEDIA_SERVERS[0]
-    }
-    return if (rawList.isNotEmpty() && merged.none { it == current }) {
-        merged.firstOrNull { it.type != ServerType.Originless } ?: merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
-    } else {
-        null
-    }
 }
