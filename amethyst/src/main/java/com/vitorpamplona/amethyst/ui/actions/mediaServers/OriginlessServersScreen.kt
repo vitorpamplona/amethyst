@@ -21,12 +21,15 @@
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,12 +41,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
@@ -53,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertPadding
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.grayText
 
 @Composable
 fun OriginlessServersScreen(
@@ -131,9 +140,17 @@ private fun OriginlessServersBody(
     ) {
         item {
             SectionLabel(
+                title = stringRes(id = R.string.originless_about_section),
+                caption = stringRes(id = R.string.originless_about_caption),
+                topPadding = 4.dp,
+            )
+            OriginlessGithubCard(modifier = Modifier.fillMaxWidth())
+        }
+
+        item {
+            SectionLabel(
                 title = stringRes(id = R.string.originless_uploads_section),
                 caption = stringRes(id = R.string.originless_uploads_section_caption),
-                topPadding = 4.dp,
             )
             Column(
                 modifier =
@@ -204,5 +221,44 @@ private fun OriginlessServersBody(
         item {
             Spacer(DoubleHorzSpacer)
         }
+    }
+}
+
+@Composable
+private fun OriginlessGithubCard(modifier: Modifier = Modifier) {
+    val uriHandler = LocalUriHandler.current
+    Row(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .clickable {
+                    runCatching { uriHandler.openUri(OriginlessUrls.PROJECT_URL) }
+                }.padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Code,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text(
+                text = stringRes(id = R.string.originless_github_title),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = stringRes(id = R.string.originless_github_caption),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.grayText,
+            )
+        }
+        Icon(
+            symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+            contentDescription = stringRes(id = R.string.originless_github_title),
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
     }
 }

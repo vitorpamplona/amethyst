@@ -28,6 +28,11 @@ import kotlin.test.assertTrue
 
 class OriginlessUrlsTest {
     @Test
+    fun projectUrlPointsAtBesoeasyOriginless() {
+        assertEquals("https://github.com/besoeasy/Originless", OriginlessUrls.PROJECT_URL)
+    }
+
+    @Test
     fun normalizeBaseStripsTrailingSlashAndAddsHttps() {
         assertEquals("https://originless.gupt.app", OriginlessUrls.normalizeBase("https://originless.gupt.app/"))
         assertEquals("https://originless.example", OriginlessUrls.normalizeBase("originless.example"))

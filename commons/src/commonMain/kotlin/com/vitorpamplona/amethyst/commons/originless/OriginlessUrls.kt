@@ -27,6 +27,7 @@ package com.vitorpamplona.amethyst.commons.originless
  */
 object OriginlessUrls {
     const val DEFAULT_SERVER = "https://originless.gupt.app"
+    const val PROJECT_URL = "https://github.com/besoeasy/Originless"
 
     private val mediaTypes =
         setOf(

@@ -1756,6 +1756,10 @@
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
 
     <string name="originless_settings_title">Originless</string>
+    <string name="originless_about_section">About</string>
+    <string name="originless_about_caption">Originless is a self-hosted IPFS pin node. Run it with Docker or install it on Umbrel, then add that node below.</string>
+    <string name="originless_github_title">Originless on GitHub</string>
+    <string name="originless_github_caption" translatable="false">github.com/besoeasy/Originless</string>
     <string name="originless_section_caption">These nodes resolve ipfs:// links. Uploads pin to every node you add. Order is the fetch failover order.</string>
     <string name="originless_uploads_section">Uploads</string>
     <string name="originless_uploads_section_caption">Originless is optional for posting. Turning this on hides Blossom and NIP-96 from the upload picker.</string>
@@ -1766,7 +1770,7 @@
     <string name="add_an_originless_server">Add an Originless server</string>
     <string name="no_originless_server_message">You have no Originless nodes set. Add one below so ipfs:// links can load, and so uploads have somewhere to pin.</string>
     <string name="originless_no_servers">Add an Originless server first, then try uploading again.</string>
-    <string name="originless_search_keywords" translatable="false">originless, ipfs, cid, gateway, umbrel, docker</string>
+    <string name="originless_search_keywords" translatable="false">originless, ipfs, cid, gateway, umbrel, docker, github</string>
 
     <string name="use_local_blossom_cache">Use local Blossom cache</string>
     <string name="use_local_blossom_cache_caption">When a Blossom cache is running on this device (port 24242), route image and video downloads through it.</string>
