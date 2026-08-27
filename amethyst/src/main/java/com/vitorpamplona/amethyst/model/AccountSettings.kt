@@ -205,6 +205,12 @@ class AccountSettings(
      * `ipfs://` fetches try each gateway until one succeeds.
      */
     val originlessServerUrls: MutableStateFlow<List<String>> = MutableStateFlow(listOf(OriginlessUrls.DEFAULT_SERVER)),
+    /**
+     * When true, compose uploads go to Originless (`ipfs://`) and Blossom/NIP-96
+     * targets are hidden from the picker. `ipfs://` fetches always use
+     * [originlessServerUrls], even when this is false.
+     */
+    val originlessUploadsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
     var stripLocationOnUpload: Boolean = true,
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -701,7 +707,10 @@ class AccountSettings(
         if (originlessServerUrls.value != normalized) {
             originlessServerUrls.tryEmit(normalized)
             IpfsGatewayResolver.currentServerBases = normalized
-            if (defaultFileServer.type == ServerType.Originless) {
+            if (normalized.isEmpty() && originlessUploadsEnabled.value) {
+                originlessUploadsEnabled.tryEmit(false)
+                defaultFileServer = DEFAULT_MEDIA_SERVERS[0]
+            } else if (defaultFileServer.type == ServerType.Originless) {
                 val currentBase = OriginlessUrls.normalizeBase(defaultFileServer.baseUrl)
                 defaultFileServer =
                     when {
@@ -709,6 +718,19 @@ class AccountSettings(
                         currentBase in normalized -> originlessServer(currentBase)
                         else -> originlessServer(normalized.first())
                     }
+            }
+            saveAccountSettings()
+        }
+    }
+
+    fun changeOriginlessUploadsEnabled(enabled: Boolean) {
+        if (enabled && originlessServerUrls.value.isEmpty()) return
+        if (originlessUploadsEnabled.value != enabled) {
+            originlessUploadsEnabled.tryEmit(enabled)
+            if (enabled) {
+                defaultFileServer = originlessServer(originlessServerUrls.value.first())
+            } else if (defaultFileServer.type == ServerType.Originless) {
+                defaultFileServer = DEFAULT_MEDIA_SERVERS[0]
             }
             saveAccountSettings()
         }

@@ -64,24 +64,20 @@ fun AllMediaServersScreen(
     nav: INav,
 ) {
     val blossomServersViewModel: BlossomServersViewModel = viewModel()
-    val originlessServersViewModel: OriginlessServersViewModel = viewModel()
 
     blossomServersViewModel.init(accountViewModel)
-    originlessServersViewModel.init(accountViewModel)
 
     LaunchedEffect(key1 = accountViewModel) {
         blossomServersViewModel.load()
-        originlessServersViewModel.load()
     }
 
-    MediaServersScaffold(blossomServersViewModel, originlessServersViewModel, accountViewModel, nav)
+    MediaServersScaffold(blossomServersViewModel, accountViewModel, nav)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaServersScaffold(
     blossomServersViewModel: BlossomServersViewModel,
-    originlessServersViewModel: OriginlessServersViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -95,7 +91,6 @@ fun MediaServersScaffold(
     ) { padding ->
         AllMediaBody(
             blossomServersViewModel = blossomServersViewModel,
-            originlessServersViewModel = originlessServersViewModel,
             accountViewModel = accountViewModel,
             nav = nav,
             modifier =

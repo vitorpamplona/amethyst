@@ -85,26 +85,23 @@ class BlossomServerListState(
     fun mergeServerList(
         blossom: List<String>?,
         originlessUrls: List<String> = settings.originlessServerUrls.value,
-    ): List<ServerName> {
-        val blossomServers = blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS } ?: DEFAULT_MEDIA_SERVERS
-        val originlessServers = originlessUrls.map { originlessServer(it) }
-        return originlessServers + blossomServers
-    }
+        originlessUploadsEnabled: Boolean = settings.originlessUploadsEnabled.value,
+    ): List<ServerName> = mergeUploadServerList(blossom, originlessUrls, originlessUploadsEnabled, ::host)
 
     val hostNameFlow: StateFlow<List<ServerName>> =
-        combine(flow, settings.originlessServerUrls) { blossoms, originlessUrls ->
-            mergeServerList(blossoms, originlessUrls)
+        combine(flow, settings.originlessServerUrls, settings.originlessUploadsEnabled) { blossoms, originlessUrls, enabled ->
+            mergeServerList(blossoms, originlessUrls, enabled)
         }.onStart {
-            emit(mergeServerList(flow.value, settings.originlessServerUrls.value))
+            emit(mergeServerList(flow.value, settings.originlessServerUrls.value, settings.originlessUploadsEnabled.value))
         }.onEach { servers ->
-            resetTargetOrNull(flow.value, servers, settings.defaultFileServer)?.let {
+            resetTargetOrNull(flow.value, servers, settings.defaultFileServer, settings.originlessUploadsEnabled.value)?.let {
                 settings.changeDefaultFileServer(it)
             }
         }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                mergeServerList(emptyList(), settings.originlessServerUrls.value),
+                mergeServerList(emptyList(), settings.originlessServerUrls.value, settings.originlessUploadsEnabled.value),
             )
 
     suspend fun saveBlossomServersList(servers: List<String>): BlossomServersEvent {
@@ -151,6 +148,22 @@ class BlossomServerListState(
 }
 
 /**
+ * Upload picker contents. Originless uploads replace Blossom/NIP-96 entirely
+ * so `ipfs://` pinning is optional; `ipfs://` fetches still use the Originless
+ * node list regardless of this switch.
+ */
+fun mergeUploadServerList(
+    blossom: List<String>?,
+    originlessUrls: List<String>,
+    originlessUploadsEnabled: Boolean,
+    host: (String) -> String,
+): List<ServerName> {
+    if (originlessUploadsEnabled) return originlessUrls.map { originlessServer(it) }
+    return blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS }
+        ?: DEFAULT_MEDIA_SERVERS
+}
+
+/**
  * Decides whether the persisted default file server must be reset, and to what.
  *
  * Returns the new default server, or `null` when no change should happen.
@@ -165,15 +178,21 @@ fun resetTargetOrNull(
     rawList: List<String>,
     merged: List<ServerName>,
     current: ServerName,
-): ServerName? =
-    if (current.type == ServerType.Originless) {
-        if (merged.any { it.type == ServerType.Originless }) {
+    originlessUploadsEnabled: Boolean = false,
+): ServerName? {
+    if (originlessUploadsEnabled) {
+        return if (current.type == ServerType.Originless && merged.any { it.type == ServerType.Originless && it.baseUrl == current.baseUrl }) {
             null
         } else {
-            merged.firstOrNull { it.type != ServerType.Originless } ?: DEFAULT_MEDIA_SERVERS[0]
+            merged.firstOrNull { it.type == ServerType.Originless }
         }
-    } else if (rawList.isNotEmpty() && merged.none { it == current }) {
+    }
+    if (current.type == ServerType.Originless) {
+        return merged.firstOrNull { it.type != ServerType.Originless } ?: DEFAULT_MEDIA_SERVERS[0]
+    }
+    return if (rawList.isNotEmpty() && merged.none { it == current }) {
         merged.firstOrNull { it.type != ServerType.Originless } ?: merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
     } else {
         null
     }
+}

@@ -94,82 +94,34 @@ private val MonogramColors =
 @Composable
 fun AllMediaBody(
     blossomServersViewModel: BlossomServersViewModel,
-    originlessServersViewModel: OriginlessServersViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
     val blossomServersState by blossomServersViewModel.fileServers.collectAsStateWithLifecycle()
     val healthState by blossomServersViewModel.health.collectAsStateWithLifecycle()
-    val originlessServersState by originlessServersViewModel.fileServers.collectAsStateWithLifecycle()
-    val originlessHealthState by originlessServersViewModel.health.collectAsStateWithLifecycle()
 
     val dragState =
         rememberRelayDragState(
             onMove = { from, to -> blossomServersViewModel.moveServer(from, to) },
             itemCount = { blossomServersState.size },
         )
-    val originlessDragState =
-        rememberRelayDragState(
-            onMove = { from, to -> originlessServersViewModel.moveServer(from, to) },
-            itemCount = { originlessServersState.size },
-        )
 
     // Auto-save the reordering once the drag finishes, rather than on every intermediate swap.
     LaunchedEffect(dragState.isDragging) {
         if (!dragState.isDragging) blossomServersViewModel.persistPending()
     }
-    LaunchedEffect(originlessDragState.isDragging) {
-        if (!originlessDragState.isDragging) originlessServersViewModel.persistPending()
-    }
 
     LazyColumn(
         modifier = modifier,
         contentPadding = FeedPadding,
-        userScrollEnabled = !dragState.isDragging && !originlessDragState.isDragging,
+        userScrollEnabled = !dragState.isDragging,
     ) {
-        item {
-            SectionLabel(
-                title = stringRes(id = R.string.originless_section),
-                caption = stringRes(id = R.string.originless_section_caption),
-                topPadding = 4.dp,
-            )
-        }
-
-        if (originlessServersState.isEmpty()) {
-            item {
-                Text(
-                    text = stringRes(id = R.string.no_originless_server_message),
-                    modifier = DoubleVertPadding,
-                )
-            }
-        } else {
-            itemsIndexed(
-                originlessServersState,
-                key = { _, server -> "originless" + server.baseUrl },
-            ) { index, entry ->
-                MediaServerRow(
-                    index = index,
-                    serverEntry = entry,
-                    health = originlessHealthState[entry.baseUrl] ?: ServerHealth.Unknown,
-                    dragState = originlessDragState,
-                    onDelete = { originlessServersViewModel.removeServer(serverUrl = it) },
-                )
-            }
-        }
-
-        item {
-            OriginlessAddServerSection(
-                addedHosts = originlessServersState.mapTo(HashSet()) { it.name },
-                onAddServer = { originlessServersViewModel.addServer(it) },
-            )
-        }
-
         item {
             SectionLabel(
                 title = stringRes(id = R.string.media_servers_priority_section),
                 caption = stringRes(id = R.string.media_servers_reorder_hint),
-                topPadding = 20.dp,
+                topPadding = 4.dp,
             )
         }
 
@@ -294,11 +246,12 @@ private fun UploadBehaviorSection(
 }
 
 @Composable
-private fun UploadToggleRow(
+internal fun UploadToggleRow(
     title: String,
     caption: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -312,13 +265,13 @@ private fun UploadToggleRow(
                 color = MaterialTheme.colorScheme.grayText,
             )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
 
 /** Compact section header: an accent label with an optional gray caption below. */
 @Composable
-private fun SectionLabel(
+internal fun SectionLabel(
     title: String,
     caption: String? = null,
     topPadding: Dp = 20.dp,
@@ -430,7 +383,7 @@ fun MediaServerRow(
  * horizontal strip of add-chips (already-added ones read as done).
  */
 @Composable
-private fun OriginlessAddServerSection(
+internal fun OriginlessAddServerSection(
     addedHosts: Set<String>,
     onAddServer: (String) -> Unit,
 ) {

@@ -1755,13 +1755,18 @@
     <string name="media_servers">Media Servers</string>
     <string name="set_preferred_media_servers">Set your preferred media upload servers.</string>
 
-    <string name="originless_section">Originless</string>
-    <string name="originless_section_caption">Uploads pin to every Originless node you add. Notes store ipfs://CID; Amethyst fetches from these gateways and tries the next if one fails.</string>
-    <string name="originless_server_url">Originless server</string>
-    <string name="originless_server_placeholder" translatable="false">https://originless.gupt.app</string>
+    <string name="originless_settings_title">Originless</string>
+    <string name="originless_section_caption">These nodes resolve ipfs:// links. Uploads pin to every node you add. Order is the fetch failover order.</string>
+    <string name="originless_uploads_section">Uploads</string>
+    <string name="originless_uploads_section_caption">Originless is optional for posting. Turning this on hides Blossom and NIP-96 from the upload picker.</string>
+    <string name="originless_uploads_switch">Upload with Originless</string>
+    <string name="originless_uploads_switch_caption">Files are pinned as ipfs://CID on every Originless node. Blossom and NIP-96 servers are not used while this is on. Add a node below first.</string>
+    <string name="originless_media_caption">POST /media strips EXIF/GPS from JPEG, PNG, GIF, and WebP before pinning. Other types still use /upload.</string>
+    <string name="originless_gateways_section">Nodes</string>
     <string name="add_an_originless_server">Add an Originless server</string>
-    <string name="no_originless_server_message">You have no Originless servers set. Add one below to upload with ipfs://.</string>
+    <string name="no_originless_server_message">You have no Originless nodes set. Add one below so ipfs:// links can load, and so uploads have somewhere to pin.</string>
     <string name="originless_no_servers">Add an Originless server first, then try uploading again.</string>
+    <string name="originless_search_keywords" translatable="false">originless, ipfs, cid, gateway, umbrel, docker</string>
 
     <string name="use_local_blossom_cache">Use local Blossom cache</string>
     <string name="use_local_blossom_cache_caption">When a Blossom cache is running on this device (port 24242), route image and video downloads through it.</string>
@@ -2465,7 +2470,7 @@
     <string name="notification_settings_search_keywords" translatable="false">push, alerts, sounds, vibration</string>
     <string name="security_filters_search_keywords" translatable="false">spam, block, mute, filter, warnings</string>
     <string name="zaps_search_keywords" translatable="false">lightning, sats, tips, wallet, amount</string>
-    <string name="media_servers_search_keywords" translatable="false">blossom, uploads, images, photos, files, cdn, storage, originless, ipfs</string>
+    <string name="media_servers_search_keywords" translatable="false">blossom, uploads, images, photos, files, cdn, storage, nip96</string>
     <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
     <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>
     <string name="nests_servers_search_keywords" translatable="false">audio rooms, live, spaces, rooms</string>
