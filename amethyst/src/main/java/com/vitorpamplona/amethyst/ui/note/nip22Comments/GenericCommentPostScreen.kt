@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -45,16 +47,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
+import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -67,6 +73,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
@@ -115,6 +122,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -168,6 +176,33 @@ fun GenericCommentPostScreen(
     nav: Nav,
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
+
+    val context = LocalContext.current
+    val activity = context.getActivity()
+    val scope = rememberCoroutineScope()
+
+    DisposableEffect(nav, activity) {
+        // Microsoft's swift key sends Gifs as new actions
+        val consumer =
+            Consumer<Intent> { intent ->
+                if (intent.action == Intent.ACTION_SEND) {
+                    intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }?.let {
+                        postViewModel.addToMessage(it)
+                    }
+
+                    // Use the `intent` parameter (the new intent), not activity.intent (the launch intent).
+                    IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.let { uri ->
+                        scope.launch(Dispatchers.IO) {
+                            val mediaType = context.contentResolver.getType(uri)
+                            postViewModel.selectImage(persistentListOf(SelectedMedia(uri, mediaType)))
+                        }
+                    }
+                }
+            }
+
+        activity.addOnNewIntentListener(consumer)
+        onDispose { activity.removeOnNewIntentListener(consumer) }
+    }
 
     // NIP-9B: when replying into a NIP-72 community, mount the community feed
     // subscription so the latest kind:34551 rules document is fetched and
@@ -364,6 +399,13 @@ private fun GenericCommentPostBody(
                     MessageField(
                         R.string.what_s_on_your_mind,
                         postViewModel,
+                        onContentReceived = { uri, mimeType ->
+                            postViewModel.selectImage(
+                                persistentListOf(
+                                    SelectedMedia(uri, mimeType),
+                                ),
+                            )
+                        },
                     )
                 }
 
