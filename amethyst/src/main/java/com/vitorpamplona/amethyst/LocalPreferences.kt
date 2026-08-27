@@ -39,9 +39,9 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.originlessServer
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -877,7 +877,7 @@ object LocalPreferences {
                     val defaultFileServer =
                         async {
                             val parsed = parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0]
-                            if (parsed.type == ServerType.Originless) originlessServer(parsed.baseUrl) else parsed
+                            if (parsed.type == ServerType.Originless) ORIGINLESS_UPLOAD_TARGET else parsed
                         }
 
                     val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
@@ -1115,7 +1115,7 @@ object LocalPreferences {
             when {
                 parsedList != null -> OriginlessUrls.normalizeList(parsedList)
                 !legacyUrl.isNullOrBlank() -> listOf(OriginlessUrls.normalizeBase(legacyUrl))
-                else -> listOf(OriginlessUrls.DEFAULT_SERVER)
+                else -> emptyList()
             }
         return OriginlessPrefs(
             serverUrls = urls,

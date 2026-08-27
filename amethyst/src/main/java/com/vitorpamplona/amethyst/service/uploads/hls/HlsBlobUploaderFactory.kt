@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.uploads.hls
 import android.content.Context
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
@@ -142,7 +143,7 @@ object HlsBlobUploaderFactory {
                 size = totalBytes,
                 alt = null,
                 sensitiveContent = null,
-                serverBaseUrls = account.settings.originlessServerUrls.value,
+                serverBaseUrls = OriginlessUrls.uploadTargets(account.settings.originlessServerUrls.value),
                 okHttpClient = ::okHttpClientForHlsUploads,
                 onProgress = { percentage ->
                     val written =

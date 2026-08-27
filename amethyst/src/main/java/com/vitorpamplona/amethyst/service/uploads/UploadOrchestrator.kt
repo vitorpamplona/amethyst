@@ -24,6 +24,7 @@ import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
@@ -206,9 +207,7 @@ class UploadOrchestrator {
         context: Context,
     ): UploadingFinalState {
         updateState(0.2, UploadingState.Uploading)
-        val targets =
-            account.settings.originlessServerUrls.value
-                .ifEmpty { listOf(serverBaseUrl) }
+        val targets = OriginlessUrls.uploadTargets(account.settings.originlessServerUrls.value)
         val useMedia = account.settings.optimizeMediaOnUpload.value
         return try {
             val result =

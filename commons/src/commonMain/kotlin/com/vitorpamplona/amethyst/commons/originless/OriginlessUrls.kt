@@ -53,7 +53,8 @@ object OriginlessUrls {
 
     /**
      * Dedupes and normalizes a user-configured Originless list. Empty input
-     * stays empty — there is no implied upload target.
+     * stays empty — there is no implied upload target and [DEFAULT_SERVER]
+     * is never injected here (it is only a fetch fallback).
      */
     fun normalizeList(urls: List<String>): List<String> {
         val seen = mutableListOf<String>()
@@ -66,6 +67,9 @@ object OriginlessUrls {
         }
         return seen
     }
+
+    /** Nodes to `POST /upload` (or `/media`) to. Empty means do not upload. */
+    fun uploadTargets(urls: List<String>): List<String> = normalizeList(urls)
 
     fun uploadUrl(base: String): String = "${normalizeBase(base)}/upload"
 

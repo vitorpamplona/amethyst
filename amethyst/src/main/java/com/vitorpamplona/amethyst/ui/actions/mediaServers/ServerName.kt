@@ -46,6 +46,12 @@ enum class ServerType {
         get() = this != Originless
 }
 
+/**
+ * Compose-picker entry for Originless. Uploads pin to every configured node;
+ * this URL is never POSTed to.
+ */
+val ORIGINLESS_UPLOAD_TARGET = ServerName("Originless", "originless://all", ServerType.Originless)
+
 fun originlessServer(url: String = OriginlessUrls.DEFAULT_SERVER): ServerName {
     val base = OriginlessUrls.normalizeBase(url)
     val host =

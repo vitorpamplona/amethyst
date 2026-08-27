@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
@@ -68,9 +69,7 @@ object DefaultFileServerUploader {
                     size = size,
                     alt = alt,
                     sensitiveContent = sensitiveContent,
-                    serverBaseUrls =
-                        account.settings.originlessServerUrls.value
-                            .ifEmpty { listOf(server.baseUrl) },
+                    serverBaseUrls = OriginlessUrls.uploadTargets(account.settings.originlessServerUrls.value),
                     okHttpClient = okHttpClient,
                     onProgress = onProgress,
                     context = context,

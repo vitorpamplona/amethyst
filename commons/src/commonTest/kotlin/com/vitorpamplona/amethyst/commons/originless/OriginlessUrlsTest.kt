@@ -35,6 +35,18 @@ class OriginlessUrlsTest {
     }
 
     @Test
+    fun uploadTargetsNeverImpliesADefaultNode() {
+        assertEquals(emptyList(), OriginlessUrls.uploadTargets(emptyList()))
+        assertEquals(emptyList(), OriginlessUrls.uploadTargets(listOf("  ", "")))
+        assertEquals(
+            listOf("https://originless.gupt.app", "https://originless.example"),
+            OriginlessUrls.uploadTargets(
+                listOf("https://originless.gupt.app/", "originless.example"),
+            ),
+        )
+    }
+
+    @Test
     fun uploadAndGatewayUrls() {
         val base = "https://originless.gupt.app"
         assertEquals("https://originless.gupt.app/upload", OriginlessUrls.uploadUrl(base))

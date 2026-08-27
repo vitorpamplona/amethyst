@@ -25,9 +25,9 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.originlessServer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
@@ -158,7 +158,9 @@ fun mergeUploadServerList(
     originlessUploadsEnabled: Boolean,
     host: (String) -> String,
 ): List<ServerName> {
-    if (originlessUploadsEnabled) return originlessUrls.map { originlessServer(it) }
+    if (originlessUploadsEnabled) {
+        return if (originlessUrls.isEmpty()) emptyList() else listOf(ORIGINLESS_UPLOAD_TARGET)
+    }
     return blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS }
         ?: DEFAULT_MEDIA_SERVERS
 }
@@ -181,11 +183,8 @@ fun resetTargetOrNull(
     originlessUploadsEnabled: Boolean = false,
 ): ServerName? {
     if (originlessUploadsEnabled) {
-        return if (current.type == ServerType.Originless && merged.any { it.type == ServerType.Originless && it.baseUrl == current.baseUrl }) {
-            null
-        } else {
-            merged.firstOrNull { it.type == ServerType.Originless }
-        }
+        val target = merged.firstOrNull { it.type == ServerType.Originless }
+        return if (current == target) null else target
     }
     if (current.type == ServerType.Originless) {
         return merged.firstOrNull { it.type != ServerType.Originless } ?: DEFAULT_MEDIA_SERVERS[0]

@@ -39,9 +39,9 @@ import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.originlessServer
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
@@ -202,9 +202,11 @@ class AccountSettings(
     /**
      * Local Originless node URLs (NIP-96-simple: `POST /upload` or `POST /media`,
      * `GET /ipfs/{cid}`). Not a kind-10063 list. Uploads pin to every entry;
-     * `ipfs://` fetches try each gateway until one succeeds.
+     * there is no default upload node. `ipfs://` fetches try each gateway until
+     * one succeeds, falling back to OriginlessUrls.DEFAULT_SERVER when this list
+     * is empty.
      */
-    val originlessServerUrls: MutableStateFlow<List<String>> = MutableStateFlow(listOf(OriginlessUrls.DEFAULT_SERVER)),
+    val originlessServerUrls: MutableStateFlow<List<String>> = MutableStateFlow(emptyList()),
     /**
      * When true, compose uploads go to Originless (`ipfs://`) and Blossom/NIP-96
      * targets are hidden from the picker. `ipfs://` fetches always use
@@ -711,12 +713,11 @@ class AccountSettings(
                 originlessUploadsEnabled.tryEmit(false)
                 defaultFileServer = DEFAULT_MEDIA_SERVERS[0]
             } else if (defaultFileServer.type == ServerType.Originless) {
-                val currentBase = OriginlessUrls.normalizeBase(defaultFileServer.baseUrl)
                 defaultFileServer =
-                    when {
-                        normalized.isEmpty() -> DEFAULT_MEDIA_SERVERS[0]
-                        currentBase in normalized -> originlessServer(currentBase)
-                        else -> originlessServer(normalized.first())
+                    if (normalized.isEmpty()) {
+                        DEFAULT_MEDIA_SERVERS[0]
+                    } else {
+                        ORIGINLESS_UPLOAD_TARGET
                     }
             }
             saveAccountSettings()
@@ -728,7 +729,7 @@ class AccountSettings(
         if (originlessUploadsEnabled.value != enabled) {
             originlessUploadsEnabled.tryEmit(enabled)
             if (enabled) {
-                defaultFileServer = originlessServer(originlessServerUrls.value.first())
+                defaultFileServer = ORIGINLESS_UPLOAD_TARGET
             } else if (defaultFileServer.type == ServerType.Originless) {
                 defaultFileServer = DEFAULT_MEDIA_SERVERS[0]
             }

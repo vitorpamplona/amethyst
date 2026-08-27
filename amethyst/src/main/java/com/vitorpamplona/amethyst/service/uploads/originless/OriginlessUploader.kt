@@ -89,7 +89,7 @@ class OriginlessUploader {
         context: Context,
         useMedia: Boolean = false,
     ): MediaUploadResult {
-        val targets = OriginlessUrls.normalizeList(serverBaseUrls)
+        val targets = OriginlessUrls.uploadTargets(serverBaseUrls)
         if (targets.isEmpty()) {
             throw RuntimeException(stringRes(context, R.string.originless_no_servers))
         }
