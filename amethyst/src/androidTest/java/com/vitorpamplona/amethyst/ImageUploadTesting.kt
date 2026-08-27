@@ -25,6 +25,7 @@ import android.graphics.Color
 import androidx.core.graphics.createBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -221,7 +222,7 @@ class ImageUploadTesting {
         val url = result.url!!
         Assert.assertTrue("${server.name}: Expected ipfs:// URL, got $url", url.startsWith("ipfs://"))
 
-        val gatewayUrl = IpfsGatewayResolver.toHttpUrl(url)
+        val gatewayUrl = IpfsGatewayResolver.toHttpUrl(url, OriginlessUrls.gatewayPrefix(server.baseUrl))
         val imageData: ByteArray =
             ImageDownloader().waitAndGetImage(gatewayUrl) { client }?.bytes
                 ?: run {

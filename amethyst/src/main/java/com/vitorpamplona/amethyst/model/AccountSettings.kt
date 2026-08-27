@@ -201,9 +201,9 @@ class AccountSettings(
     /**
      * Local Originless node URLs (NIP-96-simple: `POST /upload` or `POST /media`,
      * `GET /ipfs/{cid}`). Not a kind-10063 list. Uploads pin to every entry;
-     * there is no default upload node. `ipfs://` fetches try each gateway until
-     * one succeeds, falling back to OriginlessUrls.DEFAULT_SERVER when this list
-     * is empty.
+     * there is no default upload or fetch node. `ipfs://` fetches try each
+     * configured gateway until one succeeds. An empty list means `ipfs://`
+     * is not rewritten to HTTP.
      */
     val originlessServerUrls: MutableStateFlow<List<String>> = MutableStateFlow(emptyList()),
     /**

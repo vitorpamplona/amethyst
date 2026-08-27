@@ -27,12 +27,13 @@ object IpfsGatewayResolver {
     /**
      * Live Originless node list for singleton Coil/OkHttp. Bound once from the
      * session manager to the current account's `originlessServerUrls` flow.
-     * Empty means the public [OriginlessUrls.DEFAULT_SERVER] fetch fallback.
+     * Empty means the user has not opted into any Originless node: `ipfs://`
+     * is left as-is and is not rewritten through a third-party gateway.
      */
     @Volatile
     var serverBasesProvider: () -> List<String> = { emptyList() }
 
-    fun fetchBases(): List<String> = OriginlessUrls.normalizeList(serverBasesProvider()).ifEmpty { listOf(OriginlessUrls.DEFAULT_SERVER) }
+    fun fetchBases(): List<String> = OriginlessUrls.normalizeList(serverBasesProvider())
 
     fun isIpfsUri(url: String): Boolean =
         url.startsWith("ipfs://", ignoreCase = true) ||
@@ -41,12 +42,15 @@ object IpfsGatewayResolver {
     /**
      * Resolves an `ipfs://...` or `ipfs:...` URI into an HTTP gateway URL
      * on the first configured Originless node (`{base}/ipfs/{cid}`).
+     * With no node configured and no [gateway] override, returns [ipfsUri]
+     * unchanged so we never send the user's IP to a default third party.
      */
     fun toHttpUrl(
         ipfsUri: String,
-        gateway: String = OriginlessUrls.gatewayPrefix(fetchBases().firstOrNull() ?: OriginlessUrls.DEFAULT_SERVER),
+        gateway: String? = fetchBases().firstOrNull()?.let { OriginlessUrls.gatewayPrefix(it) },
     ): String {
         if (!isIpfsUri(ipfsUri)) return ipfsUri
+        if (gateway.isNullOrBlank()) return ipfsUri
 
         val cleanPath = cidPath(ipfsUri)
         val base = if (gateway.endsWith("/")) gateway else "$gateway/"
@@ -56,7 +60,8 @@ object IpfsGatewayResolver {
     /**
      * Returns candidate HTTP URLs for failover fetching. Each configured
      * Originless node is tried in list order; [customGateway] is tried first
-     * when the caller already has one.
+     * when the caller already has one. With no nodes and no override this is
+     * empty — we do not invent a public gateway.
      */
     fun getAllCandidateUrls(
         ipfsUri: String,
@@ -69,7 +74,7 @@ object IpfsGatewayResolver {
             val base = if (customGateway.endsWith("/")) customGateway else "$customGateway/"
             list.add("$base$cleanPath")
         }
-        serverBases.ifEmpty { listOf(OriginlessUrls.DEFAULT_SERVER) }.forEach { server ->
+        serverBases.forEach { server ->
             list.add(OriginlessUrls.gatewayUrl(server, cleanPath))
         }
         return list.distinct()
@@ -77,7 +82,8 @@ object IpfsGatewayResolver {
 
     /**
      * HTTP URLs to try for a fetch. `ipfs://` expands to every configured
-     * Originless gateway; anything else is returned as a single-item list.
+     * Originless gateway (empty when none are set); anything else is a
+     * single-item list.
      */
     fun httpFetchUrls(
         url: String,

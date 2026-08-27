@@ -54,8 +54,9 @@ object OriginlessUrls {
 
     /**
      * Dedupes and normalizes a user-configured Originless list. Empty input
-     * stays empty — there is no implied upload target and [DEFAULT_SERVER]
-     * is never injected here (it is only a fetch fallback).
+     * stays empty — there is no implied upload or fetch target.
+     * [DEFAULT_SERVER] is only a suggested chip on the Originless settings
+     * page; adding it is opt-in.
      */
     fun normalizeList(urls: List<String>): List<String> {
         val seen = mutableListOf<String>()
