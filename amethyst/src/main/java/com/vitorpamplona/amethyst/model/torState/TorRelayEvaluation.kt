@@ -22,3 +22,5 @@ package com.vitorpamplona.amethyst.model.torState
 
 // Canonical type now lives in commons
 typealias TorRelayEvaluation = com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
+
+typealias RelayClassification = com.vitorpamplona.amethyst.commons.tor.RelayClassification

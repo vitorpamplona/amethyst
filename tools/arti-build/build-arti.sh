@@ -224,6 +224,8 @@ verify_jni_symbols() {
         "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize"
         "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_startSocksProxy"
         "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksProxy"
+        "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_isBootstrapped"
+        "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_bootstrapProgressPermille"
         "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy"
     )
 

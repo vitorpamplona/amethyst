@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient
 
+import com.vitorpamplona.amethyst.commons.tor.RelayClassification
 import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.model.torState.TorRelayEvaluation
@@ -28,6 +29,7 @@ import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector.
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -112,8 +114,11 @@ class RelayProxyClientConnectorTest {
     private fun evaluation(settings: TorRelaySettings = TorRelaySettings()) =
         TorRelayEvaluation(
             torSettings = settings,
-            trustedRelayList = emptySet(),
-            dmRelayList = emptySet(),
+            classification =
+                RelayClassification(
+                    trusted = emptySet(),
+                    dm = emptySet(),
+                ),
         )
 
     private fun infra(
@@ -177,6 +182,43 @@ class RelayProxyClientConnectorTest {
             client.backoffResets,
         )
         assertEquals(listOf(true to true), client.reconnects)
+    }
+
+    /**
+     * The handover the guessed-relay feature exists to perform: when a user's own lists arrive, the
+     * relays we were guessing about must re-dial onto whatever policy the user actually chose.
+     *
+     * The case that matters is an **empty** arriving list. Normally `trusted` grows at the same
+     * moment and would have flagged the change on its own — but an account that publishes an empty
+     * relay list leaves `trusted` untouched while `assumed` empties, and before the classification
+     * was compared as one value that combination produced no reconnect at all, stranding those
+     * relays on clearnet against a policy that had already moved them to Tor.
+     */
+    @Test
+    fun `guessed relays re-dial when an empty list arrives and trusted does not change`() {
+        settleOnFirstNetwork()
+
+        val guessing =
+            TorRelayEvaluation(
+                torSettings = TorRelaySettings(),
+                classification = RelayClassification(assumed = setOf(NormalizedRelayUrl("wss://guessed.example/"))),
+            )
+        connector.apply(infra(networkId = 1L, evaluation = guessing))
+        client.reconnects.clear()
+
+        // The user's own list arrives and is empty: `assumed` empties, `trusted` stays empty.
+        val released =
+            TorRelayEvaluation(
+                torSettings = TorRelaySettings(),
+                classification = RelayClassification(),
+            )
+        connector.apply(infra(networkId = 1L, evaluation = released))
+
+        assertEquals(
+            "The relays we stopped guessing about must be asked to re-dial onto their real policy",
+            listOf(true to true),
+            client.reconnects,
+        )
     }
 
     @Test

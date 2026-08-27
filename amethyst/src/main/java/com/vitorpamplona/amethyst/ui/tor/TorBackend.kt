@@ -31,6 +31,27 @@ import kotlinx.coroutines.flow.StateFlow
 interface TorBackend {
     val status: StateFlow<TorServiceStatus>
 
+    /**
+     * True while a native bootstrap attempt is actually running.
+     *
+     * [TorServiceStatus.Connecting] conflates two states that need opposite responses: a bootstrap
+     * that is working through a cold consensus download (leave it alone) and a lifecycle that has
+     * stopped trying (reset it). The stuck-Connecting watchdog cannot tell them apart from status
+     * alone, and a fresh install spends its first minute in the first one — so the watchdog used to
+     * queue a reset behind the in-flight attempt's lifecycle lock and tear the client down the
+     * moment it succeeded. This flag is the missing half of the signal.
+     */
+    val bootstrapInFlight: StateFlow<Boolean>
+
+    /**
+     * Directory-download progress in permille while [TorServiceStatus.Bootstrapping]; -1 when there
+     * is no client or nothing is being downloaded.
+     *
+     * Emits only on change (it is a [StateFlow]), which is exactly the signal the stall detector
+     * needs: the timestamp of the last distinct value is the last time Tor made forward progress.
+     */
+    val bootstrapProgress: StateFlow<Int>
+
     suspend fun start()
 
     suspend fun stop()

@@ -64,7 +64,7 @@ class DesktopTorManager(
 
     override val activePortOrNull: StateFlow<Int?> =
         _status
-            .map { (it as? TorServiceStatus.Active)?.port }
+            .map { it.socksPort }
             .stateIn(scope, SharingStarted.Eagerly, null)
 
     private val runtime: TorRuntime by lazy {

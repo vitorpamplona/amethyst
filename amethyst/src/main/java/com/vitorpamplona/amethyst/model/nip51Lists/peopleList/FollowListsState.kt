@@ -71,7 +71,15 @@ class FollowListsState(
 ) {
     val user = cache.getOrCreateUser(signer.pubKey)
 
-    fun existingPeopleListNotes() = cache.addressables.filter(FollowListEvent.KIND, user.pubkeyHex)
+    // Hides shells that a kind-5 deletion event from the list's author has already
+    // deleted (e.g. a persisted TopFilter re-creates an empty shell for the deleted
+    // address after a restart, and its name falls back to the dTag/UUID). Shells that
+    // are merely not loaded yet stay in the list so the UI can subscribe and fetch
+    // them from relays.
+    fun existingPeopleListNotes() =
+        cache.addressables
+            .filter(FollowListEvent.KIND, user.pubkeyHex)
+            .filter { it.event != null || !cache.hasBeenDeleted(it.address) }
 
     val followListVersions = MutableStateFlow(0)
 
@@ -255,6 +263,10 @@ class FollowListsState(
         val followListEvent = getPeopleList(identifierTag)
         val deletionEvent = account.signer.sign(DeletionEvent.build(listOf(followListEvent)))
         account.sendMyPublicAndPrivateOutbox(deletionEvent)
+        // Any screen whose persisted feed filter still points at this follow pack would
+        // keep re-creating an empty shell for its address (and render the dTag/UUID in
+        // the top bar) — reset those filters to their default.
+        account.settings.resetFeedFiltersPointingTo(followListEvent.address())
     }
 
     suspend fun addUserToSet(
