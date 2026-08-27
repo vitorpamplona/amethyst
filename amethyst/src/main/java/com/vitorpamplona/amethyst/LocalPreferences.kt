@@ -779,8 +779,7 @@ object LocalPreferences {
                     val useLocalBlossomCache = getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, true)
                     val localBlossomCacheProfilePicturesOnly = getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
                     val mirrorUploadsToAllServers = getBoolean(PrefKeys.MIRROR_UPLOADS_TO_ALL_SERVERS, true)
-                    val originlessUploadsEnabledStored = contains(PrefKeys.ORIGINLESS_UPLOADS_ENABLED)
-                    val originlessUploadsEnabledRaw = getBoolean(PrefKeys.ORIGINLESS_UPLOADS_ENABLED, false)
+                    val originlessPrefs = readOriginlessPrefs()
                     val optimizeMediaOnUpload = getBoolean(PrefKeys.OPTIMIZE_MEDIA_ON_UPLOAD, false)
                     val hideCommunityRulesViolations = getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
                     val nip46SignerEnabled = getBoolean(PrefKeys.NIP46_SIGNER_ENABLED, false)
@@ -813,8 +812,6 @@ object LocalPreferences {
                     val clinkDebitWalletsStr = getString(PrefKeys.CLINK_DEBIT_WALLETS, null)
                     val defaultPaymentSourceIdStr = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null)
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
-                    val originlessServerUrlStr = getString(PrefKeys.ORIGINLESS_SERVER_URL, null)
-                    val originlessServerUrlsStr = getString(PrefKeys.ORIGINLESS_SERVER_URLS, null)
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
                     val latestUserMetadataStr = getString(PrefKeys.LATEST_USER_METADATA, null)
@@ -882,13 +879,6 @@ object LocalPreferences {
                             val parsed = parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0]
                             if (parsed.type == ServerType.Originless) originlessServer(parsed.baseUrl) else parsed
                         }
-                    val parsedOriginlessList = parseOrNull<List<String>>(originlessServerUrlsStr)
-                    val originlessServerUrls =
-                        when {
-                            parsedOriginlessList != null -> OriginlessUrls.normalizeList(parsedOriginlessList)
-                            !originlessServerUrlStr.isNullOrBlank() -> listOf(OriginlessUrls.normalizeBase(originlessServerUrlStr))
-                            else -> listOf(OriginlessUrls.DEFAULT_SERVER)
-                        }
 
                     val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
                     val pendingAttestations = async { parseOrNull<Map<HexKey, String>>(pendingAttestationsStr) ?: mapOf() }
@@ -945,12 +935,6 @@ object LocalPreferences {
                     val nwcWalletsResolved = nwcWalletsLoaded.await()
                     val clinkDebitsResolved = clinkDebitsLoaded.await()
                     val defaultFileServerResolved = defaultFileServer.await()
-                    val originlessUploadsEnabled =
-                        if (originlessUploadsEnabledStored) {
-                            originlessUploadsEnabledRaw
-                        } else {
-                            defaultFileServerResolved.type == ServerType.Originless
-                        }
                     val viewedPollResultNoteIdsResolved = viewedPollResultNoteIds.await()
                     val pendingAttestationsResolved = pendingAttestations.await()
                     val lastReadPerRouteResolved = lastReadPerRoute.await()
@@ -989,8 +973,8 @@ object LocalPreferences {
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServerResolved,
-                        originlessServerUrls = MutableStateFlow(originlessServerUrls),
-                        originlessUploadsEnabled = MutableStateFlow(originlessUploadsEnabled),
+                        originlessServerUrls = MutableStateFlow(originlessPrefs.serverUrls),
+                        originlessUploadsEnabled = MutableStateFlow(originlessPrefs.resolveUploadsEnabled(defaultFileServerResolved)),
                         stripLocationOnUpload = stripLocationOnUpload,
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),
@@ -1113,6 +1097,31 @@ object LocalPreferences {
             Log.w("LocalPreferences", "Error Decoding TopFilter from Preferences", e)
             default
         }
+    }
+
+    private data class OriginlessPrefs(
+        val serverUrls: List<String>,
+        val uploadsEnabledStored: Boolean,
+        val uploadsEnabledRaw: Boolean,
+    ) {
+        fun resolveUploadsEnabled(defaultFileServer: ServerName): Boolean = if (uploadsEnabledStored) uploadsEnabledRaw else defaultFileServer.type == ServerType.Originless
+    }
+
+    private fun SharedPreferences.readOriginlessPrefs(): OriginlessPrefs {
+        val listStr = getString(PrefKeys.ORIGINLESS_SERVER_URLS, null)
+        val legacyUrl = getString(PrefKeys.ORIGINLESS_SERVER_URL, null)
+        val parsedList = parseOrNull<List<String>>(listStr)
+        val urls =
+            when {
+                parsedList != null -> OriginlessUrls.normalizeList(parsedList)
+                !legacyUrl.isNullOrBlank() -> listOf(OriginlessUrls.normalizeBase(legacyUrl))
+                else -> listOf(OriginlessUrls.DEFAULT_SERVER)
+            }
+        return OriginlessPrefs(
+            serverUrls = urls,
+            uploadsEnabledStored = contains(PrefKeys.ORIGINLESS_UPLOADS_ENABLED),
+            uploadsEnabledRaw = getBoolean(PrefKeys.ORIGINLESS_UPLOADS_ENABLED, false),
+        )
     }
 
     private data class FollowListPrefs(
