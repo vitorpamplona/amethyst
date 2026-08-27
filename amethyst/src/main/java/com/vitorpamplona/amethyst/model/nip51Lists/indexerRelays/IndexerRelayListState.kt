@@ -58,7 +58,11 @@ class IndexerRelayListState(
 
     fun indexListEvent(note: Note) = note.event as? IndexerRelayListEvent ?: settings.backupIndexRelayList
 
-    suspend fun normalizeIndexerRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = indexListEvent(note)?.let { decryptionCache.relays(it) }?.ifEmpty { null } ?: DefaultIndexerRelayList
+    suspend fun normalizeIndexerRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
+        val event = indexListEvent(note) ?: return DefaultIndexerRelayList
+        // Fully decrypted here, so empty means the user listed nothing — not "not decrypted yet".
+        return decryptionCache.relays(event)
+    }
 
     suspend fun normalizeIndexerRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = indexListEvent(note)?.let { decryptionCache.relays(it) } ?: emptySet()
 
@@ -74,11 +78,11 @@ class IndexerRelayListState(
     fun normalizeIndexerRelayListPrecached(note: Note): Set<NormalizedRelayUrl> = indexListEvent(note)?.let { decryptionCache.cachedRelays(it) }?.ifEmpty { null } ?: DefaultIndexerRelayList
 
     /**
-     * The account's indexer relays, **never empty** — [normalizeIndexerRelayListWithBackup]
-     * substitutes [DefaultIndexerRelayList] both when there is no kind:10086 and when the
-     * one we have decodes to zero relays. Callers assembling metadata / relay-list REQs read
-     * this and can rely on getting a usable set; use [flowNoDefaults] instead to show or diff
-     * what the user actually configured.
+     * The account's indexer relays. [normalizeIndexerRelayListWithBackup] substitutes
+     * [DefaultIndexerRelayList] when there is no kind:10086 at all — but **not** when the one we
+     * have decodes to zero relays, which is the user saying "no indexers" and is honored. Callers
+     * assembling metadata / relay-list REQs must therefore tolerate an empty set; use
+     * [flowNoDefaults] to show or diff what the user actually configured.
      *
      * Seeded via [normalizeIndexerRelayListPrecached] rather than `emptySet()`, for the same
      * reason as the search list: `flowOn(IO)` makes the first real emission asynchronous, so an

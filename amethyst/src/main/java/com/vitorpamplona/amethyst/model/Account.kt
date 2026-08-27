@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSig
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.defaults.Constants
-import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
@@ -384,12 +383,16 @@ class Account(
     // doubles as the attribution pubkey for ExplainedFilter.accountPubKeys.
     override val userFinderPubkeyHex: HexKey get() = userProfile().pubkeyHex
 
-    override fun indexRelays(): Set<NormalizedRelayUrl> = indexerRelayList.flow.value.ifEmpty { DefaultIndexerRelayList }
+    // No ifEmpty here on purpose: an empty kind:10086 is the user asking for no indexers, and
+    // IndexerRelayListState already substitutes the defaults for the only case we may override —
+    // never having seen the event. Re-substituting here would undo that choice.
+    override fun indexRelays(): Set<NormalizedRelayUrl> = indexerRelayList.flow.value
 
     override fun outboxHomeRelays(): Set<NormalizedRelayUrl> = nip65RelayList.allFlowNoDefaults.value + privateStorageRelayList.flow.value + localRelayList.flow.value
 
-    // searchRelayList.flow already applies the DefaultSearchRelayList fallback internally
-    // (SearchRelayListState.normalizeSearchRelayListWithBackup), so no ifEmpty needed here.
+    // searchRelayList.flow applies DefaultSearchRelayList internally when no kind:10007 has ever
+    // been seen (SearchRelayListState.normalizeSearchRelayListWithBackup); an empty published list
+    // stays empty. No ifEmpty here either way.
     override fun searchRelays(): Set<NormalizedRelayUrl> = (trustedRelayList.flow.value + searchRelayList.flow.value).toSet()
 
     override fun searchOnlyRelays(): Set<NormalizedRelayUrl> = searchRelayList.flow.value

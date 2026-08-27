@@ -58,7 +58,11 @@ class SearchRelayListState(
 
     fun searchListEvent(note: Note) = note.event as? SearchRelayListEvent ?: settings.backupSearchRelayList
 
-    suspend fun normalizeSearchRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.relays(it) }?.ifEmpty { null } ?: DefaultSearchRelayList
+    suspend fun normalizeSearchRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> {
+        val event = searchListEvent(note) ?: return DefaultSearchRelayList
+        // Fully decrypted here, so empty means the user listed nothing — not "not decrypted yet".
+        return decryptionCache.relays(event)
+    }
 
     suspend fun normalizeSearchRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.relays(it) } ?: emptySet()
 
@@ -75,15 +79,16 @@ class SearchRelayListState(
     fun normalizeSearchRelayListPrecached(note: Note): Set<NormalizedRelayUrl> = searchListEvent(note)?.let { decryptionCache.cachedRelays(it) }?.ifEmpty { null } ?: DefaultSearchRelayList
 
     /**
-     * The account's search relays, **never empty** — [normalizeSearchRelayListWithBackup]
-     * substitutes [DefaultSearchRelayList] both when there is no kind:10007 and when the
-     * one we have decodes to zero relays. Callers assembling NIP-50 REQs read this and can
+     * The account's search relays. [normalizeSearchRelayListWithBackup] substitutes
+     * [DefaultSearchRelayList] when there is no kind:10007 at all — but **not** when the one we
+     * have decodes to zero relays, which is the user saying "no search relays" and is honored.
+     * Callers assembling NIP-50 REQs must tolerate an empty set, and can
      * rely on getting a usable set; use [flowNoDefaults] instead to show or diff what the
      * user actually configured.
      *
      * Seeded via [normalizeSearchRelayListPrecached] rather than `emptySet()`: `flowOn(IO)` means
      * the first real emission can never be synchronous with `stateIn`, so an `emptySet()` seed
-     * left a window where `.value` contradicted the "never empty" contract above and search
+     * left a window where `.value` reported nothing before the event had been read at all, so search
      * silently queried nothing. That window is unbounded for a NIP-46 signer whose list has
      * private entries, since the first emission waits on a remote decrypt.
      */

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.nip65RelayList
 
 import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.defaults.relayListOrDefaultsWhenUnknown
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -58,9 +59,9 @@ class Nip65RelayListState(
 
     fun nip65Event(note: Note) = note.event as? AdvertisedRelayListEvent ?: settings.backupNIP65RelayList
 
-    fun normalizeNIP65WriteRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.writeRelaysNorm()?.toSet() ?: Constants.eventFinderRelays
+    fun normalizeNIP65WriteRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = relayListOrDefaultsWhenUnknown(nip65Event(note), Constants.eventFinderRelays) { it.writeRelaysNorm()?.toSet() }
 
-    fun normalizeNIP65ReadRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.readRelaysNorm()?.toSet() ?: Constants.bootstrapInbox
+    fun normalizeNIP65ReadRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = relayListOrDefaultsWhenUnknown(nip65Event(note), Constants.bootstrapInbox) { it.readRelaysNorm()?.toSet() }
 
     fun normalizeNIP65WriteRelayListNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.writeRelaysNorm()?.toSet() ?: emptySet()
 
