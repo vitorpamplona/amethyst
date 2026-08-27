@@ -24,14 +24,18 @@ import android.content.Context
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -47,15 +51,11 @@ private const val GUARDS_DOWN_THRESHOLD = 40
 /** Window for [GUARDS_DOWN_THRESHOLD]. Wide enough that ordinary transient churn never trips it. */
 private const val GUARDS_DOWN_WINDOW_MS = 60_000L
 
+/** Cheap: an atomic read against a download that takes 12-34s. */
+private const val BOOTSTRAP_POLL_MS = 500L
+
 private const val DEFAULT_SOCKS_PORT = 17392
 private const val MAX_PORT_RETRIES = 10
-
-/**
- * Return code from [ArtiNative.initialize] when the native bootstrap exceeds its
- * internal timeout. The native side has already torn down the half-built client;
- * we treat this differently from a hard failure (see [TorService.start]).
- */
-private const val ARTI_ERROR_BOOTSTRAP_TIMEOUT = -4
 
 /**
  * Manages the Arti Tor client via custom JNI bindings.
@@ -70,6 +70,7 @@ private const val ARTI_ERROR_BOOTSTRAP_TIMEOUT = -4
  */
 class TorService(
     val context: Context,
+    private val scope: CoroutineScope,
 ) : TorBackend {
     private var socksPort = DEFAULT_SOCKS_PORT
     private val initialized = AtomicBoolean(false)
@@ -81,6 +82,16 @@ class TorService(
      * Diagnostic only.
      */
     @Volatile private var bootstrapStartedAtMs: Long = -1L
+
+    /**
+     * How many native bootstrap attempts this process has made. Logged at INFO on every attempt so
+     * a boot log answers "did Tor retry, and how often" — the question that separates a genuinely
+     * slow first bootstrap from a lifecycle that stopped retrying altogether.
+     */
+    @Volatile private var bootstrapAttempts: Int = 0
+
+    /** Poller promoting Bootstrapping -> Active. Cancelled by every reset so it can't outlive its client. */
+    private var bootstrapWatcher: Job? = null
 
     /**
      * Serializes every native lifecycle transition ([start], [stop], [reset],
@@ -97,6 +108,17 @@ class TorService(
 
     private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
     override val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
+
+    /**
+     * True for exactly as long as [ArtiNative.initialize] is running. See
+     * [TorBackend.bootstrapInFlight] — this is what lets the stuck-Connecting watchdog tell a
+     * bootstrap that is still working from a lifecycle that has given up.
+     */
+    private val _bootstrapInFlight = MutableStateFlow(false)
+    override val bootstrapInFlight: StateFlow<Boolean> = _bootstrapInFlight.asStateFlow()
+
+    private val _bootstrapProgress = MutableStateFlow(-1)
+    override val bootstrapProgress: StateFlow<Int> = _bootstrapProgress.asStateFlow()
 
     /**
      * Every status change goes through here so the transition is logged exactly once, at INFO, with
@@ -159,7 +181,14 @@ class TorService(
 
     private fun artiDataDir() = File(context.filesDir, "arti")
 
-    /** Diagnostic: total bytes of the consensus/descriptor cache, to correlate with bootstrap time. */
+    /**
+     * Diagnostic: total bytes of the consensus/descriptor cache, to correlate with bootstrap time —
+     * a cold 0-byte cache costs 12-34s where a warm one costs ~6s, so it is the first thing you
+     * want beside a slow bootstrap.
+     *
+     * Walks the whole cache directory, so it is called exactly once per attempt, from the INFO line
+     * below. Read it there rather than adding another call.
+     */
     private fun cacheSizeBytes(): Long {
         val cacheDir = File(artiDataDir(), "cache")
         if (!cacheDir.exists()) return 0
@@ -235,8 +264,20 @@ class TorService(
     override suspend fun start() =
         lifecycleMutex.withLock {
             if (proxyRunning.get()) {
-                if (_status.value is TorServiceStatus.Active) return@withLock
-                setStatus(TorServiceStatus.Connecting)
+                // The proxy is already bound, so re-assert the state that matches reality rather
+                // than falling back to Connecting.
+                //
+                // Connecting reports no port. Downgrading to it here would strand a perfectly good
+                // listener: `activePortOrNull` goes null, every Tor-routed dial drops to the Orbot
+                // default 9050 where nothing listens, and — because this returns without arming
+                // [watchBootstrap] — nothing would ever promote it back. `TorManager` re-enters
+                // this branch on any combine re-fire (torType/port/bypass change, resetEpoch bump,
+                // or the status flow restarting after WhileSubscribed's 30s timeout), so it is very
+                // much reachable.
+                if (_status.value !is TorServiceStatus.Active) {
+                    setStatus(TorServiceStatus.Bootstrapping(socksPort))
+                    watchBootstrap(socksPort)
+                }
                 return@withLock
             }
 
@@ -272,7 +313,7 @@ class TorService(
                     // in state/ — not cache/ — and Arti already validates consensus freshness
                     // and refetches whatever has expired. The reset/clean-state paths still call
                     // clearAllArtiData() for genuine corruption recovery.
-                    Log.d("TorService") { "Preserving Arti cache for warm bootstrap (cache size: ${cacheSizeBytes()} bytes)" }
+                    Log.d("TorService") { "Preserving Arti cache for warm bootstrap" }
 
                     // Self-heal the wedged guard sample (see [noUsableGuards]): if
                     // the persisted sample has no usable guard left, Arti can
@@ -288,29 +329,37 @@ class TorService(
                     Log.d("TorService") { "Initializing Arti with data dir: $dataDir" }
 
                     bootstrapStartedAtMs = System.currentTimeMillis()
-                    var initResult = ArtiNative.initialize(dataDir)
-
-                    if (initResult == ARTI_ERROR_BOOTSTRAP_TIMEOUT) {
-                        // The native bootstrap hit its timeout (hostile network) and
-                        // already tore down the half-built client. Don't wipe state or
-                        // retry inline — that would hold lifecycleMutex for another full
-                        // timeout. Drop the init flag and leave status at Connecting so
-                        // TorManager's self-heal watchdog resets and retries on its own
-                        // cadence (and the connection-failure dialog can still surface).
-                        Log.w("TorService") { "Arti bootstrap timed out — leaving Connecting for the self-heal watchdog to retry" }
-                        initialized.set(false)
-                        return@withContext
-                    }
+                    bootstrapAttempts++
+                    Log.i("TorService") { "Bootstrapping Arti (attempt $bootstrapAttempts, cache ${cacheSizeBytes()} bytes)" }
+                    _bootstrapInFlight.value = true
+                    val initResult =
+                        try {
+                            ArtiNative.initialize(dataDir)
+                        } finally {
+                            _bootstrapInFlight.value = false
+                        }
+                    Log.i("TorService") { "Arti bootstrap attempt $bootstrapAttempts returned $initResult after ${System.currentTimeMillis() - bootstrapStartedAtMs}ms" }
 
                     if (initResult != 0) {
-                        Log.e("TorService") { "Failed to initialize Arti: error $initResult, clearing data and retrying" }
-                        clearAllArtiData()
-                        initResult = ArtiNative.initialize(dataDir)
-                    }
-                    if (initResult != 0) {
-                        Log.e("TorService") { "Failed to initialize Arti on retry: error $initResult" }
+                        // Every failure mode ends the same way: don't decide recovery here.
+                        //
+                        // A timeout has already torn down its half-built client natively, and
+                        // retrying inline would hold lifecycleMutex for another full timeout. A
+                        // hard failure used to be treated differently — wipe all Arti data, retry
+                        // inline, then fall back to status Off — and both halves of that were
+                        // wrong. The wipe treated every failure as corruption, so a bootstrap that
+                        // failed for the most ordinary reason there is (no network) threw away a
+                        // guard sample that was working fine. And Off is a terminal state for this
+                        // lifecycle: the watchdog and the connection-failure dialog both only arm
+                        // while status is Connecting, so a hard failure left Tor switched off with
+                        // nothing ever retrying it.
+                        //
+                        // Leaving Connecting hands the decision to [TorManager], which already
+                        // owns the escalation: a gentle client-drop before Tor has ever
+                        // bootstrapped here, a clean-state wipe once a confirmed guard on disk
+                        // proves the persisted state used to work and is therefore suspect.
+                        Log.w("TorService") { "Arti client creation failed (error $initResult) — leaving Connecting for the self-heal watchdog to retry" }
                         initialized.set(false)
-                        setStatus(TorServiceStatus.Off)
                         return@withContext
                     }
                 }
@@ -330,8 +379,12 @@ class TorService(
                 }
 
                 if (!started) {
-                    Log.e("TorService") { "Failed to start SOCKS proxy after $MAX_PORT_RETRIES attempts" }
-                    setStatus(TorServiceStatus.Off)
+                    // Same reasoning as the init-failure branch: Off is terminal for this
+                    // lifecycle — neither the watchdog nor the connection-failure dialog arms on
+                    // it — so reporting Off here would leave Tor silently disabled with nothing
+                    // retrying and no way for the user to find out. Stay Connecting and let the
+                    // watchdog retry; a port collision is usually transient.
+                    Log.w("TorService") { "Failed to bind a SOCKS port after $MAX_PORT_RETRIES attempts — leaving Connecting for the self-heal watchdog to retry" }
                     return@withContext
                 }
 
@@ -350,10 +403,53 @@ class TorService(
                 // reset/stop can't clobber it.
                 val startedAt = bootstrapStartedAtMs
                 val elapsed = if (startedAt > 0) System.currentTimeMillis() - startedAt else -1
-                setStatus(TorServiceStatus.Active(socksPort))
-                Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort (bootstrap took ${elapsed}ms)" }
+                // Routable, not yet bootstrapped. The proxy is bound so dials belong here rather
+                // than at the dead 9050 fallback, but circuits cannot be built until the directory
+                // download lands — which [watchBootstrap] turns into Active.
+                setStatus(TorServiceStatus.Bootstrapping(socksPort))
+                Log.i("TorService") { "Arti SOCKS proxy routable on port $socksPort after ${elapsed}ms (directory still downloading)" }
+                watchBootstrap(socksPort)
             }
         }
+
+    /**
+     * Polls the native directory-download result and promotes [TorServiceStatus.Bootstrapping] to
+     * [TorServiceStatus.Active] once circuits can actually be built.
+     *
+     * Polling rather than reacting to a log line is deliberate: the previous log-callback-driven
+     * transition raced `startSocksProxy` returning and silently dropped the Active transition,
+     * stranding Tor at Connecting until the 60s dialog. The poll reads Arti's live readiness, so a
+     * download that fails and is retried by a later stream still promotes.
+     */
+    private fun watchBootstrap(port: Int) {
+        bootstrapWatcher?.cancel()
+        bootstrapWatcher =
+            scope.launch(Dispatchers.IO) {
+                while (true) {
+                    // Publish progress on the same tick we check readiness — one extra cheap JNI
+                    // read, and it is what lets TorManager distinguish slow from stalled.
+                    _bootstrapProgress.value = ArtiNative.bootstrapProgressPermille()
+                    when (ArtiNative.isBootstrapped()) {
+                        1 -> {
+                            // Only promote if this is still the run we started watching for: a
+                            // reset in between will have moved us to Off/Connecting already.
+                            if (_status.value == TorServiceStatus.Bootstrapping(port)) {
+                                setStatus(TorServiceStatus.Active(port))
+                            }
+                            return@launch
+                        }
+                        -1 -> {
+                            // No native client behind the proxy — a reset is in flight, or init
+                            // failed. Nothing to promote; leave the status where it is so
+                            // TorManager's watchdog treats it as stuck and retries.
+                            Log.w("TorService") { "No Arti client while watching bootstrap — leaving status for the self-heal watchdog" }
+                            return@launch
+                        }
+                        else -> delay(BOOTSTRAP_POLL_MS)
+                    }
+                }
+            }
+    }
 
     /**
      * Stop the SOCKS proxy and release the port.
@@ -362,6 +458,10 @@ class TorService(
     override suspend fun stop() {
         lifecycleMutex.withLock {
             if (!proxyRunning.compareAndSet(true, false)) return@withLock
+
+            bootstrapWatcher?.cancel()
+            bootstrapWatcher = null
+            _bootstrapProgress.value = -1
 
             withContext(Dispatchers.IO) {
                 ArtiNative.stopSocksProxy()
@@ -409,6 +509,9 @@ class TorService(
      */
     private suspend fun resetLocked() =
         withContext(Dispatchers.IO) {
+            bootstrapWatcher?.cancel()
+            bootstrapWatcher = null
+            _bootstrapProgress.value = -1
             if (proxyRunning.compareAndSet(true, false)) {
                 ArtiNative.stopSocksProxy()
             }

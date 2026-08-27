@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip09Deletions
 
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -114,6 +115,18 @@ class DeletionIndex {
 
         return false
     }
+
+    /**
+     * Checks if a kind-5 event signed by [pubKey] deleted the addressable at [address].
+     * Used when the addressable's event is not loaded yet (e.g. an empty shell
+     * re-created after a restart), so there is no event id or createdAt to compare
+     * against. A re-published version would arrive as a loaded event and is checked
+     * by [hasBeenDeleted] instead.
+     */
+    fun hasBeenDeleted(
+        address: Address,
+        pubKey: HexKey,
+    ): Boolean = hasBeenDeleted(DeletionRequest(address.toValue(), pubKey))
 
     private fun hasBeenDeleted(key: DeletionRequest) = deletedReferencesBefore.containsKey(key)
 

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.tor
 
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -199,8 +200,8 @@ class TorManagerTest {
             val backend = FakeTorBackend()
             val manager = buildManager(backend = backend, clock = { 1_000_000_000_000L })
             advanceUntilIdle()
-            // Still Connecting (never reached Active).
-            assertEquals(TorServiceStatus.Connecting, manager.status.value)
+            // Started but never reached a working Tor.
+            assertFalse(manager.status.value.isFullyBootstrapped)
             val resetCountBefore = backend.resetCount
 
             manager.onTorCircuitsDead()
@@ -270,11 +271,14 @@ class TorManagerTest {
     fun `watchdog uses gentle reset before first Active`() =
         runTest(UnconfinedTestDispatcher()) {
             val backend = FakeTorBackend()
+            // No client at all: this is the fast 45s no-client cadence, not a running download.
+            backend.startFailsToConnect = true
             // Big constant clock so (now - lastSelfHealAtMs=0) is well past cooldown.
             val manager = buildManager(backend = backend, clock = { 1_000_000_000_000L })
             advanceUntilIdle()
 
-            assertEquals(TorServiceStatus.Connecting, manager.status.value)
+            // Big constant clock so (now - lastSelfHealAtMs=0) is well past cooldown.
+            assertFalse(manager.status.value.isFullyBootstrapped)
             assertEquals(0, backend.resetCount)
 
             advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
@@ -288,11 +292,14 @@ class TorManagerTest {
     fun `watchdog wipes state on first stuck-Connecting when guards prove prior bootstrap`() =
         runTest(UnconfinedTestDispatcher()) {
             val backend = FakeTorBackend().apply { bootstrappedBefore = true }
+            // No client at all: this is the fast 45s no-client cadence, not a running download.
+            backend.startFailsToConnect = true
             // Never reaches Active in this session, but on-disk state proves a prior bootstrap.
             val manager = buildManager(backend = backend, clock = { 1_000_000_000_000L })
             advanceUntilIdle()
 
-            assertEquals(TorServiceStatus.Connecting, manager.status.value)
+            // Never reaches Active in this session, but on-disk state proves a prior bootstrap.
+            assertFalse(manager.status.value.isFullyBootstrapped)
 
             advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
             runCurrent()
@@ -348,6 +355,8 @@ class TorManagerTest {
     fun `watchdog cooldown blocks a second fire within the window`() =
         runTest(UnconfinedTestDispatcher()) {
             val backend = FakeTorBackend()
+            // No client at all: this is the fast 45s no-client cadence, not a running download.
+            backend.startFailsToConnect = true
             var clockNow = 1_000_000_000_000L
             val manager = buildManager(backend = backend, clock = { clockNow })
             advanceUntilIdle()
@@ -368,6 +377,8 @@ class TorManagerTest {
     fun `watchdog can fire again once the cooldown elapses`() =
         runTest(UnconfinedTestDispatcher()) {
             val backend = FakeTorBackend()
+            // No client at all: this is the fast 45s no-client cadence, not a running download.
+            backend.startFailsToConnect = true
             var clockNow = 1_000_000_000_000L
             val manager = buildManager(backend = backend, clock = { clockNow })
             advanceUntilIdle()
@@ -430,7 +441,7 @@ class TorManagerTest {
             val manager = buildManager(backend = backend)
             advanceUntilIdle()
 
-            assertEquals(TorServiceStatus.Connecting, manager.status.value)
+            assertEquals(TorServiceStatus.Bootstrapping(17392), manager.status.value)
 
             backend.setActive(17392)
             advanceUntilIdle()
@@ -471,6 +482,396 @@ class TorManagerTest {
         }
 
     // ------------------------------------------------------------------
+    // fresh install: the bootstrap-timeout retry loop
+    // ------------------------------------------------------------------
+
+    /**
+     * The regression that stranded brand-new installs on "Connecting" indefinitely.
+     *
+     * On a native bootstrap timeout `TorService.start()` deliberately leaves status at Connecting
+     * and delegates the retry to this watchdog. The watchdog used to fire once per Connecting
+     * *span* — and a timeout produces no status change, so no new span ever began. Two attempts
+     * were made and then the app stopped trying, permanently: no retry, no recovery short of a
+     * network-identity change or a process restart.
+     */
+    @Test
+    fun `keeps retrying when the bootstrap keeps timing out`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            // No client at all: this is the fast 45s no-client cadence, not a running download.
+            backend.startFailsToConnect = true
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            advanceTimeBy(10L * 60_000L)
+            runCurrent()
+
+            assertTrue(
+                "expected repeated bootstrap retries over 10 stuck minutes, got ${backend.startCount}",
+                backend.startCount >= 4,
+            )
+            sub.cancel()
+        }
+
+    /**
+     * A bootstrap that is still running is not stuck. The native call can hold its lifecycle lock
+     * for its full timeout, so a reset issued while it runs queues behind it and lands the instant
+     * the attempt finishes — tearing down a client that may have just succeeded. On a fresh install
+     * with a cold consensus cache that window is the common case, not a corner case.
+     */
+    @Test
+    fun `watchdog leaves an in-flight bootstrap alone`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            backend.holdBootstrapInFlight = true
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            // Well past SELF_HEAL_AFTER_MS, but the attempt is still running.
+            advanceTimeBy(3L * TorManager.SELF_HEAL_AFTER_MS)
+            runCurrent()
+
+            assertEquals(0, backend.resetCount)
+            assertEquals(0, backend.resetWithCleanStateCount)
+            assertEquals(1, backend.startCount)
+
+            // The attempt returns without reaching Active — now it is genuinely stuck.
+            backend.finishBootstrapAttempt()
+            advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
+            runCurrent()
+
+            assertTrue("watchdog should fire once the attempt returned", backend.resetCount >= 1)
+            sub.cancel()
+        }
+
+    /** A fresh install has no working state to protect, so it must not wait out the 5-min cooldown. */
+    @Test
+    fun `first-bootstrap retries use the short cooldown`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            // No client at all: this is the fast 45s no-client cadence, not a running download.
+            backend.startFailsToConnect = true
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            // Two watchdog windows: with the 5-min cooldown only one reset could land.
+            advanceTimeBy(3L * TorManager.SELF_HEAL_AFTER_MS)
+            runCurrent()
+
+            assertTrue(
+                "expected more than one retry inside 3 watchdog windows, got ${backend.resetCount}",
+                backend.resetCount >= 2,
+            )
+            sub.cancel()
+        }
+
+    /** Once Tor has worked, resets stay rate-limited — a broken network must not cause a reset loop. */
+    @Test
+    fun `after a successful bootstrap the long cooldown still applies`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            backend.setActive(17392)
+            advanceUntilIdle()
+            backend.setConnecting()
+            advanceUntilIdle()
+
+            val before = backend.resetWithCleanStateCount
+            advanceTimeBy(3L * TorManager.SELF_HEAL_AFTER_MS)
+            runCurrent()
+
+            assertEquals(
+                "post-bootstrap self-heal must stay on the long cooldown",
+                1,
+                backend.resetWithCleanStateCount - before,
+            )
+            sub.cancel()
+        }
+
+    /**
+     * `start()` blocks for a whole native bootstrap attempt. Awaiting it before subscribing to the
+     * backend's status meant nothing observed Connecting until that attempt was already over, so
+     * every timer keyed on the Connecting span — the stuck watchdog, the connection-failure
+     * dialog — started one full attempt late.
+     */
+    @Test
+    fun `status is observable while the first bootstrap is still running`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            backend.startNeverReturns = true
+            val manager = buildManager(backend = backend)
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            assertFalse(manager.status.value.isFullyBootstrapped)
+            assertNotEquals(TorServiceStatus.Off, manager.status.value)
+            sub.cancel()
+        }
+
+    /**
+     * The bypass prompt asks the user to give up on Tor. Asking that while the first bootstrap
+     * attempt is still downloading a cold consensus offers to abandon something that is working.
+     */
+    @Test
+    fun `connection-failure prompt waits for the bootstrap attempt to return`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            backend.holdBootstrapInFlight = true
+            val manager = buildManager(backend = backend)
+            val sub = launch { manager.status.collect { } }
+            val fail = mutableListOf<Boolean>()
+            val subFail = launch { manager.connectionFailure.collect { fail.add(it) } }
+            advanceUntilIdle()
+
+            advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS * 2)
+            runCurrent()
+            assertFalse("must not prompt while the attempt is still running", fail.contains(true))
+
+            backend.finishBootstrapAttempt()
+            advanceTimeBy(1_000L)
+            runCurrent()
+            assertTrue("must prompt once the attempt returned without connecting", fail.contains(true))
+
+            sub.cancel()
+            subFail.cancel()
+        }
+
+    // ------------------------------------------------------------------
+    // Bootstrapping: routable, not yet ready
+    // ------------------------------------------------------------------
+
+    /**
+     * The regression this state exists to prevent. On-demand bootstrap leaves Connecting in ~130ms
+     * and spends the whole 12-34s directory download in Bootstrapping, so a watchdog keyed on
+     * Connecting would never fire again — a download that never completes would sit there forever
+     * with nothing watching it.
+     */
+    @Test
+    fun `watchdog still fires while stuck Bootstrapping`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            assertTrue(
+                "start() should leave us routable but not bootstrapped",
+                manager.status.value is TorServiceStatus.Bootstrapping,
+            )
+
+            advanceTimeBy(TorManager.BOOTSTRAP_STALL_MS + 2L * TorManager.SELF_HEAL_AFTER_MS)
+            runCurrent()
+
+            assertTrue("watchdog must arm on Bootstrapping, not just Connecting", backend.resetCount >= 1)
+            sub.cancel()
+        }
+
+    /** The bypass prompt must also survive the state it now spends its time in. */
+    @Test
+    fun `connection-failure prompt fires from a stuck Bootstrapping span`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            // Virtual clock, not the default constant one: the timer now measures elapsed
+            // wall-clock across the watchdog's retries, so a frozen clock makes it un-expirable.
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            val fail = mutableListOf<Boolean>()
+            val subFail = launch { manager.connectionFailure.collect { fail.add(it) } }
+            advanceUntilIdle()
+
+            advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS + 1_000L)
+            runCurrent()
+
+            assertTrue(
+                "the prompt must survive the self-heal watchdog restarting the status span at 45s",
+                fail.contains(true),
+            )
+            sub.cancel()
+            subFail.cancel()
+        }
+
+    /**
+     * The whole point of the split: a dial issued during the download must be routed through the
+     * proxy, not dropped to the Orbot default port where nothing listens.
+     */
+    @Test
+    fun `port is routable while still bootstrapping`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val manager = buildManager(backend = backend)
+            val sub = launch { manager.status.collect { } }
+            val port = launch { manager.activePortOrNull.collect { } }
+            advanceUntilIdle()
+
+            backend.setBootstrapping(17392)
+            advanceUntilIdle()
+
+            assertEquals(17392, manager.activePortOrNull.value)
+            assertTrue(manager.isSocksReady())
+            sub.cancel()
+            port.cancel()
+        }
+
+    /** ...but it must not be reported to the user, or to the exit-rotation path, as working Tor. */
+    @Test
+    fun `bootstrapping does not count as fully bootstrapped`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val manager = buildManager(backend = backend)
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            backend.setBootstrapping(17392)
+            advanceUntilIdle()
+            assertFalse(manager.status.value.isFullyBootstrapped)
+
+            // onTorCircuitsDead is about dead exits behind a working Tor; a download in progress is
+            // not that, and resetting here would restart the very download we are waiting on.
+            manager.onTorCircuitsDead()
+            advanceUntilIdle()
+            assertEquals(0, backend.resetCount)
+
+            backend.setActive(17392)
+            advanceUntilIdle()
+            assertTrue(manager.status.value.isFullyBootstrapped)
+            sub.cancel()
+        }
+
+    // ------------------------------------------------------------------
+    // audit regressions
+    // ------------------------------------------------------------------
+
+    /**
+     * The worst bug the audit found, now guarded by progress rather than a timer.
+     *
+     * A cold directory download legitimately takes 12.6-34.4s (measured), and a reset discards the
+     * partial consensus — so a watchdog firing on the 45s no-client cadence could stop the download
+     * ever completing. A download that is still advancing must be left alone no matter how long it
+     * takes.
+     */
+    @Test
+    fun `a download that keeps making progress is never reset`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            backend.bootstrappedBefore = true
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            assertTrue(manager.status.value is TorServiceStatus.Bootstrapping)
+
+            // Ten minutes of slow-but-real progress — far past any fixed patience window.
+            repeat(20) { step ->
+                advanceTimeBy(30_000L)
+                backend.advanceBootstrapProgress(step * 50)
+                runCurrent()
+            }
+
+            assertEquals("a progressing download must never be reset", 0, backend.resetCount)
+            assertEquals("and never wiped", 0, backend.resetWithCleanStateCount)
+            sub.cancel()
+        }
+
+    /** A download that stops moving is reset promptly — and still never has its cache wiped. */
+    @Test
+    fun `a download that stops progressing is reset but never wiped`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            backend.bootstrappedBefore = true
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            backend.advanceBootstrapProgress(120)
+            runCurrent()
+
+            // Nothing moves from here on.
+            advanceTimeBy(TorManager.BOOTSTRAP_STALL_MS + TorManager.SELF_HEAL_AFTER_MS)
+            runCurrent()
+
+            assertTrue("a stalled download must be escaped", backend.resetCount >= 1)
+            assertEquals(
+                "but the consensus cache is what it is trying to fetch — never wipe it",
+                0,
+                backend.resetWithCleanStateCount,
+            )
+            sub.cancel()
+        }
+
+    /**
+     * A fresh install with corrupt on-disk state can never produce a client, and `guards.json`
+     * (the only thing [ArtiGuardState] inspects) may look fine. Without an escalation the gentle
+     * branch drop-and-retries forever and never clears what is actually blocking it.
+     */
+    @Test
+    fun `a fresh install that never gets a client eventually wipes state`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            // Never bootstrapped here, and start() cannot even bind a proxy.
+            backend.startFailsToConnect = true
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            advanceUntilIdle()
+
+            advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS * 12)
+            runCurrent()
+
+            assertTrue(
+                "gentle resets alone never clear corrupt state; expected an escalation",
+                backend.resetWithCleanStateCount >= 1,
+            )
+            sub.cancel()
+        }
+
+    /**
+     * Each self-heal drives Bootstrapping -> Off -> Bootstrapping. If the prompt drops on the
+     * transient Off and re-raises immediately after, the user gets a modal blinking at them on
+     * every watchdog tick instead of a stable choice.
+     */
+    @Test
+    fun `the bypass prompt stays up across a self-heal reset`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val epoch = 1_700_000_000_000L
+            val manager = buildManager(backend = backend, clock = { epoch + testScheduler.currentTime })
+            val sub = launch { manager.status.collect { } }
+            val seen = mutableListOf<Boolean>()
+            val subFail = launch { manager.connectionFailure.collect { seen.add(it) } }
+            advanceUntilIdle()
+
+            advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS + 1_000L)
+            runCurrent()
+            assertTrue("prompt should be up", manager.connectionFailure.value)
+
+            // Drive several watchdog cycles; the prompt must not drop back to false.
+            val raisedAt = seen.size
+            advanceTimeBy(TorManager.BOOTSTRAP_STALL_MS * 3)
+            runCurrent()
+
+            assertFalse(
+                "prompt blinked off during a self-heal cycle",
+                seen.drop(raisedAt).contains(false),
+            )
+            sub.cancel()
+            subFail.cancel()
+        }
+
+    // ------------------------------------------------------------------
     // helpers
     // ------------------------------------------------------------------
 
@@ -496,6 +897,28 @@ private class FakeTorBackend : TorBackend {
     private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
     override val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
 
+    private val _bootstrapInFlight = MutableStateFlow(false)
+    override val bootstrapInFlight: StateFlow<Boolean> = _bootstrapInFlight.asStateFlow()
+
+    private val _bootstrapProgress = MutableStateFlow(-1)
+    override val bootstrapProgress: StateFlow<Int> = _bootstrapProgress.asStateFlow()
+
+    /** Models the directory download advancing. Only distinct values count as progress. */
+    fun advanceBootstrapProgress(permille: Int) {
+        _bootstrapProgress.value = permille
+    }
+
+    /**
+     * When true, [start] models a native bootstrap that is still running: status goes Connecting
+     * and [bootstrapInFlight] stays true until [finishBootstrapAttempt] is called.
+     */
+    var holdBootstrapInFlight = false
+
+    /** Models the native bootstrap attempt returning without reaching Active (Arti's own timeout). */
+    fun finishBootstrapAttempt() {
+        _bootstrapInFlight.value = false
+    }
+
     var startCount = 0
         private set
     var stopCount = 0
@@ -515,9 +938,30 @@ private class FakeTorBackend : TorBackend {
 
     override suspend fun hasBootstrappedBefore(): Boolean = bootstrappedBefore
 
+    /**
+     * Set to model the real backend, whose `start()` does not return until the blocking native
+     * bootstrap attempt has finished. The status is published as soon as the attempt begins, the
+     * same as [TorService] does.
+     */
+    var startNeverReturns = false
+
+    /** When true, start() models a client that cannot be created at all: status stays Connecting. */
+    var startFailsToConnect = false
+
+    /**
+     * Mirrors [TorService]: the native client is created in ~130ms and the proxy binds, so a real
+     * start lands in [TorServiceStatus.Bootstrapping] — routable, directory still downloading — not
+     * in Connecting. Tests that want the pre-proxy state call [setConnecting].
+     */
     override suspend fun start() {
         startCount++
-        _status.value = TorServiceStatus.Connecting
+        if (startFailsToConnect) {
+            _status.value = TorServiceStatus.Connecting
+            return
+        }
+        _status.value = TorServiceStatus.Bootstrapping(17392)
+        if (holdBootstrapInFlight) _bootstrapInFlight.value = true
+        if (startNeverReturns) awaitCancellation()
     }
 
     override suspend fun stop() {
@@ -527,20 +971,27 @@ private class FakeTorBackend : TorBackend {
 
     override suspend fun reset() {
         resetCount++
+        _bootstrapInFlight.value = false
         _status.value = TorServiceStatus.Off
     }
 
     override suspend fun resetWithCleanState() {
         resetWithCleanStateCount++
+        _bootstrapInFlight.value = false
         _status.value = TorServiceStatus.Off
     }
 
     fun setActive(port: Int) {
+        _bootstrapInFlight.value = false
         _status.value = TorServiceStatus.Active(port)
     }
 
     fun setConnecting() {
         _status.value = TorServiceStatus.Connecting
+    }
+
+    fun setBootstrapping(port: Int = 17392) {
+        _status.value = TorServiceStatus.Bootstrapping(port)
     }
 }
 

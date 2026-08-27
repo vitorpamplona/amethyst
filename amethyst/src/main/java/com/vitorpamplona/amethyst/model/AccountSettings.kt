@@ -799,6 +799,62 @@ class AccountSettings(
     // list names
     // ---
 
+    /**
+     * All per-screen persisted feed filters paired with their factory default.
+     * Deleting a list (NIP-51 people list / follow pack) must reset any screen whose
+     * filter still points at the deleted address — otherwise the screen keeps a
+     * dangling [TopFilter.PeopleList] that re-creates an empty AddressableNote shell
+     * on every start and shows the list's dTag/UUID in the top bar instead of a name.
+     */
+    private val feedFiltersWithDefaults: List<Pair<MutableStateFlow<TopFilter>, TopFilter>> =
+        listOf(
+            defaultHomeFollowList to TopFilter.AllFollows,
+            defaultStoriesFollowList to TopFilter.Global,
+            defaultNotificationFollowList to TopFilter.Selected,
+            defaultDiscoveryFollowList to TopFilter.Global,
+            defaultPollsFollowList to TopFilter.Global,
+            defaultPicturesFollowList to TopFilter.Global,
+            defaultNappletsFollowList to TopFilter.Global,
+            defaultNsitesFollowList to TopFilter.Global,
+            defaultWorkoutsFollowList to TopFilter.Global,
+            defaultGitRepositoriesFollowList to TopFilter.Global,
+            defaultHighlightsFollowList to TopFilter.Global,
+            defaultCalendarsFollowList to TopFilter.Global,
+            defaultProductsFollowList to TopFilter.AroundMe,
+            defaultShortsFollowList to TopFilter.Global,
+            defaultPublicChatsFollowList to TopFilter.Global,
+            defaultLiveStreamsFollowList to TopFilter.Global,
+            defaultNestsFollowList to TopFilter.Global,
+            defaultLongsFollowList to TopFilter.Global,
+            defaultArticlesFollowList to TopFilter.AllFollows,
+            defaultMusicTracksFollowList to TopFilter.Global,
+            defaultMusicPlaylistsFollowList to TopFilter.Global,
+            defaultPodcastEpisodesFollowList to TopFilter.Global,
+            defaultPodcastsFollowList to TopFilter.Global,
+            defaultSoftwareAppsFollowList to TopFilter.Global,
+            defaultBadgesFollowList to TopFilter.Mine,
+            defaultBrowseEmojiSetsFollowList to TopFilter.Global,
+            defaultCommunitiesFollowList to TopFilter.AllFollows,
+            defaultFollowPacksFollowList to TopFilter.Global,
+            defaultAppRecommendationsFollowList to TopFilter.Global,
+            defaultRelayGroupsDiscoveryFollowList to TopFilter.Mine,
+        )
+
+    /** Resets every persisted feed filter that points at the deleted list's address. */
+    fun resetFeedFiltersPointingTo(address: Address) {
+        var changed = false
+
+        feedFiltersWithDefaults.forEach { (flow, default) ->
+            val current = flow.value
+            if (current is TopFilter.AddressableTopFilter && current.address == address) {
+                flow.tryEmit(default)
+                changed = true
+            }
+        }
+
+        if (changed) saveAccountSettings()
+    }
+
     fun changeDefaultHomeFollowList(name: FeedDefinition) {
         changeDefaultHomeFollowList(name.code)
     }

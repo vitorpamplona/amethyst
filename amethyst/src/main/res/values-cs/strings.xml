@@ -2918,6 +2918,7 @@
     <string name="cashu_no_wallet_found">V systému nebyla nalezena žádná kompatibilní peněženka Cashu</string>
     <string name="error_unable_to_fetch_invoice">Nebylo možné načíst fakturu ze serverů příjemce</string>
     <string name="wallet_connect_pay_invoice_error_error">Poskytovatel připojení vaší peněženky vrátil následující chybu: %1$s</string>
+    <string name="wallet_connect_unreadable_response_error">Váš poskytovatel Wallet Connect odeslal odpověď, kterou Amethyst nedokázal přečíst.</string>
     <string name="tor_connection_failed_title">Tor se nepřipojuje</string>
     <string name="tor_connection_failed_body">Amethystu se nepodařilo dokončit připojení k síti Tor. Chcete použít běžné připojení (bez Toru), aby se feed mohl načíst? Tuto volbu si zapamatujeme na hodinu a poté znovu zkusíme Tor.</string>
     <string name="tor_continue_without_for_session">Použít běžné připojení</string>
@@ -3047,6 +3048,15 @@
     <string name="wallet_incoming">Přijato</string>
     <string name="wallet_outgoing">Odesláno</string>
     <string name="wallet_refresh">Obnovit</string>
+    <string name="wallet_transactions_load_failed">Nepodařilo se načíst transakce</string>
+    <string name="wallet_transactions_load_more_failed">Nepodařilo se načíst další transakce</string>
+    <string name="wallet_balance_request_failed">Nepodařilo se načíst váš zůstatek</string>
+    <string name="wallet_invoice_creation_failed">Nepodařilo se vytvořit fakturu</string>
+    <string name="wallet_no_invoice_returned">Vaše peněženka nevrátila fakturu</string>
+    <string name="wallet_request_timed_out">Vypršel časový limit požadavku na peněženku</string>
+    <string name="wallet_request_failed">Nepodařilo se spojit s vaší peněženkou: %1$s</string>
+    <string name="wallet_connect_unrecognized_reply">Vaše peněženka odpověděla něčím, co Amethyst nezná (%1$s)</string>
+    <string name="wallet_connect_decrypt_failed">Amethyst nedokázal dešifrovat odpověď vaší peněženky — peněženka možná používá jiný klíč</string>
     <string name="wallet_filter_all">Vše</string>
     <string name="wallet_filter_zaps">Zapy</string>
     <string name="wallet_filter_non_zaps">Ostatní</string>
@@ -4909,6 +4919,18 @@
         <item quantity="few">%1$d členové</item>
         <item quantity="many">%1$d člena</item>
         <item quantity="other">%1$d členů</item>
+    </plurals>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Vaše peněženka neodpověděla do %1$d sekundy. Platba mohla, ale nemusela proběhnout — před opakováním zkontrolujte svou peněženku.</item>
+        <item quantity="few">Vaše peněženka neodpověděla do %1$d sekund. Platba mohla, ale nemusela proběhnout — před opakováním zkontrolujte svou peněženku.</item>
+        <item quantity="many">Vaše peněženka neodpověděla do %1$d sekund. Platba mohla, ale nemusela proběhnout — před opakováním zkontrolujte svou peněženku.</item>
+        <item quantity="other">Vaše peněženka neodpověděla do %1$d sekund. Platba mohla, ale nemusela proběhnout — před opakováním zkontrolujte svou peněženku.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Vypršel časový limit požadavku na peněženku — %1$d odpověď byla odmítnuta, protože ji podepsal neočekávaný klíč. Vaše relé nemusí být důvěryhodné.</item>
+        <item quantity="few">Vypršel časový limit požadavku na peněženku — %1$d odpovědi byly odmítnuty, protože je podepsal neočekávaný klíč. Vaše relé nemusí být důvěryhodné.</item>
+        <item quantity="many">Vypršel časový limit požadavku na peněženku — %1$d odpovědí bylo odmítnuto, protože je podepsal neočekávaný klíč. Vaše relé nemusí být důvěryhodné.</item>
+        <item quantity="other">Vypršel časový limit požadavku na peněženku — %1$d odpovědí bylo odmítnuto, protože je podepsal neočekávaný klíč. Vaše relé nemusí být důvěryhodné.</item>
     </plurals>
     <string name="marmot_group_name">Název skupiny</string>
     <string name="marmot_group_name_placeholder">Zadejte název skupiny</string>
