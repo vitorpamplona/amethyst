@@ -25,11 +25,32 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOverlayNetwork
 
+/**
+ * Which relays fall into each Tor-routing category, as one value.
+ *
+ * Grouped deliberately rather than passed as four loose sets. Consumers that must react when the
+ * categories change — `RelayProxyClientConnector` re-dials the relays whose transport flipped —
+ * previously compared the sets field by field, so adding a fifth category meant remembering to add
+ * a fifth `||`. Forgetting it fails silently: relays keep a socket on a transport the policy has
+ * already moved them off. Structural equality on one object makes that impossible to forget.
+ */
+data class RelayClassification(
+    /** Relays the user actually put in one of their own lists. */
+    val trusted: Set<NormalizedRelayUrl> = emptySet(),
+    /** NIP-17 DM relays. */
+    val dm: Set<NormalizedRelayUrl> = emptySet(),
+    /** NIP-47 wallet and CLINK debit relays, including ad-hoc registrations. */
+    val moneyOp: Set<NormalizedRelayUrl> = emptySet(),
+    /**
+     * Relays the app is guessing on the user's behalf while their own lists are unknown. Empties
+     * itself as soon as any of their events arrive; see `AssumedRelayListsState`.
+     */
+    val assumed: Set<NormalizedRelayUrl> = emptySet(),
+)
+
 class TorRelayEvaluation(
     val torSettings: TorRelaySettings,
-    val trustedRelayList: Set<NormalizedRelayUrl>,
-    val dmRelayList: Set<NormalizedRelayUrl>,
-    val moneyOpRelayList: Set<NormalizedRelayUrl> = emptySet(),
+    val classification: RelayClassification = RelayClassification(),
 ) {
     fun useTor(relay: NormalizedRelayUrl): Boolean =
         if (torSettings.torType == TorType.OFF) {
@@ -45,15 +66,21 @@ class TorRelayEvaluation(
             } else if (relay.isOnion()) {
                 // .onion is only reachable over Tor regardless of any other classification.
                 torSettings.onionRelaysViaTor
-            } else if (relay in moneyOpRelayList) {
+            } else if (relay in classification.moneyOp) {
                 // Relays used for money operations (NIP-47 wallets, CLINK offer/debit services)
                 // follow the dedicated money-operations preference, taking precedence over the
                 // generic DM/trusted/new classification so a payment never silently inherits a
                 // different Tor policy than the one the user set for money.
                 torSettings.moneyOperationsViaTor
-            } else if (relay in dmRelayList) {
+            } else if (relay in classification.dm) {
                 torSettings.dmRelaysViaTor
-            } else if (relay in trustedRelayList) {
+            } else if (relay in classification.trusted) {
+                torSettings.trustedRelaysViaTor
+            } else if (relay in classification.assumed) {
+                // Last resort before treating it as a stranger. Sits below every other
+                // classification on purpose: .onion, money-operation and DM relays keep their own
+                // policy even while we are guessing, because this branch can only ever capture
+                // relays that would otherwise have fallen through to `newRelaysViaTor`.
                 torSettings.trustedRelaysViaTor
             } else {
                 torSettings.newRelaysViaTor

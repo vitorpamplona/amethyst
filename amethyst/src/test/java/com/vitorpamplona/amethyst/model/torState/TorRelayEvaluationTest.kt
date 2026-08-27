@@ -53,8 +53,11 @@ class TorRelayEvaluationTest {
                 newRelaysViaTor = newViaTor,
                 trustedRelaysViaTor = trustedViaTor,
             ),
-        trustedRelayList = trustedRelays,
-        dmRelayList = dmRelays,
+        classification =
+            RelayClassification(
+                trusted = trustedRelays,
+                dm = dmRelays,
+            ),
     )
 
     // --- Tor OFF: always false ---

@@ -98,7 +98,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayG
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupsOnRelaySubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.warningColor
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_DM
 import com.vitorpamplona.quartz.buzz.workspace.BUZZ_CHANNEL_TYPE_FORUM
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -351,7 +350,7 @@ fun RelayGroupChannelListScreen(
     // own dialog), so don't let it read as "this relay blocks Tor exits".
     val torStatus by Amethyst.instance.torManager.status
         .collectAsStateWithLifecycle()
-    val torIsUp = torStatus is TorServiceStatus.Active
+    val torIsUp = torStatus.isFullyBootstrapped
 
     // The offer adds the relay to the kind-10089 Trusted list, which only moves it to clearnet while
     // trusted relays are *off* Tor. Under the Small-Payloads / Full-Privacy presets they are on Tor,

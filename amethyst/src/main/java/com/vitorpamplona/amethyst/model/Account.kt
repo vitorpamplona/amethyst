@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSig
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.defaults.Constants
-import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelStars
@@ -138,6 +137,7 @@ import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nip89AppHandlers.AppRecommendationsState
 import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
+import com.vitorpamplona.amethyst.model.serverList.AssumedRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithIndexRelayListsState
@@ -384,12 +384,16 @@ class Account(
     // doubles as the attribution pubkey for ExplainedFilter.accountPubKeys.
     override val userFinderPubkeyHex: HexKey get() = userProfile().pubkeyHex
 
-    override fun indexRelays(): Set<NormalizedRelayUrl> = indexerRelayList.flow.value.ifEmpty { DefaultIndexerRelayList }
+    // No ifEmpty here on purpose: an empty kind:10086 is the user asking for no indexers, and
+    // IndexerRelayListState already substitutes the defaults for the only case we may override —
+    // never having seen the event. Re-substituting here would undo that choice.
+    override fun indexRelays(): Set<NormalizedRelayUrl> = indexerRelayList.flow.value
 
     override fun outboxHomeRelays(): Set<NormalizedRelayUrl> = nip65RelayList.allFlowNoDefaults.value + privateStorageRelayList.flow.value + localRelayList.flow.value
 
-    // searchRelayList.flow already applies the DefaultSearchRelayList fallback internally
-    // (SearchRelayListState.normalizeSearchRelayListWithBackup), so no ifEmpty needed here.
+    // searchRelayList.flow applies DefaultSearchRelayList internally when no kind:10007 has ever
+    // been seen (SearchRelayListState.normalizeSearchRelayListWithBackup); an empty published list
+    // stays empty. No ifEmpty here either way.
     override fun searchRelays(): Set<NormalizedRelayUrl> = (trustedRelayList.flow.value + searchRelayList.flow.value).toSet()
 
     override fun searchOnlyRelays(): Set<NormalizedRelayUrl> = searchRelayList.flow.value
@@ -808,6 +812,9 @@ class Account(
         )
 
     val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, indexerRelayList, proxyRelayList, trustedRelayList, broadcastRelayList, scope)
+
+    /** Relays guessed on the user's behalf until their own lists arrive. Read only by Tor routing. */
+    val assumedRelays = AssumedRelayListsState(nip65RelayList, searchRelayList, indexerRelayList, scope)
 
     // Follows Relays
     val followOutboxesOrProxy = FollowListOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)

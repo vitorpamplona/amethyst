@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup
 
+import com.vitorpamplona.amethyst.commons.tor.RelayClassification
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
@@ -88,8 +89,11 @@ class TorClearnetFallbackTest {
                     trustedRelaysViaTor = preset.trustedRelaysViaTor,
                     moneyOperationsViaTor = preset.moneyOperationsViaTor,
                 ),
-            trustedRelayList = emptySet(),
-            dmRelayList = emptySet(),
+            classification =
+                RelayClassification(
+                    trusted = emptySet(),
+                    dm = emptySet(),
+                ),
         )
 
     @Test

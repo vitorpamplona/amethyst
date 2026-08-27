@@ -50,6 +50,30 @@ object ArtiNative {
     external fun initialize(dataDir: String): Int
 
     /**
+     * Whether Tor can carry traffic right now.
+     *
+     * [initialize] returns as soon as the client exists (the proxy is routable immediately and each
+     * stream waits for its own circuit), so this is the separate signal for "circuits can be built
+     * now". Polled rather than pushed: driving state off Arti's log strings is what caused the
+     * Connecting->Active race this wrapper already had to fix once.
+     *
+     * Reports Arti's *live* readiness rather than the outcome of the initial download, so a
+     * bootstrap that failed once and then succeeded on a later stream is picked up.
+     *
+     * @return 1 when ready for traffic, 0 when not yet, -1 when there is no client.
+     */
+    external fun isBootstrapped(): Int
+
+    /**
+     * Directory-download progress in permille (0..1000), or -1 when there is no client.
+     *
+     * Lets the lifecycle tell a slow download from a stalled one, which a timeout cannot: measured
+     * cold downloads ran 12.6-34.4s on the same hardware, so any fixed patience is either short
+     * enough to kill healthy ones or long enough to sit on a dead one.
+     */
+    external fun bootstrapProgressPermille(): Int
+
+    /**
      * Start the SOCKS5 proxy on the given port.
      * Can be called multiple times — stops any existing listener first.
      * @return 0 on success, negative on error.
