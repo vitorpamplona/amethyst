@@ -1765,7 +1765,7 @@
     <string name="originless_uploads_section_caption">Originless is optional for posting. Turning this on hides Blossom and NIP-96 from the upload picker.</string>
     <string name="originless_uploads_switch">Upload with Originless</string>
     <string name="originless_uploads_switch_caption">Files are pinned as ipfs://CID on every Originless node. Blossom and NIP-96 servers are not used while this is on. Add a node below first.</string>
-    <string name="originless_media_caption">POST /media strips EXIF/GPS from JPEG, PNG, GIF, and WebP before pinning. Other types still use /upload.</string>
+    <string name="originless_media_caption">Off by default: we pin the original file with POST /upload. Turn this on to POST /media, which strips EXIF/GPS from JPEG, PNG, GIF, and WebP before pinning. Other types still use /upload. We don\'t change your bytes unless you ask.</string>
     <string name="originless_gateways_section">Nodes</string>
     <string name="add_an_originless_server">Add an Originless server</string>
     <string name="no_originless_server_message">You have no Originless nodes set. Add one below so ipfs:// links can load, and so uploads have somewhere to pin.</string>

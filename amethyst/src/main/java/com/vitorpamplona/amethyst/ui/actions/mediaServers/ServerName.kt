@@ -38,9 +38,10 @@ enum class ServerType {
     ;
 
     /**
-     * Originless pins the original bytes and returns `ipfs://CID`. Client JPEG/video
-     * transcoding would change those bytes (and the CID), so Media Quality is not shown
-     * and uploads stay uncompressed.
+     * Originless pins bytes and returns `ipfs://CID`. We do not transcode on the
+     * client — Media Quality stays hidden — unless the user opts into server
+     * `POST /media` (EXIF strip / compact). Default is `POST /upload` so we
+     * don't morph the file or the CID.
      */
     val usesClientMediaCompression: Boolean
         get() = this != Originless

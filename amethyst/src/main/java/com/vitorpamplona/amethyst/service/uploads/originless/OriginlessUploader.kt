@@ -59,9 +59,10 @@ internal class OriginlessMediaUnsupportedException(
 ) : RuntimeException("Originless /media unsupported ($status)")
 
 /**
- * NIP-96-style Originless client: multipart `POST {base}/upload` (or `POST {base}/media`
- * to strip EXIF) with field `file` and no auth. The note URL is `ipfs://{cid}`;
- * fetches go through `{base}/ipfs/{cid}`.
+ * NIP-96-style Originless client: multipart `POST {base}/upload` (field `file`,
+ * no auth) is the default so we pin the original bytes. `POST {base}/media` is
+ * the opt-in path (`useMedia`) to strip EXIF then pin; if that endpoint is
+ * missing we fall back to `/upload`. The note URL is `ipfs://{cid}`.
  */
 class OriginlessUploader {
     fun ContentResolver.querySize(uri: Uri) =

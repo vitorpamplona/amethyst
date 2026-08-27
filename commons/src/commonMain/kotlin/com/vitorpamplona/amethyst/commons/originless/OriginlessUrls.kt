@@ -74,7 +74,7 @@ object OriginlessUrls {
 
     fun uploadUrl(base: String): String = "${normalizeBase(base)}/upload"
 
-    /** Originless `POST /media` — strips EXIF/GPS/XMP from JPEG/PNG/GIF/WebP, then pins. */
+    /** Originless `POST /media` — opt-in EXIF/GPS/XMP strip for JPEG/PNG/GIF/WebP, then pin. */
     fun mediaUrl(base: String): String = "${normalizeBase(base)}/media"
 
     fun healthUrl(base: String): String = "${normalizeBase(base)}/health"

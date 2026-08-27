@@ -30,6 +30,8 @@ import org.junit.Test
 class ServerTypeCompressionTest {
     @Test
     fun originlessDoesNotUseClientMediaCompression() {
+        // Originless stores ipfs://CID of the pinned bytes. We don't show Media
+        // Quality / transcode on the client; compaction is opt-in POST /media.
         assertFalse(ServerType.Originless.usesClientMediaCompression)
         assertTrue(ServerType.NIP96.usesClientMediaCompression)
         assertTrue(ServerType.Blossom.usesClientMediaCompression)
