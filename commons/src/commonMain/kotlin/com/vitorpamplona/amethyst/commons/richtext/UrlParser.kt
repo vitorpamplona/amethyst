@@ -93,6 +93,9 @@ class UrlParser {
 
         urls.forEach { url ->
             try {
+                // Originless `ipfs://CID` has no dotted host, so the TLD gate would
+                // drop it. The `||` short-circuits for normal http(s) URLs. Once past
+                // this gate, ipfs falls through to completeUrls with other unknown schemes.
                 if (url.isValidTopLevelDomain() || url.originalUrl.startsWithAny(ipfsScheme)) {
                     if (url.wroteWithSchema()) {
                         if (url.originalUrl.startsWithAny(httpScheme)) {
@@ -110,8 +113,6 @@ class UrlParser {
                             collectGroupLinks(content, url.originalUrl, groupLinks)
                         } else if (url.originalUrl.startsWithAny(blossomScheme)) {
                             blossom.add(url.originalUrl)
-                        } else if (url.originalUrl.startsWithAny(ipfsScheme)) {
-                            completeUrls.add(url.originalUrl)
                         } else {
                             completeUrls.add(url.originalUrl)
                         }

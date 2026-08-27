@@ -35,6 +35,7 @@ import coil3.network.ConnectivityChecker
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
 import kotlinx.coroutines.CoroutineScope
@@ -115,16 +116,35 @@ class ProfilePictureFetcher(
             val diskCacheLazy = lazy { imageLoader.diskCache }
 
             val netFetcher =
-                readAuthAware(data.url, readAuth) { authHeader ->
-                    NetworkFetcher(
-                        url = data.url,
-                        options = options.withAuthHeader(authHeader),
-                        networkClient = lazy { networkClient(data.url).asNetworkClient() },
-                        diskCache = diskCacheLazy,
-                        cacheStrategy = cacheStrategyLazy,
-                        connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-                        concurrentRequestStrategy = concurrentRequestStrategyLazy,
+                if (IpfsGatewayResolver.isIpfsUri(data.url)) {
+                    IpfsFetcher(
+                        candidates = IpfsGatewayResolver.getAllCandidateUrls(data.url),
+                        networkFetcher = { url ->
+                            readAuthAware(url, readAuth) { authHeader ->
+                                NetworkFetcher(
+                                    url = url,
+                                    options = options.withAuthHeader(authHeader),
+                                    networkClient = lazy { networkClient(url).asNetworkClient() },
+                                    diskCache = diskCacheLazy,
+                                    cacheStrategy = cacheStrategyLazy,
+                                    connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
+                                    concurrentRequestStrategy = concurrentRequestStrategyLazy,
+                                )
+                            }
+                        },
                     )
+                } else {
+                    readAuthAware(data.url, readAuth) { authHeader ->
+                        NetworkFetcher(
+                            url = data.url,
+                            options = options.withAuthHeader(authHeader),
+                            networkClient = lazy { networkClient(data.url).asNetworkClient() },
+                            diskCache = diskCacheLazy,
+                            cacheStrategy = cacheStrategyLazy,
+                            connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
+                            concurrentRequestStrategy = concurrentRequestStrategyLazy,
+                        )
+                    }
                 }
 
             return ProfilePictureFetcher(

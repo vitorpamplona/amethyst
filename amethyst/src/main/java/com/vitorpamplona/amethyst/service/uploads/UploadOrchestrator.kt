@@ -24,12 +24,15 @@ import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.service.uploads.originless.OriginlessUploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -191,6 +194,51 @@ class UploadOrchestrator {
         }
     }
 
+    private suspend fun uploadOriginless(
+        fileUri: Uri,
+        contentType: String?,
+        size: Long?,
+        alt: String?,
+        contentWarningReason: String?,
+        serverBaseUrl: String,
+        contentTypeForResult: String?,
+        originalHash: String?,
+        account: Account,
+        context: Context,
+    ): UploadingFinalState {
+        updateState(0.2, UploadingState.Uploading)
+        val targets = OriginlessUrls.uploadTargets(account.settings.originlessServerUrls.value)
+        val useMedia = account.settings.optimizeMediaOnUpload.value
+        return try {
+            val result =
+                OriginlessUploader().uploadToAll(
+                    uri = fileUri,
+                    contentType = contentType,
+                    size = size,
+                    alt = alt,
+                    sensitiveContent = contentWarningReason,
+                    serverBaseUrls = targets,
+                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                    onProgress = { percent: Float ->
+                        updateState(0.2 + (0.2 * percent), UploadingState.Uploading)
+                    },
+                    context = context,
+                    useMedia = useMedia,
+                )
+
+            verifyHeader(
+                uploadResult = result,
+                localContentType = contentType,
+                originalContentType = contentTypeForResult,
+                originalHash = originalHash,
+                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            error(R.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)
+        }
+    }
+
     private suspend fun uploadBlossom(
         fileUri: Uri,
         contentType: String?,
@@ -323,10 +371,22 @@ class UploadOrchestrator {
 
         updateState(0.6, UploadingState.Downloading)
 
-        // Use streaming verification for memory efficiency with large files
-        val verification =
-            ImageDownloader().waitAndVerifyStream(uploadResult.url, okHttpClient)
-                ?: return error(R.string.could_not_download_from_the_server)
+        val urlsToVerify =
+            if (IpfsGatewayResolver.isIpfsUri(uploadResult.url)) {
+                IpfsGatewayResolver.getAllCandidateUrls(uploadResult.url)
+            } else {
+                listOf(uploadResult.url)
+            }
+
+        // Use streaming verification for memory efficiency with large files.
+        // Originless may have pinned on a later node; try each gateway briefly.
+        val maxAttempts = if (urlsToVerify.size > 1) 3 else 15
+        var verification: ImageDownloader.StreamVerification? = null
+        for (urlToVerify in urlsToVerify) {
+            verification = ImageDownloader().waitAndVerifyStream(urlToVerify, okHttpClient, maxAttempts)
+            if (verification != null) break
+        }
+        verification ?: return error(R.string.could_not_download_from_the_server)
 
         updateState(0.8, UploadingState.Hashing)
 
@@ -452,11 +512,12 @@ class UploadOrchestrator {
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
+        val quality = compressionQuality.forServer(server.type)
+        val compressed = compressIfNeeded(uri, mimeType, quality, context, useH265, convertGifToMp4)
 
         val finalUri =
             try {
-                stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                stripAfterCompression(uri, compressed, mimeType, quality, stripMetadata, onStrippingFailed, context)
             } catch (e: AvifMetadataNotVerifiableException) {
                 return error(R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
                     deleteTempUri(compressed.uri, uri)
@@ -471,6 +532,7 @@ class UploadOrchestrator {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
                 ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
+                ServerType.Originless -> uploadOriginless(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
                 ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
             }
         } finally {
@@ -494,11 +556,12 @@ class UploadOrchestrator {
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
+        val quality = compressionQuality.forServer(server.type)
+        val compressed = compressIfNeeded(uri, mimeType, quality, context, useH265, convertGifToMp4)
 
         val finalUri =
             try {
-                stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                stripAfterCompression(uri, compressed, mimeType, quality, stripMetadata, onStrippingFailed, context)
             } catch (e: AvifMetadataNotVerifiableException) {
                 return error(R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
                     deleteTempUri(compressed.uri, uri)
@@ -516,6 +579,7 @@ class UploadOrchestrator {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
                 ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
+                ServerType.Originless -> uploadOriginless(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
                 ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
             }
         } finally {

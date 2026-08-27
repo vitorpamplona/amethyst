@@ -22,16 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.create
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.service.uploads.DefaultFileServerUploader
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
-import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
@@ -170,32 +167,13 @@ class CreateNestViewModel : ViewModel() {
 
             return try {
                 val result =
-                    if (account.settings.defaultFileServer.type == ServerType.NIP96) {
-                        Nip96Uploader().upload(
-                            uri = compResult.uri,
-                            contentType = compResult.contentType,
-                            size = compResult.size,
-                            alt = null,
-                            sensitiveContent = null,
-                            serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                            okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                            onProgress = {},
-                            httpAuth = account::createHTTPAuthorization,
-                            context = context,
-                        )
-                    } else {
-                        BlossomUploader().upload(
-                            uri = compResult.uri,
-                            contentType = compResult.contentType,
-                            size = compResult.size,
-                            alt = null,
-                            sensitiveContent = null,
-                            serverBaseUrl = account.settings.defaultFileServer.baseUrl,
-                            okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                            httpAuth = account::createBlossomUploadAuth,
-                            context = context,
-                        )
-                    }
+                    DefaultFileServerUploader.upload(
+                        account = account,
+                        uri = compResult.uri,
+                        contentType = compResult.contentType,
+                        size = compResult.size,
+                        context = context,
+                    )
 
                 if (result.url == null) {
                     onError(

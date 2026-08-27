@@ -102,6 +102,7 @@ class ImageLoaderSetup {
                         add(BlurHashFetcher.Factory)
                         add(ThumbHashFetcher.Factory)
                         add(BlossomFetcher.Factory(blossomServerResolver, callFactory, concurrentRequests, readAuth))
+                        add(IpfsFetcher.Factory(callFactory))
                         add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, concurrentRequests, readAuth))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)

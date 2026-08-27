@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -33,7 +34,40 @@ enum class ServerType {
     Blossom,
     NIP95,
     NIP96,
+    Originless,
+    ;
+
+    /**
+     * Originless pins the original bytes and returns `ipfs://CID`. Client JPEG/video
+     * transcoding would change those bytes (and the CID), so Media Quality is not shown
+     * and uploads stay uncompressed.
+     */
+    val usesClientMediaCompression: Boolean
+        get() = this != Originless
 }
+
+/**
+ * Compose-picker entry for Originless. Uploads pin to every configured node;
+ * this URL is never POSTed to.
+ */
+val ORIGINLESS_UPLOAD_TARGET = ServerName("Originless", "originless://all", ServerType.Originless)
+
+fun originlessServer(url: String = OriginlessUrls.DEFAULT_SERVER): ServerName {
+    val base = OriginlessUrls.normalizeBase(url)
+    val host =
+        base
+            .removePrefix("https://")
+            .removePrefix("http://")
+            .substringBefore('/')
+            .substringBefore(':')
+            .ifBlank { "Originless" }
+    return ServerName(host, base, ServerType.Originless)
+}
+
+val DEFAULT_ORIGINLESS_SERVERS: List<ServerName> =
+    listOf(
+        originlessServer(OriginlessUrls.DEFAULT_SERVER),
+    )
 
 val DEFAULT_MEDIA_SERVERS: List<ServerName> =
     listOf(

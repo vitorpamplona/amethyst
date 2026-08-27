@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -36,6 +37,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -80,23 +82,26 @@ class BlossomServerListState(
                 emptyList(),
             )
 
-    fun mergeServerList(blossom: List<String>?): List<ServerName> = blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS } ?: DEFAULT_MEDIA_SERVERS
+    fun mergeServerList(
+        blossom: List<String>?,
+        originlessUrls: List<String> = settings.originlessServerUrls.value,
+        originlessUploadsEnabled: Boolean = settings.originlessUploadsEnabled.value,
+    ): List<ServerName> = mergeUploadServerList(blossom, originlessUrls, originlessUploadsEnabled, ::host)
 
     val hostNameFlow: StateFlow<List<ServerName>> =
-        flow
-            .map { blossoms ->
-                mergeServerList(blossoms)
-            }.onStart {
-                emit(mergeServerList(flow.value))
-            }.onEach { servers ->
-                resetTargetOrNull(flow.value, servers, settings.defaultFileServer)?.let {
-                    settings.changeDefaultFileServer(it)
-                }
-            }.flowOn(Dispatchers.IO)
+        combine(flow, settings.originlessServerUrls, settings.originlessUploadsEnabled) { blossoms, originlessUrls, enabled ->
+            mergeServerList(blossoms, originlessUrls, enabled)
+        }.onStart {
+            emit(mergeServerList(flow.value, settings.originlessServerUrls.value, settings.originlessUploadsEnabled.value))
+        }.onEach { servers ->
+            resetTargetOrNull(flow.value, servers, settings.defaultFileServer, settings.originlessUploadsEnabled.value)?.let {
+                settings.changeDefaultFileServer(it)
+            }
+        }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                DEFAULT_MEDIA_SERVERS,
+                mergeServerList(emptyList(), settings.originlessServerUrls.value, settings.originlessUploadsEnabled.value),
             )
 
     suspend fun saveBlossomServersList(servers: List<String>): BlossomServersEvent {
@@ -143,6 +148,24 @@ class BlossomServerListState(
 }
 
 /**
+ * Upload picker contents. Originless uploads replace Blossom/NIP-96 entirely
+ * so `ipfs://` pinning is optional; `ipfs://` fetches still use the Originless
+ * node list regardless of this switch.
+ */
+fun mergeUploadServerList(
+    blossom: List<String>?,
+    originlessUrls: List<String>,
+    originlessUploadsEnabled: Boolean,
+    host: (String) -> String,
+): List<ServerName> {
+    if (originlessUploadsEnabled) {
+        return if (originlessUrls.isEmpty()) emptyList() else listOf(ORIGINLESS_UPLOAD_TARGET)
+    }
+    return blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS }
+        ?: DEFAULT_MEDIA_SERVERS
+}
+
+/**
  * Decides whether the persisted default file server must be reset, and to what.
  *
  * Returns the new default server, or `null` when no change should happen.
@@ -157,9 +180,18 @@ fun resetTargetOrNull(
     rawList: List<String>,
     merged: List<ServerName>,
     current: ServerName,
-): ServerName? =
-    if (rawList.isNotEmpty() && merged.none { it == current }) {
-        merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
+    originlessUploadsEnabled: Boolean = false,
+): ServerName? {
+    if (originlessUploadsEnabled) {
+        val target = merged.firstOrNull { it.type == ServerType.Originless }
+        return if (current == target) null else target
+    }
+    if (current.type == ServerType.Originless) {
+        return merged.firstOrNull { it.type != ServerType.Originless } ?: DEFAULT_MEDIA_SERVERS[0]
+    }
+    return if (rawList.isNotEmpty() && merged.none { it == current }) {
+        merged.firstOrNull { it.type != ServerType.Originless } ?: merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
     } else {
         null
     }
+}

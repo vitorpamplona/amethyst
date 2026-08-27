@@ -28,6 +28,7 @@ import androidx.media3.common.MimeTypes
 import com.davotoula.lightcompressor.video.GifToMp4Converter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.isAvif
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
@@ -149,3 +150,5 @@ enum class CompressorQuality {
     VERY_HIGH,
     UNCOMPRESSED,
 }
+
+fun CompressorQuality.forServer(type: ServerType): CompressorQuality = if (type.usesClientMediaCompression) this else CompressorQuality.UNCOMPRESSED

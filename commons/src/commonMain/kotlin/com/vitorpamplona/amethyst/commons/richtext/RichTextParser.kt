@@ -516,12 +516,16 @@ class RichTextParser {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
 
             return imageExtensions.any { removedParamsFromUrl.endsWith(it) } ||
-                videoExtensions.any { removedParamsFromUrl.endsWith(it) }
+                videoExtensions.any { removedParamsFromUrl.endsWith(it) } ||
+                isExtensionlessIpfsUri(url)
         }
 
         fun isImageUrl(url: String): Boolean {
             val removedParamsFromUrl = removeQueryParamsForExtensionComparison(url)
-            return imageExtensions.any { removedParamsFromUrl.endsWith(it) }
+            if (imageExtensions.any { removedParamsFromUrl.endsWith(it) }) return true
+            // Originless notes store `ipfs://CID` with no filename; treat as image unless
+            // the path already looks like video/pdf.
+            return isExtensionlessIpfsUri(url) && !isVideoUrl(url) && !isPdfUrl(url)
         }
 
         fun isVideoUrl(url: String): Boolean {
@@ -595,8 +599,15 @@ class RichTextParser {
             if (videoExtensions.any { removedParamsFromUrl.endsWith(it) }) return MediaContentKind.VIDEO
             if (pdfExtensions.any { removedParamsFromUrl.endsWith(it) }) return MediaContentKind.PDF
 
+            // Originless pins are content-addressed (`ipfs://CID`) and have no filename.
+            // Without imeta `m` or an extension, default to image so the note renders;
+            // a declared MIME above still wins for video/pdf.
+            if (isExtensionlessIpfsUri(url)) return MediaContentKind.IMAGE
+
             return null
         }
+
+        private fun isExtensionlessIpfsUri(url: String): Boolean = IpfsGatewayResolver.isIpfsUri(url)
 
         fun isValidURL(url: String?): Boolean = isValidUrl(url)
 

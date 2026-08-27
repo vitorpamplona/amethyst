@@ -194,7 +194,9 @@ private fun PdfViewerContent(
             try {
                 withContext(Dispatchers.IO) {
                     val snapshot =
-                        PdfFetcher.fetchSnapshot(content.url) { url ->
+                        PdfFetcher.fetchSnapshot(
+                            url = content.url,
+                        ) { url ->
                             accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
                         }
                     try {

@@ -510,6 +510,8 @@ sealed class Route {
 
     @Serializable object EditMediaServers : Route()
 
+    @Serializable object EditOriginlessServers : Route()
+
     @Serializable object ManageBlossomBlobs : Route()
 
     @Serializable object ImportBlossomBlobs : Route()

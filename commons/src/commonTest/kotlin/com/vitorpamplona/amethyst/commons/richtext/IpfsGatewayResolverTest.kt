@@ -20,18 +20,25 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class IpfsGatewayResolverTest {
+    @AfterTest
+    fun restoreDefaultGateway() {
+        IpfsGatewayResolver.currentServerBases = listOf(OriginlessUrls.DEFAULT_SERVER)
+    }
+
     @Test
     fun isIpfsUriMatchesCorrectly() {
         assertTrue(IpfsGatewayResolver.isIpfsUri("ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
         assertTrue(IpfsGatewayResolver.isIpfsUri("IPFS://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
         assertTrue(IpfsGatewayResolver.isIpfsUri("ipfs:bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
-        assertFalse(IpfsGatewayResolver.isIpfsUri("https://dweb.link/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
+        assertFalse(IpfsGatewayResolver.isIpfsUri("https://originless.gupt.app/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
         assertFalse(IpfsGatewayResolver.isIpfsUri("blossom:bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"))
     }
 
@@ -39,11 +46,11 @@ class IpfsGatewayResolverTest {
     fun toHttpUrlWithDefaultGateway() {
         val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
         assertEquals(
-            "https://dweb.link/ipfs/$cid",
+            "https://originless.gupt.app/ipfs/$cid",
             IpfsGatewayResolver.toHttpUrl("ipfs://$cid"),
         )
         assertEquals(
-            "https://dweb.link/ipfs/$cid/image.png",
+            "https://originless.gupt.app/ipfs/$cid/image.png",
             IpfsGatewayResolver.toHttpUrl("ipfs://$cid/image.png"),
         )
     }
@@ -53,16 +60,96 @@ class IpfsGatewayResolverTest {
         val cid = "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco"
         assertEquals(
             "https://ipfs.io/ipfs/$cid",
-            IpfsGatewayResolver.toHttpUrl("ipfs://$cid", IpfsGatewayResolver.SECONDARY_GATEWAY),
+            IpfsGatewayResolver.toHttpUrl("ipfs://$cid", "https://ipfs.io/ipfs/"),
         )
     }
 
     @Test
-    fun getAllCandidateUrlsIncludesBothGateways() {
+    fun toHttpUrlUsesConfiguredOriginlessNode() {
+        val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        IpfsGatewayResolver.currentServerBase = "https://originless.example"
+        assertEquals(
+            "https://originless.example/ipfs/$cid",
+            IpfsGatewayResolver.toHttpUrl("ipfs://$cid"),
+        )
+    }
+
+    @Test
+    fun getAllCandidateUrlsUsesEveryConfiguredNode() {
+        val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        IpfsGatewayResolver.currentServerBases =
+            listOf("https://originless.gupt.app", "https://originless.example")
+        val candidates = IpfsGatewayResolver.getAllCandidateUrls("ipfs://$cid")
+        assertEquals(
+            listOf(
+                "https://originless.gupt.app/ipfs/$cid",
+                "https://originless.example/ipfs/$cid",
+            ),
+            candidates,
+        )
+    }
+
+    @Test
+    fun getAllCandidateUrlsUsesOriginlessGateway() {
         val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
         val candidates = IpfsGatewayResolver.getAllCandidateUrls("ipfs://$cid")
-        assertEquals(2, candidates.size)
-        assertEquals("https://dweb.link/ipfs/$cid", candidates[0])
-        assertEquals("https://ipfs.io/ipfs/$cid", candidates[1])
+        assertEquals(1, candidates.size)
+        assertEquals("https://originless.gupt.app/ipfs/$cid", candidates[0])
+    }
+
+    @Test
+    fun httpFetchUrlsLeavesHttpUnchanged() {
+        val url = "https://example.com/file.png"
+        assertEquals(listOf(url), IpfsGatewayResolver.httpFetchUrls(url))
+    }
+
+    @Test
+    fun httpFetchUrlsExpandsIpfsAcrossEveryConfiguredNode() {
+        val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        IpfsGatewayResolver.currentServerBases =
+            listOf("https://originless.gupt.app", "https://originless.example")
+        assertEquals(
+            listOf(
+                "https://originless.gupt.app/ipfs/$cid",
+                "https://originless.example/ipfs/$cid",
+            ),
+            IpfsGatewayResolver.httpFetchUrls("ipfs://$cid"),
+        )
+    }
+
+    @Test
+    fun ipfsUriFromGatewayUrlRoundTripsCidV0() {
+        val cid = "QmNdEr3bMJ9fudJZ4hmXy3R63v8ia7XZaNVACMQF42pkhi"
+        assertEquals("ipfs://$cid", IpfsGatewayResolver.ipfsUriFromGatewayUrl("ipfs://$cid"))
+        assertEquals("ipfs://$cid", IpfsGatewayResolver.ipfsUriFromGatewayUrl("ipfs:$cid"))
+        assertEquals(
+            "ipfs://$cid",
+            IpfsGatewayResolver.ipfsUriFromGatewayUrl("https://originless.gupt.app/ipfs/$cid"),
+        )
+        assertEquals(
+            "ipfs://$cid",
+            IpfsGatewayResolver.ipfsUriFromGatewayUrl("https://originless.example/ipfs/$cid?download=1"),
+        )
+        assertEquals(null, IpfsGatewayResolver.ipfsUriFromGatewayUrl("https://example.com/file.png"))
+    }
+
+    @Test
+    fun decryptionKeyUrlsAliasIpfsAndEveryOriginlessGateway() {
+        val cid = "QmNdEr3bMJ9fudJZ4hmXy3R63v8ia7XZaNVACMQF42pkhi"
+        IpfsGatewayResolver.currentServerBases =
+            listOf("https://originless.gupt.app", "https://originless.example")
+        val aliases = IpfsGatewayResolver.decryptionKeyUrls("ipfs://$cid")
+        assertEquals(
+            listOf(
+                "ipfs://$cid",
+                "https://originless.gupt.app/ipfs/$cid",
+                "https://originless.example/ipfs/$cid",
+            ),
+            aliases,
+        )
+        assertEquals(
+            aliases.toSet(),
+            IpfsGatewayResolver.decryptionKeyUrls("https://originless.gupt.app/ipfs/$cid").toSet(),
+        )
     }
 }

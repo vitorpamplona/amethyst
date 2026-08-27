@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderAccount
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthCustomToggles
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
@@ -3630,6 +3631,14 @@ class Account(
 
     init {
         Log.d("AccountRegisterObservers", "Init")
+
+        // Originless nodes always resolve `ipfs://`, even when Originless uploads are off.
+        IpfsGatewayResolver.currentServerBases = settings.originlessServerUrls.value
+        scope.launch {
+            settings.originlessServerUrls.collect { urls ->
+                IpfsGatewayResolver.currentServerBases = urls
+            }
+        }
 
         // Blocking a relay has to forget any "just for now" login to it, or unblocking later would
         // silently resume authenticating off an answer given before the block. Blocking is the

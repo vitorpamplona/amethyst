@@ -41,6 +41,13 @@ class UrlsDetectorTest {
         assertContains(detectedLinks, "https://myblog.xyz")
     }
 
+    @Test
+    fun findsIpfsUrisForImetaMatching() {
+        val cid = "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX"
+        val detected = findURLs("Test\n\n$cid")
+        assertEquals(listOf(cid), detected)
+    }
+
     /**
      * Regression test for PR #1907: the Japanese phrase "今北産業" must not crash the URL
      * detector with a StringIndexOutOfBoundsException and must return no URLs.
