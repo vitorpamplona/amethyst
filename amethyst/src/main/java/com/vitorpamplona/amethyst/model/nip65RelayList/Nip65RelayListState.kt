@@ -71,6 +71,27 @@ class Nip65RelayListState(
 
     fun normalizeNIP65AllRelayListWithBackupNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.relays()?.map { it.relayUrl }?.toSet() ?: emptySet()
 
+    /**
+     * The app defaults currently standing in for a user we have no kind:10002 for — empty as soon
+     * as one exists, including an empty one.
+     *
+     * Uses the same `nip65Event(note) == null` predicate the substitution itself uses, so the two
+     * cannot drift: whatever is listed here is exactly what the app is guessing on the user's
+     * behalf. See [relayListOrDefaultsWhenUnknown].
+     */
+    fun assumedDefaults(note: Note): Set<NormalizedRelayUrl> = if (nip65Event(note) == null) Constants.bootstrapInbox + Constants.eventFinderRelays else emptySet()
+
+    val assumedDefaultsFlow =
+        getNIP65RelayListFlow()
+            .map { assumedDefaults(it.note) }
+            .onStart { emit(assumedDefaults(nip65ListNote)) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                assumedDefaults(nip65ListNote),
+            )
+
     val outboxFlow =
         getNIP65RelayListFlow()
             .map { normalizeNIP65WriteRelayListWithBackup(it.note) }

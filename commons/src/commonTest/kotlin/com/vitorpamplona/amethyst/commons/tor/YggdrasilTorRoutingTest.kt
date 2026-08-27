@@ -48,8 +48,11 @@ class YggdrasilTorRoutingTest {
                     trustedRelaysViaTor = false,
                     moneyOperationsViaTor = false,
                 ),
-            trustedRelayList = emptySet(),
-            dmRelayList = emptySet(),
+            classification =
+                RelayClassification(
+                    trusted = emptySet(),
+                    dm = emptySet(),
+                ),
         )
 
     @Test

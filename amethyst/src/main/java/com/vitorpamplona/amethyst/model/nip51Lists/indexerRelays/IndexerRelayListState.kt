@@ -77,6 +77,20 @@ class IndexerRelayListState(
      */
     fun normalizeIndexerRelayListPrecached(note: Note): Set<NormalizedRelayUrl> = indexListEvent(note)?.let { decryptionCache.cachedRelays(it) }?.ifEmpty { null } ?: DefaultIndexerRelayList
 
+    /** See `Nip65RelayListState.assumedDefaults`. Empty as soon as any kind:10086 exists. */
+    fun assumedDefaults(note: Note): Set<NormalizedRelayUrl> = if (indexListEvent(note) == null) DefaultIndexerRelayList else emptySet()
+
+    val assumedDefaultsFlow =
+        getIndexerRelayListFlow()
+            .map { assumedDefaults(it.note) }
+            .onStart { emit(assumedDefaults(indexerListNote)) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                assumedDefaults(indexerListNote),
+            )
+
     /**
      * The account's indexer relays. [normalizeIndexerRelayListWithBackup] substitutes
      * [DefaultIndexerRelayList] when there is no kind:10086 at all — but **not** when the one we

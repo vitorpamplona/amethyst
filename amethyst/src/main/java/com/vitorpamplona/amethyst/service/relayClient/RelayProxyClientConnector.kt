@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient
 
+import com.vitorpamplona.amethyst.commons.tor.RelayClassification
 import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
 import com.vitorpamplona.amethyst.model.torState.TorRelayEvaluation
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -101,9 +101,7 @@ class RelayProxyClientConnector(
     // flipped relay would sit out its (now-irrelevant) backoff. We track these so such a relay can
     // skip its retry delay on the next reconnect — scoped to onlyIfChanged, so only the relays that
     // actually flipped re-dial and the rest of the pool's backoff is left untouched.
-    private var lastTrustedRelays: Set<NormalizedRelayUrl>? = null
-    private var lastDmRelays: Set<NormalizedRelayUrl>? = null
-    private var lastMoneyOpRelays: Set<NormalizedRelayUrl>? = null
+    private var lastClassification: RelayClassification? = null
 
     @OptIn(FlowPreview::class)
     val relayServices =
@@ -174,9 +172,7 @@ class RelayProxyClientConnector(
                 lastTorSettings = torSettings
                 lastTorConnection = infra.torConnection
                 lastClearConnection = infra.clearConnection
-                lastTrustedRelays = infra.evaluator.trustedRelayList
-                lastDmRelays = infra.evaluator.dmRelayList
-                lastMoneyOpRelays = infra.evaluator.moneyOpRelayList
+                lastClassification = infra.evaluator.classification
             }
 
             else -> {
@@ -202,13 +198,13 @@ class RelayProxyClientConnector(
                 // so let onlyIfChanged pick out the flipped relay(s) and skip THEIR retry delay —
                 // without resetBackoff(), so the rest of the pool's backoff is untouched (these sets
                 // churn while relay lists load, and forgiving the whole pool then would be too much).
+                //
+                // One comparison over the whole classification, not one per category: this used to
+                // be a four-way `||` and adding a category meant remembering to extend it. Missing
+                // a term fails silently — the affected relays keep a socket on a transport the
+                // policy has already moved them off.
                 val classificationChanged =
-                    lastTrustedRelays != null &&
-                        (
-                            infra.evaluator.trustedRelayList != lastTrustedRelays ||
-                                infra.evaluator.dmRelayList != lastDmRelays ||
-                                infra.evaluator.moneyOpRelayList != lastMoneyOpRelays
-                        )
+                    lastClassification != null && infra.evaluator.classification != lastClassification
 
                 val previousNetworkId = lastNetworkId
 
@@ -216,9 +212,7 @@ class RelayProxyClientConnector(
                 lastClearConnection = infra.clearConnection
                 lastNetworkId = networkId ?: lastNetworkId
                 lastTorSettings = torSettings
-                lastTrustedRelays = infra.evaluator.trustedRelayList
-                lastDmRelays = infra.evaluator.dmRelayList
-                lastMoneyOpRelays = infra.evaluator.moneyOpRelayList
+                lastClassification = infra.evaluator.classification
 
                 if (networkChanged) {
                     Log.d("ManageRelayServices") {
