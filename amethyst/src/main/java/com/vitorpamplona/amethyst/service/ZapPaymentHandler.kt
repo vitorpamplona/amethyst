@@ -29,10 +29,11 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.ui.nwc.nwcFailureDetail
+import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -419,18 +420,20 @@ class ZapPaymentHandler(
                     zappedNote = note,
                     onResponse = { response ->
                         progress.step()
-                        if (response is PayInvoiceErrorResponse) {
+                        response.nwcFailureDetail(context)?.let { detail ->
                             onError(
                                 stringRes(context, R.string.error_dialog_pay_invoice_error),
-                                stringRes(
-                                    context,
-                                    R.string.wallet_connect_pay_invoice_error_error,
-                                    response.error?.message
-                                        ?: response.error?.code?.toString() ?: "Error parsing error message",
-                                ),
+                                stringRes(context, R.string.wallet_connect_pay_invoice_error_error, detail),
                                 payable.info.user,
                             )
                         }
+                    },
+                    onTimeout = {
+                        onError(
+                            stringRes(context, R.string.error_dialog_pay_invoice_error),
+                            nwcTimeoutMessage(context),
+                            payable.info.user,
+                        )
                     },
                 )
 

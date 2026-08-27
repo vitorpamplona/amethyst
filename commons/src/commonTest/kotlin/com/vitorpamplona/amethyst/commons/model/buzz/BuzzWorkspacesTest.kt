@@ -29,44 +29,74 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BuzzWorkspacesTest {
+    // A fresh instance per test: the joined set is per-account state now, not a process-wide
+    // singleton, so there is nothing to reset between tests. The dialect mark stays global.
+    private val workspaces = BuzzWorkspaces()
+
     private val a = RelayUrlNormalizer.normalize("wss://a.buzz.example")
     private val b = RelayUrlNormalizer.normalize("wss://b.buzz.example")
 
     @BeforeTest fun setup() {
-        BuzzWorkspaces.clearForTesting()
         BuzzRelayDialect.clearForTesting()
     }
 
     @AfterTest fun teardown() {
-        BuzzWorkspaces.clearForTesting()
         BuzzRelayDialect.clearForTesting()
     }
 
     @Test
     fun joiningRecordsAndMarksDialect() {
-        assertTrue(BuzzWorkspaces.join(a))
-        assertTrue(BuzzWorkspaces.isJoined(a))
-        assertEquals(setOf(a), BuzzWorkspaces.flow.value)
+        assertTrue(workspaces.join(a))
+        assertTrue(workspaces.isJoined(a))
+        assertEquals(setOf(a), workspaces.flow.value)
         // Joining also marks the relay a Buzz dialect so its events render as workspace channels.
         assertTrue(BuzzRelayDialect.isBuzz(a))
         // Re-joining is a no-op (returns false).
-        assertFalse(BuzzWorkspaces.join(a))
+        assertFalse(workspaces.join(a))
     }
 
     @Test
     fun leaveRemoves() {
-        BuzzWorkspaces.join(a)
-        BuzzWorkspaces.join(b)
-        BuzzWorkspaces.leave(a)
-        assertEquals(setOf(b), BuzzWorkspaces.flow.value)
-        assertFalse(BuzzWorkspaces.isJoined(a))
+        workspaces.join(a)
+        workspaces.join(b)
+        workspaces.leave(a)
+        assertEquals(setOf(b), workspaces.flow.value)
+        assertFalse(workspaces.isJoined(a))
     }
 
     @Test
     fun restoreReplacesAndMarksAll() {
-        BuzzWorkspaces.join(a)
-        BuzzWorkspaces.restore(setOf(b))
-        assertEquals(setOf(b), BuzzWorkspaces.flow.value)
+        workspaces.join(a)
+        workspaces.restore(setOf(b))
+        assertEquals(setOf(b), workspaces.flow.value)
         assertTrue(BuzzRelayDialect.isBuzz(b))
+    }
+
+    @Test
+    fun oneAccountsJoinDoesNotJoinForAnother() {
+        // The bystander-AUTH leak this became per-account for: while the joined set was a
+        // process-wide singleton it fed AuthCoordinator.isFirstParty, so an account that never
+        // redeemed the invite was auto-authenticated (and identified) on someone else's workspace.
+        val mine = BuzzWorkspaces()
+        val theirs = BuzzWorkspaces()
+
+        mine.join(a)
+
+        assertTrue(mine.isJoined(a))
+        assertFalse(theirs.isJoined(a))
+        assertEquals(emptySet(), theirs.flow.value)
+    }
+
+    @Test
+    fun leavingOnOneAccountLeavesTheOtherJoined() {
+        val mine = BuzzWorkspaces()
+        val theirs = BuzzWorkspaces()
+        mine.join(a)
+        theirs.join(a)
+
+        mine.leave(a)
+
+        assertFalse(mine.isJoined(a))
+        assertTrue(theirs.isJoined(a))
     }
 }

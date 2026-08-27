@@ -571,6 +571,9 @@
     <string name="quick_action_block">Blockera</string>
     <string name="quick_action_mute_thread">Tysta tråd</string>
     <string name="quick_action_unmute_thread">Avtysta tråd</string>
+    <string name="mute_notifications">Tysta aviseringar</string>
+    <string name="unmute_notifications">Sluta tysta aviseringar</string>
+    <string name="muted_chat_content_description">Aviseringar är tystade för den här chatten</string>
     <string name="quick_action_report">Rapportera</string>
     <string name="quick_action_dont_show_again_button">Visa inte igen</string>
     <string name="report_dialog_spam">Spam eller scams</string>
@@ -1108,7 +1111,7 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Logga in utan att fråga när…</string>
-    <string name="relay_auth_auto_my_relays">…det är mitt relä, eller ett rum jag gått med i</string>
+    <string name="relay_auth_auto_my_relays_and_venues">…det är mitt relä, eller ett rum jag gått med i eller följer</string>
     <string name="relay_auth_auto_read_follows">…jag läser någon jag följer</string>
     <string name="relay_auth_auto_message_follows">…jag skriver till någon jag följer</string>
     <string name="relay_auth_auto_message_strangers">…jag skriver till någon annan</string>
@@ -1152,6 +1155,11 @@
     <string name="relay_auth_remove_exception">Ta bort undantag</string>
     <string name="relay_auth_exception_removed_undo">Undantaget togs bort. %1$s följer dina regler igen.</string>
     <string name="relay_auth_undo">Ångra</string>
+    <string name="relay_auth_session_section">Bara för nu</string>
+    <string name="relay_auth_session_row_desc">Inloggad tills du startar om Amethyst</string>
+    <string name="relay_auth_forget_session">Glöm den här inloggningen</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s frågar igen nästa gång det behöver dig.</string>
+    <string name="relay_auth_session_undo_blocked">Inte återställd. “Autentisera aldrig” är på, så Amethyst loggar inte in på %1$s.</string>
     <string name="relay_auth_blocked_section">Blockerat av din blockeringslista</string>
     <string name="relay_auth_blocked_row_desc">Amethyst loggar aldrig in på blockerade reläer.</string>
     <string name="relay_auth_no_blocked">Inget blockerat. Reläer du blockerar loggas aldrig in på, oavsett vad du ställer in här.</string>
@@ -2022,7 +2030,9 @@
         <item quantity="one">Ansluten till %1$d relä</item>
         <item quantity="other">Ansluten till %1$d reläer</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <string name="always_on_notif_show_details">Visa detaljer</string>
+    <string name="always_on_notif_hide_details">Dölj detaljer</string>
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d relä</item>
@@ -2656,6 +2666,9 @@
     <string name="relay_group_no_messages_yet">Inga meddelanden ännu</string>
     <string name="channel_invite_title">Tillagd i %1$s</string>
     <string name="channel_invite_unknown_actor">Någon</string>
+    <string name="channel_invite_added_you">lade till dig i den här kanalen</string>
+    <string name="channel_invite_row_added_you_by">%1$s lade till dig i den här kanalen</string>
+    <string name="channel_invite_row_added_you">Du lades till i den här kanalen</string>
     <string name="channel_invite_ignore">Ignorera</string>
     <string name="channel_invite_leave">Lämna</string>
     <string name="relay_group_join_to_post">Gå med i den här gruppen för att skicka meddelanden.</string>
@@ -2781,6 +2794,7 @@
     <string name="cashu_no_wallet_found">Ingen kompatibel Cashu-plånbok hittades på systemet</string>
     <string name="error_unable_to_fetch_invoice">Kunde inte hämta fakturan från mottagarens servrar</string>
     <string name="wallet_connect_pay_invoice_error_error">Din Wallet Connect-leverantör returnerade följande fel: %1$s</string>
+    <string name="wallet_connect_unreadable_response_error">Din Wallet Connect-leverantör skickade ett svar som Amethyst inte kunde läsa.</string>
     <string name="tor_connection_failed_title">Tor ansluter inte</string>
     <string name="tor_connection_failed_body">Amethyst kunde inte slutföra uppstart av Tor. Vill du använda en vanlig (icke-Tor) anslutning så att flödet kan laddas? Vi kommer ihåg ditt val under nästa timme och försöker sedan Tor igen.</string>
     <string name="tor_continue_without_for_session">Använd vanlig anslutning</string>
@@ -2910,6 +2924,15 @@
     <string name="wallet_incoming">Mottagen</string>
     <string name="wallet_outgoing">Skickad</string>
     <string name="wallet_refresh">Uppdatera</string>
+    <string name="wallet_transactions_load_failed">Kunde inte läsa in transaktioner</string>
+    <string name="wallet_transactions_load_more_failed">Kunde inte läsa in fler transaktioner</string>
+    <string name="wallet_balance_request_failed">Kunde inte läsa in ditt saldo</string>
+    <string name="wallet_invoice_creation_failed">Kunde inte skapa fakturan</string>
+    <string name="wallet_no_invoice_returned">Din plånbok returnerade ingen faktura</string>
+    <string name="wallet_request_timed_out">Tidsgränsen för plånboksförfrågan överskreds</string>
+    <string name="wallet_request_failed">Kunde inte nå din plånbok: %1$s</string>
+    <string name="wallet_connect_unrecognized_reply">Din plånbok svarade med något som Amethyst inte känner igen (%1$s)</string>
+    <string name="wallet_connect_decrypt_failed">Amethyst kunde inte dekryptera plånbokens svar — plånboken kanske använder en annan nyckel</string>
     <string name="wallet_filter_all">Alla</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Övriga</string>
@@ -2968,6 +2991,9 @@
     <string name="cashu_remove_mint">Ta bort mint</string>
     <string name="cashu_add_mint">Lägg till mint</string>
     <string name="cashu_history">Historik</string>
+    <string name="cashu_history_loading_older">Läser in äldre transaktioner…</string>
+    <string name="cashu_history_all_loaded">Inga äldre transaktioner</string>
+    <string name="cashu_history_some_relays_unreachable">Inga äldre transaktioner från reläerna som svarade — några gick inte att nå</string>
     <string name="cashu_wallet_autosaves">Din plånbok sparas automatiskt när du lägger till eller tar bort mints. En nutzap-nyckel skapas åt dig första gången du lägger till en mint.</string>
     <string name="cashu_wallet_saving">Sparar…</string>
     <string name="cashu_p2pk_section">Nutzap-nyckel (avancerat)</string>
@@ -4508,9 +4534,6 @@
     <string name="relay_members_removed">%1$d medlemmar borttagna från relä</string>
     <string name="relay_join_request">Begäran om att gå med i relä</string>
     <string name="relay_leave_request">Begäran om att lämna relä</string>
-    <string name="ai_writing_help">AI-skrivhjälp</string>
-    <string name="ai_writing_setting_title">Föreslå textförbättringar</string>
-    <string name="ai_writing_setting_description">Använder en AI-modell på enheten för att föreslå textkorrigeringar och tonändringar.</string>
     <string name="tracked_broadcasts_setting_title">Spårade sändningar</string>
     <string name="tracked_broadcasts_setting_description">Använd den spårade sändaren när du skickar händelser. Visar liveförlopp och status per relä under sändning.</string>
     <string name="suggest_workouts_setting_title">Föreslå träningspass att dela</string>
@@ -4605,17 +4628,6 @@
     <string name="pow_publish_failed_retry">Ditt %1$s slutförde miningen men kunde inte publiceras. Det görs ett nytt försök nästa gång appen startar.</string>
     <string name="pow_kind_chat_message">Chattmeddelande</string>
     <string name="pow_kind_report">Rapport</string>
-    <string name="ai_writing_use_this">Använd detta</string>
-    <string name="ai_writing_dismiss">Avvisa</string>
-    <string name="ai_tone_correct">Korrigera</string>
-    <string name="ai_tone_rephrase">Formulera om</string>
-    <string name="ai_tone_shorter">Kortare</string>
-    <string name="ai_tone_elaborate">Utveckla</string>
-    <string name="ai_tone_friendly">Vänlig</string>
-    <string name="ai_tone_professional">Professionell</string>
-    <string name="ai_tone_more_direct">Mer direkt</string>
-    <string name="ai_tone_punchy">Slagkraftig</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-paket</string>
     <string name="emoji_pack_management_title">Lägg till i emoji-lista</string>
@@ -4695,6 +4707,14 @@
     <plurals name="marmot_member_count">
         <item quantity="one">%1$d medlem</item>
         <item quantity="other">%1$d medlemmar</item>
+    </plurals>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Din plånbok svarade inte inom %1$d sekund. Betalningen kan ha gått igenom ändå — kontrollera din plånbok innan du försöker igen.</item>
+        <item quantity="other">Din plånbok svarade inte inom %1$d sekunder. Betalningen kan ha gått igenom ändå — kontrollera din plånbok innan du försöker igen.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Tidsgränsen för plånboksförfrågan överskreds — %1$d svar avvisades eftersom det signerades med en oväntad nyckel. Ditt relä kanske inte är betrott.</item>
+        <item quantity="other">Tidsgränsen för plånboksförfrågan överskreds — %1$d svar avvisades eftersom de signerades med en oväntad nyckel. Ditt relä kanske inte är betrott.</item>
     </plurals>
     <string name="marmot_group_name">Gruppnamn</string>
     <string name="marmot_group_name_placeholder">Ange gruppnamn</string>

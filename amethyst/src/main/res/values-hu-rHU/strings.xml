@@ -574,6 +574,9 @@
     <string name="quick_action_block">Letiltás</string>
     <string name="quick_action_mute_thread">Szál némítása</string>
     <string name="quick_action_unmute_thread">Szál némításának megszüntetése</string>
+    <string name="mute_notifications">Értesítések némítása</string>
+    <string name="unmute_notifications">Értesítések némításának megszüntetése</string>
+    <string name="muted_chat_content_description">Ehhez a csevegéshez némítva vannak az értesítések</string>
     <string name="quick_action_report">Bejelentés</string>
     <string name="quick_action_dont_show_again_button">Ne jelenítse meg újra</string>
     <string name="report_dialog_spam">Kéretlen tartalom vagy átverés</string>
@@ -1111,7 +1114,7 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Jelentkezzen be kérdés nélkül, ha\u2026</string>
-    <string name="relay_auth_auto_my_relays">\u2026ez a saját átjátszóm, vagy egy szoba, amihez csatlakozott</string>
+    <string name="relay_auth_auto_my_relays_and_venues">\u2026ez a saját átjátszóm vagy egy szoba, amihez csatlakoztam vagy követek</string>
     <string name="relay_auth_auto_read_follows">\u2026olyan valakit olvasok, akit követek</string>
     <string name="relay_auth_auto_message_follows">\u2026olyan valakinek írok, akit követek</string>
     <string name="relay_auth_auto_message_strangers">\u2026bárki másnak írok</string>
@@ -1155,6 +1158,11 @@
     <string name="relay_auth_remove_exception">Kivétel eltávolítása</string>
     <string name="relay_auth_exception_removed_undo">Kivétel eltávolítva. %1$s ismét az Ön szabályait követi.</string>
     <string name="relay_auth_undo">Visszavonás</string>
+    <string name="relay_auth_session_section">Csak most</string>
+    <string name="relay_auth_session_row_desc">Bejelentkezve maradás az Amethyst újraindításáig</string>
+    <string name="relay_auth_forget_session">Bejelentkezés elfelejtése</string>
+    <string name="relay_auth_session_forgotten_undo">Ha szükség lesz rá, a(z) %1$s ismét rákérdez.</string>
+    <string name="relay_auth_session_undo_blocked">Nincs visszaállítva. A „Soha ne jelentkezzen be” be van kapcsolva, ezért az Amethyst nem fog bejelentkezni ide: %1$s.</string>
     <string name="relay_auth_blocked_section">Letiltva az Ön tiltólistája alapján</string>
     <string name="relay_auth_blocked_row_desc">Az Amethyst soha nem jelentkezik be a letiltott átjátszókra.</string>
     <string name="relay_auth_no_blocked">Semmi sincs letiltva. Az Ön által blokkolt átjátszókra soha nem fog bejelentkezni, függetlenül attól, hogy mit állít be itt.</string>
@@ -2025,7 +2033,7 @@
         <item quantity="one">Kapcsolódva %1$d átjátszóhoz</item>
         <item quantity="other">Kapcsolódva %1$d átjátszóhoz</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d átjátszó</item>
@@ -2659,6 +2667,9 @@
     <string name="relay_group_no_messages_yet">Még nincsenek üzenetek</string>
     <string name="channel_invite_title">Hozzáadva ide: %1$s</string>
     <string name="channel_invite_unknown_actor">Valaki</string>
+    <string name="channel_invite_added_you">hozzáadta Önt ehhez a csatornához</string>
+    <string name="channel_invite_row_added_you_by">%1$s hozzáadta Önt ehhez a csatornához</string>
+    <string name="channel_invite_row_added_you">Ön hozzá lett adva ehhez a csatornához</string>
     <string name="channel_invite_ignore">Elvetés</string>
     <string name="channel_invite_leave">Kilépés</string>
     <string name="relay_group_join_to_post">Csatlakozzon ehhez a csoporthoz az üzenetek küldéséhez.</string>
@@ -2972,6 +2983,9 @@
     <string name="cashu_remove_mint">Pénzverde eltávolítása</string>
     <string name="cashu_add_mint">Pénzverde hozzáadása</string>
     <string name="cashu_history">Előzmények</string>
+    <string name="cashu_history_loading_older">Régebbi tranzakciók betöltése…</string>
+    <string name="cashu_history_all_loaded">Nincsenek régebbi tranzakciók</string>
+    <string name="cashu_history_some_relays_unreachable">A kérésre válaszoló átjátszók közül nem érkezett régebbi tranzakció – néhányat nem sikerült elérni</string>
     <string name="cashu_wallet_autosaves">A pénztárcája automatikusan mentésre kerül, amikor pénzverdét ad hozzá vagy távolít el. Egy nutzap kulcs jön létre az Ön számára, amikor először ad hozzá egy pénzverdét.</string>
     <string name="cashu_wallet_saving">Mentés…</string>
     <string name="cashu_p2pk_section">Nutzap kulcs (speciális)</string>
@@ -4512,9 +4526,6 @@
     <string name="relay_members_removed">%1$d tag el lett távolítva az átjátszóról</string>
     <string name="relay_join_request">Átjátszóhoz való csatlakozás kérése</string>
     <string name="relay_leave_request">Átjátszó elhagyásának kérése</string>
-    <string name="ai_writing_help">Súgó az LLM-alapú íráshoz</string>
-    <string name="ai_writing_setting_title">Javaslatok a szöveg javítására</string>
-    <string name="ai_writing_setting_description">Az eszközön futó LLM-modell segítségével szövegjavításokkal és hangnemváltoztatásokkal kapcsolatos javaslatokat kaphat.</string>
     <string name="tracked_broadcasts_setting_title">Nyomon követhető közvetítések</string>
     <string name="tracked_broadcasts_setting_description">Nyomon követhető közvetítők használata az események küldesékor. Közvetítés közben megjeleníti a jelenlegi előrehaladást és az egyes átjátszók állapotát.</string>
     <string name="suggest_workouts_setting_title">Megosztandó edzések javaslása</string>
@@ -4609,17 +4620,6 @@
     <string name="pow_publish_failed_retry">A(z) %1$s bányászata befejeződött, de nem sikerült közzétenni. A következő indításkor az alkalmazás újra megpróbálja.</string>
     <string name="pow_kind_chat_message">Csevegési üzenet</string>
     <string name="pow_kind_report">Jelentés</string>
-    <string name="ai_writing_use_this">Ennek használata</string>
-    <string name="ai_writing_dismiss">Eltüntetés</string>
-    <string name="ai_tone_correct">Javítás</string>
-    <string name="ai_tone_rephrase">Újrafogalmazás</string>
-    <string name="ai_tone_shorter">Rövidebb</string>
-    <string name="ai_tone_elaborate">Kidolgozott</string>
-    <string name="ai_tone_friendly">Barátságos</string>
-    <string name="ai_tone_professional">Szakmai</string>
-    <string name="ai_tone_more_direct">Közvetlenebb</string>
-    <string name="ai_tone_punchy">Erőteljes</string>
-    <string name="ai_tone_emojify">+ Emodzsi</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emodzsicsomagok</string>
     <string name="emoji_pack_management_title">Hozzáadás az emodzsilistához</string>

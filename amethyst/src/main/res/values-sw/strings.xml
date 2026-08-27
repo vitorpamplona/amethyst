@@ -1280,7 +1280,7 @@
         <item quantity="one">Imeunganishwa na relay %1$d</item>
         <item quantity="other">Imeunganishwa na relay %1$d</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
@@ -2900,9 +2900,6 @@
     <string name="relay_members_removed">%1$d wanachama wameondolewa kutoka relay</string>
     <string name="relay_join_request">Ombi la kujiunga na relay</string>
     <string name="relay_leave_request">Ombi la kuacha relay</string>
-    <string name="ai_writing_help">Msaada wa Uandishi wa AI</string>
-    <string name="ai_writing_setting_title">Pendekeza maboresho ya maandishi</string>
-    <string name="ai_writing_setting_description">Hutumia mfano wa AI uliopo kwenye kifaa kupendekeza marekebisho ya maandishi na mabadiliko ya sauti.</string>
     <string name="tracked_broadcasts_setting_title">Matangazo yanayofuatiliwa</string>
     <string name="tracked_broadcasts_setting_description">Tumia mtangazaji anayefuatiliwa wakati wa kutuma matukio. Inaonyesha maendeleo ya moja kwa moja na hali ya kila relay wakati wa kutangaza.</string>
     <string name="suggest_workouts_setting_title">Pendekeza mazoezi ya kushiriki</string>
@@ -2910,16 +2907,6 @@
     <string name="compose_settings">Mipangilio ya Kutunga</string>
     <string name="auto_create_drafts_setting_title">Unda rasimu kiotomatiki</string>
     <string name="auto_create_drafts_setting_description">Huhifadhi tukio la rasimu kiotomatiki unapoandika au kuacha kitenzi cha kutunga chenye maandishi ambayo hayajatumwa na kutuma kwa relay zako za kibinafsi za outbox.</string>
-    <string name="ai_writing_use_this">Tumia Hii</string>
-    <string name="ai_writing_dismiss">Ondoa</string>
-    <string name="ai_tone_correct">Sahihisha</string>
-    <string name="ai_tone_rephrase">Badilisha Maneno</string>
-    <string name="ai_tone_shorter">Fupisho</string>
-    <string name="ai_tone_elaborate">Panua</string>
-    <string name="ai_tone_friendly">Kirafiki</string>
-    <string name="ai_tone_professional">Kitaalamu</string>
-    <string name="ai_tone_more_direct">Zaidi ya Moja kwa Moja</string>
-    <string name="ai_tone_punchy">Chenye Nguvu</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Pakiti za Emoji</string>
     <string name="emoji_pack_management_title">Ongeza kwenye Orodha ya Emoji</string>

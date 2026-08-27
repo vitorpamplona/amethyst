@@ -3,7 +3,7 @@ use jni::objects::{JClass, JString, JObject, GlobalRef};
 use jni::sys::{jint, jstring};
 use jni::JavaVM;
 
-use arti_client::TorClient;
+use arti_client::{BootstrapBehavior, TorClient};
 use arti_client::config::TorClientConfigBuilder;
 // `kind()` is a trait method (tor_error::HasKind), not inherent, so the trait has to be in
 // scope wherever we classify a connect failure. Both are re-exported by arti-client.
@@ -23,6 +23,10 @@ static TOKIO_RUNTIME: Mutex<Option<tokio::runtime::Runtime>> = Mutex::new(None);
 static JAVA_VM: Mutex<Option<JavaVM>> = Mutex::new(None);
 static LOG_CALLBACK: Mutex<Option<GlobalRef>> = Mutex::new(None);
 static SOCKS_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
+// The background directory download started by initialize(). It holds an Arc<TorClient>, so
+// destroy() must abort it too — otherwise the client cannot drop, the state file lock is never
+// released, and the next initialize() fails.
+static BOOTSTRAP_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
 // Per-connection handler tasks. Tracked so destroy() can abort in-flight handlers
 // — otherwise their Arc<TorClient> clones keep the client alive and the
 // state file lock would not be released for the next initialize().
@@ -170,14 +174,6 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
     std::fs::create_dir_all(&cache_dir).ok();
     std::fs::create_dir_all(&state_dir).ok();
 
-    // Bound the bootstrap so a hostile network (unreachable guards, wiped
-    // consensus) can't block this JNI call — and the Kotlin-side lifecycle lock
-    // it holds — indefinitely. On timeout the `create_bootstrapped` future is
-    // dropped, tearing down the partially built client, and -4 is returned so
-    // TorService can leave status Connecting and let the self-heal watchdog
-    // retry instead of wedging. The ABI is unchanged (still one String arg).
-    const BOOTSTRAP_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
-
     let outcome: jint = runtime.block_on(async {
         log_info!("Creating Arti client...");
 
@@ -203,24 +199,62 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
             }
         };
 
-        match tokio::time::timeout(BOOTSTRAP_TIMEOUT, TorClient::create_bootstrapped(config)).await {
-            Ok(Ok(client)) => {
-                log_info!("Arti client created and bootstrapped");
-                *ARTI_CLIENT.lock().unwrap() = Some(Arc::new(client));
-                0
+        // Create the client WITHOUT waiting for the directory.
+        //
+        // `create_bootstrapped` used to block this JNI call — and the Kotlin lifecycle lock it
+        // holds — for the entire directory download: 12.6-33.8s measured on a cold install. The
+        // app treated Tor as absent for all of it, because `activePortOrNull` stays null until
+        // status flips to Active, so every relay dial fell back to 127.0.0.1:9050 (the Orbot
+        // default) where nothing listens, and failed instantly into backoff.
+        //
+        // With `BootstrapBehavior::OnDemand` the client is usable the moment it exists and each
+        // stream waits for the directory itself. The SOCKS proxy binds right away, so a dial
+        // issued mid-download queues on its own circuit instead of failing. Readiness stops being
+        // a global gate the app has to poll and becomes a property of individual connections.
+        //
+        // The `_async` variant is deliberate: it allows a short grace period for the state file
+        // lock, which a destroy()/initialize() cycle needs, where the sync one waits not at all.
+        let client = match TorClient::builder()
+            .config(config)
+            .bootstrap_behavior(BootstrapBehavior::OnDemand)
+            .create_unbootstrapped_async()
+            .await
+        {
+            Ok(c) => Arc::new(c),
+            Err(e) => {
+                log_error!("Failed to create Tor client: {:?}", e);
+                return -3;
             }
-            Ok(Err(e)) => {
-                log_error!("Failed to bootstrap Tor client: {:?}", e);
-                -3
+        };
+
+        *ARTI_CLIENT.lock().unwrap() = Some(Arc::clone(&client));
+
+        // Start the download now rather than leaving it for the first stream to trigger, so it
+        // overlaps the login screen exactly as it used to, and publish the outcome so Kotlin can
+        // move the status from Bootstrapping to Active at the right moment.
+        let handle = tokio::spawn(async move {
+            let started = std::time::Instant::now();
+            match client.bootstrap().await {
+                Ok(()) => log_info!(
+                    "Arti directory bootstrap complete after {}ms",
+                    started.elapsed().as_millis()
+                ),
+                // Not fatal and deliberately not latched anywhere: with OnDemand the next stream
+                // retries the bootstrap on its own, and isBootstrapped() reports live readiness, so
+                // a recovery after this point is picked up without us having to model it.
+                Err(e) => log_error!(
+                    "Arti directory bootstrap failed after {}ms (streams will retry): {:?}",
+                    started.elapsed().as_millis(),
+                    e
+                ),
             }
-            Err(_elapsed) => {
-                log_error!(
-                    "Tor bootstrap timed out after {}s — aborting so the client can be retried",
-                    BOOTSTRAP_TIMEOUT.as_secs()
-                );
-                -4
-            }
+        });
+        if let Some(previous) = BOOTSTRAP_TASK.lock().unwrap().replace(handle) {
+            previous.abort();
         }
+
+        log_info!("Arti client created (unbootstrapped; directory downloading in background)");
+        0
     });
 
     if outcome == 0 {
@@ -486,6 +520,51 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksPro
     0
 }
 
+/// Directory-download progress in permille (0..1000), or -1 when there is no client.
+///
+/// Lets Kotlin tell a slow download from a stalled one. A timeout cannot: measured cold downloads
+/// ran 12.6-34.4s on the same hardware and network, so any fixed patience is either short enough to
+/// kill healthy ones or long enough to sit on a dead one. Forward progress separates them exactly.
+///
+/// Deliberately does NOT surface `BootstrapStatus::blocked()`. Arti documents it as best-effort and
+/// warns it "may declare that Arti is stuck for reasons that are incorrect; or it may declare that
+/// the client is not stuck when in fact no progress is being made" — acting on that would trade a
+/// measurable signal for a guess.
+#[no_mangle]
+pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_bootstrapProgressPermille(
+    _env: JNIEnv,
+    _class: JClass,
+) -> jint {
+    match ARTI_CLIENT.lock().unwrap().as_ref() {
+        Some(client) => (client.bootstrap_status().as_frac() * 1000.0).clamp(0.0, 1000.0) as jint,
+        None => -1,
+    }
+}
+
+/// Live readiness: 1 = ready for traffic, 0 = not yet, -1 = no client at all.
+///
+/// Asks Arti itself (`bootstrap_status().ready_for_traffic()`, a cheap borrow-and-clone of a small
+/// struct) rather than latching the outcome of the one background `bootstrap()` call. That call can
+/// fail while the client stays perfectly usable — with OnDemand the next stream just retries — so a
+/// latched failure would report "not bootstrapped" forever against a Tor that actually works,
+/// leaving the UI wrong and the exit-rotation self-heal disabled.
+#[no_mangle]
+pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_isBootstrapped(
+    _env: JNIEnv,
+    _class: JClass,
+) -> jint {
+    match ARTI_CLIENT.lock().unwrap().as_ref() {
+        Some(client) => {
+            if client.bootstrap_status().ready_for_traffic() {
+                1
+            } else {
+                0
+            }
+        }
+        None => -1,
+    }
+}
+
 /// Destroy the TorClient — used by self-heal paths in Kotlin when Tor is
 /// stuck and the in-memory state (guards, circuits) needs to be rebuilt
 /// from scratch. Aborts the SOCKS listener and all in-flight per-connection
@@ -521,6 +600,13 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy(
         });
     }
 
+    // The background directory download holds an Arc<TorClient> too, for as long as it runs —
+    // which on a dead network is indefinitely. Abort it with the handlers or the state file lock
+    // outlives this destroy() and the next initialize() cannot take it.
+    if let Some(h) = BOOTSTRAP_TASK.lock().unwrap().take() {
+        h.abort();
+    }
+
     // Abort all in-flight handlers — each holds an Arc<TorClient> clone, and
     // the client cannot drop (state file lock cannot release) while any clone
     // is alive.
@@ -538,10 +624,10 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy(
         });
     }
 
-    // Drop the static Arc. If any handler is still holding a clone, the
-    // TorClient stays alive until that handler finishes — in which case the
-    // next initialize() will fail and Kotlin's clearAllArtiData retry path
-    // will handle it.
+    // Drop the static Arc. If any handler is still holding a clone, the TorClient stays alive
+    // until that handler finishes — in which case the next initialize() fails and Kotlin leaves
+    // status Connecting for TorManager's self-heal watchdog to retry. (It no longer wipes all Arti
+    // data inline: that turned a transient failure into a lost guard sample and a lost consensus.)
     let _ = ARTI_CLIENT.lock().unwrap().take();
 
     log_info!("Arti client destroyed");

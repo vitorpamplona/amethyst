@@ -136,8 +136,20 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      # -DsyncN shrinks MirrorSyncThroughputTest's corpus from its 1,000,000-event
+      # default. At 1M the sink cannot keep up with the in-process source, and the
+      # MirrorWorker's deliberately unbounded intake channel buffers the backlog until
+      # the runner's heap is gone: throughput collapses (13,800 -> 86 ev/s) and an
+      # OutOfMemoryError lands on a coroutine thread, where the UncaughtExceptionHandler
+      # swallows it. JUnit never sees a failure, so the JVM wedges and the job burns to
+      # the timeout with no signal rather than failing. 100k keeps a real ev/s number
+      # while bounding the worst-case backlog to a tenth of what died.
+      #
+      # Only CI is shrunk: -DsyncN is unset everywhere else, so a local or manual run
+      # still measures the full 1M — the number written up in
+      # relayBench/plans/2026-07-04-sync-throughput-1m.md.
       - name: Test geode (gradle)
-        run: ./gradlew :geode:test
+        run: ./gradlew :geode:test -DsyncN=100000
 
       - name: Upload geode Test Reports
         uses: actions/upload-artifact@v7

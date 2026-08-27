@@ -82,9 +82,14 @@ class Amethyst : Application() {
          */
         val DEFAULT_LOG_LEVEL: LogLevel =
             when {
-                !BuildConfig.DEBUG -> LogLevel.WARN
-                VERBOSE_LOGS -> LogLevel.DEBUG
-                else -> LogLevel.INFO
+                // `isDebug` also covers the `benchmark` build type — a release build (R8 + AOT)
+                // that exists purely to be measured and is never shipped. Treating it as a release
+                // build left it at WARN, which drops every INFO milestone the boot narrative is
+                // made of (account load timings, Tor status transitions, the relay census), so the
+                // one variant whose numbers are trustworthy was also the one we could not read.
+                VERBOSE_LOGS && isDebug -> LogLevel.DEBUG
+                isDebug -> LogLevel.INFO
+                else -> LogLevel.WARN
             }
 
         lateinit var instance: AppModules

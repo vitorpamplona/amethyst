@@ -27,8 +27,12 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * A parsed Buzz workspace invite link: `https://<host>/invite/<code>`, where `<code>` is a
- * relay-signed token `<payloadB64url>.<sigB64url>` (base64url, JWT-style but not a JWT). The
- * payload names the community, the granted role, an expiry and a nonce.
+ * relay-signed token in one of two shapes:
+ *
+ * - `<payloadB64url>.<sigB64url>` (base64url, JWT-style but not a JWT) — the payload names the
+ *   community, the granted role, an expiry and a nonce.
+ * - `v2.<opaqueB64url>` — a bare server-side handle. Nothing about the invite is readable here;
+ *   the relay resolves it on claim.
  *
  * A Buzz invite is **not** a NIP-29 invite code (kind 9009) — it is redeemed over HTTP against
  * the relay's tenant host: `POST /api/invites/claim`, NIP-98-signed by the joining key, after
@@ -43,11 +47,15 @@ data class BuzzInvite(
     val host: String,
     /** The full opaque token (`payload.sig`) to hand back to the relay's claim endpoint. */
     val code: String,
-    /** The community (workspace/tenant) UUID the invite admits into — the payload's `c`. */
+    /**
+     * The community (workspace/tenant) UUID the invite admits into — the payload's `c`. Empty for
+     * a `v2.` token, whose code is opaque: the relay resolves the community on claim and returns
+     * it, so nothing client-side needs it (the join hands off to the tenant host, not the id).
+     */
     val communityId: String,
-    /** The role granted on claim (e.g. `member`) — the payload's `r`. */
+    /** The role granted on claim (e.g. `member`) — the payload's `r`, or [DEFAULT_ROLE] for `v2.`. */
     val role: String,
-    /** Unix-seconds expiry, or null when the payload omits it — the payload's `e`. */
+    /** Unix-seconds expiry, or null when the payload omits it (always for `v2.`) — the payload's `e`. */
     val expiresAt: Long?,
 ) {
     /** The tenant's relay websocket URL. */
@@ -62,6 +70,12 @@ data class BuzzInvite(
 
 object BuzzInviteLink {
     private const val MARKER = "/invite/"
+
+    /** The payload segment of an opaque, server-resolved token. */
+    private const val V2_PREFIX = "v2"
+
+    /** What the relay grants when the token doesn't say — and it never says for `v2.`. */
+    private const val DEFAULT_ROLE = "member"
 
     private val JSON = Json { ignoreUnknownKeys = true }
 
@@ -100,6 +114,16 @@ object BuzzInviteLink {
         val payloadB64 = code.substringBefore('.')
         if (payloadB64 == code || payloadB64.isEmpty()) return null
 
+        // `v2.<opaque>` carries no client-readable payload — the community, role and expiry live
+        // only on the relay, which resolves the code on claim and returns them. There is nothing
+        // to decode and nothing to lose by admitting it: the join flow needs the host (for the
+        // relay url and the REST base) and the code, both of which the url itself carries, and the
+        // claim response supplies the rest. Matched on the literal prefix rather than by relaxing
+        // the decode below, so `…/invite/anything.else` still fails to parse.
+        if (payloadB64 == V2_PREFIX) {
+            return BuzzInvite(host = host, code = code, communityId = "", role = DEFAULT_ROLE, expiresAt = null)
+        }
+
         val payload =
             try {
                 val bytes = Base64.UrlSafe.decode(padBase64(payloadB64))
@@ -113,7 +137,7 @@ object BuzzInviteLink {
             host = host,
             code = code,
             communityId = community,
-            role = payload.r?.takeIf { it.isNotBlank() } ?: "member",
+            role = payload.r?.takeIf { it.isNotBlank() } ?: DEFAULT_ROLE,
             expiresAt = payload.e,
         )
     }

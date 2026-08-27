@@ -217,7 +217,7 @@
     <string name="failed_to_save_the_image">Neizdevās saglabāt attēlu</string>
     <string name="video_saved_to_the_gallery">Video saglabāts tālruņa video galerijā</string>
     <string name="failed_to_save_the_video">Neizdevās saglabāt video</string>
-    <string name="pdf_saved_to_the_gallery">PDF saglabāts mapē Lejupielādes/Amethyst</string>
+    <string name="pdf_saved_to_the_gallery">PDF saglabāts Lejupielādes/Amethyst mapē</string>
     <string name="failed_to_save_the_pdf">Neizdevās saglabāt PDF</string>
     <string name="upload_image">Augšupielādēt attēlu</string>
     <string name="upload_file">Augšupielādēt failu</string>
@@ -295,6 +295,10 @@
     <string name="already_have_an_account">Jau ir Nostr konts?</string>
     <string name="loading_feed">Ielādē plūsmu</string>
     <string name="loading_account">Ielādē kontu</string>
+    <string name="concord_channel_rename">Pārsaukt kanālu</string>
+    <string name="concord_channel_rename_save">@string/rename</string>
+    <string name="concord_edit_save">@string/save</string>
+    <string name="concord_members_roles_save">@string/save</string>
     <!-- Reply-mode toggle in the chat composer: reply inline in the timeline vs pull it aside into a thread. -->
     <!-- Title of the minichat (thread) screen opened from a chat message. -->
     <!-- Title of the picked-image confirmation dialog when attaching a picture to a thread reply. -->
@@ -367,6 +371,8 @@
     <string name="account_backup_tips3_md" tools:ignore="Typos">        Papildu drošībai variet šifrēt atslēgu ar paroli. Šī atslēga sāksies ar **ncryptsec1** virkni un to nevarēs izmantot bez šīs paroles.
         \n\nJa jūs aizmirsīsiet paroli, vairs nevarēsiet atgūt savu atslēgu.
     </string>
+    <string name="backup_keys_nudge_body">Jūsu slepenā atslēga ir vienīgais veids, kā piekļūt šim kontam. Ja to pazaudēsiet, tad nekad nevarēsiet atgūt piekļuvi kontam. Saglabājiet atslēgu drošā vietā tagad.</string>
+    <string name="backup_keys_nudge_already_saved">Esiet tās saglabājuši</string>
     <string name="failed_to_encrypt_key">Neizdevās šifrēt privāto atslēgu</string>
     <string name="secret_key_copied_to_clipboard">Slepenā atslēga (nsec) nokopēta starpliktuvē</string>
     <string name="copy_my_secret_key">Kopēt manu slepeno atslēgu</string>
@@ -544,7 +550,7 @@
     <string name="new_community_rules_limits_max_bytes">Maksimālais notikuma izmērs (baiti)</string>
     <string name="new_community_rules_limits_max_per_day">Maksimālais ziņu skaits no autora dienā</string>
     <string name="new_community_rules_limits_unlimited">Atstājiet tukšu bez ierobežojuma</string>
-    <string name="new_community_rules_limits_save">Saglabāt ierobežojumus</string>
+    <string name="new_community_rules_limits_save">Saglabāšanas ierobežojumi</string>
     <string name="new_community_rules_banned_section">Aizliegtie lietotāji</string>
     <string name="new_community_rules_banned_hint">Šie publiskās atslēgas turētāji nevar publicēt kopienā.</string>
     <string name="new_community_rules_banned_add">Pievienot aizliegtu lietotāju</string>
@@ -830,7 +836,7 @@
     <string name="nest_chat_empty">Ziņojumu vēl nav. Esiet pirmais, kas čatē.</string>
     <string name="nest_reactions_button">Reaģēt</string>
     <string name="nest_edit_title">Rediģēt telpu</string>
-    <string name="nest_edit_save">Saglabāt</string>
+    <string name="nest_edit_save">@string/save</string>
     <string name="nest_close_action">Aizvērt telpu</string>
     <string name="nest_overflow_menu">Telpas darbības</string>
     <string name="nest_hand_raise_queue_title">Paceltās rokas</string>
@@ -972,7 +978,7 @@
     <string name="interest_set_hashtag_private_toggle">Privāts</string>
     <string name="interest_set_hashtag_count">%1$d hashtags(-i)</string>
     <string name="interest_set_actions_dialog_title">Interešu kopas darbības</string>
-    <string name="interest_set_rename">Pārdēvēt</string>
+    <string name="interest_set_rename">@string/rename</string>
     <string name="interest_set_clone">Klonēt</string>
     <string name="interest_set_add_hashtag">Pievienot hashtagu</string>
     <string name="interest_set_toggle_visibility">Pārslēgt publisko/privāto</string>
@@ -1296,11 +1302,12 @@
         <item quantity="one">Savienots ar %1$d relay</item>
         <item quantity="other">Savienots ar %1$d relay</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
          their profile screen. Naming the job avoids an active misreading. -->
+    <string name="relay_purpose_your_wallet">Maks</string>
     <!-- How each subscription actually works, shown on the Active Subscriptions screen.
          Describe the real strategy, not the intent — these are read by people trying to explain
          a relay count they think is too high. -->
@@ -1531,7 +1538,7 @@
     <string name="music_track_cover_upload_cta">Augšupielādēt vāka attēlu</string>
     <string name="music_track_cover_upload_hint">Izvēlieties kvadrātveida attēlu kā šī ieraksta ilustrāciju.</string>
     <string name="music_track_audio_upload_cta">Augšupielādēt audio failu</string>
-    <string name="music_track_audio_upload_hint">Izvēlieties MP3, WAV vai FLAC. Tas tiks augšupielādēts jūsu multivides serverī saglabāšanas brīdī.</string>
+    <string name="music_track_audio_upload_hint">Atlasiet MP3, WAV vai FLAC datni. Tā tiks augšupielādēta jūsu multimediju serverī saglabāšanas brīdī.</string>
     <string name="music_track_audio_picked">Audio fails gatavs augšupielādei</string>
     <string name="music_track_uploading_banner">Augšupielādē vāku un audio un publicē. Tas turpināsies pat tad, ja aiziesiet no šī ekrāna.</string>
     <string name="edit_music_playlist">Rediģēt atskaņošanas sarakstu</string>
@@ -1560,6 +1567,7 @@
     <!-- New conversation chooser (full-screen picker opened from the Messages FAB).
          Each row stays lean; the "best for" line and the pros/cons appear only when a row is tapped. -->
     <!-- Buzz calls its groups channels, and a Buzz relay is one workspace rather than a directory of groups. -->
+    <string name="relay_group_edit_confirm">@string/save</string>
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="messages_new_message">Privāts</string>
@@ -1798,10 +1806,12 @@
     <string name="cashu_no_wallet_description">Izveidojiet Cashu maku, lai turētu ecash žetonus un saņemtu nutzap.</string>
     <string name="cashu_discovering">Meklē jūsu maku…</string>
     <string name="cashu_discovering_description">NIP-60 maki tiek sinhronizēti starp klientiem. Ja jūs izveidojāt vienu citā lietotnē ar šo Nostr atslēgu, tam vajadzētu parādīties pēc dažām sekundēm.</string>
+    <string name="cashu_wizard_use_wallet">Izmantot šo maku</string>
     <string name="cashu_balance">Bilance</string>
     <string name="cashu_remove_mint">Noņemt mint</string>
     <string name="cashu_add_mint">Pievienot mint</string>
     <string name="cashu_history">Vēsture</string>
+    <string name="cashu_wallet_saving">Saglabā…</string>
     <string name="cashu_p2pk_section">Nutzap atslēga (uzlabota)</string>
     <string name="cashu_p2pk_explainer">Atsevišķa privātā atslēga, ko izmanto tikai NIP-61 nutzap saņemšanai. Nav jūsu Nostr identitātes atslēga.</string>
     <string name="cashu_p2pk_autogen">Ģenerēt jaunu atslēgu</string>
@@ -1897,9 +1907,9 @@
     <string name="cashu_token_ready">Žetons par %1$s sats gatavs. Kopīgojiet to ar saņēmēju.</string>
     <string name="cashu_redeemed_amount">Izpirkts %1$s sats jūsu makā.</string>
     <string name="wallet_paste_uri">Ielīmēt nostr+walletconnect:// URI</string>
-    <string name="wallet_save">Saglabāt</string>
-    <string name="wallet_rename">Pārdēvēt</string>
-    <string name="wallet_rename_title">Pārdēvēt maku</string>
+    <string name="wallet_save">@string/save</string>
+    <string name="wallet_rename">@string/rename</string>
+    <string name="wallet_rename_title">Pārsaukt maku</string>
     <string name="wallet_onchain_transactions">Onchain darījumi</string>
     <string name="wallet_onchain_no_address">Šim kontam nav pieejama onchain adrese.</string>
     <string name="wallet_onchain_no_backend">Nav konfigurēts ķēdes aizmugures pakalpojums.</string>
@@ -2149,9 +2159,9 @@
     <string name="video_player_settings_action_mute_description">Ieslēgt vai izslēgt audio</string>
     <string name="video_player_settings_action_quality">Video kvalitāte</string>
     <string name="video_player_settings_action_quality_description">Izvēlieties izšķirtspēju HLS video (paslēpts video, kas nav HLS)</string>
-    <string name="video_player_settings_action_share">Kopīgot vai saglabāt</string>
+    <string name="video_player_settings_action_share">@string/share_or_save</string>
     <string name="video_player_settings_action_share_description">Kopīgot video saiti ārēji</string>
-    <string name="video_player_settings_action_download">Saglabāt tālrunī</string>
+    <string name="video_player_settings_action_download">@string/download_to_phone</string>
     <string name="video_player_settings_action_download_description">Lejupielādēt video uz ierīci (paslēpts tiešraidēm)</string>
     <string name="video_player_settings_action_pip">Attēls attēlā</string>
     <string name="video_player_settings_action_pip_description">Atskaņot video peldošā logā (paslēpts, ja neatbalstīts)</string>
@@ -2279,6 +2289,7 @@
     <string name="git_repo_section_maintainers">Uzturētāji</string>
     <string name="git_repo_section_topics">Tēmas</string>
     <string name="git_repo_personal_fork">Personīgais atzarojums</string>
+    <string name="git_repo_settings_save">@string/save</string>
     <string name="napplet_card_permissions">Atļaujas:</string>
     <string name="profile_tab_apps">Lietotnes &amp; Vietnes</string>
     <string name="nsite_root_site">Saknes vietne</string>
@@ -2829,7 +2840,7 @@
     <string name="web_bookmark_description_placeholder">Īss apraksts</string>
     <string name="web_bookmark_tags_label">Birkas (atdalītas ar komatu)</string>
     <string name="web_bookmark_tags_placeholder">nostr, tehnoloģijas, blogs</string>
-    <string name="web_bookmark_save">Saglabāt</string>
+    <string name="web_bookmark_save">@string/save</string>
     <string name="web_bookmark_delete">Dzēst</string>
     <string name="web_bookmark_delete_confirm">Dzēst šo tīmekļa grāmatzīmi?</string>
     <string name="web_bookmark_open_url">Atvērt URL</string>
@@ -2936,9 +2947,6 @@
     <string name="relay_members_removed">%1$d dalībnieki noņemti no relay servera</string>
     <string name="relay_join_request">Relay pievienošanās pieprasījums</string>
     <string name="relay_leave_request">Relay aiziešanas pieprasījums</string>
-    <string name="ai_writing_help">MI rakstīšanas palīdzība</string>
-    <string name="ai_writing_setting_title">Piedāvāt teksta uzlabojumus</string>
-    <string name="ai_writing_setting_description">Izmanto ierīcē esošu MI modeli, lai piedāvātu teksta labojumus un toņa izmaiņas.</string>
     <string name="tracked_broadcasts_setting_title">Izsekotās pārraides</string>
     <string name="tracked_broadcasts_setting_description">Izmantot izsekoto raidītāju, sūtot notikumus. Parāda tiešraides progresu un katra relay statusa informāciju pārraides laikā.</string>
     <string name="suggest_workouts_setting_title">Ieteikt kopīgojamas treniņu sesijas</string>
@@ -2946,16 +2954,6 @@
     <string name="compose_settings">Rakstīšanas iestatījumi</string>
     <string name="auto_create_drafts_setting_title">Automātiski izveidot melnrakstus</string>
     <string name="auto_create_drafts_setting_description">Automātiski saglabā melnrakstu, kad rakstāt vai atstājat redaktoru ar nesūtītu tekstu, un nosūta uz jūsu privātajiem izejas relay serveriem.</string>
-    <string name="ai_writing_use_this">Izmantot šo</string>
-    <string name="ai_writing_dismiss">Noraidīt</string>
-    <string name="ai_tone_correct">Labot</string>
-    <string name="ai_tone_rephrase">Pārfrāzēt</string>
-    <string name="ai_tone_shorter">Īsāk</string>
-    <string name="ai_tone_elaborate">Izvērst</string>
-    <string name="ai_tone_friendly">Draudzīgi</string>
-    <string name="ai_tone_professional">Profesionāli</string>
-    <string name="ai_tone_more_direct">Tiešāk</string>
-    <string name="ai_tone_punchy">Izteiksmīgi</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji pakotnes</string>
     <string name="emoji_pack_management_title">Pievienot emoji sarakstam</string>

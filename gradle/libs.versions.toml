@@ -2,13 +2,13 @@
 # Amethyst app version — single source of truth consumed by both Android (amethyst/)
 # and Desktop (desktopApp/). `appCode` is the Android versionCode: a monotonic
 # integer that must increment on every release, even when `app` is unchanged.
-app = "1.13.1"
-appCode = "456"
+app = "1.14.0"
+appCode = "457"
 accompanistAdaptive = "0.37.3"
 cachemapVersion = "0.2.4"
 composeMultiplatform = "1.11.1"
 activityCompose = "1.13.0"
-agp = "9.3.1"
+agp = "9.3.2"
 android-compileSdk = "37"
 android-minSdk = "26"
 android-targetSdk = "37"
@@ -25,23 +25,21 @@ coreKtx = "1.19.0"
 datastore = "1.2.1"
 devWhyolegCryptography = "0.6.0"
 espressoCore = "3.7.0"
-firebaseBom = "34.17.0"
+firebaseBom = "34.18.0"
 fragmentKtx = "1.9.0"
 gms = "4.5.0"
 healthConnect = "1.1.0"
-jacksonModuleKotlin = "2.22.1"
+jacksonModuleKotlin = "2.22.2"
 javaKeyring = "1.0.4"
 kmpTorRuntime = "2.6.0"
 kmpTorResource = "409.5.0"
+kodeinEmoji = "2.5.0"
 junit = "4.13.2"
 kchesslib = "1.0.5"
 kotlin = "2.4.10"
 kotlinxCollectionsImmutable = "0.5.1"
 kotlinxCoroutinesCore = "1.11.0"
 kotlinxSerialization = "1.11.0"
-genaiProofreading = "1.0.0-beta1"
-genaiPrompt = "1.0.0-beta4"
-genaiRewriting = "1.0.0-beta1"
 genaiImageDescription = "1.0.0-beta1"
 languageId = "17.0.6"
 lifecycleRuntimeKtx = "2.11.0"
@@ -56,21 +54,21 @@ kotlinx-coroutines-test = "1.11.0"
 negentropyKmp = "v1.2.0"
 netUrlencoderLibVersion = "1.6.0"
 navigationCompose = "2.9.8"
-okhttp = "5.4.0"
+okhttp = "5.5.0"
 osmdroid = "6.1.20"
 runner = "1.7.0"
 secp256k1KmpJniAndroid = "0.24.0"
 schnorr256k1Kmp = "1.0.5"
 securityCryptoKtx = "1.1.0"
 slf4j = "2.0.18"
-sonarqubeGradlePlugin = "7.3.1.8318"
-spotless = "8.9.0"
+sonarqubeGradlePlugin = "7.4.0.8496"
+spotless = "8.10.0"
 streamWebrtcAndroid = "1.3.10"
 translate = "17.0.3"
 jetbrainsCompose = "1.11.1"
 unifiedpush = "3.0.10"
 playServicesCast = "22.3.1"
-vico-charts-compose = "3.2.3"
+vico-charts-compose = "3.3.0"
 zelory = "3.0.1"
 zoomable = "2.13.0"
 composemediaplayer = "0.11.4"
@@ -179,9 +177,6 @@ jetbrains-compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "
 jetbrains-compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "jetbrainsCompose" }
 jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrainsCompose" }
 jetbrains-compose-ui-test-junit4 = { module = "org.jetbrains.compose.ui:ui-test-junit4", version.ref = "jetbrainsCompose" }
-google-mlkit-genai-proofreading = { group = "com.google.mlkit", name = "genai-proofreading", version.ref = "genaiProofreading" }
-google-mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", version.ref = "genaiPrompt" }
-google-mlkit-genai-rewriting = { group = "com.google.mlkit", name = "genai-rewriting", version.ref = "genaiRewriting" }
 google-mlkit-genai-image-description = { group = "com.google.mlkit", name = "genai-image-description", version.ref = "genaiImageDescription" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
@@ -189,6 +184,7 @@ jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackso
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
 kmp-tor-runtime = { group = "io.matthewnelson.kmp-tor", name = "runtime", version.ref = "kmpTorRuntime" }
 kmp-tor-resource-exec-tor = { group = "io.matthewnelson.kmp-tor", name = "resource-exec-tor", version.ref = "kmpTorResource" }
+kodein-emoji-compose-m3 = { group = "org.kodein.emoji", name = "emoji-compose-m3", version.ref = "kodeinEmoji" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }

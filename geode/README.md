@@ -32,7 +32,7 @@ docker run -d --name geode -p 7447:7447 \
 ```
 
 with `in_memory = false` and `file = "/var/lib/geode/events.db"` in your
-`geode.toml`. Pin a version (`:1.13.1`) instead of `:latest` for reproducible
+`geode.toml`. Pin a version (`:1.14.0`) instead of `:latest` for reproducible
 deploys. To build the image yourself, from the repo root:
 
 ```bash
@@ -47,7 +47,7 @@ it — a minimal JRE is bundled, so no system Java is required. It installs to
 `/opt/geode/` with the launcher at `/opt/geode/bin/geode`.
 
 ```bash
-sudo dpkg -i geode-1.13.1-linux-x64.deb    # or: sudo rpm -i geode-1.13.1-linux-x64.rpm
+sudo dpkg -i geode-1.14.0-linux-x64.deb    # or: sudo rpm -i geode-1.14.0-linux-x64.rpm
 ```
 
 To run it as a managed service, wire up the shipped systemd unit
@@ -58,18 +58,18 @@ the copy-paste steps (create the `geode` user, drop your config in
 ### Homebrew
 
 ```bash
-brew install vitorpamplona/tap/geode    # from the tap, once published
+brew install vitorpamplona/tap/geode-relay    # from the tap, once published
 ```
 
 The formula depends on `openjdk` and installs the no-JRE jar bundle. Reference
-formula: [`packaging/homebrew/geode.rb`](packaging/homebrew/geode.rb).
+formula: [`packaging/homebrew/geode-relay.rb`](packaging/homebrew/geode-relay.rb).
 
 ### Portable tarball (any Linux/macOS, no system Java)
 
 Download `geode-<version>-<os>-<arch>.tar.gz`, unpack, and run:
 
 ```bash
-tar xzf geode-1.13.1-linux-x64.tar.gz
+tar xzf geode-1.14.0-linux-x64.tar.gz
 ./geode/bin/geode --config geode/share/geode/config.example.toml
 ```
 

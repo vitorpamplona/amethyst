@@ -36,9 +36,11 @@ class RelayAuthResolverTest {
         servesStrangerWriteCounterparty: Boolean = false,
         hasAttributablePurpose: Boolean = true,
         isFirstParty: Boolean = true,
+        hasSessionGrant: Boolean = false,
     ) = RelayAuthInputs(
         storedOverride = storedOverride,
         isBlocked = isBlocked,
+        hasSessionGrant = hasSessionGrant,
         policy = policy,
         toggles = toggles,
         isInMyRelayList = isInMyRelayList,
@@ -63,6 +65,40 @@ class RelayAuthResolverTest {
                     policy = RelayAuthPolicy.ALWAYS,
                 ),
             ),
+        )
+    }
+
+    @Test
+    fun sessionGrantAllowsWhatWouldOtherwiseAsk() {
+        // Without the grant this is the plain "we can explain it, so ask" case.
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs()))
+        assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(hasSessionGrant = true)))
+    }
+
+    @Test
+    fun sessionGrantSurvivesTheCasesThatWouldNormallySuppressTheAnswer() {
+        // The two inputs that turn an automatic grant off: no first-party reason to be here, and a
+        // NEVER policy. An answer the user typed for this exact relay outranks both.
+        assertEquals(
+            RelayAuthVerdict.ALLOW,
+            resolve(inputs(hasSessionGrant = true, isFirstParty = false)),
+        )
+        assertEquals(
+            RelayAuthVerdict.ALLOW,
+            resolve(inputs(hasSessionGrant = true, policy = RelayAuthPolicy.NEVER)),
+        )
+    }
+
+    @Test
+    fun blockedRelayAndStoredDenyBothBeatASessionGrant() {
+        assertEquals(
+            RelayAuthVerdict.DENY,
+            resolve(inputs(hasSessionGrant = true, isBlocked = true)),
+        )
+        // "Never allow" answered later in the same session must take effect immediately.
+        assertEquals(
+            RelayAuthVerdict.DENY,
+            resolve(inputs(hasSessionGrant = true, storedOverride = RelayAuthDecision.DENY)),
         )
     }
 
@@ -95,6 +131,31 @@ class RelayAuthResolverTest {
         assertEquals(
             RelayAuthVerdict.ASK,
             resolve(inputs(servesFollowedReadCounterparty = true, toggles = RelayAuthCustomToggles(readFollows = false))),
+        )
+    }
+
+    @Test
+    fun readFollowsGrantsOnTheFollowsOwnOutboxRelay() {
+        // The situation the toggle is *named for*: someone we follow publishes to a relay of theirs
+        // that we do not use. `isFirstParty` is false by construction there — the relay is theirs, we
+        // have no traffic of our own on it — so gating this category on it made "…I'm reading someone
+        // I follow" unreachable: every follow's outbox relay prompted, on an account with the toggle
+        // explicitly on. The only time it ever granted was when the relay was also on our own list,
+        // where `myRelaysAndVenues` already covered it.
+        assertEquals(
+            RelayAuthVerdict.ALLOW,
+            resolve(inputs(servesFollowedReadCounterparty = true, isFirstParty = false)),
+        )
+        // Still off when the toggle is off.
+        assertEquals(
+            RelayAuthVerdict.ASK,
+            resolve(
+                inputs(
+                    servesFollowedReadCounterparty = true,
+                    isFirstParty = false,
+                    toggles = RelayAuthCustomToggles(readFollows = false),
+                ),
+            ),
         )
     }
 
@@ -140,8 +201,21 @@ class RelayAuthResolverTest {
         val allOn = RelayAuthCustomToggles(myRelaysAndVenues = true, readFollows = true, messageFollows = true, messageStrangers = true)
         assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, isInMyRelayList = true, isFirstParty = false)))
         assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesTrustedVenue = true, isFirstParty = false)))
-        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesFollowedReadCounterparty = true, isFirstParty = false)))
         assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesFollowedWriteCounterparty = true, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesStrangerWriteCounterparty = true, isFirstParty = false)))
+        // readFollows is deliberately absent: see readFollowsGrantsOnTheFollowsOwnOutboxRelay. Its
+        // relay is the *follow's*, never ours, so the gate could only ever empty the category.
+    }
+
+    @Test
+    fun readFollowsExemptionDoesNotLeakIntoTheOtherCategories() {
+        // Only the read category is exempt. With readFollows on but nothing being read from a follow,
+        // a non-first-party relay still asks for every other reason it might want us.
+        val allOn = RelayAuthCustomToggles(myRelaysAndVenues = true, readFollows = true, messageFollows = true, messageStrangers = true)
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, isInMyRelayList = true, isFirstParty = false)))
+        assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesFollowedWriteCounterparty = true, isFirstParty = false)))
+        // The bystander case the gate exists for: another account's outgoing DM names someone we
+        // follow. Ours is not the traffic, so we do not sign for it without being asked.
         assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, servesStrangerWriteCounterparty = true, isFirstParty = false)))
     }
 
@@ -158,7 +232,8 @@ class RelayAuthResolverTest {
     @Test
     fun customPolicyStillRequiresFirstParty() {
         // The first-party gate belongs to CUSTOM: a toggle that matches is not enough if the only reason
-        // we are on this relay belongs to somebody else.
+        // we are on this relay belongs to somebody else. (Except readFollows, whose relay always
+        // belongs to the follow — see readFollowsGrantsOnTheFollowsOwnOutboxRelay.)
         val allOn = RelayAuthCustomToggles(myRelaysAndVenues = true, readFollows = true, messageFollows = true, messageStrangers = true)
         assertEquals(RelayAuthVerdict.ALLOW, resolve(inputs(toggles = allOn, isInMyRelayList = true, isFirstParty = true)))
         assertEquals(RelayAuthVerdict.ASK, resolve(inputs(toggles = allOn, isInMyRelayList = true, isFirstParty = false)))

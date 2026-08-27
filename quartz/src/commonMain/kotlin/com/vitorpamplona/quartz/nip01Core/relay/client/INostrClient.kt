@@ -143,6 +143,18 @@ interface INostrClient : AutoCloseable {
 
     fun activeCounts(url: NormalizedRelayUrl): Map<String, List<Filter>>
 
+    /**
+     * Size of the pool's REQ / COUNT state registries — the maps every relay
+     * connect, disconnect and connection failure scans in full.
+     *
+     * These track LIVE subscriptions, so a healthy client keeps them near the number of
+     * subscriptions it believes it holds. A host that drives many relays from one client
+     * should alarm on unbounded growth here: registry size multiplies the cost of every
+     * relay lifecycle event, so a leak shows up as connect-path CPU long before it shows
+     * up as memory.
+     */
+    fun registrySizes(): RegistrySizes = RegistrySizes(0, 0)
+
     fun activeOutboxCache(url: NormalizedRelayUrl): Set<HexKey>
 
     /** The events still pending delivery to [url] (full events, not just ids). */
@@ -205,3 +217,9 @@ class EmptyNostrClient : INostrClient {
 
     override fun close() {}
 }
+
+/** @see INostrClient.registrySizes */
+data class RegistrySizes(
+    val liveRequests: Int,
+    val liveCounts: Int,
+)

@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
 import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
+import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadReply
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRoot
@@ -191,8 +192,15 @@ class NotificationFeedFilter(
                 VoiceEvent.KIND,
                 VoiceReplyEvent.KIND,
                 // A Buzz workflow approval gate (46010) addressed to me — I need to grant/deny it.
-                // Also gates the push dispatcher, which uses NOTIFICATION_KINDS as its first filter.
+                // NOTE: this list does NOT gate push. NotificationDispatcher declares its own, separate
+                // NOTIFICATION_KINDS; adding a kind here changes only what renders on the tab.
                 WorkflowApprovalRequestedEvent.KIND,
+                // "Somebody added you to a channel" (44100). Like the approval gate above, this is a
+                // question addressed to me rather than a dated event — it renders as a ChannelInviteCard
+                // with Leave / Ignore / Add to Messages, and the DAL sorts pending ones to the top so an
+                // old invite can't sink into history. `acceptableEvent` narrows this to the ones still
+                // unanswered; a self-join, a dismissal or an accept drops it.
+                MemberAddedNotificationEvent.KIND,
             ) + ADDRESSABLE_KINDS
 
         // How deep to walk a public chat reply chain looking for one of the
@@ -496,6 +504,19 @@ class NotificationFeedFilter(
         // when the mute set changes. Entries suppressed while muted therefore do NOT come
         // back on unmute until the tab is refreshed. Device-confirmed; see the design doc.
         if (isMutedPublicChatMessage(noteEvent, account.settings.mutedPublicChats.value)) return false
+
+        // "Somebody added you to a channel" (kind 44100). The relay keypair authors it, so none of the
+        // follow/relevance heuristics below can say anything useful about it — its relevance is that it
+        // is addressed to me and still unanswered. Every rule that decides "unanswered" (self-join,
+        // dismissal, already on my kind-10009, DM vs named channel, superseded by a kind-44101) lives in
+        // the account's projection, so this is a map lookup, and answering the prompt drops the row on
+        // the next invalidation. This is a standing decision, not a chat message: it ignores the
+        // Messages toggle.
+        //
+        // Ordered after the mute check only for readability — a blanket "never show this" reads before a
+        // kind-specific accept. The two can't actually interact: the mute rule matches public-chat
+        // messages, which a kind-44100 is not.
+        if (noteEvent is MemberAddedNotificationEvent) return account.channelInvites.isPending(it.idHex)
 
         // Buzz DM: a group chat message in a `t=dm` channel whose 39000 participants include me. A Buzz
         // relay carries DM messages as either kind-9 (NIP-29 chat) or kind-40002 (stream message v2), and

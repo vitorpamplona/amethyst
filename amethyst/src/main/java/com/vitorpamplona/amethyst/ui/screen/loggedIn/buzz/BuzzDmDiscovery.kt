@@ -22,174 +22,117 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.buzz
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzWorkspaces
-import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
+import com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.buzz.buzzChannelTypes
+import com.vitorpamplona.amethyst.model.buzz.classifyBuzzChannel
+import com.vitorpamplona.amethyst.model.buzz.membershipNoticeFilter
+import com.vitorpamplona.amethyst.model.buzz.membershipNotices
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RELAY_GROUP_METADATA_KINDS
-import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
-import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * Always-on discovery of the viewer's Buzz **DM channels** across every joined workspace relay, mounted
  * once high in the logged-in tree ([com.vitorpamplona.amethyst.ui.screen.loggedIn.LoggedInPage]).
  *
  * The deployed relay does not expose a queryable DM list; it addresses each member a kind-44100
- * member-added notification (`#p` = me). This warm-auths a `#p=me` fetch of 44100 (+ the 30622 visibility
- * snapshot) across the joined relays, records the channels into [BuzzDmChannels], fetches each channel's
- * 39000-39003 directory (so its `t`=dm marker + participants land in `LocalCache`), and keeps a live
- * `#p=me` 44100 subscription open for new DMs. The companion [BuzzDmJoinedChatTailPreload] then keeps the
- * discovered channels' messages warm app-wide — which is what lets a Buzz DM show on the Notifications tab
- * and in push without the viewer opening the conversation first.
+ * member-added notification (`#p` = me). Those arrive through the ordinary subscription pipeline —
+ * [com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz.BuzzMembershipEoseManager]
+ * owns the one `#p=me` REQ per workspace relay — so this reads them back out of [LocalCache], fetches
+ * each discovered channel's 39000-39003 directory (so its `t`=dm marker + participants land), and
+ * records the ones that turn out to be DMs into [BuzzDmChannels]. The companion
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload]
+ * then keeps those channels' messages warm app-wide — which is what lets a Buzz DM show on the
+ * Notifications tab and in push without the viewer opening the conversation first.
  *
- * This mirrors [BuzzDmListViewModel]'s discovery, but account-scoped and always-on rather than bound to
- * the open inbox screen; the inbox keeps its own scoped copy for its per-relay projection.
+ * Everything else somebody added the viewer to is a named channel; it must NOT be silently subscribed,
+ * so it stays out of [BuzzDmChannels] and surfaces as a prompt instead — see
+ * [com.vitorpamplona.amethyst.model.buzz.ChannelInvitesState], which projects the
+ * same cached notices.
+ *
+ * ### Recompute, don't accumulate
+ *
+ * Each pass derives the whole membership picture from the cache and *declares* the result
+ * ([BuzzDmChannels.replace]). The previous incremental version — record every 44100, then delete the
+ * ones classification rejected — had no memory of its own rejections, so the next delivery of the same
+ * event re-added them and the two steps fought each other in a loop. A recomputation cannot fight
+ * itself: the same events always produce the same set.
  */
 @Composable
 fun BuzzDmDiscoveryPreload(accountViewModel: AccountViewModel) {
     val account = accountViewModel.account
-    val joined by BuzzWorkspaces.flow.collectAsStateWithLifecycle()
 
-    // Restart the whole discovery (initial warm-auth fetch + live 44100 subs) whenever the joined
-    // workspace set changes; the LaunchedEffect scope owns the live subscriptions and cancels them on
-    // account switch or dispose.
-    LaunchedEffect(account, joined) {
-        if (joined.isEmpty()) return@LaunchedEffect
-        runBuzzDmDiscovery(account, joined)
+    LaunchedEffect(account) {
+        runBuzzDmDiscovery(account)
     }
 }
 
 /**
- * Warm-auth the initial 44100/30622 `#p=me` read across [relays], record every discovered channel, fetch
- * their directories, then keep a live 44100 subscription per relay open until the caller's scope is
- * cancelled. Suspends for the lifetime of the live subscriptions.
+ * Recompute the viewer's DM set from the cached membership notices, fetching any directory still
+ * missing, and keep doing it for the lifetime of the caller's scope.
  */
-private suspend fun runBuzzDmDiscovery(
-    account: Account,
-    relays: Set<NormalizedRelayUrl>,
-) = coroutineScope {
+private suspend fun runBuzzDmDiscovery(account: Account) {
     val me = account.userProfile().pubkeyHex
 
-    // A joined workspace is first-party: pre-approve NIP-42 so the `#p=me` DM reads authenticate (the
-    // restore-from-disk path doesn't set this, unlike the inbox/import/console entry points).
-    relays.forEach { account.relayAuthLedger.setDecision(it.url, RelayAuthDecision.ALLOW) }
-
-    val discoveryFilters =
-        listOf(
-            Filter(kinds = listOf(MemberAddedNotificationEvent.KIND), tags = mapOf("p" to listOf(me))),
-            Filter(kinds = listOf(DmVisibilityEvent.KIND), tags = mapOf("p" to listOf(me))),
+    combine(
+        LocalCache.observeNotes(membershipNoticeFilter(me)),
+        // A channel's type is only decidable once its kind-39000 is in the cache, and that lands
+        // *after* the notice that revealed the channel — so the directory arriving has to re-run the
+        // classification. The emission carries the types themselves rather than a count of notes,
+        // because `LocalCache.consume(GroupMetadataEvent)` wakes this observer before it copies the
+        // event into the channel: classifying off the channel at this instant reads one that is still
+        // empty and answers UNKNOWN, and nothing emits again to correct it. See [buzzChannelTypes].
+        LocalCache
+            .observeNotes(Filter(kinds = listOf(GroupMetadataEvent.KIND)))
+            .map { buzzChannelTypes(it) }
+            .distinctUntilChanged(),
+    ) { _, knownTypes ->
+        // Read the joined set per pass, not once: which relay vouched for a notice depends on it,
+        // and restore-from-disk can land after the cache already holds notices.
+        val workspaces = account.buzzWorkspaces.flow.value
+        BuzzChannelInvites.currentMemberships(LocalCache.membershipNotices(me, workspaces)) to knownTypes
+    }.collectLatest { (memberships, knownTypes) ->
+        fetchMissingDirectories(account, memberships, knownTypes)
+        BuzzDmChannels.replace(
+            me,
+            memberships.filter { (id, relay) ->
+                classifyBuzzChannel(LocalCache, id, relay, knownTypes) == ChannelClassification.DM
+            },
         )
-    // `#p`-gated reads: use the warm-auth fetch so an `auth-required` CLOSED authenticates and retries
-    // rather than returning empty.
-    account.client.fetchAllWithHooks(
-        filters = relays.associateWith { discoveryFilters },
-        idleTimeoutMs = 8_000,
-        pendingOnAuthRequired = true,
-    ) { relay, event ->
-        (event as? MemberAddedNotificationEvent)?.let { recordDiscovery(me, it, relay) }
-        false
-    }
-    fetchDmMetadata(account, me)
-    classifyDiscoveredChannels(account, me)
-
-    relays.forEach { relay ->
-        launch {
-            val filter = Filter(kinds = listOf(MemberAddedNotificationEvent.KIND), tags = mapOf("p" to listOf(me)))
-            account.client.subscribeAsFlow(relay, filter).collect { events ->
-                var changed = false
-                events.filterIsInstance<MemberAddedNotificationEvent>().forEach { e ->
-                    if (recordDiscovery(me, e, relay)) changed = true
-                }
-                if (changed) {
-                    fetchDmMetadata(account, me)
-                    classifyDiscoveredChannels(account, me)
-                }
-            }
-        }
     }
 }
 
-/** Fetch the NIP-29 directory (39000-39003) of every known DM channel so its `t`=dm marker + roster load. */
-private suspend fun fetchDmMetadata(
+/**
+ * Fetch the NIP-29 directory (39000-39003) of every channel whose type we don't know yet, so its `t`=dm
+ * marker and roster load.
+ *
+ * Only the unclassified ones: a channel keeps its metadata in the cache for the session, so re-asking
+ * for it on every pass would put a burst of `#d` reads on the relay each time a single new notice
+ * arrives. This converges — the fetch lands the 39000, which re-runs the pass, which now finds nothing
+ * missing.
+ */
+private suspend fun fetchMissingDirectories(
     account: Account,
-    viewer: HexKey,
+    memberships: Map<String, NormalizedRelayUrl>,
+    knownTypes: Map<String, ChannelClassification>,
 ) {
     val byRelay =
-        BuzzDmChannels
-            .channelsFor(viewer)
+        memberships
+            .filterKeys { id -> memberships[id]?.let { classifyBuzzChannel(LocalCache, id, it, knownTypes) } == ChannelClassification.UNKNOWN }
             .entries
             .groupBy({ it.value }, { it.key })
             .mapValues { (_, ids) -> listOf(Filter(kinds = RELAY_GROUP_METADATA_KINDS, tags = mapOf("d" to ids))) }
     if (byRelay.isEmpty()) return
     account.client.fetchAllWithHooks(filters = byRelay, idleTimeoutMs = 8_000, pendingOnAuthRequired = true) { _, _ -> false }
-}
-
-/**
- * Records a kind-44100 "you were added" into [BuzzDmChannels] so its directory can be fetched, and — when
- * somebody *else* did the adding — into [BuzzChannelInvites] as well.
- *
- * The relay emits this same kind for a self-join with `actor == me`, so the actor is what separates "I
- * joined this" from "a stranger put me in this". Everything is provisionally treated as a DM here because
- * the channel's type only becomes knowable once its kind-39000 lands; [classifyDiscoveredChannels] sorts
- * them out immediately afterwards.
- */
-private fun recordDiscovery(
-    me: HexKey,
-    event: MemberAddedNotificationEvent,
-    relay: NormalizedRelayUrl,
-): Boolean {
-    val channelId = event.channel() ?: return false
-    val changed = BuzzDmChannels.record(me, channelId, relay)
-    val actor = event.actor()
-    if (actor == null || !actor.equals(me, ignoreCase = true)) {
-        BuzzChannelInvites.record(me, BuzzChannelInvite(channelId, relay, actor, event.createdAt))
-    }
-    return changed
-}
-
-/**
- * Splits what discovery found into DMs and named channels, now that each channel's kind-39000 has loaded.
- *
- * A `t = dm` channel is a real DM: it stays in [BuzzDmChannels], whose always-on tail keeps it warm so it
- * can reach Notifications without being opened, and it is never an "invite". Anything else is a named
- * channel somebody added the viewer to; it must NOT be silently subscribed, so it is dropped from
- * [BuzzDmChannels] and left in [BuzzChannelInvites] for the viewer to accept or dismiss.
- *
- * Channels already in the viewer's kind-10009 (accepted earlier, or joined from this device) are not
- * invites — the ordinary joined-group path owns them.
- */
-private fun classifyDiscoveredChannels(
-    account: Account,
-    me: HexKey,
-) {
-    val joined =
-        account.relayGroupList.liveRelayGroupList.value
-            .mapNotNullTo(mutableSetOf()) { it.groupId }
-
-    BuzzDmChannels.channelsFor(me).forEach { (channelId, relay) ->
-        val metadata = LocalCache.getRelayGroupChannelIfExists(GroupId(channelId, relay))?.event
-        when {
-            // Type not known yet — leave both entries alone and re-run when the directory lands.
-            metadata == null -> Unit
-            metadata.isBuzzDmChannel() -> BuzzChannelInvites.remove(me, channelId)
-            else -> {
-                BuzzDmChannels.remove(me, channelId)
-                if (channelId in joined) BuzzChannelInvites.remove(me, channelId)
-            }
-        }
-    }
 }

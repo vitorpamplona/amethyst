@@ -135,6 +135,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarCollectionEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarRSVPEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderChannelInvite
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
@@ -231,6 +232,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
@@ -1078,6 +1080,10 @@ private fun RenderNoteRow(
 
         is BadgeAwardEvent -> {
             RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is MemberAddedNotificationEvent -> {
+            RenderChannelInvite(baseNote, accountViewModel, nav)
         }
 
         is BadgeDefinitionEvent -> {

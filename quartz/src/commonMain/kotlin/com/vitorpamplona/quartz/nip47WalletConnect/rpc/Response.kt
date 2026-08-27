@@ -31,6 +31,10 @@ abstract class Response(
  * NIP-47 responses that carry a human-readable error message. Lets UI
  * collapse generic NwcErrorResponse and method-specific *ErrorResponse
  * handling into one branch.
+ *
+ * [errorMessage] falls back to the machine-readable code name when the wallet
+ * omits `message`, because NIP-47 only requires `code`. Returning null there
+ * would leave the UI with nothing to show for a perfectly conforming refusal.
  */
 interface IErrorResponseLike {
     fun errorMessage(): String?
@@ -42,7 +46,7 @@ class NwcErrorResponse(
     val error: NwcError? = null,
 ) : Response(resultType),
     IErrorResponseLike {
-    override fun errorMessage() = error?.message
+    override fun errorMessage() = error?.message ?: error?.code?.name
 }
 
 // pay_invoice success response
@@ -65,7 +69,7 @@ class PayInvoiceErrorResponse(
         val message: String? = null,
     )
 
-    override fun errorMessage() = error?.message
+    override fun errorMessage() = error?.message ?: error?.code?.name
 }
 
 // pay success response (nostr-wallet-connect/nwc#2). For a settled BOLT12 payment

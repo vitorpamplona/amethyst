@@ -103,13 +103,6 @@ fun ComposeSettingsContent(
             )
             SettingsDivider()
             BooleanSwitchTile(
-                flow = sharedPrefs.automaticallyProposeAiImprovements,
-                icon = MaterialSymbols.AutoAwesome,
-                title = R.string.ai_writing_setting_title,
-                description = R.string.ai_writing_setting_description,
-            )
-            SettingsDivider()
-            BooleanSwitchTile(
                 flow = sharedPrefs.useTrackedBroadcasts,
                 icon = MaterialSymbols.CellTower,
                 title = R.string.tracked_broadcasts_setting_title,

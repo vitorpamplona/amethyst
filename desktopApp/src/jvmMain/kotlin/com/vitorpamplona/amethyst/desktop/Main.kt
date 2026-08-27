@@ -994,8 +994,10 @@ private fun AppInner(
                         newRelaysViaTor = torSettings.newRelaysViaTor,
                         trustedRelaysViaTor = torSettings.trustedRelaysViaTor,
                     ),
-                trustedRelayList = emptySet(), // TODO: populate from account relay lists
-                dmRelayList = emptySet(), // TODO: populate from account relay lists
+                // TODO: populate from account relay lists
+                classification =
+                    com.vitorpamplona.amethyst.commons.tor
+                        .RelayClassification(),
             )
         }
 
@@ -2358,6 +2360,23 @@ fun MainContent(
             // Global fullscreen video overlay
             com.vitorpamplona.amethyst.desktop.ui.media
                 .GlobalFullscreenOverlay()
+
+            // Full-window NIP-53 live watch overlay (player + chat), opened from any live surface
+            // via LiveWatchController.
+            val watchAddress by com.vitorpamplona.amethyst.desktop.ui.live.LiveWatchController.current
+                .collectAsState()
+            watchAddress?.let { addr ->
+                com.vitorpamplona.amethyst.desktop.ui.live.LiveWatchScreen(
+                    address = addr,
+                    cache = localCache,
+                    relayManager = relayManager,
+                    account = account,
+                    onClose = {
+                        com.vitorpamplona.amethyst.desktop.ui.live.LiveWatchController
+                            .close()
+                    },
+                )
+            }
 
             // Snackbar for zap feedback
             SnackbarHost(

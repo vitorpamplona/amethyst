@@ -148,17 +148,17 @@ class PollResponsesCache : UserDependencies {
             ): Pair<PersistentMap<String, PersistentSet<User>>, PersistentSet<User>> {
                 var newTally = tally
                 accepted(event).forEach { code ->
-                    val remaining = newTally[code]?.remove(user)
+                    val remaining = newTally[code]?.removing(user)
                     newTally =
                         when {
                             remaining == null -> newTally
                             // Drop the key rather than leave an empty set: winning() and
                             // totalSelections() both read every entry.
-                            remaining.isEmpty() -> newTally.remove(code)
-                            else -> newTally.put(code, remaining)
+                            remaining.isEmpty() -> newTally.removing(code)
+                            else -> newTally.putting(code, remaining)
                         }
                 }
-                return newTally to countedVoters.remove(user)
+                return newTally to countedVoters.removing(user)
             }
 
             /**
@@ -168,7 +168,7 @@ class PollResponsesCache : UserDependencies {
             fun add(note: Note): ResponseTally {
                 if (note in allResponses) return this
 
-                val withNote = allResponses.add(note)
+                val withNote = allResponses.adding(note)
                 val event =
                     note.event as? PollResponseEvent
                         ?: return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes, backdatedVotes)
@@ -201,13 +201,13 @@ class PollResponsesCache : UserDependencies {
 
                 val codes = accepted(event)
                 if (codes.isNotEmpty()) {
-                    newVoters = newVoters.add(author)
+                    newVoters = newVoters.adding(author)
                     codes.forEach { code ->
-                        newTally = newTally.put(code, (newTally[code] ?: persistentSetOf()).add(author))
+                        newTally = newTally.putting(code, (newTally[code] ?: persistentSetOf()).adding(author))
                     }
                 }
 
-                return ResponseTally(withNote, policy, votes.put(author, event), newTally, newVoters, lateVotes, backdatedVotes)
+                return ResponseTally(withNote, policy, votes.putting(author, event), newTally, newVoters, lateVotes, backdatedVotes)
             }
 
             /**
@@ -235,7 +235,7 @@ class PollResponsesCache : UserDependencies {
         // if it's not already there, quick exit
         if (deleteNote !in responses.value.allResponses) return
 
-        responses.update { it.rebuild(responses = it.allResponses.remove(deleteNote)) }
+        responses.update { it.rebuild(responses = it.allResponses.removing(deleteNote)) }
     }
 
     /**

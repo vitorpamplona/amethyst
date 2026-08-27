@@ -101,15 +101,20 @@ git -c credential.helper= -c credential.helper='!gh auth git-credential' push up
 ```
 
 When the `Create Release Assets` workflow finishes (~25–30 min) the GH Release
-holds **31 assets**, per the asset-name contract:
+holds **47 assets**, per the asset-name contract:
 
 - **Android (13):** 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the F-Droid
   `.apks` set for Accrescent
   (`amethyst-googleplay-*-v…apk` / `.aab`, `amethyst-fdroid-*-v…apk` / `.aab` / `.apks`)
-- **Desktop (8):** DMG (macOS **arm64 only** — there is no Intel DMG),
-  MSI + zip, DEB, RPM, AppImage, flatpak, tar.gz
-- **CLI (5):** the `amy` artifacts
-- **Relay (5):** the `geode` artifacts, plus the geode Docker image
+- **Desktop (14):** macOS DMG (**arm64 only** — there is no Intel DMG), Windows
+  MSI (x64 only — **no arm64 MSI**) + portable zip (x64, arm64), and Linux
+  DEB/RPM/AppImage/flatpak/tar.gz in both x64 and arm64. BUILDING.md § Release
+  runbook has the per-leg breakdown and why the two gaps exist.
+- **CLI (10):** the `amy` artifacts — the no-JRE `jvm.tar.gz`, macOS arm64,
+  Windows x64 + arm64, and Linux DEB/RPM/tar.gz in both x64 and arm64
+- **Relay (10):** the `geode` artifacts, same matrix as `amy`. The geode Docker
+  image is **not** a release asset — it goes to the registry, so don't count it
+  here.
 - **Maven Central:** `com.vitorpamplona.quartz:quartz:<version>` published.
   `repo1.maven.org` lags the publish by tens of minutes — a 404 right after the
   run is normal. Confirm the step's log says "Deployment is being published to
@@ -121,8 +126,9 @@ holds **31 assets**, per the asset-name contract:
 ## 3. Per-channel shipping
 
 ### GitHub Releases — automatic
-Nothing to do beyond pushing the tag. Verify the asset count and that Intel +
-ARM DMGs are both present (BUILDING.md § Verify).
+Nothing to do beyond pushing the tag. Verify the asset count (BUILDING.md
+§ Verify). macOS is **arm64-only** — there is no Intel DMG, so a single
+`amethyst-desktop-<version>-macos-arm64.dmg` is the expected, correct result.
 
 ### Google Play — manual upload
 1. Download `amethyst-googleplay-<version>.aab` from the GH Release.
@@ -177,7 +183,7 @@ when unset. To fan the release event out to more relays for discoverability,
 set `RELAY_URLS` for the run:
 
 ```bash
-RELAY_URLS="wss://relay.zapstore.dev,wss://relay.damus.io,wss://nos.lol,wss://vitor.nostr1.com" \
+RELAY_URLS="wss://relay.zapstore.dev,wss://nos.lol,wss://nostr.mom,wss://vitor.nostr1.com" \
   SIGN_WITH=<amethyst-nsec> zsp publish
 ```
 
@@ -188,10 +194,22 @@ itself reads from.
 
 `bump-homebrew.yml` and `bump-winget.yml` are wired to open PRs against
 `Homebrew/homebrew-cask` (cask `amethyst-nostr`) and `microsoft/winget-pkgs`
-(`VitorPamplona.Amethyst`) — but **neither package has ever been submitted
-upstream**, so both workflows detect that and skip with a `::warning::`. As of
-**v1.13.1** these two channels deliver nothing; macOS and Windows users get the
-desktop app from GitHub Releases only.
+(`VitorPamplona.Amethyst`). Both can only *update* a package that already
+exists upstream, so until the one-time bootstrap lands they detect the absence
+and skip with a `::warning::`.
+
+Bootstrap status:
+
+| Channel | Upstream package | State |
+|---|---|---|
+| **Winget** | `microsoft/winget-pkgs` → `VitorPamplona.Amethyst` | **Submitted at v1.14.0** — [PR #422752](https://github.com/microsoft/winget-pkgs/pull/422752), pending CLA + review |
+| **Homebrew cask** | `Homebrew/homebrew-cask` → `amethyst-nostr` | Not submitted |
+| **Homebrew formula** | `Homebrew/homebrew-core` → `amy` | Not submitted |
+
+Until each lands, that channel delivers nothing and macOS/Windows users get the
+desktop app from GitHub Releases only. Re-check before assuming — the state
+above is a snapshot, and `gh api repos/microsoft/winget-pkgs/contents/manifests/v/VitorPamplona`
+(404 = still absent) answers it in one call.
 
 Two separate faults kept this invisible until v1.13.1, both now fixed:
 
@@ -219,9 +237,9 @@ readable by anyone with push access here), so a maintainer runs the last step:
 ```bash
 # after merging the sync PRs
 export HOMEBREW_GITHUB_API_TOKEN=ghp_...     # classic PAT, `repo` scope
-scripts/bump-homebrew-cask.sh v1.13.2
+scripts/bump-homebrew-cask.sh v1.14.0
 
-scripts/bump-winget.sh v1.13.2               # no token — uses your `gh` auth
+scripts/bump-winget.sh v1.14.0               # no token — uses your `gh` auth
 ```
 
 Both scripts re-verify the published artifact's sha256 before submitting, and
@@ -283,7 +301,7 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 
 ## 6. Post-release verification
 
-- [ ] GH Release: 31 assets, sizes sane, and the asset-name set matches the
+- [ ] GH Release: 47 assets, sizes sane, and the asset-name set matches the
       previous release (see the `diff` one-liner in BUILDING.md § Release
       runbook). macOS is arm64-only — do **not** look for an Intel DMG.
 - [ ] Maven Central: `quartz:<version>` resolves (allow tens of minutes of

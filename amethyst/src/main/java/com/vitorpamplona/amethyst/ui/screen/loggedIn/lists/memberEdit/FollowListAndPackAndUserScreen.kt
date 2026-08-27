@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.memberEdit
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.recalculateWindowInsets
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +38,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -92,7 +92,7 @@ fun FollowListAndPackAndUserScreen(
                         top = contentPadding.calculateTopPadding(),
                         bottom = contentPadding.calculateBottomPadding(),
                     ).consumeWindowInsets(contentPadding)
-                    .imePadding(),
+                    .imePaddingSafe(),
         ) {
             FollowListAndPackAndUserView(userToAddOrRemove, accountViewModel, nav)
         }

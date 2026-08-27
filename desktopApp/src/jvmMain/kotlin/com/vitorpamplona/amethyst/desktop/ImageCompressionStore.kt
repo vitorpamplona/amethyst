@@ -45,6 +45,12 @@ object ImageCompressionStore {
     private val _stripExif = MutableStateFlow(DesktopPreferences.imageStripExif)
     val stripExif: StateFlow<Boolean> = _stripExif.asStateFlow()
 
+    // When true, encrypted DM file uploads declare the real media type instead of
+    // application/octet-stream — less private, but works with strict Blossom
+    // servers that reject octet-stream. Off by default (privacy-preserving).
+    private val _encryptedMediaRealType = MutableStateFlow(DesktopPreferences.encryptedMediaRealType)
+    val encryptedMediaRealType: StateFlow<Boolean> = _encryptedMediaRealType.asStateFlow()
+
     fun setQuality(quality: CompressionQuality) {
         _quality.value = quality
         DesktopPreferences.imageQualityRaw = quality.name
@@ -53,5 +59,10 @@ object ImageCompressionStore {
     fun setStripExif(value: Boolean) {
         _stripExif.value = value
         DesktopPreferences.imageStripExif = value
+    }
+
+    fun setEncryptedMediaRealType(value: Boolean) {
+        _encryptedMediaRealType.value = value
+        DesktopPreferences.encryptedMediaRealType = value
     }
 }

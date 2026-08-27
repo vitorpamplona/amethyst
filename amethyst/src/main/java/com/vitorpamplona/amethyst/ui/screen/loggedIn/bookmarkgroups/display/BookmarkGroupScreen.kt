@@ -25,7 +25,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerState
@@ -61,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.note.ArrowBackIcon
@@ -158,7 +158,7 @@ fun BookmarkGroupScreenView(
                         top = padding.calculateTopPadding(),
                         bottom = padding.calculateBottomPadding(),
                     ).consumeWindowInsets(padding)
-                    .imePadding(),
+                    .imePaddingSafe(),
         ) {
             DeletedBookmarksBanner(
                 bookmarkGroupViewModel = bookmarkGroupViewModel,

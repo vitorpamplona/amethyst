@@ -33,8 +33,9 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 /**
  * Decides whether Amethyst should authenticate with a given relay (NIP-42), for one account.
  *
- * Precedence (see [RelayAuthResolver]): blocked-relay list → per-relay override → global
- * [globalPolicy] → prompt-if-attributable-else-deny. Under [RelayAuthPolicy.CUSTOM] the
+ * Precedence (see [RelayAuthResolver]): blocked-relay list → per-relay override → this session's
+ * in-memory grants ([sessionGrants]) → global [globalPolicy] → prompt-if-attributable-else-deny.
+ * Under [RelayAuthPolicy.CUSTOM] the
  * [customToggles] gate each category, using [isFollowed] to split the counterparties carried in the
  * [RelayAuthContext] into followed vs. stranger.
  *
@@ -49,6 +50,18 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 class RelayAuthPermissionLedger(
     val store: RelayAuthPermissionStore,
     val globalPolicy: () -> RelayAuthPolicy,
+    /**
+     * Relays this account already approved during this run of the app. Answering the prompt without
+     * the "remember" switch records the grant here, so the same relay's next reconnect is answered
+     * silently instead of raising the same dialog again.
+     *
+     * Required, with no default, because it is shared state: one account's grants have to be the
+     * same object on every AUTH path (the foreground screen and the background notification
+     * consumer both decide off this ledger — see [com.vitorpamplona.amethyst.model.Account]). A
+     * default would let a ledger built without one quietly get a private set instead, so answers
+     * given on one path would not be seen on the other and the dialog would come back anyway.
+     */
+    val sessionGrants: RelayAuthSessionGrants,
     val customToggles: () -> RelayAuthCustomToggles = { RelayAuthCustomToggles() },
     val isInMyRelayList: (String) -> Boolean = { false },
     val isBlocked: (String) -> Boolean = { false },
@@ -81,6 +94,7 @@ class RelayAuthPermissionLedger(
             RelayAuthInputs(
                 storedOverride = store.loadDecision(ctx.relayUrl),
                 isBlocked = isBlocked(ctx.relayUrl),
+                hasSessionGrant = sessionGrants.isGranted(ctx.relayUrl),
                 policy = globalPolicy(),
                 toggles = customToggles(),
                 isInMyRelayList = isInMyRelayList(ctx.relayUrl),
@@ -137,14 +151,72 @@ class RelayAuthPermissionLedger(
         if (additions.isNotEmpty()) store.recordUse(ctx.relayUrl, additions)
     }
 
-    /** Stores a per-relay override for [relayUrl]. */
+    /**
+     * Remembers a "log in" answer for [relayUrl] until the app is restarted, so the relay's next
+     * reconnect doesn't ask again. Nothing is written to disk — see [RelayAuthSessionGrants].
+     *
+     * Refused, returning false, while [globalPolicy] is [RelayAuthPolicy.NEVER]: that is the
+     * switch-it-all-off answer, and a session grant outranks the policy (see [RelayAuthResolver]),
+     * so recording one here would quietly re-enable the very thing the user just turned off. The
+     * settings screen clears existing grants when the policy is set to NEVER; this stops a *new*
+     * one being written afterwards — which the undo on "forget this login" otherwise did, because
+     * its snackbar carries an action label and so sits on screen indefinitely, long enough for the
+     * policy to change underneath it.
+     *
+     * Only the policy needs this guard. A stored override arriving in the same window is
+     * self-protecting: it is ranked *above* the grant, so an ALLOW or DENY written meanwhile
+     * decides the relay either way. So is the block list, which outranks everything.
+     */
+    fun grantForSession(relayUrl: String): Boolean {
+        if (globalPolicy() == RelayAuthPolicy.NEVER) return false
+        sessionGrants.grant(relayUrl)
+        return true
+    }
+
+    /** Forgets this session's grant for [relayUrl], so the next challenge is decided from scratch. */
+    fun revokeSessionGrant(relayUrl: String) = sessionGrants.revoke(relayUrl)
+
+    /**
+     * Forgets this session's grants for every relay in [blockedRelayUrls] — the kind-10006 block
+     * list, which outranks everything else on the decision path.
+     *
+     * Blocking already denies while it is in force, so this is about what happens *after* it is
+     * lifted: without it, unblocking would resume authenticating off an answer given before the
+     * block. The weaker "never allow" drops the grant too (see [setDecision]), so the stronger
+     * signal has to as well.
+     */
+    fun revokeSessionGrantsFor(blockedRelayUrls: Collection<String>) = blockedRelayUrls.forEach(sessionGrants::revoke)
+
+    /**
+     * Stores a per-relay override for [relayUrl].
+     *
+     * Also drops any session grant: the stored decision is now the whole answer for this relay, so
+     * leaving the transient one behind would let a later [clearDecision] ("follows your rules again")
+     * silently keep authenticating off a grant the user can no longer see.
+     *
+     * The two writes are not atomic — [RelayAuthPermissionCache] only publishes an override to memory
+     * *after* its disk write returns — so a challenge arriving between them must never see neither.
+     * Which side to fail on depends on the decision:
+     * - **DENY** revokes first. The window then asks or denies, never signs: a user who just pressed
+     *   "never allow" must not get one more AUTH out of the grant they are replacing.
+     * - **ALLOW** revokes last, so the grant still covers the window. Revoking first left the relay
+     *   momentarily undecided, which re-prompted the user who had just pressed "always" — the very
+     *   dialog this whole feature exists to stop.
+     */
     suspend fun setDecision(
         relayUrl: String,
         decision: RelayAuthDecision,
-    ) = store.storeDecision(relayUrl, decision)
+    ) {
+        if (decision == RelayAuthDecision.DENY) sessionGrants.revoke(relayUrl)
+        store.storeDecision(relayUrl, decision)
+        sessionGrants.revoke(relayUrl)
+    }
 
     /** Removes the per-relay override for [relayUrl], reverting to the global policy. */
-    suspend fun clearDecision(relayUrl: String) = store.clearDecision(relayUrl)
+    suspend fun clearDecision(relayUrl: String) {
+        sessionGrants.revoke(relayUrl)
+        store.clearDecision(relayUrl)
+    }
 
     /** All per-relay overrides — for the settings screen. */
     suspend fun allDecisions(): Map<String, RelayAuthDecision> = store.allDecisions()

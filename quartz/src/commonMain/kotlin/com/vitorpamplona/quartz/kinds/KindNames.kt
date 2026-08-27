@@ -57,6 +57,10 @@ import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryE
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
@@ -600,6 +604,10 @@ object KindNames {
             EventAssertionEvent.KIND to KindName("Event Assertion", "85"),
             AddressableAssertionEvent.KIND to KindName("Addressable Assertion", "85"),
             ExternalIdAssertionEvent.KIND to KindName("External ID Assertion", "85"),
+            UserTrustedListEvent.KIND to KindName("Trusted List of Pubkeys", null),
+            EventTrustedListEvent.KIND to KindName("Trusted List of Events", null),
+            AddressableTrustedListEvent.KIND to KindName("Trusted List of Addressables", null),
+            ExternalIdTrustedListEvent.KIND to KindName("Trusted List of External IDs", null),
             KeyPackageEvent.KIND to KindName("MLS KeyPackage", null),
             GitRepositoryStateEvent.KIND to KindName("Git Repo State", "34"),
             FeedDefinitionEvent.KIND to KindName("Feed Definition", null),

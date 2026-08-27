@@ -38,9 +38,26 @@ class PoolCounts {
     private var queries = LargeCache<String, Map<NormalizedRelayUrl, List<Filter>>>()
     val relays = MutableStateFlow(setOf<NormalizedRelayUrl>())
 
+    /**
+     * **Invariant: LIVE queries only** -- a row exists only while [queries] still wants
+     * the id. [onConnecting] and [onDisconnected] scan this whole map on every relay
+     * lifecycle event, so a registry that accumulated dead ids would make each connect
+     * O(all queries ever made). See the matching note in [PoolRequests].
+     */
     private val relayState = LargeCache<String, CountQueryState<NormalizedRelayUrl>>()
 
-    fun subState(subId: String): CountQueryState<NormalizedRelayUrl> = relayState.getOrCreate(subId) { CountQueryState() }
+    private fun subState(subId: String): CountQueryState<NormalizedRelayUrl> = relayState.getOrCreate(subId) { CountQueryState() }
+
+    /**
+     * State row for a query that is still desired, creating it on first use. Returns
+     * null once the query is removed, so a frame still on the wire (or a CLOSE ack for
+     * a REQ id, which NostrClient also routes through this registry) can never
+     * resurrect a dead row.
+     */
+    private fun liveState(queryId: String): CountQueryState<NormalizedRelayUrl>? = if (queries.containsKey(queryId)) subState(queryId) else null
+
+    /** Live query count. Exposed so a host can alarm on registry growth. */
+    fun activeQueryCount(): Int = relayState.size()
 
     private fun updateRelays() {
         val myRelays = mutableSetOf<NormalizedRelayUrl>()
@@ -85,8 +102,12 @@ class PoolCounts {
             val oldRelays = queries.get(queryId)?.keys ?: emptySet()
             queries.remove(queryId)
             updateRelays()
+            // The state row survives until [sendToRelayIfChanged] flushes the CLOSE --
+            // that decision compares against the filters this relay still has in flight.
             oldRelays
         } else {
+            // Not ours (a REQ id, or a double remove): drop any dead row.
+            relayState.remove(queryId)
             emptySet()
         }
 
@@ -118,8 +139,10 @@ class PoolCounts {
         cmd: Command,
     ) {
         when (cmd) {
-            is CountCmd -> subState(cmd.queryId).onQuery(relay, cmd.filters)
-            is CloseCmd -> subState(cmd.subId).onCloseQuery(relay)
+            is CountCmd -> liveState(cmd.queryId)?.onQuery(relay, cmd.filters)
+            // NostrClient routes every CLOSE through both registries, so the vast
+            // majority of these ids are REQ subs this class has never heard of.
+            is CloseCmd -> liveState(cmd.subId)?.onCloseQuery(relay)
         }
     }
 
@@ -129,14 +152,14 @@ class PoolCounts {
     ) {
         when (msg) {
             is CountMessage -> {
-                subState(msg.queryId).onCountReply(relay.url)
+                liveState(msg.queryId)?.onCountReply(relay.url)
                 sendToRelayIfChanged(msg.queryId, relay.url) { cmd ->
                     relay.sendOrConnectAndSync(cmd)
                 }
             }
 
             is ClosedMessage -> {
-                subState(msg.subId).onClosed(relay.url)
+                liveState(msg.subId)?.onClosed(relay.url)
                 sendToRelayIfChanged(msg.subId, relay.url) { cmd ->
                     relay.sendOrConnectAndSync(cmd)
                 }
@@ -166,6 +189,14 @@ class PoolCounts {
                     sync(relay, cmd)
                 }
             }
+        }
+
+        // Query is gone and every relay has been told: drop the row (see [relayState]).
+        if (!queries.containsKey(queryId)) {
+            relayState.remove(queryId)
+            // A concurrent count() may have re-added this id; leave it the empty row it
+            // expects rather than a missing one.
+            if (queries.containsKey(queryId)) subState(queryId)
         }
     }
 

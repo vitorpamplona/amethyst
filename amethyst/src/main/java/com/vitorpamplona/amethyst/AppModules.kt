@@ -130,7 +130,6 @@ import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorService
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -208,6 +207,19 @@ class AppModules(
 
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
+    /**
+     * Mints and caches BUD-01 read-auth tokens for auth-gated Blossom hosts.
+     * Shared by the OkHttp interceptor (which only reads the cache) and Coil's
+     * [com.vitorpamplona.amethyst.service.images.BlossomReadAuthFetcher] (which
+     * awaits a signature), so both see one token and one in-flight signature per
+     * host. Signing runs on [applicationIOScope], never on an OkHttp thread.
+     */
+    val blossomReadAuthTokens =
+        BlossomReadAuthTokenProvider(
+            signerProvider = { sessionManager.loggedInAccount()?.signer },
+            scope = applicationIOScope,
+        )
+
     private val _trimLevelEvents = MutableSharedFlow<Int>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val trimLevelEvents = _trimLevelEvents.asSharedFlow()
 
@@ -269,7 +281,7 @@ class AppModules(
         UiSettingsState(uiPrefs.value, connManager.isMobileOrFalse, applicationIOScope)
     }
 
-    private val torService = TorService(appContext)
+    private val torService = TorService(appContext, applicationIOScope)
     val torManager = TorManager(torPrefs, torService, applicationIOScope)
 
     // Network identity change (wifi↔cellular, regained from offline, captive portal
@@ -286,18 +298,6 @@ class AppModules(
                 .collect { torManager.onNetworkChange() }
         }
     }
-
-    // Restore + persist held NIP-OA attestations across restarts (device-global). Eager (not
-    // lazy) so it loads before the first Buzz-relay AUTH and mirrors later changes to disk.
-    val buzzAttestationPrefs = BuzzAttestationPreferences(appContext, applicationIOScope)
-
-    // Restore + persist the joined Buzz workspace relays across restarts (device-global). Eager so
-    // the app knows which relays to sync as workspaces on cold start (Buzz membership is
-    // server-side; there is no join event to rebuild the set from).
-    val buzzWorkspacePrefs = BuzzWorkspacePreferences(appContext, applicationIOScope)
-
-    // Restore + persist the user's starred Buzz workspace channels across restarts (device-global).
-    val buzzChannelStarPrefs = BuzzChannelStarPreferences(appContext, applicationIOScope)
 
     // Restore + persist the set of relay-group channels deleted (kind-9008) on this device, so a
     // deleted channel stays hidden across a restart even if the host relay re-announces a stale
@@ -413,7 +413,11 @@ class AppModules(
     init {
         applicationIOScope.launch {
             torService.status
-                .map { it is TorServiceStatus.Active }
+                // Battery ledger: Tor is doing work from the moment the client exists — the
+                // directory download is the most expensive part of a launch — so this tracks
+                // "running", not "bootstrapped". Keying it on Active alone would silently omit the
+                // 12-34s download from every cold start.
+                .map { it.socksPort != null }
                 .distinctUntilChanged()
                 .collect { torSession.setActive(it) }
         }
@@ -460,9 +464,8 @@ class AppModules(
             // tracks the logged-in account.
             blossomReadAuth =
                 BlossomReadAuthInterceptor(
-                    BlossomReadAuthTokenProvider(
-                        signerProvider = { sessionManager.loggedInAccount()?.signer },
-                    )::authHeader,
+                    cachedHeaderProvider = blossomReadAuthTokens::cachedHeader,
+                    onAuthRequired = blossomReadAuthTokens::warm,
                 ),
         )
 
@@ -647,7 +650,7 @@ class AppModules(
             // proxy during bootstrap. RelayProxyClientConnector reconnects them (with
             // ignoreRetryDelays=true) the instant Tor flips to Active.
             canDial = { url ->
-                !torEvaluatorFlow.shouldUseTorForRelay(url) || torManager.isSocksReady()
+                !torEvaluatorFlow.shouldUseTorForRelay(url) || torManager.isTorReady()
             },
         )
 
@@ -716,7 +719,7 @@ class AppModules(
         TorCircuitHealthTracker(
             client = client,
             isTorRouted = { torEvaluatorFlow.shouldUseTorForRelay(it) },
-            isTorActive = { torManager.isSocksReady() },
+            isTorActive = { torManager.isTorReady() },
             isConnectivityActive = { connManager.status.value is ConnectivityStatus.Active },
             onCircuitsDead = { torManager.onTorCircuitsDead() },
         ).also { it.register() }
@@ -905,6 +908,17 @@ class AppModules(
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
+            // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
+            // joined workspace relays (so the app knows which relays to sync as workspaces on cold
+            // start — Buzz membership is server-side) and the starred channels. Per account: the
+            // joined set makes a relay first-party for NIP-42, and a star is personal.
+            startBuzzPersistence = { account ->
+                BuzzWorkspacePreferences(appContext, account.scope, account.pubKey, account.buzzWorkspaces)
+                BuzzChannelStarPreferences(appContext, account.scope, account.pubKey, account.buzzChannelStars)
+                // Eager like the rest, so a held NIP-OA attestation is loaded before this account's
+                // first Buzz-relay AUTH rather than after it.
+                BuzzAttestationPreferences(appContext, account.scope, account.pubKey, account.buzzAttestation)
+            },
         )
 
     val sessionManager =
@@ -1084,6 +1098,7 @@ class AppModules(
             callFactory = { roleBasedHttpClientBuilder.okHttpClientForImage(it) },
             thumbnailCache = thumbnailDiskCache,
             backgroundScope = applicationIOScope,
+            readAuth = blossomReadAuthTokens,
         )
     }
 

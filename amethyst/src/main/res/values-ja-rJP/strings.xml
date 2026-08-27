@@ -1277,7 +1277,7 @@
     <plurals name="always_on_notif_connected_foreground">
         <item quantity="other">%1$d 件の relay に接続中</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <!-- Activity labels, used where the app's own noun for the data type already means something
          else to the user: "Outbox Relays" is their own relay list in settings, and "Profile" is
@@ -2877,9 +2877,6 @@
     <string name="relay_members_removed">%1$d 人のメンバーが relay から削除されました</string>
     <string name="relay_join_request">Relay 参加リクエスト</string>
     <string name="relay_leave_request">Relay 退出リクエスト</string>
-    <string name="ai_writing_help">AI ライティングサポート</string>
-    <string name="ai_writing_setting_title">テキストの改善を提案</string>
-    <string name="ai_writing_setting_description">デバイス上のAIモデルを使用して、テキストの修正やトーンの変更を提案します。</string>
     <string name="tracked_broadcasts_setting_title">追跡ブロードキャスト</string>
     <string name="tracked_broadcasts_setting_description">イベントの送信時に追跡ブロードキャスターを使用します。ブロードキャスト中にライブの進捗とrelay別のステータスを表示します。</string>
     <string name="suggest_workouts_setting_title">ワークアウトの共有を提案する</string>
@@ -2887,17 +2884,6 @@
     <string name="compose_settings">作成の設定</string>
     <string name="auto_create_drafts_setting_title">自動的に下書きを作成する</string>
     <string name="auto_create_drafts_setting_description">入力中または未送信のテキストがある状態でコンポーザーを離れると、下書きイベントを自動的に保存し、プライベートのアウトボックスrelayに送信します。</string>
-    <string name="ai_writing_use_this">これを使用する</string>
-    <string name="ai_writing_dismiss">閉じる</string>
-    <string name="ai_tone_correct">修正する</string>
-    <string name="ai_tone_rephrase">言い換える</string>
-    <string name="ai_tone_shorter">短くする</string>
-    <string name="ai_tone_elaborate">詳しく書く</string>
-    <string name="ai_tone_friendly">フレンドリーに</string>
-    <string name="ai_tone_professional">プロフェッショナルに</string>
-    <string name="ai_tone_more_direct">より直接的に</string>
-    <string name="ai_tone_punchy">パンチを効かせる</string>
-    <string name="ai_tone_emojify">+ 絵文字</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">絵文字パック</string>
     <string name="emoji_pack_management_title">絵文字リストに追加</string>

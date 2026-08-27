@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.commons.ui.feeds.LoadedFeedState
@@ -39,9 +40,11 @@ import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.BundledUpdate
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrderCard
 import com.vitorpamplona.amethyst.ui.dal.FeedFilter
+import com.vitorpamplona.amethyst.ui.dal.NotificationFeedOrderCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
+import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -135,7 +138,7 @@ class CardFeedContentState(
                     val updatedCards =
                         (oldNotesState.feed.value.list + newCards)
                             .distinctBy { it.id() }
-                            .sortedWith(DefaultFeedOrderCard)
+                            .sortedWith(NotificationFeedOrderCard)
                             .take(localFilter.limit())
                             .toImmutableList()
 
@@ -149,7 +152,7 @@ class CardFeedContentState(
 
                 val cards =
                     convertToCard(notes)
-                        .sortedWith(DefaultFeedOrderCard)
+                        .sortedWith(NotificationFeedOrderCard)
                         .take(localFilter.limit())
                         .toImmutableList()
 
@@ -366,7 +369,10 @@ class CardFeedContentState(
                         // card — a duplicate of the grouped one.
                         it.event !is NutzapEvent
                 }.map {
-                    if (it.event is PrivateDmEvent || it.event is NIP17Group || it.isInMarmotGroup()) {
+                    val pendingInvite = if (it.event is MemberAddedNotificationEvent) pendingInvites[it.idHex] else null
+                    if (pendingInvite != null) {
+                        ChannelInviteCard(it, pendingInvite)
+                    } else if (it.event is PrivateDmEvent || it.event is NIP17Group || it.isInMarmotGroup()) {
                         MessageSetCard(it)
                     } else if (it.event is BadgeAwardEvent) {
                         BadgeCard(it)
@@ -376,8 +382,24 @@ class CardFeedContentState(
                 }
 
         return (multiCards + textNoteCards + userZaps + userNutzaps)
-            .sortedWith(compareByDescending<Card> { it.createdAt() }.thenBy { it.id() })
+            .sortedWith(NotificationFeedOrderCard)
     }
+
+    /**
+     * The unanswered channel invites, keyed by their kind-44100.
+     *
+     * A StateFlow read, so each access is a volatile load of an already-built map — cheap enough to
+     * touch per note. `acceptableEvent` has already narrowed the feed to pending ones, so this only has
+     * to attach the resolved invite to its row; a 44100 that is no longer pending falls through to an
+     * ordinary card, which the filter should have excluded anyway.
+     */
+    private val pendingInvites: Map<HexKey, BuzzChannelInvite>
+        get() =
+            (localFilter as? NotificationFeedFilter)
+                ?.account
+                ?.channelInvites
+                ?.pendingByEventId
+                ?.value ?: emptyMap()
 
     private fun updateFeed(notes: ImmutableList<Card>) {
         if (notes.size >= localFilter.limit()) {
@@ -458,7 +480,7 @@ class CardFeedContentState(
                 val updatedCards =
                     (oldNotesState.feed.value.list + newCards)
                         .distinctBy { it.id() }
-                        .sortedWith(compareByDescending<Card> { it.createdAt() }.thenBy { it.id() })
+                        .sortedWith(NotificationFeedOrderCard)
                         .take(localFilter.limit())
                         .toImmutableList()
 

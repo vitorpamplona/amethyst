@@ -1152,7 +1152,7 @@
          keys are new rather than reused - a stale translation of the old standalone titles would
          read as a non-sequitur under this header. -->
     <string name="relay_auth_auto_login_when">Log in without asking when\u2026</string>
-    <string name="relay_auth_auto_my_relays">\u2026it\'s my relay, or a room I joined</string>
+    <string name="relay_auth_auto_my_relays_and_venues">\u2026it\'s my relay, or a room I joined or follow</string>
     <string name="relay_auth_auto_read_follows">\u2026I\'m reading someone I follow</string>
     <string name="relay_auth_auto_message_follows">\u2026I\'m messaging someone I follow</string>
     <string name="relay_auth_auto_message_strangers">\u2026I\'m messaging anyone else</string>
@@ -1198,6 +1198,11 @@
     <string name="relay_auth_remove_exception">Remove exception</string>
     <string name="relay_auth_exception_removed_undo">Exception removed. %1$s follows your rules again.</string>
     <string name="relay_auth_undo">Undo</string>
+    <string name="relay_auth_session_section">Just for now</string>
+    <string name="relay_auth_session_row_desc">Logged in until you restart Amethyst</string>
+    <string name="relay_auth_forget_session">Forget this login</string>
+    <string name="relay_auth_session_forgotten_undo">%1$s will ask again the next time it needs you.</string>
+    <string name="relay_auth_session_undo_blocked">Not restored. “Never log in” is on, so Amethyst won\'t log in to %1$s.</string>
     <string name="relay_auth_blocked_section">Blocked by your block list</string>
     <string name="relay_auth_blocked_row_desc">Amethyst never logs in to blocked relays.</string>
     <string name="relay_auth_no_blocked">Nothing blocked. Relays you block will never be logged in to, whatever you set here.</string>
@@ -2165,7 +2170,9 @@
         <item quantity="one">Connected to %1$d relay</item>
         <item quantity="other">Connected to %1$d relays</item>
     </plurals>
-    <!-- Expanded-only breakdown of the always-on notification. Counts overlap: one relay commonly
+    <string name="always_on_notif_show_details">Show details</string>
+    <string name="always_on_notif_hide_details">Hide details</string>
+    <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
         <item quantity="one">%1$s \u00b7 %2$d relay</item>
@@ -2891,6 +2898,9 @@
     <string name="relay_group_no_messages_yet">No messages yet</string>
     <string name="channel_invite_title">Added to %1$s</string>
     <string name="channel_invite_unknown_actor">Someone</string>
+    <string name="channel_invite_added_you">added you to this channel</string>
+    <string name="channel_invite_row_added_you_by">%1$s added you to this channel</string>
+    <string name="channel_invite_row_added_you">You were added to this channel</string>
     <string name="channel_invite_ignore">Ignore</string>
     <string name="channel_invite_leave">Leave</string>
     <string name="relay_group_join_to_post">Join this group to send messages.</string>
@@ -3048,6 +3058,7 @@
     <string name="error_unable_to_fetch_invoice">Unable to fetch invoice from receiver\'s servers</string>
 
     <string name="wallet_connect_pay_invoice_error_error">Your wallet connect provider returned the following error: %1$s</string>
+    <string name="wallet_connect_unreadable_response_error">Your wallet connect provider sent a reply Amethyst could not read.</string>
 
     <string name="tor_connection_failed_title">Tor isn\'t connecting</string>
     <string name="tor_connection_failed_body">Amethyst couldn\'t finish bootstrapping Tor. Use a regular (non-Tor) connection so the feed can load? We\'ll remember this choice for the next hour and re-try Tor after that.</string>
@@ -3203,6 +3214,15 @@
     <string name="wallet_incoming">Received</string>
     <string name="wallet_outgoing">Sent</string>
     <string name="wallet_refresh">Refresh</string>
+    <string name="wallet_transactions_load_failed">Could not load transactions</string>
+    <string name="wallet_transactions_load_more_failed">Could not load more transactions</string>
+    <string name="wallet_balance_request_failed">Could not load your balance</string>
+    <string name="wallet_invoice_creation_failed">Could not create the invoice</string>
+    <string name="wallet_no_invoice_returned">Your wallet did not return an invoice</string>
+    <string name="wallet_request_timed_out">Wallet request timed out</string>
+    <string name="wallet_request_failed">Could not reach your wallet: %1$s</string>
+    <string name="wallet_connect_unrecognized_reply">Your wallet replied with something Amethyst does not recognise (%1$s)</string>
+    <string name="wallet_connect_decrypt_failed">Amethyst could not decrypt your wallet\'s reply — the wallet may be using a different key</string>
     <string name="wallet_filter_all">All</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Non-Zaps</string>
@@ -4898,9 +4918,6 @@
     <string name="relay_join_request">Relay join request</string>
     <string name="relay_leave_request">Relay leave request</string>
 
-    <string name="ai_writing_help">AI Writing Help</string>
-    <string name="ai_writing_setting_title">Propose text improvements</string>
-    <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
     <string name="tracked_broadcasts_setting_title">Tracked broadcasts</string>
     <string name="tracked_broadcasts_setting_description">Use the tracked broadcaster when sending events. Shows live progress and per-relay status while broadcasting.</string>
     <string name="suggest_workouts_setting_title">Suggest workouts to share</string>
@@ -4995,17 +5012,6 @@
     <string name="pow_publish_failed_retry">Your %1$s finished mining but could not be published. It will be retried the next time the app starts.</string>
     <string name="pow_kind_chat_message">Chat message</string>
     <string name="pow_kind_report">Report</string>
-    <string name="ai_writing_use_this">Use This</string>
-    <string name="ai_writing_dismiss">Dismiss</string>
-    <string name="ai_tone_correct">Correct</string>
-    <string name="ai_tone_rephrase">Rephrase</string>
-    <string name="ai_tone_shorter">Shorter</string>
-    <string name="ai_tone_elaborate">Elaborate</string>
-    <string name="ai_tone_friendly">Friendly</string>
-    <string name="ai_tone_professional">Professional</string>
-    <string name="ai_tone_more_direct">More Direct</string>
-    <string name="ai_tone_punchy">Punchy</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
 
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji Packs</string>
@@ -5088,6 +5094,14 @@
     <plurals name="marmot_member_count">
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
+    </plurals>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Your wallet did not respond within %1$d second. The payment may or may not have gone through — check your wallet before retrying.</item>
+        <item quantity="other">Your wallet did not respond within %1$d seconds. The payment may or may not have gone through — check your wallet before retrying.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Wallet request timed out — %1$d reply was rejected because it was signed by an unexpected key. Your relay may be untrusted.</item>
+        <item quantity="other">Wallet request timed out — %1$d replies were rejected because they were signed by an unexpected key. Your relay may be untrusted.</item>
     </plurals>
     <string name="marmot_group_name">Group name</string>
     <string name="marmot_group_name_placeholder">Enter group name</string>

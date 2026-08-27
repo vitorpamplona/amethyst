@@ -69,7 +69,7 @@ class RelayAuthGrantRationaleTest {
     private val bob = "b".repeat(64)
     private val carol = "c".repeat(64)
 
-    private fun ledger(store: RelayAuthPermissionStore) = RelayAuthPermissionLedger(store, { RelayAuthPolicy.CUSTOM })
+    private fun ledger(store: RelayAuthPermissionStore) = RelayAuthPermissionLedger(store, { RelayAuthPolicy.CUSTOM }, RelayAuthSessionGrants())
 
     @Test
     fun recordsCounterpartiesGroupedByPurpose() =

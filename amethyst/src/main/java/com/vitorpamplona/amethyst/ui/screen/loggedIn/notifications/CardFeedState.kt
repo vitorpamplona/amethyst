@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvite
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.model.Note
@@ -130,6 +131,24 @@ class MessageSetCard(
 }
 
 /**
+ * "Somebody added you to a channel" — a relay-signed kind-44100 that is still unanswered, carrying the
+ * [invite] the projection resolved it to (who did it, which channel, on which relay).
+ *
+ * A question rather than a dated event, so [com.vitorpamplona.amethyst.ui.dal.NotificationFeedOrderCard]
+ * sorts these ahead of everything else instead of letting an old one sink into history. It still holds
+ * its [note], so it dedups, scrolls-to and pages exactly like every other card.
+ */
+@Immutable
+class ChannelInviteCard(
+    val note: Note,
+    val invite: BuzzChannelInvite,
+) : Card {
+    override fun createdAt(): Long = invite.createdAt
+
+    override fun id() = note.idHex
+}
+
+/**
  * Checks if this card contains a specific event ID.
  * Used for scrolling to a notification from a push notification intent.
  */
@@ -144,6 +163,10 @@ fun Card.containsEventId(eventId: String): Boolean =
         }
 
         is MessageSetCard -> {
+            note.idHex == eventId
+        }
+
+        is ChannelInviteCard -> {
             note.idHex == eventId
         }
 

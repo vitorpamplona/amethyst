@@ -39,16 +39,18 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /**
- * Pin/Unpin a Buzz channel (a device-local favorite — [BuzzChannelStars]). Moved off the per-channel
- * list row into the opened channel's/forum's top-bar overflow, so the list row stays a clean
- * tap-to-open target. Reads the live starred set so the label + icon reflect the current state.
+ * Pin/Unpin a Buzz channel (a local favorite of this account — [BuzzChannelStars]). Moved off the
+ * per-channel list row into the opened channel's/forum's top-bar overflow, so the list row stays a
+ * clean tap-to-open target. Reads the live starred set so the label + icon reflect the current state.
  */
 @Composable
 fun BuzzPinDropdownItem(
     groupId: GroupId,
+    accountViewModel: AccountViewModel,
     closeMenu: () -> Unit,
 ) {
-    val starred by BuzzChannelStars.flow.collectAsStateWithLifecycle()
+    val stars = accountViewModel.account.buzzChannelStars
+    val starred by stars.flow.collectAsStateWithLifecycle()
     val isStarred = groupId.id in starred
     DropdownMenuItem(
         leadingIcon = {
@@ -62,7 +64,7 @@ fun BuzzPinDropdownItem(
         text = { Text(stringRes(if (isStarred) R.string.buzz_unpin else R.string.buzz_pin)) },
         onClick = {
             closeMenu()
-            BuzzChannelStars.toggle(groupId.id)
+            stars.toggle(groupId.id)
         },
     )
 }

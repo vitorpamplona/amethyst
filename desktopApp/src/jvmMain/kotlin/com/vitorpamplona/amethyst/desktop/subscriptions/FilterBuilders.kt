@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.desktop.subscriptions
 
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 
@@ -30,6 +32,28 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
  */
 object FilterBuilders {
     private val FEED_KINDS = listOf(1, 6, 16, 1068) // TextNoteEvent, RepostEvent, GenericRepostEvent, PollEvent
+
+    /** Filter for NIP-53 live streaming events (kind 30311), optionally scoped to specific hosts. */
+    fun liveActivities(
+        authors: List<String>? = null,
+        limit: Int = 100,
+    ): Filter =
+        Filter(
+            kinds = listOf(LiveActivitiesEvent.KIND),
+            authors = authors,
+            limit = limit,
+        )
+
+    /** Filter for NIP-53 live chat messages (kind 1311) tied to a stream by its root `a` tag. */
+    fun liveActivityChat(
+        streamAddress: String,
+        limit: Int = 200,
+    ): Filter =
+        Filter(
+            kinds = listOf(LiveActivitiesChatMessageEvent.KIND),
+            tags = mapOf("a" to listOf(streamAddress)),
+            limit = limit,
+        )
 
     /**
      * Creates a filter for text notes (kind 1) from all authors.

@@ -27,7 +27,6 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
-import com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
@@ -750,6 +749,21 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         return relayGroupChannels.filter { key, _ -> key.id == groupId }.singleOrNull()
     }
 
+    /**
+     * Every host relay of the NIP-29 group [event] is scoped to (its `h` tag), or an empty set when the
+     * event carries no group scope or the group is unknown to this cache.
+     *
+     * Keyed by group id alone rather than by [GroupId]: an event about to be *sent* (a reaction, a zap
+     * request, a comment) knows which room it belongs to but not which relay hosts it — that is exactly
+     * what this resolves. Group ids are relay-minted UUIDs, so the same id on two hosts is a
+     * theoretical case, and answering with both is the safe reading of it: the content reaches every
+     * host that claims the room, and none that don't.
+     */
+    fun relayGroupHostsFor(event: Event): Set<NormalizedRelayUrl> {
+        val groupId = event.groupId() ?: return emptySet()
+        return relayGroupChannels.filter { key, _ -> key.id == groupId }.mapTo(mutableSetOf()) { it.groupId.relayUrl }
+    }
+
     fun getLiveActivityChannelIfExists(key: Address): LiveActivitiesChannel? = liveChatChannels.get(key)
 
     fun getNoteIfExists(event: Event): Note? =
@@ -810,6 +824,12 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         } else {
             false
         }
+
+    /**
+     * Checks if a kind-5 event from the addressable's own author has deleted this
+     * address. Works for empty addressable shells whose event is not loaded yet.
+     */
+    fun hasBeenDeleted(address: Address): Boolean = deletionIndex.hasBeenDeleted(address, address.pubKeyHex)
 
     fun getOrAddAliasNote(
         idHex: String,
@@ -2327,20 +2347,19 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         }
 
     /**
-     * A kind-44101 "you were removed from a channel". Consumed like any other Buzz event, then used to
-     * withdraw any pending add-prompt for that channel: once the relay has taken the membership away
-     * there is nothing left to accept, so leaving the card up would offer an action that cannot succeed.
+     * A kind-44101 "you were removed from a channel". Stored like any other Buzz event and nothing more:
+     * withdrawing the matching add-prompt is not a side effect of ingest but a consequence of the stored
+     * event, since
+     * [com.vitorpamplona.amethyst.commons.model.buzz.BuzzChannelInvites.pendingInvites] resolves each
+     * channel to its newest verdict. That ordering is what makes the two kinds arriving out of order —
+     * routine on a re-subscribe, where the relay replays the whole history — produce the same answer as
+     * them arriving in order.
      */
     private fun consume(
         event: MemberRemovedNotificationEvent,
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
-    ): Boolean =
-        consumeBuzzRegularEvent(event, relay, wasVerified).also {
-            val target = event.target() ?: return@also
-            val channelId = event.channel() ?: return@also
-            BuzzChannelInvites.remove(target, channelId)
-        }
+    ): Boolean = consumeBuzzRegularEvent(event, relay, wasVerified)
 
     /**
      * Attach a group-scoped content event (a kind-9 chat, kind-1068 poll, …
@@ -3089,6 +3108,16 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         wasVerified: Boolean,
     ): Boolean {
         val requestId = event.requestId()
+
+        // Duplicate delivery, checked before the tracker so the warnings below mean one
+        // thing each. Some NWC relays replay every cached kind-23195 whenever the REQ
+        // filter changes (see NWCPaymentFilterAssembler), so an already-answered response
+        // arrives again and again. Its first copy consumed the pending request, so the
+        // replays would otherwise be reported as "no pending request is registered" —
+        // the same line a genuinely late response produces, which made the two
+        // indistinguishable in the field.
+        if (getNoteIfExists(event.id)?.event != null) return false
+
         val pending =
             when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
                 is NwcPaymentTracker.MatchResult.Matched -> {
@@ -3108,9 +3137,12 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 }
 
                 NwcPaymentTracker.MatchResult.NoMatch -> {
+                    // Not a replay — those are filtered above — so this is the first time we
+                    // have seen this response and nothing is waiting for it.
                     Log.w("LocalCache") {
                         "NWC response ${event.id} from ${event.pubKey} references request e=$requestId but no pending request is registered. " +
-                            "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag."
+                            "The response arrived after the client gave up waiting, the user holds a stale subscription, " +
+                            "or the wallet service set the wrong e tag."
                     }
                     return false
                 }
@@ -3124,7 +3156,8 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
 
-        // Already processed this event.
+        // Backstop for a concurrent delivery that loaded the event between the replay
+        // check above and here. Same outcome, no warning: it is not a protocol problem.
         if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {

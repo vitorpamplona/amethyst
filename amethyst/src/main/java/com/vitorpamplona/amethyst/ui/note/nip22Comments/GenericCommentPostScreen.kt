@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -68,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakePictureButton
 import com.vitorpamplona.amethyst.ui.actions.uploads.TakeVideoButton
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
@@ -218,7 +218,7 @@ fun GenericCommentPostScreen(
                 Modifier
                     .padding(pad)
                     .consumeWindowInsets(pad)
-                    .imePadding(),
+                    .imePaddingSafe(),
         ) {
             GenericCommentPostBody(
                 postViewModel,

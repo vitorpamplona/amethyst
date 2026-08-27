@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.UserContext
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
+import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -57,6 +58,8 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEv
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -65,6 +68,7 @@ import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -90,6 +94,16 @@ class DesktopLocalCache : ICacheProvider {
     val users = LargeSoftCache<HexKey, User>()
     val notes = LargeSoftCache<HexKey, Note>()
     val addressableNotes = LargeSoftCache<String, AddressableNote>()
+
+    /**
+     * NIP-53 live-stream channels (kind 30311), keyed by address value. This is the FIRST channel
+     * cache on Desktop (the base app has none — [getAnyChannel] historically returned null). It is a
+     * strong-ref [LargeCache] (not soft) because a channel owns its live chat (kind 1311) notes and
+     * must survive GC while a stream is on-screen; chat growth is bounded instead by
+     * [LiveActivitiesChannel.pruneOldMessages] (cap 500), triggered from [consumeLiveActivityChat].
+     */
+    val liveChatChannels = LargeCache<String, LiveActivitiesChannel>()
+
     private val deletedEvents = ConcurrentHashMap.newKeySet<HexKey>()
 
     /** NIP-hints index accumulated from consumed events (event/address/pubkey → relay). */
@@ -130,6 +144,8 @@ class DesktopLocalCache : ICacheProvider {
     val metadataVersion: StateFlow<Long> = _metadataVersion.asStateFlow()
 
     companion object {
+        /** Cap on retained kind-1311 chat messages per live channel (matches [Channel.pruneOldMessages]). */
+        const val MAX_CHAT_MESSAGES_PER_CHANNEL = 500
     }
 
     /** Index of notes by author pubkey — for fast metadata invalidation */
@@ -279,8 +295,13 @@ class DesktopLocalCache : ICacheProvider {
     ): Boolean {
         if (!wasVerified && !justVerify(event)) return false
         val consumed = route(event, relay)
-        // Write-through to local store, but skip if event came from local store (hydration)
-        if (consumed && relay != com.vitorpamplona.amethyst.desktop.relay.LocalRelayStore.LOCAL_RELAY_URL) {
+        // Write-through to local store, but skip if event came from local store (hydration). Live
+        // chat (kind 1311) is deliberately NOT persisted: a busy stream's chat is unbounded and
+        // replaying it on next launch is pointless (the stream is over) — only the 30311s hydrate.
+        if (consumed &&
+            relay != com.vitorpamplona.amethyst.desktop.relay.LocalRelayStore.LOCAL_RELAY_URL &&
+            event !is LiveActivitiesChatMessageEvent
+        ) {
             localRelayStore?.enqueue(event)
         }
         return consumed
@@ -362,6 +383,14 @@ class DesktopLocalCache : ICacheProvider {
 
             is PollResponseEvent -> {
                 consumePollResponse(event, relay)
+            }
+
+            is LiveActivitiesEvent -> {
+                consumeLiveActivity(event, relay)
+            }
+
+            is LiveActivitiesChatMessageEvent -> {
+                consumeLiveActivityChat(event, relay)
             }
 
             else -> {
@@ -797,6 +826,88 @@ class DesktopLocalCache : ICacheProvider {
         return true
     }
 
+    // ----- NIP-53 live activities (kind 30311 streams + kind 1311 chat) -----
+
+    /**
+     * Bumped whenever a live-stream (30311) is added/updated so the Lives discovery grid and the
+     * per-column "live now" bar can recompute their snapshot. Chat (1311) does NOT bump this — chat
+     * updates flow through the channel's own notes flow, and a new message never changes stream
+     * ranking, so bumping here would cause needless full-grid recomputes on busy streams.
+     */
+    private val _liveActivityVersion = MutableStateFlow(0L)
+    val liveActivityVersion: StateFlow<Long> = _liveActivityVersion.asStateFlow()
+
+    fun getOrCreateLiveActivityChannel(address: Address): LiveActivitiesChannel =
+        liveChatChannels.getOrCreate(address.toValue()) {
+            LiveActivitiesChannel(address)
+        }
+
+    /**
+     * Consumes a kind 30311 live streaming event. Replaceable, so the newest per-address copy wins
+     * (stored in [addressableNotes] like other addressables) and is attached to the address's
+     * [LiveActivitiesChannel]. Returns true so it write-throughs to the local relay store (30311s are
+     * cheap and bounded — hydrating them on next launch shows the last-known streams instantly).
+     */
+    private fun consumeLiveActivity(
+        event: LiveActivitiesEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val address = event.address()
+        val addressableNote = getOrCreateAddressableNote(address)
+
+        val existing = addressableNote.event
+        if (existing != null && existing.createdAt >= event.createdAt) return false
+
+        val author = getOrCreateUser(event.pubKey)
+        addressableNote.loadEvent(event, author, emptyList())
+        relay?.let { addressableNote.addRelay(it) }
+
+        val channel = getOrCreateLiveActivityChannel(address)
+        channel.updateChannelInfo(author, event, addressableNote)
+
+        _liveActivityVersion.value++
+        return true
+    }
+
+    /**
+     * Consumes a kind 1311 live chat message and attaches it to its stream's channel (by the root
+     * `a` tag). The channel's chat is capped at 500 newest messages via [pruneOldMessages] so a busy
+     * stream can't grow memory unbounded. Unlike 30311, chat is NOT persisted to the local relay
+     * store (see [consume]) to avoid unbounded chat replay on next launch.
+     */
+    private fun consumeLiveActivityChat(
+        event: LiveActivitiesChatMessageEvent,
+        relay: NormalizedRelayUrl?,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+
+        val author = getOrCreateUser(event.pubKey)
+        note.loadEvent(event, author, emptyList())
+        trackNoteAuthor(note, event.pubKey)
+        relay?.let { note.addRelay(it) }
+
+        val activityAddress = event.activityAddress() ?: return true
+        val channel = getOrCreateLiveActivityChannel(activityAddress)
+        channel.addNote(note, relay)
+        if (channel.notes.size() > MAX_CHAT_MESSAGES_PER_CHANNEL) {
+            channel.pruneOldMessages()
+        }
+        return true
+    }
+
+    /**
+     * Snapshot every known live-stream channel that currently carries a 30311. Driven by
+     * [liveActivityVersion] for reactive recomputation (mirrors [snapshotFollowPacks]).
+     */
+    fun snapshotLiveActivities(): List<LiveActivitiesChannel> {
+        val out = mutableListOf<LiveActivitiesChannel>()
+        liveChatChannels.forEach { _, channel ->
+            if (channel.info != null) out.add(channel)
+        }
+        return out
+    }
+
     /**
      * Snapshot all 39089 (FollowListEvent) addressable notes currently in cache.
      * Use [followPackVersion] to drive reactive recomputation.
@@ -921,8 +1032,13 @@ class DesktopLocalCache : ICacheProvider {
     // ----- Channel operations -----
 
     override fun getAnyChannel(note: Note): Channel? {
-        // Desktop doesn't support channels yet
-        return null
+        // Only NIP-53 live channels exist on Desktop today. Resolve a 1311 chat message or a 30311
+        // stream note back to its channel; everything else has no channel.
+        return when (val event = note.event) {
+            is LiveActivitiesChatMessageEvent -> event.activityAddress()?.let { liveChatChannels.get(it.toValue()) }
+            is LiveActivitiesEvent -> liveChatChannels.get(event.address().toValue())
+            else -> null
+        }
     }
 
     // ----- Deletion tracking -----
@@ -1015,6 +1131,7 @@ class DesktopLocalCache : ICacheProvider {
         users.clear()
         notes.clear()
         addressableNotes.clear()
+        liveChatChannels.clear()
         deletedEvents.clear()
         _followedUsers.value = emptySet()
         followerCounts.clear()

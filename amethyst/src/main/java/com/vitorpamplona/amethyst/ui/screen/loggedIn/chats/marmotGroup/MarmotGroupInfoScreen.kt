@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -74,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.RenderRelayIcon
@@ -175,7 +175,7 @@ fun MarmotGroupInfoScreen(
                     // consume the scaffold insets so imePadding() unions with the nav-bar inset in
                     // `padding` instead of stacking on top of it while the keyboard is up.
                     .consumeWindowInsets(padding)
-                    .imePadding(),
+                    .imePaddingSafe(),
         ) {
             // Group header section (fixed at top)
             Column(

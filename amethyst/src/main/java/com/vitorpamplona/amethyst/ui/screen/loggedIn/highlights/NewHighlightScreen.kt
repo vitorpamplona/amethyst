@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -139,7 +139,7 @@ fun NewHighlightScreen(
                 Modifier
                     .padding(pad)
                     .consumeWindowInsets(pad)
-                    .imePadding()
+                    .imePaddingSafe()
                     .fillMaxSize(),
         ) {
             Column(

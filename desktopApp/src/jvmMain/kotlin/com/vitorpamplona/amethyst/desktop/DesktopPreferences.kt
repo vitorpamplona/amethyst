@@ -93,6 +93,31 @@ object DesktopPreferences {
             prefs.put(KEY_PINNED_NAV_ITEMS, value)
         }
 
+    private const val KEY_ENCRYPTED_MEDIA_REAL_TYPE = "encrypted_media_real_type"
+
+    // When false (default), encrypted DM file uploads declare
+    // application/octet-stream so the Blossom server can't learn the media type
+    // (image/video/voice/…). When true, they declare the real media type — less
+    // private, but works with strict servers (blossom.band, primal, …) that
+    // reject octet-stream. Off by default = privacy-preserving.
+    var encryptedMediaRealType: Boolean
+        get() = prefs.getBoolean(KEY_ENCRYPTED_MEDIA_REAL_TYPE, false)
+        set(value) = prefs.putBoolean(KEY_ENCRYPTED_MEDIA_REAL_TYPE, value)
+
+    private const val KEY_GIF_RELAYS = "gif_relays"
+
+    // Nostr-native GIF search: relays that index NIP-94 (kind 1063) GIF metadata
+    // (GIF Buddy publishes here). Its dedicated relay.gifbuddy.lol is dead (404),
+    // so default to general relays that carry these events. User-editable; merged.
+    private const val DEFAULT_GIF_RELAY = "wss://nos.lol,wss://relay.damus.io"
+
+    var gifRelays: List<String>
+        get() {
+            val raw = prefs.get(KEY_GIF_RELAYS, DEFAULT_GIF_RELAY)
+            return if (raw.isBlank()) emptyList() else raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        }
+        set(value) = prefs.put(KEY_GIF_RELAYS, value.joinToString(","))
+
     private const val KEY_SIDEBAR_COLLAPSED = "sidebar_collapsed"
 
     var sidebarCollapsed: Boolean

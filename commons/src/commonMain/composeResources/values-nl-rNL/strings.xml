@@ -21,7 +21,41 @@
     <string name="new_key_public_label">Openbare sleutel (deelbaar):</string>
     <string name="new_key_secret_label">Geheime sleutel (deel dit NOOIT!):</string>
     <string name="new_key_continue_button">Ik heb mijn sleutels bewaard, doorgaan</string>
+    <string name="new_key_saved_checkbox">Ik heb mijn sleutels op een veilige plek bewaard</string>
+    <string name="new_key_copy_encrypted_button">Versleuteld kopiëren (aanbevolen)</string>
+    <string name="new_key_encrypt_password_label">Wachtwoord voor versleutelde back-up</string>
+    <string name="new_key_step_indicator">Stap %1$d van %2$d</string>
+    <string name="new_key_next">Volgende</string>
+    <string name="new_key_back">Terug</string>
+    <string name="new_key_cancel">Annuleren</string>
+    <string name="new_key_step_intro_title">Bewaar je sleutels voordat je verdergaat</string>
+    <string name="new_key_step_intro_npub">Je openbare sleutel (npub) is je deelbare adres. Geef hem gerust aan iedereen, zodat mensen je kunnen vinden en volgen.</string>
+    <string name="new_key_step_intro_nsec">Je geheime sleutel (nsec) is een wachtwoord dat NOOIT opnieuw ingesteld kan worden. Dit is de enige keer dat hij getoond wordt — bewaar hem nu, anders verlies je voorgoed de toegang tot dit account.</string>
+    <string name="new_key_keys_title">Jouw sleutels</string>
+    <string name="new_key_confirm_title">Nog één ding</string>
+    <string name="new_key_confirm_recap">Bewaar je geheime sleutel in een wachtwoordmanager. Raak je hem kwijt, dan kan niemand hem voor je herstellen.</string>
+    <string name="new_key_readonly_info">Dit is een alleen-lezen account. Er is geen geheime sleutel aangemaakt, dus er is niets om een back-up van te maken.</string>
     <!-- Key Backup (Desktop settings) -->
+    <string name="backup_keys_title">Back-up sleutels</string>
+    <string name="backup_keys_public_label">Openbare sleutel (npub)</string>
+    <string name="backup_keys_public_help">Je openbare sleutel kun je veilig delen. Geef hem aan mensen, zodat ze je kunnen vinden en volgen.</string>
+    <string name="backup_keys_show_qr">QR tonen</string>
+    <string name="backup_keys_hide_qr">QR verbergen</string>
+    <string name="backup_keys_secret_label">Geheime sleutel (nsec)</string>
+    <string name="backup_keys_secret_warning">Je geheime sleutel is als een wachtwoord dat NOOIT opnieuw ingesteld of hersteld kan worden. Wie hem heeft, heeft voorgoed de controle over je account. Deel hem nooit; bewaar hem in een wachtwoordmanager.</string>
+    <string name="backup_keys_secret_hidden">Geheime sleutel is verborgen</string>
+    <string name="backup_keys_reveal">Geheime sleutel tonen</string>
+    <string name="backup_keys_hide">Geheime sleutel verbergen</string>
+    <string name="backup_keys_copy_plain">Geheime sleutel kopiëren</string>
+    <string name="backup_keys_copy_plain_warning">Kopieert de nsec in leesbare tekst. Plak hem alleen in een vertrouwde wachtwoordmanager.</string>
+    <string name="backup_keys_copy_encrypted">Versleuteld kopiëren (aanbevolen)</string>
+    <string name="backup_keys_encrypt_password_label">Wachtwoord voor versleutelde back-up</string>
+    <string name="backup_keys_encrypt_failed">Kon de sleutel niet versleutelen. Probeer het opnieuw.</string>
+    <string name="backup_keys_external_signer">Dit account gebruikt een externe signer — hier wordt geen geheime sleutel bewaard.</string>
+    <string name="backup_keys_copied">Gekopieerd!</string>
+    <string name="backup_keys_copy">Kopiëren</string>
+    <string name="backup_keys_unlock_title">Geheime sleutel tonen</string>
+    <string name="backup_keys_unlock_subtitle">Voer je privacyslot-wachtwoord in om je geheime sleutel te tonen.</string>
     <!-- Common Actions -->
     <string name="action_copy">Kopiëren</string>
     <string name="action_paste">Plakken</string>
@@ -60,7 +94,7 @@
     <string name="chats_history_reached_start">Begin van je %1$s berichten bereikt</string>
     <string name="chats_history_subtitle">%1$s · %2$s · geladen sinds %3$s</string>
     <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
-    <string name="chats_history_waiting">waiting on %1$s</string>
+    <string name="chats_history_waiting">wacht op %1$s</string>
     <string name="chats_history_incomplete">Sommige relays reageerden niet</string>
     <string name="chats_history_incomplete_sub">%1$s onbereikbaar · tik om te zien welke</string>
     <string name="chats_history_relays_title">%1$s · geschiedenis per relay</string>
@@ -71,7 +105,7 @@
         <item quantity="other">%1$d relays</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">replying to </string>
+    <string name="replying_to">antwoordt op </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">nSite: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>

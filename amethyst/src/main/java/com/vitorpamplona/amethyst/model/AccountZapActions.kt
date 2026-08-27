@@ -72,7 +72,15 @@ class AccountZapActions(
         lnurl: String? = null,
     ) = LnZapRequestEvent.create(
         zappedEvent = event,
-        relays = account.nip65RelayList.inboxFlow.value + (additionalRelays ?: emptySet()),
+        // Where the provider should publish the receipt. Zapping group content pins that to the room's
+        // host relay: the receipt belongs where the message it pays for lives, so the room can show it
+        // and the recipient's group query can find it — and, for a private or closed group, so a
+        // kind-9735 naming the room never lands on a relay outside it. Everything else keeps the
+        // ordinary NIP-65 inbox routing.
+        relays =
+            account.cache.relayGroupHostsFor(event).ifEmpty {
+                account.nip65RelayList.inboxFlow.value
+            } + (additionalRelays ?: emptySet()),
         signer = account.signer,
         pollOption = pollOption,
         message = message,
@@ -91,18 +99,20 @@ class AccountZapActions(
 
     suspend fun sendNwcRequest(
         request: Request,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ) {
-        val (event, relay) = account.nip47SignerState.sendNwcRequest(request, onResponse)
+        val (event, relay) = account.nip47SignerState.sendNwcRequest(request, onTimeout, onResponse)
         account.client.publish(event, setOf(relay))
     }
 
     suspend fun sendNwcRequestToWallet(
         walletUri: Nip47WalletConnect.Nip47URINorm,
         request: Request,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ): HexKey {
-        val (event, relay) = account.nip47SignerState.sendNwcRequestToWallet(walletUri, request, onResponse)
+        val (event, relay) = account.nip47SignerState.sendNwcRequestToWallet(walletUri, request, onTimeout, onResponse)
         account.client.publish(event, setOf(relay))
         return event.id
     }
@@ -119,12 +129,19 @@ class AccountZapActions(
      */
     fun cleanupNwcRequest(requestId: HexKey) = LocalCache.paymentTracker.cleanup(requestId)
 
+    /**
+     * @param onTimeout invoked when no kind-23195 reply arrives before
+     *   [NwcSignerState.NWC_RESPONSE_TIMEOUT_MS]. Pass one on any path with a user
+     *   watching: without it a response lost in transit is indistinguishable from
+     *   the action never having happened.
+     */
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
+        onTimeout: () -> Unit = {},
         onResponse: (Response?) -> Unit,
     ) {
-        val (event, relay) = account.nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
+        val (event, relay) = account.nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onTimeout, onResponse)
         account.client.publish(event, setOf(relay))
     }
 

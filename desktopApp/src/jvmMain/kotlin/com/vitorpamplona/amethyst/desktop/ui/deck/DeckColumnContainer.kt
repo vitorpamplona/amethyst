@@ -54,6 +54,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.desktop.DesktopScreen
 import com.vitorpamplona.amethyst.desktop.SettingsScreen
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
@@ -79,6 +81,7 @@ import com.vitorpamplona.amethyst.desktop.ui.SearchScreen
 import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.chats.ChatroomListState
 import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayDashboardScreen
 import com.vitorpamplona.amethyst.desktop.ui.scheduledposts.DraftsAndScheduledScreen
@@ -398,6 +401,33 @@ internal fun RootContent(
         }
 
         DeckColumnType.Messages -> {
+            // Messages state is hoisted ABOVE the lock gate so a lock/unlock
+            // cycle (which tears down the gate's content) preserves the selected
+            // conversation and the in-progress draft.
+            val listState =
+                remember(iAccount) {
+                    ChatroomListState(iAccount, localCache, relayManager, localCache, scope)
+                }
+            val selectedRoom by listState.selectedRoom.collectAsState()
+            val emojiPacks = remember(iAccount) { EmojiPackState(iAccount.signer, localCache, scope) }
+            val messageState =
+                remember(selectedRoom) {
+                    selectedRoom?.let {
+                        ChatNewMessageState(
+                            iAccount,
+                            localCache,
+                            scope,
+                            dmInboxResolver =
+                                iAccount.dmInboxResolver?.let { resolver ->
+                                    { hexKey -> resolver.resolve(hexKey) }
+                                },
+                            emojiPacks = emojiPacks,
+                        )
+                    }
+                }
+            // Pending attachments are hoisted here too so a lock/unlock cycle
+            // doesn't drop them. Keyed on the room so switching chats starts clean.
+            val attachedFiles = remember(selectedRoom) { mutableStateListOf<java.io.File>() }
             com.vitorpamplona.amethyst.desktop.security.DesktopMessagesLockGate(
                 onOpenSettings = onNavigateToRelays,
             ) {
@@ -408,6 +438,10 @@ internal fun RootContent(
                     localCache = localCache,
                     compactMode = compactMode,
                     onNavigateToProfile = onNavigateToProfile,
+                    listState = listState,
+                    emojiPacks = emojiPacks,
+                    messageState = messageState,
+                    attachedFiles = attachedFiles,
                 )
             }
         }

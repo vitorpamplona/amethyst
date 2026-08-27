@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -89,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.location.ForwardGeolocation
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.label
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
@@ -641,7 +641,7 @@ private fun PickerBottomBar(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .imePadding()
+                .imePaddingSafe()
                 .padding(16.dp),
         ) {
             Text(

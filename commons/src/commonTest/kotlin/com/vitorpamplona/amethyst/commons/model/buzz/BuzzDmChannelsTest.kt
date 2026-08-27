@@ -65,4 +65,42 @@ class BuzzDmChannelsTest {
         assertEquals(mapOf("chan-1" to relayA), BuzzDmChannels.channelsFor(alice))
         assertEquals(emptyMap(), BuzzDmChannels.channelsFor(bob))
     }
+
+    @Test
+    fun replaceDeclaresTheWholeSet() {
+        BuzzDmChannels.record(alice, "gone", relayA)
+
+        assertTrue(BuzzDmChannels.replace(alice, mapOf("kept" to relayB)))
+        assertEquals(mapOf("kept" to relayB), BuzzDmChannels.channelsFor(alice))
+    }
+
+    @Test
+    fun replaceWithTheSameSetIsANoOpAndDoesNotChurn() {
+        // Discovery recomputes from the cache on every pass, so most passes declare a set that is
+        // already current. Those must not emit — a churning flow would re-trigger every collector,
+        // which is what the incremental record/remove version did on a loop.
+        BuzzDmChannels.replace(alice, mapOf("chan-1" to relayA))
+        val before = BuzzDmChannels.flow.value
+
+        assertFalse(BuzzDmChannels.replace(alice, mapOf("chan-1" to relayA)))
+        assertTrue(before === BuzzDmChannels.flow.value, "the flow instance is unchanged on a no-op")
+    }
+
+    @Test
+    fun replaceWithAnEmptySetClearsTheViewer() {
+        BuzzDmChannels.replace(alice, mapOf("chan-1" to relayA))
+
+        assertTrue(BuzzDmChannels.replace(alice, emptyMap()))
+        assertEquals(emptyMap(), BuzzDmChannels.channelsFor(alice))
+        assertFalse(BuzzDmChannels.replace(alice, emptyMap()), "clearing an already-empty viewer is a no-op")
+    }
+
+    @Test
+    fun replaceLeavesOtherViewersAlone() {
+        BuzzDmChannels.replace(bob, mapOf("bobs" to relayA))
+        BuzzDmChannels.replace(alice, mapOf("alices" to relayB))
+
+        assertEquals(mapOf("bobs" to relayA), BuzzDmChannels.channelsFor(bob))
+        assertEquals(mapOf("alices" to relayB), BuzzDmChannels.channelsFor(alice))
+    }
 }

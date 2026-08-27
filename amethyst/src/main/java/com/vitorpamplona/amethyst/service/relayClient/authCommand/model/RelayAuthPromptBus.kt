@@ -31,7 +31,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /** What the user chose when asked whether to authenticate with a relay. */
 enum class UserAuthChoice {
-    /** Authenticate this one time; keep asking next time. */
+    /**
+     * Authenticate, and remember it for this run of the app only (see [RelayAuthSessionGrants]) —
+     * reconnects to the same relay are answered silently, and the next cold start asks again.
+     */
     ALLOW_ONCE,
 
     /** Authenticate now and remember ALLOW for this relay. */

@@ -20,14 +20,17 @@
  */
 package com.vitorpamplona.amethyst.model.torState
 
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.emitAll
@@ -35,112 +38,132 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 
+/**
+ * Pushes the relay classifications [TorRelayState] needs — which relays are DM, trusted, guessed, or
+ * money-operation relays — as a union across every logged-in account.
+ *
+ * All four are the same fold: pick one set per account, union them, publish. It used to be written
+ * out four times at ~30 lines each, and the copies had already drifted apart in trivial ways (an
+ * `if (isEmpty)` guard that could never fire, differently-named accumulators). Sharing one
+ * implementation is what keeps a fifth classification from being another 30 lines of the same
+ * thing — and, more importantly, from being 30 lines that quietly forget a step.
+ */
 class AccountsTorStateConnector(
     accountsCache: AccountCacheState,
     torEvaluatorFlow: TorRelayState,
     scope: CoroutineScope,
 ) {
-    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    val allDmRelayFlows: Flow<Set<NormalizedRelayUrl>> =
-        accountsCache.accounts
-            .debounce(200)
-            .transformLatest { snapshot ->
-                val dmFlows = snapshot.map { it.value.dmRelayList.flow }
-
-                val dmFlowReady =
-                    dmFlows.ifEmpty {
-                        listOf(MutableStateFlow(emptySet()))
-                    }
-
-                if (dmFlowReady.isEmpty()) {
-                    emit(emptySet())
-                } else {
-                    emitAll(
-                        combine(dmFlowReady) {
-                            val dmRelays = mutableSetOf<NormalizedRelayUrl>()
-                            it.forEach {
-                                dmRelays.addAll(it)
-                            }
-                            dmRelays.toSet()
-                        },
-                    )
-                }
-            }.onEach {
-                torEvaluatorFlow.dmRelays.tryEmit(it)
-            }.stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                emptySet(),
-            )
-
+    /**
+     * Union of one relay set across all logged-in accounts, republished into [TorRelayState].
+     *
+     * `debounce(200)` rides out the burst of account churn at login; `transformLatest` drops the
+     * previous fan-in when the account set changes so a logged-out account cannot keep contributing.
+     * The seed is `emptySet()` for every classification: before any account exists, nothing is
+     * classified.
+     *
+     * Takes its collaborators as parameters rather than reading constructor properties because the
+     * call sites are property initializers, where non-`val` constructor parameters are in scope but
+     * member functions cannot see them.
+     */
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-    val allTrustedRelaysFlow: Flow<Set<NormalizedRelayUrl>> =
+    private fun unionAcrossAccounts(
+        accountsCache: AccountCacheState,
+        scope: CoroutineScope,
+        select: (Account) -> Flow<Set<NormalizedRelayUrl>>,
+        publish: (Set<NormalizedRelayUrl>) -> Unit,
+    ): StateFlow<Set<NormalizedRelayUrl>> =
         accountsCache.accounts
             .debounce(200)
             .transformLatest { snapshot ->
-                val trustedRelayFlows = snapshot.map { it.value.trustedRelays.flow }
-
-                val trustedRelayFlowReady =
-                    trustedRelayFlows.ifEmpty {
-                        listOf(MutableStateFlow(emptySet()))
-                    }
-
-                if (trustedRelayFlowReady.isEmpty()) {
-                    emit(emptySet())
-                } else {
-                    emitAll(
-                        combine(trustedRelayFlowReady) {
-                            val trustedRelays = mutableSetOf<NormalizedRelayUrl>()
-                            it.forEach {
-                                trustedRelays.addAll(it)
-                            }
-                            trustedRelays.toSet()
-                        },
-                    )
-                }
-            }.onEach {
-                torEvaluatorFlow.trustedRelays.tryEmit(it)
-            }.stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                emptySet(),
-            )
-
-    // Persistent money-operation relays across all accounts: NIP-47 wallet relays and saved CLINK
-    // Debits service relays. Feeds TorRelayState.moneyOpRelays so these connections honor the
-    // money-operations Tor preference instead of being classified as generic "new" relays.
-    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-    val allMoneyOpRelaysFlow: Flow<Set<NormalizedRelayUrl>> =
-        accountsCache.accounts
-            .debounce(200)
-            .transformLatest { snapshot ->
-                val perAccountFlows =
-                    snapshot.map { (_, account) ->
-                        combine(
-                            account.settings.nwcWallets,
-                            account.settings.clinkDebitWallets,
-                        ) { nwcWallets, clinkDebitWallets ->
-                            val relays = mutableSetOf<NormalizedRelayUrl>()
-                            nwcWallets.forEach { relays.add(it.uri.relayUri) }
-                            clinkDebitWallets.forEach { relays.addAll(it.pointer.relays) }
-                            relays.toSet()
-                        }
-                    }
-
-                val ready = perAccountFlows.ifEmpty { listOf(MutableStateFlow(emptySet())) }
+                val perAccount =
+                    snapshot
+                        .map { select(it.value) }
+                        .ifEmpty { listOf(MutableStateFlow(emptySet())) }
 
                 emitAll(
-                    combine(ready) { perAccount ->
-                        val moneyOpRelays = mutableSetOf<NormalizedRelayUrl>()
-                        perAccount.forEach { moneyOpRelays.addAll(it) }
-                        moneyOpRelays.toSet()
+                    combine(perAccount) { sets ->
+                        sets.flatMapTo(mutableSetOf()) { it }
                     },
                 )
-            }.onEach {
-                torEvaluatorFlow.moneyOpRelays.tryEmit(it)
-            }.stateIn(
+            }.onEach(publish)
+            .stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 emptySet(),
             )
+
+    /** NIP-17 DM relays: these follow the dedicated DM preference, never the generic "new" one. */
+    val allDmRelayFlows: StateFlow<Set<NormalizedRelayUrl>> =
+        unionAcrossAccounts(
+            accountsCache,
+            scope,
+            select = { it.dmRelayList.flow },
+            publish = { torEvaluatorFlow.dmRelays.tryEmit(it) },
+        )
+
+    /** Everything the user actually put in one of their own relay lists. */
+    val allTrustedRelaysFlow: StateFlow<Set<NormalizedRelayUrl>> =
+        unionAcrossAccounts(
+            accountsCache,
+            scope,
+            select = { it.trustedRelays.flow },
+            publish = { torEvaluatorFlow.trustedRelays.tryEmit(it) },
+        )
+
+    /**
+     * Relays the app is *guessing* while an account's own lists are unknown. Feeds
+     * [TorRelayState.assumedRelays] and nothing else — see `AssumedRelayListsState` for why these
+     * must never reach the AUTH decision.
+     *
+     * Per account, so a second login cannot re-open the guess for an established one; each
+     * account's contribution empties itself as soon as that account's own lists land.
+     */
+    val allAssumedRelaysFlow: StateFlow<Set<NormalizedRelayUrl>> =
+        unionAcrossAccounts(
+            accountsCache,
+            scope,
+            select = { it.assumedRelays.flow },
+            publish = {
+                logHandover(it)
+                torEvaluatorFlow.assumedRelays.tryEmit(it)
+            },
+        )
+
+    /**
+     * Persistent money-operation relays: NIP-47 wallet relays and saved CLINK Debits service
+     * relays, so these connections honor the money-operations preference rather than being
+     * classified as generic "new" relays.
+     */
+    val allMoneyOpRelaysFlow: StateFlow<Set<NormalizedRelayUrl>> =
+        unionAcrossAccounts(
+            accountsCache,
+            scope,
+            select = { account ->
+                combine(
+                    account.settings.nwcWallets,
+                    account.settings.clinkDebitWallets,
+                ) { nwcWallets, clinkDebitWallets ->
+                    val relays = mutableSetOf<NormalizedRelayUrl>()
+                    nwcWallets.forEach { relays.add(it.uri.relayUri) }
+                    clinkDebitWallets.forEach { relays.addAll(it.pointer.relays) }
+                    relays.toSet()
+                }
+            },
+            publish = { torEvaluatorFlow.moneyOpRelays.tryEmit(it) },
+        )
+
+    @Volatile private var lastAssumedCount: Int = -1
+
+    /**
+     * The handover is the whole contract of the guessed-relay feature: the moment a user's own
+     * lists arrive, every relay we were guessing about goes back to the policy they actually asked
+     * for. Logged at INFO because "did it hand over, and when" is not answerable from any other
+     * line — the reconnect that follows looks identical to an ordinary one.
+     */
+    private fun logHandover(relays: Set<NormalizedRelayUrl>) {
+        if (relays.size == lastAssumedCount) return
+        val released = if (relays.isEmpty()) " (own lists arrived; released to their real Tor policy)" else ""
+        Log.i("AccountsTorState") { "Guessed relays: $lastAssumedCount -> ${relays.size}$released" }
+        lastAssumedCount = relays.size
+    }
 }
