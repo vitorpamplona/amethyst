@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -255,6 +257,11 @@ fun MinichatScreen(
             Column(modifier = EditFieldModifier) {
                 ThinPaddingTextField(
                     state = composer,
+                    onContentReceived = { uri, mimeType ->
+                        uploadState.load(persistentListOf(SelectedMedia(uri, mimeType)))
+                        // Same encryption choice the gallery button makes below.
+                        uploadState.encryptFiles = isConcord
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = EditFieldBorder,
                     placeholder = {
