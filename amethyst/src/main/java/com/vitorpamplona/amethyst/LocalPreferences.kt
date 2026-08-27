@@ -39,7 +39,6 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
@@ -876,8 +875,7 @@ object LocalPreferences {
                         }
                     val defaultFileServer =
                         async {
-                            val parsed = parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0]
-                            if (parsed.type == ServerType.Originless) ORIGINLESS_UPLOAD_TARGET else parsed
+                            parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0]
                         }
 
                     val viewedPollResultNoteIds = async { parseOrNull<Map<String, Long>>(viewedPollResultNoteIdsStr) ?: mapOf() }
