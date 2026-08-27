@@ -1511,11 +1511,6 @@ open class ShortNotePostViewModel :
         this.multiOrchestrator?.remove(selected)
     }
 
-    open fun addToMessage(it: String) {
-        message.setTextAndPlaceCursorAtEnd(message.text.toString() + " " + it)
-        onMessageChanged()
-    }
-
     override fun onMessageChanged() {
         urlPreviews.update(message.text.toString())
 

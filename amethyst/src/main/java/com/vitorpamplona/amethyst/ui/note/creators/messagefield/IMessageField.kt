@@ -21,9 +21,24 @@
 package com.vitorpamplona.amethyst.ui.note.creators.messagefield
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 
 interface IMessageField {
     val message: TextFieldState
 
     fun onMessageChanged()
+
+    /**
+     * Appends text that arrived from outside the composer to the end of the draft: a share intent
+     * dropped on the screen the user is already standing on (Microsoft's SwiftKey delivers GIFs
+     * that way) or the caption of a keyboard-inserted image.
+     *
+     * Defaulted here so every composer gets it for free — the copies that used to live in each
+     * view model drifted, and a composer that silently lacked it was how GIF replies went missing
+     * on the comment screens.
+     */
+    fun addToMessage(it: String) {
+        message.setTextAndPlaceCursorAtEnd(message.text.toString() + " " + it)
+        onMessageChanged()
+    }
 }

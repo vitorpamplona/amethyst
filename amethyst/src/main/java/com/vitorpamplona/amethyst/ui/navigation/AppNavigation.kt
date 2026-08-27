@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.ui.navigation.routes.MediaFeedRoute
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.routes.consumesSharesInPlace
 import com.vitorpamplona.amethyst.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.ui.navigation.routes.isBaseRoute
 import com.vitorpamplona.amethyst.ui.navigation.routes.isSameRoute
@@ -1196,7 +1197,7 @@ private fun NavigateIfIntentRequested(
                             ShareTarget.VIDEO -> nav.navToSharedFeed(Route.Video(attachments = attachments, message = message))
 
                             ShareTarget.NEW_POST ->
-                                if (!isBaseRoute<Route.NewShortNote>(nav.controller) && (message != null || attachment != null)) {
+                                if (!consumesSharesInPlace(nav.controller) && (message != null || attachment != null)) {
                                     nav.newStack(Route.NewShortNote(message = message, attachment = attachment))
                                 }
                         }

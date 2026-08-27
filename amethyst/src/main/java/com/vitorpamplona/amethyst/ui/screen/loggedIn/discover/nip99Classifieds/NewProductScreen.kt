@@ -219,7 +219,17 @@ private fun NewProductBody(
                     Size35dp,
                     accountViewModel = accountViewModel,
                 )
-                MessageField(R.string.description, postViewModel)
+                MessageField(
+                    R.string.description,
+                    postViewModel,
+                    onContentReceived = { uri, mimeType ->
+                        postViewModel.selectImage(
+                            persistentListOf(
+                                SelectedMedia(uri, mimeType),
+                            ),
+                        )
+                    },
+                )
             }
 
             DisplayPreviews(postViewModel.urlPreviews, accountViewModel, nav)
