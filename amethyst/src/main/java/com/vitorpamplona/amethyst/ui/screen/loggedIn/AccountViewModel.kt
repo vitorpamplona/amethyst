@@ -52,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActiviti
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningState
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.dmReportWarningFor
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
-import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
@@ -274,30 +273,17 @@ class AccountViewModel(
             MutableStateFlow(false)
         }
 
-    val callManager =
-        CallManager(
-            signer = account.signer,
-            scope = viewModelScope,
-            isFollowing = { account.isFollowing(it) },
-            publishEvent = { wrap ->
-                viewModelScope.launch {
-                    account.publishCallSignaling(wrap)
-                }
-            },
-            isCallsEnabled = { account.settings.callsEnabled.value },
-        )
+    /**
+     * The account's call state machine. Owned by [Account], not by this ViewModel: a call must
+     * survive MainActivity being destroyed while it is backgrounded. See [Account.callManager].
+     */
+    val callManager = account.callManager
 
     init {
-        // Wire the signaling event processor eagerly so incoming call
-        // events are routed to CallManager even before any CallActivity
-        // is launched. Previously this was deferred to initCallController,
-        // which could miss events if the UI hadn't mounted yet.
-        account.newNotesPreProcessor.callManager = callManager
-
         // Populate CallSessionBridge so CallActivity and background
-        // receivers can reach callManager + accountViewModel.
+        // receivers can reach callManager + account + accountViewModel.
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
-            .set(callManager, this)
+            .set(callManager, account, this)
 
         // A mined post that fails to sign or broadcast would otherwise die
         // silently — the composer already returned when it was enqueued.
@@ -2537,9 +2523,14 @@ class AccountViewModel(
 
     override fun onCleared() {
         Log.d("AccountViewModel", "onCleared")
-        callManager.dispose()
+        // Deliberately does NOT touch the call. This runs whenever MainActivity is destroyed —
+        // including while a call is up, because Android reclaims the backgrounded MainActivity
+        // (notably right after CallActivity enters picture-in-picture). Only the ViewModel
+        // reference is dropped; the call itself is account-scoped and keeps running.
+        // Real logout / account switch tears the call down via CallSessionBridge.clear(),
+        // called from AccountSessionManager alongside NestBridge.clear().
         com.vitorpamplona.amethyst.service.call.CallSessionBridge
-            .clear()
+            .clearViewModel()
         com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
             .clear()
         feedStates.destroy()

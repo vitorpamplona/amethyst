@@ -20,7 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.call
 
+import android.app.Activity
+import android.media.projection.MediaProjectionManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -74,6 +78,13 @@ fun CallScreen(
     val callState by callManager.state.collectAsState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val mediaProjectionManager = remember(context) { context.getSystemService(MediaProjectionManager::class.java) }
+    val screenShareLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                result.data?.let { callSession?.startScreenShare(it) }
+            }
+        }
     val emptyStringFlow = remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }
     val errorMessage by (callSession?.errorMessage ?: emptyStringFlow).collectAsState()
 
@@ -162,6 +173,10 @@ fun CallScreen(
                         onHangup = { scope.launch { callManager.hangup() } },
                         onToggleMute = { callSession?.toggleMute() },
                         onToggleVideo = { callSession?.toggleVideo() },
+                        onStartScreenShare = {
+                            mediaProjectionManager?.createScreenCaptureIntent()?.let(screenShareLauncher::launch)
+                        },
+                        onStopScreenShare = { callSession?.stopScreenShare() },
                         onCycleAudioRoute = { callSession?.cycleAudioRoute() },
                         onInvitePeer = { peerPubKey -> callSession?.invitePeer(peerPubKey) },
                     )
