@@ -23,13 +23,19 @@ package com.vitorpamplona.amethyst.model.nip47WalletConnect
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
 
 class NwcInfoCacheTest {
     private var clock = 1_000L
@@ -141,5 +147,111 @@ class NwcInfoCacheTest {
             assertNull(cache.current(uri("wallet1"))) // nothing fetched yet
             cache.getFresh(uri("wallet1"))
             assertNotNull(cache.current(uri("wallet1")))
+        }
+
+    // --- one fetch per wallet, however many callers ask at once ---
+
+    /**
+     * A fetch that reports when it has started and then blocks until released, so
+     * a test can put callers into a known interleaving without sleeping: caller
+     * one is provably inside the fetch before the others arrive.
+     */
+    private class GatedFetch(
+        private val result: NwcInfoEvent?,
+    ) {
+        val calls = AtomicInteger(0)
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+
+        suspend fun fetch(uri: Nip47WalletConnect.Nip47URINorm): NwcInfoEvent? {
+            calls.incrementAndGet()
+            started.complete(Unit)
+            release.await()
+            return result
+        }
+    }
+
+    @Test
+    fun `concurrent getFresh callers share one fetch`() =
+        runBlocking {
+            val fetcher = GatedFetch(info("pay_invoice"))
+            val cache = NwcInfoCache(fetch = fetcher::fetch, scope = scope, ttlSeconds = 100, now = { clock })
+
+            val results =
+                coroutineScope {
+                    val first = async(Dispatchers.IO) { cache.getFresh(uri("wallet1")) }
+                    fetcher.started.await()
+                    val rest = (1..4).map { async(Dispatchers.IO) { cache.getFresh(uri("wallet1")) } }
+                    fetcher.release.complete(Unit)
+                    (listOf(first) + rest).awaitAll()
+                }
+
+            assertEquals(1, fetcher.calls.get())
+            assertTrue(results.all { it != null })
+        }
+
+    @Test
+    fun `getFresh joins a fetch already started by refreshIfStale`() =
+        runBlocking {
+            val fetcher = GatedFetch(info("pay_invoice"))
+            val cache = NwcInfoCache(fetch = fetcher::fetch, scope = scope, ttlSeconds = 100, now = { clock })
+
+            cache.refreshIfStale(uri("wallet1"))
+            fetcher.started.await()
+
+            val joined =
+                coroutineScope {
+                    val caller = async(Dispatchers.IO) { cache.getFresh(uri("wallet1")) }
+                    fetcher.release.complete(Unit)
+                    caller.await()
+                }
+
+            assertEquals(1, fetcher.calls.get())
+            assertNotNull(joined)
+        }
+
+    // --- currentOrFetch: wait only when there is nothing cached at all ---
+
+    @Test
+    fun `currentOrFetch waits for the first fetch when nothing is cached`() =
+        runBlocking {
+            val fetcher = GatedFetch(info("pay_invoice"))
+            val cache = NwcInfoCache(fetch = fetcher::fetch, scope = scope, ttlSeconds = 100, now = { clock })
+
+            val result =
+                coroutineScope {
+                    val caller = async(Dispatchers.IO) { cache.currentOrFetch(uri("wallet1")) }
+                    fetcher.started.await()
+                    fetcher.release.complete(Unit)
+                    caller.await()
+                }
+
+            assertEquals(1, fetcher.calls.get())
+            assertNotNull("a cold cache must resolve before the caller decides on encryption", result)
+        }
+
+    @Test
+    fun `currentOrFetch returns a stale entry without waiting`() =
+        runBlocking {
+            var calls = 0
+            val cache =
+                NwcInfoCache(
+                    fetch = {
+                        calls++
+                        info("pay_invoice")
+                    },
+                    scope = scope,
+                    ttlSeconds = 100,
+                    now = { clock },
+                )
+
+            assertNotNull(cache.currentOrFetch(uri("wallet1")))
+            assertEquals(1, calls)
+
+            // Past the TTL the entry is stale, but it still answers the question it
+            // is asked (which encryption the wallet advertises), so the caller must
+            // get it back without a round-trip. The background refresh self-heals.
+            clock += 1_000
+            assertNotNull(cache.currentOrFetch(uri("wallet1")))
         }
 }

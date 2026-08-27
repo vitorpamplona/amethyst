@@ -136,17 +136,21 @@ class NwcSignerState(
     }
 
     /**
-     * Non-blocking read of the negotiated encryption preference for a wallet.
-     * NIP-47 says a client "should always prefer nip44 if supported by the wallet
-     * service". Returns true only when the cached info event advertises `nip44_v2`;
-     * otherwise NIP-04 (the legacy default). Also nudges a background refresh so a
-     * stale/expired entry self-heals for the next transaction without blocking this
-     * one.
+     * The negotiated encryption preference for a wallet. NIP-47 says a client
+     * "should always prefer nip44 if supported by the wallet service", so a false
+     * here has to mean "the wallet does not offer NIP-44" — not "we have not asked
+     * yet".
+     *
+     * That distinction is why this waits. The info cache is per-account and held in
+     * memory only, so it starts empty on every app launch, and reading it without
+     * waiting made the first transaction to each wallet after every launch fall
+     * back to NIP-04 even against a wallet advertising `nip44_v2`. Only a cold
+     * cache waits: a stale entry still says what the wallet advertises and is used
+     * as-is while it refreshes in the background.
      */
-    private fun prefersNip44(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
+    private suspend fun prefersNip44(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
         uri ?: return false
-        infoCache?.refreshIfStale(uri)
-        return infoCache?.current(uri)?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } ?: false
+        return infoCache?.currentOrFetch(uri)?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } ?: false
     }
 
     fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()
