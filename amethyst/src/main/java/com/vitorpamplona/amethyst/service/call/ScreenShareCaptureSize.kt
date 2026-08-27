@@ -47,7 +47,7 @@ internal fun screenShareCaptureSize(
     )
 }
 
-internal data class ScreenShareResources(
+data class ScreenShareResources(
     val track: VideoTrack,
     val source: VideoSource,
 )
