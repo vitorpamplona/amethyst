@@ -1995,6 +1995,9 @@
     <string name="call_camera_on">चित्रग्राहक चालू</string>
     <string name="call_camera_off">चित्रग्राहक निष्क्रिय</string>
     <string name="call_switch_camera">अन्य चित्रग्राहक</string>
+    <string name="call_screen_share_start">चित्रपटल बाँटें</string>
+    <string name="call_screen_share_stop">चित्रपटल बाँटना रोकें</string>
+    <string name="call_screen_sharing">चित्रपटल बाँटा जा रहा है</string>
     <string name="call_speaker">वक्ता</string>
     <string name="call_earpiece">कर्णयन्त्र</string>
     <string name="call_bluetooth">ब्लूटूथ</string>
@@ -2797,6 +2800,7 @@
     <string name="cashu_no_wallet_found">कोई अनुकूल काशयू धनकोष उपलब्ध नहीं यन्त्र में</string>
     <string name="error_unable_to_fetch_invoice">ग्राहक के सेवा संगणक से चालान नहीं लाया जा सका</string>
     <string name="wallet_connect_pay_invoice_error_error">आपका धनकोष संयोजन प्रदाता ने यह अपक्रम लौटाया : %1$s</string>
+    <string name="wallet_connect_unreadable_response_error">आपका धनकोष संयोजन प्रदाता ने एक उत्तर भेजा जिसे पढने में अमेथिस्ट असफल।</string>
     <string name="tor_connection_failed_title">टोर॰ संयोजन नहीं हो रहा</string>
     <string name="tor_connection_failed_body">अमेथिस्ट द्वारा टोर॰ का स्वयम उत्थापन सम्पन्न नहीं हुआ। क्या एक समान्य संयोजन (टोर॰ अतिरिक्त) का प्रयोग करें जिससे कि सूचनावली का आवहन हो सके। इस चयन का स्मरण रखा जाएगा अगले घण्टे तक तथा टोर॰ का पुनःप्रयास किया जाएगा तत्पश्चात।</string>
     <string name="tor_continue_without_for_session">सामान्य संयोजन का प्रयोग करें</string>
@@ -2926,6 +2930,15 @@
     <string name="wallet_incoming">प्राप्त</string>
     <string name="wallet_outgoing">भेजा गया</string>
     <string name="wallet_refresh">नवीकरण</string>
+    <string name="wallet_transactions_load_failed">व्यापारों का आवहन असफल</string>
+    <string name="wallet_transactions_load_more_failed">और अधिक व्यापारों का आवहन असफल</string>
+    <string name="wallet_balance_request_failed">आपका लेखाशेष का आवहन असफल</string>
+    <string name="wallet_invoice_creation_failed">चालान बनाने में असफल</string>
+    <string name="wallet_no_invoice_returned">आपका धनकोष एक चालान नहीं लौटाया</string>
+    <string name="wallet_request_timed_out">धनकोष अनुरोध समयसीमा पार</string>
+    <string name="wallet_request_failed">आपके धनकोष तक अभिगमन असफल : %1$s</string>
+    <string name="wallet_connect_unrecognized_reply">आपके धनकोष ने जो उत्तर दिया उससे अमेथिस्ट अनभिज्ञ (%1$s)</string>
+    <string name="wallet_connect_decrypt_failed">अमेथिस्ट द्वारा आपके धनकोष के उत्तर का अरहस्यीकरण असफल। सम्भाव्यतः धनकोष एक अन्य कुंचिका का उपयोग कर रहा है</string>
     <string name="wallet_filter_all">सभी</string>
     <string name="wallet_filter_zaps">ज्साप</string>
     <string name="wallet_filter_non_zaps">ज्साप अतिरिक्त</string>
@@ -4700,6 +4713,14 @@
     <plurals name="marmot_member_count">
         <item quantity="one">%1$d सदस्य</item>
         <item quantity="other">%1$d सदस्य</item>
+    </plurals>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">आपके धनकोष ने %1$d सेकण्ड के भीतर उत्तर नहीं दिया। भुगतान हो गया अथवा नहीं हुआ दोनो सम्भाव्य। धनकोष जाँचें पुनःप्रयास पूर्व।</item>
+        <item quantity="other">आपके धनकोष ने %1$d सेकण्ड के भीतर उत्तर नहीं दिया। भुगतान हो गया अथवा नहीं हुआ दोनो सम्भाव्य। धनकोष जाँचें पुनःप्रयास पूर्व।</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">धनकोष अनुरोध समयसीमा पार। %1$d उत्तर अस्वीकृत क्योंकि वह अनपेक्षित कुंचिका से हस्ताक्षरित था। आपका पुनःप्रसारक सम्भाव्यतः अविश्वसनीय।</item>
+        <item quantity="other">धनकोष अनुरोध समयसीमा पार। %1$d उत्तर अस्वीकृत क्योंकि वे अनपेक्षित कुंचिका से हस्ताक्षरित थे। आपका पुनःप्रसारक सम्भाव्यतः अविश्वसनीय।</item>
     </plurals>
     <string name="marmot_group_name">समूह नाम</string>
     <string name="marmot_group_name_placeholder">समूह नाम प्रविष्ट करें</string>

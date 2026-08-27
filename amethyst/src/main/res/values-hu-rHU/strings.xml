@@ -1996,6 +1996,9 @@
     <string name="call_camera_on">Kamera bekapcsolása</string>
     <string name="call_camera_off">Kamera kikapcsolása</string>
     <string name="call_switch_camera">Kameraváltás</string>
+    <string name="call_screen_share_start">Képernyő megosztása</string>
+    <string name="call_screen_share_stop">Képernyő megosztásának leállítása</string>
+    <string name="call_screen_sharing">Képernyő megosztása</string>
     <string name="call_speaker">Hangszóró</string>
     <string name="call_earpiece">Fülhallgató</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -2033,6 +2036,8 @@
         <item quantity="one">Kapcsolódva %1$d átjátszóhoz</item>
         <item quantity="other">Kapcsolódva %1$d átjátszóhoz</item>
     </plurals>
+    <string name="always_on_notif_show_details">Részletek megjelenítése</string>
+    <string name="always_on_notif_hide_details">Részletek elrejtése</string>
     <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
@@ -2796,6 +2801,7 @@
     <string name="cashu_no_wallet_found">A rendszeren nem található kompatibilis Cashu pénztárca</string>
     <string name="error_unable_to_fetch_invoice">Nem sikerült a számlát a kedvezményezett kiszolgálóiról lekérni</string>
     <string name="wallet_connect_pay_invoice_error_error">A Wallet Connect szolgáltatója a következő hibával tért vissza: %1$s</string>
+    <string name="wallet_connect_unreadable_response_error">A Wallet Connect-szolgáltató olyan választ küldött, amelyet az Amethyst nem tudott értelmezni.</string>
     <string name="tor_connection_failed_title">Nem sikerült kapcsolódni a Tor hálózathoz</string>
     <string name="tor_connection_failed_body">Az Amethystnek nem sikerült befejeznie a Tor előkészítését. Legyen normál (nem Tor) kapcsolat használva a hírfolyam betöltéséhez? A választás egy óráig érvényes, utána a rendszer ismételten megkísérli a Tor hálózathoz való kapcsolódást.</string>
     <string name="tor_continue_without_for_session">Normál kapcsolat használata</string>
@@ -2925,6 +2931,15 @@
     <string name="wallet_incoming">Fogadott</string>
     <string name="wallet_outgoing">Elküldött</string>
     <string name="wallet_refresh">Frissítés</string>
+    <string name="wallet_transactions_load_failed">Nem sikerült betölteni a tranzakciót</string>
+    <string name="wallet_transactions_load_more_failed">Nem sikerült betölteni további tranzakciókat</string>
+    <string name="wallet_balance_request_failed">Nem sikerült betölteni az egyenleget</string>
+    <string name="wallet_invoice_creation_failed">Nem sikerült létrehozni a számlát</string>
+    <string name="wallet_no_invoice_returned">Az Ön pénztárcája nem állított ki egy számlát</string>
+    <string name="wallet_request_timed_out">Időtúllépés tárcakéréskor</string>
+    <string name="wallet_request_failed">Nem sikerült elérni a pénztárcát: %1$s</string>
+    <string name="wallet_connect_unrecognized_reply">A pénztárca olyasmivel válaszolt, amit Amethyst nem ismer fel (%1$s)</string>
+    <string name="wallet_connect_decrypt_failed">Az Amethyst nem tudta visszafejteni a pénztárca válaszát, lehet, hogy a pénztárca másik kulcsot használ</string>
     <string name="wallet_filter_all">Összes</string>
     <string name="wallet_filter_zaps">Zapek</string>
     <string name="wallet_filter_non_zaps">Nem-zapek</string>
@@ -4699,6 +4714,14 @@
     <plurals name="marmot_member_count">
         <item quantity="one">%1$d tag</item>
         <item quantity="other">%1$d tag</item>
+    </plurals>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">A pénztárca nem válaszolt %1$d másodpercen belül. A fizetés lehet, hogy sikerült, de az is lehet, hogy nem, ellenőrizze a pénztárcát, mielőtt újrapróbálkozna.</item>
+        <item quantity="other">A pénztárca nem válaszolt %1$d másodpercen belül. A fizetés lehet, hogy sikerült, de az is lehet, hogy nem, ellenőrizze a pénztárcát, mielőtt újrapróbálkozna.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Időtúllépés tárcakéréskor, %1$d válasz vissza lett utasítva, mert nem várt kulccsal lett aláírva. Előfordulhat, hogy az Ön által használt átjátszó nem megbízható.</item>
+        <item quantity="other">Időtúllépés tárcakéréskor, %1$d válasz vissza lett utasítva, mert nem várt kulccsal lett aláírva. Előfordulhat, hogy a relé nem megbízható.</item>
     </plurals>
     <string name="marmot_group_name">Csoport neve</string>
     <string name="marmot_group_name_placeholder">Adja meg a csoport nevét</string>
