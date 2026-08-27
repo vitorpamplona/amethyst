@@ -61,4 +61,23 @@ class UrlTest {
         assertNotNull(url.fragment)
         assertEquals(443, url.port) // getPart(PORT) returns null → -1
     }
+
+    @Test
+    fun ipfsCidV0HostKeepsBase58CaseAndOmitsInventedSlash() {
+        val cid = "QmYhhHT8DtLdwm82oPhJFf4Rm9acod5KuNY53T5u3VPFJD"
+        val url = UrlDetector("ipfs://$cid").detect().single()
+        assertEquals("ipfs", url.scheme)
+        assertEquals(cid, url.host)
+        assertEquals("", url.path)
+        assertEquals("ipfs://$cid", url.fullUrl)
+    }
+
+    @Test
+    fun ipfsCidWithPathKeepsCidCase() {
+        val cid = "QmYhhHT8DtLdwm82oPhJFf4Rm9acod5KuNY53T5u3VPFJD"
+        val url = UrlDetector("ipfs://$cid/image.png").detect().single()
+        assertEquals(cid, url.host)
+        assertEquals("/image.png", url.path)
+        assertEquals("ipfs://$cid/image.png", url.fullUrl)
+    }
 }

@@ -92,4 +92,15 @@ class URIReferenceNormalizerTest {
 
         assertEquals("wss://localhost:3030/", Rfc3986.normalize("wss://localhost:3030"))
     }
+
+    @Test
+    fun ipfsCidV0IsNotLowercasedOrGivenATrailingSlash() {
+        val uri = "ipfs://QmYhhHT8DtLdwm82oPhJFf4Rm9acod5KuNY53T5u3VPFJD"
+        assertEquals(uri, Rfc3986.normalize(uri))
+        assertEquals(
+            "ipfs://QmYhhHT8DtLdwm82oPhJFf4Rm9acod5KuNY53T5u3VPFJD/image.png",
+            Rfc3986.normalize("ipfs://QmYhhHT8DtLdwm82oPhJFf4Rm9acod5KuNY53T5u3VPFJD/image.png"),
+        )
+        assertEquals("http://example.com/", Rfc3986.normalize("http://Example.COM"))
+    }
 }

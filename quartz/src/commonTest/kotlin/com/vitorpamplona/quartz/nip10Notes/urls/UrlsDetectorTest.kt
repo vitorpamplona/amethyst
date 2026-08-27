@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip10Notes.urls
 
+import com.vitorpamplona.quartz.nip01Core.tags.references.ReferenceTag
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -46,6 +47,23 @@ class UrlsDetectorTest {
         val cid = "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX"
         val detected = findURLs("Test\n\n$cid")
         assertEquals(listOf(cid), detected)
+    }
+
+    /**
+     * CIDv0 is base58btc and case-sensitive. The r tag is built from
+     * [ReferenceTag.assemble], which RFC-3986-normalizes — not from
+     * [findURLs]'s originalUrl. Assert the tag value, not only detection.
+     */
+    @Test
+    fun ipfsCidV0RTagKeepsBase58CaseAndHasNoTrailingSlash() {
+        val uri = "ipfs://QmYhhHT8DtLdwm82oPhJFf4Rm9acod5KuNY53T5u3VPFJD"
+        val detected = findURLs("Test\n\n$uri")
+        assertEquals(listOf(uri), detected)
+        val tag = ReferenceTag.assemble(detected.first())
+        assertEquals(listOf("r", uri), tag.toList())
+        val tags = ReferenceTag.assemble(detected)
+        assertEquals(1, tags.size)
+        assertEquals(listOf("r", uri), tags.first().toList())
     }
 
     /**
