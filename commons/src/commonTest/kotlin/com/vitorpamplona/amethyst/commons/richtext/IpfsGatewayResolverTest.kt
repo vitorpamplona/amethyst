@@ -96,4 +96,24 @@ class IpfsGatewayResolverTest {
         assertEquals(1, candidates.size)
         assertEquals("https://originless.gupt.app/ipfs/$cid", candidates[0])
     }
+
+    @Test
+    fun httpFetchUrlsLeavesHttpUnchanged() {
+        val url = "https://example.com/file.png"
+        assertEquals(listOf(url), IpfsGatewayResolver.httpFetchUrls(url))
+    }
+
+    @Test
+    fun httpFetchUrlsExpandsIpfsAcrossEveryConfiguredNode() {
+        val cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        IpfsGatewayResolver.currentServerBases =
+            listOf("https://originless.gupt.app", "https://originless.example")
+        assertEquals(
+            listOf(
+                "https://originless.gupt.app/ipfs/$cid",
+                "https://originless.example/ipfs/$cid",
+            ),
+            IpfsGatewayResolver.httpFetchUrls("ipfs://$cid"),
+        )
+    }
 }

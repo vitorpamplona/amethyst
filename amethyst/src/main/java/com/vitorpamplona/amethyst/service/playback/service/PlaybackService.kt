@@ -38,6 +38,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.service.okhttp.DynamicCallFactory
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
@@ -66,6 +67,10 @@ class PlaybackService : MediaSessionService() {
                 dataSourceFactory,
                 ResolvingDataSource.Resolver { dataSpec: DataSpec ->
                     val originalUri: Uri = dataSpec.uri
+                    val original = originalUri.toString()
+                    if (IpfsGatewayResolver.isIpfsUri(original)) {
+                        return@Resolver dataSpec.withUri(IpfsGatewayResolver.toHttpUrl(original).toUri())
+                    }
                     val scheme = originalUri.scheme
                     if (scheme != null && blossomServerResolver.canResolve(scheme)) {
                         val serverUrl =

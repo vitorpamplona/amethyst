@@ -86,6 +86,12 @@ object IpfsGatewayResolver {
         return list.distinct()
     }
 
+    /**
+     * HTTP URLs to try for a fetch. `ipfs://` expands to every configured
+     * Originless gateway; anything else is returned as a single-item list.
+     */
+    fun httpFetchUrls(url: String): List<String> = if (isIpfsUri(url)) getAllCandidateUrls(url) else listOf(url)
+
     private fun cidPath(ipfsUri: String): String =
         ipfsUri
             .removePrefix("ipfs://")

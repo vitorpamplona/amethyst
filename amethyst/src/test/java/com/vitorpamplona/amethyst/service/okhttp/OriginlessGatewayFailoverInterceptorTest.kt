@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessGatewayFailoverInterceptor
 import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import okhttp3.Interceptor
@@ -78,6 +79,22 @@ class OriginlessGatewayFailoverInterceptorTest {
         assertEquals(200, response.code)
         assertEquals(2, chain.requests.size)
         assertEquals("$primary/ipfs/$cid", chain.requests[0].url.toString())
+        assertEquals("$secondary/ipfs/$cid", chain.requests[1].url.toString())
+        response.close()
+    }
+
+    @Test
+    fun retriesNextOriginlessNodeOn500() {
+        val interceptor = OriginlessGatewayFailoverInterceptor { listOf(primary, secondary) }
+        val chain =
+            FakeChain(
+                "GET",
+                "$primary/ipfs/$cid",
+                codes = listOf(500, 200),
+            )
+        val response = interceptor.intercept(chain.asChain())
+        assertEquals(200, response.code)
+        assertEquals(2, chain.requests.size)
         assertEquals("$secondary/ipfs/$cid", chain.requests[1].url.toString())
         response.close()
     }
