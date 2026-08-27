@@ -37,7 +37,6 @@ import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
 import org.webrtc.MediaConstraints
 import org.webrtc.PeerConnectionFactory
-import org.webrtc.ScreenCapturerAndroid
 import org.webrtc.SurfaceTextureHelper
 import org.webrtc.VideoSource
 import org.webrtc.VideoTrack
@@ -75,7 +74,7 @@ class CallMediaManager(
 
     private var cameraCapturer: CameraVideoCapturer? = null
     private var surfaceTextureHelper: SurfaceTextureHelper? = null
-    private var screenCapturer: ScreenCapturerAndroid? = null
+    private var screenCapturer: ScreenShareCapturer? = null
     private var screenSurfaceTextureHelper: SurfaceTextureHelper? = null
     private var usingFrontCamera: Boolean = true
     private var cameraWasEnabledBeforeScreenShare = false
@@ -180,7 +179,7 @@ class CallMediaManager(
         var source: VideoSource? = null
         var track: VideoTrack? = null
         var helper: SurfaceTextureHelper? = null
-        var capturer: ScreenCapturerAndroid? = null
+        var capturer: ScreenShareCapturer? = null
 
         try {
             val createdSource = factory.createVideoSource(true)
@@ -190,7 +189,7 @@ class CallMediaManager(
             val createdHelper = SurfaceTextureHelper.create("ScreenCaptureThread", egl.eglBaseContext)
             helper = createdHelper
             val createdCapturer =
-                ScreenCapturerAndroid(
+                ScreenShareCapturer(
                     permissionData,
                     object : MediaProjection.Callback() {
                         override fun onStop() {
