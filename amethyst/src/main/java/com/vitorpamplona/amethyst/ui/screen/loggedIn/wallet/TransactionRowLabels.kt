@@ -27,14 +27,13 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionType
  * What a transaction row has to say about its counterparty, resolved away from
  * Compose so the blank-handling is a plain unit test.
  *
- * The title is a [Title] rather than a resolved string because the fallback is a
- * string resource: keeping the choice here and the lookup in the composable means
- * this can be tested without a Context.
+ * The direction label ("Received"/"Sent") is passed IN rather than looked up here,
+ * which is what keeps this Context-free while still letting it be the single place
+ * that decides what a row says.
  */
 data class TransactionRowLabels(
-    val counterpartyPubkeyHex: String?,
     val title: Title,
-    val subtitle: Subtitle?,
+    val subtitle: String?,
 ) {
     sealed interface Title {
         /** Render the counterparty's profile for this pubkey, falling back to [name]. */
@@ -46,17 +45,6 @@ data class TransactionRowLabels(
         data class Literal(
             val text: String,
         ) : Title
-
-        /** No name and no description: say "Received"/"Sent" for the direction. */
-        data object Direction : Title
-    }
-
-    sealed interface Subtitle {
-        data class Literal(
-            val text: String,
-        ) : Subtitle
-
-        data object Direction : Subtitle
     }
 
     companion object {
@@ -67,16 +55,17 @@ data class TransactionRowLabels(
          * string instead. An elvis only catches null, so the row rendered an empty
          * Text: an invisible line with the height of a real one, which is why
          * outgoing rows looked like a bare arrow and a date.
-         *
-         * NwcPaymentNotifier already did this; the transactions screen did not.
          */
-        fun resolve(tx: NwcTransaction): TransactionRowLabels {
+        fun resolve(
+            tx: NwcTransaction,
+            directionLabel: String,
+        ): TransactionRowLabels {
             val isIncoming = tx.type == NwcTransactionType.INCOMING
             val parsed = tx.parsedMetadata()
-            val description = tx.description?.ifBlank { null }
+            val description = tx.displayDescription()
 
             // Incoming: who sent it. Outgoing: who received it — on a zap request the
-            //  tag is the payee, which is what makes an outgoing row resolvable.
+            // `p` tag is the payee, which is what makes an outgoing row resolvable.
             val pubkeyHex = if (isIncoming) parsed?.senderPubkeyHex() else parsed?.recipientPubkeyHex()
             val displayName = if (isIncoming) parsed?.senderDisplayName() else parsed?.recipientIdentifier()
 
@@ -92,21 +81,13 @@ data class TransactionRowLabels(
             val isNamed = pubkeyHex != null || displayName != null
 
             val title =
-                when {
-                    pubkeyHex != null -> Title.User(pubkeyHex, displayName)
-                    displayName != null -> Title.Literal(displayName)
-                    description != null -> Title.Literal(description)
-                    else -> Title.Direction
-                }
+                pubkeyHex?.let { Title.User(it, displayName) }
+                    ?: Title.Literal(displayName ?: description ?: directionLabel)
 
-            val subtitle =
-                when {
-                    comment != null -> Subtitle.Literal(comment)
-                    isNamed -> description?.let { Subtitle.Literal(it) } ?: Subtitle.Direction
-                    else -> null
-                }
-
-            return TransactionRowLabels(pubkeyHex, title, subtitle)
+            return TransactionRowLabels(
+                title = title,
+                subtitle = comment ?: if (isNamed) description ?: directionLabel else null,
+            )
         }
     }
 }

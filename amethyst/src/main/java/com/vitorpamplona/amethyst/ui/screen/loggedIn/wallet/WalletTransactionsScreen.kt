@@ -271,11 +271,14 @@ private fun TransactionItem(
             tx.created_at?.let { formatMonthDayTime(it, context) } ?: ""
         }
 
-    val labels = remember(tx.metadata, tx.description, tx.type) { TransactionRowLabels.resolve(tx) }
-    val counterpartyPubkeyHex = labels.counterpartyPubkeyHex
-
     val directionLabel =
         if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing)
+
+    val labels =
+        remember(tx.metadata, tx.description, tx.type, directionLabel) {
+            TransactionRowLabels.resolve(tx, directionLabel)
+        }
+    val counterpartyPubkeyHex = (labels.title as? TransactionRowLabels.Title.User)?.pubkeyHex
 
     Row(
         modifier =
@@ -325,37 +328,16 @@ private fun TransactionItem(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-
-                TransactionRowLabels.Title.Direction ->
-                    Text(
-                        text = directionLabel,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
             }
 
-            when (val subtitle = labels.subtitle) {
-                is TransactionRowLabels.Subtitle.Literal ->
-                    Text(
-                        text = subtitle.text,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-
-                TransactionRowLabels.Subtitle.Direction ->
-                    Text(
-                        text = directionLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-
-                null -> {}
+            labels.subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
 
             Text(

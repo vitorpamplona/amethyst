@@ -22,21 +22,50 @@ package com.vitorpamplona.quartz.nip47WalletConnect.rpc
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 
+/**
+ * A request parameter block carrying NIP-47's optional `metadata`, whose keys
+ * NWC-06 defines.
+ *
+ * The field is `var` so a client can strip it before sending: it may only go to a
+ * wallet that advertised `06` in its info event's `extensions` tag, because a
+ * wallet that types `metadata` narrowly accepts a null but cannot decode an object
+ * and answers a params error instead of paying.
+ */
+interface MetadataCarrying {
+    var metadata: Map<String, Any?>?
+}
+
 // REQUEST OBJECTS
-abstract class Request(
+sealed class Request(
     var method: String? = null,
-) : OptimizedSerializable
+) : OptimizedSerializable {
+    /**
+     * This request's NWC-06 metadata, or null for a method that has none.
+     *
+     * Declared HERE, and overridden beside each method that carries one, so that
+     * adding a metadata-bearing method is a decision made where the method is
+     * written. The alternative — a `when` over request types in the client — needs
+     * an `else`, and an `else` silently leaks the field to a wallet that never
+     * opted in.
+     *
+     * create_connection is deliberately absent: its `metadata` names the
+     * connection and is not NWC-06's per-payment blob.
+     */
+    open val metadataCarrier: MetadataCarrying? get() = null
+}
 
 // pay_invoice
 class PayInvoiceParams(
     var invoice: String? = null,
     var amount: Long? = null,
-    var metadata: Map<String, Any?>? = null,
-)
+    override var metadata: Map<String, Any?>? = null,
+) : MetadataCarrying
 
 class PayInvoiceMethod(
     var params: PayInvoiceParams? = null,
 ) : Request(NwcMethod.PAY_INVOICE) {
+    override val metadataCarrier get() = params
+
     companion object {
         // `metadata` is NIP-47's optional per-payment blob, whose keys NWC-06 defines.
         // Only ever populate it for a wallet that advertises NWC-06 (`06` in the info
@@ -64,12 +93,14 @@ class PayParams(
     var payment: String? = null,
     var amount: Long? = null,
     var payer_note: String? = null,
-    var metadata: Map<String, Any?>? = null,
-)
+    override var metadata: Map<String, Any?>? = null,
+) : MetadataCarrying
 
 class PayMethod(
     var params: PayParams? = null,
 ) : Request(NwcMethod.PAY) {
+    override val metadataCarrier get() = params
+
     companion object {
         fun create(
             payment: String,
@@ -83,12 +114,14 @@ class PayMethod(
 class ReceiveParams(
     var amount: Long? = null,
     var description: String? = null,
-    var metadata: Map<String, Any?>? = null,
-)
+    override var metadata: Map<String, Any?>? = null,
+) : MetadataCarrying
 
 class ReceiveMethod(
     var params: ReceiveParams? = null,
 ) : Request(NwcMethod.RECEIVE) {
+    override val metadataCarrier get() = params
+
     companion object {
         fun create(
             amount: Long? = null,
@@ -124,12 +157,14 @@ class MakeInvoiceParams(
     var description: String? = null,
     var description_hash: String? = null,
     var expiry: Long? = null,
-    var metadata: Map<String, Any?>? = null,
-)
+    override var metadata: Map<String, Any?>? = null,
+) : MetadataCarrying
 
 class MakeInvoiceMethod(
     var params: MakeInvoiceParams? = null,
 ) : Request(NwcMethod.MAKE_INVOICE) {
+    override val metadataCarrier get() = params
+
     companion object {
         fun create(
             amount: Long,

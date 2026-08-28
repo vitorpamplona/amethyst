@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEve
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
@@ -167,7 +168,7 @@ class NwcSignerState(
 
     /**
      * Whether this wallet advertises NWC-06 (metadata conventions) and may therefore
-     * be sent a populated `metadata` on `pay_invoice`.
+     * be sent a populated `metadata`.
      *
      * NON-BLOCKING, and "don't know" reads as NO. Both matter: this sits on the
      * payment path, and the only cost of answering false is a history row without a
@@ -179,6 +180,29 @@ class NwcSignerState(
         uri ?: return false
         infoCache?.refreshIfStale(uri)
         return infoCache?.current(uri)?.supportsExtension(ExtensionsTag.METADATA_CONVENTIONS) == true
+    }
+
+    /**
+     * Strips NWC-06 `metadata` from a request bound for a wallet that never said it
+     * understands the field.
+     *
+     * APPLIED WHERE THE REQUEST IS BUILT rather than at each call site, because the
+     * cost of forgetting is a refused payment: a wallet that types `metadata`
+     * narrowly accepts a null but cannot decode an object, and answers a params
+     * error instead of paying. Every send path funnels through here, so populating
+     * `metadata` anywhere upstream is safe by construction.
+     *
+     * MUTATES the request in place — see the callers' KDoc. Requests are built per
+     * send and not reused, and stripping a copy would mean rebuilding a params
+     * object whose field list would then drift from the original.
+     *
+     * A method with no metadata returns before the info cache is consulted, so this
+     * costs nothing on the RPCs that can never carry any.
+     */
+    private fun Request.dropMetadataIfUnsupported(walletService: Nip47WalletConnect.Nip47URINorm) {
+        val carrier = metadataCarrier ?: return
+        if (carrier.metadata == null || supportsMetadata(walletService)) return
+        carrier.metadata = null
     }
 
     fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()
@@ -242,6 +266,10 @@ class NwcSignerState(
 
     /**
      * Sends a generic NIP-47 request to a specific wallet.
+     *
+     * [request] MAY BE MUTATED: NWC-06 `metadata` is stripped in place when the
+     * wallet has not advertised support for it. Build a fresh request per send
+     * rather than retaining or re-reading this one.
      */
     suspend fun sendNwcRequestToWallet(
         walletUri: Nip47WalletConnect.Nip47URINorm?,
@@ -251,6 +279,8 @@ class NwcSignerState(
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = walletUri ?: throw IllegalArgumentException("No NIP47 setup")
         val walletSigner = buildSigner(walletService) ?: signer
+
+        request.dropMetadataIfUnsupported(walletService)
 
         val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner, useNip44 = prefersNip44(walletService))
 
@@ -283,6 +313,9 @@ class NwcSignerState(
 
     /**
      * Sends a zap payment request to the default wallet.
+     *
+     * [metadata] is NWC-06's per-payment blob and is dropped unless the wallet
+     * advertises `06`; see [dropMetadataIfUnsupported].
      */
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
@@ -293,14 +326,15 @@ class NwcSignerState(
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = defaultWalletUri.value ?: throw IllegalArgumentException("No NIP47 setup")
 
-        // Only forwarded when the wallet advertises NWC-06; see [supportsMetadata].
+        val request = PayInvoiceMethod.create(bolt11, metadata)
+        request.dropMetadataIfUnsupported(walletService)
+
         val event =
-            LnZapPaymentRequestEvent.create(
-                bolt11,
+            LnZapPaymentRequestEvent.createRequest(
+                request,
                 walletService.pubKeyHex,
                 nip47Signer.value,
                 useNip44 = prefersNip44(walletService),
-                metadata = metadata?.takeIf { supportsMetadata(walletService) },
             )
 
         val filter =

@@ -38,28 +38,27 @@ class TransactionRowLabelsTest {
      */
     @Test
     fun anEmptyDescriptionFallsBackToTheDirection() {
-        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = ""))
+        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = ""), "Sent")
 
-        assertEquals(TransactionRowLabels.Title.Direction, labels.title)
+        assertEquals(TransactionRowLabels.Title.Literal("Sent"), labels.title)
         assertNull(labels.subtitle)
-        assertNull(labels.counterpartyPubkeyHex)
     }
 
     @Test
     fun aWhitespaceDescriptionIsTreatedTheSameWay() {
-        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = "   "))
-        assertEquals(TransactionRowLabels.Title.Direction, labels.title)
+        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = "   "), "Sent")
+        assertEquals(TransactionRowLabels.Title.Literal("Sent"), labels.title)
     }
 
     @Test
     fun anAbsentDescriptionStillFallsBack() {
-        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = null))
-        assertEquals(TransactionRowLabels.Title.Direction, labels.title)
+        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = null), "Sent")
+        assertEquals(TransactionRowLabels.Title.Literal("Sent"), labels.title)
     }
 
     @Test
     fun aRealDescriptionIsTheTitle() {
-        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = "Coffee"))
+        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = "Coffee"), "Sent")
         assertEquals(TransactionRowLabels.Title.Literal("Coffee"), labels.title)
         assertNull(labels.subtitle)
     }
@@ -83,11 +82,11 @@ class TransactionRowLabelsTest {
                                 ),
                         ),
                 ),
+                "Sent",
             )
 
-        assertEquals(recipientHex, labels.counterpartyPubkeyHex)
         assertEquals(TransactionRowLabels.Title.User(recipientHex, "user@domain.com"), labels.title)
-        assertEquals(TransactionRowLabels.Subtitle.Literal("great post"), labels.subtitle)
+        assertEquals("great post", labels.subtitle)
     }
 
     /** With no zap request, the lightning address alone still labels the row. */
@@ -100,12 +99,12 @@ class TransactionRowLabelsTest {
                     description = "",
                     metadata = mapOf("recipient_data" to mapOf("identifier" to "user@domain.com")),
                 ),
+                "Sent",
             )
 
-        assertNull(labels.counterpartyPubkeyHex)
         assertEquals(TransactionRowLabels.Title.Literal("user@domain.com"), labels.title)
         // Named but undescribed: the second line says what the row was.
-        assertEquals(TransactionRowLabels.Subtitle.Direction, labels.subtitle)
+        assertEquals("Sent", labels.subtitle)
     }
 
     /** Incoming rows keep working off the payer, which is what they did before. */
@@ -118,11 +117,11 @@ class TransactionRowLabelsTest {
                     description = "Test",
                     metadata = mapOf("nostr" to mapOf("pubkey" to recipientHex, "content" to "Test")),
                 ),
+                "Received",
             )
 
-        assertEquals(recipientHex, labels.counterpartyPubkeyHex)
         assertTrue(labels.title is TransactionRowLabels.Title.User)
         // The comment merely repeats the description, so it is not shown twice.
-        assertEquals(TransactionRowLabels.Subtitle.Literal("Test"), labels.subtitle)
+        assertEquals("Test", labels.subtitle)
     }
 }

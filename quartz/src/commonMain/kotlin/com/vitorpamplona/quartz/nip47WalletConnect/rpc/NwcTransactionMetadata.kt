@@ -126,11 +126,11 @@ class NwcTransactionMetadata(
          */
         const val MAX_METADATA_CHARS = 4096
 
-        // Upper bounds on the punctuation each part adds once serialized. Deliberately
-        // generous: overshooting drops `nostr` on a payment that would just have fit,
-        // while undershooting sends an object the wallet must throw away.
-        private const val LEAN_KEY_OVERHEAD = 64
-        private const val NOSTR_KEY_OVERHEAD = 16
+        // Slack for the keys and punctuation around the values once serialized —
+        // `{"recipient_data":{"identifier":""},"comment":"","nostr":}` is ~56 chars.
+        // Deliberately generous: overshooting drops `nostr` on a payment that would
+        // just have fit, undershooting sends an object the wallet must throw away.
+        private const val KEY_OVERHEAD = 96
 
         /**
          * Assembles NWC-06 `metadata` for an outgoing payment, or null when there is
@@ -162,22 +162,17 @@ class NwcTransactionMetadata(
             comment?.ifBlank { null }?.let { lean["comment"] = it }
 
             if (zapRequest != null) {
-                val leanChars = lean.values.sumOf { estimateChars(it) } + LEAN_KEY_OVERHEAD
-                val nostrChars = zapRequest.toJson().length + NOSTR_KEY_OVERHEAD
-                if (leanChars + nostrChars <= MAX_METADATA_CHARS) {
+                // toJson() is the exact serialized length of the `nostr` sub-object.
+                val chars =
+                    recipientIdentifier.orEmpty().length + comment.orEmpty().length +
+                        zapRequest.toJson().length + KEY_OVERHEAD
+                if (chars <= MAX_METADATA_CHARS) {
                     lean["nostr"] = zapRequestFields(zapRequest)
                 }
             }
 
             return lean.ifEmpty { null }
         }
-
-        private fun estimateChars(value: Any?): Int =
-            when (value) {
-                is String -> value.length
-                is Map<*, *> -> value.values.sumOf { estimateChars(it) } + LEAN_KEY_OVERHEAD
-                else -> 0
-            }
 
         private fun zapRequestFields(event: Event): Map<String, Any?> =
             mapOf(
