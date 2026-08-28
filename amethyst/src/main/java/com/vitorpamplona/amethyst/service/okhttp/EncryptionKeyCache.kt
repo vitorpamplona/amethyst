@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import android.util.LruCache
+import androidx.collection.LruCache
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 
 /**
@@ -32,13 +32,17 @@ import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
  * by the caller via [addForMediaUrl]; lookups here stay exact.
  */
 class EncryptionKeyCache {
+    // androidx.collection, not android.util: the latter is a no-op stub under
+    // unitTests.isReturnDefaultValues = true.
     val cache = LruCache<String, DecryptInformation>(100)
 
     fun add(
         url: String?,
         decryptInformation: DecryptInformation,
     ) {
-        if (url != null) {
+        if (url == null) return
+        // First write wins: a later add must not clobber an existing cipher for this URL.
+        if (cache.get(url) == null) {
             cache.put(url, decryptInformation)
         }
     }
