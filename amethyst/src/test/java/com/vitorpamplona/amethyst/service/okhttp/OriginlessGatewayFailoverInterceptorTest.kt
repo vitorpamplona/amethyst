@@ -27,7 +27,10 @@ import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
+import okhttp3.ResponseBody.Companion.asResponseBody
+import okio.Buffer
+import okio.Source
+import okio.buffer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -137,6 +140,7 @@ class OriginlessGatewayFailoverInterceptorTest {
                 .method(method, if (method == "POST") ByteArray(0).toRequestBody(null) else null)
                 .build()
         val requests = mutableListOf<Request>()
+        private var lastBody: ClosingSource? = null
 
         fun asChain(): Interceptor.Chain =
             Proxy.newProxyInstance(
@@ -146,23 +150,47 @@ class OriginlessGatewayFailoverInterceptorTest {
                 when (method.name) {
                     "request" -> request
                     "proceed" -> {
+                        // Mirror OkHttp's real invariant. RealCall refuses a new request while a
+                        // previous response is still open, and a fake that hands back canned
+                        // responses without this check will happily walk a path that crashes at
+                        // runtime -- which is exactly what happened here.
+                        val stillOpen = lastBody
+                        if (stillOpen != null && !stillOpen.closed) {
+                            throw IllegalStateException(
+                                "cannot make a new request because the previous response is still open: please call response.close()",
+                            )
+                        }
                         val proceeded = args[0] as Request
                         requests.add(proceeded)
                         if (failFirst && requests.size == 1) {
                             throw IOException("unreachable")
                         }
                         val code = codes.getOrElse(requests.size - 1) { codes.last() }
+                        val tracked = ClosingSource(Buffer().writeUtf8("body"))
+                        lastBody = tracked
                         Response
                             .Builder()
                             .request(proceeded)
                             .protocol(Protocol.HTTP_1_1)
                             .code(code)
                             .message("msg")
-                            .body("".toResponseBody(null))
+                            .body(tracked.buffer().asResponseBody(null, 4))
                             .build()
                     }
                     else -> throw UnsupportedOperationException(method.name)
                 }
             } as Interceptor.Chain
+    }
+
+    /** Okio source that records whether the consumer closed it. */
+    private class ClosingSource(
+        private val delegate: Source,
+    ) : Source by delegate {
+        var closed = false
+
+        override fun close() {
+            closed = true
+            delegate.close()
+        }
     }
 }
