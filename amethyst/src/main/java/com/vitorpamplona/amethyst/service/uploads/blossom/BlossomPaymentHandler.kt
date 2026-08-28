@@ -153,8 +153,9 @@ object BlossomPaymentHandler {
 
         val check = checkAmount(payment, shownSats)
         if (check !is AmountCheck.Ok) {
-            Log.w("BlossomPayment") { "refusing invoice: ${refusalReason(check)}" }
-            return PayResult.Refused(refusalReason(check))
+            val reason = refusalReason(check)
+            Log.w("BlossomPayment") { "refusing invoice: $reason" }
+            return PayResult.Refused(reason)
         }
 
         // Never send the same invoice twice: an earlier attempt may still settle.

@@ -223,16 +223,15 @@ class BootRelayDiagnostics(
         }
 
         Log.d(TAG) { "===== boot census @${atSeconds}s =====" }
-        Log.i(
-            TAG,
+        Log.i(TAG) {
             "census @${atSeconds}s pool=${snapshot.size} opened=${opened.size} served_events=${served.size} never_opened=${neverOpened.size} " +
                 "dials=${snapshot.values.sumOf { it.tentatives.get() }} " +
                 "events=${snapshot.values.sumOf { it.events.get() }} " +
                 "reqs=${snapshot.values.sumOf { it.reqsSent.get() }} " +
-                "auths=${snapshot.values.sumOf { it.authsSent.get() }}",
-        )
-        Log.i(TAG) { "census @${atSeconds}s failures_by_cause=" + causeTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" } }
-        Log.i(TAG) { "census @${atSeconds}s closed_by_prefix=" + closedTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" } }
+                "auths=${snapshot.values.sumOf { it.authsSent.get() }}"
+        }
+        Log.i(TAG) { "census @${atSeconds}s failures_by_cause=${causeTotals.byCountDesc()}" }
+        Log.i(TAG) { "census @${atSeconds}s closed_by_prefix=${closedTotals.byCountDesc()}" }
 
         // Relays that cost us dials and gave nothing back, worst first: the wasted-effort list.
         Log.d(TAG, "--- top wasted dials (no events received) ---")
@@ -242,13 +241,12 @@ class BootRelayDiagnostics(
             .sortedByDescending { it.value.tentatives.get() }
             .take(25)
             .forEach { (url, r) ->
-                Log.d(
-                    TAG,
+                Log.d(TAG) {
                     "WASTE ${url.url} dials=${r.tentatives.get()} opens=${r.opens.get()} " +
                         "fail=[${r.failures.entries.joinToString { "${it.key}:${it.value.get()}" }}] " +
                         "closed=[${r.closed.entries.joinToString { "${it.key}:${it.value.get()}" }}] " +
-                        "reqs=${r.reqsSent.get()} eose=${r.eoses.get()}",
-                )
+                        "reqs=${r.reqsSent.get()} eose=${r.eoses.get()}"
+                }
             }
 
         // The relays actually carrying the boot, so a suppression change can be checked for
@@ -258,12 +256,14 @@ class BootRelayDiagnostics(
             .sortedByDescending { it.value.events.get() }
             .take(20)
             .forEach { (url, r) ->
-                Log.d(
-                    TAG,
+                Log.d(TAG) {
                     "SERVE ${url.url} events=${r.events.get()} reqs=${r.reqsSent.get()} eose=${r.eoses.get()} " +
-                        "openMs=${r.firstOpenAtMs.get()} eoseMs=${r.firstEoseAtMs.get()} dials=${r.tentatives.get()}",
-                )
+                        "openMs=${r.firstOpenAtMs.get()} eoseMs=${r.firstEoseAtMs.get()} dials=${r.tentatives.get()}"
+                }
             }
         Log.d(TAG) { "===== end census @${atSeconds}s =====" }
     }
 }
+
+/** Buckets rendered highest-count first — the shape both census summary lines want. */
+private fun Map<String, Int>.byCountDesc() = entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" }

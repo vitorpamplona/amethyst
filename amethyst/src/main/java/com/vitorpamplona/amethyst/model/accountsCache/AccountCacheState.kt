@@ -114,7 +114,7 @@ class AccountCacheState(
                 loadAccount(accountSettings)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Log.w("AccountCacheState", "Failed to preload account ${savedAccount.npub}: ${e.message}", e)
+                Log.w("AccountCacheState", "Failed to preload account ${savedAccount.npub}", e)
             }
         }
     }
@@ -285,7 +285,7 @@ class AccountCacheState(
                     Dispatchers.IO +
                         SupervisorJob() +
                         CoroutineExceptionHandler { _, throwable ->
-                            Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception: ${throwable.message}", throwable)
+                            Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception", throwable)
                         },
                 ),
             mlsGroupStateStore = mlsStore,

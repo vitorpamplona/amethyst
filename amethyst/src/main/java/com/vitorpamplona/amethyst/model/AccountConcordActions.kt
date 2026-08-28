@@ -1521,11 +1521,10 @@ class AccountConcordActions(
         val events = account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 30_000L)
         val newest = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
         val entryCount = newest?.let { runCatching { it.decrypt(account.signer).size }.getOrElse { -1 } } ?: 0
-        Log.d(
-            "Concord",
+        Log.d("Concord") {
             "importConcordCommunities: queried ${relays.size} relays, fetched ${events.size} 13302 event(s), " +
-                "newest=${newest?.id?.take(8)}@${newest?.createdAt}, decoded $entryCount entr${if (entryCount == 1) "y" else "ies"}",
-        )
+                "newest=${newest?.id?.take(8)}@${newest?.createdAt}, decoded $entryCount entr${if (entryCount == 1) "y" else "ies"}"
+        }
         newest?.let { account.cache.justConsumeMyOwnEvent(it) }
     }
 
