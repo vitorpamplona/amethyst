@@ -49,7 +49,7 @@ class OkHttpLnurlEndpointResolver(
 ) : LnurlEndpointResolver {
     private val mapper = jacksonObjectMapper()
 
-    override suspend fun resolve(lnurlpUrl: String): LnurlEndpointInfo? = LnurlEndpointCache.getOrFetch(lnurlpUrl) { fetch(it) }
+    override suspend fun resolve(lnurlpUrl: String): LnurlEndpointInfo? = LnurlEndpointCache.getOrFetch(lnurlpUrl, ::fetch)
 
     private suspend fun fetch(url: String): LnurlEndpointInfo? =
         withContext(Dispatchers.IO) {

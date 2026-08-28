@@ -97,7 +97,24 @@ class OkHttpLnurlEndpointResolverTest {
     @Test
     fun `a burst of callers makes one http request`() =
         runBlocking {
-            val results = burst(20)
+            // The gate matters: the claim under test is that these callers were all
+            // in flight together, and a straggler arriving after the first response
+            // landed would legitimately issue a second request.
+            val client = OkHttpClient.Builder().addInterceptor(interceptor).build()
+            val resolver = OkHttpLnurlEndpointResolver { client }
+            val gate = CompletableDeferred<Unit>()
+            val results =
+                coroutineScope {
+                    val callers =
+                        (0 until 20).map {
+                            async(Dispatchers.IO) {
+                                gate.await()
+                                resolver.resolve(URL)
+                            }
+                        }
+                    gate.complete(Unit)
+                    callers.awaitAll()
+                }
 
             assertEquals(1, interceptor.calls.get(), "20 concurrent callers must share one request")
             assertNotNull(results.first(), "the shared fetch resolved")

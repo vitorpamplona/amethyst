@@ -100,10 +100,10 @@ object LnurlEndpointCache {
         try {
             info = fetch(url)?.also { cache.put(key, it) }
         } finally {
-            // Populate the cache before releasing the flight, so a caller arriving
-            // in between reads the result instead of starting a second fetch.
-            // Both calls are non-suspending, so this still runs — and still
-            // unblocks the awaiters — if we are cancelled mid-fetch.
+            // The cache is populated before the flight is released, so a caller
+            // arriving in between reads the result instead of starting a second
+            // fetch. Non-suspending, so awaiters are released even if the fetch is
+            // cancelled.
             inFlight.remove(key, ours)
             ours.complete(info)
         }
