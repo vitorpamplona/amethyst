@@ -22,9 +22,10 @@ package com.vitorpamplona.quartz.experimental.trustedLists.addressables
 
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.tags.AddressMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 
-fun TagArray.members() = mapNotNull(AddressMemberTag::parse)
+fun TagArray.members() = fastMapNotNullDense(AddressMemberTag::parse)
 
 /**
  * The optional relay-filterable discovery tags: what this list is *about*,

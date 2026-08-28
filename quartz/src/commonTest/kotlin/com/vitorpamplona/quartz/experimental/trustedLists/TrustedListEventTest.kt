@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.experimental.trustedLists.addressables.tags.Addr
 import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.events.tags.EventMemberTag
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.tags.ExternalIdMemberTag
 import com.vitorpamplona.quartz.experimental.trustedLists.tags.ListStatus
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMemberTag
@@ -452,6 +453,75 @@ class TrustedListEventTest {
     }
 
     @Test
+    fun theScoreScaleRunsFromZeroToOneHundredInclusive() {
+        // both bounds are real scores, not sentinels: 0 is "scored, and the
+        // publisher has no confidence in this member", which is not the same
+        // state as an unscored member
+        val event =
+            EventFactory.create<Event>(
+                id = "00".repeat(32),
+                pubKey = "a68dbf561cfe3da1b76f1e65c7d4d9cc116f79921b38a815fd75cb5460b4b599",
+                createdAt = 1_787_253_028L,
+                kind = UserTrustedListEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("d", "tl"),
+                        arrayOf("p", member, "", "0"),
+                        arrayOf("p", "ba2f394833658475e91680b898f9be0f1d850166c6a839dbe084d0266ad6e20a", "", "100"),
+                        arrayOf("p", "19fefd7f39c96d2ff76f87f7627ae79145bc971d8ab23205005939a5a913bc2f", "wss://nos.lol/"),
+                    ),
+                content = "",
+                sig = dummySig,
+            )
+        assertIs<UserTrustedListEvent>(event)
+
+        assertEquals(listOf(0, 100, null), event.members().map { it.score })
+    }
+
+    @Test
+    fun aScoreOffTheZeroToOneHundredScaleIsDroppedRatherThanClamped() {
+        // a publisher counting on some other scale (0..1, 0..1000, a raw
+        // endorsement tally) is telling us a quantity this field cannot carry.
+        // Pinning it to the nearest bound would turn that unknown into a
+        // confident one -- 950 read as 100 outranks every honestly-scored peer
+        val event =
+            EventFactory.create<Event>(
+                id = "00".repeat(32),
+                pubKey = "a68dbf561cfe3da1b76f1e65c7d4d9cc116f79921b38a815fd75cb5460b4b599",
+                createdAt = 1_787_253_028L,
+                kind = UserTrustedListEvent.KIND,
+                tags =
+                    arrayOf(
+                        arrayOf("d", "tl"),
+                        arrayOf("p", member, "", "950"),
+                        arrayOf("p", "ba2f394833658475e91680b898f9be0f1d850166c6a839dbe084d0266ad6e20a", "", "-1"),
+                        arrayOf("p", "19fefd7f39c96d2ff76f87f7627ae79145bc971d8ab23205005939a5a913bc2f", "", "0.87"),
+                    ),
+                content = "",
+                sig = dummySig,
+            )
+        assertIs<UserTrustedListEvent>(event)
+
+        assertEquals(listOf(null, null, null), event.members().map { it.score }, "an unreadable score leaves the member unscored")
+        // the membership itself is untouched -- an unreadable score is not an
+        // unreadable member
+        assertEquals(3, event.memberCount())
+        assertEquals(member, event.memberValues().first())
+    }
+
+    @Test
+    fun theScoreRangeHoldsOnEveryMemberType() {
+        assertNull(EventMemberTag.parse(arrayOf("e", "f00dcafe" + "0".repeat(56), "", "101"))?.score)
+        assertEquals(100, EventMemberTag.parse(arrayOf("e", "f00dcafe" + "0".repeat(56), "", "100"))?.score)
+        assertNull(AddressMemberTag.parse(arrayOf("a", "39999:$tagAuthor:podcaster", "", "101"))?.score)
+        assertEquals(100, AddressMemberTag.parse(arrayOf("a", "39999:$tagAuthor:podcaster", "", "100"))?.score)
+        assertNull(ExternalIdMemberTag.parse(arrayOf("i", "podcast:guid:c90e609a", "", "101"))?.score)
+        assertEquals(100, ExternalIdMemberTag.parse(arrayOf("i", "podcast:guid:c90e609a", "", "100"))?.score)
+        assertNull(PubKeyMemberTag.parse(arrayOf("p", member, "", "101"))?.score)
+        assertEquals(100, PubKeyMemberTag.parse(arrayOf("p", member, "", "100"))?.score)
+    }
+
+    @Test
     fun memberTagsRoundTripThroughTheirWireShape() {
         assertEquals(
             listOf("p", "b83a28b7e4e5d20bd960c5faeb6625f95529166b8bdb045d42634a2f35919450", "", "99"),
@@ -469,5 +539,20 @@ class TrustedListEventTest {
             listOf("a", "39999:$tagAuthor:podcaster"),
             AddressMemberTag("39999:$tagAuthor:podcaster").toTagArray().toList(),
         )
+    }
+
+    @Test
+    fun assemblingClampsSoWeNeverEmitAScoreWeWouldRefuseToRead() {
+        assertEquals(
+            listOf("p", member, "", "100"),
+            PubKeyMemberTag(member, score = 950).toTagArray().toList(),
+        )
+        assertEquals(
+            listOf("p", member, "", "0"),
+            PubKeyMemberTag(member, score = -1).toTagArray().toList(),
+        )
+        // and the round trip closes: what we write, we read back unchanged
+        assertEquals(100, PubKeyMemberTag.parse(PubKeyMemberTag(member, score = 950).toTagArray())?.score)
+        assertEquals(0, PubKeyMemberTag.parse(PubKeyMemberTag(member, score = -1).toTagArray())?.score)
     }
 }

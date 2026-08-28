@@ -36,6 +36,9 @@ import com.vitorpamplona.quartz.utils.ensure
  * An addressable-event member of a kind-30394 Trusted List:
  * `["a", <kind:pubkey:d>, <relay-hint>, <score>]`.
  *
+ * The score is a 0..100 percentage at index 3, after the relay hint; see
+ * [MemberTagFields.SCORE_RANGE].
+ *
  * A-coordinate members belong on 30394 and never on 30393: publishing them on
  * the event-id kind would tell a conformant reader "these are event ids" when
  * they are coordinates, breaking kind-keyed dispatch.
@@ -102,7 +105,7 @@ data class AddressMemberTag(
             address: String,
             relayHint: NormalizedRelayUrl?,
             score: Int?,
-        ) = arrayOfNotNull(TAG_NAME, address, relayHint?.url, score?.toString())
+        ) = arrayOfNotNull(TAG_NAME, address, relayHint?.url, MemberTagFields.encodeScore(score))
 
         fun assemble(member: AddressMemberTag) = assemble(member.address, member.relayHint, member.score)
 

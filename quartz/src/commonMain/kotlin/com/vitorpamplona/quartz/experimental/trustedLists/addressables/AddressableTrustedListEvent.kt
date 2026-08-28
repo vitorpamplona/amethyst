@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.experimental.trustedLists.addressables.tags.Addr
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -58,7 +59,7 @@ class AddressableTrustedListEvent(
 
     override fun addressHints() = tags.mapNotNull(AddressMemberTag::parseAsHint)
 
-    override fun linkedAddressIds() = tags.mapNotNull(AddressMemberTag::parseAddressId)
+    override fun linkedAddressIds() = tags.fastMapNotNullDense(AddressMemberTag::parseAddressId)
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 

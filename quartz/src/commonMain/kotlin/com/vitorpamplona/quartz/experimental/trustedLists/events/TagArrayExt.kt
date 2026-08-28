@@ -22,10 +22,11 @@ package com.vitorpamplona.quartz.experimental.trustedLists.events
 
 import com.vitorpamplona.quartz.experimental.trustedLists.events.tags.EventMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 
-fun TagArray.members() = mapNotNull(EventMemberTag::parse)
+fun TagArray.members() = fastMapNotNullDense(EventMemberTag::parse)
 
 /**
  * The optional relay-filterable discovery tags: what this list is *about*,

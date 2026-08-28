@@ -34,7 +34,8 @@ import com.vitorpamplona.quartz.utils.ensure
  * `["i", <i-tag>, <url-hint>, <score>]`.
  *
  * Index 2 is NIP-73's URL hint rather than a relay hint, so these members
- * carry no relay information for the hint indexer.
+ * carry no relay information for the hint indexer. Index 3 is the same 0..100
+ * score the rest of the family carries; see [MemberTagFields.SCORE_RANGE].
  */
 @Immutable
 data class ExternalIdMemberTag(
@@ -75,7 +76,7 @@ data class ExternalIdMemberTag(
             externalId: String,
             hint: String?,
             score: Int?,
-        ) = arrayOfNotNull(TAG_NAME, externalId, hint, score?.toString())
+        ) = arrayOfNotNull(TAG_NAME, externalId, hint, MemberTagFields.encodeScore(score))
 
         fun assemble(member: ExternalIdMemberTag) = assemble(member.externalId, member.hint, member.score)
 

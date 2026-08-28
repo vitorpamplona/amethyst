@@ -33,6 +33,16 @@ object MemberTagFields {
     const val SCORE_INDEX = 3
 
     /**
+     * The score is a percentage of the publisher's confidence in the member,
+     * so it is only meaningful on a fixed scale: **0 to 100 inclusive**. The
+     * range is what lets a consumer compare members across two publishers, or
+     * across two metrics of the same publisher, without knowing either
+     * computation -- a bare number with a publisher-chosen ceiling could not
+     * be compared at all.
+     */
+    val SCORE_RANGE = 0..100
+
+    /**
      * Index 2 only counts as a relay hint when it actually looks like one.
      * Publishers pad it with an empty string when they carry a score but no
      * hint, and neighbouring conventions put a petname there -- while the
@@ -49,5 +59,22 @@ object MemberTagFields {
     /** The raw hint, for member types whose hint is not a relay url (NIP-73). */
     fun hint(tag: Tag): String? = tag.getOrNull(HINT_INDEX)?.takeIf { it.isNotEmpty() }
 
-    fun score(tag: Tag): Int? = tag.getOrNull(SCORE_INDEX)?.toIntOrNull()
+    /**
+     * The score at index 3, when it is one this scale can express.
+     *
+     * A number outside [SCORE_RANGE] is dropped rather than clamped: it is a
+     * publisher counting on some other scale (0..1, 0..1000, a raw endorsement
+     * tally), and pinning it to the nearest bound would turn an unknown
+     * quantity into a confident one -- a 950 read as 100 ranks that member
+     * above every honestly-scored peer. The member itself still stands; it is
+     * simply unscored, which is the same state as a tag that carries no score.
+     */
+    fun score(tag: Tag): Int? = tag.getOrNull(SCORE_INDEX)?.toIntOrNull()?.takeIf { it in SCORE_RANGE }
+
+    /**
+     * The score as it goes on the wire, clamped into [SCORE_RANGE] so that we
+     * never emit a value our own [score] would refuse to read. Null stays null:
+     * an unscored member pads nothing and the tag simply ends at the hint.
+     */
+    fun encodeScore(score: Int?): String? = score?.coerceIn(SCORE_RANGE)?.toString()
 }

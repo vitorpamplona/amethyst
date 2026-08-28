@@ -22,9 +22,10 @@ package com.vitorpamplona.quartz.experimental.trustedLists.users
 
 import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 
-fun TagArray.members() = mapNotNull(PubKeyMemberTag::parse)
+fun TagArray.members() = fastMapNotNullDense(PubKeyMemberTag::parse)
 
 /**
  * The optional relay-filterable discovery tags: what this list is *about*,

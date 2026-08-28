@@ -66,6 +66,11 @@ data class TrustedListContentMember(
     val i: String? = null,
     val endorsements: Int? = null,
     val disputes: Int? = null,
+    /**
+     * The same 0..100 percentage the member tag carries at index 3. The echo is
+     * the publisher's own JSON, so it is taken as written -- the tag is the
+     * authoritative copy, and the one whose range this library enforces.
+     */
     val score: Int? = null,
 ) {
     /**

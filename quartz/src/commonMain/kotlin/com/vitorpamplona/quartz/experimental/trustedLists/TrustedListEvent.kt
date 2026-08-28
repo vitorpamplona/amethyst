@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
@@ -102,7 +103,7 @@ abstract class TrustedListEvent(
      * do not need the hints and scores never pay to build the member objects --
      * these lists run to thousands of entries.
      */
-    fun memberValues(): List<String> = tags.mapNotNull { memberValueOf(it) }
+    fun memberValues(): List<String> = tags.fastMapNotNullDense { memberValueOf(it) }
 
     fun memberCount(): Int = tags.count { isMemberTag(it) }
 
