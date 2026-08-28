@@ -3,6 +3,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    alias(libs.plugins.jetbrainsComposeCompiler)
+    alias(libs.plugins.composeMultiplatform)
 }
 
 // ============================================================================
@@ -92,6 +94,7 @@ abstract class GenerateAndroidResourceTable : DefaultTask() {
 
         writeRClass(stringIds, pluralIds, drawableIds)
         writeTables(perQualifierStrings, perQualifierPlurals, stringIds, pluralIds)
+        copyDrawables(res, drawableIds)
 
         logger.lifecycle(
             "generateAndroidResourceTable: ${stringNames.size} strings, ${pluralNames.size} plurals, " +
@@ -161,14 +164,79 @@ abstract class GenerateAndroidResourceTable : DefaultTask() {
             .replace("\r", "\\r")
 
     private fun collectDrawableNames(res: File): List<String> =
-        res
-            .listFiles { f -> f.isDirectory && (f.name == "drawable" || f.name.startsWith("drawable-")) }
-            .orEmpty()
+        drawableDirs(res)
             .flatMap { dir -> dir.listFiles()?.toList().orEmpty() }
             .filter { it.isFile }
             .map { it.name.substringBefore('.') }
             .distinct()
             .sorted()
+
+    private fun drawableDirs(res: File): List<File> =
+        res
+            .listFiles { f -> f.isDirectory && (f.name == "drawable" || f.name.startsWith("drawable-")) }
+            .orEmpty()
+            .toList()
+
+    /**
+     * Density buckets exist because Android picks one at install time; the JVM
+     * has a single artifact and scales at draw time, so take the largest raster
+     * available and let Skia downscale. Vectors are density-independent already.
+     *
+     * `-night` is kept as a separate variant so the JVM can honour dark theme
+     * the way Android's resource qualifier does.
+     */
+    private val densityPreference =
+        listOf("xxxhdpi", "xxhdpi", "xhdpi", "hdpi", "mdpi", "ldpi", "nodpi", "anydpi", "tvdpi")
+
+    private fun copyDrawables(
+        res: File,
+        drawableIds: Map<String, Int>,
+    ) {
+        val outRoot = File(resourceOutputDir.get().asFile, "$TABLE_DIR/drawable")
+        outRoot.mkdirs()
+        val index = StringBuilder()
+
+        drawableIds.forEach { (name, id) ->
+            listOf(false, true).forEach { night ->
+                val source = pickDrawableFile(res, name, night) ?: return@forEach
+                val variant = if (night) "night" else "default"
+                val fileName = "$variant-$name.${source.extension}"
+                source.copyTo(File(outRoot, fileName), overwrite = true)
+                index.append(id).append('\t').append(variant).append('\t').append(fileName).append('\n')
+            }
+        }
+        File(resourceOutputDir.get().asFile, "$TABLE_DIR/drawables.tsv").writeText(index.toString())
+    }
+
+    private fun pickDrawableFile(
+        res: File,
+        name: String,
+        night: Boolean,
+    ): File? {
+        val dirs = drawableDirs(res)
+        fun qualifiers(dir: File) = dir.name.removePrefix("drawable").removePrefix("-").split('-').filter { it.isNotEmpty() }
+        val candidates =
+            dirs.filter { dir ->
+                val q = qualifiers(dir)
+                if (night) "night" in q else "night" !in q
+            }
+        // Vectors first (resolution independent), then the densest raster.
+        val ordered =
+            candidates.sortedWith(
+                compareBy(
+                    { if (qualifiers(it).isEmpty()) 0 else 1 },
+                    {
+                        val idx = qualifiers(it).firstNotNullOfOrNull { q -> densityPreference.indexOf(q).takeIf { i -> i >= 0 } }
+                        idx ?: densityPreference.size
+                    },
+                ),
+            )
+        val xml = ordered.firstNotNullOfOrNull { dir -> File(dir, "$name.xml").takeIf { it.isFile } }
+        if (xml != null) return xml
+        return ordered.firstNotNullOfOrNull { dir ->
+            dir.listFiles { f -> f.isFile && f.name.substringBefore('.') == name }?.firstOrNull()
+        }
+    }
 
     private class ParsedStrings(
         val strings: Map<String, String>,
@@ -305,6 +373,16 @@ kotlin {
         // Compiled into BOTH the Android and the JVM target. Code here may
         // reference `android.*` types: they resolve from android.jar on Android
         // and from :androidStubs on the JVM. See :androidStubs/README.md.
+        commonMain {
+            dependencies {
+                implementation(libs.jetbrains.compose.runtime)
+                implementation(libs.jetbrains.compose.ui)
+                implementation(libs.jetbrains.compose.foundation)
+                implementation(libs.jetbrains.compose.material3)
+                implementation(libs.androidx.collection)
+            }
+        }
+
         val jvmAndroid =
             create("jvmAndroid") {
                 dependsOn(commonMain.get())
@@ -315,6 +393,12 @@ kotlin {
 
         androidMain {
             dependsOn(jvmAndroid)
+            dependencies {
+                implementation(libs.androidx.ui)
+                // stringResource / painterResource actuals read Android resources;
+                // LifecycleResumeEffect drives the locale-change cache eviction.
+                implementation(libs.androidx.lifecycle.runtime.compose)
+            }
         }
 
         jvmMain {
@@ -327,6 +411,7 @@ kotlin {
                 // Android selects plurals with its bundled `android.icu`, so
                 // using ICU here keeps the two platforms behaviourally identical.
                 implementation(libs.icu4j)
+                implementation(compose.desktop.currentOs)
             }
         }
 

@@ -18,12 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.shared
+package com.vitorpamplona.amethyst.ui
 
-import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import java.util.Locale
 
-/**
- * Phase 0 probe: proves a single source file in `jvmAndroid` can reference an
- * `android.*` type and compile for BOTH the Android and the JVM target.
- */
-fun probePackageName(context: Context): String = context.packageName
+@Composable
+actual fun platformStringResource(id: Int): String = stringResource(id)
+
+@Composable
+actual fun platformPainterResource(id: Int): Painter = painterResource(id)
+
+@Composable
+actual fun currentLocale(): Locale = LocalConfiguration.current.locales.get(0)
+
+@Composable
+actual fun PlatformStringResSetup() {
+    val config = LocalConfiguration.current
+    if (!config.locales.isEmpty) {
+        val language = config.locales.get(0).language
+        LifecycleResumeEffect(language) {
+            checkLanguage(language)
+
+            onPauseOrDispose { }
+        }
+    }
+}

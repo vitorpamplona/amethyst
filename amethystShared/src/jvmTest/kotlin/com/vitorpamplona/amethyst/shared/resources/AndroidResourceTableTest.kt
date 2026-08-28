@@ -112,7 +112,11 @@ class AndroidResourceTableTest {
     fun `every default string id resolves`() {
         // Guards the id space: R fields and table rows are generated from the
         // same pass, so a mismatch here means the generator drifted.
-        val fields = R.string::class.java.declaredFields.filter { it.type == Int::class.javaPrimitiveType }
+        // Skip the synthetic `$stable` the Compose compiler plugin adds.
+        val fields =
+            R.string::class.java.declaredFields.filter {
+                it.type == Int::class.javaPrimitiveType && !it.isSynthetic && !it.name.startsWith("$")
+            }
         assertEquals(4404, fields.size)
         val unresolved =
             fields.filter { field ->
