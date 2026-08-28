@@ -37,9 +37,7 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
-import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
@@ -198,12 +196,6 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
-    /**
-     * When true, compose uploads go to Originless (`ipfs://`) and Blossom/NIP-96
-     * targets are hidden from the picker. `ipfs://` fetches always use the
-     * kind-10062 Originless server list, even when this is false.
-     */
-    val originlessUploadsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
     var stripLocationOnUpload: Boolean = true,
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -692,18 +684,6 @@ class AccountSettings(
     fun changeDefaultFileServer(server: ServerName) {
         if (defaultFileServer != server) {
             defaultFileServer = server
-            saveAccountSettings()
-        }
-    }
-
-    fun changeOriginlessUploadsEnabled(enabled: Boolean) {
-        if (originlessUploadsEnabled.value != enabled) {
-            originlessUploadsEnabled.tryEmit(enabled)
-            if (enabled) {
-                defaultFileServer = ORIGINLESS_UPLOAD_TARGET
-            } else if (defaultFileServer.type == ServerType.Originless) {
-                defaultFileServer = DEFAULT_MEDIA_SERVERS[0]
-            }
             saveAccountSettings()
         }
     }

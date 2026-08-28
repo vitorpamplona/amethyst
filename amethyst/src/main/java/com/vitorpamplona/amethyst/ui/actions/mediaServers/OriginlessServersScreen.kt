@@ -34,7 +34,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -118,8 +117,6 @@ private fun OriginlessServersBody(
 ) {
     val originlessServersState by originlessServersViewModel.fileServers.collectAsStateWithLifecycle()
     val originlessHealthState by originlessServersViewModel.health.collectAsStateWithLifecycle()
-    val uploadsEnabled by accountViewModel.account.settings.originlessUploadsEnabled
-        .collectAsStateWithLifecycle()
     val optimize by accountViewModel.account.settings.optimizeMediaOnUpload
         .collectAsStateWithLifecycle()
 
@@ -160,24 +157,11 @@ private fun OriginlessServersBody(
                         .background(MaterialTheme.colorScheme.surfaceContainer),
             ) {
                 UploadToggleRow(
-                    title = stringRes(id = R.string.originless_uploads_switch),
-                    caption = stringRes(id = R.string.originless_uploads_switch_caption),
-                    checked = uploadsEnabled,
-                    enabled = originlessServersState.isNotEmpty() || uploadsEnabled,
-                    onCheckedChange = { accountViewModel.account.settings.changeOriginlessUploadsEnabled(it) },
+                    title = stringRes(id = R.string.blossom_optimize_media),
+                    caption = stringRes(id = R.string.originless_media_caption),
+                    checked = optimize,
+                    onCheckedChange = { accountViewModel.account.settings.changeOptimizeMediaOnUpload(it) },
                 )
-                if (uploadsEnabled) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 14.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
-                    UploadToggleRow(
-                        title = stringRes(id = R.string.blossom_optimize_media),
-                        caption = stringRes(id = R.string.originless_media_caption),
-                        checked = optimize,
-                        onCheckedChange = { accountViewModel.account.settings.changeOptimizeMediaOnUpload(it) },
-                    )
-                }
             }
         }
 

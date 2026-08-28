@@ -164,6 +164,8 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
@@ -3630,8 +3632,13 @@ class Account(
 
     suspend fun sendOriginlessServersList(servers: List<String>) {
         sendMyPublicAndPrivateOutbox(originlessServers.saveServerList(servers))
-        if (servers.isEmpty() && settings.originlessUploadsEnabled.value) {
-            settings.changeOriginlessUploadsEnabled(false)
+        if (servers.isEmpty() && settings.defaultFileServer.type == ServerType.Originless) {
+            // Removing the last node takes the fan-out target out of the picker, so a saved
+            // Originless default would be left pointing at nothing to upload to.
+            settings.changeDefaultFileServer(
+                uploadServers.hostNameFlow.value.firstOrNull { it.type != ServerType.Originless }
+                    ?: DEFAULT_MEDIA_SERVERS[0],
+            )
         }
     }
 

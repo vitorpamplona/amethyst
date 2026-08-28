@@ -42,9 +42,11 @@ import kotlinx.coroutines.flow.stateIn
  * kind-10062 Originless node list. Originless never writes public `server`
  * tags; the encrypted event is the only source of those URLs.
  *
- * When Originless uploads are on, the picker is a single [ORIGINLESS_UPLOAD_TARGET]
- * (fan-out to every configured node). When off, the picker is Blossom/NIP-96 only.
- * `ipfs://` fetches still use the Originless node list regardless of this switch.
+ * Configuring at least one Originless node adds [ORIGINLESS_UPLOAD_TARGET] to the
+ * picker alongside Blossom/NIP-96 rather than replacing them, so a user who keeps
+ * both picks per upload. Blossom stays the default: `ipfs://` is not resolvable by
+ * clients without an Originless node list, so pinning there is an explicit choice.
+ * `ipfs://` fetches use the node list either way.
  */
 class UploadServerListState(
     val blossomServers: BlossomServerListState,
@@ -55,42 +57,40 @@ class UploadServerListState(
     fun mergeServerList(
         blossom: List<String>?,
         originlessUrls: List<String> = originlessServers.flow.value,
-        originlessUploadsEnabled: Boolean = settings.originlessUploadsEnabled.value,
-    ): List<ServerName> = mergeUploadServerList(blossom, originlessUrls, originlessUploadsEnabled, blossomServers::host)
+    ): List<ServerName> = mergeUploadServerList(blossom, originlessUrls, blossomServers::host)
 
     val hostNameFlow: StateFlow<List<ServerName>> =
-        combine(blossomServers.flow, originlessServers.flow, settings.originlessUploadsEnabled) { blossoms, originlessUrls, enabled ->
-            mergeServerList(blossoms, originlessUrls, enabled)
+        combine(blossomServers.flow, originlessServers.flow) { blossoms, originlessUrls ->
+            mergeServerList(blossoms, originlessUrls)
         }.onStart {
-            emit(mergeServerList(blossomServers.flow.value, originlessServers.flow.value, settings.originlessUploadsEnabled.value))
+            emit(mergeServerList(blossomServers.flow.value, originlessServers.flow.value))
         }.onEach { servers ->
-            resetTargetOrNull(blossomServers.flow.value, servers, settings.defaultFileServer, settings.originlessUploadsEnabled.value)?.let {
+            resetTargetOrNull(blossomServers.flow.value, servers, settings.defaultFileServer)?.let {
                 settings.changeDefaultFileServer(it)
             }
         }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                mergeServerList(emptyList(), originlessServers.flow.value, settings.originlessUploadsEnabled.value),
+                mergeServerList(emptyList(), originlessServers.flow.value),
             )
 }
 
 /**
- * Upload picker contents. Originless uploads replace Blossom/NIP-96 entirely
- * so `ipfs://` pinning is optional; `ipfs://` fetches still use the Originless
- * node list regardless of this switch.
+ * Upload picker contents: the user's Blossom/NIP-96 servers, plus a single
+ * [ORIGINLESS_UPLOAD_TARGET] (fan-out to every node) once any Originless node is
+ * configured. Neither hides the other; `ipfs://` fetches use the node list no matter
+ * what is picked here.
  */
 fun mergeUploadServerList(
     blossom: List<String>?,
     originlessUrls: List<String>,
-    originlessUploadsEnabled: Boolean,
     host: (String) -> String,
 ): List<ServerName> {
-    if (originlessUploadsEnabled) {
-        return if (originlessUrls.isEmpty()) emptyList() else listOf(ORIGINLESS_UPLOAD_TARGET)
-    }
-    return blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS }
-        ?: DEFAULT_MEDIA_SERVERS
+    val blossoms =
+        blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS }
+            ?: DEFAULT_MEDIA_SERVERS
+    return if (originlessUrls.isEmpty()) blossoms else blossoms + ORIGINLESS_UPLOAD_TARGET
 }
 
 /**
@@ -105,26 +105,25 @@ fun mergeUploadServerList(
  * real, loaded list is in hand and it no longer contains the current pick (e.g. the user removed
  * it from their list).
  *
- * Originless nodes come from kind 10062, not kind 10063. When the Originless
- * upload switch is on, the default must be [ORIGINLESS_UPLOAD_TARGET]. When the
- * switch is off, an Originless default is snapped back to Blossom — Blossom
- * state itself never sees [ServerType.Originless].
+ * An Originless pick is left alone here, for the same reason: kind 10062 loads on its own
+ * schedule, so an empty node list is indistinguishable from "not loaded yet". Emptying the list is
+ * a deliberate act, so the snap back to Blossom lives there instead --
+ * [com.vitorpamplona.amethyst.model.Account.sendOriginlessServersList]. A legacy per-node pick is
+ * still migrated onto the fan-out target once the list is in hand.
+ *
+ * A reset never lands on Originless: `ipfs://` uploads stay an explicit choice.
  */
 fun resetTargetOrNull(
     rawList: List<String>,
     merged: List<ServerName>,
     current: ServerName,
-    originlessUploadsEnabled: Boolean = false,
 ): ServerName? {
-    if (originlessUploadsEnabled) {
-        val target = merged.firstOrNull { it.type == ServerType.Originless }
-        return if (current == target) null else target
-    }
     if (current.type == ServerType.Originless) {
-        return merged.firstOrNull { it.type != ServerType.Originless } ?: DEFAULT_MEDIA_SERVERS[0]
+        val target = merged.firstOrNull { it.type == ServerType.Originless }
+        return if (target == null || target == current) null else target
     }
     return if (rawList.isNotEmpty() && merged.none { it == current }) {
-        merged.firstOrNull { it.type != ServerType.Originless } ?: merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
+        merged.firstOrNull { it.type != ServerType.Originless } ?: DEFAULT_MEDIA_SERVERS[0]
     } else {
         null
     }
