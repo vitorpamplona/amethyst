@@ -5279,4 +5279,9 @@
     <string name="buzz_persona_avatar">Avatar URL (optional)</string>
     <string name="buzz_persona_publishing">Publishing…</string>
     <string name="buzz_persona_publish">Publish persona</string>
+
+    <!-- Profile card (kind-0 rendered in the feed) -->
+    <string name="profile_card_followers">%1$s followers</string>
+    <string name="profile_card_follows_you">Follows you</string>
+    <string name="profile_card_bot">Bot</string>
 </resources>
