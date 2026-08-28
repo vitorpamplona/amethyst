@@ -285,6 +285,7 @@ import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
@@ -3725,6 +3726,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
                 is BadgeDefinitionEvent,
                 is BlockedRelayListEvent,
                 is BlossomServersEvent,
+                is OriginlessServersEvent,
                 is NestsServersEvent,
                 is BroadcastRelayListEvent,
                 is BookmarkListEvent,
