@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.interestSet.InterestSetEvent
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
@@ -67,6 +68,7 @@ val AccountInfoAndListsFromKeyKinds =
         SearchRelayListEvent.KIND,
         FileServersEvent.KIND,
         BlossomServersEvent.KIND,
+        OriginlessServersEvent.KIND,
         NestsServersEvent.KIND,
         PrivateOutboxRelayListEvent.KIND,
     )

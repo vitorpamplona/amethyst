@@ -206,7 +206,7 @@ class UploadOrchestrator {
         context: Context,
     ): UploadingFinalState {
         updateState(0.2, UploadingState.Uploading)
-        val targets = OriginlessUrls.uploadTargets(account.settings.originlessServerUrls.value)
+        val targets = OriginlessUrls.uploadTargets(account.originlessServers.flow.value)
         // Default POST /upload (original bytes). POST /media only when the user
         // opted into server-side EXIF strip / compact on the Originless page.
         val useMedia = account.settings.optimizeMediaOnUpload.value

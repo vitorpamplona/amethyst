@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
-import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.HomeFeedType
@@ -64,6 +63,7 @@ import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFee
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
@@ -117,6 +117,7 @@ private object PrefKeys {
     const val ORIGINLESS_SERVER_URL = "originlessServerUrl"
     const val ORIGINLESS_SERVER_URLS = "originlessServerUrls"
     const val ORIGINLESS_UPLOADS_ENABLED = "originlessUploadsEnabled"
+    const val LATEST_ORIGINLESS_SERVERS = "latestOriginlessServers"
     const val STRIP_LOCATION_ON_UPLOAD = "stripLocationOnUpload"
     const val USE_LOCAL_BLOSSOM_CACHE = "useLocalBlossomCache"
     const val LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY = "localBlossomCacheProfilePicturesOnly"
@@ -515,8 +516,10 @@ object LocalPreferences {
                         PrefKeys.DEFAULT_FILE_SERVER,
                         JsonMapper.toJson(settings.defaultFileServer),
                     )
-                    putString(PrefKeys.ORIGINLESS_SERVER_URLS, JsonMapper.toJson(settings.originlessServerUrls.value))
+                    remove(PrefKeys.ORIGINLESS_SERVER_URLS)
+                    remove(PrefKeys.ORIGINLESS_SERVER_URL)
                     putBoolean(PrefKeys.ORIGINLESS_UPLOADS_ENABLED, settings.originlessUploadsEnabled.value)
+                    putOrRemove(PrefKeys.LATEST_ORIGINLESS_SERVERS, settings.backupOriginlessServersList)
 
                     putBoolean(PrefKeys.STRIP_LOCATION_ON_UPLOAD, settings.stripLocationOnUpload)
                     putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
@@ -971,7 +974,6 @@ object LocalPreferences {
                         externalSignerPackageName = externalSignerPackageName,
                         localRelayServers = MutableStateFlow(localRelayServers),
                         defaultFileServer = defaultFileServerResolved,
-                        originlessServerUrls = MutableStateFlow(originlessPrefs.serverUrls),
                         originlessUploadsEnabled = MutableStateFlow(originlessPrefs.resolveUploadsEnabled(defaultFileServerResolved)),
                         stripLocationOnUpload = stripLocationOnUpload,
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
@@ -1046,6 +1048,7 @@ object LocalPreferences {
                         backupIndexRelayList = latestIndexRelayListResolved,
                         backupRelayFeedsList = latestRelayFeedsListResolved,
                         backupBlockedRelayList = latestBlockedRelayListResolved,
+                        backupOriginlessServersList = originlessPrefs.backupEvent,
                         backupTrustedRelayList = latestTrustedRelayListResolved,
                         backupPrivateHomeRelayList = latestPrivateHomeRelayListResolved,
                         backupMuteList = latestMuteListResolved,
@@ -1098,27 +1101,19 @@ object LocalPreferences {
     }
 
     private data class OriginlessPrefs(
-        val serverUrls: List<String>,
         val uploadsEnabledStored: Boolean,
         val uploadsEnabledRaw: Boolean,
+        val backupEvent: OriginlessServersEvent?,
     ) {
         fun resolveUploadsEnabled(defaultFileServer: ServerName): Boolean = if (uploadsEnabledStored) uploadsEnabledRaw else defaultFileServer.type == ServerType.Originless
     }
 
     private fun SharedPreferences.readOriginlessPrefs(): OriginlessPrefs {
-        val listStr = getString(PrefKeys.ORIGINLESS_SERVER_URLS, null)
-        val legacyUrl = getString(PrefKeys.ORIGINLESS_SERVER_URL, null)
-        val parsedList = parseOrNull<List<String>>(listStr)
-        val urls =
-            when {
-                parsedList != null -> OriginlessUrls.normalizeList(parsedList)
-                !legacyUrl.isNullOrBlank() -> listOf(OriginlessUrls.normalizeBase(legacyUrl))
-                else -> emptyList()
-            }
+        val backupStr = getString(PrefKeys.LATEST_ORIGINLESS_SERVERS, null)
         return OriginlessPrefs(
-            serverUrls = urls,
             uploadsEnabledStored = contains(PrefKeys.ORIGINLESS_UPLOADS_ENABLED),
             uploadsEnabledRaw = getBoolean(PrefKeys.ORIGINLESS_UPLOADS_ENABLED, false),
+            backupEvent = parseEventOrNull<OriginlessServersEvent>(backupStr),
         )
     }
 

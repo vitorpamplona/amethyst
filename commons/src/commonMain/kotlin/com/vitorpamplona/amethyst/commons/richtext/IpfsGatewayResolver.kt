@@ -26,9 +26,9 @@ import kotlin.concurrent.Volatile
 object IpfsGatewayResolver {
     /**
      * Live Originless node list for singleton Coil/OkHttp. Bound once from the
-     * session manager to the current account's `originlessServerUrls` flow.
-     * Empty means the user has not opted into any Originless node: `ipfs://`
-     * is left as-is and is not rewritten through a third-party gateway.
+     * session manager to the current account's kind-10062 Originless server
+     * list. Empty means the user has not opted into any Originless node:
+     * `ipfs://` is left as-is and is not rewritten through a third-party gateway.
      */
     @Volatile
     var serverBasesProvider: () -> List<String> = { emptyList() }

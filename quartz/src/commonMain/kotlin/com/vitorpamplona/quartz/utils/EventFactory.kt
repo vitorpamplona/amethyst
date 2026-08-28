@@ -253,6 +253,7 @@ import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkLi
 import com.vitorpamplona.quartz.nip51Lists.mediaFollowList.MediaFollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaStarterPack.MediaStarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
@@ -531,6 +532,7 @@ class EventFactory {
                 BidConfirmationEvent.KIND -> BidConfirmationEvent(id, pubKey, createdAt, tags, content, sig)
                 BlockedRelayListEvent.KIND -> BlockedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
                 BlossomServersEvent.KIND -> BlossomServersEvent(id, pubKey, createdAt, tags, content, sig)
+                OriginlessServersEvent.KIND -> OriginlessServersEvent(id, pubKey, createdAt, tags, content, sig)
                 NestsServersEvent.KIND -> NestsServersEvent(id, pubKey, createdAt, tags, content, sig)
                 BlossomAuthorizationEvent.KIND -> BlossomAuthorizationEvent(id, pubKey, createdAt, tags, content, sig)
                 BroadcastRelayListEvent.KIND -> BroadcastRelayListEvent(id, pubKey, createdAt, tags, content, sig)

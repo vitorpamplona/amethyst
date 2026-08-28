@@ -143,7 +143,7 @@ object HlsBlobUploaderFactory {
                 size = totalBytes,
                 alt = null,
                 sensitiveContent = null,
-                serverBaseUrls = OriginlessUrls.uploadTargets(account.settings.originlessServerUrls.value),
+                serverBaseUrls = OriginlessUrls.uploadTargets(account.originlessServers.flow.value),
                 okHttpClient = ::okHttpClientForHlsUploads,
                 onProgress = { percentage ->
                     val written =

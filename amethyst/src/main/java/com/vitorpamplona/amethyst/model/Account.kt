@@ -121,6 +121,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
+import com.vitorpamplona.amethyst.model.nip51Lists.originlessServers.OriginlessServersDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.originlessServers.OriginlessServersListState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
@@ -601,6 +603,9 @@ class Account(
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
 
+    val originlessServersDecryptionCache = OriginlessServersDecryptionCache(signer)
+    val originlessServers = OriginlessServersListState(signer, cache, originlessServersDecryptionCache, scope, settings)
+
     val kind3FollowList = Kind3FollowListState(signer, cache, scope, settings)
 
     val ephemeralChatListDecryptionCache = EphemeralChatListDecryptionCache(signer)
@@ -759,7 +764,7 @@ class Account(
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
 
     val blossomServers = BlossomServerListState(signer, cache, scope)
-    val uploadServers = UploadServerListState(blossomServers, settings, scope)
+    val uploadServers = UploadServerListState(blossomServers, originlessServers, settings, scope)
 
     val nestsServers =
         com.vitorpamplona.amethyst.model.nip53NestsServers
@@ -3561,6 +3566,7 @@ class Account(
             bookmarkState.getBookmarkList(),
             pinState.getPinList(),
             blossomServers.getBlossomServersList(),
+            originlessServers.getOriginlessServersList(),
             nestsServers.getNestsServersList(),
             paymentTargetsState.getPaymentTargetsEvent(),
             trustProviderList.getTrustProviderList(),
@@ -3621,6 +3627,13 @@ class Account(
     }
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
+
+    suspend fun sendOriginlessServersList(servers: List<String>) {
+        sendMyPublicAndPrivateOutbox(originlessServers.saveServerList(servers))
+        if (servers.isEmpty() && settings.originlessUploadsEnabled.value) {
+            settings.changeOriginlessUploadsEnabled(false)
+        }
+    }
 
     suspend fun sendNestsServersList(servers: List<com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
 

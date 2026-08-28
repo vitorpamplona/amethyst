@@ -69,7 +69,7 @@ object DefaultFileServerUploader {
                     size = size,
                     alt = alt,
                     sensitiveContent = sensitiveContent,
-                    serverBaseUrls = OriginlessUrls.uploadTargets(account.settings.originlessServerUrls.value),
+                    serverBaseUrls = OriginlessUrls.uploadTargets(account.originlessServers.flow.value),
                     okHttpClient = okHttpClient,
                     onProgress = onProgress,
                     context = context,

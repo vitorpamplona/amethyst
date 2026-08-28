@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewM
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
-import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
@@ -67,6 +66,7 @@ import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFee
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
@@ -199,17 +199,9 @@ class AccountSettings(
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
     /**
-     * Local Originless node URLs (NIP-96-simple: `POST /upload` or `POST /media`,
-     * `GET /ipfs/{cid}`). Not a kind-10063 list. Uploads pin to every entry;
-     * there is no default upload or fetch node. `ipfs://` fetches try each
-     * configured gateway until one succeeds. An empty list means `ipfs://`
-     * is not rewritten to HTTP.
-     */
-    val originlessServerUrls: MutableStateFlow<List<String>> = MutableStateFlow(emptyList()),
-    /**
      * When true, compose uploads go to Originless (`ipfs://`) and Blossom/NIP-96
-     * targets are hidden from the picker. `ipfs://` fetches always use
-     * [originlessServerUrls], even when this is false.
+     * targets are hidden from the picker. `ipfs://` fetches always use the
+     * kind-10062 Originless server list, even when this is false.
      */
     val originlessUploadsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
     var stripLocationOnUpload: Boolean = true,
@@ -310,6 +302,7 @@ class AccountSettings(
     var backupIndexRelayList: IndexerRelayListEvent? = null,
     var backupRelayFeedsList: RelayFeedsListEvent? = null,
     var backupBlockedRelayList: BlockedRelayListEvent? = null,
+    var backupOriginlessServersList: OriginlessServersEvent? = null,
     var backupTrustedRelayList: TrustedRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
@@ -703,27 +696,7 @@ class AccountSettings(
         }
     }
 
-    fun changeOriginlessServerUrls(urls: List<String>) {
-        val normalized = OriginlessUrls.normalizeList(urls)
-        if (originlessServerUrls.value != normalized) {
-            originlessServerUrls.tryEmit(normalized)
-            if (normalized.isEmpty() && originlessUploadsEnabled.value) {
-                originlessUploadsEnabled.tryEmit(false)
-                defaultFileServer = DEFAULT_MEDIA_SERVERS[0]
-            } else if (defaultFileServer.type == ServerType.Originless) {
-                defaultFileServer =
-                    if (normalized.isEmpty()) {
-                        DEFAULT_MEDIA_SERVERS[0]
-                    } else {
-                        ORIGINLESS_UPLOAD_TARGET
-                    }
-            }
-            saveAccountSettings()
-        }
-    }
-
     fun changeOriginlessUploadsEnabled(enabled: Boolean) {
-        if (enabled && originlessServerUrls.value.isEmpty()) return
         if (originlessUploadsEnabled.value != enabled) {
             originlessUploadsEnabled.tryEmit(enabled)
             if (enabled) {
@@ -1482,6 +1455,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupBlockedRelayList?.id != newBlockedRelayList.id) {
             backupBlockedRelayList = newBlockedRelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateOriginlessServersList(newOriginlessServersList: OriginlessServersEvent?) {
+        if (newOriginlessServersList == null) return
+
+        // Public tags are empty by design (nodes live in encrypted content).
+        if (backupOriginlessServersList?.id != newOriginlessServersList.id) {
+            backupOriginlessServersList = newOriginlessServersList
             saveAccountSettings()
         }
     }

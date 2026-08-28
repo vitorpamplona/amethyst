@@ -65,6 +65,7 @@ class EventFactoryKindRangeTest {
             10023,
             10040,
             10054,
+            10062,
             10081,
             10086,
             10087,

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model.uploads
 
 import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.nip51Lists.originlessServers.OriginlessServersListState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
@@ -37,9 +38,9 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * Upload-picker contents. Combines the kind-10063 Blossom list with the local
- * Originless node list. Originless never writes a Nostr event; this state is the
- * only place the two lists meet.
+ * Upload-picker contents. Combines the kind-10063 Blossom list with the
+ * kind-10062 Originless node list. Originless never writes public `server`
+ * tags; the encrypted event is the only source of those URLs.
  *
  * When Originless uploads are on, the picker is a single [ORIGINLESS_UPLOAD_TARGET]
  * (fan-out to every configured node). When off, the picker is Blossom/NIP-96 only.
@@ -47,20 +48,21 @@ import kotlinx.coroutines.flow.stateIn
  */
 class UploadServerListState(
     val blossomServers: BlossomServerListState,
+    val originlessServers: OriginlessServersListState,
     val settings: AccountSettings,
     val scope: CoroutineScope,
 ) {
     fun mergeServerList(
         blossom: List<String>?,
-        originlessUrls: List<String> = settings.originlessServerUrls.value,
+        originlessUrls: List<String> = originlessServers.flow.value,
         originlessUploadsEnabled: Boolean = settings.originlessUploadsEnabled.value,
     ): List<ServerName> = mergeUploadServerList(blossom, originlessUrls, originlessUploadsEnabled, blossomServers::host)
 
     val hostNameFlow: StateFlow<List<ServerName>> =
-        combine(blossomServers.flow, settings.originlessServerUrls, settings.originlessUploadsEnabled) { blossoms, originlessUrls, enabled ->
+        combine(blossomServers.flow, originlessServers.flow, settings.originlessUploadsEnabled) { blossoms, originlessUrls, enabled ->
             mergeServerList(blossoms, originlessUrls, enabled)
         }.onStart {
-            emit(mergeServerList(blossomServers.flow.value, settings.originlessServerUrls.value, settings.originlessUploadsEnabled.value))
+            emit(mergeServerList(blossomServers.flow.value, originlessServers.flow.value, settings.originlessUploadsEnabled.value))
         }.onEach { servers ->
             resetTargetOrNull(blossomServers.flow.value, servers, settings.defaultFileServer, settings.originlessUploadsEnabled.value)?.let {
                 settings.changeDefaultFileServer(it)
@@ -69,7 +71,7 @@ class UploadServerListState(
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                mergeServerList(emptyList(), settings.originlessServerUrls.value, settings.originlessUploadsEnabled.value),
+                mergeServerList(emptyList(), originlessServers.flow.value, settings.originlessUploadsEnabled.value),
             )
 }
 
@@ -103,9 +105,10 @@ fun mergeUploadServerList(
  * real, loaded list is in hand and it no longer contains the current pick (e.g. the user removed
  * it from their list).
  *
- * Originless is not a kind-10063 entry. When the Originless upload switch is on, the default
- * must be [ORIGINLESS_UPLOAD_TARGET]. When the switch is off, an Originless default is snapped
- * back to Blossom — Blossom state itself never sees [ServerType.Originless].
+ * Originless nodes come from kind 10062, not kind 10063. When the Originless
+ * upload switch is on, the default must be [ORIGINLESS_UPLOAD_TARGET]. When the
+ * switch is off, an Originless default is snapped back to Blossom — Blossom
+ * state itself never sees [ServerType.Originless].
  */
 fun resetTargetOrNull(
     rawList: List<String>,

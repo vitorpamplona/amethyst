@@ -62,7 +62,7 @@ class OriginlessServersViewModel : ViewModel() {
     fun refresh() {
         isModified = false
         _fileServers.update {
-            account.settings.originlessServerUrls.value
+            account.originlessServers.flow.value
                 .map { originlessServer(it) }
         }
         pruneHealth()
@@ -140,6 +140,8 @@ class OriginlessServersViewModel : ViewModel() {
     private fun persist() {
         if (!isModified) return
         isModified = false
-        account.settings.changeOriginlessServerUrls(_fileServers.value.map { it.baseUrl })
+        accountViewModel.launchSigner {
+            account.sendOriginlessServersList(_fileServers.value.map { it.baseUrl })
+        }
     }
 }

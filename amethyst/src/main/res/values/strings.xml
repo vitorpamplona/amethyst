@@ -4481,6 +4481,7 @@
     <string name="kind_profile_badges">Profile Badges</string>
     <string name="kind_blocked_relays">Blocked Relays</string>
     <string name="kind_blossom_servers">Blossom Servers</string>
+    <string name="kind_originless_servers">Originless Servers</string>
     <string name="kind_nests_servers">Nests Servers</string>
     <string name="kind_blossom_auth">Blossom Auth</string>
     <string name="kind_broadcast_relays">Broadcast Relays</string>

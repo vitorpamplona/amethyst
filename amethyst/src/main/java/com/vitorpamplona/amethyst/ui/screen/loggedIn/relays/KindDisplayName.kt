@@ -92,6 +92,7 @@ import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BroadcastRelayListEvent
@@ -197,6 +198,7 @@ fun kindDisplayName(kind: Int): Int =
         BadgeDefinitionEvent.KIND -> R.string.kind_badge_definitions
         BlockedRelayListEvent.KIND -> R.string.kind_blocked_relays
         BlossomServersEvent.KIND -> R.string.kind_blossom_servers
+        OriginlessServersEvent.KIND -> R.string.kind_originless_servers
         NestsServersEvent.KIND -> R.string.kind_nests_servers
         BlossomAuthorizationEvent.KIND -> R.string.kind_blossom_auth
         BroadcastRelayListEvent.KIND -> R.string.kind_broadcast_relays

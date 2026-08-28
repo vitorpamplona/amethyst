@@ -938,8 +938,8 @@ class AppModules(
         IpfsGatewayResolver.serverBasesProvider = {
             sessionManager
                 .loggedInAccount()
-                ?.settings
-                ?.originlessServerUrls
+                ?.originlessServers
+                ?.flow
                 ?.value
                 .orEmpty()
         }
