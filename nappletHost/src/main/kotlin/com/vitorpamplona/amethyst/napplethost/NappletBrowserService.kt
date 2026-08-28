@@ -36,7 +36,6 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.os.SystemClock
-import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -56,6 +55,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.quartz.utils.Log
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 

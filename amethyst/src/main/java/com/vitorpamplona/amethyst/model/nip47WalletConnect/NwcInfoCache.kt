@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -37,16 +38,23 @@ import java.util.concurrent.ConcurrentHashMap
  * supported RPC methods, and whether it emits notifications.
  *
  * Entries expire after [ttlSeconds] (default 2 days) so a wallet that later
- * changes its advertised capabilities is eventually re-checked. Reads never block
- * on the network:
+ * changes its advertised capabilities is eventually re-checked. Four entry
+ * points, in increasing order of how much they will wait:
  *
  *  - [current] returns whatever is cached (possibly stale, possibly null) with no
- *    side effect — for the payment hot path.
+ *    side effect and never blocks — for callers that can act on "don't know".
  *  - [refreshIfStale] triggers a background fetch when the entry is missing or
  *    expired, and returns immediately — call it right before using a wallet so a
  *    stale entry self-heals without holding up the transaction.
- *  - [getFresh] is the suspending variant for callers that can await (e.g. the
- *    notification watcher deciding whether to open a subscription).
+ *  - [currentOrFetch] waits only when nothing at all is cached, and returns a
+ *    stale entry as-is — for callers where "don't know" and "no" are different
+ *    answers, such as NIP-44 negotiation.
+ *  - [getFresh] waits whenever the entry is missing *or* expired, for a caller
+ *    that must not act on a stale answer. No production caller needs that today.
+ *
+ * Every fetching path funnels through one request per wallet, so the startup
+ * warm-up, a payment waiting on a cold cache and the notification watcher join
+ * the same call rather than racing each other.
  *
  * A completed fetch — including a definitive "wallet published no info event"
  * (null) — is cached with a timestamp. A *failed* fetch (network error/timeout)
@@ -65,7 +73,9 @@ class NwcInfoCache(
     )
 
     private val cache = ConcurrentHashMap<HexKey, Entry>()
-    private val inFlight = ConcurrentHashMap.newKeySet<HexKey>()
+
+    // Fetches in progress, keyed like [cache]. Every fetching path goes through [fetchOnce].
+    private val inFlight = ConcurrentHashMap<HexKey, CompletableDeferred<NwcInfoEvent?>>()
 
     private fun isFresh(entry: Entry): Boolean = now() - entry.fetchedAt < ttlSeconds
 
@@ -80,26 +90,85 @@ class NwcInfoCache(
     fun refreshIfStale(uri: Nip47WalletConnect.Nip47URINorm) {
         val entry = cache[uri.pubKeyHex]
         if (entry != null && isFresh(entry)) return
-        if (!inFlight.add(uri.pubKeyHex)) return
 
-        scope.launch(Dispatchers.IO) {
-            try {
-                fetchAndStore(uri)
-            } finally {
-                inFlight.remove(uri.pubKeyHex)
-            }
-        }
+        scope.launch(Dispatchers.IO) { fetchOnce(uri) }
     }
 
     /**
      * Suspends until a fresh-enough info event is available, fetching when the
      * entry is missing or expired. Returns the last cached (possibly stale) value
      * if the fetch fails.
+     *
+     * For a caller that must not act on a stale answer. No production caller needs
+     * that today; prefer [currentOrFetch], which only waits on a cold cache.
      */
     suspend fun getFresh(uri: Nip47WalletConnect.Nip47URINorm): NwcInfoEvent? {
         val entry = cache[uri.pubKeyHex]
         if (entry != null && isFresh(entry)) return entry.info
-        return fetchAndStore(uri)
+        return fetchOnce(uri)
+    }
+
+    /**
+     * Returns whatever is cached, waiting for a fetch only when there is nothing
+     * cached at all.
+     *
+     * This is the encryption-negotiation entry point. [current] answers "what does
+     * this wallet advertise" from memory, but on a cold cache it answers null, and
+     * a null there is indistinguishable from "no NIP-44" — so the caller silently
+     * downgrades to NIP-04 on the first transaction after every app start. Waiting
+     * once, only when nothing is known, removes that.
+     *
+     * A stale entry is returned as-is without waiting: it still says which
+     * encryption the wallet advertises, and [refreshIfStale] self-heals it in the
+     * background for next time.
+     */
+    suspend fun currentOrFetch(uri: Nip47WalletConnect.Nip47URINorm): NwcInfoEvent? {
+        val entry = cache[uri.pubKeyHex] ?: return fetchOnce(uri)
+        refreshIfStale(uri)
+        return entry.info
+    }
+
+    /**
+     * Runs [fetchAndStore] for [uri] exactly once, however many callers ask at
+     * once; every caller awaits that one result.
+     *
+     * The fetch runs in this cache's own [scope], never in the caller's. A caller
+     * on the payment path is a `viewModelScope` coroutine that dies when the user
+     * backs out of the screen — owning the fetch there would abandon it, leave the
+     * cache cold and make the next attempt pay the whole cost again. Here a caller
+     * giving up cancels only its own `await`, and the fetch it started still lands.
+     */
+    private suspend fun fetchOnce(uri: Nip47WalletConnect.Nip47URINorm): NwcInfoEvent? {
+        val key = uri.pubKeyHex
+        val ours = CompletableDeferred<NwcInfoEvent?>()
+        // putIfAbsent returns the previous entry, so a non-null result means
+        // someone else already started this wallet's fetch.
+        inFlight.putIfAbsent(key, ours)?.let { return it.await() }
+
+        val job =
+            scope.launch(Dispatchers.IO) {
+                var info: NwcInfoEvent? = null
+                try {
+                    info = fetchAndStore(uri)
+                } finally {
+                    // Non-suspending, so awaiters are released even if the fetch is cancelled.
+                    inFlight.remove(key, ours)
+                    ours.complete(info)
+                }
+            }
+
+        // A scope that was already cancelled — this account was logged off while a
+        // payment was in flight — never runs the body, so the finally above never
+        // releases anyone. Without this, the caller awaits forever and the abandoned
+        // slot makes every later call for this wallet do the same. Fires immediately
+        // when the job is already complete, and is a no-op on the normal path.
+        job.invokeOnCompletion {
+            if (!ours.isCompleted) {
+                inFlight.remove(key, ours)
+                ours.complete(null)
+            }
+        }
+        return ours.await()
     }
 
     private suspend fun fetchAndStore(uri: Nip47WalletConnect.Nip47URINorm): NwcInfoEvent? {

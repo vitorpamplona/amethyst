@@ -114,7 +114,7 @@ class AccountCacheState(
                 loadAccount(accountSettings)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Log.w("AccountCacheState", "Failed to preload account ${savedAccount.npub}: ${e.message}", e)
+                Log.w("AccountCacheState", "Failed to preload account ${savedAccount.npub}", e)
             }
         }
     }
@@ -147,7 +147,7 @@ class AccountCacheState(
     fun deleteAccountFiles(pubkey: HexKey) {
         val dir = File(accountsRootDir(), pubkey)
         if (dir.exists() && !dir.deleteRecursively()) {
-            Log.w("AccountCacheState", "Failed to delete account directory ${dir.absolutePath}")
+            Log.w("AccountCacheState") { "Failed to delete account directory ${dir.absolutePath}" }
         }
     }
 
@@ -163,7 +163,7 @@ class AccountCacheState(
                 if (child.deleteRecursively()) {
                     Log.d("AccountCacheState") { "Pruned orphan account dir ${child.name.take(8)}…" }
                 } else {
-                    Log.w("AccountCacheState", "Failed to prune orphan account dir ${child.absolutePath}")
+                    Log.w("AccountCacheState") { "Failed to prune orphan account dir ${child.absolutePath}" }
                 }
             }
         }
@@ -285,7 +285,7 @@ class AccountCacheState(
                     Dispatchers.IO +
                         SupervisorJob() +
                         CoroutineExceptionHandler { _, throwable ->
-                            Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception: ${throwable.message}", throwable)
+                            Log.e("AccountCacheState", "Account ${signer.pubKey} caught exception", throwable)
                         },
                 ),
             mlsGroupStateStore = mlsStore,

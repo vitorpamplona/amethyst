@@ -117,7 +117,7 @@ object SandboxForegroundHold {
                 synchronized(this@SandboxForegroundHold) {
                     // A surface may have re-acquired while we waited; only tear down if still released.
                     if (holdCount == 0) {
-                        Log.d("SandboxForegroundHold", "No foreground sandbox surface for ${LINGER_MS}ms; releasing the resource hold")
+                        Log.d("SandboxForegroundHold") { "No foreground sandbox surface for ${LINGER_MS}ms; releasing the resource hold" }
                         holdJob?.cancel()
                         holdJob = null
                     }

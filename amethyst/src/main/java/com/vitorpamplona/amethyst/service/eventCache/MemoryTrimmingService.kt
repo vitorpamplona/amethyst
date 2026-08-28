@@ -78,7 +78,7 @@ class MemoryTrimmingService(
         level: Int = ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
     ) {
         if (isTrimmingMemoryMutex.compareAndSet(false, true)) {
-            Log.d("ServiceManager", "Trimming Memory (level=$level)")
+            Log.d("ServiceManager") { "Trimming Memory (level=$level)" }
             try {
                 doTrim(account, otherAccounts, level)
             } finally {

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
 
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -80,6 +79,7 @@ import com.vitorpamplona.amethyst.ui.theme.MediumRelayIconModifier
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon

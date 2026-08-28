@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Manages NIP-47 (Nostr Wallet Connect) related signing operations and decryption cache for a given account.
@@ -136,17 +137,31 @@ class NwcSignerState(
     }
 
     /**
-     * Non-blocking read of the negotiated encryption preference for a wallet.
-     * NIP-47 says a client "should always prefer nip44 if supported by the wallet
-     * service". Returns true only when the cached info event advertises `nip44_v2`;
-     * otherwise NIP-04 (the legacy default). Also nudges a background refresh so a
-     * stale/expired entry self-heals for the next transaction without blocking this
-     * one.
+     * The negotiated encryption preference for a wallet. NIP-47 says a client
+     * "should always prefer nip44 if supported by the wallet service", so a false
+     * here has to mean "the wallet does not offer NIP-44" — not "we have not asked
+     * yet".
+     *
+     * That distinction is why this waits. The info cache is per-account and held in
+     * memory only, so it starts empty on every app launch, and reading it without
+     * waiting made the first transaction to each wallet after every launch fall
+     * back to NIP-04 even against a wallet advertising `nip44_v2`. Only a cold
+     * cache waits: a stale entry still says what the wallet advertises and is used
+     * as-is while it refreshes in the background.
+     *
+     * The wait is capped, because this sits in front of a payment the user has
+     * already tapped. Its own fetch is bounded only by the relay accessory's 30s
+     * idle window, and the no-response timer below does not start until this
+     * returns. On expiry we send NIP-04 for this one request rather than hold the
+     * tap; the fetch keeps running in the cache's scope, so the next request gets
+     * the negotiated scheme. Never bound the fetch itself instead — a null from it
+     * is cached as a definitive "no info event" for the whole TTL, which would pin
+     * the wallet to NIP-04 for days.
      */
-    private fun prefersNip44(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
+    private suspend fun prefersNip44(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
         uri ?: return false
-        infoCache?.refreshIfStale(uri)
-        return infoCache?.current(uri)?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } ?: false
+        val info = withTimeoutOrNull(NIP44_NEGOTIATION_WAIT_MS) { infoCache?.currentOrFetch(uri) }
+        return info?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } == true
     }
 
     fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()
@@ -332,5 +347,12 @@ class NwcSignerState(
         const val NWC_RESPONSE_TIMEOUT_SECONDS = 60
 
         const val NWC_RESPONSE_TIMEOUT_MS = NWC_RESPONSE_TIMEOUT_SECONDS * 1000L
+
+        /**
+         * How long a request will wait for a cold info cache before falling back to
+         * NIP-04. Comfortably over a healthy single-relay round trip, far under the
+         * 30s the fetch itself would otherwise allow in front of a payment tap.
+         */
+        const val NIP44_NEGOTIATION_WAIT_MS = 3_000L
     }
 }

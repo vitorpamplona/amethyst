@@ -597,7 +597,7 @@ class CallSession(
                 val sender = videoSenders[key]
                 if (sender != null) {
                     if (!sender.setTrack(track, false)) {
-                        Log.e(TAG, "Failed to replace video track for ${key.take(8)}")
+                        Log.e(TAG) { "Failed to replace video track for ${key.take(8)}" }
                     }
                 } else {
                     session.addTrack(track, settingsProvider().callMaxBitrateBps)?.let { newSender ->

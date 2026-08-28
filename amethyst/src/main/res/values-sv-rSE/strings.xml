@@ -1993,6 +1993,9 @@
     <string name="call_camera_on">Kamera på</string>
     <string name="call_camera_off">Kamera av</string>
     <string name="call_switch_camera">Byt kamera</string>
+    <string name="call_screen_share_start">Dela skärm</string>
+    <string name="call_screen_share_stop">Sluta dela skärm</string>
+    <string name="call_screen_sharing">Delar skärm</string>
     <string name="call_speaker">Högtalare</string>
     <string name="call_earpiece">Hörlur</string>
     <string name="call_bluetooth">Bluetooth</string>

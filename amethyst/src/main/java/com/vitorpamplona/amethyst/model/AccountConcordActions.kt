@@ -1381,7 +1381,7 @@ class AccountConcordActions(
             val bannedHere = authority.isBanned(account.signer.pubKey)
             val merged = ConcordActions.recoverStranded(entry, bundle, bannedHere) ?: continue
             if (!adoptedConcordRotations.add("${entry.id}:${merged.rootEpoch}")) continue
-            Log.i("Concord", "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}")
+            Log.i("Concord") { "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}" }
             account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(merged))
             announceConcordGuestbookJoin(merged, inviteCreator = null, inviteLabel = null)
         }
@@ -1521,11 +1521,10 @@ class AccountConcordActions(
         val events = account.client.fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = 30_000L)
         val newest = events.filterIsInstance<ConcordCommunityListEvent>().maxByOrNull { it.createdAt }
         val entryCount = newest?.let { runCatching { it.decrypt(account.signer).size }.getOrElse { -1 } } ?: 0
-        Log.d(
-            "Concord",
+        Log.d("Concord") {
             "importConcordCommunities: queried ${relays.size} relays, fetched ${events.size} 13302 event(s), " +
-                "newest=${newest?.id?.take(8)}@${newest?.createdAt}, decoded $entryCount entr${if (entryCount == 1) "y" else "ies"}",
-        )
+                "newest=${newest?.id?.take(8)}@${newest?.createdAt}, decoded $entryCount entr${if (entryCount == 1) "y" else "ies"}"
+        }
         newest?.let { account.cache.justConsumeMyOwnEvent(it) }
     }
 
@@ -1600,6 +1599,6 @@ class AccountConcordActions(
         val byRelay = authorsByRelay.mapValues { (_, authors) -> listOf(ConcordActions.planeFilterFor(authors.toList())) }
         var drained = 0
         account.client.fetchAllPagesFromPool(filters = byRelay) { _, _ -> drained++ }
-        Log.d("Concord", "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), drained $drained control wrap(s)")
+        Log.d("Concord") { "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), drained $drained control wrap(s)" }
     }
 }

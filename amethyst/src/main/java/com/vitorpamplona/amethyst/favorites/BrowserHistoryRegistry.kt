@@ -21,12 +21,12 @@
 package com.vitorpamplona.amethyst.favorites
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

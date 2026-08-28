@@ -31,7 +31,6 @@ import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
 import android.os.SystemClock
-import android.util.Log
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
@@ -50,6 +49,7 @@ import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -182,7 +182,7 @@ class NappletBrokerService : Service() {
                     // could still spam distinct keys to keep the network up. Bound the damage: refuse new
                     // lease keys past the cap. Real usage holds only a handful of foreground surfaces.
                     if (firstReport && foregroundLeases.size >= MAX_FOREGROUND_LEASES) {
-                        Log.w("NappletBrokerService", "Foreground lease cap reached; ignoring new lease $token")
+                        Log.w("NappletBrokerService") { "Foreground lease cap reached; ignoring new lease $token" }
                         return true
                     }
                     foregroundLeases[token] = SystemClock.elapsedRealtime()
@@ -374,7 +374,7 @@ class NappletBrokerService : Service() {
                         while (iterator.hasNext()) {
                             val entry = iterator.next()
                             if (now - entry.value > FOREGROUND_LEASE_TTL_MS) {
-                                Log.w("NappletBrokerService", "Foreground lease ${entry.key} expired (host process gone?); releasing hold")
+                                Log.w("NappletBrokerService") { "Foreground lease ${entry.key} expired (host process gone?); releasing hold" }
                                 iterator.remove()
                                 SandboxForegroundHold.release()
                             }

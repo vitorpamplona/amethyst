@@ -2089,6 +2089,9 @@
     <string name="call_camera_on">Kamera zapnuta</string>
     <string name="call_camera_off">Kamera vypnuta</string>
     <string name="call_switch_camera">Přepnout kameru</string>
+    <string name="call_screen_share_start">Sdílet obrazovku</string>
+    <string name="call_screen_share_stop">Ukončit sdílení obrazovky</string>
+    <string name="call_screen_sharing">Sdílení obrazovky</string>
     <string name="call_speaker">Reproduktor</string>
     <string name="call_earpiece">Sluchátko</string>
     <string name="call_bluetooth">Bluetooth</string>

@@ -186,6 +186,13 @@ device. PRs that introduce any of them will be sent back.
   body only runs when the log level is enabled. Plain
   `Log.d("msg $x")` allocates the formatted string on every call,
   including in feed and scroll hot paths.
+- **Never `import android.util.Log`.** The platform logger bypasses
+  `Log.minLevel` and the `LogSink`, and it has no lambda overload, so
+  the rule above cannot be applied at those call sites. The one
+  legitimate user is `PlatformLog.android.kt`, which implements the
+  wrapper. A call that must pass a throwable uses the eager three-arg
+  form `Log.w(tag, "msg", e)` — the lambda overload takes no throwable,
+  and dropping it to keep the lambda loses the stack trace.
 - **Strip diagnostic `Log.d` calls before commit.** Logs added
   during on-device debugging — even lambda-form ones — must be
   removed from the production diff. They survive R8 stripping only

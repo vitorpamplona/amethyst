@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.napplethost
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.core.content.FileProvider
+import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
 /**
