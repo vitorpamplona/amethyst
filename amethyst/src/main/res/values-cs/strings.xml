@@ -5102,4 +5102,7 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
+    <string name="call_screen_share_start">Sdílet obrazovku</string>
+    <string name="call_screen_share_stop">Ukončit sdílení obrazovky</string>
+    <string name="call_screen_sharing">Sdílení obrazovky</string>
 </resources>

@@ -4886,4 +4886,7 @@
     <string name="buzz_persona_avatar">Avatar-URL (valfritt)</string>
     <string name="buzz_persona_publishing">Publicerar…</string>
     <string name="buzz_persona_publish">Publicera persona</string>
+    <string name="call_screen_share_start">Dela skärm</string>
+    <string name="call_screen_share_stop">Sluta dela skärm</string>
+    <string name="call_screen_sharing">Delar skärm</string>
 </resources>
