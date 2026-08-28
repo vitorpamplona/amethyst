@@ -30,8 +30,10 @@ import kotlin.io.path.exists
  * Read-only introspection of a file-backed Nostr event store on disk.
  *
  * Pure filesystem walk — no relay traffic, no writer lock, no [Context].
- * Shared by `amy store stat` (full detail) and `amy status` (a compact
- * roll-up alongside the account overview).
+ * Backs `amy store stat` on the FS backend. Filesystem-only by nature: the
+ * per-kind histogram reads `idx/kind/` and the age range reads file mtimes,
+ * neither of which the SQLite backend has, so `store stat` answers that one
+ * from the database instead.
  */
 data class StoreStats(
     val events: Long,

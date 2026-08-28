@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
+import java.io.File
 import kotlin.io.path.Path
 
 /** On-disk backend for the shared event store. */
@@ -85,5 +86,29 @@ object StoreFactory {
                     root = Path(dataDir.eventsDir.absolutePath),
                     eventToJson = JacksonMapper::toJsonPretty,
                 )
+        }
+
+    /**
+     * Open the shared, cross-account store under [rootBase] **only if it is
+     * already there** — returns null otherwise instead of creating it. The
+     * account-scoped [open] happily materialises an empty database, which is
+     * right for a command that is about to write; a read-only inspector like
+     * `amy status` must not leave a store behind on a machine that has none.
+     * It also takes the root rather than a [DataDir] so it never has to pick
+     * an account. Caller owns [IEventStore.close].
+     */
+    fun openExistingShared(rootBase: File): IEventStore? =
+        when (backend()) {
+            StoreBackend.SQLITE ->
+                DataDir
+                    .sharedEventsDbFile(rootBase)
+                    .takeIf { it.isFile }
+                    ?.let { EventStore(dbName = it.absolutePath, relay = null) }
+
+            StoreBackend.FS ->
+                DataDir
+                    .sharedEventsDir(rootBase)
+                    .takeIf { it.isDirectory }
+                    ?.let { FsEventStore(root = Path(it.absolutePath), eventToJson = JacksonMapper::toJsonPretty) }
         }
 }

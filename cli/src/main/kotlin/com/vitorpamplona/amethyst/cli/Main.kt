@@ -221,8 +221,8 @@ private suspend fun dispatch(argv: Array<String>): Int {
         return UseCommand.run(tail)
     }
 
-    // `status` is a cross-account, read-only overview of everything on
-    // disk under ~/.amy/. Like `use`, it must work regardless of how many
+    // `status` is the cross-account, read-only "who am I and what have I
+    // got" overview. Like `use`, it must work regardless of how many
     // accounts exist (zero, one, or many), so it dispatches before account
     // resolution rather than through the single-account DataDir path.
     if (head == "status") {
@@ -462,9 +462,9 @@ private fun printUsage() {
         |  use NAME                                  pin NAME as the active account
         |  use --clear                                remove the pin
         |  use                                        print current pin + available accounts
-        |  status                                     read-only overview of every account, signer
-        |                                              type, local Marmot/Cashu state, and the shared
-        |                                              event store (no keychain prompt, no network)
+        |  status                                     who is signed in and what each account has
+        |                                              saved locally (no keychain prompt, no network;
+        |                                              store size lives in `store stat`)
         |
         |Output:
         |  Default: human-readable text on stdout.
