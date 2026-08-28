@@ -570,7 +570,7 @@ open class ChannelNewMessageViewModel :
                     accountViewModel.account.relayGroups.putRelayGroupUser(channel, pk, emptyList())
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
-                    Log.w("BuzzAutoInvite", "Failed to add mentioned member ${pk.take(8)}: ${e.message}")
+                    Log.w("BuzzAutoInvite", "Failed to add mentioned member ${pk.take(8)}", e)
                 }
             }
         }

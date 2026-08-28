@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
-import android.util.Log
+import com.vitorpamplona.quartz.utils.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.InetSocketAddress

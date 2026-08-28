@@ -1381,7 +1381,7 @@ class AccountConcordActions(
             val bannedHere = authority.isBanned(account.signer.pubKey)
             val merged = ConcordActions.recoverStranded(entry, bundle, bannedHere) ?: continue
             if (!adoptedConcordRotations.add("${entry.id}:${merged.rootEpoch}")) continue
-            Log.i("Concord", "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}")
+            Log.i("Concord") { "Stranded recovery: ${entry.id} ${entry.rootEpoch} -> ${merged.rootEpoch}" }
             account.sendMyPublicAndPrivateOutbox(account.concordChannelList.follow(merged))
             announceConcordGuestbookJoin(merged, inviteCreator = null, inviteLabel = null)
         }
@@ -1600,6 +1600,6 @@ class AccountConcordActions(
         val byRelay = authorsByRelay.mapValues { (_, authors) -> listOf(ConcordActions.planeFilterFor(authors.toList())) }
         var drained = 0
         account.client.fetchAllPagesFromPool(filters = byRelay) { _, _ -> drained++ }
-        Log.d("Concord", "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), drained $drained control wrap(s)")
+        Log.d("Concord") { "syncConcordControlPlanes: paged ${authorsByRelay.size} relay(s), drained $drained control wrap(s)" }
     }
 }

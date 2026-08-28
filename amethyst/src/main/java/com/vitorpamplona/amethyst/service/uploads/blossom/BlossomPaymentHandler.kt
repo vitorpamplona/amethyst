@@ -153,7 +153,7 @@ object BlossomPaymentHandler {
 
         val check = checkAmount(payment, shownSats)
         if (check !is AmountCheck.Ok) {
-            Log.w("BlossomPayment", "refusing invoice: ${refusalReason(check)}")
+            Log.w("BlossomPayment") { "refusing invoice: ${refusalReason(check)}" }
             return PayResult.Refused(refusalReason(check))
         }
 

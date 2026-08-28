@@ -222,7 +222,7 @@ class BootRelayDiagnostics(
             r.closed.forEach { (k, v) -> closedTotals[k] = (closedTotals[k] ?: 0) + v.get() }
         }
 
-        Log.d(TAG, "===== boot census @${atSeconds}s =====")
+        Log.d(TAG) { "===== boot census @${atSeconds}s =====" }
         Log.i(
             TAG,
             "census @${atSeconds}s pool=${snapshot.size} opened=${opened.size} served_events=${served.size} never_opened=${neverOpened.size} " +
@@ -231,8 +231,8 @@ class BootRelayDiagnostics(
                 "reqs=${snapshot.values.sumOf { it.reqsSent.get() }} " +
                 "auths=${snapshot.values.sumOf { it.authsSent.get() }}",
         )
-        Log.i(TAG, "census @${atSeconds}s failures_by_cause=" + causeTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
-        Log.i(TAG, "census @${atSeconds}s closed_by_prefix=" + closedTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" })
+        Log.i(TAG) { "census @${atSeconds}s failures_by_cause=" + causeTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" } }
+        Log.i(TAG) { "census @${atSeconds}s closed_by_prefix=" + closedTotals.entries.sortedByDescending { it.value }.joinToString { "${it.key}:${it.value}" } }
 
         // Relays that cost us dials and gave nothing back, worst first: the wasted-effort list.
         Log.d(TAG, "--- top wasted dials (no events received) ---")
@@ -264,6 +264,6 @@ class BootRelayDiagnostics(
                         "openMs=${r.firstOpenAtMs.get()} eoseMs=${r.firstEoseAtMs.get()} dials=${r.tentatives.get()}",
                 )
             }
-        Log.d(TAG, "===== end census @${atSeconds}s =====")
+        Log.d(TAG) { "===== end census @${atSeconds}s =====" }
     }
 }

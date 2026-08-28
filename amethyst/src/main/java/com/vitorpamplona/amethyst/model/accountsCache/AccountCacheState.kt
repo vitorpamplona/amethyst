@@ -147,7 +147,7 @@ class AccountCacheState(
     fun deleteAccountFiles(pubkey: HexKey) {
         val dir = File(accountsRootDir(), pubkey)
         if (dir.exists() && !dir.deleteRecursively()) {
-            Log.w("AccountCacheState", "Failed to delete account directory ${dir.absolutePath}")
+            Log.w("AccountCacheState") { "Failed to delete account directory ${dir.absolutePath}" }
         }
     }
 
@@ -163,7 +163,7 @@ class AccountCacheState(
                 if (child.deleteRecursively()) {
                     Log.d("AccountCacheState") { "Pruned orphan account dir ${child.name.take(8)}…" }
                 } else {
-                    Log.w("AccountCacheState", "Failed to prune orphan account dir ${child.absolutePath}")
+                    Log.w("AccountCacheState") { "Failed to prune orphan account dir ${child.absolutePath}" }
                 }
             }
         }

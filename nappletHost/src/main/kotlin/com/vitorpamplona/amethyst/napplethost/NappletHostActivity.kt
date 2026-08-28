@@ -33,7 +33,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
@@ -69,6 +68,7 @@ import com.vitorpamplona.amethyst.napplethost.R
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
