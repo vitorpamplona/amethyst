@@ -62,8 +62,16 @@ build the member objects — these lists run to thousands of entries.
   recomputed (`listId()`).
 - `title` / `metric` are the label and the name of the computation.
 - Member tags carry `[<tag>, <value>, <hint>, <score>]`. The score sits at
-  index 3 for every kind in the family, so a publisher with a score but no
-  relay hint pads index 2 with an empty string — as in the `p` tag above.
+  index 3 for every kind in the family — right after the relay hint — so a
+  publisher with a score but no relay hint pads index 2 with an empty string,
+  as in the `p` tag above. It is a **percentage: an integer 0–100 inclusive**
+  (`MemberTagFields.SCORE_RANGE`). The fixed scale is the point — it is what
+  lets a consumer compare members across two publishers, or across two metrics
+  of one publisher, without knowing either computation. `assemble` clamps into
+  the range, so we never emit what we would refuse to read; a parsed value
+  outside it is dropped rather than clamped, because a 950 pinned to 100 would
+  rank a member from some other scale above every honestly-scored peer. Such a
+  member is simply unscored, exactly as if the tag carried no score at all.
   On `e` members index 3 is the score, **not** a NIP-10 marker: these lists
   enumerate membership, they do not thread. Index 2 is only read as a relay
   hint when it looks like one (`MemberTagFields.relayHint`): the normalizer

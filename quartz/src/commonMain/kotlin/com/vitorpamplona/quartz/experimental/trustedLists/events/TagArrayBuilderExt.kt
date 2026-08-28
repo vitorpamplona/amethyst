@@ -27,6 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 
+/**
+ * Adds one member. [score] is the publisher's 0..100 confidence percentage and
+ * goes after the hint; it is clamped into range, and left off the tag entirely
+ * when null. See `MemberTagFields.SCORE_RANGE`.
+ */
 fun TagArrayBuilder<EventTrustedListEvent>.member(
     eventId: HexKey,
     relayHint: NormalizedRelayUrl? = null,

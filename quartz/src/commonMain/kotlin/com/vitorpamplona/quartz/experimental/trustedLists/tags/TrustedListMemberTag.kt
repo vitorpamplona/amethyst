@@ -35,6 +35,10 @@ interface TrustedListMemberTag {
     /** The pubkey, event id, a-coordinate or external id of this member. */
     val memberValue: String
 
-    /** The computed score the publisher assigned to this member, if any. */
+    /**
+     * The computed score the publisher assigned to this member, if any, as a
+     * percentage in [MemberTagFields.SCORE_RANGE] (0..100). Null both when the
+     * tag carries no score and when it carries one this scale cannot express.
+     */
     val score: Int?
 }
