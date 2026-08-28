@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.favorites
 
 import android.content.Context
-import android.util.Log
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

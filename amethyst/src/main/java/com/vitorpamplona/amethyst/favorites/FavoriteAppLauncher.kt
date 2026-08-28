@@ -24,7 +24,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
@@ -41,6 +40,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Turns a [FavoriteApp] back into a running app. The two cases map to the two launch paths in the
@@ -145,7 +145,7 @@ object FavoriteAppLauncher {
                     profile = HostProfile.WEBSITE,
                 )
             else -> {
-                Log.w("FavoriteAppLauncher", "Favorited app not resolvable yet: $coordinate")
+                Log.w("FavoriteAppLauncher") { "Favorited app not resolvable yet: $coordinate" }
                 Toast.makeText(context, R.string.favorite_app_still_loading, Toast.LENGTH_SHORT).show()
             }
         }

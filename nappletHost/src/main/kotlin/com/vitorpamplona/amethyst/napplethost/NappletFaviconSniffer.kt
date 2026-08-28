@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.napplethost
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
-import android.util.Log
 import android.webkit.WebView
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.quartz.utils.Log
 import org.json.JSONObject
 
 /**

@@ -334,7 +334,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
                         // again must not be able to spin up an endless pay-prompt
                         // cycle. One prompt per target per user-initiated mirror.
                         if (!promptLedger.shouldPrompt(row.hash, target)) {
-                            Log.w("BlossomBlobManager", "mirror to $target asked for payment again after being paid; not re-prompting")
+                            Log.w("BlossomBlobManager") { "mirror to $target asked for payment again after being paid; not re-prompting" }
                             _error.value = "${hostOf(target)} asked for payment again after being paid. Amethyst stopped to avoid paying twice."
                             continue
                         }

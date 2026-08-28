@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import com.vitorpamplona.quartz.utils.Log
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 

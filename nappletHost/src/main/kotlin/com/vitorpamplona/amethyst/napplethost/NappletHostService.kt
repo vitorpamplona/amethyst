@@ -36,7 +36,6 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.os.SystemClock
-import android.util.Log
 import android.view.View
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
@@ -61,6 +60,7 @@ import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream

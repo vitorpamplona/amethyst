@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.napplethost
 
 import android.content.Context
-import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebView
@@ -29,6 +28,7 @@ import androidx.core.content.edit
 import androidx.webkit.ProfileStore
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Partitions WebView storage (cookies, localStorage, IndexedDB, service workers) per Nostr account.

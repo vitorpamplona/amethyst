@@ -57,6 +57,9 @@ import java.io.File
  */
 class Amethyst : Application() {
     init {
+        // Deliberately in init, not onCreate: this runs in EVERY process, including the
+        // :napplet sandbox, whose onCreate early-returns. Moving it would leave that
+        // process on the wrapper's DEBUG default.
         Log.minLevel = DEFAULT_LOG_LEVEL
         Log.d("AmethystApp") { "Creating App $this" }
     }
