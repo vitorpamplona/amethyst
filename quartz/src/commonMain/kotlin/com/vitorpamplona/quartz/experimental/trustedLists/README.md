@@ -88,6 +88,63 @@ build the member objects — these lists run to thousands of entries.
 - `content` is an optional JSON echo of the members with their computed values
   (`contentEcho()` → `TrustedListContent`).
 
+## Treasure Map advertisement (kind 10040)
+
+A NIP-85 Treasure Map delegates each assertion kind+metric to a publisher with
+`["30382:rank", <pubkey>, <relay>]`. Trusted Lists extend it with a **generic
+bare-kind entry** (Tapestry ADR `tl-treasure-map/0001`):
+
+```json
+["30392", "<publisher-pubkey>", "wss://nip85.brainstorm.world"]
+```
+
+One entry delegates *all* lists of that kind — the ones computed under the Map
+owner's point of view, discoverable at the relay hint. List names are never
+enumerated, which is the point of the bare-kind form: the Map stays a fixed
+size however many lists the publisher computes.
+
+Parse rule — split the first element on `:`. A single all-digits segment is a
+generic entry; two segments are either NIP-85's `3038x:<metric>` or a **named**
+TL entry (`3039x:<name>`, reserved). Named entries parse so a reader can
+display them as Trusted List entries, but drive no behavior until the spec
+defines them — `isGeneric` is the guard, and `trustedListProvider(kind)`
+returns only the generic one.
+
+This lives in `treasureMap/`, outside `nip85TrustedAssertions/`, even though it
+rides on that kind: `ServiceProviderTag` models NIP-85's own delegation, and a
+NIP-85 consumer should stay unaware of this family. That separation is load
+bearing in both directions — `ServiceProviderTag.parse` is bounded to NIP-85's
+own assertion kinds (30382–30385), so a `30392:podcaster` entry, which splits
+into two segments exactly like `30382:rank`, is never handed to code looking
+for a rank or follower-count service.
+
+Two things the reader must not do:
+
+- **Drop an entry with an empty relay hint.** A publisher with no relay
+  configured still writes the three-element shape with `""` in the slot. The
+  pubkey is the part a consumer cannot do without, so `relayUrl` is nullable
+  and the delegation stands without it.
+- **Resolve duplicates arbitrarily.** At most one generic entry per kind is the
+  *writer's* invariant; where duplicates appear in the wild the **first
+  occurrence wins**, so two readers of one Map resolve the same publisher.
+
+Writing goes through `replaceTrustedListProvider`, which swaps the generic
+entry for its kind **in place** and preserves every other tag verbatim — 10040
+is replaceable, so the update republishes the whole tag set and anything
+dropped is lost from the Map for good. `content` (the NIP-44 envelope holding
+private entries) is carried across untouched, so the write needs no decryption
+permission.
+
+```kotlin
+val updated =
+    treasureMap.replaceTrustedListProvider(
+        kind = UserTrustedListEvent.KIND,
+        pubkey = publisherHex,
+        relayUrl = RelayUrlNormalizer.normalizeOrNull("wss://nip85.brainstorm.world"),
+        signer = signer,
+    )
+```
+
 ## Completeness and retraction
 
 A list an integrator relies on must be complete, or say that it isn't. The
