@@ -22,10 +22,11 @@ package com.vitorpamplona.quartz.experimental.trustedLists.externalIds
 
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.tags.ExternalIdMemberTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 
-fun TagArray.members() = mapNotNull(ExternalIdMemberTag::parse)
+fun TagArray.members() = fastMapNotNullDense(ExternalIdMemberTag::parse)
 
 /**
  * The optional relay-filterable discovery tags: what this list is *about*,

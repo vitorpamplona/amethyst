@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ProviderTypes
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -234,6 +235,63 @@ class TreasureMapEntryTest {
 
         assertNull(after.trustedListProvider(UserTrustedListEvent.KIND))
         assertEquals(2, after.size)
+    }
+
+    @Test
+    fun aNamedWriteNeverDeletesTheKindsGenericDelegation() {
+        // the generic entry is a live delegation and 10040 is replaceable, so
+        // a write that matched on kind alone would drop it irrecoverably --
+        // and, never having found its own entry, duplicate on every later call
+        val before =
+            map(
+                arrayOf("30392", publisher, nip85),
+                arrayOf("30392:podcaster", publisher, nip85),
+            ).tags
+
+        val named = TrustedListProviderTag(UserTrustedListEvent.KIND, "podcaster", otherPublisher, null)
+        val after = before.replaceTrustedListProvider(named)
+
+        assertEquals(
+            listOf(
+                listOf("30392", publisher, nip85),
+                listOf("30392:podcaster", otherPublisher, ""),
+            ),
+            after.map { it.toList() },
+        )
+
+        // and it is idempotent: a second write finds its own entry
+        assertEquals(after.map { it.toList() }, after.replaceTrustedListProvider(named).map { it.toList() })
+    }
+
+    @Test
+    fun removingTheGenericEntryLeavesTheNamedOneAndViceVersa() {
+        val before =
+            map(
+                arrayOf("30392", publisher, nip85),
+                arrayOf("30392:podcaster", publisher, nip85),
+            ).tags
+
+        assertEquals(
+            listOf(listOf("30392:podcaster", publisher, nip85)),
+            before.removeTrustedListProvider(UserTrustedListEvent.KIND).map { it.toList() },
+        )
+        assertEquals(
+            listOf(listOf("30392", publisher, nip85)),
+            before.removeTrustedListProvider(UserTrustedListEvent.KIND, "podcaster").map { it.toList() },
+        )
+    }
+
+    @Test
+    fun aKindOutsideTheFamilyCannotBeConstructed() {
+        // parse refuses it, so a constructed one would write a tag that can
+        // never be read back -- and therefore never replaced or removed, since
+        // both address an entry through the parser. It would accumulate
+        assertFailsWith<IllegalArgumentException> {
+            TrustedListProviderTag(30382, null, publisher, null)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            TrustedListProviderTag(30396, null, publisher, null)
+        }
     }
 
     @Test

@@ -35,6 +35,16 @@ data class ServiceProviderTag(
     val pubkey: HexKey,
     val relayUrl: NormalizedRelayUrl,
 ) {
+    init {
+        // [parse] refuses a kind outside NIP-85's own, so a constructed one
+        // would write a tag this class can never read back. Callers address an
+        // existing entry by parsing -- `removeParsing`, the CLI's dedup check
+        // before appending -- so such a tag can be neither found nor removed,
+        // and re-registering appends another. Rejecting it here keeps the write
+        // side inside what the read side admits.
+        require(service.kind in ASSERTION_KINDS) { "Not a NIP-85 assertion kind: ${service.kind}" }
+    }
+
     fun toTagArray() = assemble(service, pubkey, relayUrl)
 
     companion object {

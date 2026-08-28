@@ -310,6 +310,22 @@ object GrapeRankOperator {
     }
 
     /**
+     * `--service KIND:TAG`, accepted only for a kind NIP-85 actually defines.
+     * [ServiceProviderTag] reads back nothing else, and both the dedup check
+     * before appending and `unregister`'s match go through that read -- so a
+     * `30392:podcaster` would append a fresh duplicate on every register and
+     * could never be unregistered. Better a bad_args than a 10040 that grows a
+     * tag per run.
+     */
+    private fun parseAssertionService(raw: String): ServiceType? = ServiceType.parse(raw)?.takeIf { it.kind in ServiceProviderTag.ASSERTION_KINDS }
+
+    private fun badServiceArg() =
+        Output.error(
+            "bad_args",
+            "--service must be KIND:TAG with KIND in ${ServiceProviderTag.ASSERTION_KINDS.first}-${ServiceProviderTag.ASSERTION_KINDS.last}, e.g. 30382:rank",
+        )
+
+    /**
      * `amy graperank register [PROVIDER] [--service KIND:TAG] [--relay URL] [--private]`
      *
      * Add a NIP-85 provider entry to the account's kind:10040
@@ -337,7 +353,7 @@ object GrapeRankOperator {
 
         val service =
             serviceArg?.let {
-                ServiceType.parse(it) ?: return Output.error("bad_args", "--service must be KIND:TAG, e.g. 30382:rank")
+                parseAssertionService(it) ?: return badServiceArg()
             } ?: ProviderTypes.rank
 
         Context.open(dataDir).use { ctx ->
@@ -424,7 +440,7 @@ object GrapeRankOperator {
 
         val service =
             serviceArg?.let {
-                ServiceType.parse(it) ?: return Output.error("bad_args", "--service must be KIND:TAG, e.g. 30382:rank")
+                parseAssertionService(it) ?: return badServiceArg()
             }
         val relay =
             relayArg?.let {

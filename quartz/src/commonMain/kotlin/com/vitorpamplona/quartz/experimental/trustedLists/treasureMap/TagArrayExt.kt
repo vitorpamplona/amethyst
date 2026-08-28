@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.trustedLists.treasureMap
 
+import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 
@@ -45,17 +46,22 @@ fun TagArray.trustedListProvider(kind: Int) =
     }
 
 /**
- * Replaces the generic entry for [provider]'s kind, preserving **every other
- * tag verbatim** -- 10040 is replaceable, so an update republishes the whole
- * tag set and anything dropped here is lost from the Map for good.
+ * Replaces the entry [provider] would occupy, preserving **every other tag
+ * verbatim** -- 10040 is replaceable, so an update republishes the whole tag
+ * set and anything dropped here is lost from the Map for good.
+ *
+ * What counts as "the same entry" is kind **and** name, the pair the first
+ * element encodes: a generic write replaces the generic entry, a named write
+ * replaces that name. Matching on kind alone would let a named write delete
+ * the kind's generic delegation -- a different, live delegation, gone
+ * irrecoverably -- while never finding its own entry to replace, so it would
+ * also duplicate on every later call.
  *
  * The replacement keeps the old entry's position rather than moving it to the
  * end, so a Map does not reshuffle on every publisher switch. Redundant
- * generic entries for the same kind are collapsed onto that one: the invariant
- * is at most one per kind, and a writer that has to touch the kind anyway is
- * the right place to settle a Map that arrived violating it. Named entries for
- * the same kind are left alone -- they are a different delegation, reserved to
- * override this one per list.
+ * entries for the same kind and name are collapsed onto that one: at most one
+ * is the invariant, and a writer that has to touch the entry anyway is the
+ * right place to settle a Map that arrived violating it.
  */
 fun TagArray.replaceTrustedListProvider(provider: TrustedListProviderTag): TagArray {
     val replacement = provider.toTagArray()
@@ -63,8 +69,7 @@ fun TagArray.replaceTrustedListProvider(provider: TrustedListProviderTag): TagAr
 
     val out = ArrayList<Array<String>>(size + 1)
     forEach { tag ->
-        val existing = TrustedListProviderTag.parseGeneric(tag)
-        if (existing != null && existing.kind == provider.kind) {
+        if (isSameEntry(tag, provider.kind, provider.name)) {
             if (!replaced) {
                 out.add(replacement)
                 replaced = true
@@ -79,8 +84,25 @@ fun TagArray.replaceTrustedListProvider(provider: TrustedListProviderTag): TagAr
     return out.toTypedArray()
 }
 
-/** Drops the generic entry for [kind], leaving every other tag verbatim. */
-fun TagArray.removeTrustedListProvider(kind: Int): TagArray =
-    filterNot { tag ->
-        TrustedListProviderTag.parseGeneric(tag)?.kind == kind
-    }.toTypedArray()
+/**
+ * Drops the entry for [kind] and [name] -- the generic one by default --
+ * leaving every other tag verbatim.
+ */
+fun TagArray.removeTrustedListProvider(
+    kind: Int,
+    name: String? = null,
+): TagArray = filterNot { isSameEntry(it, kind, name) }.toTypedArray()
+
+/**
+ * Whether [tag] is the Trusted List entry addressed by [kind] and [name]. The
+ * comparison goes through the parser rather than string-matching the first
+ * element so that a tag we would not read is never one we silently delete.
+ */
+private fun isSameEntry(
+    tag: Tag,
+    kind: Int,
+    name: String?,
+): Boolean {
+    val entry = TrustedListProviderTag.parse(tag) ?: return false
+    return entry.kind == kind && entry.name == name
+}

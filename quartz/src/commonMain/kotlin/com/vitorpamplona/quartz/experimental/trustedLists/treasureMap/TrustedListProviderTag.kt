@@ -80,6 +80,15 @@ data class TrustedListProviderTag(
      */
     val relayUrl: NormalizedRelayUrl? = null,
 ) {
+    init {
+        // [parse] refuses a kind outside the family, so a constructed one would
+        // write a tag that can never be read back -- and therefore never
+        // replaced or removed either, since both address an entry through the
+        // parser. It would accumulate on every write. Rejecting it here keeps
+        // the two directions in step.
+        require(kind in KINDS) { "Not a Trusted List kind: $kind" }
+    }
+
     /**
      * True for the bare-kind entry, the only form that currently drives
      * behavior. Named entries parse but stay inert until the spec defines them.
