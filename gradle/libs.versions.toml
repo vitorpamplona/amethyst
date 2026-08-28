@@ -102,6 +102,8 @@ fourkoma = "1.2.0"
 appfunctions = "1.0.0-alpha09"
 ksp = "2.3.11"
 
+icu4j = "78.3"
+
 [libraries]
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
 accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-adaptive", version.ref = "accompanistAdaptive" }
@@ -239,6 +241,8 @@ androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.r
 androidx-sqlite-bundled-jvm = { module = "androidx.sqlite:sqlite-bundled-jvm", version.ref = "sqlite" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
 androidx-health-connect-client = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
+
+icu4j = { group = "com.ibm.icu", name = "icu4j", version.ref = "icu4j" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
