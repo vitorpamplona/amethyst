@@ -40,6 +40,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -70,13 +71,13 @@ class TreasureMapEntryTest {
 
     @Test
     fun readsTheGenericBareKindEntry() {
-        val entry = map(arrayOf("30392", publisher, nip85)).publicTrustedListProvider(UserTrustedListEvent.KIND)
+        val entry = assertNotNull(map(arrayOf("30392", publisher, nip85)).publicTrustedListProvider(UserTrustedListEvent.KIND))
 
-        assertEquals(UserTrustedListEvent.KIND, entry?.kind)
-        assertEquals(publisher, entry?.pubkey)
-        assertEquals("$nip85/", entry?.relayUrl?.url)
-        assertTrue(entry?.isGeneric == true)
-        assertNull(entry?.name)
+        assertEquals(UserTrustedListEvent.KIND, entry.kind)
+        assertEquals(publisher, entry.pubkey)
+        assertEquals("$nip85/", entry.relayUrl?.url)
+        assertTrue(entry.isGeneric)
+        assertNull(entry.name)
     }
 
     @Test
