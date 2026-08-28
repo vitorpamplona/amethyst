@@ -28,15 +28,22 @@ import java.io.File
  * The terminal rendering of [StatusCommand] — the one command whose answer
  * the generic key/value renderer buries.
  *
- * One block per account, four lines at most:
+ * One block per account — three lines of identity, then one line per
+ * thing the account has saved:
  *
  * ```
  * alice (current)
  *   Alice Jones · alice@example.com
  *   npub1hje47kz5qeneyqrxc9nzgmz06ml6l9lguqv0qtsz4rkwqkmf636qvg4sz3
  *   local key, in the login keychain
- *   saved: 128 events (newest 2h ago) · 3 contacts · 2 Marmot groups
+ *   saved: 128 events (newest 2h ago)
+ *          3 contacts
+ *          2 Marmot groups
  * ```
+ *
+ * The footprint gets a line per item rather than one `·`-joined run: a
+ * busy account lists six or seven of them, and a column of short lines
+ * scans in one pass where a wrapped sentence does not.
  *
  * The rule that keeps it short: **absent is silent**. A profile the store
  * hasn't seen, a footprint an account doesn't have — those lines simply
@@ -49,11 +56,8 @@ import java.io.File
 internal object StatusText {
     private const val DOT = " · "
 
-    /**
-     * Wrap column for the `saved:` list. Fixed rather than probed: JDK 21
-     * offers no terminal width, and 80 is the floor every terminal honours.
-     */
-    private const val WIDTH = 78
+    /** Hanging indent for the `saved:` list — the visible width of `"  saved: "`. */
+    private val SAVED_INDENT = " ".repeat("  saved: ".length)
 
     fun render(
         rootBase: File,
@@ -100,46 +104,16 @@ internal object StatusText {
         out.append("  ").append(signerLine(account.name, account.signer, color)).append('\n')
         if (account.npub == null) return
 
-        // Line 4 — the footprint, or one honest word when there isn't one.
-        // A busy account can list six things, so it wraps under its label.
+        // Then the footprint — one line per item, hanging off the label — or
+        // one honest word when there isn't one.
         val label = "  " + color.dim("saved:") + " "
         if (account.saved.isEmpty) {
             out.append(label).append(color.dim("nothing yet")).append('\n')
         } else {
-            appendWrapped(out, label, indent = "         ", parts = savedParts(account.saved))
-        }
-    }
-
-    /**
-     * Join [parts] with [DOT] across as many lines as it takes to stay inside
-     * [WIDTH], continuing under [indent] (which must be as wide as the visible
-     * [label]). The separator stays at the end of a line, so a wrapped list
-     * still reads as one run-on item rather than a new heading.
-     */
-    private fun appendWrapped(
-        out: StringBuilder,
-        label: String,
-        indent: String,
-        parts: List<String>,
-    ) {
-        out.append(label)
-        var used = indent.length
-        parts.forEachIndexed { i, part ->
-            val isLast = i == parts.lastIndex
-            val piece = if (isLast) part else part + DOT.trimEnd()
-            if (i > 0) {
-                if (used + 1 + piece.length > WIDTH) {
-                    out.append('\n').append(indent)
-                    used = indent.length
-                } else {
-                    out.append(' ')
-                    used += 1
-                }
+            savedParts(account.saved).forEachIndexed { i, part ->
+                out.append(if (i == 0) label else SAVED_INDENT).append(part).append('\n')
             }
-            out.append(piece)
-            used += piece.length
         }
-        out.append('\n')
     }
 
     /**
@@ -183,8 +157,8 @@ internal object StatusText {
         }
 
     /**
-     * The footprint, most-interesting first, absent items omitted. Reads as
-     * a sentence fragment: `128 events (newest 2h ago) · 3 contacts · …`.
+     * The footprint, most-interesting first, absent items omitted. One
+     * self-contained phrase per entry, since each gets its own line.
      */
     private fun savedParts(saved: StatusReport.Saved): List<String> {
         val parts = mutableListOf<String>()
