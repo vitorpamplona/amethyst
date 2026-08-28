@@ -20,48 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
-import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
-import com.vitorpamplona.amethyst.service.uploads.forServer
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ServerTypeCompressionTest {
     @Test
-    fun originlessDoesNotUseClientMediaCompression() {
-        // Originless stores ipfs://CID of the pinned bytes. We don't show Media
-        // Quality / transcode on the client; compaction is opt-in POST /media.
-        assertFalse(ServerType.Originless.usesClientMediaCompression)
-        assertTrue(ServerType.NIP96.usesClientMediaCompression)
-        assertTrue(ServerType.Blossom.usesClientMediaCompression)
-        assertTrue(ServerType.NIP95.usesClientMediaCompression)
-    }
-
-    @Test
-    fun originlessForcesUncompressedRegardlessOfRequestedQuality() {
-        assertEquals(
-            CompressorQuality.UNCOMPRESSED,
-            CompressorQuality.LOW.forServer(ServerType.Originless),
-        )
-        assertEquals(
-            CompressorQuality.UNCOMPRESSED,
-            CompressorQuality.MEDIUM.forServer(ServerType.Originless),
-        )
-        assertEquals(
-            CompressorQuality.UNCOMPRESSED,
-            CompressorQuality.HIGH.forServer(ServerType.Originless),
-        )
-    }
-
-    @Test
-    fun otherServersKeepRequestedQuality() {
-        assertEquals(CompressorQuality.LOW, CompressorQuality.LOW.forServer(ServerType.NIP96))
-        assertEquals(CompressorQuality.MEDIUM, CompressorQuality.MEDIUM.forServer(ServerType.Blossom))
-        assertEquals(CompressorQuality.HIGH, CompressorQuality.HIGH.forServer(ServerType.NIP95))
-        assertEquals(
-            CompressorQuality.UNCOMPRESSED,
-            CompressorQuality.UNCOMPRESSED.forServer(ServerType.NIP96),
-        )
+    fun everyServerTypeUsesClientMediaCompression() {
+        // Media Quality is the user's choice for every backend, including Originless.
+        // Originless POST /media is a separate node-side EXIF opt-in.
+        ServerType.entries.forEach { type ->
+            assertTrue(type.name, type.usesClientMediaCompression)
+        }
     }
 }

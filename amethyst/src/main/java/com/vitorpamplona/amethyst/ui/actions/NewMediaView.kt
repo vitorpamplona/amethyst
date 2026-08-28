@@ -218,8 +218,6 @@ fun ImageVideoPost(
         )
     }
 
-    // Originless hides this slider: we pin original bytes unless the user opts
-    // into POST /media on the Originless settings page.
     val showMediaQuality = postViewModel.selectedServer?.type?.usesClientMediaCompression ?: true
 
     if (showMediaQuality) {

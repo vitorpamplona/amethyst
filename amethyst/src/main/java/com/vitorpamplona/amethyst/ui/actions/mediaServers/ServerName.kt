@@ -38,13 +38,13 @@ enum class ServerType {
     ;
 
     /**
-     * Originless pins bytes and returns `ipfs://CID`. We do not transcode on the
-     * client — Media Quality stays hidden — unless the user opts into server
-     * `POST /media` (EXIF strip / compact). Default is `POST /upload` so we
-     * don't morph the file or the CID.
+     * Media Quality is the user's choice for every backend, including Originless.
+     * If they pick a quality, Amethyst compresses locally and uploads those bytes
+     * (the `ipfs://CID` is of the file we pin). Originless `POST /media` is a
+     * separate node-side EXIF/GPS opt-in and stays off by default (`POST /upload`).
      */
     val usesClientMediaCompression: Boolean
-        get() = this != Originless
+        get() = true
 }
 
 /**
