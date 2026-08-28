@@ -40,19 +40,16 @@ import kotlin.coroutines.cancellation.CancellationException
  * `/.well-known/lnurlp/<user>` endpoint, parses `nostrPubkey` + `allowsNostr`,
  * caches the result, and returns it. Returns null on HTTP / parse failure;
  * callers should treat that as "validation unavailable" rather than "invalid".
+ *
+ * Caching and fetch deduplication both belong to [LnurlEndpointCache]; this
+ * class is only the HTTP half.
  */
 class OkHttpLnurlEndpointResolver(
     private val okHttpClient: (String) -> OkHttpClient,
 ) : LnurlEndpointResolver {
     private val mapper = jacksonObjectMapper()
 
-    override suspend fun resolve(lnurlpUrl: String): LnurlEndpointInfo? {
-        LnurlEndpointCache.get(lnurlpUrl)?.let { return it }
-
-        val info = fetch(lnurlpUrl) ?: return null
-        LnurlEndpointCache.put(lnurlpUrl, info)
-        return info
-    }
+    override suspend fun resolve(lnurlpUrl: String): LnurlEndpointInfo? = LnurlEndpointCache.getOrFetch(lnurlpUrl, ::fetch)
 
     private suspend fun fetch(url: String): LnurlEndpointInfo? =
         withContext(Dispatchers.IO) {

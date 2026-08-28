@@ -21,6 +21,8 @@
 package com.vitorpamplona.quartz.nip57Zaps.validate
 
 import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
+import kotlinx.coroutines.CompletableDeferred
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Process-wide cache of LNURL-pay endpoint metadata, keyed by the canonical
@@ -44,6 +46,12 @@ object LnurlEndpointCache {
     // the previous LinkedHashMap-based behaviour where only put reordered.
     private val cache = ConcurrentLruCache<String, LnurlEndpointInfo>(MAX_ENTRIES)
 
+    // Fetches in progress, keyed exactly as [cache] is. The two must agree on
+    // what counts as "the same address", which is why they live together: a
+    // flight map that keyed URLs differently would silently stop deduplicating
+    // the moment this object's canonicalisation changed, and nothing would fail.
+    private val inFlight = ConcurrentHashMap<String, CompletableDeferred<LnurlEndpointInfo?>>()
+
     fun get(url: String): LnurlEndpointInfo? = cache.get(LnurlForm.normalizeUrl(url))
 
     fun put(
@@ -53,8 +61,58 @@ object LnurlEndpointCache {
         cache.put(LnurlForm.normalizeUrl(url), info)
     }
 
+    /**
+     * Returns the cached entry for [url], or runs [fetch] — exactly once, however
+     * many callers ask at once — and caches what it returns.
+     *
+     * A zap-receipt burst asks once per receipt: twenty receipts for one
+     * lightning address arrive together, all miss, and without this they would
+     * be twenty requests to a stranger's unthrottled `/.well-known/lnurlp/`
+     * endpoint for one user action. The first caller fetches; the rest await it.
+     *
+     * A [fetch] returning null is not cached, so a provider having a bad minute
+     * is retried by the next caller rather than remembered as unresolvable.
+     *
+     * [fetch] is expected to report failure by returning null rather than by
+     * throwing. Cancellation is the exception: if the coroutine that owns the
+     * fetch is cancelled, the CancellationException propagates to that caller
+     * alone, and everyone awaiting it gets null — "unresolved", the same as a
+     * failed fetch. That asymmetry is deliberate. Awaiters are separate
+     * coroutines that are still alive, and cancelling them because the caller
+     * that happened to win the race went away would be wrong. Any other
+     * throwable reaches awaiters the same way, as null, while propagating to
+     * the owner — so a [fetch] that throws gives the two a different answer for
+     * one failure. Return null instead.
+     */
+    suspend fun getOrFetch(
+        url: String,
+        fetch: suspend (String) -> LnurlEndpointInfo?,
+    ): LnurlEndpointInfo? {
+        val key = LnurlForm.normalizeUrl(url)
+        cache.get(key)?.let { return it }
+
+        val ours = CompletableDeferred<LnurlEndpointInfo?>()
+        // Whoever wins putIfAbsent owns the fetch; it returns the previous entry,
+        // so a non-null result means someone else is already in flight.
+        inFlight.putIfAbsent(key, ours)?.let { return it.await() }
+
+        var info: LnurlEndpointInfo? = null
+        try {
+            info = fetch(url)?.also { cache.put(key, it) }
+        } finally {
+            // The cache is populated before the flight is released, so a caller
+            // arriving in between reads the result instead of starting a second
+            // fetch. Non-suspending, so awaiters are released even if the fetch is
+            // cancelled.
+            inFlight.remove(key, ours)
+            ours.complete(info)
+        }
+        return info
+    }
+
     fun clear() {
         cache.clear()
+        inFlight.clear()
     }
 
     internal fun size(): Int = cache.size()
