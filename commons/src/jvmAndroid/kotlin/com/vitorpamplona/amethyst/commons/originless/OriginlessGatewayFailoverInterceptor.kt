@@ -77,7 +77,17 @@ class OriginlessGatewayFailoverInterceptor(
                 }
                 if (response.code == 404 || response.code == 410 || response.code in 500..599) {
                     lastFailure?.close()
-                    lastFailure = response
+                    // Buffer the error body and release the connection before looping. OkHttp
+                    // throws IllegalStateException ("cannot make a new request because the
+                    // previous response is still open") if chain.proceed() is called while a
+                    // response is open, and this loop has to keep the failure around in case
+                    // every gateway misses. Body size is capped: these are small error pages.
+                    lastFailure =
+                        response
+                            .newBuilder()
+                            .body(response.peekBody(MAX_BUFFERED_ERROR_BYTES))
+                            .build()
+                    response.close()
                     continue
                 }
                 lastFailure?.close()
@@ -91,6 +101,9 @@ class OriginlessGatewayFailoverInterceptor(
     }
 
     companion object {
+        /** Cap on a buffered gateway error body. Real ones are a few hundred bytes. */
+        private const val MAX_BUFFERED_ERROR_BYTES = 64L * 1024
+
         fun ipfsCidPathOrNull(url: HttpUrl): String? {
             val segments = url.pathSegments
             if (segments.size < 2) return null
