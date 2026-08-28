@@ -22,10 +22,11 @@ package com.vitorpamplona.quartz.experimental.trustedLists
 
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.treasureMap.TrustedListProviderTag
+import com.vitorpamplona.quartz.experimental.trustedLists.treasureMap.publicTrustedListProvider
+import com.vitorpamplona.quartz.experimental.trustedLists.treasureMap.publicTrustedListProviders
 import com.vitorpamplona.quartz.experimental.trustedLists.treasureMap.removeTrustedListProvider
 import com.vitorpamplona.quartz.experimental.trustedLists.treasureMap.replaceTrustedListProvider
 import com.vitorpamplona.quartz.experimental.trustedLists.treasureMap.trustedListProvider
-import com.vitorpamplona.quartz.experimental.trustedLists.treasureMap.trustedListProviders
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
@@ -68,7 +69,7 @@ class TreasureMapEntryTest {
 
     @Test
     fun readsTheGenericBareKindEntry() {
-        val entry = map(arrayOf("30392", publisher, nip85)).trustedListProvider(UserTrustedListEvent.KIND)
+        val entry = map(arrayOf("30392", publisher, nip85)).publicTrustedListProvider(UserTrustedListEvent.KIND)
 
         assertEquals(UserTrustedListEvent.KIND, entry?.kind)
         assertEquals(publisher, entry?.pubkey)
@@ -83,21 +84,21 @@ class TreasureMapEntryTest {
         // what keeps the Map a fixed size however many lists get computed
         val treasureMap = map(arrayOf("30392", publisher, nip85))
 
-        assertEquals(publisher, treasureMap.trustedListProvider(UserTrustedListEvent.KIND)?.pubkey)
-        assertNull(treasureMap.trustedListProvider(AddressableTrustedListEvent.KIND))
+        assertEquals(publisher, treasureMap.publicTrustedListProvider(UserTrustedListEvent.KIND)?.pubkey)
+        assertNull(treasureMap.publicTrustedListProvider(AddressableTrustedListEvent.KIND))
     }
 
     @Test
     fun anUnconfiguredRelayHintDoesNotTakeTheDelegationWithIt() {
         // the spec keeps the three-element shape with an empty relay slot. The
         // pubkey is the part a consumer cannot do without, so the entry stands
-        val entry = map(arrayOf("30392", publisher, "")).trustedListProvider(UserTrustedListEvent.KIND)
+        val entry = map(arrayOf("30392", publisher, "")).publicTrustedListProvider(UserTrustedListEvent.KIND)
 
         assertEquals(publisher, entry?.pubkey)
         assertNull(entry?.relayUrl)
 
         // and a missing third element is the same story
-        val short = map(arrayOf("30392", publisher)).trustedListProvider(UserTrustedListEvent.KIND)
+        val short = map(arrayOf("30392", publisher)).publicTrustedListProvider(UserTrustedListEvent.KIND)
         assertEquals(publisher, short?.pubkey)
         assertNull(short?.relayUrl)
     }
@@ -110,7 +111,7 @@ class TreasureMapEntryTest {
             map(
                 arrayOf("30392", publisher, nip85),
                 arrayOf("30392", otherPublisher, scores),
-            ).trustedListProvider(UserTrustedListEvent.KIND)
+            ).publicTrustedListProvider(UserTrustedListEvent.KIND)
 
         assertEquals(publisher, entry?.pubkey)
     }
@@ -120,13 +121,13 @@ class TreasureMapEntryTest {
         val treasureMap = map(arrayOf("30392:podcaster", publisher, nip85))
 
         // display it as a Trusted List entry...
-        val named = treasureMap.trustedListProviders().single()
+        val named = treasureMap.publicTrustedListProviders().single()
         assertEquals(UserTrustedListEvent.KIND, named.kind)
         assertEquals("podcaster", named.name)
         assertFalse(named.isGeneric)
 
         // ...but drive nothing from it: it is not the kind's delegation
-        assertNull(treasureMap.trustedListProvider(UserTrustedListEvent.KIND))
+        assertNull(treasureMap.publicTrustedListProvider(UserTrustedListEvent.KIND))
     }
 
     @Test
@@ -158,7 +159,7 @@ class TreasureMapEntryTest {
                 arrayOf("alt", "a trust provider list"),
             )
 
-        assertEquals(emptyList(), treasureMap.trustedListProviders())
+        assertEquals(emptyList(), treasureMap.publicTrustedListProviders())
     }
 
     @Test

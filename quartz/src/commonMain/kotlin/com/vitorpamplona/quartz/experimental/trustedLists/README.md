@@ -128,12 +128,41 @@ Two things the reader must not do:
   *writer's* invariant; where duplicates appear in the wild the **first
   occurrence wins**, so two readers of one Map resolve the same publisher.
 
-Writing goes through `replaceTrustedListProvider`, which swaps the generic
-entry for its kind **in place** and preserves every other tag verbatim — 10040
-is replaceable, so the update republishes the whole tag set and anything
-dropped is lost from the Map for good. `content` (the NIP-44 envelope holding
-private entries) is carried across untouched, so the write needs no decryption
-permission.
+### Both halves of the Map
+
+A 10040 keeps half its delegations NIP-44 encrypted in `content` — who you
+trust to rank the network is itself sensitive — so a Trusted List entry has to
+work in both halves, and the one-entry-per-kind invariant spans them.
+
+The parsing is `TagArray`-level and half-agnostic: hand
+`trustedListProviders()` an already-merged array (commons'
+`PrivateTagArrayEventCache`, which caches the decryption, is how the app reads
+NIP-85 providers) and private entries come out with no extra work. The
+event-level accessors are the convenience layer on top:
+
+| Accessor | Sees |
+|---|---|
+| `publicTrustedListProviders()` / `publicTrustedListProvider(kind)` | the public tags alone, no signer |
+| `trustedListProviders(signer)` / `trustedListProvider(kind, signer)` | both halves, merged |
+
+With anyone else's signer, or a private half that will not decrypt, the merged
+accessors fall back to the public half rather than failing — the same contract
+as `TrustProviderListEvent.privateTags`. Public tags are searched first, so
+where a Map violates the invariant *across* halves the public entry wins.
+
+Writing goes through `replaceTrustedListProvider(provider, isPrivate, signer)`,
+which swaps the generic entry for its kind **in place** in the half `isPrivate`
+selects, and drops it from the other one — moving a delegation between public
+and private is a single call rather than a two-step that strands a twin,
+shadowed on read and republished forever after. Every other tag in both halves
+survives verbatim: 10040 is replaceable, so the update republishes the whole
+event and anything dropped is gone from the Map for good.
+
+The cost of the cross-half invariant is that a Map *with* a private half must
+be decryptable even for a public write — we cannot drop a private twin we
+cannot read, so that write throws `UnauthorizedDecryptionException` rather than
+publishing a Map that breaks the invariant. A Map with no private half (blank
+`content`) needs no decryption either way.
 
 ```kotlin
 val updated =
@@ -141,6 +170,7 @@ val updated =
         kind = UserTrustedListEvent.KIND,
         pubkey = publisherHex,
         relayUrl = RelayUrlNormalizer.normalizeOrNull("wss://nip85.brainstorm.world"),
+        isPrivate = false,
         signer = signer,
     )
 ```
