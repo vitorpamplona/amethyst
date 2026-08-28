@@ -2131,6 +2131,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="many">Podłączono do %1$d transmiterów</item>
         <item quantity="other">Podłączono do %1$d transmiterów</item>
     </plurals>
+    <string name="always_on_notif_show_details">Pokaż szczegóły</string>
+    <string name="always_on_notif_hide_details">Ukryj szczegóły</string>
     <!-- Opt-in breakdown of the always-on notification, shown only after the user taps "Show details". Counts overlap: one relay commonly
          serves several jobs at once, so these deliberately sum to more than the relay count. -->
     <plurals name="relay_purpose_line">
@@ -2918,6 +2920,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="cashu_no_wallet_found">W systemie nie znaleziono kompatybilnego portfela Cashu</string>
     <string name="error_unable_to_fetch_invoice">Nie można pobrać faktury z serwerów odbiorcy</string>
     <string name="wallet_connect_pay_invoice_error_error">Twój dostawca połączenia z portfelem zwrócił następujący błąd: %1$s</string>
+    <string name="wallet_connect_unreadable_response_error">Twój dostawca usługi Wallet Connect wysłał odpowiedź, której Amethyst nie zdołała odczytać.</string>
     <string name="tor_connection_failed_title">Tor nie łączy się</string>
     <string name="tor_connection_failed_body">Amethyst nie zdołał uruchomić sieci Tor. Czy można skorzystać ze zwykłego połączenia (nie przez Tor), aby strona mogła się załadować? Zapamiętamy ten wybór na najbliższą godzinę, a potem spróbujemy ponownie połączyć się przez Tor.</string>
     <string name="tor_continue_without_for_session">Użyj zwykłego połączenia</string>
@@ -3047,6 +3050,15 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_incoming">Otrzymano</string>
     <string name="wallet_outgoing">Wysłano</string>
     <string name="wallet_refresh">Odśwież</string>
+    <string name="wallet_transactions_load_failed">Nie udało się wczytać transakcji</string>
+    <string name="wallet_transactions_load_more_failed">Nie udało się wczytać kolejnych transakcji</string>
+    <string name="wallet_balance_request_failed">Nie udało się odczytać stanu konta</string>
+    <string name="wallet_invoice_creation_failed">Nie udało się utworzyć faktury</string>
+    <string name="wallet_no_invoice_returned">Twój portfel nie zwrócił faktury</string>
+    <string name="wallet_request_timed_out">Upłynął limit czasu żądania portfela</string>
+    <string name="wallet_request_failed">Nie można dotrzeć do Twojego portfela: %1$s</string>
+    <string name="wallet_connect_unrecognized_reply">Twój portfel odpowiedział czymś, czego Ametyst nie rozpoznaje (%1$s)</string>
+    <string name="wallet_connect_decrypt_failed">Amethyst nie mógł odszyfrować odpowiedzi Twojego portfela — portfel może używać innego klucza</string>
     <string name="wallet_filter_all">Wszystkie</string>
     <string name="wallet_filter_zaps">Zapy</string>
     <string name="wallet_filter_non_zaps">Bez zapów</string>
@@ -4909,6 +4921,18 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="few">%1$d członków</item>
         <item quantity="many">%1$d członków</item>
         <item quantity="other">%1$d członków</item>
+    </plurals>
+    <plurals name="wallet_connect_no_response_error">
+        <item quantity="one">Twój portfel nie odpowiedział w ciągu %1$d sekundy. Płatność mogła lub nie została zrealizowana — sprawdź swój portfel przed ponowną próbą.</item>
+        <item quantity="few">Twój portfel nie odpowiedział w ciągu %1$d sekund. Płatność mogła lub nie została zrealizowana — sprawdź swój portfel przed ponowną próbą.</item>
+        <item quantity="many">Twój portfel nie odpowiedział w ciągu %1$d sekund. Płatność mogła lub nie została zrealizowana — sprawdź swój portfel przed ponowną próbą.</item>
+        <item quantity="other">Twój portfel nie odpowiedział w ciągu %1$d sekund. Płatność mogła lub nie została zrealizowana — sprawdź swój portfel przed ponowną próbą.</item>
+    </plurals>
+    <plurals name="wallet_request_timed_out_spoofed">
+        <item quantity="one">Przekroczono limit czasu żądania portfela — %1$d odpowiedź została odrzucona, ponieważ została podpisana nieoczekiwanym kluczem. Twój transmiter może być niezaufany.</item>
+        <item quantity="few">Przekroczono limit czasu żądania portfela — %1$d odpowiedzi zostały odrzucone, ponieważ zostały podpisane przez nieoczekiwany klucz. Twój transmiter może być niezaufany.</item>
+        <item quantity="many">Przekroczono limit czasu żądania portfela — %1$d odpowiedzi zostało odrzuconych, ponieważ zostały podpisane przez nieoczekiwany klucz. Twój transmiter może być niezaufany.</item>
+        <item quantity="other">Przekroczono limit czasu żądania portfela — %1$d odpowiedzi zostały odrzucone, ponieważ zostały podpisane przez nieoczekiwany klucz. Twój transmiter może być niezaufany.</item>
     </plurals>
     <string name="marmot_group_name">Nazwa grupy</string>
     <string name="marmot_group_name_placeholder">Wpisz nazwę grupy</string>
