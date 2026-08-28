@@ -1993,6 +1993,9 @@
     <string name="call_camera_on">Câmera ligada</string>
     <string name="call_camera_off">Câmera desligada</string>
     <string name="call_switch_camera">Trocar câmera</string>
+    <string name="call_screen_share_start">Compartilhar tela</string>
+    <string name="call_screen_share_stop">Parar de compartilhar tela</string>
+    <string name="call_screen_sharing">Compartilhando tela</string>
     <string name="call_speaker">Alto-falante</string>
     <string name="call_earpiece">Auricular</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -4886,7 +4889,4 @@
     <string name="buzz_persona_avatar">URL do avatar (opcional)</string>
     <string name="buzz_persona_publishing">Publicando…</string>
     <string name="buzz_persona_publish">Publicar persona</string>
-    <string name="call_screen_share_start">Compartilhar tela</string>
-    <string name="call_screen_share_stop">Parar de compartilhar tela</string>
-    <string name="call_screen_sharing">Compartilhando tela</string>
 </resources>
