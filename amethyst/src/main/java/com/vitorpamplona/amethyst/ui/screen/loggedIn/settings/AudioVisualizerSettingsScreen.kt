@@ -50,12 +50,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.AudioVisualizer
 import com.vitorpamplona.amethyst.commons.audio.Spectrum
 import com.vitorpamplona.amethyst.commons.audio.SyntheticSpectrum
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.FakeWaveformAnimation
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
+import com.vitorpamplona.amethyst.shared.R
 import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.napplet
 
 import androidx.annotation.StringRes
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.shared.R
 
 /** Localized display name for a capability, shared by the consent dialog and the permissions screen. */
 @StringRes

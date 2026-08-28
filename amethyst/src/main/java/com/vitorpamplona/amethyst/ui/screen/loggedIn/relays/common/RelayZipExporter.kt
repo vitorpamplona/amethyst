@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry

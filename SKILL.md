@@ -141,7 +141,7 @@ Files generated:
 
 ### Change App Name
 
-Edit `amethyst/src/main/res/values/strings.xml`:
+Edit `amethystShared/src/androidMain/res/values/strings.xml`:
 ```xml
 <string name="app_name" translatable="false">YourAppName</string>
 <string name="app_name_debug" translatable="false">YourAppName Debug</string>

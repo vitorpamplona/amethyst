@@ -23,13 +23,13 @@ package com.vitorpamplona.amethyst.napplet
 import android.content.Context
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach

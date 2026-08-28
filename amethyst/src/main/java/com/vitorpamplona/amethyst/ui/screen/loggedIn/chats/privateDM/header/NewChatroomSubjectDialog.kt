@@ -46,8 +46,8 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel

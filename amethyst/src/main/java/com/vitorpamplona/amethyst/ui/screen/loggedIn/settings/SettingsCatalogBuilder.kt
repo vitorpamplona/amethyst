@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.ui.platform.UriHandler
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 

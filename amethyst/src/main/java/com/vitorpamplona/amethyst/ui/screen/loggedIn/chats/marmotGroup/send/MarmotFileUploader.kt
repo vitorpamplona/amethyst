@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send
 
 import android.content.Context
 import android.net.Uri
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04NostrCipher

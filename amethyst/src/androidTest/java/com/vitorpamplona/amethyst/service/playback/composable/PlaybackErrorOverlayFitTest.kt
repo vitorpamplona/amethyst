@@ -40,7 +40,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import io.mockk.mockk
 import org.junit.Assert.assertTrue

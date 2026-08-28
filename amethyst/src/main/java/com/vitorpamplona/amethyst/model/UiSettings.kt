@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import kotlinx.serialization.Serializable
 
 @Stable

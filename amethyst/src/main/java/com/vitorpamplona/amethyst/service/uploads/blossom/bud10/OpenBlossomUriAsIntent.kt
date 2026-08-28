@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
 import android.content.Context
 import android.content.Intent
 import androidx.core.net.toUri
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import kotlin.coroutines.cancellation.CancellationException
 
 fun openBlossomUriAsIntent(

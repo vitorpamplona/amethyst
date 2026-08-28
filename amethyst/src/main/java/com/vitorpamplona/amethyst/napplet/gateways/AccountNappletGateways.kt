@@ -26,7 +26,6 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
@@ -54,6 +53,7 @@ import com.vitorpamplona.amethyst.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.napplet.buildConnectInfo
 import com.vitorpamplona.amethyst.napplet.buildSignerConsentInfo
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll

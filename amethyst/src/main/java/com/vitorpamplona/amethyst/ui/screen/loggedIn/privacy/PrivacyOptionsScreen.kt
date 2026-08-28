@@ -55,7 +55,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -66,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.tor.torFullyPrivate
 import com.vitorpamplona.amethyst.commons.tor.torOnlyWhenNeededPreset
 import com.vitorpamplona.amethyst.commons.tor.torSmallPayloadsPreset
 import com.vitorpamplona.amethyst.commons.tor.whichPreset
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav

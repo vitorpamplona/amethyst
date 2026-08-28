@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 
 class RelayExporter(
     val context: Context,

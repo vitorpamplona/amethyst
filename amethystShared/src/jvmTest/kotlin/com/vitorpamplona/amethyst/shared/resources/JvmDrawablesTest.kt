@@ -26,7 +26,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.VectorGroup
 import androidx.compose.ui.graphics.vector.VectorNode
 import androidx.compose.ui.graphics.vector.VectorPath
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

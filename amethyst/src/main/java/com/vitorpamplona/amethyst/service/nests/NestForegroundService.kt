@@ -40,10 +40,10 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusBus
 import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestNetworkChangeBus
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.utils.Log
 

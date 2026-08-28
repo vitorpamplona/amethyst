@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 
 data class RelayListCollection(
     val homeRelays: List<BasicRelaySetupInfo>,

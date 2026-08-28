@@ -32,7 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.util.Consumer
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.getActivityOrNull
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser

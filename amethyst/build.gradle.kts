@@ -401,6 +401,7 @@ dependencies {
 
     implementation(project(":quartz"))
     implementation(project(":commons"))
+    implementation(project(":amethystShared"))
     implementation(project(":nestsClient"))
     implementation(project(":nappletHost"))
     // Compose Multiplatform resources runtime, so app-side screens that share a

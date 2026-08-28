@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.purposes
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.SubPurposeLabels
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

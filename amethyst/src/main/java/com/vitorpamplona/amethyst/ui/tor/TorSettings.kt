@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.tor.TorPresetType
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.shared.R
 
 // Re-export shared types so existing Android imports continue to work
 // The canonical types now live in commons/commonMain

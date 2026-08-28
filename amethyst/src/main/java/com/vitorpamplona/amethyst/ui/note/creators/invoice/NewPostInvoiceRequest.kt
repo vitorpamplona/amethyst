@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.ui.note.creators.invoice
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 

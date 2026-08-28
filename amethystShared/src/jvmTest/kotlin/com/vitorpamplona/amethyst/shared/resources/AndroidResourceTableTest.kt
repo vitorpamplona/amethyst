@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.shared.resources
 
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import java.util.Locale
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest

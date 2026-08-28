@@ -39,7 +39,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.utils.Log

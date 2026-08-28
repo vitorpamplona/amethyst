@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.keyPackage
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.CountFilter
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent

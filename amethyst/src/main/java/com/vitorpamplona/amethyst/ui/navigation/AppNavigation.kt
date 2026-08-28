@@ -48,7 +48,6 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
@@ -58,6 +57,7 @@ import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayA
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
 import com.vitorpamplona.amethyst.service.resourceusage.ScreenTimeIntegrator
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen
 import com.vitorpamplona.amethyst.ui.actions.bolt12Offers.Bolt12OffersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen

@@ -50,8 +50,8 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.resourceusage.UsageSummary
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.chart.LastWeekLabelFormatter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.chart.makeLine
 import com.vitorpamplona.amethyst.ui.stringRes

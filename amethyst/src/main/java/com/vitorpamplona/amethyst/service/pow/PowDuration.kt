@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.service.pow
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlin.math.roundToLong

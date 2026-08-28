@@ -35,9 +35,9 @@ import android.util.Rational
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.StringResSetup
 import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav

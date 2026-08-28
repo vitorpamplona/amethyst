@@ -46,8 +46,8 @@ import coil3.asDrawable
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.ui.theme.SmallBorder

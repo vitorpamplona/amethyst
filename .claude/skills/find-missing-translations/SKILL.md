@@ -23,7 +23,7 @@ There are two separate `strings.xml` trees, each with its own default `values/` 
 
 | Tree | Default file | Per-locale file |
 |------|--------------|-----------------|
-| **amethyst** (Android app) | `amethyst/src/main/res/values/strings.xml` | `amethyst/src/main/res/values-<locale>/strings.xml` |
+| **amethyst** (Android app) | `amethystShared/src/androidMain/res/values/strings.xml` | `amethystShared/src/androidMain/res/values-<locale>/strings.xml` |
 | **commons** (KMP Compose resources, shared by Android + Desktop) | `commons/src/commonMain/composeResources/values/strings.xml` | `commons/src/commonMain/composeResources/values-<locale>/strings.xml` |
 
 The `commons` tree appeared when shared event-renderer composables were extracted out of `amethyst/` into `commons/` (Compose Multiplatform `stringResource`). It is **not** a copy of the amethyst tree — the vast majority of its keys are commons-only; only a small handful overlap. Every diff/count/translate command below works on either tree by swapping the base path — **run the whole technique once per tree** and report them separately (each maps to its own Crowdin file, so the counts should reconcile against two different Crowdin UI numbers).
@@ -38,7 +38,7 @@ Detect name-overlap **and flag value mismatches** in one pass:
 
 ```bash
 cdef=commons/src/commonMain/composeResources/values/strings.xml
-adef=amethyst/src/main/res/values/strings.xml
+adef=amethystShared/src/androidMain/res/values/strings.xml
 comm -12 \
   <(grep '<string name=' "$cdef" | sed 's/.*name="\([^"]*\)".*/\1/' | sort -u) \
   <(grep '<string name=' "$adef" | grep -v 'translatable="false"' | sed 's/.*name="\([^"]*\)".*/\1/' | sort -u) \
@@ -128,8 +128,8 @@ Do this for **each** resource tree (see "Resource trees" above). The examples be
 
 ```
 # amethyst tree
-Default:  amethyst/src/main/res/values/strings.xml
-Target:   amethyst/src/main/res/values-<locale>/strings.xml
+Default:  amethystShared/src/androidMain/res/values/strings.xml
+Target:   amethystShared/src/androidMain/res/values-<locale>/strings.xml
 
 # commons tree
 Default:  commons/src/commonMain/composeResources/values/strings.xml
@@ -155,18 +155,18 @@ You MUST diff **both** `<string name=` AND `<plurals name=` — these are indepe
 # Strings: extract translatable keys from default (exclude translatable="false")
 echo "=== missing <string> ==="
 comm -23 \
-  <(grep '<string name=' amethyst/src/main/res/values/strings.xml \
+  <(grep '<string name=' amethystShared/src/androidMain/res/values/strings.xml \
     | grep -v 'translatable="false"' \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
-  <(grep '<string name=' amethyst/src/main/res/values-cs/strings.xml \
+  <(grep '<string name=' amethystShared/src/androidMain/res/values-cs/strings.xml \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort)
 
 # Plurals: a separate resource type — MUST be diffed independently
 echo "=== missing <plurals> ==="
 comm -23 \
-  <(grep '<plurals name=' amethyst/src/main/res/values/strings.xml \
+  <(grep '<plurals name=' amethystShared/src/androidMain/res/values/strings.xml \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
-  <(grep '<plurals name=' amethyst/src/main/res/values-cs/strings.xml \
+  <(grep '<plurals name=' amethystShared/src/androidMain/res/values-cs/strings.xml \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort)
 ```
 
@@ -177,14 +177,14 @@ Crowdin can asymmetrically strip keys across locales (each translator independen
 ```bash
 for locale in cs de-rDE sv-rSE pt-rBR; do
   ns=$(comm -23 \
-    <(grep '<string name=' amethyst/src/main/res/values/strings.xml \
+    <(grep '<string name=' amethystShared/src/androidMain/res/values/strings.xml \
       | grep -v 'translatable="false"' | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
-    <(grep '<string name=' amethyst/src/main/res/values-$locale/strings.xml \
+    <(grep '<string name=' amethystShared/src/androidMain/res/values-$locale/strings.xml \
       | sed 's/.*name="\([^"]*\)".*/\1/' | sort) | wc -l)
   np=$(comm -23 \
-    <(grep '<plurals name=' amethyst/src/main/res/values/strings.xml \
+    <(grep '<plurals name=' amethystShared/src/androidMain/res/values/strings.xml \
       | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
-    <(grep '<plurals name=' amethyst/src/main/res/values-$locale/strings.xml \
+    <(grep '<plurals name=' amethystShared/src/androidMain/res/values-$locale/strings.xml \
       | sed 's/.*name="\([^"]*\)".*/\1/' | sort) | wc -l)
   echo "$locale: strings=$ns plurals=$np total=$((ns+np))"
 done
@@ -199,12 +199,12 @@ For each missing key, extract its English value. `<string>` is a single line; `<
 ```bash
 # Missing <string>: full line from default strings.xml
 while IFS= read -r key; do
-  grep "name=\"$key\"" amethyst/src/main/res/values/strings.xml
+  grep "name=\"$key\"" amethystShared/src/androidMain/res/values/strings.xml
 done < <(comm -23 \
-  <(grep '<string name=' amethyst/src/main/res/values/strings.xml \
+  <(grep '<string name=' amethystShared/src/androidMain/res/values/strings.xml \
     | grep -v 'translatable="false"' \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
-  <(grep '<string name=' amethyst/src/main/res/values-cs/strings.xml \
+  <(grep '<string name=' amethystShared/src/androidMain/res/values-cs/strings.xml \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort))
 
 # Missing <plurals>: extract the multi-line block (opening tag through </plurals>)
@@ -213,11 +213,11 @@ while IFS= read -r key; do
     $0 ~ "<plurals name=\"" key "\"" { in_p = 1 }
     in_p { print }
     in_p && /<\/plurals>/ { in_p = 0 }
-  ' amethyst/src/main/res/values/strings.xml
+  ' amethystShared/src/androidMain/res/values/strings.xml
 done < <(comm -23 \
-  <(grep '<plurals name=' amethyst/src/main/res/values/strings.xml \
+  <(grep '<plurals name=' amethystShared/src/androidMain/res/values/strings.xml \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
-  <(grep '<plurals name=' amethyst/src/main/res/values-cs/strings.xml \
+  <(grep '<plurals name=' amethystShared/src/androidMain/res/values-cs/strings.xml \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort))
 ```
 
@@ -257,7 +257,7 @@ Flag and offer to fix:
 # Scan every locale's strings.xml for <item quantity="one"> entries that
 # hardcode "1" (or other literal digits) instead of using a placeholder.
 # Looks at default + all values-* locales, in BOTH resource trees.
-for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*/strings.xml \
+for f in amethystShared/src/androidMain/res/values/strings.xml amethystShared/src/androidMain/res/values-*/strings.xml \
          commons/src/commonMain/composeResources/values/strings.xml \
          commons/src/commonMain/composeResources/values-*/strings.xml; do
   awk -v file="$f" '
@@ -278,7 +278,7 @@ done
 Then scan for dead `quantity="zero"` entries. CLDR's `zero` category is integer-bearing only in **Arabic (`ar`)**, **Latvian (`lv`)** and **Welsh (`cy`)** — those three are skipped below, so a hit is a genuine bug. In every other locale, count=0 falls through to `other`, so a `<item quantity="zero">` entry is dead and likely a translator/author bug (or it silently never fires):
 
 ```bash
-for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*/strings.xml \
+for f in amethystShared/src/androidMain/res/values/strings.xml amethystShared/src/androidMain/res/values-*/strings.xml \
          commons/src/commonMain/composeResources/values/strings.xml \
          commons/src/commonMain/composeResources/values-*/strings.xml; do
   # Skip Arabic, Latvian and Welsh — they natively use the zero category.
@@ -338,7 +338,7 @@ PY
 
 # Empty plural items render as nothing at runtime — always a bug.
 grep -rn '<item quantity="[a-z]*"></item>' \
-  amethyst/src/main/res/values*/strings.xml \
+  amethystShared/src/androidMain/res/values*/strings.xml \
   commons/src/commonMain/composeResources/values*/strings.xml
 ```
 
@@ -362,16 +362,16 @@ Quick scan over the missing keys:
 ```bash
 # Flag missing English values that look like they should be <plurals>
 while IFS= read -r key; do
-  line=$(grep "name=\"$key\"" amethyst/src/main/res/values/strings.xml)
+  line=$(grep "name=\"$key\"" amethystShared/src/androidMain/res/values/strings.xml)
   # Hardcoded standalone "1" (word-boundary), or a count placeholder followed by a likely-countable noun
   if echo "$line" | grep -qE '>([^<]*\b1\b[^<]*|[^<]*%[0-9]*\$?d[^<]*)<'; then
     echo "PLURAL CANDIDATE: $line"
   fi
 done < <(comm -23 \
-  <(grep '<string name=' amethyst/src/main/res/values/strings.xml \
+  <(grep '<string name=' amethystShared/src/androidMain/res/values/strings.xml \
     | grep -v 'translatable="false"' \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
-  <(grep '<string name=' amethyst/src/main/res/values-cs/strings.xml \
+  <(grep '<string name=' amethystShared/src/androidMain/res/values-cs/strings.xml \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort))
 ```
 

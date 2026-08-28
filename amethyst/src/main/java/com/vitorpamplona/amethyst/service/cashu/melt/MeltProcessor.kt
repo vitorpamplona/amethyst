@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service.cashu.melt
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient

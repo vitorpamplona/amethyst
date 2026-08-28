@@ -56,8 +56,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.graphics.drawable.toBitmap
 import coil3.compose.rememberAsyncImagePainter
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.DefaultSignerPermissions
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size40dp

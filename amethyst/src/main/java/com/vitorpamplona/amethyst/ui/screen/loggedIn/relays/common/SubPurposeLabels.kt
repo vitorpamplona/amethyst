@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurposeGroup
+import com.vitorpamplona.amethyst.shared.R
 
 /**
  * The one place a [SubPurpose] becomes words, shared by the relay screens and the always-on

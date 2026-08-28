@@ -24,9 +24,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.uploads.ConfirmationCallbacks
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.stringRes
 
 @Composable

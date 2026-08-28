@@ -5,8 +5,8 @@
 "preserve_hierarchy": true
 
 files:
-  - source: amethyst/src/main/res/values/strings.xml
-    translation: amethyst/src/main/res/values-%android_code%/%original_file_name%
+  - source: amethystShared/src/androidMain/res/values/strings.xml
+    translation: amethystShared/src/androidMain/res/values-%android_code%/%original_file_name%
     type: android
     skip_untranslated_strings: true
     # Land Kenyan Swahili (sw-KE) at the base qualifier so every Swahili speaker

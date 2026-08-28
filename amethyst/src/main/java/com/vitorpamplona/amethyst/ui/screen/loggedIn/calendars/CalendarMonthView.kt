@@ -53,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MONTH_GRID_MAX_LANES
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MonthGridBarSegment
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBars
@@ -61,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpan
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes

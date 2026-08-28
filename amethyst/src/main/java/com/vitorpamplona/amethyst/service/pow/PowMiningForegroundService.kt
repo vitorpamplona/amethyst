@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.service.pow
 import android.content.Context
 import android.content.pm.ServiceInfo
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils

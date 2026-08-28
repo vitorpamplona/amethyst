@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -35,6 +34,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postCo
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.replyGroupKeyFor
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.replySummaryIdFor
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 

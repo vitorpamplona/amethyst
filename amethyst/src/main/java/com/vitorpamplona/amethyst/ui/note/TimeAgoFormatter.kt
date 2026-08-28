@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.note
 import android.content.Context
 import android.text.format.DateFormat
 import android.text.format.DateUtils
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.text.SimpleDateFormat

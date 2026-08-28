@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowing
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.FollowButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.UnfollowButton

@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
 import android.content.Context
 import android.text.format.DateUtils
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarAppointmentView
+import com.vitorpamplona.amethyst.shared.R
 
 /**
  * Localised "starts in 2 hours" / "started 5 minutes ago" / "Happening now · ends in 2 hours"

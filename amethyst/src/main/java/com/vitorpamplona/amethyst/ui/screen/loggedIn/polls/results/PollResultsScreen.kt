@@ -72,13 +72,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollOptionResult
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollVoterRow
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor

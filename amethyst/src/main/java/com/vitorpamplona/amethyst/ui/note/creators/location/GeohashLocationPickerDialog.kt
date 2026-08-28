@@ -83,11 +83,11 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.location.ForwardGeolocation
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.geohashChat.label
 import com.vitorpamplona.amethyst.ui.stringRes

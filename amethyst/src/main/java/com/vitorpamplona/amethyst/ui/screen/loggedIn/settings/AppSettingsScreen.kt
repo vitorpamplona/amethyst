@@ -70,7 +70,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.os.LocaleListCompat
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -82,6 +81,7 @@ import com.vitorpamplona.amethyst.model.FontFamilyType
 import com.vitorpamplona.amethyst.model.FontSizeType
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
@@ -103,6 +103,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
+import com.vitorpamplona.amethyst.R as AppR
 
 @Composable
 fun SettingsScreen(
@@ -498,7 +499,7 @@ private fun LanguageTile(sharedPrefs: UiSettingsFlow) {
 fun Context.getLocaleListFromXml(): LocaleListCompat {
     val tagsList = mutableListOf<CharSequence>()
     try {
-        val xpp: XmlPullParser = resources.getXml(R.xml.locales_config)
+        val xpp: XmlPullParser = resources.getXml(AppR.xml.locales_config)
         while (xpp.eventType != XmlPullParser.END_DOCUMENT) {
             if (xpp.eventType == XmlPullParser.START_TAG && xpp.name == "locale") {
                 tagsList.add(xpp.getAttributeValue(0))

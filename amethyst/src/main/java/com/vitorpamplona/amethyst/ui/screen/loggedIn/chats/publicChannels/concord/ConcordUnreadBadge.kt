@@ -37,7 +37,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 
 /** Counts above this render as "N+" so a very busy channel doesn't blow out the row. */
 private const val CONCORD_UNREAD_CAP = 99

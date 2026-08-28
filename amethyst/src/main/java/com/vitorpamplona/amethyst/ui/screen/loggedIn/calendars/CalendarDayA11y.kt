@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.stringRes
 
 // Picks calendar_day_a11y_no_events when count is 0 because ICU/CLDR maps 0 to

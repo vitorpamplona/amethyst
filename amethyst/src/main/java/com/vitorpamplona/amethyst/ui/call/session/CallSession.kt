@@ -27,7 +27,6 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.AnswerRouteAction
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
@@ -45,6 +44,7 @@ import com.vitorpamplona.amethyst.service.call.RemoteVideoMonitor
 import com.vitorpamplona.amethyst.service.call.WebRtcCallSession
 import com.vitorpamplona.amethyst.service.call.WebRtcPeerSessionAdapter
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory

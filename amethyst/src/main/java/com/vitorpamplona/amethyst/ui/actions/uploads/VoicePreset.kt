@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 
 enum class VoicePreset(
     val pitchFactor: Double,

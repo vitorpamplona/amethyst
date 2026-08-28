@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 
 class HttpStatusMessages {
     companion object {

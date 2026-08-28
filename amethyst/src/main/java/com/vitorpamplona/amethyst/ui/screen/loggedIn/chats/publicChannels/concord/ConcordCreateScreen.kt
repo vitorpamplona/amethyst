@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -75,10 +76,10 @@ fun ConcordCreateScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_title)) },
+                title = { Text(stringRes(R.string.concord_create_title)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
-                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(com.vitorpamplona.amethyst.R.string.back))
+                        SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(R.string.back))
                     }
                 },
             )
@@ -102,8 +103,8 @@ fun ConcordCreateScreen(
             )
 
             ConcordSectionHeader(
-                title = stringRes(com.vitorpamplona.amethyst.R.string.concord_create_relays),
-                description = stringRes(com.vitorpamplona.amethyst.R.string.concord_create_relays_desc),
+                title = stringRes(R.string.concord_create_relays),
+                description = stringRes(R.string.concord_create_relays_desc),
             )
             ConcordRelayListEditor(
                 relays = relays,
@@ -136,7 +137,7 @@ fun ConcordCreateScreen(
                 enabled = name.value.isNotBlank() && !working,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
-                Text(stringRes(com.vitorpamplona.amethyst.R.string.concord_create_action))
+                Text(stringRes(R.string.concord_create_action))
             }
         }
     }

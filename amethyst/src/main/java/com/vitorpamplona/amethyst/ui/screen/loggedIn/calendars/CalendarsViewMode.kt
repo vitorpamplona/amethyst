@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
 import androidx.annotation.StringRes
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.shared.R
 
 /**
  * Lenses on the same appointment timeline. Calendar *collections* (kind 31924) live on their

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.nwc
 
 import android.content.Context
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike

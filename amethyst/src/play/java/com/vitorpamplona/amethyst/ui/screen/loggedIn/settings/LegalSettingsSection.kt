@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import androidx.compose.ui.platform.UriHandler
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.shared.R
 
 /** Play build surfaces the GitHub-hosted legal policy links. */
 fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? =

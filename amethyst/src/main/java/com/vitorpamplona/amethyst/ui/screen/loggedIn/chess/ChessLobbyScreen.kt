@@ -59,7 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip64Chess.ActiveGameCard
@@ -72,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.OutgoingChallengeCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.nip64Chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.SpectatingGameCard
+import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
