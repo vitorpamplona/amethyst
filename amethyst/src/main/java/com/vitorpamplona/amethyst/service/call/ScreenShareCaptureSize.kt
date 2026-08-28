@@ -18,27 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.messagefield
+package com.vitorpamplona.amethyst.service.call
 
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import org.webrtc.VideoSource
+import org.webrtc.VideoTrack
+import kotlin.math.min
+import kotlin.math.roundToInt
 
-interface IMessageField {
-    val message: TextFieldState
+internal data class ScreenShareCaptureSize(
+    val width: Int,
+    val height: Int,
+)
 
-    fun onMessageChanged()
+internal fun screenShareCaptureSize(
+    widthPixels: Int,
+    heightPixels: Int,
+    maxDimension: Int = 1920,
+): ScreenShareCaptureSize {
+    val width = widthPixels.coerceAtLeast(2)
+    val height = heightPixels.coerceAtLeast(2)
+    val scale = min(1f, maxDimension.toFloat() / maxOf(width, height))
 
-    /**
-     * Appends text that arrived from outside the composer to the end of the draft: a share intent
-     * dropped on the screen the user is already standing on (Microsoft's SwiftKey delivers GIFs
-     * that way) or the caption of a keyboard-inserted image.
-     *
-     * Defaulted here so every composer gets it for free — the copies that used to live in each
-     * view model drifted, and a composer that silently lacked it was how GIF replies went missing
-     * on the comment screens.
-     */
-    fun addToMessage(it: String) {
-        message.setTextAndPlaceCursorAtEnd(message.text.toString() + " " + it)
-        onMessageChanged()
-    }
+    fun even(value: Int): Int = value.coerceAtLeast(2).let { it - it % 2 }
+
+    return ScreenShareCaptureSize(
+        width = even((width * scale).roundToInt()),
+        height = even((height * scale).roundToInt()),
+    )
 }
+
+data class ScreenShareResources(
+    val track: VideoTrack,
+    val source: VideoSource,
+)

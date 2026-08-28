@@ -552,11 +552,6 @@ class NewPublicMessageViewModel :
         this.multiOrchestrator?.remove(selected)
     }
 
-    fun addToMessage(it: String) {
-        message.setTextAndPlaceCursorAtEnd(message.text.toString() + " " + it)
-        onMessageChanged()
-    }
-
     override fun onMessageChanged() {
         urlPreviews.update(message.text.toString())
 

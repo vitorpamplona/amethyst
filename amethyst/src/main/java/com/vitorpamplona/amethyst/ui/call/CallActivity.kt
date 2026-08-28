@@ -105,9 +105,13 @@ class CallActivity : AppCompatActivity() {
         }
 
         val callManager = CallSessionBridge.callManager
+        // The session deliberately binds to the account, not to the AccountViewModel: MainActivity
+        // (and with it the ViewModel) can be destroyed while this call is running, so a session
+        // built on the ViewModel would die with it. The ViewModel below is only for the UI.
+        val account = CallSessionBridge.account
         val accountViewModel = CallSessionBridge.accountViewModel
 
-        if (callManager == null || accountViewModel == null) {
+        if (callManager == null || account == null || accountViewModel == null) {
             finish()
             return
         }
@@ -118,10 +122,10 @@ class CallActivity : AppCompatActivity() {
                 context = this,
                 callManager = callManager,
                 scope = lifecycleScope,
-                publishWrap = { wrap -> accountViewModel.account.publishCallSignaling(wrap) },
-                signerProvider = { accountViewModel.account.signer },
-                localPubKey = accountViewModel.account.signer.pubKey,
-                settingsProvider = { accountViewModel.account.settings },
+                publishWrap = { wrap -> account.publishCallSignaling(wrap) },
+                signerProvider = { account.signer },
+                localPubKey = account.signer.pubKey,
+                settingsProvider = { account.settings },
             )
         session = callSession
 

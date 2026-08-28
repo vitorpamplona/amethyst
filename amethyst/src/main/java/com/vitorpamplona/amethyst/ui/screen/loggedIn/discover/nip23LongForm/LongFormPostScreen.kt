@@ -124,6 +124,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.collections.immutable.persistentListOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -385,6 +386,9 @@ private fun MarkdownPostScreenBody(
                     ThinPaddingTextField(
                         state = postViewModel.message,
                         onTextChanged = postViewModel::onMessageChanged,
+                        onContentReceived = { uri, mimeType ->
+                            postViewModel.selectImage(persistentListOf(SelectedMedia(uri, mimeType)))
+                        },
                         inputTransformation = MentionPreservingInputTransformation,
                         modifier =
                             Modifier

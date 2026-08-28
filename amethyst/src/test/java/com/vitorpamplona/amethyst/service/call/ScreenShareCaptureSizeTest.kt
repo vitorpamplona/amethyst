@@ -18,27 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.creators.messagefield
+package com.vitorpamplona.amethyst.service.call
 
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
-interface IMessageField {
-    val message: TextFieldState
+class ScreenShareCaptureSizeTest {
+    @Test
+    fun keepsDisplaySizeWhenItFitsTheEncoderLimit() {
+        assertEquals(ScreenShareCaptureSize(1080, 1920), screenShareCaptureSize(1080, 1920))
+    }
 
-    fun onMessageChanged()
+    @Test
+    fun scalesLargeDisplaysAndKeepsDimensionsEven() {
+        assertEquals(ScreenShareCaptureSize(1080, 1920), screenShareCaptureSize(1441, 2560))
+    }
 
-    /**
-     * Appends text that arrived from outside the composer to the end of the draft: a share intent
-     * dropped on the screen the user is already standing on (Microsoft's SwiftKey delivers GIFs
-     * that way) or the caption of a keyboard-inserted image.
-     *
-     * Defaulted here so every composer gets it for free — the copies that used to live in each
-     * view model drifted, and a composer that silently lacked it was how GIF replies went missing
-     * on the comment screens.
-     */
-    fun addToMessage(it: String) {
-        message.setTextAndPlaceCursorAtEnd(message.text.toString() + " " + it)
-        onMessageChanged()
+    @Test
+    fun handlesMissingDisplayDimensions() {
+        assertEquals(ScreenShareCaptureSize(2, 2), screenShareCaptureSize(0, 0))
     }
 }
