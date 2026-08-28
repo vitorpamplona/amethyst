@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.vitorpamplona.amethyst.cli.DataDir
+import com.vitorpamplona.amethyst.cli.OperatorKeys
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.RunState
 import com.vitorpamplona.amethyst.cli.secrets.IdentityFile
@@ -31,7 +33,11 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import java.io.File
 
 /**
@@ -45,6 +51,54 @@ import java.io.File
  * cannot pop a keychain dialog or ask for a NIP-49 passphrase.
  */
 internal object StatusReport {
+    /**
+     * The whole answer: the machine's `~/.amy/`, which account is selected,
+     * every account, and the machine-level operator key if one exists.
+     */
+    data class Overview(
+        val root: File,
+        val currentPin: String?,
+        /**
+         * Whether [currentPin] resolves to a directory that is actually
+         * there. A pin left behind by a deleted account makes *every* other
+         * verb fail with "pins 'x' but … doesn't exist" — so status, the
+         * command you run to work out why, has to be able to say so.
+         */
+        val currentExists: Boolean,
+        val accounts: List<AccountReport>,
+        val operator: Operator?,
+    ) {
+        /**
+         * True when no account is selected and amy cannot pick one for you —
+         * a stale pin, or several accounts and no pin. Until it's resolved
+         * every verb needs an explicit `--account`.
+         */
+        val selectionBroken: Boolean
+            get() = if (currentPin != null) !currentExists else accounts.size > 1
+
+        fun toJson(): Map<String, Any?> =
+            linkedMapOf(
+                "root" to root.absolutePath,
+                "current" to currentPin,
+                "current_exists" to currentExists,
+                "accounts" to accounts.map { it.toJson() },
+                "operator" to operator?.toJson(),
+            )
+    }
+
+    /**
+     * The machine-level GrapeRank operator key at `~/.amy/operator/`, shared
+     * by every account. `listAccounts` skips it as a reserved name, so
+     * without this it is the one thing under `~/.amy/` nothing reports.
+     */
+    data class Operator(
+        val pubkey: String,
+        val npub: String,
+        val relays: List<String>,
+    ) {
+        fun toJson(): Map<String, Any?> = linkedMapOf("pubkey" to pubkey, "npub" to npub, "relays" to relays)
+    }
+
     /** One account's answer to "who is this" and "what have they got". */
     data class AccountReport(
         val name: String,
@@ -81,10 +135,22 @@ internal object StatusReport {
      * the account's own directory.
      */
     data class Saved(
+        val follows: Int,
+        /**
+         * NIP-65 (kind 10002). A bare `r` tag advertises a relay for both
+         * directions, so [relaysWrite] + [relaysRead] can exceed [relays] —
+         * that is the spec, not double counting.
+         */
+        val relays: Int,
+        val relaysWrite: Int,
+        val relaysRead: Int,
+        /** NIP-17 DM inbox (kind 10050) — where others send this account DMs. */
+        val dmRelays: Int,
         val events: Int,
         val newestEventAt: Long?,
         val contacts: Int,
         val marmotGroups: Int,
+        val marmotMessages: Int,
         val keyPackage: Boolean,
         val concordCommunities: Int,
         val cashuWallet: Boolean,
@@ -94,15 +160,22 @@ internal object StatusReport {
         /** True when this account has nothing but its key — the fresh-`init` state. */
         val isEmpty: Boolean
             get() =
-                events == 0 && contacts == 0 && marmotGroups == 0 && !keyPackage &&
-                    concordCommunities == 0 && !cashuWallet && dmCursorAt == null
+                follows == 0 && relays == 0 && dmRelays == 0 && events == 0 && contacts == 0 &&
+                    marmotGroups == 0 && !keyPackage && concordCommunities == 0 && !cashuWallet &&
+                    dmCursorAt == null
 
         fun toJson(): Map<String, Any?> =
             linkedMapOf(
+                "follows" to follows,
+                "relays" to relays,
+                "relays_write" to relaysWrite,
+                "relays_read" to relaysRead,
+                "dm_relays" to dmRelays,
                 "events" to events,
                 "newest_event_at" to newestEventAt,
                 "contacts" to contacts,
                 "marmot_groups" to marmotGroups,
+                "marmot_messages" to marmotMessages,
                 "key_package" to keyPackage,
                 "concord_communities" to concordCommunities,
                 "cashu_wallet" to cashuWallet,
@@ -129,6 +202,41 @@ internal object StatusReport {
         val canSign: Boolean,
         val bunkerRelays: List<String>?,
     )
+
+    /**
+     * Read every account under [rootBase], plus the selection state and the
+     * machine-level operator key. [store] is the shared event store, already
+     * open, or null when this machine has none.
+     */
+    suspend fun overview(
+        rootBase: File,
+        store: IEventStore?,
+    ): Overview {
+        val pin =
+            File(rootBase, DataDir.CURRENT_MARKER_NAME)
+                .takeIf { it.isFile }
+                ?.readText()
+                ?.trim()
+                ?.ifEmpty { null }
+
+        return Overview(
+            root = rootBase,
+            currentPin = pin,
+            currentExists = pin != null && File(rootBase, pin).isDirectory,
+            accounts =
+                DataDir.listAccounts(rootBase).map { name ->
+                    of(File(rootBase, name), name, name == pin, store)
+                },
+            operator =
+                OperatorKeys.peek(rootBase)?.let { cfg ->
+                    Operator(
+                        pubkey = cfg.masterPubKey,
+                        npub = runCatching { NPub.create(cfg.masterPubKey) }.getOrElse { cfg.masterPubKey },
+                        relays = cfg.relays,
+                    )
+                },
+        )
+    }
 
     /**
      * Read one account rooted at [accountRoot]. [store] is the shared event
@@ -159,13 +267,16 @@ internal object StatusReport {
             signer = classifySigner(identity, identityFile.isFile),
             saved =
                 Saved(
+                    follows = own.follows,
+                    relays = own.relays,
+                    relaysWrite = own.relaysWrite,
+                    relaysRead = own.relaysRead,
+                    dmRelays = own.dmRelays,
                     events = own.count,
                     newestEventAt = own.newestAt,
                     contacts = contactCount(File(accountRoot, "aliases.json"), identity?.npub),
-                    marmotGroups =
-                        File(accountRoot, "marmot/groups")
-                            .listFiles { f -> f.name.endsWith(".state") }
-                            ?.size ?: 0,
+                    marmotGroups = marmotFiles(accountRoot, ".state").size,
+                    marmotMessages = marmotFiles(accountRoot, ".messages").sumOf { countLines(it) },
                     keyPackage = File(accountRoot, "marmot/keypackages.bundle").isFile,
                     concordCommunities = ConcordStore(File(accountRoot, "concord.json")).load().size,
                     cashuWallet = own.hasWallet,
@@ -181,6 +292,11 @@ internal object StatusReport {
         val newestAt: Long? = null,
         val profile: UserMetadata? = null,
         val hasWallet: Boolean = false,
+        val follows: Int = 0,
+        val relays: Int = 0,
+        val relaysWrite: Int = 0,
+        val relaysRead: Int = 0,
+        val dmRelays: Int = 0,
     )
 
     /**
@@ -199,19 +315,32 @@ internal object StatusReport {
             val authors = listOf(pubkey)
             var newestAt: Long? = null
             var profile: MetadataEvent? = null
+            var contacts: ContactListEvent? = null
+            var relayList: AdvertisedRelayListEvent? = null
+            var dmInbox: ChatMessageRelayListEvent? = null
             var wallet = false
 
             // Newest-first with limit 1 gives the last-activity stamp.
             store.query<Event>(Filter(authors = authors, limit = 1)) { newestAt = it.createdAt }
-            store.query<Event>(Filter(authors = authors, kinds = listOf(MetadataEvent.KIND, CashuWalletEvent.KIND))) { event ->
-                when (event) {
-                    is MetadataEvent -> {
-                        // The store supersedes replaceables, so this is
-                        // normally a single row — keep the newest anyway.
-                        val known = profile
-                        if (known == null || event.createdAt > known.createdAt) profile = event
-                    }
 
+            // Every replaceable that describes the account, in ONE pass —
+            // each is at most one row, so adding a kind here is free.
+            val describes =
+                listOf(
+                    MetadataEvent.KIND,
+                    ContactListEvent.KIND,
+                    AdvertisedRelayListEvent.KIND,
+                    ChatMessageRelayListEvent.KIND,
+                    CashuWalletEvent.KIND,
+                )
+            store.query<Event>(Filter(authors = authors, kinds = describes)) { event ->
+                when (event) {
+                    // The store supersedes replaceables, so each of these is
+                    // normally a single row — keep the newest anyway.
+                    is MetadataEvent -> if (isNewer(event, profile)) profile = event
+                    is ContactListEvent -> if (isNewer(event, contacts)) contacts = event
+                    is AdvertisedRelayListEvent -> if (isNewer(event, relayList)) relayList = event
+                    is ChatMessageRelayListEvent -> if (isNewer(event, dmInbox)) dmInbox = event
                     is CashuWalletEvent -> wallet = true
                     else -> Unit
                 }
@@ -222,8 +351,47 @@ internal object StatusReport {
                 newestAt = newestAt,
                 profile = profile?.contactMetaData(),
                 hasWallet = wallet,
+                follows = contacts?.unverifiedFollowKeySet()?.size ?: 0,
+                relays = relayList?.relays()?.size ?: 0,
+                relaysWrite = relayList?.writeRelays()?.size ?: 0,
+                relaysRead = relayList?.readRelays()?.size ?: 0,
+                dmRelays = dmInbox?.relays()?.size ?: 0,
             )
         }.getOrElse { OwnEvents() }
+
+    private fun isNewer(
+        candidate: Event,
+        known: Event?,
+    ): Boolean = known == null || candidate.createdAt > known.createdAt
+
+    /** Marmot per-group files with the given suffix, under `marmot/groups/`. */
+    private fun marmotFiles(
+        accountRoot: File,
+        suffix: String,
+    ): List<File> =
+        File(accountRoot, "marmot/groups")
+            .listFiles { f -> f.name.endsWith(suffix) }
+            ?.toList()
+            .orEmpty()
+
+    /**
+     * Lines in [file] — one decrypted group message per line, per
+     * `FileMarmotMessageStore`. Streams bytes rather than reading the file in,
+     * so a long chat history costs a scan and not its size in heap.
+     */
+    private fun countLines(file: File): Int =
+        runCatching {
+            file.inputStream().buffered().use { input ->
+                var lines = 0
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    for (i in 0 until read) if (buffer[i] == '\n'.code.toByte()) lines++
+                }
+                lines
+            }
+        }.getOrDefault(0)
 
     private fun classifySigner(
         identity: IdentityFile?,

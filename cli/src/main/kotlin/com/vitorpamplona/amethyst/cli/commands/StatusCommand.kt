@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.cli.StoreFactory
-import java.io.File
 
 /**
  * `amy status` — who is signed in, and what each of them has saved.
@@ -31,11 +30,19 @@ import java.io.File
  * Two questions, in that order. **Who**: every account under `~/.amy/`,
  * which one commands run as, the name/NIP-05 on its profile, and how (or
  * whether) it can sign. **What's saved**: the local footprint that account
- * has accumulated — its own events in the shared store, address-book
- * aliases, Marmot groups, a published KeyPackage, Concord communities, a
- * Cashu wallet, and how far the DM catch-up cursor has run. Anything an
- * account does *not* have is left out rather than printed as a zero, so a
- * fresh account reads as one short block instead of a wall of `no`.
+ * has accumulated — follows and relay lists, its own events in the shared
+ * store, address-book aliases, Marmot groups and their messages, a Marmot
+ * KeyPackage, Concord communities, a Cashu wallet, and how far the DM
+ * catch-up cursor has run. Anything an account does *not* have is left out
+ * rather than printed as a zero, so a fresh account reads as one short
+ * block instead of a wall of `no`.
+ *
+ * It also reports the one thing no other verb can: that **no account is
+ * selected**. Everything but `use` and `status` resolves an account before
+ * it runs and dies on a stale `current` pin or an ambiguous `~/.amy/`, so
+ * the command you reach for to find out why has to name the cause. The
+ * machine-level GrapeRank operator key gets a line for the same reason —
+ * `listAccounts` skips it as a reserved name, so nothing else reports it.
  *
  * Deliberately out of scope: event-store internals (backend, disk bytes,
  * kind histogram) — that is `amy store stat`, and duplicating a partial,
@@ -67,33 +74,18 @@ object StatusCommand {
         // rather than erroring — it's a read-only inspection command.
         val rootBase = DataDir.DEFAULT_ROOT
 
-        val currentPin =
-            File(rootBase, DataDir.CURRENT_MARKER_NAME)
-                .takeIf { it.isFile }
-                ?.readText()
-                ?.trim()
-                ?.ifEmpty { null }
-
         // One store handle for every account — it's shared. Null when the
         // machine has no store yet; a store we can't open (locked, corrupt)
         // degrades to the same thing, so the on-disk half still prints.
         val store = runCatching { StoreFactory.openExistingShared(rootBase) }.getOrNull()
-        val accounts =
+        val overview =
             try {
-                DataDir.listAccounts(rootBase).map { name ->
-                    StatusReport.of(File(rootBase, name), name, name == currentPin, store)
-                }
+                StatusReport.overview(rootBase, store)
             } finally {
                 runCatching { store?.close() }
             }
 
-        Output.emit(
-            mapOf(
-                "root" to rootBase.absolutePath,
-                "current" to currentPin,
-                "accounts" to accounts.map { it.toJson() },
-            ),
-        ) { color -> StatusText.render(rootBase, accounts, color) }
+        Output.emit(overview.toJson()) { color -> StatusText.render(overview, color) }
         return 0
     }
 }

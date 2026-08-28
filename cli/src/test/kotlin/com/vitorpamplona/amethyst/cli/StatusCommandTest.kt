@@ -115,7 +115,11 @@ class StatusCommandTest {
             val saved = accountNamed(statusJson(), "alice")["saved"]
             assertEquals(0, saved["contacts"].asInt(), "the self-alias is not a saved contact")
             assertEquals(0, saved["events"].asInt())
+            assertEquals(0, saved["follows"].asInt())
+            assertEquals(0, saved["relays"].asInt())
+            assertEquals(0, saved["dm_relays"].asInt())
             assertEquals(0, saved["marmot_groups"].asInt())
+            assertEquals(0, saved["marmot_messages"].asInt())
             assertEquals(0, saved["concord_communities"].asInt())
             assertFalse(saved["key_package"].asBoolean())
             assertFalse(saved["cashu_wallet"].asBoolean())
@@ -135,6 +139,65 @@ class StatusCommandTest {
             aliases.writeText(Output.mapper.writeValueAsString(map))
 
             assertEquals(1, accountNamed(statusJson(), "alice")["saved"]["contacts"].asInt())
+        }
+
+    /**
+     * The selection state is the thing only `status` can report. Every other
+     * verb resolves an account first and dies; a user with several accounts
+     * and no pin needs to be told that, not left to read a list.
+     */
+    @Test
+    fun warnsWhenSeveralAccountsAndNoPin() =
+        withSharedAmyHome {
+            initAccount("alice")
+            initAccount("bob")
+
+            val json = statusJson()
+            assertTrue(json["current"].isNull)
+            assertFalse(json["current_exists"].asBoolean())
+            assertTrue(amy("status").stdout.contains("No account selected"), "status should say nothing is selected")
+        }
+
+    /**
+     * A pin left behind by a deleted account makes every other verb fail with
+     * "pins 'x' but … doesn't exist". Status has to name the same cause.
+     */
+    @Test
+    fun warnsWhenTheCurrentPinIsStale() =
+        withSharedAmyHome { home ->
+            initAccount("alice")
+            File(home, ".amy/current").writeText("ghost")
+
+            val json = statusJson()
+            assertEquals("ghost", json["current"].asText())
+            assertFalse(json["current_exists"].asBoolean(), "the pinned directory is gone")
+
+            val text = amy("status").stdout
+            assertTrue(text.contains("No account selected"), "status should flag the broken pin: $text")
+            assertTrue(text.contains("ghost"), "status should name the dangling pin: $text")
+        }
+
+    /** A single account, or a good pin, resolves on its own — no nagging. */
+    @Test
+    fun staysQuietWhenAnAccountResolves() =
+        withSharedAmyHome {
+            initAccount("alice")
+            assertTrue(statusJson()["current"].isNull, "one account needs no pin")
+            assertFalse(amy("status").stdout.contains("No account selected"))
+
+            initAccount("bob")
+            assertEquals(0, amy("use", "bob").exit)
+            assertTrue(statusJson()["current_exists"].asBoolean())
+            assertFalse(amy("status").stdout.contains("No account selected"), "a good pin is not a warning")
+        }
+
+    /** The machine-level operator key is reported, and absent by default. */
+    @Test
+    fun reportsNoOperatorKeyUntilOneExists() =
+        withSharedAmyHome {
+            initAccount("alice")
+            assertTrue(statusJson()["operator"].isNull, "graperank was never run")
+            assertFalse(amy("status").stdout.contains("operator"))
         }
 
     /** Text mode has no shape contract, but it must still carry the answers. */

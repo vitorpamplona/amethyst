@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Ansi
 import com.vitorpamplona.amethyst.cli.Output
-import java.io.File
 
 /**
  * The terminal rendering of [StatusCommand] — the one command whose answer
@@ -36,10 +35,16 @@ import java.io.File
  *   Alice Jones · alice@example.com
  *   npub1hje47kz5qeneyqrxc9nzgmz06ml6l9lguqv0qtsz4rkwqkmf636qvg4sz3
  *   local key, in the login keychain
- *   saved: 128 events (newest 2h ago)
+ *   saved: 312 follows
+ *          5 relays (4 write, 3 read)
+ *          DM inbox on 2 relays
+ *          128 events (newest 2h ago)
  *          3 contacts
- *          2 Marmot groups
  * ```
+ *
+ * A `No account selected` warning leads the whole report when amy cannot
+ * resolve an account on its own; the footer carries the account count and
+ * the machine-level operator key.
  *
  * The footprint gets a line per item rather than one `·`-joined run: a
  * busy account lists six or seven of them, and a column of short lines
@@ -60,25 +65,50 @@ internal object StatusText {
     private val SAVED_INDENT = " ".repeat("  saved: ".length)
 
     fun render(
-        rootBase: File,
-        accounts: List<StatusReport.AccountReport>,
+        overview: StatusReport.Overview,
         color: Ansi,
     ): String {
-        if (accounts.isEmpty()) {
+        if (overview.accounts.isEmpty()) {
             return buildString {
-                append(color.dim("No accounts under ${rootBase.absolutePath}"))
+                append(color.dim("No accounts under ${overview.root.absolutePath}"))
                 append("\n\n")
                 append("Create one with `amy --account <name> init`")
             }
         }
 
         val out = StringBuilder()
-        for (account in accounts) {
+        // Leads, because it's the reason the next command is about to fail.
+        // No trailing blank line — the account loop below adds the separator.
+        selectionWarning(overview, color)?.let { out.append(it).append('\n') }
+        for (account in overview.accounts) {
             if (out.isNotEmpty()) out.append('\n')
             appendAccount(out, account, color)
         }
-        out.append('\n').append(footer(rootBase, accounts, color))
+        out.append('\n').append(footer(overview, color))
         return out.toString()
+    }
+
+    /**
+     * The one thing status can say that no other command will: *no account is
+     * selected*. Every verb but `use` and `status` resolves an account first
+     * and dies with "pins 'x' but … doesn't exist" or "multiple accounts …
+     * pick one" — so the command you run to diagnose that has to name it.
+     * Null when amy can resolve an account on its own (a good pin, or exactly
+     * one account).
+     */
+    private fun selectionWarning(
+        overview: StatusReport.Overview,
+        color: Ansi,
+    ): String? {
+        if (!overview.selectionBroken) return null
+        val detail =
+            if (overview.currentPin != null) {
+                "the `current` pin names '${overview.currentPin}', which no longer exists"
+            } else {
+                "${overview.accounts.size} accounts and no pin"
+            }
+        return color.yellow("No account selected") +
+            " — $detail. Every command needs `--account <name>` until you run `amy use <name>`."
     }
 
     private fun appendAccount(
@@ -162,28 +192,53 @@ internal object StatusText {
      */
     private fun savedParts(saved: StatusReport.Saved): List<String> {
         val parts = mutableListOf<String>()
+        // The two numbers that define a nostr account come first.
+        if (saved.follows > 0) parts += plural(saved.follows, "follow")
+        if (saved.relays > 0) parts += relayLine(saved)
+        if (saved.dmRelays > 0) parts += "DM inbox on ${plural(saved.dmRelays, "relay")}"
         if (saved.events > 0) {
             val age = saved.newestEventAt?.let { " (newest ${ago(it)})" } ?: ""
             parts += "${plural(saved.events, "event")}$age"
         }
         if (saved.contacts > 0) parts += plural(saved.contacts, "contact")
-        if (saved.marmotGroups > 0) parts += plural(saved.marmotGroups, "Marmot group")
-        if (saved.keyPackage) parts += "a published key package"
+        if (saved.marmotGroups > 0) {
+            val messages = if (saved.marmotMessages > 0) ", ${plural(saved.marmotMessages, "message")}" else ""
+            parts += plural(saved.marmotGroups, "Marmot group") + messages
+        }
+        // NOT "published": keypackages.bundle is the local private MLS
+        // material. The kind:30443 announcement is a separate thing.
+        if (saved.keyPackage) parts += "a Marmot key package"
         if (saved.concordCommunities > 0) parts += plural(saved.concordCommunities, "Concord community", "Concord communities")
         if (saved.cashuWallet) parts += "a Cashu wallet"
         if (saved.dmCursorAt != null) parts += "DMs synced ${ago(saved.dmCursorAt)}"
         return parts
     }
 
+    /**
+     * `5 relays (4 write, 3 read)`. The breakdown is dropped when every relay
+     * is advertised for both directions — NIP-65's bare `r` tag — because
+     * then it just restates the total twice.
+     */
+    private fun relayLine(saved: StatusReport.Saved): String {
+        val total = plural(saved.relays, "relay")
+        val bothWays = saved.relaysWrite == saved.relays && saved.relaysRead == saved.relays
+        return if (bothWays) total else "$total (${saved.relaysWrite} write, ${saved.relaysRead} read)"
+    }
+
     private fun footer(
-        rootBase: File,
-        accounts: List<StatusReport.AccountReport>,
+        overview: StatusReport.Overview,
         color: Ansi,
     ): String {
-        val head = "${plural(accounts.size, "account")} under ${rootBase.absolutePath}"
-        // Only nag about switching when there is somewhere to switch to.
-        val hint = if (accounts.size > 1) DOT + "switch with `amy use <name>`" else ""
-        return color.dim(head + hint)
+        val head = "${plural(overview.accounts.size, "account")} under ${overview.root.absolutePath}"
+        // Only nag about switching when there is somewhere to switch to, and
+        // not when the warning above already said it louder.
+        val hint = if (overview.accounts.size > 1 && !overview.selectionBroken) DOT + "switch with `amy use <name>`" else ""
+        val operator =
+            overview.operator?.let {
+                val relays = if (it.relays.isEmpty()) "no relays set" else plural(it.relays.size, "relay")
+                "\nGrapeRank operator key ${it.npub} ($relays)"
+            } ?: ""
+        return color.dim(head + hint + operator)
     }
 
     private fun ago(epochSeconds: Long): String = Output.relativeTime(System.currentTimeMillis() / 1000 - epochSeconds)
