@@ -38,12 +38,20 @@ class PayInvoiceMethod(
     var params: PayInvoiceParams? = null,
 ) : Request(NwcMethod.PAY_INVOICE) {
     companion object {
-        fun create(bolt11: String): PayInvoiceMethod = PayInvoiceMethod(PayInvoiceParams(bolt11))
+        // `metadata` is NIP-47's optional per-payment blob, whose keys NWC-06 defines.
+        // Only ever populate it for a wallet that advertises NWC-06 (`06` in the info
+        // event's `extensions` tag): a wallet is free to type the field narrowly, and
+        // one that cannot decode an object it never asked for refuses the payment.
+        fun create(
+            bolt11: String,
+            metadata: Map<String, Any?>? = null,
+        ): PayInvoiceMethod = PayInvoiceMethod(PayInvoiceParams(bolt11, metadata = metadata))
 
         fun create(
             bolt11: String,
             amount: Long,
-        ): PayInvoiceMethod = PayInvoiceMethod(PayInvoiceParams(bolt11, amount))
+            metadata: Map<String, Any?>? = null,
+        ): PayInvoiceMethod = PayInvoiceMethod(PayInvoiceParams(bolt11, amount, metadata))
     }
 }
 

@@ -271,35 +271,11 @@ private fun TransactionItem(
             tx.created_at?.let { formatMonthDayTime(it, context) } ?: ""
         }
 
-    val parsed = remember(tx.metadata) { tx.parsedMetadata() }
+    val labels = remember(tx.metadata, tx.description, tx.type) { TransactionRowLabels.resolve(tx) }
+    val counterpartyPubkeyHex = labels.counterpartyPubkeyHex
 
-    // For incoming: show who sent it (nostr pubkey or payer name/email)
-    // For outgoing: show who received it (nostr recipient or recipient identifier)
-    val counterpartyPubkeyHex =
-        remember(parsed) {
-            if (isIncoming) parsed?.senderPubkeyHex() else parsed?.recipientPubkeyHex()
-        }
-
-    val counterpartyDisplayName =
-        remember(parsed) {
-            if (isIncoming) {
-                parsed?.senderDisplayName()
-            } else {
-                parsed?.recipientIdentifier()
-            }
-        }
-
-    // Show comment only if it differs from description
-    val commentText =
-        remember(parsed, tx.description) {
-            parsed?.comment?.let { comment ->
-                if (tx.description == null || !comment.equals(tx.description, ignoreCase = true)) {
-                    comment
-                } else {
-                    null
-                }
-            }
-        }
+    val directionLabel =
+        if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing)
 
     Row(
         modifier =
@@ -337,42 +313,49 @@ private fun TransactionItem(
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            if (counterpartyPubkeyHex != null) {
-                TransactionUserName(counterpartyPubkeyHex, counterpartyDisplayName, accountViewModel)
-            } else if (counterpartyDisplayName != null) {
-                Text(
-                    text = counterpartyDisplayName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else {
-                Text(
-                    text = tx.description ?: if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            when (val title = labels.title) {
+                is TransactionRowLabels.Title.User ->
+                    TransactionUserName(title.pubkeyHex, title.name, accountViewModel)
+
+                is TransactionRowLabels.Title.Literal ->
+                    Text(
+                        text = title.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                TransactionRowLabels.Title.Direction ->
+                    Text(
+                        text = directionLabel,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
             }
 
-            if (commentText != null) {
-                Text(
-                    text = commentText,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else if (counterpartyPubkeyHex != null || counterpartyDisplayName != null) {
-                val descOrType = tx.description ?: if (isIncoming) stringRes(R.string.wallet_incoming) else stringRes(R.string.wallet_outgoing)
-                Text(
-                    text = descOrType,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            when (val subtitle = labels.subtitle) {
+                is TransactionRowLabels.Subtitle.Literal ->
+                    Text(
+                        text = subtitle.text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                TransactionRowLabels.Subtitle.Direction ->
+                    Text(
+                        text = directionLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                null -> {}
             }
 
             Text(

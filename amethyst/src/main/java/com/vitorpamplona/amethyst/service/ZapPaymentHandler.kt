@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.ui.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionMetadata
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
@@ -61,6 +62,11 @@ class ZapPaymentHandler(
         val info: MyZapSplitSetup,
         val amountMilliSats: Long,
         val invoice: String,
+        // The signed kind 9734 this invoice was fetched with, and the message on it.
+        // Carried so the NWC payment can name the payee (NWC-06 `metadata`); null for
+        // a NONZAP split, which has no zap request to send.
+        val zapRequest: LnZapRequestEvent? = null,
+        val message: String = "",
     )
 
     data class UnverifiedZapSplitSetup(
@@ -418,6 +424,13 @@ class ZapPaymentHandler(
                 account.zaps.sendZapPaymentRequestFor(
                     bolt11 = payable.invoice,
                     zappedNote = note,
+                    // Dropped unless the wallet advertises NWC-06 — see NwcSignerState.
+                    metadata =
+                        NwcTransactionMetadata.build(
+                            zapRequest = payable.zapRequest,
+                            recipientIdentifier = payable.info.lnAddress,
+                            comment = payable.message,
+                        ),
                     onResponse = { response ->
                         progress.step()
                         response.nwcFailureDetail(context)?.let { detail ->
@@ -575,6 +588,8 @@ class ZapPaymentHandler(
             info = splitSetup,
             amountMilliSats = zapValue,
             invoice = invoice,
+            zapRequest = nostrZapRequest,
+            message = message,
         )
     }
 }

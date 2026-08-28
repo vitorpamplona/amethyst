@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.tags.ExtensionsTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -164,6 +165,22 @@ class NwcSignerState(
         return info?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } == true
     }
 
+    /**
+     * Whether this wallet advertises NWC-06 (metadata conventions) and may therefore
+     * be sent a populated `metadata` on `pay_invoice`.
+     *
+     * NON-BLOCKING, and "don't know" reads as NO. Both matter: this sits on the
+     * payment path, and the only cost of answering false is a history row without a
+     * recipient — whereas answering true for a wallet that types `metadata` narrowly
+     * costs the user a refused payment. [NwcInfoCache.refreshIfStale] means a wallet
+     * that adds the tag later starts being sent metadata without any user action.
+     */
+    private fun supportsMetadata(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
+        uri ?: return false
+        infoCache?.refreshIfStale(uri)
+        return infoCache?.current(uri)?.supportsExtension(ExtensionsTag.METADATA_CONVENTIONS) == true
+    }
+
     fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()
 
     override fun isNIP47Author(pubKey: HexKey?): Boolean = nip47Signer.value.pubKey == pubKey
@@ -271,11 +288,20 @@ class NwcSignerState(
         bolt11: String,
         zappedNote: Note?,
         onTimeout: () -> Unit = {},
+        metadata: Map<String, Any?>? = null,
         onResponse: (Response?) -> Unit,
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = defaultWalletUri.value ?: throw IllegalArgumentException("No NIP47 setup")
 
-        val event = LnZapPaymentRequestEvent.create(bolt11, walletService.pubKeyHex, nip47Signer.value, useNip44 = prefersNip44(walletService))
+        // Only forwarded when the wallet advertises NWC-06; see [supportsMetadata].
+        val event =
+            LnZapPaymentRequestEvent.create(
+                bolt11,
+                walletService.pubKeyHex,
+                nip47Signer.value,
+                useNip44 = prefersNip44(walletService),
+                metadata = metadata?.takeIf { supportsMetadata(walletService) },
+            )
 
         val filter =
             NWCPaymentQueryState(

@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip47WalletConnect.tags.EncryptionTag
+import com.vitorpamplona.quartz.nip47WalletConnect.tags.ExtensionsTag
 import com.vitorpamplona.quartz.nip47WalletConnect.tags.NotificationsTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -61,6 +62,23 @@ class NwcInfoEvent(
             .flatMap { it.split(" ") }
             .filter { it.isNotBlank() }
 
+    /** The optional NWC extension specs this wallet advertises (eg. `["05", "06"]`). */
+    fun extensions() =
+        tags
+            .mapNotNull(ExtensionsTag::parse)
+            .flatten()
+            .flatMap { it.split(" ") }
+            .filter { it.isNotBlank() }
+
+    /**
+     * Whether the wallet advertises a given NWC extension spec.
+     *
+     * A wallet that says nothing reads as **no**. That direction is deliberate:
+     * the caller is deciding whether to send something the wallet may not
+     * understand, so silence must not be read as permission.
+     */
+    fun supportsExtension(id: String) = extensions().contains(id)
+
     companion object {
         const val KIND = 13194
 
@@ -68,11 +86,13 @@ class NwcInfoEvent(
             capabilities: List<String>,
             encryptionSchemes: List<String>? = null,
             notificationTypes: List<String>? = null,
+            extensions: List<String>? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NwcInfoEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, capabilities.joinToString(" "), createdAt) {
             encryptionSchemes?.let { addUnique(EncryptionTag.assemble(it)) }
             notificationTypes?.let { addUnique(NotificationsTag.assemble(it)) }
+            extensions?.let { addUnique(ExtensionsTag.assemble(it)) }
             initializer()
         }
     }

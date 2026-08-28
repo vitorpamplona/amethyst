@@ -64,9 +64,10 @@ class LnZapPaymentRequestEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
             useNip44: Boolean = false,
+            metadata: Map<String, Any?>? = null,
         ): LnZapPaymentRequestEvent =
             createRequest(
-                PayInvoiceMethod.create(lnInvoice),
+                PayInvoiceMethod.create(lnInvoice, metadata),
                 walletServicePubkey,
                 signer,
                 createdAt,

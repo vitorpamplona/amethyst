@@ -139,9 +139,10 @@ class AccountZapActions(
         bolt11: String,
         zappedNote: Note?,
         onTimeout: () -> Unit = {},
+        metadata: Map<String, Any?>? = null,
         onResponse: (Response?) -> Unit,
     ) {
-        val (event, relay) = account.nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onTimeout, onResponse)
+        val (event, relay) = account.nip47SignerState.sendZapPaymentRequestFor(bolt11, zappedNote, onTimeout, metadata, onResponse)
         account.client.publish(event, setOf(relay))
     }
 

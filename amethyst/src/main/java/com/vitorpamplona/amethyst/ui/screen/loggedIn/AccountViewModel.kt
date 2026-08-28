@@ -2839,9 +2839,10 @@ class AccountViewModel(
         zappedNote: Note?,
         onSent: () -> Unit = {},
         onTimeout: () -> Unit = {},
+        metadata: Map<String, Any?>? = null,
         onResponse: (Response?) -> Unit,
     ) = launchSigner {
-        account.zaps.sendZapPaymentRequestFor(bolt11, zappedNote, onTimeout, onResponse)
+        account.zaps.sendZapPaymentRequestFor(bolt11, zappedNote, onTimeout, metadata, onResponse)
         onSent()
     }
 
