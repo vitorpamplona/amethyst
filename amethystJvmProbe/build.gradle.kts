@@ -107,6 +107,13 @@ dependencies {
     // AndroidX Navigation ships Android-only; JetBrains publishes the same
     // androidx.navigation.* API for JVM. Apache-2.0.
     implementation(libs.jetbrains.navigation.compose)
+    // Vico is a KMP library: `compose` and `compose-m3` are root artifacts that
+    // resolve to their -desktop variants on the JVM. Same coordinates and same
+    // version the Android app uses; no stub needed. Apache-2.0.
+    implementation(libs.vico.charts.compose)
+    implementation(libs.vico.charts.m3)
+    // Also KMP, also the same version the Android app uses. Apache-2.0.
+    implementation(libs.zoomable)
 }
 
 /**
@@ -160,10 +167,27 @@ val jvmReadiness by tasks.registering {
         val excluded = allKt.count { f -> excludedDirs.any { f.invariantSeparatorsPath.contains(it) } }
         val total = allKt.size - excluded
         val broken = matches.mapTo(HashSet()) { it.groupValues[1] }.size
+        // Kotlin reports only the FIRST unresolved segment of a qualified name,
+        // so a missing library shows up as "Unresolved reference 'net'" and
+        // ranks as if it were nothing. When the error sits on an import line,
+        // read that line back and report the whole import instead — otherwise a
+        // one-line dependency fix can hide below a long tail of real work.
+        val sourceLines = HashMap<String, List<String>>()
+        fun importAt(
+            path: String,
+            line: Int,
+        ): String? {
+            val lines = sourceLines.getOrPut(path) { runCatching { File(path).readLines() }.getOrDefault(emptyList()) }
+            val text = lines.getOrNull(line - 1)?.trim() ?: return null
+            return text.removePrefix("import ").takeIf { text.startsWith("import ") }
+        }
+
         val unresolved =
             matches
-                .mapNotNull { unresolvedRe.find(it.groupValues[4])?.groupValues?.get(1) }
-                .groupingBy { it }
+                .mapNotNull { match ->
+                    val symbol = unresolvedRe.find(match.groupValues[4])?.groupValues?.get(1) ?: return@mapNotNull null
+                    importAt(match.groupValues[1], match.groupValues[2].toInt()) ?: symbol
+                }.groupingBy { it }
                 .eachCount()
                 .entries
                 .sortedByDescending { it.value }
