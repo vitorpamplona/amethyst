@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
-import org.json.JSONObject
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /** Parses the `geom` object of an `ime.pagesel` payload into a [SelectionGeometry], or null if absent. */
-fun parseSelectionGeometry(o: JSONObject?): SelectionGeometry? {
+fun parseSelectionGeometry(o: JsonObject?): SelectionGeometry? {
     if (o == null) return null
     return SelectionGeometry(
         left = o.optDouble("l", 0.0).toFloat(),
@@ -62,11 +64,11 @@ interface EmbeddedImeBridge {
  * learns there is a field to put the keyboard back on. Sent when a tab becomes the active one again, and when
  * an [ImeEvent.WantKeyboard] tap arrives for a field this host no longer mirrors.
  */
-fun EmbeddedImeBridge.requestImeResync() = sendImeOp(JSONObject().put("type", "ime.resync").toString())
+fun EmbeddedImeBridge.requestImeResync() = sendImeOp(buildJsonObject { put("type", "ime.resync") }.toString())
 
 /** Parses one page → host `ime.*` envelope into an [ImeEvent], or null for anything unrecognized. */
 fun parseImeEvent(payload: String): ImeEvent? {
-    val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
+    val o = parseImeEnvelope(payload) ?: return null
     return when (o.optString("type")) {
         "ime.focus" -> parseFocus(o)
         "ime.wantkb" -> ImeEvent.WantKeyboard
@@ -77,21 +79,21 @@ fun parseImeEvent(payload: String): ImeEvent? {
                 text = o.optString("text", ""),
                 selStart = o.optInt("selStart", 0),
                 selEnd = o.optInt("selEnd", 0),
-                geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+                geometry = parseSelectionGeometry(o.optObject("geom")),
             )
         "ime.pagesel" ->
             ImeEvent.PageSelection(
                 active = o.optBoolean("active", false),
                 text = o.optString("text", ""),
-                geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+                geometry = parseSelectionGeometry(o.optObject("geom")),
             )
         "ime.scroll" -> ImeEvent.Scroll(active = o.optBoolean("active", false))
-        "ime.carettap" -> ImeEvent.CaretTap(geometry = parseSelectionGeometry(o.optJSONObject("geom")))
+        "ime.carettap" -> ImeEvent.CaretTap(geometry = parseSelectionGeometry(o.optObject("geom")))
         else -> null
     }
 }
 
-private fun parseFocus(o: JSONObject) =
+private fun parseFocus(o: JsonObject) =
     ImeEvent.Focus(
         inputType = o.optString("inputType", "text"),
         enterKeyHint = o.optString("enterKeyHint", ""),
@@ -100,7 +102,7 @@ private fun parseFocus(o: JSONObject) =
         text = o.optString("text", ""),
         selStart = o.optInt("selStart", 0),
         selEnd = o.optInt("selEnd", 0),
-        geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+        geometry = parseSelectionGeometry(o.optObject("geom")),
     )
 
 /** What the focused page field reports up to the host keyboard. */
