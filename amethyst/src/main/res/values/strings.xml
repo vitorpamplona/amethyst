@@ -4918,7 +4918,6 @@
     <string name="relay_join_request">Relay join request</string>
     <string name="relay_leave_request">Relay leave request</string>
 
-    <string name="ai_writing_help">AI Writing Help</string>
     <string name="ai_writing_setting_title">Propose text improvements</string>
     <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
     <string name="tracked_broadcasts_setting_title">Tracked broadcasts</string>
@@ -5023,8 +5022,6 @@
     <string name="ai_tone_elaborate">Elaborate</string>
     <string name="ai_tone_friendly">Friendly</string>
     <string name="ai_tone_professional">Professional</string>
-    <string name="ai_tone_more_direct">More Direct</string>
-    <string name="ai_tone_punchy">Punchy</string>
     <string name="ai_tone_emojify">+ Emoji</string>
 
     <!-- Emoji packs -->

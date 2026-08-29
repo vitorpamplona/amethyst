@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -180,8 +181,15 @@ fun ShortNotePostScreen(
     val activity = context.getActivity()
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        postViewModel.initWritingAssistant(context)
+    val proposeAiImprovements by
+        accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements
+            .collectAsStateWithLifecycle()
+
+    LaunchedEffect(proposeAiImprovements) {
+        if (proposeAiImprovements == BooleanType.ALWAYS) {
+            // The assistant outlives this Activity inside the ViewModel, so it must not hold it.
+            postViewModel.initWritingAssistant(context.applicationContext)
+        }
     }
 
     LaunchedEffect(postViewModel, accountViewModel) {
@@ -714,8 +722,12 @@ private fun NewPostScreenBody(
             )
         }
 
+        val proposeAiImprovements by
+            accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements
+                .collectAsStateWithLifecycle()
+
         AiWritingHelpPanel(
-            isVisible = postViewModel.showAiPanel,
+            isVisible = proposeAiImprovements == BooleanType.ALWAYS && postViewModel.showAiPanel,
             readyResults = postViewModel.aiResults,
             selectedResult = postViewModel.aiSelectedResult,
             onToneSelected = postViewModel::selectAiResult,

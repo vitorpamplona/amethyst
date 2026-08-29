@@ -25,6 +25,15 @@ import androidx.compose.runtime.Immutable
 interface WritingAssistant {
     suspend fun checkAvailability(): WritingAssistantStatus
 
+    /**
+     * Asks the platform to fetch the on-device model when [checkAvailability] reported
+     * [WritingAssistantStatus.Downloadable]. Returns the status after the attempt.
+     *
+     * Implementations must be safe to call repeatedly: only the first call per instance
+     * starts a download, later ones just report the current status.
+     */
+    suspend fun requestDownload(): WritingAssistantStatus
+
     suspend fun transform(
         text: String,
         tone: WritingTone,
@@ -40,8 +49,6 @@ enum class WritingTone {
     ELABORATE,
     FRIENDLY,
     PROFESSIONAL,
-    MORE_DIRECT,
-    PUNCHY,
     EMOJIFY,
 }
 
@@ -49,6 +56,9 @@ sealed class WritingAssistantStatus {
     data object Available : WritingAssistantStatus()
 
     data object Unavailable : WritingAssistantStatus()
+
+    /** The device supports the model but it has not been fetched yet. */
+    data object Downloadable : WritingAssistantStatus()
 
     data object Downloading : WritingAssistantStatus()
 }

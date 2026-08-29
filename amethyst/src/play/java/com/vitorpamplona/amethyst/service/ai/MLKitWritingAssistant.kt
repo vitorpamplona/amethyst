@@ -22,7 +22,10 @@ package com.vitorpamplona.amethyst.service.ai
 
 import android.content.Context
 import com.google.android.gms.tasks.Tasks
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.mlkit.genai.common.DownloadCallback
 import com.google.mlkit.genai.common.FeatureStatus
+import com.google.mlkit.genai.common.GenAiException
 import com.google.mlkit.genai.proofreading.Proofreader
 import com.google.mlkit.genai.proofreading.ProofreaderOptions
 import com.google.mlkit.genai.proofreading.Proofreading
@@ -32,60 +35,141 @@ import com.google.mlkit.genai.rewriting.RewriterOptions
 import com.google.mlkit.genai.rewriting.Rewriting
 import com.google.mlkit.genai.rewriting.RewritingRequest
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executor
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
+/**
+ * On-device writing assistance backed by ML Kit GenAI (Gemini Nano through AICore).
+ *
+ * Clients are cached per (output type, language) because building one is expensive, and
+ * the composer asks for every tone at once — so the cache is hit concurrently and must be
+ * a concurrent map.
+ */
 class MLKitWritingAssistant(
-    private val context: Context,
+    context: Context,
 ) : WritingAssistant {
-    private var rewriters = mutableMapOf<Long, Rewriter>()
-    private var proofreaders = mutableMapOf<Int, Proofreader>()
+    private val context = context.applicationContext
+
+    private val rewriters = ConcurrentHashMap<Long, Rewriter>()
+    private val proofreaders = ConcurrentHashMap<Int, Proofreader>()
+
+    @Volatile
+    private var closed = false
+
+    private val downloadMutex = Mutex()
+    private var downloadRequested = false
+
+    private val languageMutex = Mutex()
+    private var lastDetectedText: String? = null
+    private var lastDetectedLanguage: WritingLanguage = WritingLanguage.ENGLISH
 
     private fun rewriterCacheKey(
         @RewriterOptions.OutputType outputType: Int,
-        @RewriterOptions.Language language: Int,
-    ): Long = (outputType.toLong() shl 32) or language.toLong()
+        language: WritingLanguage,
+    ): Long = (outputType.toLong() shl 32) or language.rewriterCode.toLong()
 
     private fun getRewriter(
         @RewriterOptions.OutputType outputType: Int,
-        @RewriterOptions.Language language: Int,
-    ): Rewriter =
-        rewriters.getOrPut(rewriterCacheKey(outputType, language)) {
-            Rewriting.getClient(
-                RewriterOptions
-                    .builder(context)
-                    .setOutputType(outputType)
-                    .setLanguage(language)
-                    .build(),
-            )
+        language: WritingLanguage,
+    ): Rewriter {
+        check(!closed) { "MLKitWritingAssistant is closed" }
+        val key = rewriterCacheKey(outputType, language)
+        val rewriter =
+            rewriters.computeIfAbsent(key) {
+                Rewriting.getClient(
+                    RewriterOptions
+                        .builder(context)
+                        .setOutputType(outputType)
+                        .setLanguage(language.rewriterCode)
+                        .build(),
+                )
+            }
+        // close() may have run between the check above and the insert. Undo the insert
+        // rather than leaking a client nothing will ever close.
+        if (closed) {
+            rewriters.remove(key)?.close()
+            error("MLKitWritingAssistant is closed")
         }
+        return rewriter
+    }
 
-    private fun getProofreader(
-        @ProofreaderOptions.Language language: Int,
-    ): Proofreader =
-        proofreaders.getOrPut(language) {
-            Proofreading.getClient(
-                ProofreaderOptions
-                    .builder(context)
-                    .setInputType(ProofreaderOptions.InputType.KEYBOARD)
-                    .setLanguage(language)
-                    .build(),
-            )
+    private fun getProofreader(language: WritingLanguage): Proofreader {
+        check(!closed) { "MLKitWritingAssistant is closed" }
+        val key = language.proofreaderCode
+        val proofreader =
+            proofreaders.computeIfAbsent(key) {
+                Proofreading.getClient(
+                    ProofreaderOptions
+                        .builder(context)
+                        .setInputType(ProofreaderOptions.InputType.KEYBOARD)
+                        .setLanguage(key)
+                        .build(),
+                )
+            }
+        if (closed) {
+            proofreaders.remove(key)?.close()
+            error("MLKitWritingAssistant is closed")
         }
+        return proofreader
+    }
 
     override suspend fun checkAvailability(): WritingAssistantStatus =
         withContext(Dispatchers.IO) {
             try {
-                val rewriter = getRewriter(RewriterOptions.OutputType.REPHRASE, RewriterOptions.Language.ENGLISH)
-                val status = rewriter.checkFeatureStatus().get()
-                when (status) {
-                    FeatureStatus.AVAILABLE -> WritingAssistantStatus.Available
-                    FeatureStatus.DOWNLOADING -> WritingAssistantStatus.Downloading
-                    else -> WritingAssistantStatus.Unavailable
-                }
+                statusOf(getRewriter(RewriterOptions.OutputType.REPHRASE, WritingLanguage.ENGLISH))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                Log.w(TAG, "Could not read the writing assistant status", e)
                 WritingAssistantStatus.Unavailable
             }
+        }
+
+    override suspend fun requestDownload(): WritingAssistantStatus =
+        withContext(Dispatchers.IO) {
+            try {
+                downloadMutex.withLock {
+                    val rewriter = getRewriter(RewriterOptions.OutputType.REPHRASE, WritingLanguage.ENGLISH)
+                    if (!downloadRequested) {
+                        downloadRequested = true
+                        rewriter.downloadFeature(SilentDownloadCallback).await()
+                        // The proofreader ships as its own feature: fetch it too, or the
+                        // CORRECT tone would stay missing forever. A failure here is not
+                        // fatal — the rewriting tones still work.
+                        try {
+                            getProofreader(WritingLanguage.ENGLISH).downloadFeature(SilentDownloadCallback).await()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Could not download the proofreading model", e)
+                        }
+                    }
+                    statusOf(rewriter)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not download the writing assistant model", e)
+                WritingAssistantStatus.Unavailable
+            }
+        }
+
+    private suspend fun statusOf(rewriter: Rewriter): WritingAssistantStatus =
+        when (rewriter.checkFeatureStatus().await()) {
+            FeatureStatus.AVAILABLE -> WritingAssistantStatus.Available
+            FeatureStatus.DOWNLOADING -> WritingAssistantStatus.Downloading
+            FeatureStatus.DOWNLOADABLE -> WritingAssistantStatus.Downloadable
+            else -> WritingAssistantStatus.Unavailable
         }
 
     override suspend fun transform(
@@ -102,8 +186,6 @@ class MLKitWritingAssistant(
                 WritingTone.FRIENDLY -> rewrite(text, RewriterOptions.OutputType.FRIENDLY, language)
                 WritingTone.PROFESSIONAL -> rewrite(text, RewriterOptions.OutputType.PROFESSIONAL, language)
                 WritingTone.EMOJIFY -> rewrite(text, RewriterOptions.OutputType.EMOJIFY, language)
-                WritingTone.MORE_DIRECT -> rewrite(text, RewriterOptions.OutputType.PROFESSIONAL, language)
-                WritingTone.PUNCHY -> rewrite(text, RewriterOptions.OutputType.SHORTEN, language)
             }
 
         return WritingResult(
@@ -113,57 +195,122 @@ class MLKitWritingAssistant(
         )
     }
 
-    private suspend fun detectLanguage(text: String): Int =
-        withContext(Dispatchers.IO) {
-            try {
-                val langTag = Tasks.await(LanguageTranslatorService.identifyLanguage(text))
-                mapLanguageTag(langTag)
-            } catch (e: Exception) {
-                RewriterOptions.Language.ENGLISH
-            }
+    /**
+     * Every tone of a batch runs over the same text, so the detection result is memoized:
+     * the first caller pays for it and the rest read the cached answer.
+     */
+    private suspend fun detectLanguage(text: String): WritingLanguage =
+        languageMutex.withLock {
+            if (lastDetectedText == text) return@withLock lastDetectedLanguage
+
+            val detected =
+                try {
+                    withContext(Dispatchers.IO) {
+                        WritingLanguage.fromTag(Tasks.await(LanguageTranslatorService.identifyLanguage(text)))
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not identify the language of the post", e)
+                    WritingLanguage.ENGLISH
+                }
+
+            lastDetectedText = text
+            lastDetectedLanguage = detected
+            detected
         }
 
     private suspend fun rewrite(
         text: String,
         @RewriterOptions.OutputType outputType: Int,
-        @RewriterOptions.Language language: Int,
-    ): String =
-        withContext(Dispatchers.IO) {
-            val rewriter = getRewriter(outputType, language)
-            val request = RewritingRequest.builder(text).build()
-            val result = rewriter.runInference(request).get()
-            result.results.firstOrNull()?.text ?: text
-        }
+        language: WritingLanguage,
+    ): String {
+        // Building a client touches disk and another process; awaiting the inference does not.
+        val rewriter = withContext(Dispatchers.IO) { getRewriter(outputType, language) }
+        val result = rewriter.runInference(RewritingRequest.builder(text).build()).await()
+        return result.results.firstOrNull()?.text ?: text
+    }
 
     private suspend fun proofread(
         text: String,
-        @ProofreaderOptions.Language language: Int,
-    ): String =
-        withContext(Dispatchers.IO) {
-            val proofreader = getProofreader(language)
-            val request = ProofreadingRequest.builder(text).build()
-            val result = proofreader.runInference(request).get()
-            result.results.firstOrNull()?.text ?: text
-        }
+        language: WritingLanguage,
+    ): String {
+        val proofreader = withContext(Dispatchers.IO) { getProofreader(language) }
+        val result = proofreader.runInference(ProofreadingRequest.builder(text).build()).await()
+        return result.results.firstOrNull()?.text ?: text
+    }
 
     override fun close() {
-        rewriters.values.forEach { it.close() }
-        rewriters.clear()
-        proofreaders.values.forEach { it.close() }
-        proofreaders.clear()
+        closed = true
+        rewriters.keys.toList().forEach { rewriters.remove(it)?.close() }
+        proofreaders.keys.toList().forEach { proofreaders.remove(it)?.close() }
+    }
+
+    /**
+     * Bridges a [ListenableFuture] into a cancellable suspend call: cancelling the caller
+     * cancels the inference instead of leaving it running on a thread nobody waits for.
+     */
+    private suspend fun <T> ListenableFuture<T>.await(): T =
+        suspendCancellableCoroutine { continuation ->
+            addListener(
+                {
+                    try {
+                        continuation.resume(get())
+                    } catch (e: CancellationException) {
+                        continuation.cancel(e)
+                    } catch (e: ExecutionException) {
+                        continuation.resumeWithException(e.cause ?: e)
+                    } catch (e: Exception) {
+                        continuation.resumeWithException(e)
+                    }
+                },
+                DIRECT_EXECUTOR,
+            )
+            continuation.invokeOnCancellation { cancel(true) }
+        }
+
+    /**
+     * The two ML Kit APIs declare their own language constants. They happen to share the
+     * same numbering today; this enum keeps our call sites from depending on that.
+     */
+    enum class WritingLanguage(
+        val rewriterCode: Int,
+        val proofreaderCode: Int,
+    ) {
+        ENGLISH(RewriterOptions.Language.ENGLISH, ProofreaderOptions.Language.ENGLISH),
+        JAPANESE(RewriterOptions.Language.JAPANESE, ProofreaderOptions.Language.JAPANESE),
+        KOREAN(RewriterOptions.Language.KOREAN, ProofreaderOptions.Language.KOREAN),
+        GERMAN(RewriterOptions.Language.GERMAN, ProofreaderOptions.Language.GERMAN),
+        FRENCH(RewriterOptions.Language.FRENCH, ProofreaderOptions.Language.FRENCH),
+        ITALIAN(RewriterOptions.Language.ITALIAN, ProofreaderOptions.Language.ITALIAN),
+        SPANISH(RewriterOptions.Language.SPANISH, ProofreaderOptions.Language.SPANISH),
+        ;
+
+        companion object {
+            fun fromTag(tag: String?): WritingLanguage =
+                when (tag?.lowercase()?.take(2)) {
+                    "en" -> ENGLISH
+                    "ja" -> JAPANESE
+                    "ko" -> KOREAN
+                    "de" -> GERMAN
+                    "fr" -> FRENCH
+                    "it" -> ITALIAN
+                    "es" -> SPANISH
+                    else -> ENGLISH
+                }
+        }
+    }
+
+    private object SilentDownloadCallback : DownloadCallback {
+        override fun onDownloadFailed(e: GenAiException) {
+            Log.w(TAG, "Writing assistant model download failed", e)
+        }
     }
 
     companion object {
-        fun mapLanguageTag(tag: String?): Int =
-            when (tag?.lowercase()?.take(2)) {
-                "en" -> RewriterOptions.Language.ENGLISH
-                "ja" -> RewriterOptions.Language.JAPANESE
-                "ko" -> RewriterOptions.Language.KOREAN
-                "de" -> RewriterOptions.Language.GERMAN
-                "fr" -> RewriterOptions.Language.FRENCH
-                "it" -> RewriterOptions.Language.ITALIAN
-                "es" -> RewriterOptions.Language.SPANISH
-                else -> RewriterOptions.Language.ENGLISH
-            }
+        private const val TAG = "MLKitWritingAssistant"
+
+        /** Completes the continuation on whichever thread finished the future. */
+        private val DIRECT_EXECUTOR = Executor { it.run() }
     }
 }

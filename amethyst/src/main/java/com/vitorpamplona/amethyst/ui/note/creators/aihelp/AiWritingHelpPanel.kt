@@ -47,11 +47,12 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.ai.WritingResult
 import com.vitorpamplona.amethyst.service.ai.WritingTone
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.collections.immutable.ImmutableMap
 
 @Composable
 fun AiWritingHelpPanel(
     isVisible: Boolean,
-    readyResults: Map<WritingTone, WritingResult>,
+    readyResults: ImmutableMap<WritingTone, WritingResult>,
     selectedResult: WritingResult?,
     onToneSelected: (WritingTone) -> Unit,
     onApply: () -> Unit,
@@ -163,7 +164,5 @@ private fun toneDisplayName(tone: WritingTone): String =
         WritingTone.ELABORATE -> stringRes(R.string.ai_tone_elaborate)
         WritingTone.FRIENDLY -> stringRes(R.string.ai_tone_friendly)
         WritingTone.PROFESSIONAL -> stringRes(R.string.ai_tone_professional)
-        WritingTone.MORE_DIRECT -> stringRes(R.string.ai_tone_more_direct)
-        WritingTone.PUNCHY -> stringRes(R.string.ai_tone_punchy)
         WritingTone.EMOJIFY -> stringRes(R.string.ai_tone_emojify)
     }

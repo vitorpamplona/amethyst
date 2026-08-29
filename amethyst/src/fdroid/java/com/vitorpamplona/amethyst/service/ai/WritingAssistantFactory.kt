@@ -23,6 +23,9 @@ package com.vitorpamplona.amethyst.service.ai
 import android.content.Context
 
 object WritingAssistantFactory {
+    /** Whether this flavor ships a real assistant. Drives the Settings tile. */
+    const val IS_SUPPORTED = false
+
     @Suppress("UNUSED_PARAMETER")
     fun create(context: Context): WritingAssistant = NoOpWritingAssistant()
 }

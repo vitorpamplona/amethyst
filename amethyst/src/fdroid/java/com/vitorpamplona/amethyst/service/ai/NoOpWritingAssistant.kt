@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.service.ai
 class NoOpWritingAssistant : WritingAssistant {
     override suspend fun checkAvailability(): WritingAssistantStatus = WritingAssistantStatus.Unavailable
 
+    override suspend fun requestDownload(): WritingAssistantStatus = WritingAssistantStatus.Unavailable
+
     override suspend fun transform(
         text: String,
         tone: WritingTone,
