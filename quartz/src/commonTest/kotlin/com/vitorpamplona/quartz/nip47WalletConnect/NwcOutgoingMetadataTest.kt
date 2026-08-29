@@ -73,19 +73,40 @@ class NwcOutgoingMetadataTest {
         assertFalse(meta.containsKey("nostr"))
     }
 
+    /**
+     * THE INTEROP PROPERTY. NIP-57 sets a zap invoice's `description_hash` to the
+     * sha256 of the raw JSON the LNURL callback received in `nostr=` — which is
+     * `LnZapRequestEvent.toJson()` (see LightningAddressResolver). A wallet that
+     * binds a stored zap request to the invoice it labels hashes the bytes of the
+     * `nostr` member, so anything short of byte-identity reads as a forged event
+     * and the row is silently stored unlabelled.
+     */
     @Test
-    fun zapRequestTravelsWithTypedFields() {
-        val meta = assertNotNull(NwcTransactionMetadata.build(zapRequest(), "user@domain.com", "great post"))
+    fun theNostrMemberIsByteIdenticalToWhatTheLnurlCallbackReceived() {
+        val event = zapRequest(content = "quoted \" and & <angled> \u00fcn\u00efcode \ud83d\ude00")
+        val callbackBytes = event.toJson()
 
-        @Suppress("UNCHECKED_CAST")
-        val nostr = meta["nostr"] as Map<String, Any?>
+        val wire =
+            OptimizedJsonMapper.toJson(
+                PayInvoiceMethod.create("lnbc50n1abc", NwcTransactionMetadata.build(event, "user@domain.com", "hi")),
+            )
 
-        // Integers, not floats: a verifying wallet recomputes the event id from these.
-        assertEquals(9734, nostr["kind"])
-        assertEquals(1756000000L, nostr["created_at"])
-        assertEquals(payerHex, nostr["pubkey"])
-        assertEquals("great post", nostr["content"])
-        assertEquals(listOf(listOf("p", recipientHex), listOf("relays", "wss://relay.damus.io")), nostr["tags"])
+        assertTrue(
+            wire.contains("\"nostr\":" + callbackBytes),
+            "metadata.nostr must be the callback's own bytes.\n  sent: $callbackBytes\n  wire: $wire",
+        )
+    }
+
+    @Test
+    fun theZapRequestSurvivesAsAReadableObject() {
+        val event = zapRequest()
+        val wire = OptimizedJsonMapper.toJson(PayInvoiceMethod.create("lnbc1", NwcTransactionMetadata.build(event, null, null)))
+        val back = OptimizedJsonMapper.fromJsonTo<Request>(wire) as PayInvoiceMethod
+        val parsed = assertNotNull(NwcTransactionMetadata.parse(back.params?.metadata))
+
+        // Raw on the way out, a normal object on the way back in.
+        assertEquals(recipientHex, parsed.recipientPubkeyHex())
+        assertEquals(payerHex, parsed.senderPubkeyHex())
     }
 
     @Test
@@ -164,8 +185,12 @@ class NwcOutgoingMetadataTest {
 
     @Test
     fun anOutgoingRowResolvesThePayeeFromThePTag() {
-        val meta = NwcTransactionMetadata.build(zapRequest(content = "for the article"), "user@domain.com", "")
-        val parsed = assertNotNull(NwcTransactionMetadata.parse(meta))
+        val wire =
+            OptimizedJsonMapper.toJson(
+                PayInvoiceMethod.create("lnbc1", NwcTransactionMetadata.build(zapRequest(content = "for the article"), "user@domain.com", "")),
+            )
+        val back = OptimizedJsonMapper.fromJsonTo<Request>(wire) as PayInvoiceMethod
+        val parsed = assertNotNull(NwcTransactionMetadata.parse(back.params?.metadata))
 
         // The p tag, not the pubkey: on an outgoing zap the pubkey is US.
         assertEquals(recipientHex, parsed.recipientPubkeyHex())

@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectReque
 import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectResponseCache
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
@@ -160,27 +161,48 @@ class NwcSignerState(
      * is cached as a definitive "no info event" for the whole TTL, which would pin
      * the wallet to NIP-04 for days.
      */
-    private suspend fun prefersNip44(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
-        uri ?: return false
-        val info = withTimeoutOrNull(NIP44_NEGOTIATION_WAIT_MS) { infoCache?.currentOrFetch(uri) }
-        return info?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } == true
+    private fun prefersNip44(info: NwcInfoEvent?): Boolean = info?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } == true
+
+    /**
+     * The wallet's advertised capabilities, fetched AT MOST ONCE per send.
+     *
+     * Every send asks this event two questions — which encryption to use, and
+     * whether NWC-06 metadata may travel — and each used to fetch it for itself.
+     * That is free on a warm cache and doubles the stall on a cold one, because
+     * [NwcInfoCache] deliberately does not cache a FAILED fetch: when the wallet's
+     * relay is down, both waits run in full. A relay dropping hourly turned a 3s
+     * worst case into 6s, which is what the wallet operator saw as a stall.
+     *
+     * Bounded, and a timeout answers null — the callers treat "don't know" as
+     * NIP-04 and as no-metadata respectively, both of which are safe.
+     */
+    private suspend fun walletInfo(uri: Nip47WalletConnect.Nip47URINorm?): NwcInfoEvent? {
+        uri ?: return null
+        return withTimeoutOrNull(NIP44_NEGOTIATION_WAIT_MS) { infoCache?.currentOrFetch(uri) }
     }
 
     /**
      * Whether this wallet advertises NWC-06 (metadata conventions) and may therefore
      * be sent a populated `metadata`.
      *
-     * NON-BLOCKING, and "don't know" reads as NO. Both matter: this sits on the
-     * payment path, and the only cost of answering false is a history row without a
-     * recipient — whereas answering true for a wallet that types `metadata` narrowly
-     * costs the user a refused payment. [NwcInfoCache.refreshIfStale] means a wallet
-     * that adds the tag later starts being sent metadata without any user action.
+     * WAITS ON A COLD CACHE, and that is the whole point. The first version paired
+     * [NwcInfoCache.refreshIfStale] — which only *starts* a fetch — with [current],
+     * read immediately after, so a wallet whose info event had not been fetched yet
+     * answered "no" and the payment went out bare. Interop testing against a live
+     * wallet caught it: a pairing whose wallet had been advertising `06` for twenty
+     * minutes still sent no metadata, and nothing anywhere reported an error.
+     *
+     * This is the same trap [currentOrFetch] was written for on the NIP-44 path —
+     * "not fetched yet" is indistinguishable from "not supported" — so it takes the
+     * same remedy, including the bounded wait so a slow relay cannot stall a
+     * payment. A timeout still reads as NO: the cost of that is a history row
+     * without a recipient, whereas a wrong YES to a wallet that types `metadata`
+     * narrowly costs the user a refused payment.
+     *
+     * [currentOrFetch] also kicks a background refresh for an expired entry, so a
+     * wallet that adds the tag later is picked up without any user action.
      */
-    private fun supportsMetadata(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
-        uri ?: return false
-        infoCache?.refreshIfStale(uri)
-        return infoCache?.current(uri)?.supportsExtension(ExtensionsTag.METADATA_CONVENTIONS) == true
-    }
+    private fun supportsMetadata(info: NwcInfoEvent?): Boolean = info?.supportsExtension(ExtensionsTag.METADATA_CONVENTIONS) == true
 
     /**
      * Strips NWC-06 `metadata` from a request bound for a wallet that never said it
@@ -199,9 +221,9 @@ class NwcSignerState(
      * A method with no metadata returns before the info cache is consulted, so this
      * costs nothing on the RPCs that can never carry any.
      */
-    private fun Request.dropMetadataIfUnsupported(walletService: Nip47WalletConnect.Nip47URINorm) {
+    private fun Request.dropMetadataIfUnsupported(info: NwcInfoEvent?) {
         val carrier = metadataCarrier ?: return
-        if (carrier.metadata == null || supportsMetadata(walletService)) return
+        if (carrier.metadata == null || supportsMetadata(info)) return
         carrier.metadata = null
     }
 
@@ -280,9 +302,10 @@ class NwcSignerState(
         val walletService = walletUri ?: throw IllegalArgumentException("No NIP47 setup")
         val walletSigner = buildSigner(walletService) ?: signer
 
-        request.dropMetadataIfUnsupported(walletService)
+        val info = walletInfo(walletService)
+        request.dropMetadataIfUnsupported(info)
 
-        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner, useNip44 = prefersNip44(walletService))
+        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner, useNip44 = prefersNip44(info))
 
         val filter =
             NWCPaymentQueryState(
@@ -326,15 +349,16 @@ class NwcSignerState(
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = defaultWalletUri.value ?: throw IllegalArgumentException("No NIP47 setup")
 
+        val info = walletInfo(walletService)
         val request = PayInvoiceMethod.create(bolt11, metadata)
-        request.dropMetadataIfUnsupported(walletService)
+        request.dropMetadataIfUnsupported(info)
 
         val event =
             LnZapPaymentRequestEvent.createRequest(
                 request,
                 walletService.pubKeyHex,
                 nip47Signer.value,
-                useNip44 = prefersNip44(walletService),
+                useNip44 = prefersNip44(info),
             )
 
         val filter =

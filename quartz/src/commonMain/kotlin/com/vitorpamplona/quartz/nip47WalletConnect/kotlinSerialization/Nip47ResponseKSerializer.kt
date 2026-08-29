@@ -47,7 +47,6 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
@@ -56,7 +55,6 @@ import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -226,7 +224,7 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
             result.notifications?.let { notifications ->
                 put("notifications", buildJsonArray { notifications.forEach { add(it) } })
             }
-            result.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+            result.metadata?.let { put("metadata", anyToJsonElement(it)) }
             result.lud16?.let { put("lud16", it) }
         }
 
@@ -373,7 +371,7 @@ object Nip47ResponseKSerializer : KSerializer<Response> {
             transaction.expires_at?.let { put("expires_at", it) }
             transaction.settled_at?.let { put("settled_at", it) }
             transaction.settle_deadline?.let { put("settle_deadline", it) }
-            transaction.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+            transaction.metadata?.let { put("metadata", anyToJsonElement(it)) }
         }
     }
 

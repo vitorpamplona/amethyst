@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip47WalletConnect.rpc
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.RawJson
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
 class NwcTransactionMetadata(
@@ -126,24 +127,30 @@ class NwcTransactionMetadata(
          */
         const val MAX_METADATA_CHARS = 4096
 
-        // Slack for the keys and punctuation around the values once serialized —
+        // The keys and punctuation around the values once serialized —
         // `{"recipient_data":{"identifier":""},"comment":"","nostr":}` is ~56 chars.
-        // Deliberately generous: overshooting drops `nostr` on a payment that would
-        // just have fit, undershooting sends an object the wallet must throw away.
+        // Only this wrapper is estimated now; every value's length is exact.
         private const val KEY_OVERHEAD = 96
 
         /**
          * Assembles NWC-06 `metadata` for an outgoing payment, or null when there is
          * nothing worth saying.
          *
-         * `nostr` is built from the event's TYPED fields rather than by re-parsing its
-         * JSON. A wallet that verifies the request recomputes the event id from these
-         * values, so `kind` and `created_at` must stay integers — and the obvious
-         * shortcut breaks exactly that: [com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.toAnyValue]
-         * resolves untyped numbers with `toDoubleOrNull()` BEFORE `toLongOrNull()`, so
-         * a JSON round-trip would emit `"kind": 9734.0` on the kotlinx (native) path
-         * while the JVM/Jackson path stayed correct — invisible on the platform we
-         * test on, broken on the one we do not.
+         * `nostr` carries the zap request's OWN serialization verbatim, as [RawJson].
+         *
+         * NIP-57 sets a zap invoice's `description_hash` to the sha256 of the raw
+         * JSON the LNURL callback received in `nostr=`, and that is
+         * `LnZapRequestEvent.toJson()` — the exact string used here. A wallet can
+         * therefore bind this stored event to the invoice it labels, which is what
+         * turns "the client says it paid X" into something the wallet checked.
+         *
+         * Rebuilding the object from typed fields would put that binding at the mercy
+         * of key order, escaping and number formatting matching by coincidence, and
+         * it fails as a silently unlabelled row rather than as an error. Passing the
+         * bytes through also sidesteps the number-widening hazard in
+         * [com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.toAnyValue],
+         * which resolves untyped numbers with `toDoubleOrNull()` BEFORE
+         * `toLongOrNull()`: nothing here decomposes the event at all.
          *
          * When the whole object would breach [MAX_METADATA_CHARS], `nostr` is dropped
          * and the much smaller `recipient_data`/`comment` pair survives, so the row
@@ -162,27 +169,18 @@ class NwcTransactionMetadata(
             comment?.ifBlank { null }?.let { lean["comment"] = it }
 
             if (zapRequest != null) {
-                // toJson() is the exact serialized length of the `nostr` sub-object.
+                // The serialized length of the `nostr` member, exactly — it is the
+                // string that gets embedded, not a reconstruction of it.
+                val raw = zapRequest.toJson()
                 val chars =
                     recipientIdentifier.orEmpty().length + comment.orEmpty().length +
-                        zapRequest.toJson().length + KEY_OVERHEAD
+                        raw.length + KEY_OVERHEAD
                 if (chars <= MAX_METADATA_CHARS) {
-                    lean["nostr"] = zapRequestFields(zapRequest)
+                    lean["nostr"] = RawJson(raw)
                 }
             }
 
             return lean.ifEmpty { null }
         }
-
-        private fun zapRequestFields(event: Event): Map<String, Any?> =
-            mapOf(
-                "id" to event.id,
-                "pubkey" to event.pubKey,
-                "created_at" to event.createdAt,
-                "kind" to event.kind,
-                "tags" to event.tags.map { it.toList() },
-                "content" to event.content,
-                "sig" to event.sig,
-            )
     }
 }
