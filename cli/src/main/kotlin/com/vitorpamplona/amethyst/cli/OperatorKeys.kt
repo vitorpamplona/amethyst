@@ -169,6 +169,24 @@ class OperatorKeys(
     companion object {
         private const val DIR_NAME = "operator"
         private const val CONFIG_NAME = "operator.json"
+
+        /**
+         * Read the manifest at `<amyHome>/operator/operator.json` without a
+         * [SecretStore] and without creating anything — null when this machine
+         * has no operator yet.
+         *
+         * The instance API can't answer "is there one, and what is it?" for a
+         * read-only caller: it needs a [SecretStore] to construct, and
+         * [masterPubKey] mints a master on first use. `amy status` must do
+         * neither, so it peeks. Only public data is returned to the caller —
+         * [Config.master] is a [SecretStore] descriptor, not the key.
+         */
+        fun peek(amyHome: File): Config? =
+            File(File(amyHome, DIR_NAME), CONFIG_NAME)
+                .takeIf { it.isFile }
+                ?.let { runCatching { Output.mapper.readValue<Config>(it.readText()) }.getOrNull() }
+                ?.takeIf { it.masterPubKey.isNotEmpty() }
+
         private const val DERIVATION_LABEL = "graperank-provider:"
         private const val MONITOR_LABEL = "relay-monitor:"
     }

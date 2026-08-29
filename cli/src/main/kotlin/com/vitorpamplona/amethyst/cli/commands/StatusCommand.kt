@@ -20,43 +20,52 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.cli.RunState
-import com.vitorpamplona.amethyst.cli.StoreStats
-import com.vitorpamplona.amethyst.cli.secrets.IdentityFile
-import com.vitorpamplona.amethyst.cli.secrets.IdentitySecret
-import java.io.File
+import com.vitorpamplona.amethyst.cli.StoreFactory
 
 /**
- * `amy status` — a single at-a-glance overview of everything amy is
- * holding on disk under `~/.amy/`. Built for the returning user: "I
- * haven't run this in months — what accounts do I have, which one is
- * active, can they still sign, and how big is the local database?"
+ * `amy status` — who is signed in, and what each of them has saved.
+ *
+ * Two questions, in that order. **Who**: every account under `~/.amy/`,
+ * which one commands run as, the name/NIP-05 on its profile, and how (or
+ * whether) it can sign. **What's saved**: the local footprint that account
+ * has accumulated — follows and relay lists, its own events in the shared
+ * store, address-book aliases, Marmot groups and their messages, a Marmot
+ * KeyPackage, Concord communities, a Cashu wallet, and how far the DM
+ * catch-up cursor has run. Anything an account does *not* have is left out
+ * rather than printed as a zero, so a fresh account reads as one short
+ * block instead of a wall of `no`.
+ *
+ * It also reports the one thing no other verb can: that **no account is
+ * selected**. Everything but `use` and `status` resolves an account before
+ * it runs and dies on a stale `current` pin or an ambiguous `~/.amy/`, so
+ * the command you reach for to find out why has to name the cause. The
+ * machine-level GrapeRank operator key gets a line for the same reason —
+ * `listAccounts` skips it as a reserved name, so nothing else reports it.
+ *
+ * Deliberately out of scope: event-store internals (backend, disk bytes,
+ * kind histogram) — that is `amy store stat`, and duplicating a partial,
+ * FS-only view of it here is what made the old output so noisy.
  *
  * Cross-account by design, so it dispatches *before* account resolution
  * (like `use`) and never fails on "zero accounts" or "ambiguous account".
- * It is strictly read-only and metadata-only: it parses the on-disk
- * `identity.json` / `state.json` / `aliases.json` and walks the shared
- * event store, but it never unlocks a private key (no keychain prompt,
- * no NIP-49 passphrase) and never touches the network.
+ * Strictly read-only: [StatusReport] parses the on-disk JSON and reads —
+ * never creates — the shared event store. It never unlocks a private key
+ * (no keychain prompt, no NIP-49 passphrase) and never touches the network.
  *
- * Per account it reports the npub, how the key is stored (local keychain
- * / ncryptsec / plaintext, a NIP-46 bunker, or read-only), whether it can
- * sign, and the local footprint that account has accumulated: aliases,
- * Marmot groups, a published KeyPackage bundle, a Cashu wallet, and the
- * sync cursors that tell catch-up commands where they left off.
+ * [StatusReport] holds the data model and the `--json` contract;
+ * [StatusText] holds the terminal rendering.
  */
 object StatusCommand {
     val USAGE: String =
         """
-        |amy status — read-only overview of every account, signer type, local
-        |Marmot/Cashu state, and the shared event store (no keychain prompt,
-        |no network). Takes no arguments.
+        |amy status — who is signed in and what each account has saved
+        |locally. Read-only: no keychain prompt, no network. Takes no
+        |arguments. For event-store size and backend, see `amy store stat`.
         """.trimMargin()
 
-    fun run(tail: Array<String>): Int {
+    suspend fun run(tail: Array<String>): Int {
         if (tail.firstOrNull() == "--help" || tail.firstOrNull() == "-h") {
             System.err.println(USAGE)
             return 0
@@ -65,114 +74,18 @@ object StatusCommand {
         // rather than erroring — it's a read-only inspection command.
         val rootBase = DataDir.DEFAULT_ROOT
 
-        val currentPin =
-            File(rootBase, DataDir.CURRENT_MARKER_NAME)
-                .takeIf { it.isFile }
-                ?.readText()
-                ?.trim()
-                ?.ifEmpty { null }
+        // One store handle for every account — it's shared. Null when the
+        // machine has no store yet; a store we can't open (locked, corrupt)
+        // degrades to the same thing, so the on-disk half still prints.
+        val store = runCatching { StoreFactory.openExistingShared(rootBase) }.getOrNull()
+        val overview =
+            try {
+                StatusReport.overview(rootBase, store)
+            } finally {
+                runCatching { store?.close() }
+            }
 
-        val accountNames = DataDir.listAccounts(rootBase)
-        val accounts = accountNames.map { accountRow(File(rootBase, it), it, it == currentPin) }
-
-        // The event store is shared across every account.
-        val store = StoreStats.of(File(rootBase, "shared/events-store").toPath())
-
-        Output.emit(
-            mapOf(
-                "root" to rootBase.absolutePath,
-                "current" to currentPin,
-                "account_count" to accounts.size,
-                "accounts" to accounts,
-                "store" to
-                    mapOf(
-                        "events" to store.events,
-                        "distinct_kinds" to store.distinctKinds,
-                        "disk_bytes" to store.diskBytes,
-                        "oldest_at" to store.oldestAt,
-                        "newest_at" to store.newestAt,
-                        "root" to store.root.toString(),
-                    ),
-            ),
-        )
+        Output.emit(overview.toJson()) { color -> StatusText.render(overview, color) }
         return 0
     }
-
-    private fun accountRow(
-        accountRoot: File,
-        name: String,
-        isCurrent: Boolean,
-    ): Map<String, Any?> {
-        val identity = readIdentity(File(accountRoot, "identity.json"))
-        val signer = classifySigner(identity)
-
-        val marmotGroups =
-            File(accountRoot, "marmot/groups")
-                .listFiles { f -> f.name.endsWith(".state") }
-                ?.size ?: 0
-        val hasKeyPackage = File(accountRoot, "marmot/keypackages.bundle").isFile
-        val hasCashuWallet = File(accountRoot, "cashu.json").isFile
-        val aliasCount = readAliases(File(accountRoot, "aliases.json")).size
-        val runState = readRunState(File(accountRoot, "state.json"))
-
-        // LinkedHashMap so the text renderer prints fields in this order.
-        val row = LinkedHashMap<String, Any?>()
-        row["name"] = name
-        row["current"] = isCurrent
-        row["npub"] = identity?.npub
-        row["hex"] = identity?.pubKeyHex
-        row["signer"] = signer.kind
-        row["key_storage"] = signer.storage
-        row["can_sign"] = signer.canSign
-        if (signer.bunkerRelays != null) row["bunker_relays"] = signer.bunkerRelays
-        row["aliases"] = aliasCount
-        row["marmot_groups"] = marmotGroups
-        row["key_package_published"] = hasKeyPackage
-        row["cashu_wallet"] = hasCashuWallet
-        row["dm_cursor_at"] = runState.giftWrapSince
-        row["marmot_group_cursors"] = runState.groupSince.size
-        return row
-    }
-
-    /**
-     * How this account can sign, derived purely from the on-disk
-     * [IdentityFile] — never resolves the secret itself.
-     *  - `local`     — an on-device private key ([storage] says where).
-     *  - `bunker`    — a NIP-46 remote signer ([bunkerRelays] lists it).
-     *  - `read-only` — imported from an npub/nprofile/NIP-05; cannot sign.
-     */
-    private data class SignerInfo(
-        val kind: String,
-        val storage: String?,
-        val canSign: Boolean,
-        val bunkerRelays: List<String>?,
-    )
-
-    private fun classifySigner(identity: IdentityFile?): SignerInfo {
-        if (identity == null) return SignerInfo("unknown", null, false, null)
-        identity.bunker?.let { bunker ->
-            return SignerInfo("bunker", secretStorageLabel(identity.secret), true, bunker.relays)
-        }
-        val storage = secretStorageLabel(identity.secret)
-        return when {
-            identity.secret != null -> SignerInfo("local", storage, true, null)
-            // Pre-secret-store data-dirs kept the key inline; still signable.
-            identity.privKeyHex != null || identity.nsec != null -> SignerInfo("local", "legacy-plaintext", true, null)
-            else -> SignerInfo("read-only", null, false, null)
-        }
-    }
-
-    private fun secretStorageLabel(secret: IdentitySecret?): String? =
-        when (secret) {
-            is IdentitySecret.Keychain -> "keychain:${secret.backend}"
-            is IdentitySecret.Ncryptsec -> "ncryptsec"
-            is IdentitySecret.Plaintext -> "plaintext"
-            null -> null
-        }
-
-    private fun readIdentity(file: File): IdentityFile? = if (file.isFile) runCatching { Output.mapper.readValue<IdentityFile>(file.readText()) }.getOrNull() else null
-
-    private fun readAliases(file: File): Map<String, String> = if (file.isFile) runCatching { Output.mapper.readValue<Map<String, String>>(file.readText()) }.getOrElse { emptyMap() } else emptyMap()
-
-    private fun readRunState(file: File): RunState = if (file.isFile) runCatching { Output.mapper.readValue<RunState>(file.readText()) }.getOrElse { RunState() } else RunState()
 }

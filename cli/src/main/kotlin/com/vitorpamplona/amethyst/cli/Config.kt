@@ -418,7 +418,7 @@ class DataDir(
             val rootBase = DEFAULT_ROOT
             val name = if (accountFlag != null) validateName(accountFlag) else pickAccount(rootBase)
             val accountRoot = File(rootBase, name).absoluteFile
-            val sharedEvents = File(rootBase, "$SHARED_DIR_NAME/events-store").absoluteFile
+            val sharedEvents = sharedEventsDir(rootBase)
             return DataDir(
                 root = accountRoot,
                 eventsDir = sharedEvents,
@@ -442,7 +442,7 @@ class DataDir(
             secrets: SecretStore,
         ): DataDir {
             val rootBase = DEFAULT_ROOT
-            val sharedEvents = File(rootBase, "$SHARED_DIR_NAME/events-store").absoluteFile
+            val sharedEvents = sharedEventsDir(rootBase)
             if (accountFlag != null) {
                 val name = validateName(accountFlag)
                 return DataDir(File(rootBase, name).absoluteFile, sharedEvents, name, secrets)
@@ -530,6 +530,17 @@ class DataDir(
                 }
             }
         }
+
+        /**
+         * The cross-account event store under [rootBase], as the two backends
+         * lay it out (see [com.vitorpamplona.amethyst.cli.StoreFactory]). These
+         * mirror the per-instance [eventsDir] / [eventsDbFile] but take the
+         * root directly, so a cross-account command like `status` can reach the
+         * shared store without resolving — or creating — an account directory.
+         */
+        fun sharedEventsDir(rootBase: File): File = File(rootBase, "$SHARED_DIR_NAME/events-store").absoluteFile
+
+        fun sharedEventsDbFile(rootBase: File): File = File(rootBase, "$SHARED_DIR_NAME/events.db").absoluteFile
 
         /** Subdirectories of `<root>/` that look like accounts (excludes `shared/`). */
         fun listAccounts(rootBase: File): List<String> =
