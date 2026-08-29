@@ -4894,4 +4894,6 @@
     <string name="buzz_persona_publishing">Közzététel…</string>
     <string name="buzz_persona_publish">Személyiség közzététele</string>
     <!-- Profile card (kind-0 rendered in the feed) -->
+    <string name="profile_card_follows_you">Követi Önt</string>
+    <string name="profile_card_bot">Bot</string>
 </resources>

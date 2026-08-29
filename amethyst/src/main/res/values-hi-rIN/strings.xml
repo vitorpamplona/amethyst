@@ -4893,4 +4893,6 @@
     <string name="buzz_persona_publishing">प्रकाशन…</string>
     <string name="buzz_persona_publish">व्यक्तिशैली प्रकाशन</string>
     <!-- Profile card (kind-0 rendered in the feed) -->
+    <string name="profile_card_follows_you">आपका अनुचर</string>
+    <string name="profile_card_bot">क्रमचर</string>
 </resources>
