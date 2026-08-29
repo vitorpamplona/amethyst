@@ -125,6 +125,7 @@ dependencies {
     implementation(libs.vico.charts.m3)
     // Also KMP, also the same version the Android app uses. Apache-2.0.
     implementation(libs.zoomable)
+    implementation(libs.kotlinx.serialization.json)
 }
 
 /**
