@@ -5105,4 +5105,5 @@
     <string name="buzz_persona_avatar">URL avataru (volitelné)</string>
     <string name="buzz_persona_publishing">Publikování…</string>
     <string name="buzz_persona_publish">Publikovat personu</string>
+    <!-- Profile card (kind-0 rendered in the feed) -->
 </resources>

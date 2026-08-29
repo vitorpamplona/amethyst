@@ -2090,6 +2090,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="call_camera_on">Kamera włączona</string>
     <string name="call_camera_off">Kamera wyłączona</string>
     <string name="call_switch_camera">Przełącz kamerę</string>
+    <string name="call_screen_share_start">Udostępnij ekran</string>
+    <string name="call_screen_share_stop">Przestań udostępniać ekran</string>
+    <string name="call_screen_sharing">Udostępnianie ekranu</string>
     <string name="call_speaker">Głośnik</string>
     <string name="call_earpiece">Słuchawka</string>
     <string name="call_bluetooth">Bluetooth</string>
@@ -5104,4 +5107,5 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_persona_avatar">Adres URL awatara (opcjonalnie)</string>
     <string name="buzz_persona_publishing">Publikowanie…</string>
     <string name="buzz_persona_publish">Publikuj persona</string>
+    <!-- Profile card (kind-0 rendered in the feed) -->
 </resources>
