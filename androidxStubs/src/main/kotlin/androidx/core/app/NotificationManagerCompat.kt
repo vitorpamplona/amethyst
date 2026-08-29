@@ -33,9 +33,17 @@ class NotificationManagerCompat private constructor(
     companion object {
         private val shared = NotificationManager()
 
+        const val IMPORTANCE_NONE = NotificationManager.IMPORTANCE_NONE
+        const val IMPORTANCE_MIN = NotificationManager.IMPORTANCE_MIN
+        const val IMPORTANCE_LOW = NotificationManager.IMPORTANCE_LOW
+        const val IMPORTANCE_DEFAULT = NotificationManager.IMPORTANCE_DEFAULT
+        const val IMPORTANCE_HIGH = NotificationManager.IMPORTANCE_HIGH
+
         @JvmStatic
         fun from(context: Context): NotificationManagerCompat = NotificationManagerCompat(shared)
     }
+
+    fun createNotificationChannel(channel: NotificationChannelCompat) = delegate.createNotificationChannel(channel.channel)
 
     fun areNotificationsEnabled(): Boolean = delegate.areNotificationsEnabled()
 

@@ -37,6 +37,19 @@ public class LruCache<K, V> {
 
     public synchronized void evictAll() { map.clear(); }
 
+    /** Drops the least recently used entries until at most {@code size} remain. */
+    public synchronized void trimToSize(int size) {
+        if (size < 0) {
+            map.clear();
+            return;
+        }
+        java.util.Iterator<K> keys = map.keySet().iterator();
+        while (map.size() > size && keys.hasNext()) {
+            keys.next();
+            keys.remove();
+        }
+    }
+
     public synchronized int size() { return map.size(); }
 
     public int maxSize() { return maxSize; }

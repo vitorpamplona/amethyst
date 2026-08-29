@@ -12,6 +12,7 @@ import java.io.File;
  * (com.vitorpamplona.amethyst.shared.platform.JvmContext), not here.
  */
 public abstract class Context {
+
     /**
      * The process-wide context, installed by the JVM app at startup.
      *
@@ -50,6 +51,7 @@ public abstract class Context {
     public static final String WINDOW_SERVICE = "window";
 
     public static final int MODE_PRIVATE = 0;
+    public static final int MODE_APPEND = 0x8000;
 
     public abstract String getPackageName();
 
@@ -92,13 +94,76 @@ public abstract class Context {
      * on a given device — so this degrades along a path that is already tested
      * rather than inventing a new failure mode.
      */
+    /**
+     * The app's private files live under the JVM's per-user app data directory,
+     * which is what {@link #getFilesDir} already resolves. Real file I/O, so a
+     * crash report written before a restart is still there to read after it.
+     */
+    public java.io.FileOutputStream openFileOutput(String name, int mode) throws java.io.FileNotFoundException {
+        java.io.File dir = getFilesDir();
+        if (dir != null) dir.mkdirs();
+        return new java.io.FileOutputStream(new java.io.File(dir, name), (mode & MODE_APPEND) != 0);
+    }
+
+    public java.io.FileInputStream openFileInput(String name) throws java.io.FileNotFoundException {
+        return new java.io.FileInputStream(new java.io.File(getFilesDir(), name));
+    }
+
+    public boolean deleteFile(String name) {
+        return new java.io.File(getFilesDir(), name).delete();
+    }
+
+    public java.io.File getFileStreamPath(String name) {
+        return new java.io.File(getFilesDir(), name);
+    }
+
+    public String[] fileList() {
+        java.io.File dir = getFilesDir();
+        String[] names = dir == null ? null : dir.list();
+        return names == null ? new String[0] : names;
+    }
+
+    /**
+     * Hands back the services this platform actually models, and null for the
+     * rest. Null is the right answer for those — Android itself returns null
+     * for a service missing on a given device, so callers already handle it —
+     * but null for a service that *is* modelled would be its own bug: code
+     * asking ActivityManager for the memory class would size its caches for
+     * zero bytes rather than for this machine's heap.
+     */
     public Object getSystemService(String name) {
+        if (name == null) return null;
+        switch (name) {
+            case ACTIVITY_SERVICE:
+                return SERVICES.computeIfAbsent(name, key -> new android.app.ActivityManager());
+            case CONNECTIVITY_SERVICE:
+                return SERVICES.computeIfAbsent(name, key -> new android.net.ConnectivityManager());
+            case NOTIFICATION_SERVICE:
+                return SERVICES.computeIfAbsent(name, key -> new android.app.NotificationManager());
+            case AUDIO_SERVICE:
+                return SERVICES.computeIfAbsent(name, key -> new android.media.AudioManager());
+            default:
+                return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getSystemService(Class<T> serviceClass) {
+        if (serviceClass == null) return null;
+        Object service = getSystemService(nameOf(serviceClass));
+        return serviceClass.isInstance(service) ? (T) service : null;
+    }
+
+    private static String nameOf(Class<?> serviceClass) {
+        if (serviceClass == android.app.ActivityManager.class) return ACTIVITY_SERVICE;
+        if (serviceClass == android.net.ConnectivityManager.class) return CONNECTIVITY_SERVICE;
+        if (serviceClass == android.app.NotificationManager.class) return NOTIFICATION_SERVICE;
+        if (serviceClass == android.media.AudioManager.class) return AUDIO_SERVICE;
         return null;
     }
 
-    public <T> T getSystemService(Class<T> serviceClass) {
-        return null;
-    }
+    /** One instance per service, as on Android, shared across every Context. */
+    private static final java.util.Map<String, Object> SERVICES = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * Carried out by {@link IntentDispatcher}: opening a link and sharing text

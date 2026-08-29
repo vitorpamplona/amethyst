@@ -18,30 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.base64Image
+package androidx.core.content
 
-import android.graphics.Bitmap
-import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
-import com.vitorpamplona.amethyst.commons.blurhash.toAndroidBitmap
-import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import com.vitorpamplona.amethyst.commons.richtext.Base64Image
-import java.io.ByteArrayInputStream
-import javax.imageio.ImageIO
+import android.content.Context
 
 /**
- * Converts a base64 image data URI to a PlatformImage (BufferedImage wrapper).
+ * The reified `getSystemService<T>()` from androidx-core-ktx.
+ *
+ * Callers write `val manager: ActivityManager? = context.getSystemService()`
+ * and rely on the nullable result — which is the right contract here too, since
+ * a desktop models only some of Android's services.
  */
-fun Base64Image.toPlatformImage(content: String): PlatformImage {
-    val byteArray = parse(content)
-
-    val bufferedImage =
-        ImageIO.read(ByteArrayInputStream(byteArray))
-            ?: throw Exception("Unable to decode base64 image: $content")
-    return bufferedImage.toPlatformImage()
-}
-
-/**
- * The JVM twin of the `androidMain` overload, for the Android code retargeted
- * onto the JVM. Same decode, one wrap apart.
- */
-fun Base64Image.toBitmap(content: String): Bitmap = toPlatformImage(content).toAndroidBitmap()
+inline fun <reified T : Any> Context.getSystemService(): T? = getSystemService(T::class.java)

@@ -37,7 +37,36 @@ public class Matrix {
         values[5] += dy;
     }
 
+    public void postRotate(float degrees) {
+        double radians = Math.toRadians(degrees);
+        float cos = (float) Math.cos(radians);
+        float sin = (float) Math.sin(radians);
+        float a = values[0];
+        float b = values[1];
+        float c = values[3];
+        float d = values[4];
+        values[0] = cos * a - sin * c;
+        values[1] = cos * b - sin * d;
+        values[3] = sin * a + cos * c;
+        values[4] = sin * b + cos * d;
+    }
+
     public void getValues(float[] out) { System.arraycopy(values, 0, out, 0, 9); }
 
     public void setValues(float[] in) { System.arraycopy(in, 0, values, 0, 9); }
+
+    public boolean isIdentity() {
+        return values[0] == 1 && values[1] == 0 && values[2] == 0
+                && values[3] == 0 && values[4] == 1 && values[5] == 0;
+    }
+
+    /**
+     * The same transform as an AWT one, so anything that actually draws can use
+     * it. Android orders its 3x3 row-major (scaleX, skewX, transX, ...), which
+     * is the (m00, m01, m02, m10, m11, m12) AffineTransform takes.
+     */
+    public java.awt.geom.AffineTransform toAffineTransform() {
+        return new java.awt.geom.AffineTransform(
+                values[0], values[3], values[1], values[4], values[2], values[5]);
+    }
 }

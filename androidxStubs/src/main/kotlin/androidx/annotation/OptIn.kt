@@ -18,30 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.base64Image
+package androidx.annotation
 
-import android.graphics.Bitmap
-import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
-import com.vitorpamplona.amethyst.commons.blurhash.toAndroidBitmap
-import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import com.vitorpamplona.amethyst.commons.richtext.Base64Image
-import java.io.ByteArrayInputStream
-import javax.imageio.ImageIO
+import kotlin.reflect.KClass
 
 /**
- * Converts a base64 image data URI to a PlatformImage (BufferedImage wrapper).
+ * JVM stand-in for androidx.annotation.OptIn.
+ *
+ * Kotlin, like the real one, and for the reason that matters: the library's
+ * `OptIn` is a Kotlin annotation with a `vararg` marker, so the app writes
+ * `@OptIn(UnstableApi::class)` positionally. A Java `@interface` with a
+ * `Class[]` member would force every one of those call sites to be rewritten
+ * as `@OptIn(markerClass = [...])`, since Kotlin allows only named arguments
+ * for Java annotations.
  */
-fun Base64Image.toPlatformImage(content: String): PlatformImage {
-    val byteArray = parse(content)
-
-    val bufferedImage =
-        ImageIO.read(ByteArrayInputStream(byteArray))
-            ?: throw Exception("Unable to decode base64 image: $content")
-    return bufferedImage.toPlatformImage()
-}
-
-/**
- * The JVM twin of the `androidMain` overload, for the Android code retargeted
- * onto the JVM. Same decode, one wrap apart.
- */
-fun Base64Image.toBitmap(content: String): Bitmap = toPlatformImage(content).toAndroidBitmap()
+@Retention(AnnotationRetention.BINARY)
+@Target(
+    AnnotationTarget.CLASS,
+    AnnotationTarget.PROPERTY,
+    AnnotationTarget.LOCAL_VARIABLE,
+    AnnotationTarget.VALUE_PARAMETER,
+    AnnotationTarget.CONSTRUCTOR,
+    AnnotationTarget.FUNCTION,
+    AnnotationTarget.PROPERTY_GETTER,
+    AnnotationTarget.PROPERTY_SETTER,
+    AnnotationTarget.FILE,
+    AnnotationTarget.TYPEALIAS,
+)
+annotation class OptIn(
+    vararg val markerClass: KClass<out Annotation>,
+)

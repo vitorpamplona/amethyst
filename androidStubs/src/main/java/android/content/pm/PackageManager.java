@@ -31,6 +31,23 @@ public class PackageManager {
 
     public boolean hasSystemFeature(String name) { return false; }
 
+    /**
+     * Desktop has no application registry to enumerate. Empty is the honest
+     * answer and the one callers already handle — every use here is an
+     * "is this companion app installed?" check, which is correctly false.
+     */
+    public List<ApplicationInfo> getInstalledApplications(int flags) {
+        return java.util.Collections.emptyList();
+    }
+
+    public ApplicationInfo getApplicationInfo(String packageName, int flags) throws NameNotFoundException {
+        throw new NameNotFoundException(packageName);
+    }
+
+    public CharSequence getApplicationLabel(ApplicationInfo info) {
+        return info == null || info.packageName == null ? "" : info.packageName;
+    }
+
     public int checkPermission(String permission, String packageName) { return PERMISSION_DENIED; }
 
     public static class NameNotFoundException extends Exception {

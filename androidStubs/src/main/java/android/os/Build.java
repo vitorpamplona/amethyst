@@ -15,6 +15,13 @@ public final class Build {
     public static final String BRAND = "desktop";
     public static final String PRODUCT = "desktop";
     public static final String FINGERPRINT = "desktop/jvm";
+    public static final String HARDWARE = System.getProperty("os.arch", "desktop");
+    public static final String BOARD = "desktop";
+    public static final String ID = "desktop";
+    public static final String TAGS = "release-keys";
+    public static final String TYPE = "user";
+    public static final String HOST = "desktop";
+    public static final String USER = System.getProperty("user.name", "desktop");
 
     private Build() {}
 

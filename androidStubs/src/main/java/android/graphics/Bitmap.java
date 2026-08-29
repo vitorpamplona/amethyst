@@ -26,6 +26,66 @@ public final class Bitmap {
         return new Bitmap(new BufferedImage(Math.max(width, 1), Math.max(height, 1), BufferedImage.TYPE_INT_ARGB));
     }
 
+    public static Bitmap createBitmap(int[] pixels, int width, int height, Config config) {
+        BufferedImage out = new BufferedImage(Math.max(width, 1), Math.max(height, 1), BufferedImage.TYPE_INT_ARGB);
+        out.setRGB(0, 0, width, height, pixels, 0, width);
+        return new Bitmap(out);
+    }
+
+    public static Bitmap createBitmap(Bitmap src) {
+        return createBitmap(src, 0, 0, src.getWidth(), src.getHeight());
+    }
+
+    public static Bitmap createBitmap(Bitmap src, int x, int y, int width, int height) {
+        return createBitmap(src, x, y, width, height, null, false);
+    }
+
+    /**
+     * The crop-and-transform overload. Android applies the matrix after the
+     * crop, which for the app's use — centre-crop then scale to a thumbnail
+     * size — means the output is the transformed bounds, not the crop's.
+     */
+    public static Bitmap createBitmap(
+            Bitmap src, int x, int y, int width, int height, Matrix matrix, boolean filter) {
+        BufferedImage cropped =
+                src.image.getSubimage(
+                        Math.max(0, Math.min(x, src.getWidth() - 1)),
+                        Math.max(0, Math.min(y, src.getHeight() - 1)),
+                        Math.max(1, Math.min(width, src.getWidth() - x)),
+                        Math.max(1, Math.min(height, src.getHeight() - y)));
+
+        if (matrix == null || matrix.isIdentity()) {
+            // getSubimage shares the parent's raster; copy so recycling or
+            // mutating the source cannot corrupt the result.
+            BufferedImage copy = new BufferedImage(cropped.getWidth(), cropped.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            java.awt.Graphics2D g = copy.createGraphics();
+            g.drawImage(cropped, 0, 0, null);
+            g.dispose();
+            return new Bitmap(copy);
+        }
+
+        java.awt.geom.AffineTransform transform = matrix.toAffineTransform();
+        java.awt.geom.Rectangle2D bounds =
+                transform.createTransformedShape(
+                                new java.awt.Rectangle(0, 0, cropped.getWidth(), cropped.getHeight()))
+                        .getBounds2D();
+
+        BufferedImage out =
+                new BufferedImage(
+                        Math.max(1, (int) Math.round(bounds.getWidth())),
+                        Math.max(1, (int) Math.round(bounds.getHeight())),
+                        BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g = out.createGraphics();
+        g.setRenderingHint(
+                java.awt.RenderingHints.KEY_INTERPOLATION,
+                filter ? java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR
+                       : java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g.translate(-bounds.getX(), -bounds.getY());
+        g.drawImage(cropped, transform, null);
+        g.dispose();
+        return new Bitmap(out);
+    }
+
     public static Bitmap createScaledBitmap(Bitmap src, int dstWidth, int dstHeight, boolean filter) {
         BufferedImage out = new BufferedImage(Math.max(dstWidth, 1), Math.max(dstHeight, 1), BufferedImage.TYPE_INT_ARGB);
         java.awt.Graphics2D g = out.createGraphics();
@@ -59,6 +119,19 @@ public final class Bitmap {
     public void getPixels(int[] pixels, int offset, int stride, int x, int y, int width, int height) {
         image.getRGB(x, y, width, height, pixels, offset, stride);
     }
+
+    public void setPixels(int[] pixels, int offset, int stride, int x, int y, int width, int height) {
+        image.setRGB(x, y, width, height, pixels, offset, stride);
+    }
+
+    /** Bytes a pixel occupies; ARGB_8888 throughout, as {@link #getConfig} reports. */
+    public int getByteCount() { return getWidth() * getHeight() * 4; }
+
+    public int getAllocationByteCount() { return getByteCount(); }
+
+    public boolean hasAlpha() { return true; }
+
+    public Bitmap copy(Config config, boolean mutable) { return createBitmap(this); }
 
     public boolean compress(CompressFormat format, int quality, OutputStream stream) {
         try {
