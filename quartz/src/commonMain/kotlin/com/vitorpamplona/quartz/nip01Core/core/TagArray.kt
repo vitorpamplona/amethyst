@@ -40,6 +40,26 @@ inline fun <T> Array<out T>.fastFirstOrNull(predicate: (T) -> Boolean): T? {
     return null
 }
 
+/**
+ * [mapNotNull] with the destination sized up front, for scans where **most
+ * tags match** -- a Trusted List's thousands of member tags, say. The stdlib
+ * version starts at capacity 10 and grows by halves, so a 5k-member scan pays
+ * ~20 array copies on the way up; this pays none.
+ *
+ * Use it only for the dense case. On a sparse scan -- picking the two
+ * discovery tags out of those same thousands -- presizing allocates a
+ * thousands-wide array to hold two entries, which is worse than the growth it
+ * avoids. Reach for the stdlib [mapNotNull] there.
+ */
+inline fun <T, R : Any> Array<out T>.fastMapNotNullDense(transform: (T) -> R?): List<R> {
+    val destination = ArrayList<R>(size)
+    for (index in indices) {
+        val mapped = transform(this[index])
+        if (mapped != null) destination.add(mapped)
+    }
+    return destination
+}
+
 inline fun <T, R : Any> Array<out T>.fastFirstNotNullOfOrNull(transform: (T) -> R?): R? {
     for (index in indices) {
         val result = transform(get(index))

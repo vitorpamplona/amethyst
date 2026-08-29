@@ -26,14 +26,44 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.ensure
 
+/**
+ * One NIP-85 delegation in a Treasure Map (kind 10040):
+ * `["<assertion-kind>:<metric>", <pubkey>, <relay>]`.
+ */
 data class ServiceProviderTag(
     val service: ServiceType,
     val pubkey: HexKey,
     val relayUrl: NormalizedRelayUrl,
 ) {
+    init {
+        // [parse] refuses a kind outside NIP-85's own, so a constructed one
+        // would write a tag this class can never read back. Callers address an
+        // existing entry by parsing -- `removeParsing`, the CLI's dedup check
+        // before appending -- so such a tag can be neither found nor removed,
+        // and re-registering appends another. Rejecting it here keeps the write
+        // side inside what the read side admits.
+        require(service.kind in ASSERTION_KINDS) { "Not a NIP-85 assertion kind: ${service.kind}" }
+    }
+
     fun toTagArray() = assemble(service, pubkey, relayUrl)
 
     companion object {
+        /**
+         * The assertion kinds NIP-85 defines, and so the only ones a
+         * `<kind>:<metric>` entry can be delegating.
+         *
+         * A Treasure Map is an open tag set -- it carries `["client", ...]`,
+         * and neighbouring specs hang their own delegations off the same event
+         * with the same two-segment shape (Tapestry's Trusted Lists reserve
+         * `3039x:<name>`). Without this bound every one of those would parse as
+         * a NIP-85 provider and be handed to code looking for a rank or
+         * follower-count service, which is exactly the behavior those specs
+         * tell readers not to drive. They are not lost, only routed: the
+         * `experimental/trustedLists/treasureMap` parser reads the `3039x`
+         * ones.
+         */
+        val ASSERTION_KINDS = 30382..30385
+
         fun parse(tag: Array<String>): ServiceProviderTag? {
             ensure(tag.has(2)) { return null }
             ensure(tag[0].isNotEmpty()) { return null }
@@ -41,6 +71,9 @@ data class ServiceProviderTag(
             ensure(tag[2].isNotEmpty()) { return null }
 
             val service = ServiceType.parse(tag[0]) ?: return null
+
+            ensure(service.kind in ASSERTION_KINDS) { return null }
+
             val relay = RelayUrlNormalizer.normalizeOrNull(tag[2]) ?: return null
 
             return ServiceProviderTag(service, tag[1], relay)

@@ -36,8 +36,9 @@ import com.vitorpamplona.quartz.utils.ensure
  * A pubkey member of a kind-30392 Trusted List:
  * `["p", <pubkey>, <relay-hint>, <score>]`.
  *
- * The score sits at index 3 across the whole family, so publishers that have a
- * score but no relay hint pad index 2 with an empty string.
+ * The score sits at index 3 across the whole family -- after the relay hint --
+ * so publishers that have a score but no relay hint pad index 2 with an empty
+ * string. It is a 0..100 percentage; see [MemberTagFields.SCORE_RANGE].
  */
 @Immutable
 data class PubKeyMemberTag(
@@ -91,7 +92,7 @@ data class PubKeyMemberTag(
             pubKey: HexKey,
             relayHint: NormalizedRelayUrl?,
             score: Int?,
-        ) = arrayOfNotNull(TAG_NAME, pubKey, relayHint?.url, score?.toString())
+        ) = arrayOfNotNull(TAG_NAME, pubKey, relayHint?.url, MemberTagFields.encodeScore(score))
 
         fun assemble(member: PubKeyMemberTag) = assemble(member.pubKey, member.relayHint, member.score)
 

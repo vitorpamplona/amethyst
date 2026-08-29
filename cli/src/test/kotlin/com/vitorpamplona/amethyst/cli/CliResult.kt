@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli
 
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.PrintStream
 import java.nio.file.Files
 
@@ -38,13 +39,39 @@ data class CliResult(
     val stdoutLines: List<String> get() = stdout.trim().lines().filter { it.isNotBlank() }
 }
 
+/**
+ * The `~/.amy` parent [withSharedAmyHome] pins, or null when each [amy] call
+ * should mint (and delete) its own. Not thread-safe by design — the JVM suite
+ * runs these serially, and so does the `amy.home` property they both drive.
+ */
+private var sharedHome: File? = null
+
+/**
+ * Run [body] with every [amy] call inside it sharing ONE isolated `~/.amy`,
+ * so state written by one invocation is visible to the next. Needed by the
+ * commands whose whole job is to report accumulated on-disk state — `status`
+ * has nothing to say about accounts a previous, discarded home created.
+ */
+fun <T> withSharedAmyHome(body: (File) -> T): T {
+    val previous = sharedHome
+    val home = Files.createTempDirectory("amy-test-shared").toFile()
+    sharedHome = home
+    return try {
+        body(home)
+    } finally {
+        sharedHome = previous
+        home.deleteRecursively()
+    }
+}
+
 fun amy(vararg argv: String): CliResult {
     val outBuf = ByteArrayOutputStream()
     val errBuf = ByteArrayOutputStream()
     val prevOut = System.out
     val prevErr = System.err
     val prevHome = System.getProperty("amy.home")
-    val tempHome = Files.createTempDirectory("amy-test").toFile()
+    val shared = sharedHome
+    val tempHome = shared ?: Files.createTempDirectory("amy-test").toFile()
     System.setProperty("amy.home", tempHome.absolutePath)
     Output.mode = Output.Mode.TEXT
     return try {
@@ -57,6 +84,6 @@ fun amy(vararg argv: String): CliResult {
         System.setErr(prevErr)
         Output.mode = Output.Mode.TEXT
         if (prevHome == null) System.clearProperty("amy.home") else System.setProperty("amy.home", prevHome)
-        tempHome.deleteRecursively()
+        if (shared == null) tempHome.deleteRecursively()
     }
 }

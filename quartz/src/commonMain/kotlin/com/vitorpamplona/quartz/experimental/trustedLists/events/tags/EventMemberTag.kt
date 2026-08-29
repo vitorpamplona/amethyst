@@ -35,8 +35,9 @@ import com.vitorpamplona.quartz.utils.ensure
  * An event member of a kind-30393 Trusted List:
  * `["e", <event-id>, <relay-hint>, <score>]`.
  *
- * Index 3 is the score across the whole family, not a NIP-10 marker: these
- * lists enumerate membership, they do not thread.
+ * Index 3 is the score across the whole family -- a 0..100 percentage, see
+ * [MemberTagFields.SCORE_RANGE] -- and not a NIP-10 marker: these lists
+ * enumerate membership, they do not thread.
  */
 @Immutable
 data class EventMemberTag(
@@ -89,7 +90,7 @@ data class EventMemberTag(
             eventId: HexKey,
             relayHint: NormalizedRelayUrl?,
             score: Int?,
-        ) = arrayOfNotNull(TAG_NAME, eventId, relayHint?.url, score?.toString())
+        ) = arrayOfNotNull(TAG_NAME, eventId, relayHint?.url, MemberTagFields.encodeScore(score))
 
         fun assemble(member: EventMemberTag) = assemble(member.eventId, member.relayHint, member.score)
 

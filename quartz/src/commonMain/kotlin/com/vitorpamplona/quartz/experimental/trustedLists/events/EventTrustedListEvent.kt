@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.experimental.trustedLists.events.tags.EventMembe
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
@@ -63,7 +64,7 @@ class EventTrustedListEvent(
 
     override fun eventHints() = tags.mapNotNull(EventMemberTag::parseAsHint)
 
-    override fun linkedEventIds() = tags.mapNotNull(EventMemberTag::parseId)
+    override fun linkedEventIds() = tags.fastMapNotNullDense(EventMemberTag::parseId)
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 

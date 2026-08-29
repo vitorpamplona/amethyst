@@ -35,6 +35,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -114,14 +115,28 @@ class BlossomReadAuthTokenProviderTest {
     fun refreshesAfterExpiry() =
         runBlocking {
             var now = 0L
-            val provider = BlossomReadAuthTokenProvider({ signer }, scope, clock = { now })
+            var lookups = 0
+            val provider =
+                BlossomReadAuthTokenProvider({
+                    lookups++
+                    signer
+                }, scope, clock = { now })
 
-            val first = provider.header(host)
+            assertNotNull(provider.header(host))
+            assertEquals("the first call must sign", 1, lookups)
+
             now += 56L * 60L * 1000L
             assertNull("token must be gone from the pure read once expired", provider.cachedHeader(host))
-            val second = provider.header(host)
 
-            assertNotEquals("an expired token must be re-signed", first, second)
+            // Counts signatures rather than comparing the two headers: the injected [clock] only
+            // drives the cache TTL, while the signed BlossomAuthorizationEvent takes its
+            // `created_at` from the real wall clock (TimeUtils.now()). Both signings land in the
+            // same second on any quick machine, so the two events — and therefore their ids, sigs
+            // and headers — are byte-identical, and an assertNotEquals on them fails even though
+            // the token was correctly re-signed. The signer is only ever consulted on a real
+            // signing pass (a cache hit returns before it), so this counter says exactly that.
+            assertNotNull(provider.header(host))
+            assertEquals("an expired token must be re-signed", 2, lookups)
         }
 
     @Test

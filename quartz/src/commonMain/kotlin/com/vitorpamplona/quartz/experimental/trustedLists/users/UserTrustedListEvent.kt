@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMembe
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.fastMapNotNullDense
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
@@ -58,7 +59,7 @@ class UserTrustedListEvent(
 
     override fun pubKeyHints() = tags.mapNotNull(PubKeyMemberTag::parseAsHint)
 
-    override fun linkedPubKeys() = tags.mapNotNull(PubKeyMemberTag::parseKey)
+    override fun linkedPubKeys() = tags.fastMapNotNullDense(PubKeyMemberTag::parseKey)
 
     override fun addressHints() = tags.mapNotNull(ATag::parseAsHint)
 

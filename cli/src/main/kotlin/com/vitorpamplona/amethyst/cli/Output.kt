@@ -61,6 +61,29 @@ object Output {
     }
 
     /**
+     * Emit a result that has earned a purpose-built human rendering.
+     * [result] is still the `--json` shape (the public contract); [text] is
+     * asked for the terminal form only in TEXT mode, and is handed the
+     * already-resolved [Ansi] so it paints under the same TTY/`NO_COLOR`
+     * rules as everything else.
+     *
+     * Reach for this only when the generic key/value render genuinely buries
+     * the answer — an overview that has to group and prioritise, rather than
+     * list. `amy status` is the reference case. Everything else should stay
+     * on the plain [emit], so the default text shape keeps being derived from
+     * one place.
+     */
+    internal fun emit(
+        result: Any?,
+        text: (Ansi) -> String,
+    ) {
+        when (mode) {
+            Mode.JSON -> println(mapper.writeValueAsString(result))
+            Mode.TEXT -> println(text(Ansi.forStream(isStderr = false)))
+        }
+    }
+
+    /**
      * Report a failure and return the exit code the process should end with.
      * The code string picks the exit code — `bad_args` → 2, `timeout` → 124,
      * everything else → 1 — so `return Output.error(…)` always honours the
@@ -341,7 +364,12 @@ object Output {
         return "$iso ${color.dim("($rel)")}"
     }
 
-    private fun relativeTime(secondsAgo: Long): String {
+    /**
+     * `2h ago` / `3d ago` / `5m from now` for a delta in seconds. Internal
+     * so a command with its own text renderer (see the [emit] overload)
+     * words elapsed time exactly the way the generic renderer does.
+     */
+    internal fun relativeTime(secondsAgo: Long): String {
         val s = if (secondsAgo < 0) -secondsAgo else secondsAgo
         val suffix = if (secondsAgo < 0) "from now" else "ago"
         val unit =

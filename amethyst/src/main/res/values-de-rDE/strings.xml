@@ -4891,4 +4891,5 @@
     <string name="buzz_persona_avatar">Avatar-URL (optional)</string>
     <string name="buzz_persona_publishing">Wird veröffentlicht…</string>
     <string name="buzz_persona_publish">Persona veröffentlichen</string>
+    <!-- Profile card (kind-0 rendered in the feed) -->
 </resources>
