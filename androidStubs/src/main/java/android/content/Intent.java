@@ -15,6 +15,8 @@ import android.os.Bundle;
  */
 public class Intent {
     public static final String ACTION_VIEW = "android.intent.action.VIEW";
+    public static final String ACTION_BOOT_COMPLETED = "android.intent.action.BOOT_COMPLETED";
+    public static final String ACTION_MY_PACKAGE_REPLACED = "android.intent.action.MY_PACKAGE_REPLACED";
     public static final String ACTION_SEND = "android.intent.action.SEND";
     public static final String ACTION_SENDTO = "android.intent.action.SENDTO";
     public static final String ACTION_MAIN = "android.intent.action.MAIN";
@@ -42,6 +44,7 @@ public class Intent {
     private int flags;
     private final Bundle extras = new Bundle();
     private final java.util.Set<String> categories = new java.util.LinkedHashSet<>();
+    private Class<?> targetClass;
 
     public Intent() {}
 
@@ -52,7 +55,24 @@ public class Intent {
         this.data = data;
     }
 
-    public Intent(Context packageContext, Class<?> cls) {}
+    public Intent(Context packageContext, Class<?> cls) { this.targetClass = cls; }
+
+    /**
+     * The explicit target, when there is one. Dropping it would leave every
+     * "start this component" intent indistinguishable from every other, and a
+     * desktop dispatcher has nothing else to route on.
+     */
+    public Class<?> getTargetClass() { return targetClass; }
+
+    public Intent setClass(Context packageContext, Class<?> cls) { this.targetClass = cls; return this; }
+
+    public Intent setClassName(String packageName, String className) { return this; }
+
+    /** The target's class name, or the action, for a diagnostic message. */
+    public String getComponentClassName() {
+        if (targetClass != null) return targetClass.getName();
+        return action == null ? "(no component)" : action;
+    }
 
     public String getAction() { return action; }
 
@@ -94,8 +114,17 @@ public class Intent {
 
     public Intent putExtra(String name, String[] value) { extras.putStringArray(name, value); return this; }
 
+    public Intent putExtra(String name, Bundle value) { extras.putBundle(name, value); return this; }
+
+    public Intent putExtra(String name, CharSequence value) { extras.putCharSequence(name, value); return this; }
+
+    /**
+     * Copies every extra, keeping its type. Reading each one back as a String
+     * would turn an int extra into null on the other side, which the receivers
+     * read as "not present" — a bug that only shows up at runtime.
+     */
     public Intent putExtras(Bundle source) {
-        for (String key : source.keySet()) extras.putString(key, source.getString(key));
+        extras.putAll(source);
         return this;
     }
 
@@ -108,6 +137,10 @@ public class Intent {
     public boolean getBooleanExtra(String name, boolean defaultValue) { return extras.getBoolean(name, defaultValue); }
 
     public String[] getStringArrayExtra(String name) { return extras.getStringArray(name); }
+
+    public Bundle getBundleExtra(String name) { return extras.getBundle(name); }
+
+    public CharSequence getCharSequenceExtra(String name) { return extras.getCharSequence(name); }
 
     public boolean hasExtra(String name) { return extras.containsKey(name); }
 

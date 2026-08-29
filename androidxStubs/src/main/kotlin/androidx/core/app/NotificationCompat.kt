@@ -27,10 +27,14 @@ import android.content.Context
 /**
  * JVM stand-in for androidx.core.app.NotificationCompat.
  *
- * The builder records what a notification would say so a desktop backend can
- * render it; the Android-only knobs (small icon resource, vibration pattern,
- * lights) accept their arguments and drop them rather than being removed, so
- * the app's long builder chains compile unchanged.
+ * The builder fills in a real [Notification] rather than accumulating nothing:
+ * a desktop presenter can only show what it is given, and a builder that
+ * accepted a title and a body and then discarded them would post blank
+ * notifications that look, from the calling code, exactly like working ones.
+ *
+ * The knobs with no desktop meaning — vibration patterns, lights, LED colour,
+ * lock-screen visibility, the small-icon drawable id — take their arguments and
+ * drop them, so the app's long builder chains compile unchanged.
  */
 object NotificationCompat {
     const val PRIORITY_MIN = -2
@@ -42,76 +46,173 @@ object NotificationCompat {
     const val VISIBILITY_PRIVATE = 0
     const val VISIBILITY_PUBLIC = 1
     const val VISIBILITY_SECRET = -1
-    const val CATEGORY_MESSAGE = "msg"
+
+    const val CATEGORY_ALARM = "alarm"
     const val CATEGORY_CALL = "call"
+    const val CATEGORY_EMAIL = "email"
+    const val CATEGORY_ERROR = "err"
+    const val CATEGORY_EVENT = "event"
+    const val CATEGORY_LOCATION_SHARING = "location_sharing"
+    const val CATEGORY_MESSAGE = "msg"
+    const val CATEGORY_MISSED_CALL = "missed_call"
+    const val CATEGORY_NAVIGATION = "navigation"
+    const val CATEGORY_PROGRESS = "progress"
+    const val CATEGORY_PROMO = "promo"
+    const val CATEGORY_RECOMMENDATION = "recommendation"
+    const val CATEGORY_REMINDER = "reminder"
     const val CATEGORY_SERVICE = "service"
     const val CATEGORY_SOCIAL = "social"
+    const val CATEGORY_STATUS = "status"
+    const val CATEGORY_STOPWATCH = "stopwatch"
+    const val CATEGORY_SYSTEM = "sys"
+    const val CATEGORY_TRANSPORT = "transport"
+    const val CATEGORY_WORKOUT = "workout"
+
+    const val FOREGROUND_SERVICE_DEFAULT = 0
+    const val FOREGROUND_SERVICE_IMMEDIATE = 1
+    const val FOREGROUND_SERVICE_DEFERRED = 2
 
     class Builder(
         context: Context,
         val channelId: String,
     ) {
-        var contentTitle: CharSequence? = null
-            private set
-        var contentText: CharSequence? = null
-            private set
-        var contentIntent: PendingIntent? = null
-            private set
+        private val notification = Notification().also { it.channelId = channelId }
 
-        fun setContentTitle(title: CharSequence?) = apply { contentTitle = title }
+        val contentTitle: CharSequence? get() = notification.title
+        val contentText: CharSequence? get() = notification.text
+        val contentIntent: PendingIntent? get() = notification.contentIntent
 
-        fun setContentText(text: CharSequence?) = apply { contentText = text }
+        fun setContentTitle(title: CharSequence?) = apply { notification.title = title }
 
-        fun setContentIntent(intent: PendingIntent?) = apply { contentIntent = intent }
+        fun setContentText(text: CharSequence?) = apply { notification.text = text }
 
-        fun setSmallIcon(icon: Int) = apply { }
+        fun setContentIntent(intent: PendingIntent?) = apply { notification.contentIntent = intent }
 
-        fun setLargeIcon(icon: Any?) = apply { }
+        fun setSmallIcon(icon: Int) = apply { notification.smallIcon = icon }
 
-        fun setPriority(priority: Int) = apply { }
+        fun setLargeIcon(icon: Any?) = apply { notification.largeIcon = icon }
 
-        fun setCategory(category: String?) = apply { }
+        fun setPriority(priority: Int) = apply { notification.priority = priority }
+
+        fun setCategory(category: String?) = apply { notification.category = category }
 
         fun setVisibility(visibility: Int) = apply { }
 
-        fun setAutoCancel(autoCancel: Boolean) = apply { }
+        fun setAutoCancel(autoCancel: Boolean) = apply { notification.autoCancel = autoCancel }
 
-        fun setOngoing(ongoing: Boolean) = apply { }
+        fun setOngoing(ongoing: Boolean) =
+            apply {
+                notification.ongoing = ongoing
+                notification.flags =
+                    if (ongoing) {
+                        notification.flags or Notification.FLAG_ONGOING_EVENT
+                    } else {
+                        notification.flags and Notification.FLAG_ONGOING_EVENT.inv()
+                    }
+            }
 
-        fun setSilent(silent: Boolean) = apply { }
+        fun setSilent(silent: Boolean) = apply { notification.silent = silent }
 
         fun setDefaults(defaults: Int) = apply { }
 
-        fun setGroup(group: String?) = apply { }
+        fun setGroup(group: String?) = apply { notification.group = group }
 
-        fun setGroupSummary(summary: Boolean) = apply { }
+        fun setGroupSummary(summary: Boolean) = apply { notification.groupSummary = summary }
 
-        fun setWhen(whenMs: Long) = apply { }
+        fun setWhen(whenMs: Long) = apply { notification.`when` = whenMs }
 
         fun setShowWhen(show: Boolean) = apply { }
 
-        fun setOnlyAlertOnce(once: Boolean) = apply { }
+        fun setOnlyAlertOnce(once: Boolean) = apply { notification.onlyAlertOnce = once }
 
-        fun setStyle(style: Any?) = apply { }
+        fun setForegroundServiceBehavior(behavior: Int) = apply { }
 
-        fun setSubText(text: CharSequence?) = apply { }
+        fun setTimeoutAfter(durationMs: Long) = apply { }
 
-        fun setDeleteIntent(intent: PendingIntent?) = apply { }
+        fun setUsesChronometer(uses: Boolean) = apply { }
+
+        fun setLocalOnly(localOnly: Boolean) = apply { }
+
+        fun setColor(color: Int) = apply { }
+
+        fun setColorized(colorized: Boolean) = apply { }
+
+        fun setSortKey(key: String?) = apply { }
+
+        fun setTicker(ticker: CharSequence?) = apply { }
+
+        fun setNumber(number: Int) = apply { }
+
+        fun setVibrate(pattern: LongArray?) = apply { }
+
+        fun setLights(
+            argb: Int,
+            onMs: Int,
+            offMs: Int,
+        ) = apply { }
+
+        fun setSound(sound: Any?) = apply { }
+
+        fun setSubText(text: CharSequence?) = apply { notification.subText = text }
+
+        fun setDeleteIntent(intent: PendingIntent?) = apply { notification.deleteIntent = intent }
+
+        fun setProgress(
+            max: Int,
+            progress: Int,
+            indeterminate: Boolean,
+        ) = apply {
+            notification.progressMax = max
+            notification.progress = progress
+            notification.progressIndeterminate = indeterminate
+        }
+
+        /**
+         * Styles are what carry the expanded body and the progress bar, so they
+         * are folded into the notification here rather than ignored.
+         */
+        fun setStyle(style: Any?) =
+            apply {
+                when (style) {
+                    is BigTextStyle -> {
+                        notification.bigText = style.bigText
+                        style.bigContentTitle?.let { notification.title = it }
+                        style.summaryText?.let { notification.subText = it }
+                    }
+                    is InboxStyle -> {
+                        notification.lines.clear()
+                        notification.lines.addAll(style.lines)
+                        style.bigContentTitle?.let { notification.title = it }
+                        style.summaryText?.let { notification.subText = it }
+                    }
+                    is ProgressStyle -> {
+                        notification.progressIndeterminate = style.isIndeterminate
+                        notification.progressMax = style.total
+                        notification.progress = style.progress
+                    }
+                    else -> Unit
+                }
+            }
 
         fun setFullScreenIntent(
             intent: PendingIntent?,
             highPriority: Boolean,
-        ) = apply { }
+        ) = apply { notification.fullScreenIntent = intent }
 
         fun addAction(
             icon: Int,
             title: CharSequence?,
             intent: PendingIntent?,
-        ) = apply { }
+        ) = apply { notification.actions.add(Notification.Action(icon, title, intent)) }
 
-        fun addAction(action: Action?) = apply { }
+        fun addAction(action: Action?) =
+            apply {
+                if (action != null) {
+                    notification.actions.add(Notification.Action(0, action.title, action.actionIntent))
+                }
+            }
 
-        fun build(): Notification = Notification()
+        fun build(): Notification = notification
     }
 
     /**
@@ -123,13 +224,16 @@ object NotificationCompat {
         icon: Int,
         val title: CharSequence?,
         val actionIntent: PendingIntent?,
+        val remoteInputs: List<RemoteInput> = emptyList(),
     ) {
         class Builder(
             icon: Int,
             private val title: CharSequence?,
             private val intent: PendingIntent?,
         ) {
-            fun addRemoteInput(input: Any?) = apply { }
+            private val remoteInputs = mutableListOf<RemoteInput>()
+
+            fun addRemoteInput(input: RemoteInput?) = apply { if (input != null) remoteInputs.add(input) }
 
             fun setAllowGeneratedReplies(allowed: Boolean) = apply { }
 
@@ -137,7 +241,7 @@ object NotificationCompat {
 
             fun setShowsUserInterface(shows: Boolean) = apply { }
 
-            fun build() = Action(0, title, intent)
+            fun build() = Action(0, title, intent, remoteInputs.toList())
         }
 
         companion object {
@@ -148,18 +252,81 @@ object NotificationCompat {
     }
 
     class BigTextStyle {
-        fun bigText(text: CharSequence?) = apply { }
+        var bigText: CharSequence? = null
+            private set
+        var bigContentTitle: CharSequence? = null
+            private set
+        var summaryText: CharSequence? = null
+            private set
 
-        fun setBigContentTitle(title: CharSequence?) = apply { }
+        fun bigText(text: CharSequence?) = apply { bigText = text }
 
-        fun setSummaryText(text: CharSequence?) = apply { }
+        fun setBigContentTitle(title: CharSequence?) = apply { bigContentTitle = title }
+
+        fun setSummaryText(text: CharSequence?) = apply { summaryText = text }
     }
 
     class InboxStyle {
-        fun addLine(line: CharSequence?) = apply { }
+        val lines = mutableListOf<CharSequence>()
+
+        var bigContentTitle: CharSequence? = null
+            private set
+        var summaryText: CharSequence? = null
+            private set
+
+        fun addLine(line: CharSequence?) = apply { if (line != null) lines.add(line) }
+
+        fun setBigContentTitle(title: CharSequence?) = apply { bigContentTitle = title }
+
+        fun setSummaryText(text: CharSequence?) = apply { summaryText = text }
+    }
+
+    /**
+     * JVM stand-in for the segmented progress style.
+     *
+     * Android draws each segment separately; a desktop presenter has one bar,
+     * so the segments are collapsed into a total the same way the platform
+     * computes its own: the sum of the segment lengths. Collapsing is the
+     * honest reduction — the progress value keeps meaning, only the visual
+     * subdivision is lost.
+     */
+    class ProgressStyle {
+        var segments: List<Segment> = emptyList()
+            private set
+        var points: List<Point> = emptyList()
+            private set
+        var progress: Int = 0
+            private set
+        var isIndeterminate: Boolean = false
+            private set
+
+        /** The sum of the segment lengths, or 100 when no segments were given. */
+        val total: Int get() = segments.sumOf { it.length }.takeIf { it > 0 } ?: 100
+
+        fun setProgressSegments(value: List<Segment>) = apply { segments = value }
+
+        fun setProgressPoints(value: List<Point>) = apply { points = value }
+
+        fun setProgress(value: Int) = apply { progress = value }
+
+        fun setProgressIndeterminate(value: Boolean) = apply { isIndeterminate = value }
+
+        fun setStyledByProgress(value: Boolean) = apply { }
+
+        fun setProgressTrackerIcon(icon: Any?) = apply { }
 
         fun setBigContentTitle(title: CharSequence?) = apply { }
 
-        fun setSummaryText(text: CharSequence?) = apply { }
+        class Segment(
+            val length: Int,
+        ) {
+            fun setColor(color: Int) = apply { }
+        }
+
+        class Point(
+            val position: Int,
+        ) {
+            fun setColor(color: Int) = apply { }
+        }
     }
 }

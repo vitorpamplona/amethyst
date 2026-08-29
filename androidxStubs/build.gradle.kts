@@ -28,6 +28,9 @@ dependencies {
     // delegate, which is what this module supplies.
     implementation(libs.androidx.datastore.preferences)
 
+    // compileOnly above keeps the stubs off consumers' Android classpath; the
+    // tests run on the JVM, where they are what android.jar would have been.
+    testImplementation(project(":androidStubs"))
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
 }

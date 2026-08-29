@@ -113,6 +113,28 @@ public abstract class Context {
         IntentDispatcher.dispatch(intent);
     }
 
+    /**
+     * Desktop has no service manager. {@code ForegroundService} is declared as
+     * having no desktop counterpart — the work these services do belongs to
+     * long-lived objects the app owns — so a start request is recorded against
+     * that declaration rather than silently doing nothing.
+     */
+    public ComponentName startService(Intent intent) {
+        com.vitorpamplona.amethyst.stubs.PlatformGaps.report(
+                "Context.startService",
+                "desktop has no service manager; " + intent.getComponentClassName()
+                        + " must be owned directly by the app");
+        return null;
+    }
+
+    public ComponentName startForegroundService(Intent intent) {
+        return startService(intent);
+    }
+
+    public boolean stopService(Intent intent) {
+        return false;
+    }
+
     public void sendBroadcast(Intent intent) {
         com.vitorpamplona.amethyst.stubs.PlatformGaps.report(
                 "Context.sendBroadcast", "desktop has no broadcast bus; action=" + intent.getAction());

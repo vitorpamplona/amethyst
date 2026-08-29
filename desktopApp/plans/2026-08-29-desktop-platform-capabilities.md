@@ -66,6 +66,32 @@ Worth recording so nobody re-litigates them as gaps:
 | Android Keystore | OS keychain via jkeychain |
 | `DateFormat`, `DateUtils` | `java.time` / `java.text`, same CLDR data |
 | aapt2 resources | a generated `R` plus locale tables, built from the same `res/` tree |
+| WorkManager | a daemon timer with the same retry backoff and constraint waiting |
+| `NotificationCompat` + `NotificationManager` | `java.awt.SystemTray` balloons, behind a swappable presenter |
+
+WorkManager is worth a note because it is where a stub would have been most
+expensive: scheduled posts and calendar reminders are the whole feature, and a
+scheduler that records an enqueue and never fires means a post the user
+scheduled silently never publishes. So the desktop one really runs the work —
+periodic repeats, `Result.retry()` with WorkManager's own 30s-doubling-to-5h
+backoff, network constraints waited on rather than assumed, and KEEP / REPLACE /
+UPDATE / CANCEL_AND_REENQUEUE implemented exactly. What it cannot do is
+Android's other half: JobScheduler can start a stopped app, and no desktop OS
+offers that to an ordinary application. Work therefore runs while the app is
+open, and the app re-enqueues what is still due at the next launch — "next
+launch" being the desktop analogue of "next boot". That one difference is
+declared as `WorkManager.wakeWhileAppClosed`, not papered over.
+
+Notifications are the same shape of decision. The tray gives real balloons on
+Windows and most Linux desktops, and a menu-bar item on macOS, with no extra
+dependency. What it does not give is a persistent row, so an *ongoing* or
+progress notification is announced once and its latest state kept in
+`DesktopNotifications.ongoing` for an in-app status row to draw, rather than
+flashing a balloon per progress tick. Action buttons and inline reply do not fit
+on a balloon either: tapping it fires the content intent, so the app still opens
+where the notification points, and `RemoteInput`'s intent plumbing is
+implemented exactly so a presenter that *can* collect text — a small reply
+window, or a platform with inline replies — needs no change downstream.
 
 One asterisk: `ConnectivityManager` cannot report whether a connection is
 metered — no JDK API exposes that on any OS — so desktop assumes unmetered and

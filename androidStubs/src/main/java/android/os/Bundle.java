@@ -23,6 +23,13 @@ public class Bundle {
 
     public void putBundle(String key, Bundle value) { values.put(key, value); }
 
+    public void putCharSequence(String key, CharSequence value) { values.put(key, value); }
+
+    /** Copies every entry, keeping its type — see {@link #getString} on why that matters. */
+    public void putAll(Bundle source) {
+        if (source != null) values.putAll(source.values);
+    }
+
     public String getString(String key) { return (String) values.get(key); }
 
     public String getString(String key, String defaultValue) {
@@ -54,6 +61,22 @@ public class Bundle {
     public String[] getStringArray(String key) { return (String[]) values.get(key); }
 
     public Bundle getBundle(String key) { return (Bundle) values.get(key); }
+
+    public CharSequence getCharSequence(String key) {
+        Object v = values.get(key);
+        return v instanceof CharSequence ? (CharSequence) v : null;
+    }
+
+    public CharSequence getCharSequence(String key, CharSequence defaultValue) {
+        CharSequence v = getCharSequence(key);
+        return v == null ? defaultValue : v;
+    }
+
+    public Object get(String key) { return values.get(key); }
+
+    public void putObject(String key, Object value) { values.put(key, value); }
+
+
 
     public boolean containsKey(String key) { return values.containsKey(key); }
 

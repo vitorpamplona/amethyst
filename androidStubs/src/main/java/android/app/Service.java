@@ -19,6 +19,9 @@ public abstract class Service extends DelegatingContext {
     public static final int START_NOT_STICKY = 2;
     public static final int START_REDELIVER_INTENT = 3;
 
+    public static final int STOP_FOREGROUND_REMOVE = 1;
+    public static final int STOP_FOREGROUND_DETACH = 2;
+
     public void onCreate() {}
 
     public int onStartCommand(Intent intent, int flags, int startId) { return START_NOT_STICKY; }
@@ -30,6 +33,15 @@ public abstract class Service extends DelegatingContext {
     public void onDestroy() {}
 
     public void stopSelf() {}
+
+    /**
+     * Android calls this when a foreground service exhausts its runtime budget.
+     * Desktop has no such budget, so it is never called here — it exists so the
+     * overrides in shared code compile and keep documenting the Android path.
+     */
+    public void onTimeout(int startId) {}
+
+    public void onTimeout(int startId, int foregroundServiceType) { onTimeout(startId); }
 
     public void stopForeground(int flags) {}
 
