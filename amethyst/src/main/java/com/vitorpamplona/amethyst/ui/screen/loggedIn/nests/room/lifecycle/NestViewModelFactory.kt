@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lifecycle
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.nestsclient.NestsRoomConfig
@@ -32,6 +33,7 @@ import com.vitorpamplona.nestsclient.audio.MediaCodecOpusDecoder
 import com.vitorpamplona.nestsclient.audio.MediaCodecOpusEncoder
 import com.vitorpamplona.nestsclient.transport.QuicWebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import kotlin.reflect.KClass
 
 /**
  * Android-side Factory for [NestViewModel]. The ViewModel itself lives
@@ -45,7 +47,10 @@ internal class NestViewModelFactory(
     private val room: NestsRoomConfig,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+    override fun <T : ViewModel> create(
+        modelClass: KClass<T>,
+        extras: CreationExtras,
+    ): T =
         NestViewModel(
             // Named parameter — `OkHttpNestsClient`'s primary constructor
             // declares `callTimeoutMs` first with a default, so the

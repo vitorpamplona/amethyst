@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import kotlin.reflect.KClass
 
 @Stable
 class UserAppRecommendationsFeedViewModel(
@@ -34,6 +36,9 @@ class UserAppRecommendationsFeedViewModel(
         val user: User,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserAppRecommendationsFeedViewModel(user) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = UserAppRecommendationsFeedViewModel(user) as T
     }
 }

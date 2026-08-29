@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import kotlin.reflect.KClass
 
 class CommunityFeedViewModel(
     val note: AddressableNote,
@@ -41,6 +43,9 @@ class CommunityFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = CommunityFeedViewModel(note, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = CommunityFeedViewModel(note, account) as T
     }
 }

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.minichat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.isMinichatReply
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlin.reflect.KClass
 
 /**
  * The reactive read-model of a message's minichat: the root's kind-1111 [CommentEvent]
@@ -65,6 +67,9 @@ class MinichatFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = MinichatFeedViewModel(rootNote, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = MinichatFeedViewModel(rootNote, account) as T
     }
 }

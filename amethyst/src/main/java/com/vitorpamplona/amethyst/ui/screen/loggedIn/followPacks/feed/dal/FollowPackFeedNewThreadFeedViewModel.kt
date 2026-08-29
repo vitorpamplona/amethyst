@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import kotlin.reflect.KClass
 
 class FollowPackFeedNewThreadFeedViewModel(
     val note: AddressableNote,
@@ -35,6 +37,9 @@ class FollowPackFeedNewThreadFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = FollowPackFeedNewThreadFeedViewModel(note, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = FollowPackFeedNewThreadFeedViewModel(note, account) as T
     }
 }

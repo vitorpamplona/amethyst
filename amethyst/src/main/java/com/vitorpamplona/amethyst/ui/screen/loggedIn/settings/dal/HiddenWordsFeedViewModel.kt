@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.StringFeedViewModel
+import kotlin.reflect.KClass
 
 class HiddenWordsFeedViewModel(
     val account: Account,
@@ -34,6 +36,9 @@ class HiddenWordsFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = HiddenWordsFeedViewModel(account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = HiddenWordsFeedViewModel(account) as T
     }
 }

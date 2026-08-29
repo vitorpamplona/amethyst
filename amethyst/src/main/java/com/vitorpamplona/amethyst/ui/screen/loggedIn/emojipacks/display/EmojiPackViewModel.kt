@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
@@ -47,6 +48,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.reflect.KClass
 
 @Stable
 class EmojiPackViewModel(
@@ -181,6 +183,9 @@ class EmojiPackViewModel(
         val account: Account,
         val packIdentifier: String,
     ) : ViewModelProvider.NewInstanceFactory() {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = EmojiPackViewModel(account, packIdentifier) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = EmojiPackViewModel(account, packIdentifier) as T
     }
 }

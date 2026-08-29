@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.ui.feeds.MarmotGroupFeedFilter
 import com.vitorpamplona.amethyst.commons.viewmodels.ListChangeFeedViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlin.reflect.KClass
 
 class MarmotGroupFeedViewModel(
     nostrGroupId: HexKey,
@@ -40,6 +42,9 @@ class MarmotGroupFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = MarmotGroupFeedViewModel(nostrGroupId, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = MarmotGroupFeedViewModel(nostrGroupId, account) as T
     }
 }

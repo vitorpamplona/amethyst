@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.model.Account
+import kotlin.reflect.KClass
 
 /**
  * Factory for creating ChessViewModelNew instances.
@@ -30,11 +33,14 @@ import com.vitorpamplona.amethyst.model.Account
  */
 class ChessViewModelFactory(
     private val account: Account,
-    private val application: android.app.Application,
+    private val application: Application,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ChessViewModelNew::class.java)) {
+    override fun <T : ViewModel> create(
+        modelClass: KClass<T>,
+        extras: CreationExtras,
+    ): T {
+        if (modelClass == ChessViewModelNew::class) {
             return ChessViewModelNew(account, application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

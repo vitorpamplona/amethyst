@@ -23,10 +23,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.dal
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlin.reflect.KClass
 
 @Stable
 class HashtagFeedViewModel(
@@ -43,6 +45,9 @@ class HashtagFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = HashtagFeedViewModel(hashtag, relays, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = HashtagFeedViewModel(hashtag, relays, account) as T
     }
 }

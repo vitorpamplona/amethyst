@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.UserFeedViewModel
+import kotlin.reflect.KClass
 
 class HiddenAccountsFeedViewModel(
     val account: Account,
@@ -31,12 +33,15 @@ class HiddenAccountsFeedViewModel(
     class Factory(
         val account: Account,
     ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(HiddenAccountsFeedViewModel::class.java)) {
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T {
+            if (modelClass == HiddenAccountsFeedViewModel::class) {
                 @Suppress("UNCHECKED_CAST")
                 return HiddenAccountsFeedViewModel(account) as T
             }
-            throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+            throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.simpleName}")
         }
     }
 }

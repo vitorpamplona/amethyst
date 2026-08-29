@@ -23,12 +23,14 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.GitStatusIndex
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.reflect.KClass
 
 class RepositoryPatchesFeedViewModel(
     val note: AddressableNote,
@@ -50,6 +52,9 @@ class RepositoryPatchesFeedViewModel(
         val showClosed: Boolean,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = RepositoryPatchesFeedViewModel(note, account, showClosed) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = RepositoryPatchesFeedViewModel(note, account, showClosed) as T
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlin.reflect.KClass
 
 @Stable
 class BookmarkGroupViewModel(
@@ -173,6 +175,9 @@ class BookmarkGroupViewModel(
         val account: Account,
         val bookmarkGroupIdentifier: String,
     ) : ViewModelProvider.NewInstanceFactory() {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = BookmarkGroupViewModel(account, bookmarkGroupIdentifier) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = BookmarkGroupViewModel(account, bookmarkGroupIdentifier) as T
     }
 }

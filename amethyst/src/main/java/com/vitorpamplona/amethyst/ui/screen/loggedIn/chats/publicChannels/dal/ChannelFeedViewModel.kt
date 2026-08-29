@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ListChangeFeedViewModel
+import kotlin.reflect.KClass
 
 class ChannelFeedViewModel(
     val channel: Channel,
@@ -36,6 +38,9 @@ class ChannelFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = ChannelFeedViewModel(channel, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = ChannelFeedViewModel(channel, account) as T
     }
 }

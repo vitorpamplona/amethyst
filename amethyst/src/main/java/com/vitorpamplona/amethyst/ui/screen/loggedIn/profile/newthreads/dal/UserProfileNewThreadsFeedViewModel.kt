@@ -23,9 +23,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.dal
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import kotlin.reflect.KClass
 
 @Stable
 class UserProfileNewThreadsFeedViewModel(
@@ -37,6 +39,9 @@ class UserProfileNewThreadsFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = UserProfileNewThreadsFeedViewModel(user, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = UserProfileNewThreadsFeedViewModel(user, account) as T
     }
 }

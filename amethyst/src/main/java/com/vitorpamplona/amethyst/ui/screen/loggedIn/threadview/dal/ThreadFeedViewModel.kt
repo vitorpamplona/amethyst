@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import kotlin.reflect.KClass
 
 class ThreadFeedViewModel(
     account: Account,
@@ -35,6 +37,9 @@ class ThreadFeedViewModel(
         val noteId: String,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = ThreadFeedViewModel(account, noteId) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = ThreadFeedViewModel(account, noteId) as T
     }
 }

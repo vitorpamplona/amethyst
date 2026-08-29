@@ -23,8 +23,10 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.dvms.dal
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
+import kotlin.reflect.KClass
 
 @Stable
 class NIP90ContentDiscoveryFeedViewModel(
@@ -38,6 +40,9 @@ class NIP90ContentDiscoveryFeedViewModel(
         val requestId: String,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = NIP90ContentDiscoveryFeedViewModel(account, dvmKey, requestId) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = NIP90ContentDiscoveryFeedViewModel(account, dvmKey, requestId) as T
     }
 }

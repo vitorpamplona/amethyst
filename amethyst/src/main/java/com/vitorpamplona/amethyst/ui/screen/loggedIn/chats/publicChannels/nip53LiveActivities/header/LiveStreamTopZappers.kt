@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.nip53LiveActivities.TopZapperEntry
@@ -63,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import java.math.BigDecimal
+import kotlin.reflect.KClass
 
 /**
  * Horizontally-scrollable leaderboard of the top zappers on a live stream. Matches
@@ -83,7 +85,10 @@ fun LiveStreamTopZappers(
             factory =
                 object : ViewModelProvider.Factory {
                     @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T = LiveStreamTopZappersViewModel(channel) as T
+                    override fun <T : ViewModel> create(
+                        modelClass: KClass<T>,
+                        extras: CreationExtras,
+                    ): T = LiveStreamTopZappersViewModel(channel) as T
                 },
         )
 

@@ -22,10 +22,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.ui.feeds.ChatroomFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlin.reflect.KClass
 
 // Re-export from commons for backwards compatibility
 typealias ListChangeFeedViewModel = com.vitorpamplona.amethyst.commons.viewmodels.ListChangeFeedViewModel
@@ -42,6 +44,9 @@ class ChatroomFeedViewModel(
         val account: Account,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = ChatroomFeedViewModel(user, account) as T
+        override fun <T : ViewModel> create(
+            modelClass: KClass<T>,
+            extras: CreationExtras,
+        ): T = ChatroomFeedViewModel(user, account) as T
     }
 }

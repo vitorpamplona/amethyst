@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
@@ -95,6 +96,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import okhttp3.OkHttpClient
+import kotlin.reflect.KClass
 
 // ---------------------------------------------------------------------------
 // Project Home + drill-in screens.
@@ -164,7 +166,10 @@ internal class GitRepositoryBrowserViewModelFactory(
     private val okHttpClient: (String) -> OkHttpClient,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = GitRepositoryBrowserViewModel(okHttpClient) as T
+    override fun <T : ViewModel> create(
+        modelClass: KClass<T>,
+        extras: CreationExtras,
+    ): T = GitRepositoryBrowserViewModel(okHttpClient) as T
 }
 
 @Composable
