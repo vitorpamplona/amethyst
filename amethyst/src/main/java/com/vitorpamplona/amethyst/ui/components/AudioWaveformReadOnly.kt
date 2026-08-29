@@ -45,8 +45,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
-import com.linc.audiowaveform.model.AmplitudeType
-import com.linc.audiowaveform.model.WaveformAlignment
+import com.vitorpamplona.amethyst.commons.ui.waveform.AmplitudeType
+import com.vitorpamplona.amethyst.commons.ui.waveform.WaveformAlignment
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 

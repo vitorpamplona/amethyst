@@ -14,7 +14,6 @@ android-minSdk = "26"
 android-targetSdk = "37"
 androidxJunit = "1.3.0"
 appcompat = "1.8.0"
-audiowaveform = "1.1.2"
 benchmark = "1.5.0-rc01"
 uiautomator = "2.4.0"
 biometricKtx = "1.4.0-alpha02"
@@ -159,7 +158,6 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-audiowaveform = { group = "com.github.lincollincol", name = "compose-audiowaveform", version.ref = "audiowaveform" }
 charlietap-cachemap = { module = "io.github.charlietap:cachemap", version.ref = "cachemapVersion" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }

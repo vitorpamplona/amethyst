@@ -17,6 +17,13 @@ public final class MediaFormat {
     public static final String KEY_CHANNEL_COUNT = "channel-count";
     public static final String KEY_SAMPLE_RATE = "sample-rate";
     public static final String KEY_MAX_INPUT_SIZE = "max-input-size";
+    public static final String KEY_AAC_PROFILE = "aac-profile";
+
+    public static final String MIMETYPE_AUDIO_AAC = "audio/mp4a-latm";
+    public static final String MIMETYPE_AUDIO_OPUS = "audio/opus";
+    public static final String MIMETYPE_AUDIO_RAW = "audio/raw";
+    public static final String MIMETYPE_VIDEO_AVC = "video/avc";
+    public static final String MIMETYPE_VIDEO_HEVC = "video/hevc";
 
     private final Map<String, Object> values = new HashMap<>();
 

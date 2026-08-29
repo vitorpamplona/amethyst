@@ -561,9 +561,6 @@ dependencies {
     implementation(libs.vico.charts.compose)
     implementation(libs.vico.charts.m3)
 
-    // Waveform visualizer
-    implementation(libs.audiowaveform)
-
     // Video compression lib
     implementation(libs.abedElazizShe.video.compressor.fork)
     // Image compression lib

@@ -73,6 +73,9 @@ Worth recording so nobody re-litigates them as gaps:
 | `ImageDecoder` | ImageIO (AVIF/HEIF excepted — they need a plugin, and decode to null, which callers already handle) |
 | `ACTION_SEND` of a file | the clipboard, as a file — every file manager and mail client takes it as a paste |
 | `MediaScannerConnection` | nothing to do: desktop file managers read directories, and the indexers that exist watch the filesystem |
+| `MediaRecorder` | `javax.sound.sampled` capture, with a real live amplitude for the waveform |
+| `MediaPlayer` | `javax.sound.sampled` for what the JDK decodes, the desktop media backend for the rest |
+| `compose-audiowaveform` | reimplemented in `:commons` — the app already drew its own waveform and needed only three primitives from it |
 
 WorkManager is worth a note because it is where a stub would have been most
 expensive: scheduled posts and calendar reminders are the whole feature, and a
@@ -101,6 +104,17 @@ firing a toast per progress tick. Action buttons do not survive: a click
 deep-links instead. `RemoteInput`'s intent plumbing is implemented exactly, so a
 presenter that *can* collect text — a reply window, or a platform with inline
 replies — needs no change downstream.
+
+Voice messages needed the microphone, which is not an Android-only capability:
+`MediaRecorder` opens a `TargetDataLine`, and `getMaxAmplitude` is computed from
+the captured samples, so the live waveform is the real signal. What the JDK does
+not have is an *encoder* — `setAudioEncoder(AAC)` cannot be honoured — so the
+default backend writes WAV/PCM and reports the substitution, because a file
+silently labelled `audio/mp4` that is really a WAV only shows up at the far end.
+A build with a real encoder installs one through `MediaRecorder.setEncoder`, and
+`MediaPlayer` takes the matching seam: the JDK decodes WAV, AU and AIFF, and
+anything else (AAC-in-MP4, which is what Android records) goes to the desktop
+media backend.
 
 One asterisk: `ConnectivityManager` cannot report whether a connection is
 metered — no JDK API exposes that on any OS — so desktop assumes unmetered and
