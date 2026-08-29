@@ -57,6 +57,10 @@ import androidx.webkit.ProxyController
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
+import com.vitorpamplona.amethyst.commons.napplet.NappletEmbedContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletHostContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletIpc
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag

@@ -27,11 +27,11 @@ import android.os.Bundle
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.napplet.NappletHostContract
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.model.ThemeType
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
-import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.EmbeddedWebAppController
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.EmbeddedNostrAppController
 

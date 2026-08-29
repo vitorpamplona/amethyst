@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.napplethost.HostProfile
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import io.mockk.every
 import io.mockk.mockk

@@ -54,6 +54,9 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.napplet.NappletBrowserContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletHostContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletIpc
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.quartz.utils.Log
 import org.json.JSONObject
