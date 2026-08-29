@@ -27,6 +27,12 @@ java {
 }
 
 dependencies {
+    // Backs the org.json stand-in. Android bundles org.json; the JDK does not,
+    // and the `org.json:json` artifact carries the non-OSI JSON License that
+    // Debian, Fedora and the ASF all reject. Jackson is Apache-2.0 and already
+    // used throughout this codebase.
+    implementation(libs.jackson.databind)
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
