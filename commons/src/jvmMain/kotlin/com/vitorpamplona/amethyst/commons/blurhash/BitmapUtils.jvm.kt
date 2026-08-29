@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.blurhash
 
+import android.graphics.Bitmap
 import java.awt.image.BufferedImage
 
 /**
@@ -27,3 +28,17 @@ import java.awt.image.BufferedImage
  * Delegates to PlatformImage.toBlurhash() for the actual encoding.
  */
 fun BufferedImage.toBlurhash(): String = this.toPlatformImage().toBlurhash()
+
+/**
+ * The JVM twin of the `androidMain` bitmap extensions, for the Android code
+ * retargeted onto the JVM.
+ *
+ * `Bitmap` is a `BufferedImage` behind a stand-in here, and `PlatformImage` on
+ * this target already *is* a `BufferedImage`, so the conversion is free and the
+ * encoder that runs is the same shared one.
+ */
+fun Bitmap.toPlatformImage(): PlatformImage = PlatformImage(image)
+
+fun PlatformImage.toAndroidBitmap(): Bitmap = Bitmap.wrap(image)
+
+fun Bitmap.toBlurhash(): String = toPlatformImage().toBlurhash()

@@ -178,6 +178,13 @@ kotlin {
         jvmMain {
             dependsOn(jvmAndroid)
             dependencies {
+                // The android.* stand-ins, so the JVM side of the port can adapt
+                // the Android-shaped types (Bitmap, Notification) the retargeted
+                // app code hands over. compileOnly: on Android these come from
+                // android.jar, and no desktop consumer of :commons needs them at
+                // runtime unless it calls one of the adapters. See :androidStubs.
+                compileOnly(project(":androidStubs"))
+
                 // Desktop-specific Compose
                 implementation(compose.desktop.currentOs)
                 implementation(libs.jetbrains.compose.ui.tooling)

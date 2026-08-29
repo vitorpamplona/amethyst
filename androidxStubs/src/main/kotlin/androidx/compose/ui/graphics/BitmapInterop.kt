@@ -18,13 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.thumbhash
+package androidx.compose.ui.graphics
 
 import android.graphics.Bitmap
-import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import java.awt.image.BufferedImage
 
-fun BufferedImage.toThumbhash(): String = this.toPlatformImage().toThumbhash()
+/**
+ * The `ImageBitmap` <-> `Bitmap` bridge Compose ships on Android.
+ *
+ * Both sides already exist here: `Bitmap` is a `BufferedImage` in disguise, and
+ * Compose Desktop converts to and from `BufferedImage` through `toAwtImage` /
+ * `toComposeImageBitmap`. So these are the real conversions Compose would do,
+ * with the same pixel data — not a placeholder.
+ */
+fun ImageBitmap.asAndroidBitmap(): Bitmap = Bitmap.wrap(toAwtImage())
 
-/** The JVM twin of the `androidMain` thumbhash extension. See the blurhash one. */
-fun Bitmap.toThumbhash(): String = toPlatformImage().toThumbhash()
+fun Bitmap.asImageBitmap(): ImageBitmap = image.toComposeImageBitmap()

@@ -45,6 +45,7 @@ public class Intent {
     private final Bundle extras = new Bundle();
     private final java.util.Set<String> categories = new java.util.LinkedHashSet<>();
     private Class<?> targetClass;
+    private ClipData clipData;
 
     public Intent() {}
 
@@ -116,6 +117,13 @@ public class Intent {
 
     public Intent putExtra(String name, Bundle value) { extras.putBundle(name, value); return this; }
 
+    public Intent putExtra(String name, android.net.Uri value) { extras.putObject(name, value); return this; }
+
+    public android.net.Uri getParcelableExtra(String name) {
+        Object v = extras.get(name);
+        return v instanceof android.net.Uri ? (android.net.Uri) v : null;
+    }
+
     public Intent putExtra(String name, CharSequence value) { extras.putCharSequence(name, value); return this; }
 
     /**
@@ -145,4 +153,13 @@ public class Intent {
     public boolean hasExtra(String name) { return extras.containsKey(name); }
 
     public static Intent createChooser(Intent target, CharSequence title) { return target; }
+
+    /**
+     * Android attaches this so the share sheet can preview the file. Desktop
+     * has no share sheet, but {@link IntentDispatcher} reads it the same way to
+     * find what is being shared, so it is kept rather than dropped.
+     */
+    public ClipData getClipData() { return clipData; }
+
+    public Intent setClipData(ClipData value) { this.clipData = value; return this; }
 }

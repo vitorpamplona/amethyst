@@ -18,13 +18,38 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.thumbhash
+package androidx.core.content
 
-import android.graphics.Bitmap
-import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
-import java.awt.image.BufferedImage
+import android.content.Context
+import android.net.Uri
+import java.io.File
 
-fun BufferedImage.toThumbhash(): String = this.toPlatformImage().toThumbhash()
+/**
+ * JVM stand-in for androidx.core.content.FileProvider.
+ *
+ * FileProvider exists on Android to hand another app a readable handle to a
+ * file without granting it the filesystem — a `content://` URI carrying a
+ * temporary grant. Desktop has no such sandbox between applications: the file
+ * path *is* the handle, and every consumer of these URIs here (the share sheet,
+ * the camera capture target, the .ics and .zip exports) opens it as a file.
+ *
+ * So the honest translation is the file's own URI. The authority is accepted
+ * and ignored because it names an Android manifest provider, which has no
+ * desktop counterpart to name.
+ */
+object FileProvider {
+    @JvmStatic
+    fun getUriForFile(
+        context: Context,
+        authority: String,
+        file: File,
+    ): Uri = Uri.fromFile(file)
 
-/** The JVM twin of the `androidMain` thumbhash extension. See the blurhash one. */
-fun Bitmap.toThumbhash(): String = toPlatformImage().toThumbhash()
+    @JvmStatic
+    fun getUriForFile(
+        context: Context,
+        authority: String,
+        file: File,
+        displayName: String,
+    ): Uri = Uri.fromFile(file)
+}

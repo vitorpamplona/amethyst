@@ -67,7 +67,12 @@ Worth recording so nobody re-litigates them as gaps:
 | `DateFormat`, `DateUtils` | `java.time` / `java.text`, same CLDR data |
 | aapt2 resources | a generated `R` plus locale tables, built from the same `res/` tree |
 | WorkManager | a daemon timer with the same retry backoff and constraint waiting |
-| `NotificationCompat` + `NotificationManager` | `java.awt.SystemTray` balloons, behind a swappable presenter |
+| `NotificationCompat` + `NotificationManager` | the Nucleus native stack already in `:commons`, behind a swappable presenter |
+| `FileProvider` | the file's own `file://` URI — desktop has no inter-app sandbox to hand a grant through |
+| `MediaStore` | the XDG user directories, with a ContentResolver insert that creates the real file |
+| `ImageDecoder` | ImageIO (AVIF/HEIF excepted — they need a plugin, and decode to null, which callers already handle) |
+| `ACTION_SEND` of a file | the clipboard, as a file — every file manager and mail client takes it as a paste |
+| `MediaScannerConnection` | nothing to do: desktop file managers read directories, and the indexers that exist watch the filesystem |
 
 WorkManager is worth a note because it is where a stub would have been most
 expensive: scheduled posts and calendar reminders are the whole feature, and a
@@ -82,16 +87,20 @@ open, and the app re-enqueues what is still due at the next launch — "next
 launch" being the desktop analogue of "next boot". That one difference is
 declared as `WorkManager.wakeWhileAppClosed`, not papered over.
 
-Notifications are the same shape of decision. The tray gives real balloons on
-Windows and most Linux desktops, and a menu-bar item on macOS, with no extra
-dependency. What it does not give is a persistent row, so an *ongoing* or
-progress notification is announced once and its latest state kept in
-`DesktopNotifications.ongoing` for an in-app status row to draw, rather than
-flashing a balloon per progress tick. Action buttons and inline reply do not fit
-on a balloon either: tapping it fires the content intent, so the app still opens
-where the notification points, and `RemoteInput`'s intent plumbing is
-implemented exactly so a presenter that *can* collect text — a small reply
-window, or a platform with inline replies — needs no change downstream.
+Notifications needed no new backend: `:commons` already carries
+`NucleusNotificationDispatcher`, which delivers through
+`UNUserNotificationCenter`, WinRT toasts and freedesktop D-Bus and falls back to
+an AWT balloon. What was missing was the adapter, and — more to the point — the
+content: `NotificationCompat.Builder` accepted a title and a body and dropped
+both, so every notification would have arrived blank while looking, from the
+calling code, exactly like a working one. `AndroidNotificationBridge` is that
+adapter. What the OS model does not have is Android's persistent row, so an
+*ongoing* or progress notification is delivered once and its latest state kept
+in `AndroidNotificationBridge.ongoing` for an in-app status row, rather than
+firing a toast per progress tick. Action buttons do not survive: a click
+deep-links instead. `RemoteInput`'s intent plumbing is implemented exactly, so a
+presenter that *can* collect text — a reply window, or a platform with inline
+replies — needs no change downstream.
 
 One asterisk: `ConnectivityManager` cannot report whether a connection is
 metered — no JDK API exposes that on any OS — so desktop assumes unmetered and

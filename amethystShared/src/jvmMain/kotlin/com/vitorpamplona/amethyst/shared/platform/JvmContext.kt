@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.shared.platform
 
 import android.content.ContentResolver
+import android.content.ContentValues
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.net.Uri
 import android.os.LocaleList
+import android.provider.MediaStore
 import com.vitorpamplona.amethyst.shared.resources.AndroidResourceTable
 import java.io.File
 import java.io.InputStream
@@ -199,6 +201,43 @@ object JvmContentResolver : ContentResolver() {
     override fun openOutputStream(uri: Uri): OutputStream? = fileFor(uri)?.outputStream()
 
     override fun getType(uri: Uri): String? = URLConnection.guessContentTypeFromName(uri.toString())
+
+    /**
+     * Creates the file a MediaStore insert stands for and hands back its
+     * `file://` URI, so the caller's `openOutputStream` writes real bytes to a
+     * real place — the XDG directory the collection maps to, under whatever
+     * `RELATIVE_PATH` asked for.
+     *
+     * Returning a URI without creating anything would let "saved to your
+     * gallery" appear over a file that does not exist, so an unrecognised
+     * collection returns null instead.
+     */
+    override fun insert(
+        collection: Uri,
+        values: ContentValues,
+    ): Uri? {
+        val base = MediaStore.directoryFor(collection) ?: return null
+        val name = values.getAsString(MediaStore.MediaColumns.DISPLAY_NAME) ?: return null
+        val relative = values.getAsString(MediaStore.MediaColumns.RELATIVE_PATH)
+
+        // RELATIVE_PATH is rooted at the shared-storage top level and repeats
+        // the directory the collection already names, so only the part past it
+        // applies here.
+        val subPath = relative?.trim('/')?.substringAfter('/', "")?.takeIf { it.isNotBlank() }
+        val target = if (subPath == null) File(base, name) else File(File(base, subPath), name)
+
+        target.parentFile?.mkdirs()
+        return runCatching {
+            target.createNewFile()
+            Uri.fromFile(target)
+        }.getOrNull()
+    }
+
+    override fun delete(
+        uri: Uri,
+        selection: String?,
+        selectionArgs: Array<String>?,
+    ): Int = if (fileFor(uri)?.delete() == true) 1 else 0
 
     private fun fileFor(uri: Uri): File? = uri.path?.let(::File)?.takeIf { uri.scheme == null || uri.scheme == "file" }
 }
