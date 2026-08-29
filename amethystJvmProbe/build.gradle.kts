@@ -67,6 +67,17 @@ sourceSets {
             "**/service/playback/service/**",
             "**/service/playback/diskCache/**",
             "**/service/playback/websocket/**",
+            // The calls feature. commons already holds the right abstraction —
+            // PeerSession, CallState, CallManager under nipACWebRtcCalls — and
+            // the rest of the app only ever touches that. But these 20 files
+            // bind straight to org.webrtc types (VideoTrack, SurfaceViewRenderer,
+            // EglBase), so they are the Android *implementation*, UI included.
+            // Nothing outside these two directories imports org.webrtc, so the
+            // boundary is already clean; desktop needs its own implementation
+            // behind the same PeerSession interface, plus a calls UI that talks
+            // to it rather than to org.webrtc.
+            "**/ui/call/**",
+            "**/service/call/**",
         )
         resources.setSrcDirs(emptyList<String>())
     }
@@ -138,7 +149,15 @@ val jvmReadiness by tasks.registering {
     // Kept in step with the source set's excludes above. Counted separately
     // rather than silently folded into "clean": a file that is not compiled
     // has not been shown to compile.
-    val excludedDirs = listOf("/service/playback/playerPool/", "/service/playback/service/", "/service/playback/diskCache/", "/service/playback/websocket/")
+    val excludedDirs =
+        listOf(
+            "/service/playback/playerPool/",
+            "/service/playback/service/",
+            "/service/playback/diskCache/",
+            "/service/playback/websocket/",
+            "/ui/call/",
+            "/service/call/",
+        )
     val launcher = rootProject.file("gradlew")
     val rootDir = rootProject.projectDir
     outputs.upToDateWhen { false }
@@ -212,7 +231,7 @@ val jvmReadiness by tasks.registering {
                 appendLine("=".repeat(52))
                 appendLine("files compiling clean : ${total - broken} / $total (${if (total == 0) 0 else (total - broken) * 100 / total}%)")
                 appendLine("files with errors     : $broken")
-                appendLine("files excluded        : $excluded (Android-only ExoPlayer engine layer)")
+                appendLine("files excluded        : $excluded (Android implementations: ExoPlayer engine, WebRTC calls)")
                 appendLine("total errors          : ${matches.size}")
                 appendLine()
                 appendLine("Top unresolved symbols - each is one stub, shim or seam:")
