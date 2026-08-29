@@ -46,6 +46,16 @@ import java.util.prefs.Preferences
 object JvmContext : Context() {
     private const val PACKAGE_NAME = "com.vitorpamplona.amethyst"
 
+    /**
+     * Android hands every component a Context; on the JVM there is one per
+     * process, and Application/Service/Activity all resolve through whatever is
+     * installed here. Installing on first touch means a caller that reaches
+     * JvmContext at all cannot then hit the "no Context installed" failure.
+     */
+    init {
+        installApplicationContext(this)
+    }
+
     override fun getPackageName(): String = PACKAGE_NAME
 
     override fun getResources(): Resources = JvmResources

@@ -12,6 +12,33 @@ import java.io.File;
  * (com.vitorpamplona.amethyst.shared.platform.JvmContext), not here.
  */
 public abstract class Context {
+    /**
+     * The process-wide context, installed by the JVM app at startup.
+     *
+     * Android hands every component a Context; on the JVM there is one per
+     * process, so Application, Service and Activity all resolve through this
+     * rather than each carrying their own.
+     */
+    private static volatile Context applicationContext;
+
+    public static void installApplicationContext(Context context) {
+        applicationContext = context;
+    }
+
+    /**
+     * Fails loudly rather than returning null. A null Context surfaces far from
+     * the missing install as an NPE inside unrelated code; this names the cause.
+     */
+    protected static Context requireApplicationContext() {
+        Context context = applicationContext;
+        if (context == null) {
+            throw new IllegalStateException(
+                    "No application Context installed. The JVM app must call "
+                            + "Context.installApplicationContext(...) during startup.");
+        }
+        return context;
+    }
+
     public static final String NOTIFICATION_SERVICE = "notification";
     public static final String CLIPBOARD_SERVICE = "clipboard";
     public static final String AUDIO_SERVICE = "audio";
@@ -32,9 +59,10 @@ public abstract class Context {
 
     public abstract String getString(int resId, Object... formatArgs);
 
-    /** On the JVM there is one process-wide context, so this returns itself. */
+    /** On the JVM there is one process-wide context. */
     public Context getApplicationContext() {
-        return this;
+        Context context = applicationContext;
+        return context == null ? this : context;
     }
 
     public abstract File getCacheDir();
