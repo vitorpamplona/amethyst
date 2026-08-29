@@ -1,6 +1,10 @@
 # Shipping the Android app as a JVM desktop app
 
-**Date:** 2026-08-28 · **Owning module:** `desktopApp` · **Status:** proposal (no code moved yet)
+**Date:** 2026-08-28 · **Owning module:** `desktopApp` · **Status:** in progress — Phase 0 done, Phase 1 under way
+
+> **Progress.** The mechanism is proven and the resource layer is built and shipped.
+> `./gradlew :amethystJvmProbe:jvmReadiness` prints the live burn-down; at the last
+> run **1863 of 2340 files (80%) already compile for the JVM.** See §8.
 
 Goal: stop re-implementing Amethyst's screens for desktop and instead **compile the
 existing Android app for the JVM**. The current `:desktopApp` is a desktop-first
@@ -93,24 +97,41 @@ file there can reference platform types that exist on both sides without an
 starts with **no** iOS target, so it is not subject to that gate and may use OkHttp and
 Jackson freely in `jvmAndroid`.
 
-### 2.1 How `android.*` types resolve in shared code — settle this first
+### 2.1 How `android.*` types resolve in shared code — SETTLED
 
-Two candidate mechanisms. **Phase 0 must decide empirically; do not build on a guess.**
+Two mechanisms were on the table. **Option (b), the raw stub jar, won, and the
+`expect`/`actual typealias` alternative is retired** — it would have cost a codemod
+over every `android.*` import for no benefit.
 
-- **(a) `compat` package + `expect`/`actual typealias` — recommended default.**
-  `jvmAndroid` code imports `com.vitorpamplona.amethyst.compat.Context`;
-  `androidMain` declares `actual typealias Context = android.content.Context`,
-  `jvmMain` declares a real JVM `actual class Context`. Textbook KMP, no classpath
-  games, zero risk of the Android build silently resolving against a stub. Cost: a
-  `sed` over the ~442 files rewriting `import android.content.Context` →
-  `import com.vitorpamplona.amethyst.compat.Context`. Mechanical, reviewable as a
-  codemod, not hand-work.
-- **(b) Raw `android.*` shim jar on the JVM target only.** Zero import edits — the
-  same `import android.content.Context` line resolves from `android.jar` on Android
-  and from the shim on JVM. Cheaper on paper, but it is **unverified** whether AGP
-  tolerates that jar on the Android compile classpath without duplicate-class or
-  resolution-order problems, and a shim that drifts from the real API could change
-  what the Android build compiles against. Only adopt if Phase 0 proves it clean.
+A file writes the ordinary Android import and it resolves from `android.jar` on
+Android and from `:androidStubs` on the JVM. Wired `compileOnly` on the shared
+source set and `implementation` on `jvmMain` only. Measured on `:amethystShared`:
+
+| classpath | `:androidStubs` present |
+|---|---|
+| `androidCompileClasspath` | yes (compileOnly) |
+| `androidRuntimeClasspath` | **no** — never dexed, never in the APK |
+| `jvmCompileClasspath` / `jvmRuntimeClasspath` | yes |
+
+The decisive question was which `Context` the **Android** target compiles against
+when both jars are on its compile classpath. Measured by calling
+`Context.getCacheDir()`, present on the real class and deliberately absent from the
+stub: the Android target **compiles** it (so `android.jar` wins, and the stub can
+never weaken or alter what the app is built against) while the JVM target fails with
+`Unresolved reference 'cacheDir'`. The mechanism can only ever fail closed, on the
+JVM side, and **the JVM compiler doubles as the worklist**.
+
+Kotlin runs no metadata compilation for a source set shared only among JVM-family
+targets (`compileJvmAndroidKotlinMetadata` is `SKIPPED`), so there is no third
+classpath to reconcile.
+
+**The same trick extends to Compose.** `:composeStubs` declares `LocalContext`,
+`stringResource`, `pluralStringResource` and `painterResource(Int)` *inside*
+`androidx.compose.ui.platform` and `androidx.compose.ui.res` — Compose's own
+packages — so the existing imports resolve from the Compose Android artifacts on
+Android and from the stub on the JVM. That is ~1000 references fixed with zero
+source edits. (Split packages across jars are legal on the classpath; this would
+need rework only if the project ever moved to JPMS modules.)
 
 Several `android.*` uses need no shim at all and should just be swapped:
 
@@ -196,17 +217,52 @@ unsupported features rather than calling a `TODO()` actual and crashing.
 
 ---
 
-## 6. Phasing
+## 6. The structural finding that shapes everything: one big cycle
 
-- **Phase 0 — spike (~1 week). Go/no-go gate.** Stand up `:amethystShared`; settle
-  §2.1 (a) vs (b) by building it; move one self-contained screen family and its
-  dependencies; generate `R` for a handful of strings; render that real Android
-  screen in a desktop `Window`. Every later phase is bought on this answer.
-- **Phase 1 — the split.** `:amethystApp` / `:amethystShared`. Bulk-move everything
-  into `commonMain`/`jvmAndroid`; `androidMain` catches whatever refuses to compile.
-  **Ships no behavior change** — the existing Android test suite is the gate, and the
-  Android app must be indistinguishable before and after.
-- **Phase 2 — resources + Compose codemods** (§3, §4).
+The original phasing assumed the module could be migrated in dependency order,
+with `androidMain` catching whatever refused to compile. A package-graph analysis
+of `amethyst/src/main/java` says otherwise:
+
+| | |
+|---|---|
+| packages | 537 |
+| **largest strongly connected component** | **505 packages / 2284 files (98%)** |
+| every other SCC | a single package |
+| packages movable today, transitively Android-free | 12 packages / **15 files (1%)** |
+
+The file-level figure in §1 (72% of files import nothing Android-specific) is real
+but misleading: those files sit *inside* the cycle, importing neighbours that
+import Android. Greedy analysis confirms it — fixing the single highest-leverage
+package unblocks **8 files**, and the twelve best fixes together unblock 29.
+
+Two consequences, and they are the crux of this plan:
+
+1. **There is no incremental package-by-package migration.** Nothing can move on
+   its own, so "move a package, verify, repeat" is not available at any granularity
+   coarser than the individual file.
+2. **`androidMain` cannot be the fallback for Android-coupled code.** Code in
+   `androidMain` is invisible to `jvmAndroid`, so pushing the 583 Android-coupled
+   files down there would sever 583 edges *inside* a cycle — each one needing an
+   `expect`/`actual` seam. That is the expensive path.
+
+So the migration is **stub-driven, not move-driven**: grow `:androidStubs` and
+`:composeStubs` until the whole module compiles for the JVM in place, and reserve
+`expect`/`actual` for the genuinely divergent behaviour (§5). The unit of work is a
+missing symbol, not a package — which is exactly what §8's gate reports.
+
+## 7. Phasing
+
+- **Phase 0 — spike. DONE.** `:amethystShared` + `:androidStubs` stood up, §2.1
+  settled by measurement, the resource pipeline built and tested, and a composable
+  written against `stringRes(R.string.x)` / `painterRes(R.drawable.x)` rendered
+  offscreen on the JVM with no Android framework present.
+- **Phase 1 — resources relocated. DONE.** All 57 `values*/strings.xml` and every
+  `drawable*` bucket now live in `:amethystShared`; 770 `R` imports re-pointed. The
+  fdroid APK assembles with 4758 strings, 110 plurals, 259 drawables and the
+  translations intact, and `./gradlew test` stays green.
+- **Phase 2 — burn the stub surface down (current).** Driven by §8's gate, not by
+  moving files. Then split `:amethyst` into `:amethystApp` + the shared module once
+  the module actually compiles for the JVM — a rename at that point, not a port.
 - **Phase 3 — seams**, one at a time, wiring the JVM actuals already in `:desktopApp`
   and feature-gating the rest.
 - **Phase 4 — desktop affordances *on top of* the shared screens:** window chrome,
@@ -217,7 +273,42 @@ unsupported features rather than calling a `TODO()` actual and crashing.
 
 ---
 
-## 7. Risks
+## 8. The gate: `:amethystJvmProbe`
+
+`./gradlew :amethystJvmProbe:jvmReadiness`
+
+The probe compiles `amethyst/src/main/java` **in place, unmoved** for the JVM
+against the stub modules. It ships nothing and is excluded from `build` and
+`check` — a red gate must never block the Android app's pipeline. Its product is
+the compiler's error list, rendered as a burn-down: how many files already compile,
+and which unresolved symbols would fix the most references.
+
+Burn-down so far, of 2340 files:
+
+| after | files compiling clean | errors |
+|---|---|---|
+| the first four stubs | 1652 (71%) | 11 708 |
+| `:composeStubs` (`LocalContext`, `stringResource`, …) | 1761 (75%) | 10 776 |
+| the first framework tier (Build, Uri, Intent, Bundle, Toast, Log, Context, …) | **1863 (80%)** | 8 531 |
+
+What remains, ranked by references (the gate prints this live):
+
+| surface | refs | shape of the fix |
+|---|---|---|
+| `androidx.media3` / ExoPlayer `Player` | ~205 | the real seam — back it with `composemediaplayer`, which `:desktopApp` already ships |
+| `androidx.core` (`NotificationCompat`, `toUri`, …) | ~110 | stub; mostly thin wrappers over framework classes already stubbed |
+| navigation `composableFromEnd*` helpers | ~225 | app-side helpers over `androidx.navigation`; KMP already, needs wiring |
+| `androidx.datastore` (`stringPreferencesKey`) | ~153 | datastore is KMP; wire the JVM artifact |
+| napplet `Nappletbrowser/Embed/Ipc` contracts | ~140 | WebView sandbox — desktop needs its own host or the feature gates off |
+| `PendingIntent` / `NotificationManager` / `Manifest` | ~193 | stub + a desktop notification backend |
+| `webrtc` / `PeerConnection` | ~81 | calls; feature-gate or a JVM WebRTC binding |
+| `ExifInterface`, `MediaMetadataRetriever`, `Bitmap` | ~123 | `:desktopApp` already has commons-imaging and JCodec for these |
+| `accompanist`, `ActivityResultContracts`, `work` | ~96 | permissions, file pickers, background jobs — desktop equivalents exist |
+
+The long tail is genuinely long — 452 symbols referenced exactly once — but it is
+tail, not body: each is a one-line stub or a deletion.
+
+## 9. Risks
 
 - **Phase 1 regresses Android.** Mitigated by making Phase 1 a pure move with zero
   behavior change, gated on the existing test suite.
@@ -229,7 +320,7 @@ unsupported features rather than calling a `TODO()` actual and crashing.
 - **Two shipped apps from one tree** means desktop-driven refactors can break mobile.
   The Android build stays the primary CI gate.
 
-## 8. Alternatives rejected
+## 10. Alternatives rejected
 
 - **Robolectric `android-all` as the shim.** It carries real AOSP implementations, but
   needs Robolectric's instrumenting classloader and JUnit sandbox to work. It is a
