@@ -20,13 +20,15 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.hls
 
-import com.davotoula.lightcompressor.Resolution
-import com.davotoula.lightcompressor.VideoCodec
-import com.davotoula.lightcompressor.hls.HlsLadder
-import com.davotoula.lightcompressor.hls.HlsRenditionSummary
-import com.davotoula.lightcompressor.hls.HlsUploadResult
-import com.davotoula.lightcompressor.hls.HlsUploaded
-import com.davotoula.lightcompressor.hls.Rendition
+import com.vitorpamplona.amethyst.commons.uploads.VideoCodecChoice
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsConfig
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsLadder
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsListener
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsRenditionSummary
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsUploadResult
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsUploaded
+import com.vitorpamplona.amethyst.commons.uploads.hls.Rendition
+import com.vitorpamplona.amethyst.commons.uploads.hls.Resolution
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
@@ -84,8 +86,8 @@ class HlsPublishOrchestratorTest {
      * fake [HlsUploadResult] with the supplied rendition summaries.
      */
     private fun fakeRunUpload(renditions: List<HlsRenditionSummary> = listOf(landscapeSummary())): suspend (
-        config: com.davotoula.lightcompressor.hls.HlsConfig,
-        listener: com.davotoula.lightcompressor.hls.HlsListener,
+        config: HlsConfig,
+        listener: HlsListener,
         uploadFile: suspend (File, String) -> HlsUploaded<MediaUploadResult>,
     ) -> HlsUploadResult<MediaUploadResult> =
         { _, listener, uploadFile ->
@@ -148,7 +150,7 @@ class HlsPublishOrchestratorTest {
         description = description,
         sensitiveContent = sensitive,
         contentWarningReason = warningReason,
-        codec = VideoCodec.H265,
+        codec = VideoCodecChoice.H265,
         server = server,
         ladder = ladder,
     )
@@ -193,8 +195,8 @@ class HlsPublishOrchestratorTest {
 
         val canned = CannedUploader()
         val capturingRunUpload: suspend (
-            com.davotoula.lightcompressor.hls.HlsConfig,
-            com.davotoula.lightcompressor.hls.HlsListener,
+            HlsConfig,
+            HlsListener,
             suspend (File, String) -> HlsUploaded<MediaUploadResult>,
         ) -> HlsUploadResult<MediaUploadResult> = { _, listener, uploadFile ->
             val summary = landscapeSummary()

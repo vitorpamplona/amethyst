@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.hls
 
-import com.davotoula.lightcompressor.hls.HlsContentTypes
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsContentTypes
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.references.reference
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent

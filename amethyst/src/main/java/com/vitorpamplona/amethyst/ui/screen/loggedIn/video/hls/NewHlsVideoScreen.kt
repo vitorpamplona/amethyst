@@ -75,10 +75,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.davotoula.lightcompressor.hls.HlsLadder
-import com.davotoula.lightcompressor.utils.CompressorUtils
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.uploads.VideoTranscoder
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsLadder
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
@@ -363,7 +363,7 @@ private fun CodecToggle(
     useH265: Boolean,
     onChange: (Boolean) -> Unit,
 ) {
-    val hevcSupported = remember { CompressorUtils.isHevcEncodingSupported() }
+    val hevcSupported = remember { VideoTranscoder.supportsH265() }
 
     Text(
         text = stringResource(R.string.hls_codec_label),

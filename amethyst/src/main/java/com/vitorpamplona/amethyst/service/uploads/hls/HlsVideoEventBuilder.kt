@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.hls
 
-import com.davotoula.lightcompressor.hls.HlsContentTypes
-import com.davotoula.lightcompressor.hls.HlsRenditionSummary
-import com.davotoula.lightcompressor.hls.HlsUploaded
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsContentTypes
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsRenditionSummary
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsUploaded
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning

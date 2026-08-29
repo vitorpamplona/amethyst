@@ -28,10 +28,10 @@ import java.io.File
  * unit-testable. Production wiring adapts this to either
  * [com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader] or
  * [com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader]. The HLS orchestrator
- * wraps this in an [com.davotoula.lightcompressor.hls.HlsUploaded]-returning lambda for
- * [com.davotoula.lightcompressor.hls.HlsUploadHelper.run]; the library itself drives the
+ * wraps this in an [com.vitorpamplona.amethyst.commons.uploads.hls.HlsUploaded]-returning lambda for
+ * [com.vitorpamplona.amethyst.commons.uploads.hls.HlsTranscoder.run]; the transcoder drives the
  * per-rendition map of [MediaUploadResult]s back into
- * [com.davotoula.lightcompressor.hls.HlsUploadResult.uploads] so per-rendition sha256/size
+ * [com.vitorpamplona.amethyst.commons.uploads.hls.HlsUploadResult.uploads] so per-rendition sha256/size
  * can flow into the NIP-71 event's imeta tags.
  *
  * The optional [onProgress] callback is invoked as bytes flow to the wire so the UI can show

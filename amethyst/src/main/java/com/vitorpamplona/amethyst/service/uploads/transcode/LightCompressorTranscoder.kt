@@ -28,6 +28,7 @@ import com.davotoula.lightcompressor.VideoCompressor
 import com.davotoula.lightcompressor.config.AppSpecificStorageConfiguration
 import com.davotoula.lightcompressor.config.Configuration
 import com.davotoula.lightcompressor.config.VideoResizer
+import com.davotoula.lightcompressor.utils.CompressorUtils
 import com.davotoula.lightcompressor.video.GifToMp4Converter
 import com.vitorpamplona.amethyst.commons.uploads.ConvertedGif
 import com.vitorpamplona.amethyst.commons.uploads.GifToVideoConverter
@@ -92,6 +93,8 @@ class LightCompressorTranscoder(
     }
 
     override fun cancel() = VideoCompressor.cancel()
+
+    override val supportsH265: Boolean get() = CompressorUtils.isHevcEncodingSupported()
 }
 
 /** The Android side of [GifToVideoConverter]; also `MediaCodec`-backed. */

@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.uploads.GifToVideoConverter
 import com.vitorpamplona.amethyst.commons.uploads.VideoTranscoder
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsTranscoder
 import com.vitorpamplona.amethyst.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.model.Account
@@ -127,6 +128,7 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerRes
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.service.uploads.transcode.LightCompressorGifConverter
+import com.vitorpamplona.amethyst.service.uploads.transcode.LightCompressorHlsTranscoder
 import com.vitorpamplona.amethyst.service.uploads.transcode.LightCompressorTranscoder
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
@@ -1159,6 +1161,7 @@ class AppModules(
         // keeping) can stay shared. Android's side is LightCompressor.
         VideoTranscoder.installed = LightCompressorTranscoder(appContext)
         GifToVideoConverter.installed = LightCompressorGifConverter(appContext)
+        HlsTranscoder.installed = LightCompressorHlsTranscoder(appContext)
 
         // initializes diskcache on an IO thread.
         applicationIOScope.launch {

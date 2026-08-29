@@ -20,15 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls
 
-import com.davotoula.lightcompressor.VideoCodec
-import com.davotoula.lightcompressor.hls.HlsConfig
-import com.davotoula.lightcompressor.hls.HlsContentTypes
-import com.davotoula.lightcompressor.hls.HlsLadder
-import com.davotoula.lightcompressor.hls.HlsListener
-import com.davotoula.lightcompressor.hls.HlsUploadResult
-import com.davotoula.lightcompressor.hls.HlsUploaded
-import com.davotoula.lightcompressor.hls.Rendition
-import com.davotoula.lightcompressor.hls.SimpleHlsListener
+import com.vitorpamplona.amethyst.commons.uploads.VideoCodecChoice
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsConfig
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsContentTypes
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsLadder
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsListener
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsUploadResult
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsUploaded
+import com.vitorpamplona.amethyst.commons.uploads.hls.Rendition
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsBlobUploader
 import com.vitorpamplona.amethyst.service.uploads.hls.HlsKind1SiblingBuilder
@@ -52,7 +51,7 @@ data class HlsPublishRequest(
     val description: String,
     val sensitiveContent: Boolean,
     val contentWarningReason: String,
-    val codec: VideoCodec,
+    val codec: VideoCodecChoice,
     val server: ServerName,
     val ladder: HlsLadder = HlsLadder.default(),
     val durationSeconds: Int? = null,
@@ -73,7 +72,7 @@ data class HlsPosterUpload(
 /**
  * Orchestrates the transcode → upload → build → publish pipeline for a single HLS video publish.
  * Delegates transcoding and segment/media-playlist upload plumbing to the library's
- * [com.davotoula.lightcompressor.hls.HlsUploadHelper] via the injected [runUpload] closure, then
+ * [com.vitorpamplona.amethyst.commons.uploads.hls.HlsTranscoder] via the injected [runUpload] closure, then
  * uploads the rewritten master playlist itself, builds the NIP-71 event, signs, and publishes.
  * All Android/account-specific concerns are injected as suspending callbacks so the whole state
  * machine is unit-testable.
@@ -125,7 +124,7 @@ class HlsPublishOrchestrator(
             var lastTranscodingPercent = -1
 
             val listener =
-                object : SimpleHlsListener() {
+                object : HlsListener {
                     override fun onRenditionStart(rendition: Rendition) {
                         val label = rendition.resolution.label
                         if (lastTranscodingLabel != label || lastTranscodingPercent != 0) {

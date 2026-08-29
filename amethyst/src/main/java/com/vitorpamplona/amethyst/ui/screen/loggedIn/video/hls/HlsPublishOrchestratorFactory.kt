@@ -24,8 +24,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import com.davotoula.lightcompressor.hls.HlsContentTypes
-import com.davotoula.lightcompressor.hls.HlsUploadHelper
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsContentTypes
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsTranscoder
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
@@ -64,13 +64,15 @@ fun createProductionHlsPublishOrchestrator(
         _state = state,
         runUpload = { config, listener, uploadFile ->
             val uri = uriProvider() ?: error("No video picked")
-            HlsUploadHelper.run<MediaUploadResult>(
-                context = context,
-                uri = uri,
+            val transcoder =
+                HlsTranscoder.installed
+                    ?: error("No HLS transcoder installed on this platform")
+            transcoder.run<MediaUploadResult>(
+                sourceUri = uri.toString(),
                 config = config,
                 listener = listener,
-                uploader = uploadFile,
-            )
+                uploadFile = { path, contentType -> uploadFile(File(path), contentType) },
+            ) ?: error("HLS transcoding is not available on this platform")
         },
         buildUploader = { server ->
             HlsBlobUploaderFactory.create(server, account, context)

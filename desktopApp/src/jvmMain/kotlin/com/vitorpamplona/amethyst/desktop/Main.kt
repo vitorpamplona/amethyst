@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccoun
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.uploads.GifToVideoConverter
 import com.vitorpamplona.amethyst.commons.uploads.VideoTranscoder
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsTranscoder
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
@@ -125,6 +126,7 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.LocalScheduledP
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
 import com.vitorpamplona.amethyst.desktop.service.uploads.FfmpegGifConverter
+import com.vitorpamplona.amethyst.desktop.service.uploads.FfmpegHlsTranscoder
 import com.vitorpamplona.amethyst.desktop.service.uploads.FfmpegVideoTranscoder
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
@@ -306,6 +308,7 @@ fun main(args: Array<String>) {
     val transcodeDir = File(System.getProperty("user.home"), ".cache/amethyst-desktop/transcode")
     VideoTranscoder.installed = FfmpegVideoTranscoder(transcodeDir)
     GifToVideoConverter.installed = FfmpegGifConverter(transcodeDir)
+    HlsTranscoder.installed = FfmpegHlsTranscoder(transcodeDir)
     if (!FfmpegBinary.isAvailable) {
         Log.w("Main") { "No ffmpeg found; videos will be uploaded without re-encoding" }
     }

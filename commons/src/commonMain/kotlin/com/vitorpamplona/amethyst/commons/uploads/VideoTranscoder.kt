@@ -48,6 +48,14 @@ interface VideoTranscoder {
     /** Cancels whatever is in flight. Safe when nothing is. */
     fun cancel()
 
+    /**
+     * Whether this platform can encode H.265/HEVC. Asked before offering the
+     * choice, because a device or an ffmpeg build without it would fail the
+     * encode rather than fall back — and the user would have picked a codec
+     * that never had a chance.
+     */
+    val supportsH265: Boolean get() = false
+
     companion object {
         /**
          * The platform's transcoder, installed at startup. Null means this
@@ -57,6 +65,9 @@ interface VideoTranscoder {
          */
         @Volatile
         var installed: VideoTranscoder? = null
+
+        /** False with no transcoder, which is also the safe default. */
+        fun supportsH265(): Boolean = installed?.supportsH265 == true
     }
 }
 

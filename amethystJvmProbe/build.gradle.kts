@@ -78,6 +78,13 @@ sourceSets {
             // to it rather than to org.webrtc.
             "**/ui/call/**",
             "**/service/call/**",
+            // The Android side of the upload-transcode seams. LightCompressor
+            // encodes through MediaCodec and exists only on Android; these two
+            // files are nothing but the translation into it, and the shared
+            // decisions (bitrate, ladder, playlists, the NIP-71 event) stayed in
+            // :commons. The desktop implementations of the same seams live in
+            // :desktopApp over ffmpeg.
+            "**/service/uploads/transcode/**",
         )
         resources.setSrcDirs(emptyList<String>())
     }
@@ -158,6 +165,7 @@ val jvmReadiness by tasks.registering {
             "/service/playback/websocket/",
             "/ui/call/",
             "/service/call/",
+            "/service/uploads/transcode/",
         )
     val launcher = rootProject.file("gradlew")
     val rootDir = rootProject.projectDir
@@ -282,7 +290,10 @@ val jvmReadiness by tasks.registering {
                 appendLine("=".repeat(52))
                 appendLine("files compiling clean : ${total - broken} / $total (${if (total == 0) 0 else (total - broken) * 100 / total}%)")
                 appendLine("files with errors     : $broken")
-                appendLine("files excluded        : $excluded (Android implementations: ExoPlayer engine, WebRTC calls)")
+                appendLine(
+                "files excluded        : $excluded (Android implementations behind a seam: " +
+                    "ExoPlayer engine, WebRTC calls, LightCompressor transcode)",
+            )
                 appendLine("total errors          : ${matches.size}")
                 appendLine()
                 appendLine("Top unresolved symbols - each is one stub, shim or seam:")

@@ -28,9 +28,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.davotoula.lightcompressor.VideoCodec
-import com.davotoula.lightcompressor.hls.HlsLadder
-import com.davotoula.lightcompressor.utils.CompressorUtils
+import com.vitorpamplona.amethyst.commons.uploads.VideoCodecChoice
+import com.vitorpamplona.amethyst.commons.uploads.VideoTranscoder
+import com.vitorpamplona.amethyst.commons.uploads.hls.HlsLadder
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -184,11 +184,11 @@ open class NewHlsVideoViewModel : ViewModel() {
         currentJob?.cancel()
     }
 
-    private fun effectiveCodec(wantH265: Boolean): VideoCodec =
-        if (wantH265 && CompressorUtils.isHevcEncodingSupported()) {
-            VideoCodec.H265
+    private fun effectiveCodec(wantH265: Boolean): VideoCodecChoice =
+        if (wantH265 && VideoTranscoder.supportsH265()) {
+            VideoCodecChoice.H265
         } else {
-            VideoCodec.H264
+            VideoCodecChoice.H264
         }
 }
 
