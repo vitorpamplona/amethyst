@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.awaitCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -33,6 +34,8 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.cancellation.CancellationException
 
 class AppSpecificState(
@@ -52,12 +55,35 @@ class AppSpecificState(
 
     fun getAppSpecificDataFlow(): StateFlow<NoteState> = amethystSettingsNote.flow().metadata.stateFlow
 
+    /**
+     * Serializes the state snapshot and the timestamp it is stamped with. Two rapid toggles publish
+     * from separate coroutines on the signer's dispatcher; without this they could read the same
+     * previous timestamp and collide again, or take timestamps in the opposite order to the state
+     * they captured. Signing and encrypting stay outside the lock — those can wait on an external
+     * signer, and they don't affect ordering.
+     */
+    private val stampOrder = Mutex()
+
+    /**
+     * The newest version this instance has published, which is not always in [amethystSettingsNote]
+     * yet: the cache is only updated once the event comes back through the broadcaster.
+     */
+    private var lastPublishedAt = 0L
+
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
-        val toInternal = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
+        val (toInternal, createdAt) =
+            stampOrder.withLock {
+                val snapshot = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
+                val stamp = awaitCreatedAtToSupersede(maxOf(lastPublishedAt, amethystSettingsNote.event?.createdAt ?: 0L))
+                lastPublishedAt = stamp
+                snapshot to stamp
+            }
+
         return signer.sign(
             AppSpecificDataEvent.build(
                 dTag = APP_SPECIFIC_DATA_D_TAG,
                 description = signer.nip44Encrypt(JsonMapper.toJson(toInternal), signer.pubKey),
+                createdAt = createdAt,
             ),
         )
     }

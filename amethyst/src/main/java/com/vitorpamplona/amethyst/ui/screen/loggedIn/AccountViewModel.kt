@@ -217,6 +217,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * How long the navigation pickers wait for the toggles to stop before publishing. Long enough that a
+ * run of taps is one publish, short enough that leaving the screen normally finds nothing to flush.
+ */
+private const val PICKER_PUBLISH_DEBOUNCE_MS = 2000L
+
 @Stable
 class AccountViewModel(
     val account: Account,
@@ -1619,43 +1625,60 @@ class AccountViewModel(
 
     inline fun launchSigner(crossinline action: suspend () -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                action()
-            } catch (_: SignerExceptions.ReadOnlyException) {
-                toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_sign_events,
-                )
-            } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
-                toastManager.toast(
-                    R.string.unauthorized_exception,
-                    R.string.unauthorized_exception_description,
-                )
-            } catch (_: SignerExceptions.SignerNotFoundException) {
-                toastManager.toast(
-                    R.string.signer_not_found_exception,
-                    R.string.signer_not_found_exception_description,
-                )
-            } catch (e: SignerExceptions.TimedOutException) {
-                Log.w("AccountViewModel", "TimedOutException", e)
-            } catch (e: SignerExceptions.NothingToDecrypt) {
-                Log.w("AccountViewModel", "NothingToDecrypt", e)
-            } catch (e: SignerExceptions.CouldNotPerformException) {
-                Log.w("AccountViewModel", "CouldNotPerformException", e)
-            } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
-                Log.w("AccountViewModel", "ManuallyUnauthorizedException", e)
-            } catch (e: SignerExceptions.AutomaticallyUnauthorizedException) {
-                Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
-            } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
-                Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
-            } catch (e: IllegalStateException) {
-                toastManager.toast(
-                    R.string.signer_not_found_exception,
-                    R.string.signer_illegal_state_exception_description,
-                    e,
-                )
-            }
+            reportSignerErrors { action() }
         }
+
+    /**
+     * The signer-failure reporting of [launchSigner], separated from its scope so work that must
+     * outlive [viewModelScope] can still surface the same messages. Public because [launchSigner]
+     * is inline.
+     */
+    suspend fun reportSignerErrors(action: suspend () -> Unit) {
+        try {
+            action()
+        } catch (e: CancellationException) {
+            // MUST stay ahead of the IllegalStateException arm below: java.util.concurrent
+            // .CancellationException extends IllegalStateException, so without this every cancelled
+            // signer coroutine — a superseded debounce, a scope torn down mid-sign — would be
+            // swallowed there and shown to the user as a "signer" toast reading
+            // "JobCancellationException: StandaloneCoroutine was cancelled". Cancellation is not a
+            // signer failure and must propagate for structured concurrency to work.
+            throw e
+        } catch (_: SignerExceptions.ReadOnlyException) {
+            toastManager.toast(
+                R.string.read_only_user,
+                R.string.login_with_a_private_key_to_be_able_to_sign_events,
+            )
+        } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
+            toastManager.toast(
+                R.string.unauthorized_exception,
+                R.string.unauthorized_exception_description,
+            )
+        } catch (_: SignerExceptions.SignerNotFoundException) {
+            toastManager.toast(
+                R.string.signer_not_found_exception,
+                R.string.signer_not_found_exception_description,
+            )
+        } catch (e: SignerExceptions.TimedOutException) {
+            Log.w("AccountViewModel", "TimedOutException", e)
+        } catch (e: SignerExceptions.NothingToDecrypt) {
+            Log.w("AccountViewModel", "NothingToDecrypt", e)
+        } catch (e: SignerExceptions.CouldNotPerformException) {
+            Log.w("AccountViewModel", "CouldNotPerformException", e)
+        } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
+            Log.w("AccountViewModel", "ManuallyUnauthorizedException", e)
+        } catch (e: SignerExceptions.AutomaticallyUnauthorizedException) {
+            Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
+        } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
+            Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
+        } catch (e: IllegalStateException) {
+            toastManager.toast(
+                R.string.signer_not_found_exception,
+                R.string.signer_illegal_state_exception_description,
+                e,
+            )
+        }
+    }
 
     fun approveCommunityPost(
         post: Note,
@@ -2006,7 +2029,7 @@ class AccountViewModel(
     /** Same ordering contract as [changeBottomBarItems]: apply on the caller's thread, publish off it. */
     fun changeHiddenDrawerItems(items: Set<NavBarItem>) {
         if (account.applyHiddenDrawerItems(items)) {
-            launchSigner { account.sendNewAppSpecificData() }
+            pickerPublisher.schedule()
         }
     }
 
@@ -2014,11 +2037,47 @@ class AccountViewModel(
         // Apply to the reactive flow synchronously on the caller (UI) thread so rapid edits stay
         // ordered — launchSigner dispatches on a multi-threaded pool, so wrapping the emit too would
         // let two quick edits complete out of order and revert the newer one (the settings screen
-        // re-seeds its editable list from this flow). Only the sign + encrypt + publish runs off-thread.
+        // re-seeds its editable list from this flow). Only the sign + encrypt + publish runs off-thread,
+        // and that part is debounced — see [pickerPublisher].
         if (account.applyBottomBarItems(items)) {
-            launchSigner { account.sendNewAppSpecificData() }
+            pickerPublisher.schedule()
         }
     }
+
+    /**
+     * Publishes the account's synced settings once the picker edits stop, rather than once per toggle.
+     *
+     * The Side Menu and bottom-bar pickers are the only settings surfaces that write in bursts — a
+     * configuring session is a run of discrete toggles over ~50 rows, and each one signs, encrypts
+     * and publishes the whole blob to every outbox relay, which on an external signer is an IPC
+     * round trip (and possibly a prompt) per switch. One publisher for both, since they edit the same
+     * app-specific data event and a burst that crosses the two should still collapse.
+     *
+     * Only these two. Every other synced setting changes one at a time, and the published event is
+     * its only durable copy, so delaying those would buy nothing and cost durability.
+     *
+     * On the account's scope, NOT [viewModelScope]. A synced setting's only durable copy is the
+     * published event, so an edit waiting out the debounce must survive this ViewModel: AndroidX
+     * closes [viewModelScope] *before* it calls [onCleared] (`ViewModel.clear()` closes the keyed
+     * closeables, and `viewModelScope` is one of them), so a pending publish tied to it would already
+     * be cancelled by the time any teardown hook here could notice — and no hook could rescue it.
+     * The account's scope is cancelled only when the account is removed, so the publish simply
+     * completes across an account switch or an Activity teardown.
+     */
+    private val pickerPublisher =
+        DebouncedPublisher(
+            debounceMs = PICKER_PUBLISH_DEBOUNCE_MS,
+            launch = { block -> account.scope.launch(Dispatchers.IO) { reportSignerErrors { block() } } },
+            publish = { account.sendNewAppSpecificData() },
+        )
+
+    /**
+     * Publish any pending picker edits now. Called when a picker screen leaves the composition or the
+     * app stops, so an edit is never left sitting only in memory: synced settings have no local copy
+     * of their own — [com.vitorpamplona.amethyst.model.AccountSettings.backupAppSpecificData], written
+     * when the published event comes back through the collector, *is* the local copy.
+     */
+    fun flushPickerPublish() = pickerPublisher.flush()
 
     fun pinnedChatroomsFlow(): StateFlow<Set<ChatroomKey>> = account.settings.syncedSettings.chats.pinnedChatrooms
 

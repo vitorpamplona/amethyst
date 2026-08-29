@@ -111,6 +111,9 @@ fun DrawerSettingsContent(accountViewModel: AccountViewModel) {
     val state = remember { DrawerSettingsState(savedHidden) { accountViewModel.changeHiddenDrawerItems(it) } }
     LaunchedEffect(savedHidden) { state.syncFrom(savedHidden) }
 
+    // Edits publish on a debounce; make sure leaving the screen doesn't strand the last one.
+    FlushPickerEditsOnExit(accountViewModel)
+
     // Sections start collapsed: expanded, they are ~50 rows of scrolling. The header's hidden
     // counter is what tells the user which one to open.
     val expandedSections = rememberExpandedKeys<DrawerSectionId>()
