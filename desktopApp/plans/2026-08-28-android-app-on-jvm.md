@@ -312,8 +312,39 @@ What remains, ranked by references (the gate prints this live):
 | `ExifInterface`, `MediaMetadataRetriever`, `Bitmap` | ~123 | `:desktopApp` already has commons-imaging and JCodec for these |
 | `accompanist`, `ActivityResultContracts`, `work` | ~96 | permissions, file pickers, background jobs — desktop equivalents exist |
 
-The long tail is genuinely long — 452 symbols referenced exactly once — but it is
-tail, not body: each is a one-line stub or a deletion.
+### The shape of the work changed once the stub surface filled
+
+Past roughly 85%, the remaining errors stopped being a list of missing symbols
+and became a list of **features that need a desktop implementation**. The gate
+now groups by feature directory for exactly that reason — `errors` and `files`
+are a size estimate, `needs` names the platform API standing in the way:
+
+| errors | files | area | needs |
+|---|---|---|---|
+| 294 | 6 | `ui/note/creators` (location picker) | osmdroid, `GeoPoint`, `Marker` |
+| 256 | 15 | `service/notifications` | WorkManager, `BroadcastReceiver`, `PowerManager` |
+| 164 | 6 | `ui/actions/uploads` | `MediaCodec`, `MediaRecorder` |
+| 121 | 7 | `service/uploads` | `MediaMuxer`, `MediaExtractor`, LightCompressor |
+| 111 | 8 | `service/location` | `Geocoder`, `Address` |
+| 110 | 2 | `service/workouts/health` | Health Connect |
+| 87 | 6 | `service/playback/pip` | picture-in-picture |
+| 60 | 2 | `ui/components/pdf` | `PdfRenderer` |
+| 53 | 1 | `service/connectivity` | `ConnectivityManager` |
+| 42 | 1 | `service/tts` | `TextToSpeech` |
+| 36 | 2 | `service/scheduledposts` | WorkManager |
+| 29 | 3 | `ui/note` (private-note lock) | `BiometricPrompt` |
+
+`ui/screen/loggedIn` tops the list at 653 errors across 107 files, but that is
+not one feature — it is the screen layer, and its errors are mostly the
+downstream of the rows below it.
+
+Two directories are excluded rather than counted, because commons already holds
+their abstraction and what is excluded is the Android implementation of it:
+the ExoPlayer engine layer (22 files, behind `Player`) and the WebRTC calls
+feature (20 files, behind `PeerSession`). The calls exclusion carries a caveat
+worth acting on: the abstraction exists, but `ui/call` bypasses it and binds
+straight to `org.webrtc` view types, so a desktop implementation needs the UI
+pointed at `PeerSession` first.
 
 ## 9. Risks
 

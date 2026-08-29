@@ -225,6 +225,34 @@ val jvmReadiness by tasks.registering {
             )
         }
 
+        // Once the stub surface is mostly filled, what is left stops being a list
+        // of missing symbols and becomes a list of features that need a desktop
+        // implementation. Grouping by feature directory says which, and how big.
+        val featureOf = { path: String ->
+            val relative = path.substringAfter("/com/vitorpamplona/amethyst/", path)
+            relative.split("/").let { parts ->
+                if (parts.size > 3) parts.take(3).joinToString("/") else parts.dropLast(1).joinToString("/").ifEmpty { "(root)" }
+            }
+        }
+        val byFeature =
+            matches
+                .groupBy { featureOf(it.groupValues[1]) }
+                .mapValues { (_, group) ->
+                    Triple(
+                        group.size,
+                        group.mapTo(HashSet()) { it.groupValues[1] }.size,
+                        group
+                            .mapNotNull { unresolvedRe.find(it.groupValues[4])?.groupValues?.get(1) }
+                            .groupingBy { it }
+                            .eachCount()
+                            .entries
+                            .sortedByDescending { it.value }
+                            .take(4)
+                            .joinToString(", ") { it.key },
+                    )
+                }.entries
+                .sortedByDescending { it.value.first }
+
         val report =
             buildString {
                 appendLine("JVM readiness of amethyst (main + fdroid flavor)")
@@ -235,7 +263,15 @@ val jvmReadiness by tasks.registering {
                 appendLine("total errors          : ${matches.size}")
                 appendLine()
                 appendLine("Top unresolved symbols - each is one stub, shim or seam:")
-                unresolved.take(40).forEach { appendLine("  ${it.value.toString().padStart(6)}  ${it.key}") }
+                unresolved.take(30).forEach { appendLine("  ${it.value.toString().padStart(6)}  ${it.key}") }
+                appendLine()
+                appendLine("Remaining work by feature - each is a desktop implementation to write:")
+                appendLine("  ${"errors".padStart(6)} ${"files".padStart(5)}  area / what it needs")
+                byFeature.take(25).forEach { (area, stats) ->
+                    val (errors, files, apis) = stats
+                    appendLine("  ${errors.toString().padStart(6)} ${files.toString().padStart(5)}  $area")
+                    if (apis.isNotEmpty()) appendLine("  ${" ".repeat(12)}  needs: $apis")
+                }
             }
         reportFile.get().asFile.writeText(report)
         println(report)
