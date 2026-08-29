@@ -27,9 +27,25 @@ kotlin {
     }
 }
 
+// The probe is expected to FAIL to compile until the port is finished, so it
+// must never participate in an ordinary build. Disabling `build` and `check` is
+// not enough — Gradle still runs a disabled task's dependencies, so
+// `./gradlew test` would reach compileKotlin through testClasses -> classes.
+//
+// Instead the source set is empty unless explicitly switched on, so a normal
+// build compiles nothing here. `jvmReadiness` sets the flag on its own
+// invocation.
+val readinessEnabled = providers.gradleProperty("amethyst.jvmReadiness").isPresent
+
 sourceSets {
     main {
-        kotlin.setSrcDirs(listOf(rootProject.layout.projectDirectory.dir("amethyst/src/main/java")))
+        kotlin.setSrcDirs(
+            if (readinessEnabled) {
+                listOf(rootProject.layout.projectDirectory.dir("amethyst/src/main/java"))
+            } else {
+                emptyList<Any>()
+            },
+        )
         resources.setSrcDirs(emptyList<String>())
     }
 }
@@ -96,6 +112,7 @@ val jvmReadiness by tasks.registering {
                 launcher.absolutePath,
                 "--console=plain",
                 "-q",
+                "-Pamethyst.jvmReadiness=true",
                 ":amethystJvmProbe:compileKotlin",
             ).directory(rootDir)
                 .redirectErrorStream(true)
@@ -146,7 +163,4 @@ val jvmReadiness by tasks.registering {
     }
 }
 
-// Never part of `build` or `check` — it is expected to fail until the port is
-// finished, and a red gate must not block the Android app's own pipeline.
-tasks.named("build").configure { enabled = false }
-tasks.named("check").configure { enabled = false }
+
