@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -247,6 +248,13 @@ fun routeForInner(
             wrap.innerEventId?.let {
                 routeFor(LocalCache.getOrCreateNote(it), loggedIn)
             }
+        }
+
+        // A kind-0 IS the person: tapping one anywhere (feed card, quote, `nostr:naddr`
+        // deep link) opens their profile instead of the bare note view AddressableEvent
+        // below would otherwise fall through to.
+        is MetadataEvent -> {
+            Route.Profile(noteEvent.pubKey)
         }
 
         is AddressableEvent -> {

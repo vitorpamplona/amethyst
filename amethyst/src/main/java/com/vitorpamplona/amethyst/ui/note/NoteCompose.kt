@@ -178,6 +178,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastMetadata
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderProfileCard
 import com.vitorpamplona.amethyst.ui.note.types.RenderPs1Save
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
@@ -262,6 +263,7 @@ import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfi
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -934,6 +936,10 @@ private fun RenderNoteRow(
     isBoostedNote: Boolean = false,
 ) {
     when (val noteEvent = baseNote.event) {
+        is MetadataEvent -> {
+            RenderProfileCard(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
         is AppDefinitionEvent -> {
             RenderAppDefinition(baseNote, accountViewModel, nav)
         }
