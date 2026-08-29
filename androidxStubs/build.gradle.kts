@@ -24,6 +24,9 @@ dependencies {
     compileOnly(project(":androidStubs"))
     api(project(":amethystShared"))
     implementation(compose.desktop.currentOs)
+    // Coil publishes coil-gif and coil-video for Android only; the JVM
+    // stand-ins for those live here and need Coil's core types.
+    implementation(libs.coil.compose)
     // DataStore is multiplatform; only Android has the Context-based property
     // delegate, which is what this module supplies.
     implementation(libs.androidx.datastore.preferences)

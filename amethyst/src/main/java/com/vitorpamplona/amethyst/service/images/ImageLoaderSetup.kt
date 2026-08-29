@@ -43,6 +43,7 @@ import coil3.size.Precision
 import coil3.svg.SvgDecoder
 import coil3.util.Logger
 import coil3.video.VideoFrameDecoder
+import com.vitorpamplona.amethyst.commons.images.asCoilContext
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
@@ -86,7 +87,7 @@ class ImageLoaderSetup {
 
             SingletonImageLoader.setUnsafe(
                 ImageLoader
-                    .Builder(app)
+                    .Builder(app.asCoilContext())
                     .diskCache(diskCache)
                     .memoryCache(memoryCache)
                     .precision(Precision.INEXACT)

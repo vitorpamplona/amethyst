@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.images
 import android.content.Context
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.images.asCoilContext
 import com.vitorpamplona.amethyst.service.safeCacheDir
 import kotlinx.coroutines.CoroutineScope
 import okio.FileSystem
@@ -47,7 +48,7 @@ class ImageCacheFactory {
         fun newMemory(app: Context): MemoryCache =
             MemoryCache
                 .Builder()
-                .maxSizePercent(app)
+                .maxSizePercent(app.asCoilContext())
                 .build()
     }
 }

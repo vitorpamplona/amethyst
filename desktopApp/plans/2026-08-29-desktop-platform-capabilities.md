@@ -78,6 +78,9 @@ Worth recording so nobody re-litigates them as gaps:
 | `compose-audiowaveform` | reimplemented in `:commons` — the app already drew its own waveform and needed only three primitives from it |
 | `AlarmManager` | a daemon timer that really sends the PendingIntent |
 | `PendingIntent` | a registry with the platform's identity rules, so `cancel` reaches what `schedule` created |
+| `coil-gif` | Skia's codec — same formats, first frame only until an animated image lands |
+| `coil-video` | Coil's own decoder shape over this platform's `MediaMetadataRetriever` |
+| `Image.asDrawable` / `Bitmap.asImage` | a Skia <-> `BufferedImage` conversion, un-premultiplied |
 
 WorkManager is worth a note because it is where a stub would have been most
 expensive: scheduled posts and calendar reminders are the whole feature, and a
