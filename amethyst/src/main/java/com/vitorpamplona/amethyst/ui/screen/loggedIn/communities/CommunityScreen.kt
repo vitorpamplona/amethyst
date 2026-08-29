@@ -43,7 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState

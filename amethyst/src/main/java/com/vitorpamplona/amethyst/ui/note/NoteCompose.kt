@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -69,9 +71,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
 import com.vitorpamplona.amethyst.commons.ui.note.isCommunityDefinition
 import com.vitorpamplona.amethyst.commons.ui.note.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.textNoteModifications
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannelPicture
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus

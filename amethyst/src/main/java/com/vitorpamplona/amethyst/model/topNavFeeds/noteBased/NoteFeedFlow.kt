@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.noteBased
 
-import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter

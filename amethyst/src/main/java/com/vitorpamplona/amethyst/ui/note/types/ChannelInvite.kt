@@ -53,9 +53,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.shared.R

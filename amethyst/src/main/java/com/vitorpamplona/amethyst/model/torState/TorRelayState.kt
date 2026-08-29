@@ -21,6 +21,9 @@
 package com.vitorpamplona.amethyst.model.torState
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.tor.RelayClassification
+import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
+import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow

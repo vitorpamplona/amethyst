@@ -25,7 +25,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

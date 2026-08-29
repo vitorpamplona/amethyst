@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource
 
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // Keyed by the podcast's own pubkey (each podcast is its own keypair per NIP-F4). Multiple

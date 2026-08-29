@@ -33,8 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.createBitmap
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.Ps1SaveCard
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.theme.Size24dp
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveIcon

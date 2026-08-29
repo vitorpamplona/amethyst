@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.geohash.dal
 
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent

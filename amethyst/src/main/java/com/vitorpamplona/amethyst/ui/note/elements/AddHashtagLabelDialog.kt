@@ -35,7 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes

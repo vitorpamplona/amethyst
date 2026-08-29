@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**

@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.note
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage

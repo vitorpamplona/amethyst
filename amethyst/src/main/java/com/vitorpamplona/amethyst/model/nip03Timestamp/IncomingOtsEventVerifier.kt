@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.nip03Timestamp
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolverBuilder
 import kotlinx.coroutines.CoroutineScope

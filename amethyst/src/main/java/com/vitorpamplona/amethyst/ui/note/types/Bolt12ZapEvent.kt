@@ -27,11 +27,11 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityAmountRow
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityBadge
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityCardFrame
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityHeaderRow
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
 import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor

@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.dal
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.mapNotNullIntoSet
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams

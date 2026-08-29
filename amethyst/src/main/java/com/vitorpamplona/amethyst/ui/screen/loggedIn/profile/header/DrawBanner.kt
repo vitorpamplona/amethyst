@@ -39,8 +39,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserBanner
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog

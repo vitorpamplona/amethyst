@@ -25,8 +25,12 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.UserContext
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzCommunityMembership
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzPresenceState
@@ -49,11 +53,11 @@ import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilt
 import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
 import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
-import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent

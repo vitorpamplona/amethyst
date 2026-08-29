@@ -41,10 +41,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
-import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
-import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType

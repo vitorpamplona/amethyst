@@ -44,7 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.DeletedItemsBanner

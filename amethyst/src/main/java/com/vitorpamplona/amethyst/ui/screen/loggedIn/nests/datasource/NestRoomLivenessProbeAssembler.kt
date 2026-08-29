@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap

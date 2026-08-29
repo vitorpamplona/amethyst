@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.bookmarks.dal
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 
 @Stable

@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmChannels
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzDmRegistry
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap

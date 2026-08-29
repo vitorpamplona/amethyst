@@ -45,7 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe

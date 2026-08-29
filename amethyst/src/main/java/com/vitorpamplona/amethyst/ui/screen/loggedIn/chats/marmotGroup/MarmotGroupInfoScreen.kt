@@ -447,7 +447,7 @@ private fun AddMemberInline(
     isError: Boolean,
     isAdding: Boolean,
     accountViewModel: AccountViewModel,
-    onAdd: (com.vitorpamplona.amethyst.model.User) -> Unit,
+    onAdd: (com.vitorpamplona.amethyst.commons.model.User) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         if (!isAdding && searchInput.length > 2) {

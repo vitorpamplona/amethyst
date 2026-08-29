@@ -31,13 +31,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.search.SearchScope
 import com.vitorpamplona.amethyst.commons.search.SearchSortOrder
 import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -291,7 +291,7 @@ class SearchBarViewModel(
             when (order) {
                 SearchSortOrder.POPULAR -> {
                     filtered.sortedWith(
-                        compareByDescending<com.vitorpamplona.amethyst.model.Note> { it.zapsAmount }
+                        compareByDescending<com.vitorpamplona.amethyst.commons.model.Note> { it.zapsAmount }
                             .thenByDescending { it.createdAt() ?: 0L },
                     )
                 }

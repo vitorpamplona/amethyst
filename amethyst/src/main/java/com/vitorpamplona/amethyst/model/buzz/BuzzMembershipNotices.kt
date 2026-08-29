@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.buzz
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.ChannelClassification
 import com.vitorpamplona.amethyst.commons.model.buzz.MembershipNotice
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz.MembershipNotificationKinds
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent

@@ -55,9 +55,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserPicture
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataViewModel

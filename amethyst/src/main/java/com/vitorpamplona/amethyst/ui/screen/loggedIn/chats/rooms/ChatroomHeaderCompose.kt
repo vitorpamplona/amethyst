@@ -48,6 +48,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -58,8 +60,6 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatPreview
 import com.vitorpamplona.amethyst.commons.model.privateChats.chatPreviewOf
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.buzz.toMembershipNotice
 import com.vitorpamplona.amethyst.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo

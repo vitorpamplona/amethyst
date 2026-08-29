@@ -60,12 +60,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.IcsExport
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_collection_count
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage

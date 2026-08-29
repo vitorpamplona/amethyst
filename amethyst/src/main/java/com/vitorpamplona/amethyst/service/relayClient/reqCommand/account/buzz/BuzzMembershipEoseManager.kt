@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.buzz
 
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap

@@ -41,7 +41,10 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
@@ -63,13 +66,10 @@ import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Dao
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder

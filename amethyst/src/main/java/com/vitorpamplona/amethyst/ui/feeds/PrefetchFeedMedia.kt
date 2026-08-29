@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
@@ -43,7 +44,6 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event

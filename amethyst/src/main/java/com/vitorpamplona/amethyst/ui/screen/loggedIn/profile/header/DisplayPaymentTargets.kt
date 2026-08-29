@@ -48,8 +48,8 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

@@ -36,8 +36,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserNickname

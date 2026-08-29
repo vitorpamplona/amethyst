@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.notify
 
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.model.UserContext
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.UserContext
 import kotlinx.collections.immutable.persistentListOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

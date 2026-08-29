@@ -107,7 +107,7 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun NestFullScreen(
     event: MeetingSpaceEvent,
-    roomNote: com.vitorpamplona.amethyst.model.AddressableNote,
+    roomNote: com.vitorpamplona.amethyst.commons.model.AddressableNote,
     participantGrid: ParticipantGrid,
     viewModel: NestViewModel,
     ui: NestUiState,

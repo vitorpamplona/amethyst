@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.RoadEventConfirmationCard
 import com.vitorpamplona.amethyst.commons.ui.note.RoadEventReportCard
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent

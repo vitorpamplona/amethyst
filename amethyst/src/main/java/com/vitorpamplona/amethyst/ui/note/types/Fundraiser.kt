@@ -41,7 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.util.setText

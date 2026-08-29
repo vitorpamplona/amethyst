@@ -42,6 +42,7 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
@@ -49,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isHl
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.shared.R

@@ -58,10 +58,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.shared.R

@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen
 
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 
 // Re-export from commons for backwards compatibility
 typealias FeedViewModel = com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel

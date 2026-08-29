@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.dal
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.GitStatusIndex
 import com.vitorpamplona.amethyst.ui.screen.AndroidFeedViewModel
 import kotlinx.coroutines.Dispatchers

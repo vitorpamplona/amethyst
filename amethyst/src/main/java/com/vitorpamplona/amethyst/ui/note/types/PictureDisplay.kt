@@ -36,9 +36,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.ui.components.BlurhashGridBackdrop

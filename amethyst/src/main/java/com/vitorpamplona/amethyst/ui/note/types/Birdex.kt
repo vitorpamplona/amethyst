@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.BirdDetectionCard
 import com.vitorpamplona.amethyst.commons.ui.note.BirdexCard
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 

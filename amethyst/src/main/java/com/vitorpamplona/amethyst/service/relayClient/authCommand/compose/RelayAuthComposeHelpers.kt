@@ -26,8 +26,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

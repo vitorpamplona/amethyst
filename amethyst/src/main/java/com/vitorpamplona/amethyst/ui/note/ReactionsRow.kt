@@ -113,14 +113,14 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
 import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver

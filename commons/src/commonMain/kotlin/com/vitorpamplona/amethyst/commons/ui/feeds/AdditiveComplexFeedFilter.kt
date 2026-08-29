@@ -18,9 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.torState
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-// Canonical type now lives in commons
-typealias TorRelayEvaluation = com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
-
-typealias RelayClassification = com.vitorpamplona.amethyst.commons.tor.RelayClassification
+abstract class AdditiveComplexFeedFilter<T, U> : FeedFilter<T>() {
+    abstract fun updateListWith(
+        oldList: List<T>,
+        newItems: Set<U>,
+    ): List<T>
+}

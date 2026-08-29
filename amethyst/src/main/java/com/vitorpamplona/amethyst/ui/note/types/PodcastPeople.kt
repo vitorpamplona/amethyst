@@ -41,7 +41,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

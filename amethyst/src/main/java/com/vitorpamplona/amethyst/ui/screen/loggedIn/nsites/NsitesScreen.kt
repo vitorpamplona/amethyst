@@ -51,7 +51,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
  * Lists the NIP-5A static-site manifests currently in the local cache (kinds 15128/35128). These are
  * replaceable/addressable events, so the screen observes the **AddressableNote** store ([observeNotes],
  * which scans `LocalCache.addressables`): exactly one note per address — the latest version — keyed by
- * the stable address ([com.vitorpamplona.amethyst.model.Note.idHex]) and auto-updating in place as
+ * the stable address ([com.vitorpamplona.amethyst.commons.model.Note.idHex]) and auto-updating in place as
  * newer versions arrive. Mirrors the nApplets browse screen: a follow-list filter in the top bar and
  * each row rendered through the shared [NoteCompose] — the same path the main feed uses for these
  * events — so it gets the author header, the

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.subassembies
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 

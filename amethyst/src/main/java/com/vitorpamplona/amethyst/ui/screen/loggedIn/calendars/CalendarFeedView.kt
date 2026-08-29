@@ -38,12 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarEndSeconds
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarStartSeconds
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop

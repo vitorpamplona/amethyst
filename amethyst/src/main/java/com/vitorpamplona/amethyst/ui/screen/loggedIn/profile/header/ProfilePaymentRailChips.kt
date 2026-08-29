@@ -52,9 +52,9 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.shared.R

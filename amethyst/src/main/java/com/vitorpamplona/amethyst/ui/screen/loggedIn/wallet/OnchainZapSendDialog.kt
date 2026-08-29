@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.onchain.DustRecipientException
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
@@ -79,7 +80,6 @@ import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSplitter
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.insets.imePaddingSafe

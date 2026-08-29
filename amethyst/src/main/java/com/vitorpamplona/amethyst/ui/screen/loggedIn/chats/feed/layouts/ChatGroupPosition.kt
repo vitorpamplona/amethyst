@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMe
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeBottom
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeMeMiddle
@@ -33,7 +34,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThem
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThemBottom
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThemMiddle
 import com.vitorpamplona.amethyst.commons.ui.theme.ChatBubbleShapeThemTop
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip14Subject.subject

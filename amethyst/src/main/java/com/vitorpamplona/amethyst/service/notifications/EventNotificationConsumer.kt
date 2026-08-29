@@ -30,10 +30,11 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.isMutedPublicChatMessage
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.renderers.ArticleNotification
@@ -51,7 +52,6 @@ import com.vitorpamplona.amethyst.service.notifications.renderers.RepostNotifica
 import com.vitorpamplona.amethyst.service.notifications.renderers.ZapNotification
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.ScreenAuthAccount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter

@@ -54,11 +54,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteMinichatReplyCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps

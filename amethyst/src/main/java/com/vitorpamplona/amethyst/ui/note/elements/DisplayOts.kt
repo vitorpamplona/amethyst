@@ -26,8 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.note.LoadOts
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot

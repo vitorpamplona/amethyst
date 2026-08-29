@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.peopleList
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.anyNotNullEvent
 import com.vitorpamplona.amethyst.commons.model.eventIdSet
 import com.vitorpamplona.amethyst.commons.model.events
 import com.vitorpamplona.amethyst.commons.model.updateFlow
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.filter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

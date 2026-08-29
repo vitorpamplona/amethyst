@@ -45,12 +45,12 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Tunestr
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05VerifState
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
-import com.vitorpamplona.amethyst.model.AddressableNote
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserStatuses

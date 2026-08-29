@@ -62,12 +62,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.util.prettyMime
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.shared.R

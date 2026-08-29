@@ -41,8 +41,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

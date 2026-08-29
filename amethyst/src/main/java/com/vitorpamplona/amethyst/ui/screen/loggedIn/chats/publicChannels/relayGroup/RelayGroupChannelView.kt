@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
@@ -48,7 +49,6 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

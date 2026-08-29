@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.dal
 
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 
 class MutedThreadsFeedFilter(
     val account: Account,

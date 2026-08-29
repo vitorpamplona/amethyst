@@ -27,13 +27,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
