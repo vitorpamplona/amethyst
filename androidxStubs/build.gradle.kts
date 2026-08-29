@@ -24,6 +24,9 @@ dependencies {
     compileOnly(project(":androidStubs"))
     api(project(":amethystShared"))
     implementation(compose.desktop.currentOs)
+    // DataStore is multiplatform; only Android has the Context-based property
+    // delegate, which is what this module supplies.
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -109,7 +109,42 @@ object NotificationCompat {
             intent: PendingIntent?,
         ) = apply { }
 
+        fun addAction(action: Action?) = apply { }
+
         fun build(): Notification = Notification()
+    }
+
+    /**
+     * An action button on a notification. Carries its label and intent so a
+     * desktop notification backend can render and fire it; the icon is an
+     * Android drawable id with no desktop meaning and is dropped.
+     */
+    class Action(
+        icon: Int,
+        val title: CharSequence?,
+        val actionIntent: PendingIntent?,
+    ) {
+        class Builder(
+            icon: Int,
+            private val title: CharSequence?,
+            private val intent: PendingIntent?,
+        ) {
+            fun addRemoteInput(input: Any?) = apply { }
+
+            fun setAllowGeneratedReplies(allowed: Boolean) = apply { }
+
+            fun setSemanticAction(action: Int) = apply { }
+
+            fun setShowsUserInterface(shows: Boolean) = apply { }
+
+            fun build() = Action(0, title, intent)
+        }
+
+        companion object {
+            const val SEMANTIC_ACTION_REPLY = 1
+            const val SEMANTIC_ACTION_MARK_AS_READ = 2
+            const val SEMANTIC_ACTION_MUTE = 6
+        }
     }
 
     class BigTextStyle {

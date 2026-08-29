@@ -226,6 +226,21 @@ object JvmResources : Resources() {
 }
 
 object JvmConfiguration : Configuration() {
+    init {
+        // Filled from the real display so a layout that branches on window size
+        // branches on something true rather than on a phone-shaped default.
+        runCatching {
+            val screen =
+                java.awt.Toolkit
+                    .getDefaultToolkit()
+                    .screenSize
+            screenWidthDp = screen.width
+            screenHeightDp = screen.height
+            smallestScreenWidthDp = minOf(screen.width, screen.height)
+            orientation = if (screen.width >= screen.height) ORIENTATION_LANDSCAPE else ORIENTATION_PORTRAIT
+        }
+    }
+
     // Rebuilt on read rather than cached: the locale can change at runtime and
     // callers reach for it precisely when they are about to format something.
     override fun getLocales(): LocaleList = LocaleList(AndroidResourceTable.locale)

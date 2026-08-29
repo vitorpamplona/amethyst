@@ -78,6 +78,15 @@ public abstract class Context {
     public abstract ContentResolver getContentResolver();
 
     /**
+     * Desktop has no package manager. Returning a stub rather than null keeps
+     * the common "can anything handle this intent" checks compiling; each
+     * answers no, which routes callers to their fallback path.
+     */
+    public android.content.pm.PackageManager getPackageManager() {
+        return android.content.pm.PackageManager.EMPTY;
+    }
+
+    /**
      * Returns null for every service the desktop does not model. Callers must
      * already handle null — Android itself returns null for a service missing
      * on a given device — so this degrades along a path that is already tested
