@@ -4093,7 +4093,6 @@
     
     <string name="relay_leave_request">Relay 退出リクエスト</string>
     
-    <string name="ai_writing_help">AI ライティングサポート</string>
     
     <string name="ai_writing_setting_title">テキストの改善を提案</string>
 
@@ -4129,9 +4128,7 @@
     
     <string name="ai_tone_professional">プロフェッショナルに</string>
     
-    <string name="ai_tone_more_direct">より直接的に</string>
     
-    <string name="ai_tone_punchy">パンチを効かせる</string>
     
     <string name="ai_tone_emojify">+ 絵文字</string>
     

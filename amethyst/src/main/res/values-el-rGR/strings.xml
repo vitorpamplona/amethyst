@@ -2862,7 +2862,6 @@
     <string name="relay_members_removed">%1$d μέλη αφαιρέθηκαν από το relay</string>
     <string name="relay_join_request">Αίτηση συμμετοχής σε relay</string>
     <string name="relay_leave_request">Αίτηση αποχώρησης από relay</string>
-    <string name="ai_writing_help">Βοήθεια Συγγραφής AI</string>
     <string name="ai_writing_setting_title">Πρόταση βελτιώσεων κειμένου</string>
     <string name="ai_writing_setting_description">Χρησιμοποιεί ένα τοπικό μοντέλο AI για να προτείνει διορθώσεις κειμένου και αλλαγές τόνου.</string>
     <string name="tracked_broadcasts_setting_title">Παρακολουθούμενες μεταδόσεις</string>
@@ -2880,8 +2879,6 @@
     <string name="ai_tone_elaborate">Επεξεργασία</string>
     <string name="ai_tone_friendly">Φιλικό</string>
     <string name="ai_tone_professional">Επαγγελματικό</string>
-    <string name="ai_tone_more_direct">Πιο Άμεσο</string>
-    <string name="ai_tone_punchy">Δυναμικό</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Πακέτα Emoji</string>
     <string name="emoji_pack_management_title">Προσθήκη στη Λίστα Emoji</string>

@@ -3027,7 +3027,6 @@
     
 <string name="relay_leave_request">Solicitud de salida del relay</string>
     
-<string name="ai_writing_help">Ayuda de escritura IA</string>
     
 <string name="ai_writing_setting_title">Proponer mejoras de texto</string>
     
@@ -3063,9 +3062,7 @@
     
 <string name="ai_tone_professional">Profesional</string>
     
-<string name="ai_tone_more_direct">Más directo</string>
     
-<string name="ai_tone_punchy">Contundente</string>
     
 <string name="ai_tone_emojify">+ Emoji</string>
     

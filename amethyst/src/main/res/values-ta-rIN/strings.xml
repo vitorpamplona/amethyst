@@ -2888,7 +2888,6 @@
     <string name="relay_members_removed">%1$d உறுப்பினர்கள் relay-லிருந்து நீக்கப்பட்டனர்</string>
     <string name="relay_join_request">Relay சேரும் கோரிக்கை</string>
     <string name="relay_leave_request">Relay விலகும் கோரிக்கை</string>
-    <string name="ai_writing_help">AI எழுத்து உதவி</string>
     <string name="ai_writing_setting_title">உரை மேம்பாடுகளை பரிந்துரை செய்யவும்</string>
     <string name="ai_writing_setting_description">உரை திருத்தங்கள் மற்றும் தொனி மாற்றங்களை பரிந்துரைக்க சாதனத்திலுள்ள AI மாதிரியை பயன்படுத்துகிறது.</string>
     <string name="tracked_broadcasts_setting_title">கண்காணிக்கப்பட்ட ஒளிபரப்புகள்</string>
@@ -2906,8 +2905,6 @@
     <string name="ai_tone_elaborate">விரிவாக்கு</string>
     <string name="ai_tone_friendly">நட்புடன்</string>
     <string name="ai_tone_professional">தொழில்முறை</string>
-    <string name="ai_tone_more_direct">நேரடியாக</string>
-    <string name="ai_tone_punchy">சுறுசுறுப்பான</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji தொகுப்புகள்</string>
     <string name="emoji_pack_management_title">Emoji பட்டியலில் சேர்</string>

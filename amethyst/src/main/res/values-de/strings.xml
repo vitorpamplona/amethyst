@@ -4600,7 +4600,6 @@ anz der Bedingungen ist erforderlich</string>
     
 <string name="relay_leave_request">Relay-Austrittsanfrage</string>
     
-<string name="ai_writing_help">KI-Schreibhilfe</string>
     
 <string name="ai_writing_setting_title">Textverbesserungen vorschlagen</string>
     
@@ -4636,9 +4635,7 @@ anz der Bedingungen ist erforderlich</string>
     
 <string name="ai_tone_professional">Professionell</string>
     
-<string name="ai_tone_more_direct">Direkter</string>
     
-<string name="ai_tone_punchy">Prägnant</string>
     
 <string name="ai_tone_emojify">+ Emoji</string>
     

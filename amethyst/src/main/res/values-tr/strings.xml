@@ -4282,7 +4282,6 @@
     
     <string name="relay_leave_request">Relay ayrılma isteği</string>
     
-    <string name="ai_writing_help">Yapay Zeka Yazma Yardımı</string>
     
     <string name="ai_writing_setting_title">Metin iyileştirmeleri öner</string>
     
@@ -4318,9 +4317,7 @@
     
     <string name="ai_tone_professional">Profesyonel</string>
     
-    <string name="ai_tone_more_direct">Daha Doğrudan</string>
     
-    <string name="ai_tone_punchy">Etkili</string>
     
     <string name="ai_tone_emojify">+ Emoji</string>
     

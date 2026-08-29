@@ -4502,7 +4502,6 @@
     <string name="relay_members_removed">%1$d leden verwijderd van relay</string>
     <string name="relay_join_request">Relay-lidmaatschapsverzoek</string>
     <string name="relay_leave_request">Relay-opzegverzoek</string>
-    <string name="ai_writing_help">AI-schrijfassistent</string>
     <string name="ai_writing_setting_title">Tekstverbeteringen voorstellen</string>
     <string name="ai_writing_setting_description">Gebruikt een on-device AI-model om tekstcorrecties en toonwijzigingen voor te stellen.</string>
     <string name="tracked_broadcasts_setting_title">Getrackte uitzendingen</string>
@@ -4607,8 +4606,6 @@
     <string name="ai_tone_elaborate">Uitbreiden</string>
     <string name="ai_tone_friendly">Vriendelijk</string>
     <string name="ai_tone_professional">Professioneel</string>
-    <string name="ai_tone_more_direct">Directer</string>
-    <string name="ai_tone_punchy">Kort en krachtig</string>
     <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-pakketten</string>

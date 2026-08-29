@@ -2881,7 +2881,6 @@
     <string name="relay_members_removed">%1$d membros removidos do relay</string>
     <string name="relay_join_request">Solicitação de entrada no relay</string>
     <string name="relay_leave_request">Solicitação de saída do relay</string>
-    <string name="ai_writing_help">Assistente de escrita com IA</string>
     <string name="ai_writing_setting_title">Sugerir melhorias de texto</string>
     <string name="ai_writing_setting_description">Usa um modelo de IA no dispositivo para sugerir correções de texto e mudanças de tom.</string>
     <string name="tracked_broadcasts_setting_title">Transmissões rastreadas</string>
@@ -2899,8 +2898,6 @@
     <string name="ai_tone_elaborate">Elaborar</string>
     <string name="ai_tone_friendly">Amigável</string>
     <string name="ai_tone_professional">Profissional</string>
-    <string name="ai_tone_more_direct">Mais direto</string>
-    <string name="ai_tone_punchy">Impactante</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Pacotes de emojis</string>
     <string name="emoji_pack_management_title">Adicionar à lista de emojis</string>

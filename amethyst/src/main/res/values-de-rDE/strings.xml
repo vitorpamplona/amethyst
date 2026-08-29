@@ -4539,7 +4539,6 @@
     <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
-    <string name="ai_writing_help">KI-Schreibhilfe</string>
     <string name="ai_writing_setting_title">Textverbesserungen vorschlagen</string>
     <string name="ai_writing_setting_description">Verwendet ein KI-Modell auf dem Gerät, um Textkorrekturen und Tonänderungen vorzuschlagen.</string>
     <string name="tracked_broadcasts_setting_title">Verfolgte Übertragungen</string>
@@ -4644,8 +4643,6 @@
     <string name="ai_tone_elaborate">Ausführen</string>
     <string name="ai_tone_friendly">Freundlich</string>
     <string name="ai_tone_professional">Professionell</string>
-    <string name="ai_tone_more_direct">Direkter</string>
-    <string name="ai_tone_punchy">Prägnant</string>
     <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-Pakete</string>
