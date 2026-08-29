@@ -155,6 +155,9 @@ fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
     val state = remember { BottomBarSettingsState(savedItems) { accountViewModel.changeBottomBarItems(it) } }
     LaunchedEffect(savedItems) { state.syncFrom(savedItems) }
 
+    // Edits publish on a debounce; make sure leaving the screen doesn't strand the last one.
+    FlushPickerEditsOnExit(accountViewModel)
+
     val pinned = state.pinned
     val pinnedKeys = remember(pinned) { state.pinnedKeys() }
 

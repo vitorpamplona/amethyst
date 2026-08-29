@@ -28,11 +28,14 @@ import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.cancellation.CancellationException
 
 class AppSpecificState(
@@ -43,6 +46,23 @@ class AppSpecificState(
 ) {
     companion object {
         const val APP_SPECIFIC_DATA_D_TAG = "AmethystSettings"
+
+        /**
+         * The `created_at` for the next version of a replaceable event: one second past the newest
+         * version we already know about, or the wall clock when that is already ahead.
+         *
+         * `created_at` is whole seconds, and the settings pickers republish this event on every
+         * discrete toggle, so two edits a few hundred milliseconds apart would otherwise carry the
+         * *same* timestamp. That silently loses the second edit: [LocalCache] keeps the strictly
+         * newest version per address, so it drops the republish, the app-specific-data collector
+         * never fires, `backupAppSpecificData` keeps the first edit, and the next app start restores
+         * that. Relays are no safer — NIP-01 breaks a `created_at` tie by lowest id, so which of the
+         * two edits survives there is arbitrary.
+         */
+        fun nextCreatedAt(
+            newestKnown: Long,
+            now: Long,
+        ): Long = (newestKnown + 1).coerceAtLeast(now)
     }
 
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
@@ -52,12 +72,40 @@ class AppSpecificState(
 
     fun getAppSpecificDataFlow(): StateFlow<NoteState> = amethystSettingsNote.flow().metadata.stateFlow
 
+    /**
+     * Serializes the state snapshot and the timestamp it is stamped with. Two rapid toggles publish
+     * from separate coroutines on the signer's dispatcher; without this they could read the same
+     * previous timestamp and collide again, or take timestamps in the opposite order to the state
+     * they captured. Signing and encrypting stay outside the lock — those can wait on an external
+     * signer, and they don't affect ordering.
+     */
+    private val stampOrder = Mutex()
+
+    /**
+     * The newest version this instance has published, which is not always in [amethystSettingsNote]
+     * yet: the cache is only updated once the event comes back through the broadcaster.
+     */
+    private var lastPublishedAt = 0L
+
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
-        val toInternal = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
+        val toInternal: AccountSyncedSettingsInternal
+        val createdAt: Long
+
+        stampOrder.withLock {
+            toInternal = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
+            createdAt =
+                nextCreatedAt(
+                    newestKnown = maxOf(lastPublishedAt, amethystSettingsNote.event?.createdAt ?: 0L),
+                    now = TimeUtils.now(),
+                )
+            lastPublishedAt = createdAt
+        }
+
         return signer.sign(
             AppSpecificDataEvent.build(
                 dTag = APP_SPECIFIC_DATA_D_TAG,
                 description = signer.nip44Encrypt(JsonMapper.toJson(toInternal), signer.pubKey),
+                createdAt = createdAt,
             ),
         )
     }

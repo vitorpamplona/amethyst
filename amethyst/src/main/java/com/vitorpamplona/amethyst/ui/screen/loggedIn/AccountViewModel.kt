@@ -217,6 +217,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * How long the navigation pickers wait for the toggles to stop before publishing. Long enough that a
+ * run of taps is one publish, short enough that leaving the screen normally finds nothing to flush.
+ */
+private const val PICKER_PUBLISH_DEBOUNCE_MS = 2000L
+
 @Stable
 class AccountViewModel(
     val account: Account,
@@ -2006,7 +2012,7 @@ class AccountViewModel(
     /** Same ordering contract as [changeBottomBarItems]: apply on the caller's thread, publish off it. */
     fun changeHiddenDrawerItems(items: Set<NavBarItem>) {
         if (account.applyHiddenDrawerItems(items)) {
-            launchSigner { account.sendNewAppSpecificData() }
+            schedulePickerPublish()
         }
     }
 
@@ -2014,9 +2020,60 @@ class AccountViewModel(
         // Apply to the reactive flow synchronously on the caller (UI) thread so rapid edits stay
         // ordered — launchSigner dispatches on a multi-threaded pool, so wrapping the emit too would
         // let two quick edits complete out of order and revert the newer one (the settings screen
-        // re-seeds its editable list from this flow). Only the sign + encrypt + publish runs off-thread.
+        // re-seeds its editable list from this flow). Only the sign + encrypt + publish runs off-thread,
+        // and that part is debounced — see [pickerPublisher].
         if (account.applyBottomBarItems(items)) {
-            launchSigner { account.sendNewAppSpecificData() }
+            schedulePickerPublish()
+        }
+    }
+
+    /**
+     * Publishes the account's synced settings once the picker edits stop, rather than once per toggle.
+     *
+     * The Side Menu and bottom-bar pickers are the only settings surfaces that write in bursts — a
+     * configuring session is a run of discrete toggles over ~50 rows, and each one signs, encrypts
+     * and publishes the whole blob to every outbox relay, which on an external signer is an IPC
+     * round trip (and possibly a prompt) per switch. One publisher for both, since they edit the same
+     * app-specific data event and a burst that crosses the two should still collapse.
+     *
+     * Only these two. Every other synced setting changes one at a time, and the published event is
+     * its only durable copy, so delaying those would buy nothing and cost durability.
+     */
+    private val pickerPublisher =
+        DebouncedPublisher(
+            debounceMs = PICKER_PUBLISH_DEBOUNCE_MS,
+            launch = { launchSigner(it) },
+            publish = { account.sendNewAppSpecificData() },
+        )
+
+    private fun schedulePickerPublish() = pickerPublisher.schedule()
+
+    /**
+     * Publish any pending picker edits now. Called when a picker screen leaves the composition or the
+     * app stops, so an edit is never left sitting only in memory: synced settings have no local copy
+     * of their own — [com.vitorpamplona.amethyst.model.AccountSettings.backupAppSpecificData], written
+     * when the published event comes back through the collector, *is* the local copy.
+     */
+    fun flushPickerPublish() = pickerPublisher.flush()
+
+    /**
+     * Last resort for a pending publish, on the account's scope rather than [viewModelScope] — this
+     * runs from [onCleared], where [viewModelScope] is already cancelled. Covers an account switch or
+     * an Activity teardown that happens while a picker edit is still inside its debounce window; the
+     * account's scope outlives both and is only torn down at logout.
+     *
+     * Signer errors go to the log instead of a toast: by this point there is no UI left to show one.
+     */
+    private fun flushPickerPublishDetached() {
+        if (!pickerPublisher.isPending()) return
+        pickerPublisher.cancel()
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                account.sendNewAppSpecificData()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("AccountViewModel", "Could not publish pending navigation settings", e)
+            }
         }
     }
 
@@ -2533,6 +2590,7 @@ class AccountViewModel(
             .clearViewModel()
         com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
             .clear()
+        flushPickerPublishDetached()
         feedStates.destroy()
         super.onCleared()
     }
