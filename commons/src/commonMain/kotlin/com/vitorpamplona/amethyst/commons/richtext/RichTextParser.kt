@@ -650,8 +650,17 @@ class RichTextParser {
          * Brackets and quotes that may open a NIP-19 entity. Only characters that can never be part
          * of an entity and that a writer would plausibly wrap one in — no trailing punctuation
          * (that is the entity's `additionalChars`) and no markdown emphasis markers.
+         *
+         * A `when` over char literals, not a `CharArray` + `in`: every word of every rendered note
+         * asks this, and almost all of them answer no, which is the case a linear `contains` scan
+         * is slowest at — it compares against all twelve before rejecting. `when` compiles to a
+         * single lookupswitch on the char.
          */
-        private val nip19OpeningPunctuation = charArrayOf('(', '[', '{', '<', '"', '\'', '\u00AB', '\u2039', '\u201C', '\u201E', '\u2018', '\u201A')
+        private fun isNip19OpeningPunctuation(c: Char): Boolean =
+            when (c) {
+                '(', '[', '{', '<', '"', '\'', '\u00AB', '\u2039', '\u201C', '\u201E', '\u2018', '\u201A' -> true
+                else -> false
+            }
 
         /**
          * How many leading bracket/quote characters of [word] hide a NIP-19 entity behind them, or
@@ -668,10 +677,10 @@ class RichTextParser {
          * `npub1...`/`@npub1...` are not URIs, so nothing splits them; this does.
          */
         fun nip19OpeningPunctuationLength(word: String): Int {
-            if (word.isEmpty() || word[0] !in nip19OpeningPunctuation) return 0
+            if (word.isEmpty() || !isNip19OpeningPunctuation(word[0])) return 0
 
             var i = 1
-            while (i < word.length && word[i] in nip19OpeningPunctuation) i++
+            while (i < word.length && isNip19OpeningPunctuation(word[i])) i++
 
             return if (startsWithNIP19Scheme(word, i)) i else 0
         }
