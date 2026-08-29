@@ -5108,4 +5108,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_persona_publishing">Publikowanie…</string>
     <string name="buzz_persona_publish">Publikuj persona</string>
     <!-- Profile card (kind-0 rendered in the feed) -->
+    <string name="profile_card_follows_you">Obserwuje cię</string>
+    <string name="profile_card_bot">Bot</string>
 </resources>
