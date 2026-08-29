@@ -4918,6 +4918,8 @@
     <string name="relay_join_request">Relay join request</string>
     <string name="relay_leave_request">Relay leave request</string>
 
+    <string name="ai_writing_setting_title">Propose text improvements</string>
+    <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
     <string name="tracked_broadcasts_setting_title">Tracked broadcasts</string>
     <string name="tracked_broadcasts_setting_description">Use the tracked broadcaster when sending events. Shows live progress and per-relay status while broadcasting.</string>
     <string name="suggest_workouts_setting_title">Suggest workouts to share</string>
@@ -5012,6 +5014,15 @@
     <string name="pow_publish_failed_retry">Your %1$s finished mining but could not be published. It will be retried the next time the app starts.</string>
     <string name="pow_kind_chat_message">Chat message</string>
     <string name="pow_kind_report">Report</string>
+    <string name="ai_writing_use_this">Use This</string>
+    <string name="ai_writing_dismiss">Dismiss</string>
+    <string name="ai_tone_correct">Correct</string>
+    <string name="ai_tone_rephrase">Rephrase</string>
+    <string name="ai_tone_shorter">Shorter</string>
+    <string name="ai_tone_elaborate">Elaborate</string>
+    <string name="ai_tone_friendly">Friendly</string>
+    <string name="ai_tone_professional">Professional</string>
+    <string name="ai_tone_emojify">+ Emoji</string>
 
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji Packs</string>

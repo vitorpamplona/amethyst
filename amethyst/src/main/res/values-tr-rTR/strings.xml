@@ -2901,6 +2901,9 @@
     <string name="relay_members_removed">%1$d üye relay\'den kaldırıldı</string>
     <string name="relay_join_request">Relay katılım isteği</string>
     <string name="relay_leave_request">Relay ayrılma isteği</string>
+    <string name="ai_writing_help">Yapay Zeka Yazma Yardımı</string>
+    <string name="ai_writing_setting_title">Metin iyileştirmeleri öner</string>
+    <string name="ai_writing_setting_description">Metin düzeltmeleri ve ton değişiklikleri önermek için cihaz üzerindeki bir yapay zeka modeli kullanır.</string>
     <string name="tracked_broadcasts_setting_title">Takip edilen yayınlar</string>
     <string name="tracked_broadcasts_setting_description">Etkinlikler gönderilirken takip edilen yayıncıyı kullan. Yayın sırasında canlı ilerlemeyi ve relay başına durumu gösterir.</string>
     <string name="suggest_workouts_setting_title">Paylaşılacak antrenmanlar öner</string>
@@ -2908,6 +2911,16 @@
     <string name="compose_settings">Oluşturma Ayarları</string>
     <string name="auto_create_drafts_setting_title">Otomatik olarak taslak oluştur</string>
     <string name="auto_create_drafts_setting_description">Yazarken veya gönderilmemiş metin içeren bir düzenleyiciden ayrılırken otomatik olarak taslak etkinliği kaydeder ve özel giden kutusu relay\'lerinize gönderir.</string>
+    <string name="ai_writing_use_this">Bunu Kullan</string>
+    <string name="ai_writing_dismiss">Kapat</string>
+    <string name="ai_tone_correct">Düzelt</string>
+    <string name="ai_tone_rephrase">Yeniden İfade Et</string>
+    <string name="ai_tone_shorter">Daha Kısa</string>
+    <string name="ai_tone_elaborate">Detaylandır</string>
+    <string name="ai_tone_friendly">Samimi</string>
+    <string name="ai_tone_professional">Profesyonel</string>
+    <string name="ai_tone_more_direct">Daha Doğrudan</string>
+    <string name="ai_tone_punchy">Etkili</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji Paketleri</string>
     <string name="emoji_pack_management_title">Emoji Listesine Ekle</string>

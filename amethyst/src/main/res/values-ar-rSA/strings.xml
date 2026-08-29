@@ -3034,6 +3034,9 @@
     <string name="relay_members_removed">تمت إزالة %1$d أعضاء من الـ relay</string>
     <string name="relay_join_request">طلب الانضمام إلى relay</string>
     <string name="relay_leave_request">طلب مغادرة relay</string>
+    <string name="ai_writing_help">مساعدة الذكاء الاصطناعي في الكتابة</string>
+    <string name="ai_writing_setting_title">اقتراح تحسينات النص</string>
+    <string name="ai_writing_setting_description">يستخدم نموذج ذكاء اصطناعي على الجهاز لاقتراح تصحيحات نصية وتغييرات في النبرة.</string>
     <string name="tracked_broadcasts_setting_title">البث المتتبَّع</string>
     <string name="tracked_broadcasts_setting_description">استخدم المذيع المتتبَّع عند إرسال الأحداث. يعرض تقدمًا مباشرًا وحالة كل relay أثناء البث.</string>
     <string name="suggest_workouts_setting_title">اقتراح تمارين للمشاركة</string>
@@ -3041,6 +3044,17 @@
     <string name="compose_settings">إعدادات الكتابة</string>
     <string name="auto_create_drafts_setting_title">إنشاء مسودات تلقائياً</string>
     <string name="auto_create_drafts_setting_description">يحفظ حدثاً كمسودة تلقائياً عند الكتابة أو مغادرة محرر النص بنص غير مُرسل، ويرسله إلى relay صناديق الصادر الخاصة.</string>
+    <string name="ai_writing_use_this">استخدام هذا</string>
+    <string name="ai_writing_dismiss">رفض</string>
+    <string name="ai_tone_correct">تصحيح</string>
+    <string name="ai_tone_rephrase">إعادة صياغة</string>
+    <string name="ai_tone_shorter">أقصر</string>
+    <string name="ai_tone_elaborate">توسيع</string>
+    <string name="ai_tone_friendly">ودّي</string>
+    <string name="ai_tone_professional">احترافي</string>
+    <string name="ai_tone_more_direct">أكثر مباشرة</string>
+    <string name="ai_tone_punchy">قوي ومؤثر</string>
+    <string name="ai_tone_emojify">+ إيموجي</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">حزم الإيموجي</string>
     <string name="emoji_pack_management_title">إضافة إلى قائمة الإيموجي</string>

@@ -3027,8 +3027,11 @@
     
 <string name="relay_leave_request">Solicitud de salida del relay</string>
     
+<string name="ai_writing_help">Ayuda de escritura IA</string>
     
+<string name="ai_writing_setting_title">Proponer mejoras de texto</string>
     
+<string name="ai_writing_setting_description">Usa un modelo de IA en el dispositivo para proponer correcciones de texto y cambios de tono.</string>
     
 <string name="tracked_broadcasts_setting_title">Difusiones rastreadas</string>
     
@@ -3044,16 +3047,27 @@
     
 <string name="auto_create_drafts_setting_description">Guarda un borrador automáticamente cuando escribes o abandonas el compositor con texto no enviado, y lo envía a tus relays de bandeja de salida privada.</string>
     
+<string name="ai_writing_use_this">Usar esto</string>
     
+<string name="ai_writing_dismiss">Descartar</string>
     
+<string name="ai_tone_correct">Corregir</string>
     
+<string name="ai_tone_rephrase">Reformular</string>
     
+<string name="ai_tone_shorter">Más corto</string>
     
+<string name="ai_tone_elaborate">Ampliar</string>
     
+<string name="ai_tone_friendly">Amigable</string>
     
+<string name="ai_tone_professional">Profesional</string>
     
+<string name="ai_tone_more_direct">Más directo</string>
     
+<string name="ai_tone_punchy">Contundente</string>
     
+<string name="ai_tone_emojify">+ Emoji</string>
     
 <string name="emoji_packs_title">Paquetes de emojis</string>
     

@@ -2725,6 +2725,9 @@
     <string name="relay_members_removed">ลบ %1$d สมาชิกออกจาก relay แล้ว</string>
     <string name="relay_join_request">คำขอเข้าร่วม Relay</string>
     <string name="relay_leave_request">คำขอออกจาก Relay</string>
+    <string name="ai_writing_help">ความช่วยเหลือการเขียนด้วย AI</string>
+    <string name="ai_writing_setting_title">เสนอการปรับปรุงข้อความ</string>
+    <string name="ai_writing_setting_description">ใช้โมเดล AI บนอุปกรณ์เพื่อเสนอการแก้ไขข้อความและการเปลี่ยนแปลงโทนเสียง</string>
     <string name="tracked_broadcasts_setting_title">การออกอากาศที่ติดตาม</string>
     <string name="tracked_broadcasts_setting_description">ใช้ตัวออกอากาศที่ติดตามเมื่อส่งกิจกรรม แสดงความคืบหน้าสดและสถานะต่อ relay ขณะออกอากาศ</string>
     <string name="suggest_workouts_setting_title">แนะนำการออกกำลังกายเพื่อแชร์</string>
@@ -2732,6 +2735,16 @@
     <string name="compose_settings">การตั้งค่าการแต่ง</string>
     <string name="auto_create_drafts_setting_title">สร้างร่างโดยอัตโนมัติ</string>
     <string name="auto_create_drafts_setting_description">บันทึกกิจกรรมร่างโดยอัตโนมัติเมื่อคุณพิมพ์หรือออกจากตัวแต่งที่มีข้อความที่ยังไม่ได้ส่ง และส่งไปยัง relay outbox ส่วนตัวของคุณ</string>
+    <string name="ai_writing_use_this">ใช้สิ่งนี้</string>
+    <string name="ai_writing_dismiss">ปิด</string>
+    <string name="ai_tone_correct">แก้ไข</string>
+    <string name="ai_tone_rephrase">เรียบเรียงใหม่</string>
+    <string name="ai_tone_shorter">สั้นลง</string>
+    <string name="ai_tone_elaborate">ขยายความ</string>
+    <string name="ai_tone_friendly">เป็นกันเอง</string>
+    <string name="ai_tone_professional">เป็นมืออาชีพ</string>
+    <string name="ai_tone_more_direct">ตรงไปตรงมามากขึ้น</string>
+    <string name="ai_tone_punchy">กระชับ</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">แพ็ค Emoji</string>
     <string name="emoji_pack_management_title">เพิ่มในรายการ Emoji</string>

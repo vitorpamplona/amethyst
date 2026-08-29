@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.model.AccountPoWPreferences
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
+import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.pow.deviceHashesPerSecond
 import com.vitorpamplona.amethyst.service.pow.formatApproxDuration
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -102,6 +103,16 @@ fun ComposeSettingsContent(
                 description = R.string.auto_create_drafts_setting_description,
             )
             SettingsDivider()
+            // The F-Droid build ships no on-device model, so the toggle would do nothing there.
+            if (WritingAssistantFactory.IS_SUPPORTED) {
+                BooleanSwitchTile(
+                    flow = sharedPrefs.automaticallyProposeAiImprovements,
+                    icon = MaterialSymbols.AutoAwesome,
+                    title = R.string.ai_writing_setting_title,
+                    description = R.string.ai_writing_setting_description,
+                )
+                SettingsDivider()
+            }
             BooleanSwitchTile(
                 flow = sharedPrefs.useTrackedBroadcasts,
                 icon = MaterialSymbols.CellTower,

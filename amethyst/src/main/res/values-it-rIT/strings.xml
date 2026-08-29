@@ -2859,6 +2859,9 @@
     <string name="relay_members_removed">%1$d membri rimossi dal relay</string>
     <string name="relay_join_request">Richiesta di iscrizione al relay</string>
     <string name="relay_leave_request">Richiesta di uscita dal relay</string>
+    <string name="ai_writing_help">Assistenza Scrittura AI</string>
+    <string name="ai_writing_setting_title">Proponi miglioramenti al testo</string>
+    <string name="ai_writing_setting_description">Utilizza un modello AI sul dispositivo per proporre correzioni al testo e modifiche al tono.</string>
     <string name="tracked_broadcasts_setting_title">Trasmissioni tracciate</string>
     <string name="tracked_broadcasts_setting_description">Usa il trasmettitore tracciato per l\'invio degli eventi. Mostra l\'avanzamento in tempo reale e lo stato per ogni relay durante la trasmissione.</string>
     <string name="suggest_workouts_setting_title">Suggerisci allenamenti da condividere</string>
@@ -2866,6 +2869,16 @@
     <string name="compose_settings">Impostazioni Composizione</string>
     <string name="auto_create_drafts_setting_title">Crea bozze automaticamente</string>
     <string name="auto_create_drafts_setting_description">Salva automaticamente una bozza dell\'evento quando scrivi o esci da un compositore con testo non inviato, e la invia ai tuoi relay di outbox privati.</string>
+    <string name="ai_writing_use_this">Usa Questo</string>
+    <string name="ai_writing_dismiss">Ignora</string>
+    <string name="ai_tone_correct">Correggi</string>
+    <string name="ai_tone_rephrase">Riformula</string>
+    <string name="ai_tone_shorter">Più breve</string>
+    <string name="ai_tone_elaborate">Approfondisci</string>
+    <string name="ai_tone_friendly">Amichevole</string>
+    <string name="ai_tone_professional">Professionale</string>
+    <string name="ai_tone_more_direct">Più diretto</string>
+    <string name="ai_tone_punchy">Incisivo</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Pacchetti Emoji</string>
     <string name="emoji_pack_management_title">Aggiungi alla Lista Emoji</string>

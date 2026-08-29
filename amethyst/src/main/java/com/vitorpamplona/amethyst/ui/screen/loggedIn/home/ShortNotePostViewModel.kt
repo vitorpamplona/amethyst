@@ -46,10 +46,16 @@ import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.service.ai.WritingAssistant
+import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
+import com.vitorpamplona.amethyst.service.ai.WritingAssistantStatus
+import com.vitorpamplona.amethyst.service.ai.WritingResult
+import com.vitorpamplona.amethyst.service.ai.WritingTone
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
@@ -158,7 +164,16 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toImmutableMap
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -170,6 +185,15 @@ enum class UserSuggestionAnchor {
     TO_USERS,
     NOTIFY,
 }
+
+/** Below this many characters a draft is too short for a rewrite to say anything useful. */
+private const val AI_MIN_TEXT_LENGTH = 20
+
+/** How long typing must pause before spending the device's model on the draft. */
+private const val AI_DEBOUNCE_MS = 1000L
+
+/** Model status crosses a process boundary, so it is only re-read this often. */
+private const val AI_STATUS_RECHECK_SECONDS = 30
 
 @Stable
 open class ShortNotePostViewModel :
@@ -408,6 +432,151 @@ open class ShortNotePostViewModel :
     fun defaultPowDifficulty(): Int? {
         if (!::accountViewModel.isInitialized) return null
         return accountViewModel.account.powDifficultyFor(anticipatedPowKind())
+    }
+
+    // --- AI Writing Help -----------------------------------------------------------------
+
+    var aiResults by mutableStateOf<ImmutableMap<WritingTone, WritingResult>>(persistentMapOf())
+    var aiSelectedResult by mutableStateOf<WritingResult?>(null)
+    var aiStatus by mutableStateOf<WritingAssistantStatus>(WritingAssistantStatus.Unavailable)
+    private var writingAssistant: WritingAssistant? = null
+    private var aiComputeJob: Job? = null
+    private var aiStatusJob: Job? = null
+    private var lastComputedText: String = ""
+    private var lastStatusCheckAt: Long = 0
+
+    /**
+     * Whether there is anything to show. The user's preference is watched by the screen so
+     * that turning the setting off hides the panel right away.
+     */
+    val showAiPanel: Boolean
+        get() = aiStatus is WritingAssistantStatus.Available && aiResults.isNotEmpty()
+
+    private fun isAiEnabledInSettings(): Boolean =
+        accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements.value ==
+            BooleanType.ALWAYS
+
+    fun initWritingAssistant(context: Context) {
+        if (writingAssistant != null) return
+        writingAssistant = WritingAssistantFactory.create(context)
+        refreshAiStatus()
+    }
+
+    /**
+     * Re-reads the model status, and asks for the download when the device can run the model
+     * but has not fetched it yet. Runs outside [aiComputeJob] so a keystroke cannot cancel a
+     * download halfway, and is throttled because it crosses into another process.
+     */
+    private fun refreshAiStatus() {
+        val assistant = writingAssistant ?: return
+        if (aiStatusJob?.isActive == true) return
+
+        val now = TimeUtils.now()
+        if (lastStatusCheckAt > 0 && now - lastStatusCheckAt < AI_STATUS_RECHECK_SECONDS) return
+        lastStatusCheckAt = now
+
+        // Stays on the ViewModel's main dispatcher so every AI field is written from one
+        // thread; the assistant moves its own blocking work to IO.
+        aiStatusJob =
+            viewModelScope.launch {
+                val status = assistant.checkAvailability()
+                aiStatus =
+                    if (status is WritingAssistantStatus.Downloadable && isAiEnabledInSettings()) {
+                        assistant.requestDownload()
+                    } else {
+                        status
+                    }
+
+                // The model may have become usable while the draft sat untouched; the next
+                // keystroke should not be what finally starts the proposals.
+                if (aiStatus is WritingAssistantStatus.Available) precomputeAiResults()
+            }
+    }
+
+    fun precomputeAiResults() {
+        if (!::accountViewModel.isInitialized) return
+
+        val text = message.text.toString().trim()
+        if (text.length < AI_MIN_TEXT_LENGTH) {
+            // Covers the composer being emptied or reset: the old proposals no longer
+            // describe what is in the field, so they must not stay on screen.
+            resetAiState()
+            return
+        }
+        if (text == lastComputedText) return
+
+        val assistant = writingAssistant ?: return
+        if (!isAiEnabledInSettings()) return
+
+        if (aiStatus !is WritingAssistantStatus.Available) {
+            refreshAiStatus()
+            return
+        }
+
+        aiComputeJob?.cancel()
+        aiResults = persistentMapOf()
+        aiSelectedResult = null
+
+        aiComputeJob =
+            viewModelScope.launch {
+                delay(AI_DEBOUNCE_MS)
+
+                val results =
+                    coroutineScope {
+                        WritingTone.entries
+                            .map { tone ->
+                                async {
+                                    try {
+                                        assistant.transform(text, tone)
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        Log.w("ShortNotePostViewModel", "Could not run the $tone rewrite", e)
+                                        null
+                                    }
+                                }
+                            }.awaitAll()
+                            .filterNotNull()
+                            // A model that hands back the input unchanged has nothing to offer.
+                            .filter { it.transformedText.isNotBlank() && it.transformedText != it.originalText }
+                            .associateBy { it.tone }
+                            .toImmutableMap()
+                    }
+
+                aiResults = results
+                // Only now: a run that was cancelled must not mark this text as done, or
+                // coming back to it would show nothing.
+                lastComputedText = text
+            }
+    }
+
+    fun selectAiResult(tone: WritingTone) {
+        aiSelectedResult = aiResults[tone]
+    }
+
+    fun applyAiResult() {
+        aiSelectedResult?.let {
+            val applied = it.transformedText
+            message.setTextAndPlaceCursorAtEnd(applied)
+            aiSelectedResult = null
+            aiResults = persistentMapOf()
+            // The edit above re-enters onMessageChanged. Remember the applied text so it
+            // does not immediately trigger a fresh batch of inferences over it.
+            lastComputedText = applied.trim()
+            draftTag.newVersion()
+        }
+    }
+
+    fun dismissAiResult() {
+        aiSelectedResult = null
+    }
+
+    private fun resetAiState() {
+        aiComputeJob?.cancel()
+        aiComputeJob = null
+        aiResults = persistentMapOf()
+        aiSelectedResult = null
+        lastComputedText = ""
     }
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
@@ -1505,6 +1674,8 @@ open class ShortNotePostViewModel :
         iMetaAttachments.reset()
 
         emojiSuggestions?.reset()
+
+        resetAiState()
     }
 
     fun deleteMediaToUpload(selected: SelectedMediaProcessing) {
@@ -1527,6 +1698,7 @@ open class ShortNotePostViewModel :
             emojiSuggestions?.processCurrentWord(lastWord)
         }
 
+        precomputeAiResults()
         draftTag.newVersion()
     }
 
@@ -1765,6 +1937,8 @@ open class ShortNotePostViewModel :
 
     override fun onCleared() {
         super.onCleared()
+        writingAssistant?.close()
+        writingAssistant = null
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
     }
 
