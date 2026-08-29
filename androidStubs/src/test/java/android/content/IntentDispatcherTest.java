@@ -17,7 +17,7 @@ class IntentDispatcherTest {
 
     @BeforeEach
     void captureGaps() {
-        PlatformGaps.setReporter((feature, detail) -> gaps.add(feature));
+        PlatformGaps.setReporter((feature, detail, kind) -> gaps.add(feature));
     }
 
     @AfterEach
@@ -76,6 +76,6 @@ class IntentDispatcherTest {
     void gapsAreRecordedForLaterInspection() {
         PlatformGaps.setReporter(null);
         PlatformGaps.report("Feature.x", "why");
-        assertTrue(PlatformGaps.seen().stream().anyMatch(s -> s.startsWith("Feature.x")));
+        assertTrue(PlatformGaps.seen().keySet().stream().anyMatch(s -> s.startsWith("Feature.x")));
     }
 }

@@ -58,14 +58,14 @@ class DateFormattingTest {
     @Test
     void theEnglishOnlyFallbackReportsItselfAsAGap() {
         java.util.List<String> gaps = new java.util.ArrayList<>();
-        com.vitorpamplona.amethyst.stubs.PlatformGaps.setReporter((feature, detail) -> gaps.add(feature));
+        com.vitorpamplona.amethyst.stubs.PlatformGaps.setReporter((feature, detail, kind) -> gaps.add(feature));
         try {
             DateUtils.getRelativeTimeSpanString(0L, 1L, 0);
             // Reported at most once per process, so accept either: what matters
             // is that the limitation is recorded somewhere, not silently shipped.
             assertTrue(
                     gaps.contains("DateUtils.getRelativeTimeSpanString")
-                            || com.vitorpamplona.amethyst.stubs.PlatformGaps.seen().stream()
+                            || com.vitorpamplona.amethyst.stubs.PlatformGaps.seen().keySet().stream()
                                     .anyMatch(s -> s.startsWith("DateUtils.getRelativeTimeSpanString")),
                     "an English-only fallback must not ship silently");
         } finally {
