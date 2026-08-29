@@ -41,13 +41,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
-private val FULL_AUTHOR = "a".repeat(64)
-private val MINIMAL_AUTHOR = "b".repeat(64)
-private val BOT_AUTHOR = "c".repeat(64)
+// LocalCache is a process-wide object shared by every preview the renderer runs, and
+// consuming a kind-0 is a no-op when the id already exists or the createdAt isn't newer.
+// These keys must not collide with any other preview's (e.g. NoteHeaderMarkersPreview's
+// "a"*64 / "e1"*32) or whichever renders first wins and this one shows that profile.
+private val FULL_AUTHOR = "c0".repeat(32)
+private val MINIMAL_AUTHOR = "c1".repeat(32)
+private val BOT_AUTHOR = "c2".repeat(32)
 
-private val FULL_ID = "e1".repeat(32)
-private val MINIMAL_ID = "e2".repeat(32)
-private val BOT_ID = "e3".repeat(32)
+private val FULL_ID = "d0".repeat(32)
+private val MINIMAL_ID = "d1".repeat(32)
+private val BOT_ID = "d2".repeat(32)
 
 /**
  * Design-system preview for the kind-0 feed card, rendered by the REAL

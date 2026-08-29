@@ -94,6 +94,14 @@ private val AvatarRingWidth = 3.dp
 /** How far the avatar hangs below the banner, into the body of the card. */
 private val AvatarOverhang = 30.dp
 
+private val ChipShape = RoundedCornerShape(50)
+
+private val BannerModifier = Modifier.fillMaxWidth().height(BannerHeight)
+
+private val AvatarRingModifier = Modifier.size(AvatarSize + AvatarRingWidth * 2).clip(CircleShape)
+
+private val AvatarRowModifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).offset(y = AvatarOverhang)
+
 private val CardBodyPadding =
     Modifier.padding(
         start = 14.dp,
@@ -166,38 +174,26 @@ private fun ProfileCardHeader(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
 ) {
-    Box(Modifier.fillMaxWidth().height(BannerHeight)) {
-        BannerImage(banner, Modifier.fillMaxWidth().height(BannerHeight), accountViewModel)
+    val cardBackground = backgroundColor.value
 
-        // Fades the banner into the card so the avatar and the name below always
-        // have enough contrast, whatever the user uploaded.
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(BannerHeight)
-                .background(
-                    Brush.verticalGradient(
-                        0.35f to Color.Transparent,
-                        1f to backgroundColor.value,
-                    ),
-                ),
-        )
+    // Fades the banner into the card so the avatar and the name below always have
+    // enough contrast, whatever the user uploaded.
+    val scrim =
+        remember(cardBackground) {
+            Brush.verticalGradient(0.35f to Color.Transparent, 1f to cardBackground)
+        }
+
+    Box(BannerModifier) {
+        BannerImage(banner, BannerModifier, accountViewModel)
+
+        Box(BannerModifier.background(scrim))
 
         Row(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-                    .offset(y = AvatarOverhang),
+            modifier = AvatarRowModifier.align(Alignment.BottomStart),
             verticalAlignment = Alignment.Bottom,
         ) {
             Box(
-                modifier =
-                    Modifier
-                        .size(AvatarSize + AvatarRingWidth * 2)
-                        .clip(CircleShape)
-                        .background(backgroundColor.value),
+                modifier = AvatarRingModifier.background(cardBackground),
                 contentAlignment = Alignment.Center,
             ) {
                 BaseUserPicture(author, AvatarSize, accountViewModel)
@@ -231,7 +227,10 @@ private fun ProfileCardNames(
     metadata: UserMetadata?,
     tags: ImmutableListOfLists<String>?,
 ) {
-    val bestName = metadata?.bestName() ?: author.pubkeyDisplayHex()
+    // pubkeyDisplayHex() hex-decodes and bech32-encodes the key; keep it off the
+    // recomposition path.
+    val shortNpub = remember(author) { author.pubkeyDisplayHex() }
+    val bestName = metadata?.bestName() ?: shortNpub
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         CreateTextWithEmoji(
@@ -247,7 +246,7 @@ private fun ProfileCardNames(
         metadata?.pronouns?.ifBlank { null }?.let {
             Spacer(Modifier.size(Size5dp))
             Text(
-                text = "($it)",
+                text = remember(it) { "($it)" },
                 color = MaterialTheme.colorScheme.placeholderText,
                 fontSize = 14.sp,
                 maxLines = 1,
@@ -259,7 +258,7 @@ private fun ProfileCardNames(
     val handle = metadata?.name
     if (!handle.isNullOrBlank() && handle != bestName) {
         CreateTextWithEmoji(
-            text = "@$handle",
+            text = remember(handle) { "@$handle" },
             tags = tags,
             color = MaterialTheme.colorScheme.placeholderText,
             fontSize = 14.sp,
@@ -282,7 +281,9 @@ private fun ProfileCardChips(
     val lnAddress = metadata?.lnAddress()?.ifBlank { null }
     val isBot = metadata?.bot == true
 
-    val followsYou by observeUserIsFollowing(author, accountViewModel.account.userProfile(), accountViewModel)
+    // A self-follow in your own kind:3 is common; "Follows you" on your own card is not a fact.
+    val followsMe by observeUserIsFollowing(author, accountViewModel.account.userProfile(), accountViewModel)
+    val followsYou = followsMe && !accountViewModel.isLoggedUser(author)
     val followerCount by observeUserContactCardsFollowerCount(author, accountViewModel)
     // "--" is the placeholder the contact-card observer emits while no trusted
     // assertion for this user has arrived. Nothing to brag about yet.
@@ -298,7 +299,7 @@ private fun ProfileCardChips(
         if (followers != null) {
             ProfileCardChip(
                 symbol = MaterialSymbols.Groups,
-                label = stringRes(R.string.profile_card_followers, followers),
+                label = stringRes(R.string.number_followers, followers),
                 color = MaterialTheme.colorScheme.primary,
             )
         }
@@ -358,11 +359,13 @@ private fun ProfileCardChip(
     color: Color,
     onClick: (() -> Unit)? = null,
 ) {
+    // Clip before clickable: Surface applies the passed-in modifier above its own
+    // shape clip, so an unclipped ripple would paint a square over the pill.
     Surface(
-        shape = RoundedCornerShape(50),
+        shape = ChipShape,
         color = color.copy(alpha = 0.10f),
         border = BorderStroke(1.dp, color.copy(alpha = 0.35f)),
-        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
+        modifier = if (onClick != null) Modifier.clip(ChipShape).clickable(onClick = onClick) else Modifier,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
