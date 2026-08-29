@@ -27,6 +27,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import com.vitorpamplona.amethyst.commons.R as CommonsR
 
 class AndroidResourceTableTest {
     @BeforeTest
@@ -124,6 +125,49 @@ class AndroidResourceTableTest {
                 AndroidResourceTable.getString(field.getInt(null)).startsWith("<missing")
             }
         assertTrue(unresolved.isEmpty(), "unresolved: ${unresolved.take(5).map { it.name }}")
+    }
+
+    @Test
+    fun `serves the commons res tree from the same table`() {
+        // :commons ships its own translated res/ and its own R, which the app
+        // references as CommonsR. Both are merged into one runtime lookup, so a
+        // missing table dir shows up as a blank label at runtime, not a build
+        // failure — hence this test.
+        assertEquals("Console", AndroidResourceTable.getString(CommonsR.string.browser_console_title_short))
+        assertEquals("Console (3)", AndroidResourceTable.getString(CommonsR.string.browser_console_title, 3))
+    }
+
+    @Test
+    fun `the two res trees cannot collide in the id space`() {
+        val shared =
+            R.string::class.java.declaredFields
+                .filter { it.type == Int::class.javaPrimitiveType && !it.isSynthetic && !it.name.startsWith("$") }
+                .map {
+                    it.isAccessible = true
+                    it.getInt(null)
+                }.toSet()
+        val commons =
+            CommonsR.string::class.java.declaredFields
+                .filter { it.type == Int::class.javaPrimitiveType && !it.isSynthetic && !it.name.startsWith("$") }
+                .map {
+                    it.isAccessible = true
+                    it.getInt(null)
+                }.toSet()
+
+        assertTrue(commons.isNotEmpty())
+        assertTrue(shared.intersect(commons).isEmpty(), "the package byte stopped separating the two id spaces")
+    }
+
+    @Test
+    fun `every commons string id resolves`() {
+        val unresolved =
+            CommonsR.string::class.java.declaredFields
+                .filter { it.type == Int::class.javaPrimitiveType && !it.isSynthetic && !it.name.startsWith("$") }
+                .filter { field ->
+                    field.isAccessible = true
+                    AndroidResourceTable.getString(field.getInt(null)).startsWith("<missing")
+                }
+        assertTrue(unresolved.isEmpty(), "unresolved: ${unresolved.map { it.name }}")
     }
 
     @Test

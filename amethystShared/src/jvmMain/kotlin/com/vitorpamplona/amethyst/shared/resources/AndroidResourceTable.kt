@@ -37,7 +37,12 @@ import java.util.concurrent.ConcurrentHashMap
  * rather than by a hand-maintained table of language rules.
  */
 object AndroidResourceTable {
-    private const val TABLE_DIR = "amethyst-res"
+    /**
+     * One table dir per generated `R`: the app's own resources and :commons's.
+     * Their ids come from disjoint package bytes, so a merged lookup cannot
+     * collide and a call site does not need to know which tree a string is in.
+     */
+    private val TABLE_DIRS = listOf("amethyst-res", "amethyst-commons-res")
     private const val DEFAULT_QUALIFIER = "default"
 
     /** Parsed `<qualifier>.tsv` files, keyed by qualifier. Loaded on demand. */
@@ -71,11 +76,15 @@ object AndroidResourceTable {
 
     /** The qualifiers this build actually ships, for diagnostics and pickers. */
     fun availableQualifiers(): List<String> =
-        readResource("$TABLE_DIR/qualifiers.txt")
-            ?.lineSequence()
-            ?.filter { it.isNotBlank() }
-            ?.toList()
-            .orEmpty()
+        TABLE_DIRS
+            .flatMap { dir ->
+                readResource("$dir/qualifiers.txt")
+                    ?.lineSequence()
+                    ?.filter { it.isNotBlank() }
+                    ?.toList()
+                    .orEmpty()
+            }.distinct()
+            .sorted()
 
     fun getString(id: Int): String = lookupString(id) ?: missing("string", id)
 
@@ -154,26 +163,32 @@ object AndroidResourceTable {
     }
 
     private fun loadTable(qualifier: String): Table {
-        val text = readResource("$TABLE_DIR/$qualifier.tsv") ?: return Table.EMPTY
         val strings = HashMap<Int, String>()
         val plurals = HashMap<Int, MutableMap<String, String>>()
-        text.lineSequence().forEach { line ->
-            if (line.isEmpty()) return@forEach
-            val parts = line.split('\t')
-            when (parts.getOrNull(0)) {
-                "s" ->
-                    if (parts.size >= 3) {
-                        parts[1].toIntOrNull()?.let { strings[it] = decode(parts[2]) }
-                    }
-                "p" ->
-                    if (parts.size >= 4) {
-                        parts[1].toIntOrNull()?.let { id ->
-                            plurals.getOrPut(id) { HashMap() }[parts[2]] = decode(parts[3])
+        var found = false
+
+        TABLE_DIRS.forEach { dir ->
+            val text = readResource("$dir/$qualifier.tsv") ?: return@forEach
+            found = true
+            text.lineSequence().forEach { line ->
+                if (line.isEmpty()) return@forEach
+                val parts = line.split('\t')
+                when (parts.getOrNull(0)) {
+                    "s" ->
+                        if (parts.size >= 3) {
+                            parts[1].toIntOrNull()?.let { strings[it] = decode(parts[2]) }
                         }
-                    }
+                    "p" ->
+                        if (parts.size >= 4) {
+                            parts[1].toIntOrNull()?.let { id ->
+                                plurals.getOrPut(id) { HashMap() }[parts[2]] = decode(parts[3])
+                            }
+                        }
+                }
             }
         }
-        return Table(strings, plurals)
+
+        return if (found) Table(strings, plurals) else Table.EMPTY
     }
 
     private fun readResource(path: String): String? =
