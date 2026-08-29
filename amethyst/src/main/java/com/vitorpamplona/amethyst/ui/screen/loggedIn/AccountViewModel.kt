@@ -1636,6 +1636,14 @@ class AccountViewModel(
     suspend fun reportSignerErrors(action: suspend () -> Unit) {
         try {
             action()
+        } catch (e: CancellationException) {
+            // MUST stay ahead of the IllegalStateException arm below: java.util.concurrent
+            // .CancellationException extends IllegalStateException, so without this every cancelled
+            // signer coroutine — a superseded debounce, a scope torn down mid-sign — would be
+            // swallowed there and shown to the user as a "signer" toast reading
+            // "JobCancellationException: StandaloneCoroutine was cancelled". Cancellation is not a
+            // signer failure and must propagate for structured concurrency to work.
+            throw e
         } catch (_: SignerExceptions.ReadOnlyException) {
             toastManager.toast(
                 R.string.read_only_user,
