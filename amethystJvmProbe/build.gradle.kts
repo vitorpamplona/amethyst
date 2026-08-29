@@ -36,7 +36,7 @@ sourceSets {
 
 dependencies {
     compileOnly(project(":androidStubs"))
-    implementation(project(":composeStubs"))
+    implementation(project(":androidxStubs"))
     implementation(project(":quartz"))
     implementation(project(":commons"))
     implementation(project(":amethystShared"))
@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.markdown.ui.material3)
     implementation(libs.markdown.commonmark)
     implementation(libs.highlights)
+    // DataStore is multiplatform from 1.1; the app needs no stub for it, just the artifact.
+    implementation(libs.androidx.datastore.preferences)
 }
 
 /**
