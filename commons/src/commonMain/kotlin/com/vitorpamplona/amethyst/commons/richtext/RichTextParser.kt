@@ -261,13 +261,26 @@ class RichTextParser {
 
             // split() behaves like `line.split(' ')`, but keeps math spans
             // (`$...$`, `$$...$$`) whole instead of tearing them at internal spaces.
-            val segments =
-                MathParser.split(paragraph.trimEnd()).map { token ->
-                    when (token) {
-                        is MathParser.Token.Math -> MathSegment(token.raw, token.latex, token.displayMode, token.leading, token.trailing)
-                        is MathParser.Token.Word -> wordIdentifier(token.text, images, videos, pdfs, urls, emojis, tags)
+            val tokens = MathParser.split(paragraph.trimEnd())
+            val segments = ArrayList<Segment>(tokens.size)
+
+            tokens.forEach { token ->
+                when (token) {
+                    is MathParser.Token.Math -> segments.add(MathSegment(token.raw, token.latex, token.displayMode, token.leading, token.trailing))
+                    is MathParser.Token.Word -> {
+                        // An opening bracket or quote glued to the front of a NIP-19 entity becomes
+                        // its own word, so wordIdentifier can still see the scheme. See
+                        // [nip19OpeningPunctuationLength].
+                        val prefixLength = nip19OpeningPunctuationLength(token.text)
+                        if (prefixLength > 0) {
+                            segments.add(RegularTextSegment(token.text.substring(0, prefixLength)))
+                            segments.add(wordIdentifier(token.text.substring(prefixLength), images, videos, pdfs, urls, emojis, tags))
+                        } else {
+                            segments.add(wordIdentifier(token.text, images, videos, pdfs, urls, emojis, tags))
+                        }
                     }
                 }
+            }
 
             paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
         }
@@ -614,19 +627,53 @@ class RichTextParser {
             }
         }
 
-        fun startsWithNIP19Scheme(word: String): Boolean {
-            if (word.isEmpty()) return false
-            return if (word[0] == 'n' || word[0] == 'N') {
-                if (word.startsWith("nostr:n") || word.startsWith("NOSTR:N")) {
-                    acceptedNIP19schemes.any { word.startsWith(it, 6) }
+        fun startsWithNIP19Scheme(
+            word: String,
+            from: Int = 0,
+        ): Boolean {
+            if (from >= word.length) return false
+            val first = word[from]
+            return if (first == 'n' || first == 'N') {
+                if (word.startsWith("nostr:n", from) || word.startsWith("NOSTR:N", from)) {
+                    acceptedNIP19schemes.any { word.startsWith(it, from + 6) }
                 } else {
-                    acceptedNIP19schemes.any { word.startsWith(it) }
+                    acceptedNIP19schemes.any { word.startsWith(it, from) }
                 }
-            } else if (word[0] == '@') {
-                acceptedNIP19schemes.any { word.startsWith(it, 1) }
+            } else if (first == '@') {
+                acceptedNIP19schemes.any { word.startsWith(it, from + 1) }
             } else {
                 false
             }
+        }
+
+        /**
+         * Brackets and quotes that may open a NIP-19 entity. Only characters that can never be part
+         * of an entity and that a writer would plausibly wrap one in — no trailing punctuation
+         * (that is the entity's `additionalChars`) and no markdown emphasis markers.
+         */
+        private val nip19OpeningPunctuation = charArrayOf('(', '[', '{', '<', '"', '\'', '\u00AB', '\u2039', '\u201C', '\u201E', '\u2018', '\u201A')
+
+        /**
+         * How many leading bracket/quote characters of [word] hide a NIP-19 entity behind them, or
+         * 0 when the word neither starts with such punctuation nor holds an entity right after it.
+         *
+         * [wordIdentifier] can only classify a word by its first character, so `(@npub1...)` and
+         * `"npub1..."` fell through to plain text: the leading `(`/`"` hides the scheme from
+         * [startsWithNIP19Scheme]. Splitting the punctuation into its own word restores it.
+         * Trailing punctuation needs no such help — it is captured as the entity's
+         * `additionalChars` downstream.
+         *
+         * The `nostr:`-prefixed spelling already behaves this way for free: the URL detector finds
+         * the URI inside the parentheses and [fixMissingSpaces] separates it. Bare
+         * `npub1...`/`@npub1...` are not URIs, so nothing splits them; this does.
+         */
+        fun nip19OpeningPunctuationLength(word: String): Int {
+            if (word.isEmpty() || word[0] !in nip19OpeningPunctuation) return 0
+
+            var i = 1
+            while (i < word.length && word[i] in nip19OpeningPunctuation) i++
+
+            return if (startsWithNIP19Scheme(word, i)) i else 0
         }
 
         fun isUrlWithoutScheme(url: String) = noProtocolUrlValidator.matches(url)
