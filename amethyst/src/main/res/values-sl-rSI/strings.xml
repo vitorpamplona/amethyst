@@ -4727,6 +4727,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="relay_members_removed">%1$d članov odstranjenih iz releja</string>
     <string name="relay_join_request">Prošnja za dostop do releja</string>
     <string name="relay_leave_request">Prošnja za izstop z releja</string>
+    <string name="ai_writing_help">Pomoč za pisanje z umetno inteligenco</string>
+    <string name="ai_writing_setting_title">Predlagaj tekstovne izboljšave</string>
+    <string name="ai_writing_setting_description">Uporablja model umetne inteligence v napravi za predloge popravkov besedila in spremembe tona.</string>
     <string name="tracked_broadcasts_setting_title">Sledeni prenosi</string>
     <string name="tracked_broadcasts_setting_description">Pri pošiljanju dogodkov uporabi sledilnik oddajanja. V živo prikazuje napredek in stanje posameznih relejev med oddajanjem.</string>
     <string name="suggest_workouts_setting_title">Predlagaj vadbo za deljenje</string>
@@ -4839,6 +4842,17 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="pow_publish_failed_retry">Vaš %1$s je končal z rudarjenjem, vendar ga ni bilo mogoče objaviti. Ponovni poskus bo izveden ob naslednjem zagonu aplikacije.</string>
     <string name="pow_kind_chat_message">Sporočilo klepeta</string>
     <string name="pow_kind_report">Prijavi</string>
+    <string name="ai_writing_use_this">Uporabi to</string>
+    <string name="ai_writing_dismiss">Prekliči</string>
+    <string name="ai_tone_correct">Pravilno</string>
+    <string name="ai_tone_rephrase">Izrazi drugače</string>
+    <string name="ai_tone_shorter">Krajše</string>
+    <string name="ai_tone_elaborate">Razloži podrobneje</string>
+    <string name="ai_tone_friendly">Prijateljsko</string>
+    <string name="ai_tone_professional">Profesionalno</string>
+    <string name="ai_tone_more_direct">Boj direktno</string>
+    <string name="ai_tone_punchy">Udarno</string>
+    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji paketi</string>
     <string name="emoji_pack_management_title">Dodaj v seznam emojijev</string>

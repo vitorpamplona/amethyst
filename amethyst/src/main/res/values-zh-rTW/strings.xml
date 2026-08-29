@@ -2880,6 +2880,9 @@
     <string name="relay_members_removed">%1$d 位成員已從 relay 移除</string>
     <string name="relay_join_request">Relay 加入申請</string>
     <string name="relay_leave_request">Relay 退出申請</string>
+    <string name="ai_writing_help">AI 寫作輔助</string>
+    <string name="ai_writing_setting_title">建議文字改進</string>
+    <string name="ai_writing_setting_description">使用裝置上的 AI 模型提出文字修正和語氣變更建議。</string>
     <string name="tracked_broadcasts_setting_title">追蹤廣播</string>
     <string name="tracked_broadcasts_setting_description">傳送事件時使用追蹤廣播器。廣播時顯示即時進度和每個 relay 的狀態。</string>
     <string name="suggest_workouts_setting_title">建議分享運動紀錄</string>
@@ -2887,6 +2890,16 @@
     <string name="compose_settings">撰寫設定</string>
     <string name="auto_create_drafts_setting_title">自動建立草稿</string>
     <string name="auto_create_drafts_setting_description">當您輸入或離開含有未送出文字的撰寫器時，自動儲存草稿事件並傳送至您的私人發件箱 relay。</string>
+    <string name="ai_writing_use_this">使用此版本</string>
+    <string name="ai_writing_dismiss">關閉</string>
+    <string name="ai_tone_correct">修正</string>
+    <string name="ai_tone_rephrase">改寫</string>
+    <string name="ai_tone_shorter">縮短</string>
+    <string name="ai_tone_elaborate">詳述</string>
+    <string name="ai_tone_friendly">友善</string>
+    <string name="ai_tone_professional">專業</string>
+    <string name="ai_tone_more_direct">更直接</string>
+    <string name="ai_tone_punchy">有力</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji 包</string>
     <string name="emoji_pack_management_title">新增至 Emoji 清單</string>

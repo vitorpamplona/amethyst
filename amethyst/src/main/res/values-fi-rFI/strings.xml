@@ -2893,6 +2893,9 @@
     <string name="relay_members_removed">%1$d jäsentä poistettu relaylta</string>
     <string name="relay_join_request">Relayn liittymispyyntö</string>
     <string name="relay_leave_request">Relayn poistumispyyntö</string>
+    <string name="ai_writing_help">Tekoälyn kirjoitusapu</string>
+    <string name="ai_writing_setting_title">Ehdota tekstiparannuksia</string>
+    <string name="ai_writing_setting_description">Käyttää laitteen tekoälymallia ehdottamaan tekstikorjauksia ja sävymuutoksia.</string>
     <string name="tracked_broadcasts_setting_title">Seuratut lähetykset</string>
     <string name="tracked_broadcasts_setting_description">Käytä seurattua lähetintä tapahtumien lähettämiseen. Näyttää reaaliaikaiset edistymistiedot ja relay-kohtaisen tilan lähetyksen aikana.</string>
     <string name="suggest_workouts_setting_title">Ehdota treenejä jaettavaksi</string>
@@ -2900,6 +2903,16 @@
     <string name="compose_settings">Kirjoitusasetukset</string>
     <string name="auto_create_drafts_setting_title">Luo luonnokset automaattisesti</string>
     <string name="auto_create_drafts_setting_description">Tallentaa luonnoksen automaattisesti, kun kirjoitat tai poistut kirjoitusnäkymästä lähettämättömällä tekstillä, ja lähettää sen yksityisiin lähteviin relayihisi.</string>
+    <string name="ai_writing_use_this">Käytä tätä</string>
+    <string name="ai_writing_dismiss">Hylkää</string>
+    <string name="ai_tone_correct">Korjaa</string>
+    <string name="ai_tone_rephrase">Muotoile uudelleen</string>
+    <string name="ai_tone_shorter">Lyhyempi</string>
+    <string name="ai_tone_elaborate">Laajenna</string>
+    <string name="ai_tone_friendly">Ystävällinen</string>
+    <string name="ai_tone_professional">Ammattimainen</string>
+    <string name="ai_tone_more_direct">Suorempi</string>
+    <string name="ai_tone_punchy">Napakka</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-paketit</string>
     <string name="emoji_pack_management_title">Lisää emoji-listaan</string>

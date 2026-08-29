@@ -4540,6 +4540,9 @@
     <string name="relay_members_removed">%1$d सदस्य हटाए गए पुनःप्रसारक से</string>
     <string name="relay_join_request">पुनःप्रसारक से जुडने का अनुरोध</string>
     <string name="relay_leave_request">पुनःप्रसारक से चले जाने का अनुरोध</string>
+    <string name="ai_writing_help">एआई॰ लेखन सहायता</string>
+    <string name="ai_writing_setting_title">लेख शोधन प्रस्ताव करें</string>
+    <string name="ai_writing_setting_description">यन्त्र स्थित एआई॰ प्रतिरूप का प्रयोग करता है लेख सुधार तथा स्वर परिवर्तन प्रस्तावों के लिए।</string>
     <string name="tracked_broadcasts_setting_title">पदचिह्न युक्त प्रसारण</string>
     <string name="tracked_broadcasts_setting_description">पदचिह्न युक्त प्रसारक का उपयोग करें घटनाओं को भेजते समय। वर्तमान प्रगति दिखाता है तथा प्रत्येक पुनःप्रसारक की स्थिति प्रसारण करते समय।</string>
     <string name="suggest_workouts_setting_title">व्यायामों का सुझाव बाँटनें के लिए</string>
@@ -4634,6 +4637,17 @@
     <string name="pow_publish_failed_retry">आपका %1$s खनन समाप्त हुआ पर प्रकाशित नहीं हो सका। अगली बार क्रमक आरम्भ होने पर इसका पुनःप्रयास किया जाएगा।</string>
     <string name="pow_kind_chat_message">चर्चा सन्देश</string>
     <string name="pow_kind_report">वृत्तान्त</string>
+    <string name="ai_writing_use_this">इसका प्रयोग करें</string>
+    <string name="ai_writing_dismiss">हटाएँ</string>
+    <string name="ai_tone_correct">सम्यक</string>
+    <string name="ai_tone_rephrase">वाक्याम्श पुनः लिखें</string>
+    <string name="ai_tone_shorter">सूक्ष्मतर</string>
+    <string name="ai_tone_elaborate">विस्तार</string>
+    <string name="ai_tone_friendly">मित्रतापूर्ण</string>
+    <string name="ai_tone_professional">व्यावसायिक</string>
+    <string name="ai_tone_more_direct">अधिक सीधा</string>
+    <string name="ai_tone_punchy">आघाती</string>
+    <string name="ai_tone_emojify">भावचिह्न युक्त</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">भावचिह्न पोटलियाँ</string>
     <string name="emoji_pack_management_title">भावचिह्न सूची में जोडें</string>
