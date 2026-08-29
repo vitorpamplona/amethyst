@@ -39,9 +39,18 @@ val readinessEnabled = providers.gradleProperty("amethyst.jvmReadiness").isPrese
 
 sourceSets {
     main {
+        // The desktop build corresponds to the `fdroid` flavor: no Play
+        // Services, no Google Cast, no ML Kit. Its sources are compiled
+        // alongside main because several main files call into them
+        // (TranslatableRichTextViewer and the notification distributor live
+        // only in a flavor), and leaving them out reports flavor-only symbols
+        // as if they were platform gaps.
         kotlin.setSrcDirs(
             if (readinessEnabled) {
-                listOf(rootProject.layout.projectDirectory.dir("amethyst/src/main/java"))
+                listOf(
+                    rootProject.layout.projectDirectory.dir("amethyst/src/main/java"),
+                    rootProject.layout.projectDirectory.dir("amethyst/src/fdroid/java"),
+                )
             } else {
                 emptyList<Any>()
             },
@@ -101,7 +110,11 @@ val jvmReadiness by tasks.registering {
 
     val logFile = layout.buildDirectory.file("reports/jvm-readiness.log")
     val reportFile = layout.buildDirectory.file("reports/jvm-readiness.txt")
-    val sourceRoot = rootProject.layout.projectDirectory.dir("amethyst/src/main/java")
+    val sourceRoots =
+        listOf(
+            rootProject.layout.projectDirectory.dir("amethyst/src/main/java"),
+            rootProject.layout.projectDirectory.dir("amethyst/src/fdroid/java"),
+        )
     val launcher = rootProject.file("gradlew")
     val rootDir = rootProject.projectDir
     outputs.upToDateWhen { false }
@@ -126,7 +139,7 @@ val jvmReadiness by tasks.registering {
         val text = log.readText()
         val matches = Regex("""^e: file://(\S+?):(\d+):(\d+) (.*)$""", RegexOption.MULTILINE).findAll(text).toList()
         val unresolvedRe = Regex("""Unresolved reference '([^']+)'""")
-        val total = sourceRoot.asFile.walkTopDown().count { it.isFile && it.extension == "kt" }
+        val total = sourceRoots.sumOf { root -> root.asFile.walkTopDown().count { it.isFile && it.extension == "kt" } }
         val broken = matches.mapTo(HashSet()) { it.groupValues[1] }.size
         val unresolved =
             matches
@@ -152,7 +165,7 @@ val jvmReadiness by tasks.registering {
 
         val report =
             buildString {
-                appendLine("JVM readiness of amethyst/src/main/java")
+                appendLine("JVM readiness of amethyst (main + fdroid flavor)")
                 appendLine("=".repeat(52))
                 appendLine("files compiling clean : ${total - broken} / $total (${if (total == 0) 0 else (total - broken) * 100 / total}%)")
                 appendLine("files with errors     : $broken")
