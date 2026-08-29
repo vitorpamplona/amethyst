@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSectionId
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerSections
 import com.vitorpamplona.amethyst.ui.navigation.drawer.MandatoryDrawerItems
 import com.vitorpamplona.amethyst.ui.navigation.drawer.SdkGatedDrawerItems
+import com.vitorpamplona.amethyst.ui.navigation.drawer.drawerSectionIdsFromNames
+import com.vitorpamplona.amethyst.ui.navigation.drawer.toNames
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -103,6 +105,26 @@ class DrawerSectionsTest {
                 "give it items, set hasFixedRows and a branch in CatalogSection, or delete it",
             emptyList<Any>(),
             unreachable.map { it.id },
+        )
+    }
+
+    @Test
+    fun everySectionSurvivesTheCollapsedHeadingNameRoundTrip() {
+        // The collapsed-heading preference stores DrawerSectionIds by name, and CollapsibleSection is
+        // driven purely by that id — so a heading whose name didn't round trip would collapse on tap
+        // and spring open again on the next launch, with nothing failing anywhere in between.
+        val all = DrawerSections.map { it.id }.toSet()
+
+        assertEquals(all, drawerSectionIdsFromNames(all.toNames()))
+    }
+
+    @Test
+    fun aCollapsedHeadingNameFromAnotherBuildIsDroppedInsteadOfFailingTheWholeRead() {
+        // Stored as names precisely for this: a section that exists in a newer build (or one deleted
+        // since) must cost that one heading, not every other heading the user collapsed.
+        assertEquals(
+            setOf(DrawerSectionId.FEEDS),
+            drawerSectionIdsFromNames(setOf("FEEDS", "SOME_SECTION_FROM_THE_FUTURE")),
         )
     }
 

@@ -50,11 +50,13 @@ import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.preferences.BuzzAttestationPreferences
 import com.vitorpamplona.amethyst.model.preferences.BuzzChannelStarPreferences
 import com.vitorpamplona.amethyst.model.preferences.BuzzWorkspacePreferences
+import com.vitorpamplona.amethyst.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.RelayGroupDeletionPreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
+import com.vitorpamplona.amethyst.model.preferences.sharedPreferencesDataStore
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
@@ -303,6 +305,11 @@ class AppModules(
     // deleted channel stays hidden across a restart even if the host relay re-announces a stale
     // kind-44100 for it (device-global; a delete is authoritative and terminal for everyone).
     val relayGroupDeletionPrefs = RelayGroupDeletionPreferences(appContext, applicationIOScope)
+
+    // Restore + persist which drawer section headings the user has folded away, so the side menu
+    // opens the way they left it (device-global: a collapsed heading is a per-device view choice,
+    // not an account setting worth syncing, unlike the hidden rows beside it in the drawer).
+    val drawerSectionCollapsePrefs = DrawerSectionCollapsePreferences(appContext.sharedPreferencesDataStore, applicationIOScope)
 
     // Service that will run at all times to receive events from Pokey
     val pokeyReceiver = PokeyReceiver()
