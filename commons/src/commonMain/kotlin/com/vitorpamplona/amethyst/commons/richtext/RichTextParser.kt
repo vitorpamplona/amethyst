@@ -676,7 +676,7 @@ class RichTextParser {
          * the URI inside the parentheses and [fixMissingSpaces] separates it. Bare
          * `npub1...`/`@npub1...` are not URIs, so nothing splits them; this does.
          */
-        fun nip19OpeningPunctuationLength(word: String): Int {
+        private fun nip19OpeningPunctuationLength(word: String): Int {
             if (word.isEmpty() || !isNip19OpeningPunctuation(word[0])) return 0
 
             var i = 1
