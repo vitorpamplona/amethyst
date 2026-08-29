@@ -19,6 +19,13 @@ public class PackageManager {
     public static final int GET_META_DATA = 0x00000080;
     public static final int MATCH_DEFAULT_ONLY = 0x00010000;
 
+    public static final String FEATURE_PICTURE_IN_PICTURE = "android.software.picture_in_picture";
+    public static final String FEATURE_CAMERA = "android.hardware.camera";
+    public static final String FEATURE_CAMERA_ANY = "android.hardware.camera.any";
+    public static final String FEATURE_MICROPHONE = "android.hardware.microphone";
+    public static final String FEATURE_LOCATION = "android.hardware.location";
+    public static final String FEATURE_TELEPHONY = "android.hardware.telephony";
+
     public static final PackageManager EMPTY = new PackageManager();
 
     public List<ResolveInfo> queryIntentActivities(Intent intent, int flags) {

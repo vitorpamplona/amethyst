@@ -76,6 +76,8 @@ Worth recording so nobody re-litigates them as gaps:
 | `MediaRecorder` | `javax.sound.sampled` capture, with a real live amplitude for the waveform |
 | `MediaPlayer` | `javax.sound.sampled` for what the JDK decodes, the desktop media backend for the rest |
 | `compose-audiowaveform` | reimplemented in `:commons` — the app already drew its own waveform and needed only three primitives from it |
+| `AlarmManager` | a daemon timer that really sends the PendingIntent |
+| `PendingIntent` | a registry with the platform's identity rules, so `cancel` reaches what `schedule` created |
 
 WorkManager is worth a note because it is where a stub would have been most
 expensive: scheduled posts and calendar reminders are the whole feature, and a
@@ -104,6 +106,20 @@ firing a toast per progress tick. Action buttons do not survive: a click
 deep-links instead. `RemoteInput`'s intent plumbing is implemented exactly, so a
 presenter that *can* collect text — a reply window, or a platform with inline
 replies — needs no change downstream.
+
+`AlarmManager` is worth a note for the bug it was hiding rather than the timer
+it gained. The watchdog schedules an alarm with one `PendingIntent` and cancels
+it with another, built from scratch — which works on Android because two
+intents with the same kind, request code and target *are* the same token. A
+stub handing back a fresh object each time makes every `cancel` a silent no-op,
+and `FLAG_NO_CREATE` returning non-null makes the caller cancel a token it
+never set. So `PendingIntent` now keeps a registry with the platform's matching
+rules (action, data, type, component, categories — not extras) and the flags
+that depend on it, and the alarm itself fires on a daemon timer. The one real
+difference is the same as WorkManager's: Android's alarm can start a stopped
+app, and no desktop OS offers that — which for a watchdog over an in-process
+service is the lifetime that matters anyway, since the thing it watches is gone
+too.
 
 Voice messages needed the microphone, which is not an Android-only capability:
 `MediaRecorder` opens a `TargetDataLine`, and `getMaxAmplitude` is computed from

@@ -115,6 +115,19 @@ public class Intent {
 
     public Intent putExtra(String name, String[] value) { extras.putStringArray(name, value); return this; }
 
+    public Intent putExtra(String name, float value) { extras.putFloat(name, value); return this; }
+
+    public Intent putExtra(String name, double value) { extras.putDouble(name, value); return this; }
+
+    public Intent putExtra(String name, float[] value) { extras.putFloatArray(name, value); return this; }
+
+    public Intent putExtra(String name, int[] value) { extras.putIntArray(name, value); return this; }
+
+    public Intent putStringArrayListExtra(String name, java.util.ArrayList<String> value) {
+        extras.putStringArrayList(name, value);
+        return this;
+    }
+
     public Intent putExtra(String name, Bundle value) { extras.putBundle(name, value); return this; }
 
     public Intent putExtra(String name, android.net.Uri value) { extras.putObject(name, value); return this; }
@@ -145,6 +158,16 @@ public class Intent {
     public boolean getBooleanExtra(String name, boolean defaultValue) { return extras.getBoolean(name, defaultValue); }
 
     public String[] getStringArrayExtra(String name) { return extras.getStringArray(name); }
+
+    public float getFloatExtra(String name, float defaultValue) { return extras.getFloat(name, defaultValue); }
+
+    public double getDoubleExtra(String name, double defaultValue) { return extras.getDouble(name, defaultValue); }
+
+    public float[] getFloatArrayExtra(String name) { return extras.getFloatArray(name); }
+
+    public int[] getIntArrayExtra(String name) { return extras.getIntArray(name); }
+
+    public java.util.ArrayList<String> getStringArrayListExtra(String name) { return extras.getStringArrayList(name); }
 
     public Bundle getBundleExtra(String name) { return extras.getBundle(name); }
 

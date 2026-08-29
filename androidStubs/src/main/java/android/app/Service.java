@@ -32,6 +32,14 @@ public abstract class Service extends DelegatingContext {
 
     public void onDestroy() {}
 
+    /**
+     * Android calls this when the user swipes the app off the recents list.
+     * A desktop app closing its window is the nearest thing, and nothing calls
+     * it here, so it exists for the overrides in shared code to compile and
+     * keep documenting the Android path.
+     */
+    public void onTaskRemoved(Intent rootIntent) {}
+
     public void stopSelf() {}
 
     /**

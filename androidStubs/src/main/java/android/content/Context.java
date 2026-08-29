@@ -49,6 +49,8 @@ public abstract class Context {
     public static final String ACTIVITY_SERVICE = "activity";
     public static final String INPUT_METHOD_SERVICE = "input_method";
     public static final String WINDOW_SERVICE = "window";
+    public static final String ALARM_SERVICE = "alarm";
+    public static final String APP_OPS_SERVICE = "appops";
 
     public static final int MODE_PRIVATE = 0;
     public static final int MODE_APPEND = 0x8000;
@@ -142,6 +144,10 @@ public abstract class Context {
                 return SERVICES.computeIfAbsent(name, key -> new android.app.NotificationManager());
             case AUDIO_SERVICE:
                 return SERVICES.computeIfAbsent(name, key -> new android.media.AudioManager());
+            case ALARM_SERVICE:
+                return SERVICES.computeIfAbsent(name, key -> new android.app.AlarmManager());
+            case APP_OPS_SERVICE:
+                return SERVICES.computeIfAbsent(name, key -> new android.app.AppOpsManager());
             default:
                 return null;
         }
@@ -159,6 +165,8 @@ public abstract class Context {
         if (serviceClass == android.net.ConnectivityManager.class) return CONNECTIVITY_SERVICE;
         if (serviceClass == android.app.NotificationManager.class) return NOTIFICATION_SERVICE;
         if (serviceClass == android.media.AudioManager.class) return AUDIO_SERVICE;
+        if (serviceClass == android.app.AlarmManager.class) return ALARM_SERVICE;
+        if (serviceClass == android.app.AppOpsManager.class) return APP_OPS_SERVICE;
         return null;
     }
 
