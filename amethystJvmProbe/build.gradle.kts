@@ -82,6 +82,9 @@ dependencies {
     implementation(libs.highlights)
     // DataStore is multiplatform from 1.1; the app needs no stub for it, just the artifact.
     implementation(libs.androidx.datastore.preferences)
+    // AndroidX Navigation ships Android-only; JetBrains publishes the same
+    // androidx.navigation.* API for JVM. Apache-2.0.
+    implementation(libs.jetbrains.navigation.compose)
 }
 
 /**

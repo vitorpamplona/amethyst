@@ -54,6 +54,9 @@ kotlinx-coroutines-test = "1.11.0"
 negentropyKmp = "v1.2.0"
 netUrlencoderLibVersion = "1.6.0"
 navigationCompose = "2.9.8"
+# JetBrains' multiplatform build of AndroidX Navigation. Same androidx.navigation.*
+# API, published for JVM/desktop; Apache-2.0 (verified from its POM).
+jetbrainsNavigationCompose = "2.9.2"
 okhttp = "5.5.0"
 osmdroid = "6.1.20"
 runner = "1.7.0"
@@ -146,6 +149,7 @@ androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exop
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 androidx-media3-ui-compose-material3 = { group = "androidx.media3", name = "media3-ui-compose-material3", version.ref = "media3" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+jetbrains-navigation-compose = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "jetbrainsNavigationCompose" }
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
 androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 androidx-security-crypto-ktx = { group = "androidx.security", name = "security-crypto-ktx", version.ref = "securityCryptoKtx" }
