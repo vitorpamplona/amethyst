@@ -137,6 +137,11 @@ internal object RoomParticipantActions {
         // Creating a room then immediately promoting in the same wall-clock
         // second produced the dreaded silent-no-op: both versions carried the
         // same createdAt and the tie-break picked one at random.
+        //
+        // The out-stamping form rather than awaitCreatedAtToSupersede: this is
+        // reached from non-suspending Compose click handlers, and the stamp is
+        // derived from the one event being acted on, so it runs at most a second
+        // ahead of the clock and cannot drift the way a repeated republish does.
         val nextCreatedAt = nextCreatedAtToSupersede(original.createdAt, TimeUtils.now())
 
         return MeetingSpaceEvent.build(

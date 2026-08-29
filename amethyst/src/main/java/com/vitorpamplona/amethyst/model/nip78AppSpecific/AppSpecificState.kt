@@ -25,11 +25,10 @@ import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
-import com.vitorpamplona.quartz.nip01Core.core.nextCreatedAtToSupersede
+import com.vitorpamplona.quartz.nip01Core.core.awaitCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -75,11 +74,7 @@ class AppSpecificState(
         val (toInternal, createdAt) =
             stampOrder.withLock {
                 val snapshot = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
-                val stamp =
-                    nextCreatedAtToSupersede(
-                        newestKnown = maxOf(lastPublishedAt, amethystSettingsNote.event?.createdAt ?: 0L),
-                        now = TimeUtils.now(),
-                    )
+                val stamp = awaitCreatedAtToSupersede(maxOf(lastPublishedAt, amethystSettingsNote.event?.createdAt ?: 0L))
                 lastPublishedAt = stamp
                 snapshot to stamp
             }

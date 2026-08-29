@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.nextCreatedAtToSupersede
+import com.vitorpamplona.quartz.nip01Core.core.awaitCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.tags.RecommendationTag
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -85,11 +84,16 @@ class AppRecommendationsState(
      */
     private val publishMutex = Mutex()
 
-    /** The createdAt this d-tag's next version needs to supersede whatever is in cache for it. */
-    private fun nextCreatedAt(supportedKind: String): Long {
+    /**
+     * The createdAt this d-tag's next version needs to supersede whatever is in cache for it. Waits
+     * out the second rather than stamping the future, so repeatedly toggling one recommendation
+     * cannot drift its `created_at` ahead of the clock. Runs under [publishMutex], which is what
+     * keeps two waits from racing each other onto the same second.
+     */
+    private suspend fun nextCreatedAt(supportedKind: String): Long {
         val address = Address(AppRecommendationEvent.KIND, signer.pubKey, supportedKind)
         val latest = cache.getAddressableNoteIfExists(address)?.event?.createdAt ?: 0L
-        return nextCreatedAtToSupersede(latest, TimeUtils.now())
+        return awaitCreatedAtToSupersede(latest)
     }
 
     private fun currentRecommendations(supportedKind: String): List<RecommendationTag> {
