@@ -24,4 +24,9 @@ dependencies {
     compileOnly(project(":androidStubs"))
     api(project(":amethystShared"))
     implementation(compose.desktop.currentOs)
+
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
+
+tasks.withType<Test>().configureEach { useJUnitPlatform() }

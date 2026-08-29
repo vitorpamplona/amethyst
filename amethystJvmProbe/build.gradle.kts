@@ -55,6 +55,19 @@ sourceSets {
                 emptyList<Any>()
             },
         )
+        // The ExoPlayer engine layer is Android-only by construction: the
+        // player pool, the MediaSessionService, the disk cache and the
+        // websocket DataSource are all ExoPlayer internals with no desktop
+        // counterpart. Desktop replaces them wholesale with an engine
+        // installed through androidx.media3.common.VideoEngine, so they are
+        // excluded rather than stubbed. In the eventual module split these
+        // move to :amethystApp.
+        kotlin.exclude(
+            "**/service/playback/playerPool/**",
+            "**/service/playback/service/**",
+            "**/service/playback/diskCache/**",
+            "**/service/playback/websocket/**",
+        )
         resources.setSrcDirs(emptyList<String>())
     }
 }
@@ -115,6 +128,10 @@ val jvmReadiness by tasks.registering {
             rootProject.layout.projectDirectory.dir("amethyst/src/main/java"),
             rootProject.layout.projectDirectory.dir("amethyst/src/fdroid/java"),
         )
+    // Kept in step with the source set's excludes above. Counted separately
+    // rather than silently folded into "clean": a file that is not compiled
+    // has not been shown to compile.
+    val excludedDirs = listOf("/service/playback/playerPool/", "/service/playback/service/", "/service/playback/diskCache/", "/service/playback/websocket/")
     val launcher = rootProject.file("gradlew")
     val rootDir = rootProject.projectDir
     outputs.upToDateWhen { false }
@@ -139,7 +156,9 @@ val jvmReadiness by tasks.registering {
         val text = log.readText()
         val matches = Regex("""^e: file://(\S+?):(\d+):(\d+) (.*)$""", RegexOption.MULTILINE).findAll(text).toList()
         val unresolvedRe = Regex("""Unresolved reference '([^']+)'""")
-        val total = sourceRoots.sumOf { root -> root.asFile.walkTopDown().count { it.isFile && it.extension == "kt" } }
+        val allKt = sourceRoots.flatMap { root -> root.asFile.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList() }
+        val excluded = allKt.count { f -> excludedDirs.any { f.invariantSeparatorsPath.contains(it) } }
+        val total = allKt.size - excluded
         val broken = matches.mapTo(HashSet()) { it.groupValues[1] }.size
         val unresolved =
             matches
@@ -169,6 +188,7 @@ val jvmReadiness by tasks.registering {
                 appendLine("=".repeat(52))
                 appendLine("files compiling clean : ${total - broken} / $total (${if (total == 0) 0 else (total - broken) * 100 / total}%)")
                 appendLine("files with errors     : $broken")
+                appendLine("files excluded        : $excluded (Android-only ExoPlayer engine layer)")
                 appendLine("total errors          : ${matches.size}")
                 appendLine()
                 appendLine("Top unresolved symbols - each is one stub, shim or seam:")
