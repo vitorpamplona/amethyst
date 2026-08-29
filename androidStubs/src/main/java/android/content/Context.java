@@ -63,12 +63,23 @@ public abstract class Context {
         return null;
     }
 
-    /** Inert: activity dispatch is a platform concern handled at the call site. */
-    public void startActivity(Intent intent) {}
+    /**
+     * Carried out by {@link IntentDispatcher}: opening a link and sharing text
+     * both work on desktop, and anything it cannot do is reported as a platform
+     * gap rather than silently dropped.
+     */
+    public void startActivity(Intent intent) {
+        IntentDispatcher.dispatch(intent);
+    }
 
-    public void startActivity(Intent intent, android.os.Bundle options) {}
+    public void startActivity(Intent intent, android.os.Bundle options) {
+        IntentDispatcher.dispatch(intent);
+    }
 
-    public void sendBroadcast(Intent intent) {}
+    public void sendBroadcast(Intent intent) {
+        com.vitorpamplona.amethyst.stubs.PlatformGaps.report(
+                "Context.sendBroadcast", "desktop has no broadcast bus; action=" + intent.getAction());
+    }
 
     public int checkSelfPermission(String permission) {
         return android.content.pm.PackageManager.PERMISSION_DENIED;

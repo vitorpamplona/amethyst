@@ -42,6 +42,30 @@ Because Kotlin never runs a metadata compilation for a source set shared only
 among JVM-family targets (`compileJvmAndroidKotlinMetadata` is `SKIPPED`), there
 is no third classpath to reconcile.
 
+## The one rule that matters: never fail silently
+
+Every feature is meant to get a real desktop implementation eventually. That
+makes an inert stub the most expensive kind of placeholder: it compiles, runs,
+does nothing, and nobody finds out until a user reports a dead button. A stub
+that cannot do the thing must do one of these instead, never nothing:
+
+| situation | what the stub must do | example |
+|---|---|---|
+| the JVM can genuinely do it | **do it** | `Bitmap` is a `BufferedImage`; `Handler` posts to the AWT queue; `ACTION_VIEW` opens the browser |
+| a desktop app can do it, but this layer cannot | **expose an SPI** and let the app install it | `Toast.Presenter`, `NotificationManager.Presenter`, `MediaMetadataRetriever.Extractor`, `VideoEngine` |
+| nothing can do it yet | **report it** to `PlatformGaps` | `Context.sendBroadcast`, an Intent with no desktop meaning |
+| doing nothing would be *unsafe* | **throw** | `ExifInterface` — a no-op would make the caller report "metadata stripped" for a file that still carries GPS |
+
+`PlatformGaps.report(feature, detail)` writes each distinct gap to stderr once
+by default, so gaps show up during development before anyone wires a reporter.
+An app can replace the reporter to surface them in the UI, and `PlatformGaps.seen()`
+lists everything hit so far — useful for a diagnostics screen or a test that
+asserts a screen touches no gaps.
+
+Genuinely-nothing-to-do methods are fine and need no ceremony: base-class
+lifecycle hooks that are no-ops on Android too (`Activity.onCreate`), and
+configuration a desktop backend has no use for (`NotificationChannel.enableVibration`).
+
 ## Rules
 
 1. **Java, not Kotlin.** Kotlin sees Java members as platform types (`String!`),

@@ -212,8 +212,15 @@ are already the answer**. They are the JVM `actual`s, not throwaway.
 | Maps (osmdroid) | osmdroid | tile renderer or static map | new, degradable |
 | Health Connect · TTS · Cast · PIP · napplet WebView | native | — | **feature-gate off** |
 
-Add a capability registry (`Feature.HealthConnect.isAvailable`) so screens *hide*
-unsupported features rather than calling a `TODO()` actual and crashing.
+**Every one of these is meant to get a real desktop implementation eventually**,
+so none of them may be stubbed inert and forgotten. The rule, documented in full
+in `androidStubs/README.md`: a stub either does the thing (the JVM often can),
+exposes an SPI for the desktop app to implement, reports itself to
+`PlatformGaps`, or throws when silence would be unsafe. Never nothing.
+
+That reframes feature-gating: a gate is a *temporary state of an SPI that has no
+implementation yet*, not a decision to drop the feature. `PlatformGaps.seen()`
+is the running list of what is still missing, which is exactly the backlog.
 
 ---
 

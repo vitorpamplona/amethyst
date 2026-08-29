@@ -19,6 +19,8 @@ public class Intent {
     public static final String ACTION_SENDTO = "android.intent.action.SENDTO";
     public static final String ACTION_MAIN = "android.intent.action.MAIN";
     public static final String ACTION_GET_CONTENT = "android.intent.action.GET_CONTENT";
+    public static final String ACTION_DIAL = "android.intent.action.DIAL";
+    public static final String ACTION_INSERT = "android.intent.action.INSERT";
     public static final String ACTION_OPEN_DOCUMENT = "android.intent.action.OPEN_DOCUMENT";
     public static final String EXTRA_TEXT = "android.intent.extra.TEXT";
     public static final String EXTRA_SUBJECT = "android.intent.extra.SUBJECT";

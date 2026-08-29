@@ -40,7 +40,10 @@ public final class PendingIntent {
         return new PendingIntent(intent);
     }
 
-    public void send() {}
+    /** Fires the wrapped Intent, so a notification action is not a dead button. */
+    public void send() {
+        android.content.IntentDispatcher.dispatch(intent);
+    }
 
     public void cancel() {}
 }
