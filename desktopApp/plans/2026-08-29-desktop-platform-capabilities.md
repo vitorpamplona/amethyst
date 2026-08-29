@@ -81,6 +81,8 @@ Worth recording so nobody re-litigates them as gaps:
 | `coil-gif` | Skia's codec — same formats, first frame only until an animated image lands |
 | `coil-video` | Coil's own decoder shape over this platform's `MediaMetadataRetriever` |
 | `Image.asDrawable` / `Bitmap.asImage` | a Skia <-> `BufferedImage` conversion, un-premultiplied |
+| LightCompressor (upload re-encode) | the ffmpeg already bundled for video thumbnails, behind a shared seam |
+| `ContentResolver.query` | the file itself — name and size are facts a filesystem can answer |
 
 WorkManager is worth a note because it is where a stub would have been most
 expensive: scheduled posts and calendar reminders are the whole feature, and a

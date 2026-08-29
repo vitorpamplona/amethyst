@@ -72,41 +72,8 @@ object VideoThumbnailCache {
         base
     }
 
-    private val ffmpegBinary: String? by lazy {
-        // 1. System ffmpeg on PATH. Probe with `ffmpeg -version`; drain stdout
-        // so the child doesn't block on a full pipe, kill it if it overruns
-        // the probe budget so we don't leak the process when ffmpeg hangs.
-        val onPath =
-            runCatching {
-                val probe =
-                    ProcessBuilder("ffmpeg", "-version")
-                        .redirectErrorStream(true)
-                        .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                        .start()
-                val exited = probe.waitFor(2, TimeUnit.SECONDS)
-                if (!exited) {
-                    probe.destroyForcibly()
-                    return@runCatching false
-                }
-                probe.exitValue() == 0
-            }.getOrDefault(false)
-        if (onPath) return@lazy "ffmpeg"
-
-        // 2. Bundled ffmpeg under appResources/<os>/ffmpeg/.
-        // jpackage drops appResources at <app>/lib/app/resources/ — equivalently,
-        // we can read from the working dir layout under desktopApp/src/jvmMain/appResources
-        // during `./gradlew :desktopApp:run`. Look for it in well-known locations.
-        val osName = System.getProperty("os.name").lowercase()
-        val isWin = "win" in osName
-        val binaryName = if (isWin) "ffmpeg.exe" else "ffmpeg"
-        val candidates =
-            listOf(
-                File(System.getProperty("compose.application.resources.dir") ?: "", "ffmpeg/$binaryName"),
-                File("desktopApp/src/jvmMain/appResources/${osTag(osName)}/ffmpeg/$binaryName"),
-                File("src/jvmMain/appResources/${osTag(osName)}/ffmpeg/$binaryName"),
-            )
-        candidates.firstOrNull { it.exists() && it.canExecute() }?.absolutePath
-    }
+    /** See [FfmpegBinary]: one search, shared with the upload transcoder. */
+    private val ffmpegBinary: String? get() = FfmpegBinary.path
 
     fun getCached(url: String): ImageBitmap? = cache[url]
 
@@ -290,11 +257,4 @@ object VideoThumbnailCache {
         val bytes = md.digest(s.toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
     }
-
-    private fun osTag(osName: String): String =
-        when {
-            "mac" in osName -> "macos"
-            "win" in osName -> "windows"
-            else -> "linux"
-        }
 }

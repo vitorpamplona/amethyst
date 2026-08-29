@@ -95,6 +95,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrN
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccount
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.uploads.GifToVideoConverter
+import com.vitorpamplona.amethyst.commons.uploads.VideoTranscoder
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
@@ -111,6 +113,7 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+import com.vitorpamplona.amethyst.desktop.service.media.FfmpegBinary
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
 import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
@@ -121,6 +124,8 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopSchedule
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.LocalScheduledPostStore
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
+import com.vitorpamplona.amethyst.desktop.service.uploads.FfmpegGifConverter
+import com.vitorpamplona.amethyst.desktop.service.uploads.FfmpegVideoTranscoder
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
@@ -187,6 +192,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import java.io.File
 
 private val isMacOS = com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS
 
@@ -292,6 +298,17 @@ fun main(args: Array<String>) {
 
     Log.minLevel = LogLevel.DEBUG
     DesktopImageLoaderSetup.setup()
+
+    // Uploads re-encode through the same ffmpeg that already produces video
+    // thumbnails. Installed here rather than found at the call site so the
+    // shared upload code keeps making the decisions and this only carries them
+    // out; with no ffmpeg on the machine the caller uploads the original.
+    val transcodeDir = File(System.getProperty("user.home"), ".cache/amethyst-desktop/transcode")
+    VideoTranscoder.installed = FfmpegVideoTranscoder(transcodeDir)
+    GifToVideoConverter.installed = FfmpegGifConverter(transcodeDir)
+    if (!FfmpegBinary.isAvailable) {
+        Log.w("Main") { "No ffmpeg found; videos will be uploaded without re-encoding" }
+    }
     Runtime.getRuntime().addShutdownHook(
         Thread {
             GlobalMediaPlayer.shutdown()
