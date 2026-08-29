@@ -139,6 +139,15 @@ class BlossomReadAuthTokenProvider(
                 if (header != null) {
                     cache[host] = CachedToken(header, clock() + CACHE_TTL_MS)
                 }
+
+                // Retire the entry *before* completing it. `invokeOnCompletion` fires when the
+                // job ends, which is after `complete()` resumes the awaiting caller — so a
+                // caller that returned from `header()` could come straight back, find this
+                // finished deferred still in the map, and be handed its already-signed token
+                // instead of signing a new one. A caller whose token has just expired does
+                // exactly that, and got the expired token back for as long as the window
+                // lasted — [refreshesAfterExpiry] closes it immediately and so hit it every run.
+                inFlight.remove(host, fresh)
                 fresh.complete(header)
             }.invokeOnCompletion {
                 inFlight.remove(host, fresh)
