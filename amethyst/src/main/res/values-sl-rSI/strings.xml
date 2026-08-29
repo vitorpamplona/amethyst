@@ -5095,4 +5095,5 @@ Ali želite za to uporabiti trenutne releje iz odhodnega predala?</string>
     <string name="buzz_persona_avatar">URL avatarja (izbirno)</string>
     <string name="buzz_persona_publishing">Objavljam…</string>
     <string name="buzz_persona_publish">Objavi persono</string>
+    <!-- Profile card (kind-0 rendered in the feed) -->
 </resources>
