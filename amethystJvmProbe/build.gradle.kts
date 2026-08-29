@@ -40,6 +40,10 @@ dependencies {
     implementation(project(":quartz"))
     implementation(project(":commons"))
     implementation(project(":amethystShared"))
+    // The audio-room client is first-party and already builds for the JVM.
+    // :nappletHost is deliberately NOT here: it is an Android-only library, so
+    // the napplet sandbox really is a platform gap, not a missing dependency.
+    implementation(project(":nestsClient"))
 
     implementation(compose.desktop.currentOs)
     implementation(libs.jetbrains.compose.material3)
@@ -111,6 +115,20 @@ val jvmReadiness by tasks.registering {
                 .eachCount()
                 .entries
                 .sortedByDescending { it.value }
+
+        // A build that fails before the compiler runs (dependency resolution, a
+        // bad build script) emits no `e: file://` lines at all. Without this
+        // check the report would read as a flawless 100%, which is the most
+        // dangerous thing a gate can say.
+        val compilerRan = matches.isNotEmpty() || text.contains("BUILD SUCCESSFUL")
+        if (!compilerRan) {
+            val tail = text.lines().takeLast(40).joinToString("\n")
+            throw GradleException(
+                "jvmReadiness could not measure anything: the probe build failed before the Kotlin " +
+                    "compiler ran, so there are no per-file errors to count. Tail of " +
+                    "${logFile.get().asFile}:\n$tail",
+            )
+        }
 
         val report =
             buildString {
