@@ -181,7 +181,29 @@ val jvmReadiness by tasks.registering {
         process.waitFor()
 
         val text = log.readText()
-        val matches = Regex("""^e: file://(\S+?):(\d+):(\d+) (.*)$""", RegexOption.MULTILINE).findAll(text).toList()
+        val allMatches = Regex("""^e: file://(\S+?):(\d+):(\d+) (.*)$""", RegexOption.MULTILINE).findAll(text).toList()
+
+        // Errors from outside this module's own sources mean a *dependency*
+        // failed to compile, and then the count measures nothing: the probe's
+        // own files were never reached, so every one of them counts as clean.
+        // That reads as a near-perfect score at exactly the moment the build is
+        // most broken, which is the worst thing this report could do — so it
+        // refuses to print a number instead.
+        val rootPaths = sourceRoots.map { it.asFile.invariantSeparatorsPath }
+        val (matches, foreign) =
+            allMatches.partition { match ->
+                val path = match.groupValues[1]
+                rootPaths.any { path.startsWith(it) }
+            }
+        if (foreign.isNotEmpty()) {
+            val where = foreign.mapTo(LinkedHashSet()) { it.groupValues[1] }.take(5)
+            throw GradleException(
+                "jvmReadiness cannot measure anything: ${foreign.size} error(s) came from outside " +
+                    "amethyst's own sources, so a dependency failed to compile and the probe's files " +
+                    "were never reached. Fix these first:\n" + where.joinToString("\n") { "  $it" },
+            )
+        }
+
         val unresolvedRe = Regex("""Unresolved reference '([^']+)'""")
         val allKt = sourceRoots.flatMap { root -> root.asFile.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList() }
         val excluded = allKt.count { f -> excludedDirs.any { f.invariantSeparatorsPath.contains(it) } }

@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResol
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.uploads.GifToVideoConverter
+import com.vitorpamplona.amethyst.commons.uploads.VideoTranscoder
 import com.vitorpamplona.amethyst.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.model.Account
@@ -124,6 +126,8 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundS
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
+import com.vitorpamplona.amethyst.service.uploads.transcode.LightCompressorGifConverter
+import com.vitorpamplona.amethyst.service.uploads.transcode.LightCompressorTranscoder
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.AccountState
@@ -1149,6 +1153,12 @@ class AppModules(
 
         // forces initialization of uiPrefs in the main thread to avoid blinking themes
         uiPrefs
+
+        // Video transcoding runs through a platform seam so the upload
+        // decisions (bitrate, resolution, whether the result was worth
+        // keeping) can stay shared. Android's side is LightCompressor.
+        VideoTranscoder.installed = LightCompressorTranscoder(appContext)
+        GifToVideoConverter.installed = LightCompressorGifConverter(appContext)
 
         // initializes diskcache on an IO thread.
         applicationIOScope.launch {

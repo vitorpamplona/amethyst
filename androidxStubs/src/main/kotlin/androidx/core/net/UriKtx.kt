@@ -22,8 +22,10 @@ package androidx.core.net
 
 import android.net.Uri
 
-/** JVM stand-in for androidx.core.net's `String.toUri()` KTX extension. */
+/** JVM stand-ins for androidx.core.net's `toUri()` KTX extensions. */
 fun String.toUri(): Uri = Uri.parse(this)
+
+fun java.io.File.toUri(): Uri = Uri.fromFile(this)
 
 /** JVM stand-in for androidx.core.net's `Uri.toFile()` KTX extension. */
 fun Uri.toFile(): java.io.File {

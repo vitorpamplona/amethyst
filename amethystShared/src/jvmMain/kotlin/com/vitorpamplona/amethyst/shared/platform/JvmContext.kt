@@ -26,9 +26,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.database.Cursor
+import android.database.MatrixCursor
 import android.net.Uri
 import android.os.LocaleList
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import com.vitorpamplona.amethyst.shared.resources.AndroidResourceTable
 import java.io.File
 import java.io.InputStream
@@ -238,6 +241,34 @@ object JvmContentResolver : ContentResolver() {
         selection: String?,
         selectionArgs: Array<String>?,
     ): Int = if (fileFor(uri)?.delete() == true) 1 else 0
+
+    /**
+     * The two columns every caller here asks for — display name and size — are
+     * facts about a file, so they are answered rather than left null. A null
+     * cursor reads as "size unknown", which makes an upload announce 0 bytes
+     * and skips the "is the compressed one actually smaller?" check.
+     */
+    override fun query(
+        uri: Uri,
+        projection: Array<String>?,
+        selection: String?,
+        selectionArgs: Array<String>?,
+        sortOrder: String?,
+    ): Cursor? {
+        val file = fileFor(uri)?.takeIf { it.isFile } ?: return null
+        val columns = projection ?: arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
+        val cursor = MatrixCursor(columns)
+        val row =
+            Array<Any?>(columns.size) { index ->
+                when (columns[index]) {
+                    OpenableColumns.DISPLAY_NAME -> file.name
+                    OpenableColumns.SIZE -> file.length()
+                    else -> null
+                }
+            }
+        cursor.addRow(row)
+        return cursor
+    }
 
     private fun fileFor(uri: Uri): File? = uri.path?.let(::File)?.takeIf { uri.scheme == null || uri.scheme == "file" }
 }

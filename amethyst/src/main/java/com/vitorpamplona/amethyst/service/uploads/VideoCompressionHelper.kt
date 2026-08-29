@@ -27,12 +27,11 @@ import android.os.Handler
 import android.os.Looper
 import android.text.format.Formatter.formatFileSize
 import android.widget.Toast
-import com.davotoula.lightcompressor.CompressionListener
-import com.davotoula.lightcompressor.VideoCodec
-import com.davotoula.lightcompressor.VideoCompressor
-import com.davotoula.lightcompressor.config.AppSpecificStorageConfiguration
-import com.davotoula.lightcompressor.config.Configuration
-import com.davotoula.lightcompressor.config.VideoResizer
+import com.vitorpamplona.amethyst.commons.uploads.TranscodeConfig
+import com.vitorpamplona.amethyst.commons.uploads.TranscodeListener
+import com.vitorpamplona.amethyst.commons.uploads.TranscodeSource
+import com.vitorpamplona.amethyst.commons.uploads.VideoCodecChoice
+import com.vitorpamplona.amethyst.commons.uploads.VideoTranscoder
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -154,7 +153,7 @@ object VideoCompressionHelper {
     ): MediaCompressorResult {
         val videoInfo = getVideoInfo(uri, applicationContext)
 
-        val (videoBitrateInBps, resizer) =
+        val (videoBitrateInBps, shortSideLimit) =
             videoInfo?.let { info ->
                 val rule =
                     compressionRules
@@ -168,9 +167,7 @@ object VideoCompressionHelper {
                     "Resizer: ${info.resolution.width}x${info.resolution.height} -> " +
                         "shortSide=${rule.shortSide} (${rule.description})"
                 }
-                val resizer = VideoResizer.limitShortSide(rule.shortSide.toDouble())
-
-                Pair(bitrateBps, resizer)
+                Pair(bitrateBps, rule.shortSide)
             } ?: run {
                 Log.w(LOG_TAG, "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
                 Log.d(LOG_TAG, "Resizer: null (original resolution preserved)")
@@ -180,37 +177,38 @@ object VideoCompressionHelper {
         // Get original file size safely
         val originalSize = applicationContext.getFileSize(uri)
 
+        // No transcoder on this platform: upload the original, which is the
+        // same thing this function already does when the video's properties
+        // cannot be read.
+        val transcoder =
+            VideoTranscoder.installed ?: run {
+                Log.w(LOG_TAG, "No video transcoder installed; uploading the original uncompressed")
+                return MediaCompressorResult(uri, contentType, null)
+            }
+
         val result =
             withTimeoutOrNull(timeoutMs) {
                 suspendCancellableCoroutine { continuation ->
-                    VideoCompressor.start(
-                        context = applicationContext,
-                        uris = listOf(uri),
-                        isStreamable = true,
-                        storageConfiguration = AppSpecificStorageConfiguration(),
-                        configureWith =
-                            Configuration(
+                    transcoder.start(
+                        source = TranscodeSource(uri = uri.toString(), streamable = true),
+                        config =
+                            TranscodeConfig(
                                 videoBitrateInBps = videoBitrateInBps.toLong(),
-                                resizer = resizer,
-                                videoNames = listOf(UUID.randomUUID().toString()),
-                                isMinBitrateCheckEnabled = false,
-                                videoCodec = if (useH265) VideoCodec.H265 else VideoCodec.H264,
+                                shortSideLimit = shortSideLimit,
+                                codec = if (useH265) VideoCodecChoice.H265 else VideoCodecChoice.H264,
+                                outputName = UUID.randomUUID().toString(),
                             ),
                         listener =
-                            object : CompressionListener {
-                                override fun onStart(index: Int) {
+                            object : TranscodeListener {
+                                override fun onStart() {
                                     // No action needed on compression start
                                 }
 
-                                override fun onProgress(
-                                    index: Int,
-                                    percent: Float,
-                                ) {
+                                override fun onProgress(percent: Float) {
                                     // Progress tracking not needed for this use case
                                 }
 
                                 override fun onSuccess(
-                                    index: Int,
                                     size: Long,
                                     path: String?,
                                 ) {
@@ -269,18 +267,15 @@ object VideoCompressionHelper {
                                     }
                                 }
 
-                                override fun onFailure(
-                                    index: Int,
-                                    failureMessage: String,
-                                ) {
+                                override fun onFailure(message: String) {
                                     applicationContext.notifyUser(
-                                        "Video compression failed: $failureMessage",
+                                        "Video compression failed: $message",
                                         LogLevel.ERROR,
                                     )
                                     if (continuation.isActive) continuation.resume(null)
                                 }
 
-                                override fun onCancelled(index: Int) {
+                                override fun onCancelled() {
                                     Log.w(LOG_TAG, "Video compression cancelled")
                                     if (continuation.isActive) continuation.resume(null)
                                 }

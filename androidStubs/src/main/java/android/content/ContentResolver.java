@@ -26,4 +26,14 @@ public abstract class ContentResolver {
     public int delete(Uri uri, String selection, String[] selectionArgs) { return 0; }
 
     public OutputStream openOutputStream(Uri uri, String mode) { return openOutputStream(uri); }
+
+    /**
+     * Metadata about the thing a URI points at. Null means "nothing known",
+     * which callers read as an unknown size — so a platform that can answer
+     * should, rather than leaving an upload to announce 0 bytes.
+     */
+    public android.database.Cursor query(
+            Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
+        return null;
+    }
 }

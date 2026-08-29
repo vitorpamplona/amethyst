@@ -25,7 +25,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
-import com.davotoula.lightcompressor.video.GifToMp4Converter
+import com.vitorpamplona.amethyst.commons.uploads.GifToVideoConverter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.isAvif
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
@@ -57,9 +57,9 @@ class MediaCompressor {
         // H.264 MP4 so no additional video compression step is needed.
         if (convertGifToMp4 && contentType?.contains("gif", ignoreCase = true) == true) {
             Log.d("MediaCompressor") { "Converting GIF to MP4" }
-            val converted = GifToMp4Converter.convert(uri, applicationContext)
+            val converted = GifToVideoConverter.installed?.convert(uri.toString())
             if (converted != null) {
-                return MediaCompressorResult(converted.file.toUri(), converted.mimeType, converted.size)
+                return MediaCompressorResult(File(converted.path).toUri(), converted.mimeType, converted.size)
             }
             Log.w("MediaCompressor") { "GIF to MP4 conversion failed, uploading as original GIF" }
             return MediaCompressorResult(uri, contentType, null)
