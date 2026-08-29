@@ -1625,43 +1625,52 @@ class AccountViewModel(
 
     inline fun launchSigner(crossinline action: suspend () -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                action()
-            } catch (_: SignerExceptions.ReadOnlyException) {
-                toastManager.toast(
-                    R.string.read_only_user,
-                    R.string.login_with_a_private_key_to_be_able_to_sign_events,
-                )
-            } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
-                toastManager.toast(
-                    R.string.unauthorized_exception,
-                    R.string.unauthorized_exception_description,
-                )
-            } catch (_: SignerExceptions.SignerNotFoundException) {
-                toastManager.toast(
-                    R.string.signer_not_found_exception,
-                    R.string.signer_not_found_exception_description,
-                )
-            } catch (e: SignerExceptions.TimedOutException) {
-                Log.w("AccountViewModel", "TimedOutException", e)
-            } catch (e: SignerExceptions.NothingToDecrypt) {
-                Log.w("AccountViewModel", "NothingToDecrypt", e)
-            } catch (e: SignerExceptions.CouldNotPerformException) {
-                Log.w("AccountViewModel", "CouldNotPerformException", e)
-            } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
-                Log.w("AccountViewModel", "ManuallyUnauthorizedException", e)
-            } catch (e: SignerExceptions.AutomaticallyUnauthorizedException) {
-                Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
-            } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
-                Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
-            } catch (e: IllegalStateException) {
-                toastManager.toast(
-                    R.string.signer_not_found_exception,
-                    R.string.signer_illegal_state_exception_description,
-                    e,
-                )
-            }
+            reportSignerErrors { action() }
         }
+
+    /**
+     * The signer-failure reporting of [launchSigner], separated from its scope so work that must
+     * outlive [viewModelScope] can still surface the same messages. Public because [launchSigner]
+     * is inline.
+     */
+    suspend fun reportSignerErrors(action: suspend () -> Unit) {
+        try {
+            action()
+        } catch (_: SignerExceptions.ReadOnlyException) {
+            toastManager.toast(
+                R.string.read_only_user,
+                R.string.login_with_a_private_key_to_be_able_to_sign_events,
+            )
+        } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
+            toastManager.toast(
+                R.string.unauthorized_exception,
+                R.string.unauthorized_exception_description,
+            )
+        } catch (_: SignerExceptions.SignerNotFoundException) {
+            toastManager.toast(
+                R.string.signer_not_found_exception,
+                R.string.signer_not_found_exception_description,
+            )
+        } catch (e: SignerExceptions.TimedOutException) {
+            Log.w("AccountViewModel", "TimedOutException", e)
+        } catch (e: SignerExceptions.NothingToDecrypt) {
+            Log.w("AccountViewModel", "NothingToDecrypt", e)
+        } catch (e: SignerExceptions.CouldNotPerformException) {
+            Log.w("AccountViewModel", "CouldNotPerformException", e)
+        } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
+            Log.w("AccountViewModel", "ManuallyUnauthorizedException", e)
+        } catch (e: SignerExceptions.AutomaticallyUnauthorizedException) {
+            Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
+        } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
+            Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
+        } catch (e: IllegalStateException) {
+            toastManager.toast(
+                R.string.signer_not_found_exception,
+                R.string.signer_illegal_state_exception_description,
+                e,
+            )
+        }
+    }
 
     fun approveCommunityPost(
         post: Note,
@@ -2012,7 +2021,7 @@ class AccountViewModel(
     /** Same ordering contract as [changeBottomBarItems]: apply on the caller's thread, publish off it. */
     fun changeHiddenDrawerItems(items: Set<NavBarItem>) {
         if (account.applyHiddenDrawerItems(items)) {
-            schedulePickerPublish()
+            pickerPublisher.schedule()
         }
     }
 
@@ -2023,7 +2032,7 @@ class AccountViewModel(
         // re-seeds its editable list from this flow). Only the sign + encrypt + publish runs off-thread,
         // and that part is debounced — see [pickerPublisher].
         if (account.applyBottomBarItems(items)) {
-            schedulePickerPublish()
+            pickerPublisher.schedule()
         }
     }
 
@@ -2038,15 +2047,21 @@ class AccountViewModel(
      *
      * Only these two. Every other synced setting changes one at a time, and the published event is
      * its only durable copy, so delaying those would buy nothing and cost durability.
+     *
+     * On the account's scope, NOT [viewModelScope]. A synced setting's only durable copy is the
+     * published event, so an edit waiting out the debounce must survive this ViewModel: AndroidX
+     * closes [viewModelScope] *before* it calls [onCleared] (`ViewModel.clear()` closes the keyed
+     * closeables, and `viewModelScope` is one of them), so a pending publish tied to it would already
+     * be cancelled by the time any teardown hook here could notice — and no hook could rescue it.
+     * The account's scope is cancelled only when the account is removed, so the publish simply
+     * completes across an account switch or an Activity teardown.
      */
     private val pickerPublisher =
         DebouncedPublisher(
             debounceMs = PICKER_PUBLISH_DEBOUNCE_MS,
-            launch = { launchSigner(it) },
+            launch = { block -> account.scope.launch(Dispatchers.IO) { reportSignerErrors { block() } } },
             publish = { account.sendNewAppSpecificData() },
         )
-
-    private fun schedulePickerPublish() = pickerPublisher.schedule()
 
     /**
      * Publish any pending picker edits now. Called when a picker screen leaves the composition or the
@@ -2055,27 +2070,6 @@ class AccountViewModel(
      * when the published event comes back through the collector, *is* the local copy.
      */
     fun flushPickerPublish() = pickerPublisher.flush()
-
-    /**
-     * Last resort for a pending publish, on the account's scope rather than [viewModelScope] — this
-     * runs from [onCleared], where [viewModelScope] is already cancelled. Covers an account switch or
-     * an Activity teardown that happens while a picker edit is still inside its debounce window; the
-     * account's scope outlives both and is only torn down at logout.
-     *
-     * Signer errors go to the log instead of a toast: by this point there is no UI left to show one.
-     */
-    private fun flushPickerPublishDetached() {
-        if (!pickerPublisher.isPending()) return
-        pickerPublisher.cancel()
-        account.scope.launch(Dispatchers.IO) {
-            try {
-                account.sendNewAppSpecificData()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w("AccountViewModel", "Could not publish pending navigation settings", e)
-            }
-        }
-    }
 
     fun pinnedChatroomsFlow(): StateFlow<Set<ChatroomKey>> = account.settings.syncedSettings.chats.pinnedChatrooms
 
@@ -2590,7 +2584,6 @@ class AccountViewModel(
             .clearViewModel()
         com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBridge
             .clear()
-        flushPickerPublishDetached()
         feedStates.destroy()
         super.onCleared()
     }

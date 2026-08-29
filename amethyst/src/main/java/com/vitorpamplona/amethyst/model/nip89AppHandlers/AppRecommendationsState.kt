@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.nextCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -84,16 +85,11 @@ class AppRecommendationsState(
      */
     private val publishMutex = Mutex()
 
-    /**
-     * Returns a createdAt strictly greater than whatever AppRecommendationEvent
-     * currently sits in cache for this d-tag. Needed because
-     * LocalCache.consumeBaseReplaceable drops updates whose createdAt isn't
-     * strictly greater, and TimeUtils.now() has only second resolution.
-     */
+    /** The createdAt this d-tag's next version needs to supersede whatever is in cache for it. */
     private fun nextCreatedAt(supportedKind: String): Long {
         val address = Address(AppRecommendationEvent.KIND, signer.pubKey, supportedKind)
         val latest = cache.getAddressableNoteIfExists(address)?.event?.createdAt ?: 0L
-        return maxOf(TimeUtils.now(), latest + 1)
+        return nextCreatedAtToSupersede(latest, TimeUtils.now())
     }
 
     private fun currentRecommendations(supportedKind: String): List<RecommendationTag> {

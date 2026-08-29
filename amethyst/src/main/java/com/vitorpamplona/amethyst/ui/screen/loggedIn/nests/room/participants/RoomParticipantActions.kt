@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants
 
+import com.vitorpamplona.quartz.nip01Core.core.nextCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.endpoint
@@ -133,17 +134,10 @@ internal object RoomParticipantActions {
                 ?: ParticipantTag(original.pubKey, null, ROLE.HOST.code, null)
         val others = participants.filterNot { it.pubKey == host.pubKey }
 
-        // Strictly monotonic createdAt. NIP-01 replaceable-event
-        // semantics drop a new version whose createdAt is <= the
-        // previous one (with a lower-id tie-break that's effectively
-        // random under signing). Creating a room then immediately
-        // promoting in the same wall-clock second produced the
-        // dreaded silent-no-op: the local cache rejected the new
-        // event in `consumeBaseReplaceable` (strict `>`) and relays
-        // applied the same rule. `+ 1` is enough to win the tie;
-        // `coerceAtLeast(now)` keeps the wire timestamp accurate
-        // when the original is already in the past.
-        val nextCreatedAt = (original.createdAt + 1L).coerceAtLeast(TimeUtils.now())
+        // Creating a room then immediately promoting in the same wall-clock
+        // second produced the dreaded silent-no-op: both versions carried the
+        // same createdAt and the tie-break picked one at random.
+        val nextCreatedAt = nextCreatedAtToSupersede(original.createdAt, TimeUtils.now())
 
         return MeetingSpaceEvent.build(
             room = original.room().orEmpty(),

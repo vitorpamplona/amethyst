@@ -33,3 +33,21 @@ fun Event.supersedes(existing: Event): Boolean =
         createdAt < existing.createdAt -> false
         else -> id < existing.id
     }
+
+/**
+ * The `created_at` a new version needs in order to supersede [newestKnown]: one second past it, or
+ * [now] when the clock has already moved beyond it.
+ *
+ * `created_at` has one-second resolution, so republishing an address twice inside the same second
+ * stamps both versions identically and leaves [supersedes] to settle it on the id tie-break — which
+ * signing makes effectively random. Every store applies that rule, so the loser is dropped silently:
+ * locally it never reaches the observers watching the address, and relays may keep a different
+ * version than the one this client kept. Any address republished from user input (a settings toggle,
+ * a room status change) hits this routinely.
+ *
+ * [now] is a parameter rather than read here so the rule stays pure and testable.
+ */
+fun nextCreatedAtToSupersede(
+    newestKnown: Long,
+    now: Long,
+): Long = (newestKnown + 1).coerceAtLeast(now)

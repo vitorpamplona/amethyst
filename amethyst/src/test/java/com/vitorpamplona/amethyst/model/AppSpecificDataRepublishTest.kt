@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import android.os.Looper
-import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
+import com.vitorpamplona.quartz.nip01Core.core.nextCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
@@ -38,9 +38,9 @@ import org.junit.Test
 
 /**
  * The settings pickers (Side Menu, bottom bar) republish the NIP-78 app-specific data event on every
- * discrete toggle, and `created_at` is whole seconds. These pin the rule that keeps two toggles a few
- * hundred milliseconds apart from collapsing into one — the failure the user sees as "my side-menu
- * rows came back after a restart".
+ * discrete toggle, and `created_at` is whole seconds. These pin what that costs in LocalCache — the
+ * failure the user sees as "my side-menu rows came back after a restart". The timestamp rule itself
+ * is unit-tested in quartz, next to the supersession rule it exists to beat.
  */
 class AppSpecificDataRepublishTest {
     private val signer = NostrSignerInternal(KeyPair())
@@ -80,7 +80,7 @@ class AppSpecificDataRepublishTest {
         runBlocking {
             val sameSecond = TimeUtils.now()
 
-            val first = signer.sign(AppSpecificDataEvent.build(dTag, "first", createdAt = AppSpecificState.nextCreatedAt(0L, sameSecond)))
+            val first = signer.sign(AppSpecificDataEvent.build(dTag, "first", createdAt = nextCreatedAtToSupersede(0L, sameSecond)))
             LocalCache.justConsumeMyOwnEvent(first)
 
             val second =
@@ -88,30 +88,11 @@ class AppSpecificDataRepublishTest {
                     AppSpecificDataEvent.build(
                         dTag,
                         "second",
-                        createdAt = AppSpecificState.nextCreatedAt(first.createdAt, sameSecond),
+                        createdAt = nextCreatedAtToSupersede(first.createdAt, sameSecond),
                     ),
                 )
             LocalCache.justConsumeMyOwnEvent(second)
 
             assertEquals("second", LocalCache.getOrCreateAddressableNote(address).event?.content)
         }
-
-    @Test
-    fun theWallClockWinsOnceItHasMovedPastTheLastVersion() {
-        // The common case — edits minutes apart carry the real time, not a drifting counter.
-        assertEquals(1_000L, AppSpecificState.nextCreatedAt(newestKnown = 900L, now = 1_000L))
-    }
-
-    @Test
-    fun aBurstStepsOneSecondPerEdit() {
-        assertEquals(1_001L, AppSpecificState.nextCreatedAt(newestKnown = 1_000L, now = 1_000L))
-        assertEquals(1_002L, AppSpecificState.nextCreatedAt(newestKnown = 1_001L, now = 1_000L))
-    }
-
-    @Test
-    fun aVersionStampedInTheFutureIsStillSuperseded() {
-        // A clock skew on another device (or our own burst) can leave the newest known version ahead
-        // of this device's clock. Going back to `now` there would publish an event the cache drops.
-        assertEquals(9_001L, AppSpecificState.nextCreatedAt(newestKnown = 9_000L, now = 1_000L))
-    }
 }

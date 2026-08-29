@@ -20,14 +20,16 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -114,27 +116,29 @@ class DebouncedPublisherTest {
         }
 
     @Test
-    fun cancelHandsThePendingEditToTheCaller() =
+    fun aPendingPublishDiesWithTheScopeItWasLaunchedOn() =
         runTest {
-            // What onCleared relies on: it takes the pending edit off this publisher and republishes
-            // it on the account's scope, which must not leave the original to fire as well.
+            // Why the pickers launch on the account's scope and not viewModelScope: a pending edit is
+            // only as durable as the scope holding it, and AndroidX cancels viewModelScope BEFORE it
+            // calls onCleared — so an edit tied to it is already gone by the time any teardown hook
+            // there could rescue it.
             var published = 0
-            val publisher = publisher { published++ }
+            val shortLived = CoroutineScope(coroutineContext + Job())
+            val publisher = publisher(scope = shortLived) { published++ }
 
             publisher.schedule()
-            assertTrue(publisher.isPending())
-
-            publisher.cancel()
+            shortLived.cancel()
             advanceUntilIdle()
 
             assertEquals(0, published)
-            assertFalse(publisher.isPending())
         }
 
-    private fun kotlinx.coroutines.test.TestScope.publisher(publish: suspend () -> Unit) =
-        DebouncedPublisher(
-            debounceMs = debounce,
-            launch = { block -> launch { block() } },
-            publish = publish,
-        )
+    private fun TestScope.publisher(
+        scope: CoroutineScope = this,
+        publish: suspend () -> Unit,
+    ) = DebouncedPublisher(
+        debounceMs = debounce,
+        launch = { block -> scope.launch { block() } },
+        publish = publish,
+    )
 }

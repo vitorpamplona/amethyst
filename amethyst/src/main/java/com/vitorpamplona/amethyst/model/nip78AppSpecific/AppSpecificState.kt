@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.nextCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -46,23 +47,6 @@ class AppSpecificState(
 ) {
     companion object {
         const val APP_SPECIFIC_DATA_D_TAG = "AmethystSettings"
-
-        /**
-         * The `created_at` for the next version of a replaceable event: one second past the newest
-         * version we already know about, or the wall clock when that is already ahead.
-         *
-         * `created_at` is whole seconds, and the settings pickers republish this event on every
-         * discrete toggle, so two edits a few hundred milliseconds apart would otherwise carry the
-         * *same* timestamp. That silently loses the second edit: [LocalCache] keeps the strictly
-         * newest version per address, so it drops the republish, the app-specific-data collector
-         * never fires, `backupAppSpecificData` keeps the first edit, and the next app start restores
-         * that. Relays are no safer — NIP-01 breaks a `created_at` tie by lowest id, so which of the
-         * two edits survives there is arbitrary.
-         */
-        fun nextCreatedAt(
-            newestKnown: Long,
-            now: Long,
-        ): Long = (newestKnown + 1).coerceAtLeast(now)
     }
 
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
@@ -88,18 +72,17 @@ class AppSpecificState(
     private var lastPublishedAt = 0L
 
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
-        val toInternal: AccountSyncedSettingsInternal
-        val createdAt: Long
-
-        stampOrder.withLock {
-            toInternal = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
-            createdAt =
-                nextCreatedAt(
-                    newestKnown = maxOf(lastPublishedAt, amethystSettingsNote.event?.createdAt ?: 0L),
-                    now = TimeUtils.now(),
-                )
-            lastPublishedAt = createdAt
-        }
+        val (toInternal, createdAt) =
+            stampOrder.withLock {
+                val snapshot = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
+                val stamp =
+                    nextCreatedAtToSupersede(
+                        newestKnown = maxOf(lastPublishedAt, amethystSettingsNote.event?.createdAt ?: 0L),
+                        now = TimeUtils.now(),
+                    )
+                lastPublishedAt = stamp
+                snapshot to stamp
+            }
 
         return signer.sign(
             AppSpecificDataEvent.build(

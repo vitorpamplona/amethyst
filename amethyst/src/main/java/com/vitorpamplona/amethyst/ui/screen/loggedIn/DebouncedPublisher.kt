@@ -30,9 +30,13 @@ import kotlinx.coroutines.delay
  * reads the current state when it runs rather than carrying a payload — because the replacement
  * carries the same state or newer; it is wrong for anything that publishes a delta.
  *
- * [launch] is injected rather than a [kotlinx.coroutines.CoroutineScope] so the caller keeps its own
- * error handling (for [AccountViewModel], the signer-exception toasts of `launchSigner`), and so the
- * semantics here can be unit-tested on a test scope.
+ * A pending edit lives entirely in the [Job] that [launch] returned, so it is only as durable as the
+ * scope that job belongs to — see `aPendingPublishDiesWithTheScopeItWasLaunchedOn`. Give [launch] a
+ * scope that outlives every teardown the edit has to survive.
+ *
+ * [launch] is injected rather than a [kotlinx.coroutines.CoroutineScope] so the caller chooses that
+ * scope and keeps its own error handling (for [AccountViewModel], the signer-exception toasts), and
+ * so the semantics here can be unit-tested on a test scope.
  */
 class DebouncedPublisher(
     private val debounceMs: Long,
@@ -40,9 +44,6 @@ class DebouncedPublisher(
     private val publish: suspend () -> Unit,
 ) {
     private var pending: Job? = null
-
-    /** True while an edit is waiting out the debounce, or its publish is still in flight. */
-    fun isPending(): Boolean = pending?.isActive == true
 
     /** Records an edit: restarts the wait, so a run of edits publishes once, after the last one. */
     fun schedule() = start(debounceMs)
@@ -52,14 +53,8 @@ class DebouncedPublisher(
      * pending, so a caller can flush on every exit path without publishing the same state twice.
      */
     fun flush() {
-        if (!isPending()) return
+        if (pending?.isActive != true) return
         start(0)
-    }
-
-    /** Abandons a pending edit without publishing. For a caller that will publish it another way. */
-    fun cancel() {
-        pending?.cancel()
-        pending = null
     }
 
     private fun start(delayMs: Long) {
