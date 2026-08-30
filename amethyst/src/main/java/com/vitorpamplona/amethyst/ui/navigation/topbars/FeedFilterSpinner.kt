@@ -69,8 +69,8 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserIsFollowingGeohash

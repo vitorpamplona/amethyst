@@ -20,9 +20,10 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedFlowsType
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedFlowsType
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.Flow

@@ -41,8 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsSnapshot
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.LoadNote

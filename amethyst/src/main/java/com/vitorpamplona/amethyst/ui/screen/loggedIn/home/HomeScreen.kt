@@ -59,10 +59,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.geohashChat.GeohashChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled

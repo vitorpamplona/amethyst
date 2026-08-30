@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.nip02FollowLists
 
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.UsingRelayUnwrapper
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.topNavFeeds.UsingRelayUnwrapper
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope

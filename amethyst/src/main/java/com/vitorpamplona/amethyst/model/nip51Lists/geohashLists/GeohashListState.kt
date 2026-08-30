@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.nip51Lists.geohashLists
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner

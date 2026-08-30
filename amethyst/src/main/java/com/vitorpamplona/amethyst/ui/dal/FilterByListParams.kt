@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
-import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
-import com.vitorpamplona.amethyst.model.topNavFeeds.relay.RelayTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByOutboxTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsByProxyTopNavFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavFilter
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Cache provider interface for accessing cached Notes, Users, and Channels.
@@ -101,7 +102,20 @@ interface ICacheProvider {
      * @param address The note's ID in address format
      * @return The AddressableNote (existing or newly created)
      */
+
     fun getOrCreateAddressableNote(address: Address): AddressableNote
+
+    /**
+     * Parses [key] as an address and returns the addressable note for it, or null
+     * when the key is not a valid address.
+     */
+    fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
+        try {
+            Address.parse(key)?.let { getOrCreateAddressableNote(it) }
+        } catch (e: IllegalArgumentException) {
+            Log.e("ICacheProvider", "Invalid address key: $key", e)
+            null
+        }
 
     /**
      * Gets the event stream for cache updates.

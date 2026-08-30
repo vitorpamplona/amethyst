@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies
 
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
@@ -31,7 +32,6 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoQueryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip01Core.filterPictureAndVideoByGeohash
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.subassemblies.nip01Core.filterPictureAndVideoByHashtag

@@ -966,7 +966,7 @@ object LocalCache : ILocalCache, ICacheProvider, Dao {
         return Hex.isHex64(key)
     }
 
-    fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
+    override fun checkGetOrCreateAddressableNote(key: String): AddressableNote? =
         try {
             val addr = Address.parse(key)
             if (addr != null) {
