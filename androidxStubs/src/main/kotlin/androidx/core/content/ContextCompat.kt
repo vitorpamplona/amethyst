@@ -20,8 +20,10 @@
  */
 package androidx.core.content
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 
@@ -60,16 +62,19 @@ object ContextCompat {
         id: Int,
     ): Int = 0
 
-    /** Desktop has no per-app broadcast bus; registration is inert by design. */
+    /** Same in-process bus as [Context.registerReceiver]; see the note there. */
     fun registerReceiver(
         context: Context,
-        receiver: Any?,
-        filter: Any?,
+        receiver: BroadcastReceiver,
+        filter: IntentFilter,
         flags: Int,
-    ): Intent? = null
+    ): Intent? {
+        context.registerReceiver(receiver, filter, flags)
+        return null
+    }
 
-    const val RECEIVER_NOT_EXPORTED = 4
-    const val RECEIVER_EXPORTED = 2
+    const val RECEIVER_NOT_EXPORTED = Context.RECEIVER_NOT_EXPORTED
+    const val RECEIVER_EXPORTED = Context.RECEIVER_EXPORTED
 }
 
 /** JVM stand-in for the `SharedPreferences.edit { }` KTX extension. */

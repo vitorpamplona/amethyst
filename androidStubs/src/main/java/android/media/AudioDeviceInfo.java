@@ -14,6 +14,9 @@ public final class AudioDeviceInfo {
     public static final int TYPE_BLUETOOTH_SCO = 7;
     public static final int TYPE_BLUETOOTH_A2DP = 8;
     public static final int TYPE_USB_HEADSET = 22;
+    public static final int TYPE_BLE_HEADSET = 26;
+    public static final int TYPE_BLE_SPEAKER = 27;
+    public static final int TYPE_BLE_BROADCAST = 30;
 
     public int getType() { return TYPE_BUILTIN_SPEAKER; }
 

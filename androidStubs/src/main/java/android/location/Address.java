@@ -22,6 +22,45 @@ public class Address {
 
     public Locale getLocale() { return locale; }
 
+    /**
+     * Latitude and longitude are optional on an Address — a geocoder can return
+     * a street with no fix — so the has* pair is what callers filter on before
+     * reading. Reading an unset coordinate throws rather than returning 0.0,
+     * which would silently drop a search result onto Null Island.
+     */
+    public boolean hasLatitude() { return hasLatitude; }
+
+    public double getLatitude() {
+        if (!hasLatitude) throw new IllegalStateException("this Address has no latitude");
+        return latitude;
+    }
+
+    public void setLatitude(double value) {
+        latitude = value;
+        hasLatitude = true;
+    }
+
+    public void clearLatitude() { hasLatitude = false; }
+
+    public boolean hasLongitude() { return hasLongitude; }
+
+    public double getLongitude() {
+        if (!hasLongitude) throw new IllegalStateException("this Address has no longitude");
+        return longitude;
+    }
+
+    public void setLongitude(double value) {
+        longitude = value;
+        hasLongitude = true;
+    }
+
+    public void clearLongitude() { hasLongitude = false; }
+
+    private double latitude;
+    private double longitude;
+    private boolean hasLatitude;
+    private boolean hasLongitude;
+
     public String getAddressLine(int index) {
         return index >= 0 && index < addressLines.size() ? addressLines.get(index) : null;
     }

@@ -66,6 +66,22 @@ public class Activity extends DelegatingContext {
 
     protected void onDestroy() {}
 
+    /**
+     * Called when the user leaves the activity by their own action rather than
+     * by another one appearing over it — the cue Android gives for entering
+     * picture-in-picture. Nothing drives it here; PiP is already declared as
+     * having no desktop counterpart.
+     */
+    protected void onUserLeaveHint() {}
+
+    /**
+     * The other half of the new-intent path. On Android the framework calls
+     * this; here the desktop shell delivers through
+     * `ComponentActivity.dispatchNewIntent`, which is what feeds the listeners
+     * the app actually registers.
+     */
+    protected void onNewIntent(Intent intent) {}
+
     public void finish() {}
 
     public boolean isFinishing() { return false; }

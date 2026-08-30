@@ -77,6 +77,9 @@ Worth recording so nobody re-litigates them as gaps:
 | `ColorMatrix` / `ColorMatrixColorFilter` | the same 4x5 maths, so the map's day and night filters mean the same thing — only the renderer that applies them is still missing |
 | `XmlPullParser` | StAX, with XmlPull's habit of skipping comments and whitespace, so the language picker parses the same `locales_config.xml` |
 | `R.xml` resources | a third generated table from the app module's own res tree |
+| in-process broadcasts | a real bus — notification buttons and PiP controls talk to receivers in this same process, which is what Android does too. Only the cross-app half (an exported receiver) has no counterpart, and it says so |
+| ICU `LocaleData.getMeasurementSystem` | CLDR's own territory table, which is three lines, so a workout still publishes in the units the user runs in |
+| `CalendarContract` | column names kept so the intent's extras still mean the same thing; writing an `.ics` for the default handler is the open work |
 | `DateFormat`, `DateUtils` | `java.time` / `java.text`, same CLDR data |
 | aapt2 resources | a generated `R` plus locale tables, built from the same `res/` tree |
 | WorkManager | a daemon timer with the same retry backoff and constraint waiting |

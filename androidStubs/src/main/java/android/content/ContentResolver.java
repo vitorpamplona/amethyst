@@ -13,6 +13,10 @@ import java.io.OutputStream;
  * your gallery" appear over a file that does not exist.
  */
 public abstract class ContentResolver {
+    public static final String SCHEME_CONTENT = "content";
+    public static final String SCHEME_FILE = "file";
+    public static final String SCHEME_ANDROID_RESOURCE = "android.resource";
+
     public abstract InputStream openInputStream(Uri uri);
 
     public abstract OutputStream openOutputStream(Uri uri);

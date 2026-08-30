@@ -52,6 +52,7 @@ public abstract class Context {
     public static final String ALARM_SERVICE = "alarm";
     public static final String APP_OPS_SERVICE = "appops";
     public static final String UI_MODE_SERVICE = "uimode";
+    public static final String KEYGUARD_SERVICE = "keyguard";
 
     public static final int MODE_PRIVATE = 0;
     public static final int MODE_APPEND = 0x8000;
@@ -151,6 +152,8 @@ public abstract class Context {
                 return SERVICES.computeIfAbsent(name, key -> new android.app.AppOpsManager());
             case UI_MODE_SERVICE:
                 return SERVICES.computeIfAbsent(name, key -> new android.app.UiModeManager());
+            case KEYGUARD_SERVICE:
+                return SERVICES.computeIfAbsent(name, key -> new android.app.KeyguardManager());
             default:
                 return null;
         }
@@ -171,6 +174,7 @@ public abstract class Context {
         if (serviceClass == android.app.AlarmManager.class) return ALARM_SERVICE;
         if (serviceClass == android.app.AppOpsManager.class) return APP_OPS_SERVICE;
         if (serviceClass == android.app.UiModeManager.class) return UI_MODE_SERVICE;
+        if (serviceClass == android.app.KeyguardManager.class) return KEYGUARD_SERVICE;
         return null;
     }
 
@@ -212,10 +216,67 @@ public abstract class Context {
         return false;
     }
 
-    public void sendBroadcast(Intent intent) {
-        com.vitorpamplona.amethyst.stubs.PlatformGaps.report(
-                "Context.sendBroadcast", "desktop has no broadcast bus; action=" + intent.getAction());
+    public static final int RECEIVER_EXPORTED = 0x2;
+    public static final int RECEIVER_NOT_EXPORTED = 0x4;
+
+    /**
+     * A real in-process broadcast bus.
+     *
+     * What the app uses broadcasts for is talking to itself: a notification
+     * action or a picture-in-picture control fires a PendingIntent that a
+     * receiver in this same process handles. Android delivers those in-process
+     * too, so running them here is the same behaviour rather than an
+     * approximation — and a bus that dropped them would silently break every
+     * notification button.
+     *
+     * What genuinely has no counterpart is the cross-app half: a receiver
+     * registered RECEIVER_EXPORTED is reachable by other apps on Android and by
+     * nothing here, which is reported once at registration.
+     */
+    public void registerReceiver(BroadcastReceiver receiver, IntentFilter filter) {
+        registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED);
     }
+
+    public void registerReceiver(BroadcastReceiver receiver, IntentFilter filter, int flags) {
+        if (receiver == null || filter == null) return;
+        RECEIVERS.add(new Registration(receiver, filter));
+        if ((flags & RECEIVER_EXPORTED) != 0) {
+            com.vitorpamplona.amethyst.stubs.PlatformGaps.report(
+                    "Context.registerReceiver(RECEIVER_EXPORTED)",
+                    "an exported receiver is how another app reaches this one on Android. Nothing "
+                            + "outside this process can deliver to it here; in-process broadcasts still work.");
+        }
+    }
+
+    public void unregisterReceiver(BroadcastReceiver receiver) {
+        RECEIVERS.removeIf(registration -> registration.receiver == receiver);
+    }
+
+    public void sendBroadcast(Intent intent) {
+        if (intent == null) return;
+        String action = intent.getAction();
+        // A copy, so a receiver that registers or unregisters while handling
+        // does not disturb this dispatch — the platform behaves the same way.
+        for (Registration registration : new java.util.ArrayList<>(RECEIVERS)) {
+            if (action != null && registration.filter.hasAction(action)) {
+                registration.receiver.onReceive(this, intent);
+            }
+        }
+    }
+
+    private static final class Registration {
+        final BroadcastReceiver receiver;
+        final IntentFilter filter;
+
+        Registration(BroadcastReceiver receiver, IntentFilter filter) {
+            this.receiver = receiver;
+            this.filter = filter;
+        }
+    }
+
+    /** Process-wide, as Android's is: any Context reaches the same receivers. */
+    private static final java.util.List<Registration> RECEIVERS =
+            new java.util.concurrent.CopyOnWriteArrayList<>();
 
     public int checkSelfPermission(String permission) {
         return android.content.pm.PackageManager.PERMISSION_DENIED;
