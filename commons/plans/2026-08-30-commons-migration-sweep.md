@@ -1,5 +1,37 @@
 # Full sweep: `amethyst/` → `:commons` migration candidates
 
+> **Execution status (updated 2026-08-30, same branch):** Waves 0-1 are DONE
+> on this branch — the 12 shim deletions, the 38-file relayClient batch
+> (with `AccountScopedQuery` generalized to `IAccount`), the okhttp stack →
+> `commons/service/http`, 37 model/service singles, the
+> `IFeedTopNavFilter` → `ICacheProvider` signature fix, `TopFilter`
+> extracted out of `AccountSettings.kt`, and 34 topNavFeeds files reunited
+> with their commons half. All app/desktop/cli targets compile.
+> Corrections found while executing are folded into the sections below;
+> the biggest one: **import-graph analysis under-counts blockers** —
+> same-package files use `Account`/`LocalCache`/each other *without
+> imports* (extension receivers included), so several "clean" files
+> (AccountMarmotActions, EventBroadcaster, ParticipantListBuilder,
+> UnexpectedCrashSaver, the Blossom fetchers) are actually
+> Account/LocalCache-coupled and stayed. The `ui/theme` + `ui/layouts`
+> batch also does NOT move mechanically: `Theme.kt` is Android-coupled
+> (Activity, UiModeManager, app font/theme prefs enums) and the layouts
+> sit on app-side theme constants + `stringRes` — that whole cluster
+> belongs to the strings/theme wave.
+>
+> **Refined `LocalCache` recipe (next big step, needs maintainer input):**
+> the move-group is `LocalCache` + `AntiSpamFilter` (android LruCache →
+> androidx.collection) + `CachePruner` + `CacheSearch` + `MiniFhir` +
+> `OnchainZapResolver`, into commons **jvmAndroid** (which legalizes its
+> `java.io.File` NIP-95 spill as-is). Seams to cut: `Amethyst.instance`
+> (2 sites → injected scope), app `isDebug` (2 → settable flag),
+> `checkNotInMainThread` (→ settable hook or expect), `ui.note.dateFormatter`
+> (1 log line). The open design question: `CachePruner`/`CacheSearch` call
+> `Account.isFollowing(...)` and read `account.hiddenUsers.flow.value.
+> hiddenWordsCase` — `IAccount` already has `isHidden`/`hiddenWordsCase`
+> but lacks `isFollowing`, so either `IAccount` grows it (DesktopIAccount
+> must implement) or the pruner/search take a narrower ISP interface.
+
 **Date:** 2026-08-30
 **Scope:** every Kotlin source file in the `amethyst` Android module
 (`amethyst/src/main`, 2,347 files), audited for "can and should move to
