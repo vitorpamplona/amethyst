@@ -17,6 +17,8 @@ public class View {
     private final Context context;
     private int visibility = VISIBLE;
     private boolean keepScreenOn;
+    private ViewParent parent;
+    private ViewGroup.LayoutParams layoutParams;
 
     public View(Context context) { this.context = context; }
 
@@ -34,6 +36,24 @@ public class View {
      * that wants to inhibit sleep should ask the desktop shell.
      */
     public void setKeepScreenOn(boolean value) { keepScreenOn = value; }
+
+    /**
+     * Null, always. Compose Desktop has no View tree, so nothing wraps this —
+     * and null is what the app's own {@code parent as? DialogWindowProvider}
+     * checks for, so the "not inside a dialog" branch is the true one here.
+     */
+    public ViewParent getParent() { return parent; }
+
+    public void setParent(ViewParent value) { parent = value; }
+
+    public ViewGroup.LayoutParams getLayoutParams() { return layoutParams; }
+
+    public void setLayoutParams(ViewGroup.LayoutParams value) { layoutParams = value; }
+
+    /** Never a layout preview on the JVM; the real thing is always running. */
+    public boolean isInEditMode() { return false; }
+
+    public View getRootView() { return this; }
 
     public int getWidth() { return 0; }
 

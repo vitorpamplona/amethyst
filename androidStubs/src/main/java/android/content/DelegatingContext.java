@@ -11,7 +11,24 @@ import java.io.File;
  * the JVM there is one process Context, so they all forward to it. Kept in one
  * place so the three do not drift apart.
  */
-public abstract class DelegatingContext extends Context {
+public abstract class DelegatingContext extends ContextWrapper {
+    protected DelegatingContext() { super(null); }
+
+    /**
+     * The process Context, which on the JVM is a plain {@link Context} rather
+     * than another wrapper — so the app's tailrec walks up the Context chain
+     * ({@code Context.getActivity()}, {@code Context.getActivityWindow()})
+     * terminate one step above this instead of recursing.
+     *
+     * Null only in the degenerate case where this component IS the installed
+     * process Context, because a wrapper whose base is itself would make those
+     * same walks spin forever.
+     */
+    @Override public Context getBaseContext() {
+        Context app = requireApplicationContext();
+        return app == this ? null : app;
+    }
+
     @Override public String getPackageName() { return requireApplicationContext().getPackageName(); }
 
     @Override public Resources getResources() { return requireApplicationContext().getResources(); }

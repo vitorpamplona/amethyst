@@ -5,6 +5,7 @@ import android.content.DelegatingContext;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.view.Window;
 
 /**
  * JVM stand-in for android.app.Activity.
@@ -73,6 +74,14 @@ public class Activity extends DelegatingContext {
 
     public void setIntent(Intent intent) {}
 
-    /** No window system behind this stub; the desktop shell owns the window. */
-    public Object getWindow() { return null; }
+    /**
+     * A real {@link Window} whose flags are recorded, because the app sets them
+     * for reasons that matter (FLAG_SECURE over the key backup, keep-screen-on
+     * during video). Returning null here would make every one of those calls
+     * silently vanish; Window itself is what reports the ones the desktop shell
+     * still has to honour.
+     */
+    public Window getWindow() { return window; }
+
+    private final Window window = new Window(this);
 }
