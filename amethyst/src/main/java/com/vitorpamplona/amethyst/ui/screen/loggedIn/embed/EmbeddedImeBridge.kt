@@ -20,25 +20,45 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.put
+
+// The `ime.*` envelopes are ad-hoc JSON from the page shim; every field is optional, so each
+// accessor degrades to null rather than throwing on an absent or mistyped value.
+private fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
+
+private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.intOrNull
+
+private fun JsonObject.double(key: String): Double? = (this[key] as? JsonPrimitive)?.doubleOrNull
+
+private fun JsonObject.bool(key: String): Boolean? = (this[key] as? JsonPrimitive)?.booleanOrNull
+
+private fun JsonObject.obj(key: String): JsonObject? = this[key] as? JsonObject
 
 /** Parses the `geom` object of an `ime.pagesel` payload into a [SelectionGeometry], or null if absent. */
-fun parseSelectionGeometry(o: JSONObject?): SelectionGeometry? {
+fun parseSelectionGeometry(o: JsonObject?): SelectionGeometry? {
     if (o == null) return null
     return SelectionGeometry(
-        left = o.optDouble("l", 0.0).toFloat(),
-        top = o.optDouble("t", 0.0).toFloat(),
-        right = o.optDouble("r", 0.0).toFloat(),
-        bottom = o.optDouble("b", 0.0).toFloat(),
-        startX = o.optDouble("sx", 0.0).toFloat(),
-        startBottom = o.optDouble("sb", 0.0).toFloat(),
-        endX = o.optDouble("ex", 0.0).toFloat(),
-        endBottom = o.optDouble("eb", 0.0).toFloat(),
-        viewportWidth = o.optDouble("vw", 0.0).toFloat(),
-        caretX = if (o.has("cx")) o.optDouble("cx").toFloat() else null,
-        caretTop = if (o.has("ct")) o.optDouble("ct").toFloat() else null,
-        caretBottom = if (o.has("cb")) o.optDouble("cb").toFloat() else null,
-        isRange = o.optBoolean("rng", false),
+        left = (o.double("l") ?: 0.0).toFloat(),
+        top = (o.double("t") ?: 0.0).toFloat(),
+        right = (o.double("r") ?: 0.0).toFloat(),
+        bottom = (o.double("b") ?: 0.0).toFloat(),
+        startX = (o.double("sx") ?: 0.0).toFloat(),
+        startBottom = (o.double("sb") ?: 0.0).toFloat(),
+        endX = (o.double("ex") ?: 0.0).toFloat(),
+        endBottom = (o.double("eb") ?: 0.0).toFloat(),
+        viewportWidth = (o.double("vw") ?: 0.0).toFloat(),
+        caretX = o.double("cx")?.toFloat(),
+        caretTop = o.double("ct")?.toFloat(),
+        caretBottom = o.double("cb")?.toFloat(),
+        isRange = o.bool("rng") ?: false,
     )
 }
 
@@ -62,45 +82,45 @@ interface EmbeddedImeBridge {
  * learns there is a field to put the keyboard back on. Sent when a tab becomes the active one again, and when
  * an [ImeEvent.WantKeyboard] tap arrives for a field this host no longer mirrors.
  */
-fun EmbeddedImeBridge.requestImeResync() = sendImeOp(JSONObject().put("type", "ime.resync").toString())
+fun EmbeddedImeBridge.requestImeResync() = sendImeOp(buildJsonObject { put("type", "ime.resync") }.toString())
 
 /** Parses one page → host `ime.*` envelope into an [ImeEvent], or null for anything unrecognized. */
 fun parseImeEvent(payload: String): ImeEvent? {
-    val o = runCatching { JSONObject(payload) }.getOrNull() ?: return null
-    return when (o.optString("type")) {
+    val o = runCatching { Json.parseToJsonElement(payload) as? JsonObject }.getOrNull() ?: return null
+    return when (o.string("type")) {
         "ime.focus" -> parseFocus(o)
         "ime.wantkb" -> ImeEvent.WantKeyboard
         "ime.refocus" -> ImeEvent.ReFocus(parseFocus(o))
         "ime.blur" -> ImeEvent.Blur
         "ime.state" ->
             ImeEvent.State(
-                text = o.optString("text", ""),
-                selStart = o.optInt("selStart", 0),
-                selEnd = o.optInt("selEnd", 0),
-                geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+                text = o.string("text") ?: "",
+                selStart = o.int("selStart") ?: 0,
+                selEnd = o.int("selEnd") ?: 0,
+                geometry = parseSelectionGeometry(o.obj("geom")),
             )
         "ime.pagesel" ->
             ImeEvent.PageSelection(
-                active = o.optBoolean("active", false),
-                text = o.optString("text", ""),
-                geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+                active = o.bool("active") ?: false,
+                text = o.string("text") ?: "",
+                geometry = parseSelectionGeometry(o.obj("geom")),
             )
-        "ime.scroll" -> ImeEvent.Scroll(active = o.optBoolean("active", false))
-        "ime.carettap" -> ImeEvent.CaretTap(geometry = parseSelectionGeometry(o.optJSONObject("geom")))
+        "ime.scroll" -> ImeEvent.Scroll(active = o.bool("active") ?: false)
+        "ime.carettap" -> ImeEvent.CaretTap(geometry = parseSelectionGeometry(o.obj("geom")))
         else -> null
     }
 }
 
-private fun parseFocus(o: JSONObject) =
+private fun parseFocus(o: JsonObject) =
     ImeEvent.Focus(
-        inputType = o.optString("inputType", "text"),
-        enterKeyHint = o.optString("enterKeyHint", ""),
-        multiline = o.optBoolean("multiline", false),
-        readOnly = o.optBoolean("readOnly", false),
-        text = o.optString("text", ""),
-        selStart = o.optInt("selStart", 0),
-        selEnd = o.optInt("selEnd", 0),
-        geometry = parseSelectionGeometry(o.optJSONObject("geom")),
+        inputType = o.string("inputType") ?: "text",
+        enterKeyHint = o.string("enterKeyHint") ?: "",
+        multiline = o.bool("multiline") ?: false,
+        readOnly = o.bool("readOnly") ?: false,
+        text = o.string("text") ?: "",
+        selStart = o.int("selStart") ?: 0,
+        selEnd = o.int("selEnd") ?: 0,
+        geometry = parseSelectionGeometry(o.obj("geom")),
     )
 
 /** What the focused page field reports up to the host keyboard. */

@@ -78,7 +78,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
+import kotlinx.serialization.json.JsonObject
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executor
 import com.vitorpamplona.amethyst.commons.R as CommonsR
@@ -744,17 +744,17 @@ class NappletHostActivity : ComponentActivity() {
         val raw = message.data ?: return
         // The applet sends a full upstream envelope {type, id, ...}; we forward it verbatim and
         // correlate on its id. The broker reads `type` to decode and to build the .result reply.
-        val envelope = runCatching { JSONObject(raw) }.getOrNull() ?: return
+        val envelope = parseJsonObject(raw) ?: return
 
         // Unbind a keyboard action as soon as the applet drops it (the broker's Done reply carries no
         // actionId, so the binding is removed here from the envelope itself).
-        if (envelope.optString("type") == "keys.unregisterAction") {
-            envelope.optString("actionId").takeIf { it.isNotEmpty() }?.let { keyActions.unregister(it) }
+        if (envelope.stringOrEmpty("type") == "keys.unregisterAction") {
+            envelope.stringOrEmpty("actionId").takeIf { it.isNotEmpty() }?.let { keyActions.unregister(it) }
         }
 
         // Fire-and-forget messages (inc.emit, keys.unregisterAction) have no id; synthesize one so
         // they still reach the broker. Any reply is harmless — the applet has nothing to correlate.
-        val id = envelope.optString("id").ifEmpty { "fire-${fireSeq++}" }
+        val id = envelope.stringOrEmpty("id").ifEmpty { "fire-${fireSeq++}" }
 
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
@@ -791,13 +791,12 @@ class NappletHostActivity : ComponentActivity() {
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
 
                 // payload is the broker's {type:"...result", ok, ...}; inject the correlation id for the shim.
-                val result = runCatching { JSONObject(payload) }.getOrNull() ?: JSONObject()
-                result.put("id", id)
+                val result = (parseJsonObject(payload) ?: JsonObject(emptyMap())).withString("id", id)
                 // The broker authorized a keyboard action: bind the honored key combo so dispatchKeyEvent
                 // can fire it. Only ok'd registrations bind (a denied KEYS request never reaches here).
-                if (result.optString("type") == "keys.registerAction.result" && result.optBoolean("ok")) {
-                    val actionId = result.optString("actionId")
-                    if (actionId.isNotEmpty()) keyActions.register(actionId, result.optString("binding").ifEmpty { null })
+                if (result.stringOrEmpty("type") == "keys.registerAction.result" && result.booleanOrFalse("ok")) {
+                    val actionId = result.stringOrEmpty("actionId")
+                    if (actionId.isNotEmpty()) keyActions.register(actionId, result.stringOrEmpty("binding").ifEmpty { null })
                 }
                 notifyIfSensitive(result)
                 bridgeReplyProxy?.postMessage(result.toString())
@@ -989,10 +988,10 @@ class NappletHostActivity : ComponentActivity() {
      * Surfaces an "allow always" capability acting on the user's behalf, so a granted RELAY/UPLOAD/VALUE
      * op can never run completely silently. Read-only ops (identity/storage/resource) don't toast.
      */
-    private fun notifyIfSensitive(result: JSONObject) {
-        if (!result.optBoolean("ok")) return
+    private fun notifyIfSensitive(result: JsonObject) {
+        if (!result.booleanOrFalse("ok")) return
         val message =
-            when (result.optString("type")) {
+            when (result.stringOrEmpty("type")) {
                 "relay.publish.result", "relay.publishEncrypted.result" -> getString(R.string.napplet_action_published, barTitle())
                 "upload.upload.result" -> getString(R.string.napplet_action_uploaded, barTitle())
                 "value.payInvoice.result" -> getString(R.string.napplet_action_paid, barTitle())

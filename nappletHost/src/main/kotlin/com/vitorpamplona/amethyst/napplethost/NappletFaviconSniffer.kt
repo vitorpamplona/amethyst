@@ -26,7 +26,6 @@ import android.util.Base64
 import android.webkit.WebView
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.quartz.utils.Log
-import org.json.JSONObject
 
 /**
  * Declared-favicon capture for the sandboxed browser WebViews, complementing
@@ -111,9 +110,9 @@ internal object NappletFaviconSniffer {
     /** `state` to base64 payload, or null when the page has not produced a result for this seq yet. */
     private fun parse(raw: String?): Pair<String, String>? {
         if (raw == null || raw == "null") return null
-        val json = runCatching { JSONObject(raw) }.getOrNull() ?: return null
-        val state = json.optString("state").ifBlank { return null }
-        return state to json.optString("data")
+        val json = parseJsonObject(raw) ?: return null
+        val state = json.stringOrEmpty("state").ifBlank { return null }
+        return state to json.stringOrEmpty("data")
     }
 
     /**

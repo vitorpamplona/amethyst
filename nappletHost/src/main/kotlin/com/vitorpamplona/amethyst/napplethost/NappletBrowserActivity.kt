@@ -64,7 +64,7 @@ import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.quartz.utils.Log
-import org.json.JSONObject
+import kotlinx.serialization.json.JsonObject
 import java.io.ByteArrayOutputStream
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executor
@@ -616,13 +616,13 @@ class NappletBrowserActivity : ComponentActivity() {
         if (!isMainFrame) return
         bridgeReplyProxy = replyProxy
         val raw = message.data ?: return
-        val envelope = runCatching { JSONObject(raw) }.getOrNull() ?: return
+        val envelope = parseJsonObject(raw) ?: return
 
         val scheme = sourceOrigin.scheme ?: return
         val host = sourceOrigin.host ?: return
         val origin = "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
 
-        val id = envelope.optString("id").ifEmpty { "fire-${fireSeq++}" }
+        val id = envelope.stringOrEmpty("id").ifEmpty { "fire-${fireSeq++}" }
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
                 replyTo = replyMessenger
@@ -667,8 +667,7 @@ class NappletBrowserActivity : ComponentActivity() {
             NappletIpc.MSG_RESPONSE -> {
                 val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                val result = runCatching { JSONObject(payload) }.getOrNull() ?: JSONObject()
-                result.put("id", id)
+                val result = (parseJsonObject(payload) ?: JsonObject(emptyMap())).withString("id", id)
                 bridgeReplyProxy?.postMessage(result.toString())
             }
             NappletIpc.MSG_PUSH -> {

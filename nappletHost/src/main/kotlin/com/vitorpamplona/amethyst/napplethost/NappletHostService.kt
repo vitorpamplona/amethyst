@@ -62,7 +62,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
-import org.json.JSONObject
+import kotlinx.serialization.json.JsonObject
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executor
 
@@ -583,10 +583,10 @@ class NappletHostService : Service() {
         tab.bridgeReplyProxy = replyProxy
 
         val raw = message.data ?: return
-        val envelope = runCatching { JSONObject(raw) }.getOrNull() ?: return
+        val envelope = parseJsonObject(raw) ?: return
 
         // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
-        if (envelope.optString("type").startsWith("ime.")) {
+        if (envelope.stringOrEmpty("type").startsWith("ime.")) {
             val reply =
                 Message.obtain(null, NappletEmbedContract.MSG_IME_EVENT).apply {
                     data = Bundle().apply { putString(NappletEmbedContract.KEY_IME_PAYLOAD, raw) }
@@ -595,7 +595,7 @@ class NappletHostService : Service() {
             return
         }
 
-        val id = envelope.optString("id").ifEmpty { "fire-${tab.fireSeq++}" }
+        val id = envelope.stringOrEmpty("id").ifEmpty { "fire-${tab.fireSeq++}" }
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
                 replyTo = tab.replyMessenger
@@ -630,8 +630,7 @@ class NappletHostService : Service() {
             NappletIpc.MSG_RESPONSE -> {
                 val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                val result = runCatching { JSONObject(payload) }.getOrNull() ?: JSONObject()
-                result.put("id", id)
+                val result = (parseJsonObject(payload) ?: JsonObject(emptyMap())).withString("id", id)
                 notifyIfSensitive(tab, result)
                 runCatching { tab.bridgeReplyProxy?.postMessage(result.toString()) }
             }
@@ -647,11 +646,11 @@ class NappletHostService : Service() {
     /** Pushes a notice to the main process for a granted "allow always" sensitive op, so it can toast. */
     private fun notifyIfSensitive(
         tab: NappletTab,
-        result: JSONObject,
+        result: JsonObject,
     ) {
-        if (!result.optBoolean("ok")) return
+        if (!result.booleanOrFalse("ok")) return
         val notice =
-            when (result.optString("type")) {
+            when (result.stringOrEmpty("type")) {
                 "relay.publish.result", "relay.publishEncrypted.result" -> NappletEmbedContract.NOTICE_PUBLISHED
                 "upload.upload.result" -> NappletEmbedContract.NOTICE_UPLOADED
                 "value.payInvoice.result" -> NappletEmbedContract.NOTICE_PAID

@@ -32,7 +32,9 @@ import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputConnectionWrapper
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import org.json.JSONObject
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * The main-app-window home for the soft keyboard when a field is focused inside an embedded WebView. The
@@ -124,7 +126,7 @@ class RemoteImeView(
         )
         // The IME's "Go/Search/Send/Done" — the page submits/handles it (single-line has no newline).
         setOnEditorActionListener { _, _, _ ->
-            bridge?.sendImeOp(JSONObject().put("type", "ime.action").toString())
+            bridge?.sendImeOp(buildJsonObject { put("type", "ime.action") }.toString())
             true
         }
     }
@@ -365,12 +367,12 @@ class RemoteImeView(
         schedule()
     }
 
-    private fun stateJson(): JSONObject {
+    private fun stateJson(): JsonObject {
         val editable = text
         val composingStart = if (editable != null) BaseInputConnection.getComposingSpanStart(editable) else -1
         val composingEnd = if (editable != null) BaseInputConnection.getComposingSpanEnd(editable) else -1
-        return JSONObject()
-            .put("type", "ime.set")
+        return buildJsonObject {
+            put("type", "ime.set")
             // A readonly field's text must never travel back to the page. TYPE_NULL keeps the *user* from
             // typing into the mirror, but the mirror still flushes on selection changes — a long-press
             // select-all, then Chrome's collapse-to-endpoint, both emit one — and that flush is delivered
@@ -381,11 +383,12 @@ class RemoteImeView(
             // Omitting the key (rather than sending the current text) makes the shim treat the message as
             // selection-only — `var next = (msg.text != null) ? String(msg.text) : prev` — so the
             // host-drawn handles and Copy keep working off a synced selection while nothing can be written.
-            .apply { if (!fieldReadOnly) put("text", editable?.toString() ?: "") }
-            .put("selStart", selectionStart)
-            .put("selEnd", selectionEnd)
-            .put("composingStart", composingStart)
-            .put("composingEnd", composingEnd)
+            if (!fieldReadOnly) put("text", editable?.toString() ?: "")
+            put("selStart", selectionStart)
+            put("selEnd", selectionEnd)
+            put("composingStart", composingStart)
+            put("composingEnd", composingEnd)
+        }
     }
 
     private fun flushState() {
