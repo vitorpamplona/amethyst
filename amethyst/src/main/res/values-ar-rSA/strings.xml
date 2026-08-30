@@ -3034,7 +3034,6 @@
     <string name="relay_members_removed">تمت إزالة %1$d أعضاء من الـ relay</string>
     <string name="relay_join_request">طلب الانضمام إلى relay</string>
     <string name="relay_leave_request">طلب مغادرة relay</string>
-    <string name="ai_writing_help">مساعدة الذكاء الاصطناعي في الكتابة</string>
     <string name="ai_writing_setting_title">اقتراح تحسينات النص</string>
     <string name="ai_writing_setting_description">يستخدم نموذج ذكاء اصطناعي على الجهاز لاقتراح تصحيحات نصية وتغييرات في النبرة.</string>
     <string name="tracked_broadcasts_setting_title">البث المتتبَّع</string>
@@ -3052,8 +3051,6 @@
     <string name="ai_tone_elaborate">توسيع</string>
     <string name="ai_tone_friendly">ودّي</string>
     <string name="ai_tone_professional">احترافي</string>
-    <string name="ai_tone_more_direct">أكثر مباشرة</string>
-    <string name="ai_tone_punchy">قوي ومؤثر</string>
     <string name="ai_tone_emojify">+ إيموجي</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">حزم الإيموجي</string>

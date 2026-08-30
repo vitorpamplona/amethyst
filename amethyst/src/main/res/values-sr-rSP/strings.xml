@@ -2918,7 +2918,6 @@
     <string name="relay_members_removed">%1$d članova uklonjeno iz relay-a</string>
     <string name="relay_join_request">Zahtev za pridruživanje relay-u</string>
     <string name="relay_leave_request">Zahtev za napuštanje relay-a</string>
-    <string name="ai_writing_help">Pomoć AI pri pisanju</string>
     <string name="ai_writing_setting_title">Predloži poboljšanja teksta</string>
     <string name="ai_writing_setting_description">Koristi AI model na uređaju za predlaganje ispravki teksta i promena tona.</string>
     <string name="tracked_broadcasts_setting_title">Praćena emitovanja</string>
@@ -2936,8 +2935,6 @@
     <string name="ai_tone_elaborate">Razradi</string>
     <string name="ai_tone_friendly">Prijateljski</string>
     <string name="ai_tone_professional">Profesionalno</string>
-    <string name="ai_tone_more_direct">Direktnije</string>
-    <string name="ai_tone_punchy">Upečatljivo</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji paketi</string>
     <string name="emoji_pack_management_title">Dodaj na emoji listu</string>

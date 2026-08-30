@@ -2893,7 +2893,6 @@
     <string name="relay_members_removed">%1$d jäsentä poistettu relaylta</string>
     <string name="relay_join_request">Relayn liittymispyyntö</string>
     <string name="relay_leave_request">Relayn poistumispyyntö</string>
-    <string name="ai_writing_help">Tekoälyn kirjoitusapu</string>
     <string name="ai_writing_setting_title">Ehdota tekstiparannuksia</string>
     <string name="ai_writing_setting_description">Käyttää laitteen tekoälymallia ehdottamaan tekstikorjauksia ja sävymuutoksia.</string>
     <string name="tracked_broadcasts_setting_title">Seuratut lähetykset</string>
@@ -2911,8 +2910,6 @@
     <string name="ai_tone_elaborate">Laajenna</string>
     <string name="ai_tone_friendly">Ystävällinen</string>
     <string name="ai_tone_professional">Ammattimainen</string>
-    <string name="ai_tone_more_direct">Suorempi</string>
-    <string name="ai_tone_punchy">Napakka</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-paketit</string>
     <string name="emoji_pack_management_title">Lisää emoji-listaan</string>

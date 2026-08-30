@@ -2864,7 +2864,6 @@
     <string name="relay_members_removed">Relay에서 %1$d명의 멤버가 제거되었습니다</string>
     <string name="relay_join_request">Relay 가입 요청</string>
     <string name="relay_leave_request">Relay 탈퇴 요청</string>
-    <string name="ai_writing_help">AI 작성 도우미</string>
     <string name="ai_writing_setting_title">텍스트 개선 제안</string>
     <string name="ai_writing_setting_description">기기 내 AI 모델을 사용하여 텍스트 수정 및 톤 변경을 제안합니다.</string>
     <string name="tracked_broadcasts_setting_title">추적된 방송</string>
@@ -2882,8 +2881,6 @@
     <string name="ai_tone_elaborate">자세히</string>
     <string name="ai_tone_friendly">친근하게</string>
     <string name="ai_tone_professional">전문적으로</string>
-    <string name="ai_tone_more_direct">더 직접적으로</string>
-    <string name="ai_tone_punchy">임팩트 있게</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji 팩</string>
     <string name="emoji_pack_management_title">Emoji 목록에 추가</string>

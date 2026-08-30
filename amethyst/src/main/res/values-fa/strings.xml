@@ -3678,7 +3678,6 @@
     
     <string name="relay_leave_request">درخواست خروج از relay</string>
     
-    <string name="ai_writing_help">کمک نوشتاری هوش مصنوعی</string>
     
     <string name="ai_writing_setting_title">پیشنهاد بهبود متن</string>
     
@@ -3714,9 +3713,7 @@
     
     <string name="ai_tone_professional">حرفه‌ای</string>
     
-    <string name="ai_tone_more_direct">مستقیم‌تر</string>
     
-    <string name="ai_tone_punchy">تأثیرگذار</string>
 
     <string name="ai_tone_emojify">+ ایموجی</string>
     

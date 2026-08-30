@@ -5496,7 +5496,6 @@
     
 <string name="relay_leave_request">中继离开请求</string>
     
-<string name="ai_writing_help">AI 写入帮助</string>
     
 <string name="ai_writing_setting_title">建议文本改进</string>
     
@@ -5532,9 +5531,7 @@
     
 <string name="ai_tone_professional">专业</string>
     
-<string name="ai_tone_more_direct">更直接</string>
     
-<string name="ai_tone_punchy">强有力</string>
     
 <string name="ai_tone_emojify">+ Emoji</string>
     

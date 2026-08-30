@@ -5004,7 +5004,6 @@
     
 <string name="relay_leave_request">Demande de départ du relais</string>
     
-<string name="ai_writing_help">Aide à la rédaction IA</string>
     
 <string name="ai_writing_setting_title">Proposer des améliorations de texte</string>
     
@@ -5040,9 +5039,7 @@
     
 <string name="ai_tone_professional">Professionnel</string>
     
-<string name="ai_tone_more_direct">Plus direct</string>
     
-<string name="ai_tone_punchy">Percutant</string>
     
 <string name="ai_tone_emojify">+ Emoji</string>
     

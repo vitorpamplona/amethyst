@@ -2921,7 +2921,6 @@
     <string name="relay_members_removed">%1$d membroj forigitaj el relay</string>
     <string name="relay_join_request">Peto pri aliĝo al relay</string>
     <string name="relay_leave_request">Peto pri foriro el relay</string>
-    <string name="ai_writing_help">Helpo pri AI-Skribado</string>
     <string name="ai_writing_setting_title">Proponi tekstajn plibonigojn</string>
     <string name="ai_writing_setting_description">Uzas aparatan AI-modelon por proponi tekstajn korektojn kaj tondoŝanĝojn.</string>
     <string name="tracked_broadcasts_setting_title">Spurataj dissendoj</string>
@@ -2939,8 +2938,6 @@
     <string name="ai_tone_elaborate">Plidetali</string>
     <string name="ai_tone_friendly">Amika</string>
     <string name="ai_tone_professional">Profesia</string>
-    <string name="ai_tone_more_direct">Pli Rekta</string>
-    <string name="ai_tone_punchy">Trafa</string>
     <string name="ai_tone_emojify">+ Emodžio</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emodžio-Pakaj</string>

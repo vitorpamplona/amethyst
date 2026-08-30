@@ -2725,7 +2725,6 @@
     <string name="relay_members_removed">ลบ %1$d สมาชิกออกจาก relay แล้ว</string>
     <string name="relay_join_request">คำขอเข้าร่วม Relay</string>
     <string name="relay_leave_request">คำขอออกจาก Relay</string>
-    <string name="ai_writing_help">ความช่วยเหลือการเขียนด้วย AI</string>
     <string name="ai_writing_setting_title">เสนอการปรับปรุงข้อความ</string>
     <string name="ai_writing_setting_description">ใช้โมเดล AI บนอุปกรณ์เพื่อเสนอการแก้ไขข้อความและการเปลี่ยนแปลงโทนเสียง</string>
     <string name="tracked_broadcasts_setting_title">การออกอากาศที่ติดตาม</string>
@@ -2743,8 +2742,6 @@
     <string name="ai_tone_elaborate">ขยายความ</string>
     <string name="ai_tone_friendly">เป็นกันเอง</string>
     <string name="ai_tone_professional">เป็นมืออาชีพ</string>
-    <string name="ai_tone_more_direct">ตรงไปตรงมามากขึ้น</string>
-    <string name="ai_tone_punchy">กระชับ</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">แพ็ค Emoji</string>
     <string name="emoji_pack_management_title">เพิ่มในรายการ Emoji</string>

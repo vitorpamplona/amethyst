@@ -2880,7 +2880,6 @@
     <string name="relay_members_removed">%1$d 位成員已從 relay 移除</string>
     <string name="relay_join_request">Relay 加入申請</string>
     <string name="relay_leave_request">Relay 退出申請</string>
-    <string name="ai_writing_help">AI 寫作輔助</string>
     <string name="ai_writing_setting_title">建議文字改進</string>
     <string name="ai_writing_setting_description">使用裝置上的 AI 模型提出文字修正和語氣變更建議。</string>
     <string name="tracked_broadcasts_setting_title">追蹤廣播</string>
@@ -2898,8 +2897,6 @@
     <string name="ai_tone_elaborate">詳述</string>
     <string name="ai_tone_friendly">友善</string>
     <string name="ai_tone_professional">專業</string>
-    <string name="ai_tone_more_direct">更直接</string>
-    <string name="ai_tone_punchy">有力</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji 包</string>
     <string name="emoji_pack_management_title">新增至 Emoji 清單</string>

@@ -4350,7 +4350,6 @@
     
 <string name="relay_leave_request">Relay-opzegverzoek</string>
     
-<string name="ai_writing_help">AI-schrijfassistent</string>
     
 <string name="ai_writing_setting_title">Tekstverbeteringen voorstellen</string>
     
@@ -4386,9 +4385,7 @@
     
 <string name="ai_tone_professional">Professioneel</string>
     
-<string name="ai_tone_more_direct">Directer</string>
     
-<string name="ai_tone_punchy">Kort en krachtig</string>
     
 <string name="ai_tone_emojify">+ Emoji</string>
     

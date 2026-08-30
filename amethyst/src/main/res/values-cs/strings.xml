@@ -4727,7 +4727,6 @@
     <string name="relay_members_removed">%1$d členů odebráno z relé</string>
     <string name="relay_join_request">Žádost o připojení k relé</string>
     <string name="relay_leave_request">Žádost o opuštění relé</string>
-    <string name="ai_writing_help">Asistent psaní s AI</string>
     <string name="ai_writing_setting_title">Navrhovat vylepšení textu</string>
     <string name="ai_writing_setting_description">Používá AI model běžící v zařízení k navrhování oprav textu a změn tónu.</string>
     <string name="tracked_broadcasts_setting_title">Sledovaná vysílání</string>
@@ -4850,8 +4849,6 @@
     <string name="ai_tone_elaborate">Rozvést</string>
     <string name="ai_tone_friendly">Přátelský</string>
     <string name="ai_tone_professional">Profesionální</string>
-    <string name="ai_tone_more_direct">Přímější</string>
-    <string name="ai_tone_punchy">Úderný</string>
     <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji balíčky</string>

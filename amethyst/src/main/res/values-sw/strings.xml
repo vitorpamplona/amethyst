@@ -2900,7 +2900,6 @@
     <string name="relay_members_removed">%1$d wanachama wameondolewa kutoka relay</string>
     <string name="relay_join_request">Ombi la kujiunga na relay</string>
     <string name="relay_leave_request">Ombi la kuacha relay</string>
-    <string name="ai_writing_help">Msaada wa Uandishi wa AI</string>
     <string name="ai_writing_setting_title">Pendekeza maboresho ya maandishi</string>
     <string name="ai_writing_setting_description">Hutumia mfano wa AI uliopo kwenye kifaa kupendekeza marekebisho ya maandishi na mabadiliko ya sauti.</string>
     <string name="tracked_broadcasts_setting_title">Matangazo yanayofuatiliwa</string>
@@ -2918,8 +2917,6 @@
     <string name="ai_tone_elaborate">Panua</string>
     <string name="ai_tone_friendly">Kirafiki</string>
     <string name="ai_tone_professional">Kitaalamu</string>
-    <string name="ai_tone_more_direct">Zaidi ya Moja kwa Moja</string>
-    <string name="ai_tone_punchy">Chenye Nguvu</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Pakiti za Emoji</string>
     <string name="emoji_pack_management_title">Ongeza kwenye Orodha ya Emoji</string>

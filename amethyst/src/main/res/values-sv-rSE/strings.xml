@@ -4537,7 +4537,6 @@
     <string name="relay_members_removed">%1$d medlemmar borttagna från relä</string>
     <string name="relay_join_request">Begäran om att gå med i relä</string>
     <string name="relay_leave_request">Begäran om att lämna relä</string>
-    <string name="ai_writing_help">AI-skrivhjälp</string>
     <string name="ai_writing_setting_title">Föreslå textförbättringar</string>
     <string name="ai_writing_setting_description">Använder en AI-modell på enheten för att föreslå textkorrigeringar och tonändringar.</string>
     <string name="tracked_broadcasts_setting_title">Spårade sändningar</string>
@@ -4642,8 +4641,6 @@
     <string name="ai_tone_elaborate">Utveckla</string>
     <string name="ai_tone_friendly">Vänlig</string>
     <string name="ai_tone_professional">Professionell</string>
-    <string name="ai_tone_more_direct">Mer direkt</string>
-    <string name="ai_tone_punchy">Slagkraftig</string>
     <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-paket</string>

@@ -3846,7 +3846,6 @@
     
     <string name="relay_leave_request">Запрос на выход из relay</string>
     
-    <string name="ai_writing_help">Помощь ИИ в написании</string>
     
     <string name="ai_writing_setting_title">Предлагать улучшения текста</string>
     
@@ -3882,9 +3881,7 @@
     
     <string name="ai_tone_professional">Профессионально</string>
     
-    <string name="ai_tone_more_direct">Прямее</string>
     
-    <string name="ai_tone_punchy">Энергично</string>
     
     <string name="ai_tone_emojify">+ Эмодзи</string>
     

@@ -2955,7 +2955,6 @@
     <string name="relay_members_removed">%1$d участников удалено из relay</string>
     <string name="relay_join_request">Запрос на вступление в relay</string>
     <string name="relay_leave_request">Запрос на выход из relay</string>
-    <string name="ai_writing_help">Помощь ИИ в написании</string>
     <string name="ai_writing_setting_title">Предлагать улучшения текста</string>
     <string name="ai_writing_setting_description">Использует модель ИИ на устройстве для предложения исправлений текста и изменения тональности.</string>
     <string name="tracked_broadcasts_setting_title">Отслеживаемые трансляции</string>
@@ -2973,8 +2972,6 @@
     <string name="ai_tone_elaborate">Подробнее</string>
     <string name="ai_tone_friendly">Дружелюбно</string>
     <string name="ai_tone_professional">Профессионально</string>
-    <string name="ai_tone_more_direct">Прямее</string>
-    <string name="ai_tone_punchy">Энергично</string>
     <string name="ai_tone_emojify">+ Эмодзи</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Наборы эмодзи</string>

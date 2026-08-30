@@ -2859,7 +2859,6 @@
     <string name="relay_members_removed">%1$d membri rimossi dal relay</string>
     <string name="relay_join_request">Richiesta di iscrizione al relay</string>
     <string name="relay_leave_request">Richiesta di uscita dal relay</string>
-    <string name="ai_writing_help">Assistenza Scrittura AI</string>
     <string name="ai_writing_setting_title">Proponi miglioramenti al testo</string>
     <string name="ai_writing_setting_description">Utilizza un modello AI sul dispositivo per proporre correzioni al testo e modifiche al tono.</string>
     <string name="tracked_broadcasts_setting_title">Trasmissioni tracciate</string>
@@ -2877,8 +2876,6 @@
     <string name="ai_tone_elaborate">Approfondisci</string>
     <string name="ai_tone_friendly">Amichevole</string>
     <string name="ai_tone_professional">Professionale</string>
-    <string name="ai_tone_more_direct">Più diretto</string>
-    <string name="ai_tone_punchy">Incisivo</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Pacchetti Emoji</string>
     <string name="emoji_pack_management_title">Aggiungi alla Lista Emoji</string>
