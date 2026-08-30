@@ -31,6 +31,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
+import com.vitorpamplona.quartz.nip01Core.core.RawJson
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDeserializer
@@ -84,6 +85,7 @@ class JacksonMapper {
                 .registerModule(
                     SimpleModule()
                         // nip 01
+                        .addSerializer(RawJson::class.java, RawJsonSerializer())
                         .addSerializer(Event::class.java, EventSerializer())
                         .addDeserializer(Event::class.java, EventDeserializer())
                         .addSerializer(Filter::class.java, FilterSerializer())

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.rpc
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.RawJson
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 
 class NwcTransactionMetadata(
@@ -41,15 +43,25 @@ class NwcTransactionMetadata(
     class NostrZapData(
         val pubkeyHex: String?,
         val recipientPubkeyHex: String?,
+        val content: String?,
     )
 
     fun senderPubkeyHex(): String? = nostr?.pubkeyHex ?: payerData?.pubkey?.let { decodePublicKeyAsHexOrNull(it) }
 
-    fun senderDisplayName(): String? = payerData?.name ?: payerData?.email
+    fun senderDisplayName(): String? = payerData?.name?.ifBlank { null } ?: payerData?.email?.ifBlank { null }
 
-    fun recipientIdentifier(): String? = recipientData?.identifier
+    fun recipientIdentifier(): String? = recipientData?.identifier?.ifBlank { null }
 
     fun recipientPubkeyHex(): String? = nostr?.recipientPubkeyHex
+
+    /**
+     * The message to show for this transaction.
+     *
+     * A wallet that stores only `nostr` still carries the message: a zap request's
+     * `content` IS the public zap comment. Private-zap messages are encrypted into
+     * the `anon` tag rather than content, so nothing encrypted can surface here.
+     */
+    fun displayComment(): String? = comment?.ifBlank { null } ?: nostr?.content?.ifBlank { null }
 
     companion object {
         fun parse(metadata: Any?): NwcTransactionMetadata? {
@@ -92,6 +104,7 @@ class NwcTransactionMetadata(
                     NostrZapData(
                         pubkeyHex = pubkeyHex,
                         recipientPubkeyHex = recipientHex,
+                        content = n["content"] as? String,
                     )
                 }
 
@@ -105,6 +118,91 @@ class NwcTransactionMetadata(
                 recipientData = recipientData,
                 nostr = nostr,
             )
+        }
+
+        /**
+         * NWC-06: "The metadata MUST be no more than 4096 characters, otherwise MUST
+         * be dropped." A wallet is required to discard an over-long object wholesale,
+         * so breaching this loses the recipient entirely rather than degrading.
+         */
+        const val MAX_METADATA_CHARS = 4096
+
+        // The keys and punctuation around the values:
+        // `{"recipient_data":{"identifier":""},"comment":"","nostr":}` is 58 chars.
+        // Escaping is counted separately by [escapedLength], so this is a fixed cost.
+        private const val KEY_OVERHEAD = 64
+
+        /**
+         * The length a string occupies once JSON-escaped.
+         *
+         * `comment` is free text a user typed, so its raw length is not what reaches
+         * the wire: a quote or backslash becomes two characters and a control
+         * character becomes six. Counting the raw length instead would let an
+         * escaping-heavy comment breach [MAX_METADATA_CHARS] unnoticed — and NWC-06
+         * makes the wallet drop the WHOLE object then, losing `recipient_data` too,
+         * which is the degradation this budget exists to protect.
+         *
+         * Over-counts the short forms (`\n` is two characters, not six), which is
+         * the safe direction.
+         */
+        private fun escapedLength(value: String): Int =
+            value.sumOf { char ->
+                when {
+                    char == '"' || char == '\\' -> 2
+                    char < ' ' -> 6
+                    else -> 1
+                }
+            }
+
+        /**
+         * Assembles NWC-06 `metadata` for an outgoing payment, or null when there is
+         * nothing worth saying.
+         *
+         * `nostr` carries the zap request's OWN serialization verbatim, as [RawJson].
+         *
+         * NIP-57 sets a zap invoice's `description_hash` to the sha256 of the raw
+         * JSON the LNURL callback received in `nostr=`, and that is
+         * `LnZapRequestEvent.toJson()` — the exact string used here. A wallet can
+         * therefore bind this stored event to the invoice it labels, which is what
+         * turns "the client says it paid X" into something the wallet checked.
+         *
+         * Rebuilding the object from typed fields would put that binding at the mercy
+         * of key order, escaping and number formatting matching by coincidence, and
+         * it fails as a silently unlabelled row rather than as an error. Passing the
+         * bytes through also sidesteps the number-widening hazard in
+         * [com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.toAnyValue],
+         * which resolves untyped numbers with `toDoubleOrNull()` BEFORE
+         * `toLongOrNull()`: nothing here decomposes the event at all.
+         *
+         * When the whole object would breach [MAX_METADATA_CHARS], `nostr` is dropped
+         * and the much smaller `recipient_data`/`comment` pair survives, so the row
+         * still names the payee instead of arriving blank.
+         */
+        fun build(
+            zapRequest: Event?,
+            recipientIdentifier: String?,
+            comment: String?,
+        ): Map<String, Any?>? {
+            val lean = mutableMapOf<String, Any?>()
+
+            recipientIdentifier?.ifBlank { null }?.let {
+                lean["recipient_data"] = mapOf("identifier" to it)
+            }
+            comment?.ifBlank { null }?.let { lean["comment"] = it }
+
+            if (zapRequest != null) {
+                // The serialized length of the `nostr` member, exactly — it is the
+                // string that gets embedded, not a reconstruction of it.
+                val raw = zapRequest.toJson()
+                val chars =
+                    escapedLength(recipientIdentifier.orEmpty()) + escapedLength(comment.orEmpty()) +
+                        raw.length + KEY_OVERHEAD
+                if (chars <= MAX_METADATA_CHARS) {
+                    lean["nostr"] = RawJson(raw)
+                }
+            }
+
+            return lean.ifEmpty { null }
         }
     }
 }

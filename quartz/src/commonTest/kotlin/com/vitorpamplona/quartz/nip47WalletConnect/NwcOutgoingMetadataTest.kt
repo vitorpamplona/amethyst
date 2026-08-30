@@ -1,0 +1,260 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip47WalletConnect
+
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionMetadata
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.tags.ExtensionsTag
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * NWC-06 metadata on OUTGOING payments: what we send, when we are allowed to send
+ * it, and what a row makes of it coming back.
+ */
+class NwcOutgoingMetadataTest {
+    private val recipientHex = "ca89cb11f1c75d5b6622268ff43d2288ea8b2cb5b9aa996ff9ff704fc904b78b"
+    private val payerHex = "f512822a89d2369a386bfeb1e687ccd26ceb6bb33e73b98417499bb9054bff1f"
+
+    private fun zapRequest(
+        content: String = "great post",
+        relays: List<String> = listOf("wss://relay.damus.io"),
+    ) = Event(
+        id = "a".repeat(64),
+        pubKey = payerHex,
+        createdAt = 1756000000L,
+        kind = 9734,
+        tags = arrayOf(arrayOf("p", recipientHex), arrayOf("relays", *relays.toTypedArray())),
+        content = content,
+        sig = "b".repeat(128),
+    )
+
+    // --- build ---
+
+    @Test
+    fun nothingToSayProducesNoMetadataAtAll() {
+        assertNull(NwcTransactionMetadata.build(null, null, null))
+        assertNull(NwcTransactionMetadata.build(null, "   ", ""))
+    }
+
+    @Test
+    fun leanPairIsSentWithoutAZapRequest() {
+        val meta = assertNotNull(NwcTransactionMetadata.build(null, "user@domain.com", "thanks"))
+        assertEquals(mapOf("identifier" to "user@domain.com"), meta["recipient_data"])
+        assertEquals("thanks", meta["comment"])
+        assertFalse(meta.containsKey("nostr"))
+    }
+
+    /**
+     * THE INTEROP PROPERTY. NIP-57 sets a zap invoice's `description_hash` to the
+     * sha256 of the raw JSON the LNURL callback received in `nostr=` — which is
+     * `LnZapRequestEvent.toJson()` (see LightningAddressResolver). A wallet that
+     * binds a stored zap request to the invoice it labels hashes the bytes of the
+     * `nostr` member, so anything short of byte-identity reads as a forged event
+     * and the row is silently stored unlabelled.
+     */
+    @Test
+    fun theNostrMemberIsByteIdenticalToWhatTheLnurlCallbackReceived() {
+        val event = zapRequest(content = "quoted \" and & <angled> \u00fcn\u00efcode \ud83d\ude00")
+        val callbackBytes = event.toJson()
+
+        val wire =
+            OptimizedJsonMapper.toJson(
+                PayInvoiceMethod.create("lnbc50n1abc", NwcTransactionMetadata.build(event, "user@domain.com", "hi")),
+            )
+
+        assertTrue(
+            wire.contains("\"nostr\":" + callbackBytes),
+            "metadata.nostr must be the callback's own bytes.\n  sent: $callbackBytes\n  wire: $wire",
+        )
+    }
+
+    @Test
+    fun theZapRequestSurvivesAsAReadableObject() {
+        val event = zapRequest()
+        val wire = OptimizedJsonMapper.toJson(PayInvoiceMethod.create("lnbc1", NwcTransactionMetadata.build(event, null, null)))
+        val back = OptimizedJsonMapper.fromJsonTo<Request>(wire) as PayInvoiceMethod
+        val parsed = assertNotNull(NwcTransactionMetadata.parse(back.params?.metadata))
+
+        // Raw on the way out, a normal object on the way back in.
+        assertEquals(recipientHex, parsed.recipientPubkeyHex())
+        assertEquals(payerHex, parsed.senderPubkeyHex())
+    }
+
+    @Test
+    fun anOversizeZapRequestIsDroppedButTheRowStillNamesThePayee() {
+        // NWC-06: over 4096 characters a wallet MUST drop the WHOLE object, so
+        // breaching it would lose the payee entirely rather than degrade.
+        val many = List(200) { "wss://relay-with-a-fairly-long-hostname-.example.com" }
+        val meta = assertNotNull(NwcTransactionMetadata.build(zapRequest(relays = many), "user@domain.com", "hi"))
+
+        assertFalse(meta.containsKey("nostr"))
+        assertEquals(mapOf("identifier" to "user@domain.com"), meta["recipient_data"])
+        assertEquals("hi", meta["comment"])
+    }
+
+    /**
+     * A provider that does not advertise `allowsNostr` never receives the zap request,
+     * so its invoice commits to nothing about it. Passing null here is how the caller
+     * says so, and the metadata must then make no claim it cannot support — while the
+     * payee's address still labels the row.
+     */
+    @Test
+    fun withoutAZapRequestTheRowIsStillNamedButClaimsNoBinding() {
+        val meta = assertNotNull(NwcTransactionMetadata.build(null, "user@domain.com", "great post"))
+
+        assertFalse(meta.containsKey("nostr"))
+        assertEquals(mapOf("identifier" to "user@domain.com"), meta["recipient_data"])
+        assertEquals("great post", meta["comment"])
+    }
+
+    /**
+     * `comment` is free text, and JSON escaping expands it on the way out. Counting the
+     * raw length would let an escaping-heavy comment breach the 4096 ceiling unnoticed
+     * — and NWC-06 makes the wallet drop the WHOLE object then, taking `recipient_data`
+     * with it.
+     */
+    @Test
+    fun theCeilingCountsEscapedLengthNotRawLength() {
+        // Every character escapes to six, so 900 raw chars occupy ~5400 on the wire.
+        val controlHeavy = "\u0001".repeat(900)
+        val meta = assertNotNull(NwcTransactionMetadata.build(zapRequest(), "user@domain.com", controlHeavy))
+
+        assertFalse(meta.containsKey("nostr"), "the escaped comment alone exceeds the ceiling")
+
+        // The same length in plain characters leaves room for the zap request.
+        val plain = "a".repeat(900)
+        assertTrue(assertNotNull(NwcTransactionMetadata.build(zapRequest(), "user@domain.com", plain)).containsKey("nostr"))
+    }
+
+    @Test
+    fun whatWeSendStaysUnderTheSpecCeiling() {
+        val meta = NwcTransactionMetadata.build(zapRequest(), "user@domain.com", "great post")
+        val serialized = OptimizedJsonMapper.toJson(PayInvoiceMethod.create("lnbc50n1abc", meta))
+        assertTrue(serialized.length < NwcTransactionMetadata.MAX_METADATA_CHARS)
+    }
+
+    // --- the wire ---
+
+    @Test
+    fun metadataSurvivesASerializationRoundTrip() {
+        val meta = NwcTransactionMetadata.build(zapRequest(), "user@domain.com", "great post")
+        val json = OptimizedJsonMapper.toJson(PayInvoiceMethod.create("lnbc50n1abc", meta))
+
+        assertTrue(json.contains("\"kind\":9734"), "kind must stay an integer: $json")
+        assertTrue(json.contains("\"created_at\":1756000000"), "created_at must stay an integer: $json")
+
+        val back = OptimizedJsonMapper.fromJsonTo<Request>(json)
+        assertIs<PayInvoiceMethod>(back)
+        val parsed = assertNotNull(NwcTransactionMetadata.parse(back.params?.metadata))
+        assertEquals(recipientHex, parsed.recipientPubkeyHex())
+        assertEquals("great post", parsed.displayComment())
+    }
+
+    @Test
+    fun noMetadataMeansTheRequestIsUnchanged() {
+        // The regression test that protects every wallet which has not advertised
+        // NWC-06: what they receive must be byte-identical to what they receive today.
+        val expected = OptimizedJsonMapper.toJson(PayInvoiceMethod.create("lnbc50n1abc"))
+        val actual = OptimizedJsonMapper.toJson(PayInvoiceMethod.create("lnbc50n1abc", null))
+        assertEquals(expected, actual)
+        assertFalse(actual.contains("recipient_data"))
+    }
+
+    // --- the gate ---
+
+    @Test
+    fun extensionsTagIsReadFromTheInfoEvent() {
+        assertEquals(listOf("02", "05", "06"), infoWith(arrayOf("extensions", "02 05 06")).extensions())
+        assertTrue(infoWith(arrayOf("extensions", "05 06")).supportsExtension(ExtensionsTag.METADATA_CONVENTIONS))
+    }
+
+    @Test
+    fun aWalletThatSaysNothingReadsAsNo() {
+        assertFalse(infoWith().supportsExtension(ExtensionsTag.METADATA_CONVENTIONS))
+        assertFalse(infoWith(arrayOf("extensions", "")).supportsExtension(ExtensionsTag.METADATA_CONVENTIONS))
+        assertFalse(infoWith(arrayOf("extensions", "02 03")).supportsExtension(ExtensionsTag.METADATA_CONVENTIONS))
+        assertTrue(infoWith().extensions().isEmpty())
+    }
+
+    private fun infoWith(vararg tags: Array<String>) =
+        NwcInfoEvent(
+            id = "c".repeat(64),
+            pubKey = payerHex,
+            createdAt = 1756000000L,
+            tags = arrayOf(*tags),
+            content = "pay_invoice get_balance",
+            sig = "d".repeat(128),
+        )
+
+    // --- reading it back ---
+
+    @Test
+    fun anOutgoingRowResolvesThePayeeFromThePTag() {
+        val wire =
+            OptimizedJsonMapper.toJson(
+                PayInvoiceMethod.create("lnbc1", NwcTransactionMetadata.build(zapRequest(content = "for the article"), "user@domain.com", "")),
+            )
+        val back = OptimizedJsonMapper.fromJsonTo<Request>(wire) as PayInvoiceMethod
+        val parsed = assertNotNull(NwcTransactionMetadata.parse(back.params?.metadata))
+
+        // The p tag, not the pubkey: on an outgoing zap the pubkey is US.
+        assertEquals(recipientHex, parsed.recipientPubkeyHex())
+        assertEquals("user@domain.com", parsed.recipientIdentifier())
+        // A wallet storing only `nostr` still yields the message.
+        assertEquals("for the article", parsed.displayComment())
+    }
+
+    @Test
+    fun blankFieldsReadAsAbsent() {
+        val parsed =
+            assertNotNull(
+                NwcTransactionMetadata.parse(
+                    mapOf(
+                        "comment" to "  ",
+                        "recipient_data" to mapOf("identifier" to ""),
+                        "nostr" to mapOf("content" to ""),
+                    ),
+                ),
+            )
+        assertNull(parsed.recipientIdentifier())
+        assertNull(parsed.displayComment())
+    }
+
+    @Test
+    fun emptyDescriptionIsNotAName() {
+        // The wallet-side habit this exists for: an empty `description` string
+        // rather than an omitted field. The row must fall back, not render an empty line.
+        val tx = NwcTransaction(type = "outgoing", description = "", amount = 21000L)
+        assertEquals("", tx.description, "the raw field keeps what the wallet sent")
+        assertNull(tx.displayDescription(), "but nothing downstream sees an empty name")
+    }
+}

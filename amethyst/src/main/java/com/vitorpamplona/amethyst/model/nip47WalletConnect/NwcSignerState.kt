@@ -37,11 +37,14 @@ import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectReque
 import com.vitorpamplona.quartz.nip47WalletConnect.cache.NostrWalletConnectResponseCache
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PaymentReceivedNotification
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.tags.ExtensionsTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -140,28 +143,55 @@ class NwcSignerState(
      * The negotiated encryption preference for a wallet. NIP-47 says a client
      * "should always prefer nip44 if supported by the wallet service", so a false
      * here has to mean "the wallet does not offer NIP-44" — not "we have not asked
-     * yet".
-     *
-     * That distinction is why this waits. The info cache is per-account and held in
-     * memory only, so it starts empty on every app launch, and reading it without
-     * waiting made the first transaction to each wallet after every launch fall
-     * back to NIP-04 even against a wallet advertising `nip44_v2`. Only a cold
-     * cache waits: a stale entry still says what the wallet advertises and is used
-     * as-is while it refreshes in the background.
-     *
-     * The wait is capped, because this sits in front of a payment the user has
-     * already tapped. Its own fetch is bounded only by the relay accessory's 30s
-     * idle window, and the no-response timer below does not start until this
-     * returns. On expiry we send NIP-04 for this one request rather than hold the
-     * tap; the fetch keeps running in the cache's scope, so the next request gets
-     * the negotiated scheme. Never bound the fetch itself instead — a null from it
-     * is cached as a definitive "no info event" for the whole TTL, which would pin
-     * the wallet to NIP-04 for days.
+     * yet". [walletInfo] is what makes that distinction true.
      */
-    private suspend fun prefersNip44(uri: Nip47WalletConnect.Nip47URINorm?): Boolean {
-        uri ?: return false
-        val info = withTimeoutOrNull(NIP44_NEGOTIATION_WAIT_MS) { infoCache?.currentOrFetch(uri) }
-        return info?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } == true
+    private fun prefersNip44(info: NwcInfoEvent?): Boolean = info?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } == true
+
+    /**
+     * The wallet's advertised capabilities: the one place a send waits on them, and
+     * it waits AT MOST ONCE.
+     *
+     * WAITING IS THE POINT. The info cache is per-account and in memory only, so it
+     * starts empty on every app launch, and reading it without waiting makes "not
+     * fetched yet" indistinguishable from "not supported". That shipped twice: the
+     * first transaction to each wallet after a launch fell back to NIP-04 against a
+     * wallet advertising `nip44_v2`, and a payment to a wallet that had been
+     * advertising NWC-06 for twenty minutes still went out bare — with nothing, on
+     * either side, reporting an error.
+     *
+     * ONCE, because both questions read the same event. Each used to fetch for
+     * itself, which is free on a warm cache and doubles the stall on a cold one:
+     * [NwcInfoCache] deliberately does not cache a FAILED fetch, so with the relay
+     * down both waits ran in full and a 3s worst case became 6s.
+     *
+     * BOUNDED, because this sits in front of a payment the user has already tapped
+     * and the no-response timer does not start until it returns. On expiry the
+     * answer is null — read as NIP-04 and as no-metadata, both of them the safe
+     * direction — while the fetch keeps running in the cache's own scope so the next
+     * request gets the negotiated scheme. Never bound the fetch itself instead: a
+     * null from it is cached as a definitive "no info event" for the whole TTL,
+     * which would pin the wallet to NIP-04 for days.
+     */
+    private suspend fun walletInfo(uri: Nip47WalletConnect.Nip47URINorm?): NwcInfoEvent? {
+        uri ?: return null
+        return withTimeoutOrNull(NIP44_NEGOTIATION_WAIT_MS) { infoCache?.currentOrFetch(uri) }
+    }
+
+    /**
+     * Strips NWC-06 `metadata` from a request bound for a wallet that never said it
+     * understands the field — [MetadataCarrying] has the reason that matters.
+     *
+     * APPLIED WHERE THE REQUEST IS BUILT rather than at each call site, so populating
+     * `metadata` anywhere upstream is safe by construction.
+     *
+     * MUTATES the request in place — see the callers' KDoc. Requests are built per
+     * send and not reused, and stripping a copy would mean rebuilding a params object
+     * whose field list would then drift from the original.
+     */
+    private fun Request.dropMetadataIfUnsupported(info: NwcInfoEvent?) {
+        val carrier = metadataCarrier ?: return
+        if (carrier.metadata == null || info?.supportsExtension(ExtensionsTag.METADATA_CONVENTIONS) == true) return
+        carrier.metadata = null
     }
 
     fun hasWalletConnectSetup(): Boolean = settings.nwcWallets.value.isNotEmpty()
@@ -225,6 +255,10 @@ class NwcSignerState(
 
     /**
      * Sends a generic NIP-47 request to a specific wallet.
+     *
+     * [request] MAY BE MUTATED: NWC-06 `metadata` is stripped in place when the
+     * wallet has not advertised support for it. Build a fresh request per send
+     * rather than retaining or re-reading this one.
      */
     suspend fun sendNwcRequestToWallet(
         walletUri: Nip47WalletConnect.Nip47URINorm?,
@@ -235,7 +269,10 @@ class NwcSignerState(
         val walletService = walletUri ?: throw IllegalArgumentException("No NIP47 setup")
         val walletSigner = buildSigner(walletService) ?: signer
 
-        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner, useNip44 = prefersNip44(walletService))
+        val info = walletInfo(walletService)
+        request.dropMetadataIfUnsupported(info)
+
+        val event = LnZapPaymentRequestEvent.createRequest(request, walletService.pubKeyHex, walletSigner, useNip44 = prefersNip44(info))
 
         val filter =
             NWCPaymentQueryState(
@@ -266,16 +303,30 @@ class NwcSignerState(
 
     /**
      * Sends a zap payment request to the default wallet.
+     *
+     * [metadata] is NWC-06's per-payment blob and is dropped unless the wallet
+     * advertises `06`; see [dropMetadataIfUnsupported].
      */
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
         zappedNote: Note?,
         onTimeout: () -> Unit = {},
+        metadata: Map<String, Any?>? = null,
         onResponse: (Response?) -> Unit,
     ): Pair<LnZapPaymentRequestEvent, NormalizedRelayUrl> {
         val walletService = defaultWalletUri.value ?: throw IllegalArgumentException("No NIP47 setup")
 
-        val event = LnZapPaymentRequestEvent.create(bolt11, walletService.pubKeyHex, nip47Signer.value, useNip44 = prefersNip44(walletService))
+        val info = walletInfo(walletService)
+        val request = PayInvoiceMethod.create(bolt11, metadata)
+        request.dropMetadataIfUnsupported(info)
+
+        val event =
+            LnZapPaymentRequestEvent.createRequest(
+                request,
+                walletService.pubKeyHex,
+                nip47Signer.value,
+                useNip44 = prefersNip44(info),
+            )
 
         val filter =
             NWCPaymentQueryState(

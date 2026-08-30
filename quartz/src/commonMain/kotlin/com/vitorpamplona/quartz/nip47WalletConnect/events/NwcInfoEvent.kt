@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip47WalletConnect.tags.EncryptionTag
+import com.vitorpamplona.quartz.nip47WalletConnect.tags.ExtensionsTag
 import com.vitorpamplona.quartz.nip47WalletConnect.tags.NotificationsTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -47,19 +48,28 @@ class NwcInfoEvent(
     // NIP-47 carries the schemes/types as a single space-separated string in one
     // tag value (e.g. ["encryption", "nip44_v2 nip04"]). Split on whitespace so we
     // return individual tokens, while still tolerating a multi-element tag.
-    fun encryptionSchemes() =
+    private fun spaceSeparatedTag(parse: (Array<String>) -> List<String>?) =
         tags
-            .mapNotNull(EncryptionTag::parse)
+            .mapNotNull(parse)
             .flatten()
             .flatMap { it.split(" ") }
             .filter { it.isNotBlank() }
 
-    fun notificationTypes() =
-        tags
-            .mapNotNull(NotificationsTag::parse)
-            .flatten()
-            .flatMap { it.split(" ") }
-            .filter { it.isNotBlank() }
+    fun encryptionSchemes() = spaceSeparatedTag(EncryptionTag::parse)
+
+    fun notificationTypes() = spaceSeparatedTag(NotificationsTag::parse)
+
+    /** The optional NWC extension specs this wallet advertises (eg. `["05", "06"]`). */
+    fun extensions() = spaceSeparatedTag(ExtensionsTag::parse)
+
+    /**
+     * Whether the wallet advertises a given NWC extension spec.
+     *
+     * A wallet that says nothing reads as **no**. That direction is deliberate:
+     * the caller is deciding whether to send something the wallet may not
+     * understand, so silence must not be read as permission.
+     */
+    fun supportsExtension(id: String) = extensions().contains(id)
 
     companion object {
         const val KIND = 13194
@@ -68,11 +78,13 @@ class NwcInfoEvent(
             capabilities: List<String>,
             encryptionSchemes: List<String>? = null,
             notificationTypes: List<String>? = null,
+            extensions: List<String>? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NwcInfoEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, capabilities.joinToString(" "), createdAt) {
             encryptionSchemes?.let { addUnique(EncryptionTag.assemble(it)) }
             notificationTypes?.let { addUnique(NotificationsTag.assemble(it)) }
+            extensions?.let { addUnique(ExtensionsTag.assemble(it)) }
             initializer()
         }
     }

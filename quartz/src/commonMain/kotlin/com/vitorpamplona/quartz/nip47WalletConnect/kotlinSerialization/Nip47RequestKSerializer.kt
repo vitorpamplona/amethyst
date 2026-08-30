@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.anyToJsonElement
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceParams
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionMethod
@@ -55,7 +56,6 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
@@ -65,7 +65,6 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -148,7 +147,7 @@ object Nip47RequestKSerializer : KSerializer<Request> {
         buildJsonObject {
             params.invoice?.let { put("invoice", it) }
             params.amount?.let { put("amount", it) }
-            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+            params.metadata?.let { put("metadata", anyToJsonElement(it)) }
         }
 
     private fun serializePayParams(params: PayParams): JsonObject =
@@ -156,14 +155,14 @@ object Nip47RequestKSerializer : KSerializer<Request> {
             params.payment?.let { put("payment", it) }
             params.amount?.let { put("amount", it) }
             params.payer_note?.let { put("payer_note", it) }
-            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+            params.metadata?.let { put("metadata", anyToJsonElement(it)) }
         }
 
     private fun serializeReceiveParams(params: ReceiveParams): JsonObject =
         buildJsonObject {
             params.amount?.let { put("amount", it) }
             params.description?.let { put("description", it) }
-            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+            params.metadata?.let { put("metadata", anyToJsonElement(it)) }
         }
 
     private fun serializePayKeysendParams(params: PayKeysendParams): JsonObject =
@@ -194,7 +193,7 @@ object Nip47RequestKSerializer : KSerializer<Request> {
             params.description?.let { put("description", it) }
             params.description_hash?.let { put("description_hash", it) }
             params.expiry?.let { put("expiry", it) }
-            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+            params.metadata?.let { put("metadata", anyToJsonElement(it)) }
         }
 
     private fun serializeLookupInvoiceParams(params: LookupInvoiceParams): JsonObject =
@@ -234,7 +233,7 @@ object Nip47RequestKSerializer : KSerializer<Request> {
             params.budget_renewal?.let { put("budget_renewal", it) }
             params.expires_at?.let { put("expires_at", it) }
             params.isolated?.let { put("isolated", it) }
-            params.metadata?.let { put("metadata", Json.encodeToJsonElement(it)) }
+            params.metadata?.let { put("metadata", anyToJsonElement(it)) }
         }
 
     private fun serializeMakeHoldInvoiceParams(params: MakeHoldInvoiceParams): JsonObject =

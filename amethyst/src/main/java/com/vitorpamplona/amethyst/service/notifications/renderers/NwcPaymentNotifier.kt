@@ -58,7 +58,7 @@ object NwcPaymentNotifier {
         val time = tx.settled_at ?: tx.created_at ?: TimeUtils.now()
 
         val title = stringRes(context, R.string.app_notification_payments_channel_message, amount)
-        val comment = (tx.parsedMetadata()?.comment ?: tx.description)?.ifBlank { null }
+        val comment = tx.parsedMetadata()?.displayComment() ?: tx.displayDescription()
         val body = comment ?: title
 
         val accountNpub = NotificationRoutes.accountNpub(account)

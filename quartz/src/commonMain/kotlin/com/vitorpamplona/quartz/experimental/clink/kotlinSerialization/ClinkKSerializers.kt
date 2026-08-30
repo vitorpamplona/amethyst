@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.experimental.clink.manage.OfferFields
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferReceipt
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.anyToJsonElement
 import com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.toAnyMap
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -45,7 +46,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -62,18 +62,6 @@ import kotlinx.serialization.json.put
  * JVM/Android — including coercing a lone `details` object into a one-element list
  * (Jackson's `ACCEPT_SINGLE_VALUE_AS_ARRAY`) — so native targets parse the same wire shapes.
  */
-
-private fun anyToJsonElement(value: Any?): JsonElement =
-    when (value) {
-        null -> JsonNull
-        is JsonElement -> value
-        is String -> JsonPrimitive(value)
-        is Boolean -> JsonPrimitive(value)
-        is Number -> JsonPrimitive(value)
-        is Map<*, *> -> buildJsonObject { value.forEach { (k, v) -> put(k.toString(), anyToJsonElement(v)) } }
-        is Iterable<*> -> buildJsonArray { value.forEach { add(anyToJsonElement(it)) } }
-        else -> JsonPrimitive(value.toString())
-    }
 
 private fun JsonObject.stringOrNull(key: String): String? = get(key)?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
 
