@@ -73,6 +73,10 @@ Worth recording so nobody re-litigates them as gaps:
 | accompanist `TwoPane` | a real split-pane layout; only the fold snapping is dropped, and only because there is no fold |
 | `IntentCompat` typed extras | the same read plus a type check, so a share that drops a file says so |
 | new-intent listeners | the same registry, delivered by the desktop shell for a `nostr:` URL, an opened file, or a second launch folded into the first window |
+| audio focus | granted, and truthfully: desktop systems mix rather than arbitrate, so nothing revokes an app's output line and there is no ducking protocol to join |
+| `ColorMatrix` / `ColorMatrixColorFilter` | the same 4x5 maths, so the map's day and night filters mean the same thing — only the renderer that applies them is still missing |
+| `XmlPullParser` | StAX, with XmlPull's habit of skipping comments and whitespace, so the language picker parses the same `locales_config.xml` |
+| `R.xml` resources | a third generated table from the app module's own res tree |
 | `DateFormat`, `DateUtils` | `java.time` / `java.text`, same CLDR data |
 | aapt2 resources | a generated `R` plus locale tables, built from the same `res/` tree |
 | WorkManager | a daemon timer with the same retry backoff and constraint waiting |

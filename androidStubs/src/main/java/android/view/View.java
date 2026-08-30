@@ -55,6 +55,21 @@ public class View {
 
     public View getRootView() { return this; }
 
+    public interface OnTouchListener {
+        boolean onTouch(View view, MotionEvent event);
+    }
+
+    public OnTouchListener getOnTouchListener() { return touchListener; }
+
+    /**
+     * Kept, never fired: Compose Desktop routes pointer input through its own
+     * types, so nothing here synthesises a MotionEvent. Storing it means a
+     * desktop host that wanted to bridge gestures has somewhere to deliver.
+     */
+    public void setOnTouchListener(OnTouchListener listener) { touchListener = listener; }
+
+    private OnTouchListener touchListener;
+
     public int getWidth() { return 0; }
 
     public int getHeight() { return 0; }

@@ -9,4 +9,12 @@ package android.view;
  */
 public interface ViewParent {
     ViewParent getParent();
+
+    /**
+     * A no-op with nothing to intercept: the app calls this so an ancestor
+     * (drawer, pager, feed) stops stealing a drag from a map. Compose Desktop
+     * has no View hierarchy competing for the pointer, so there is nothing to
+     * ask.
+     */
+    default void requestDisallowInterceptTouchEvent(boolean disallow) {}
 }

@@ -27,7 +27,16 @@ public class Marker {
 
     public void setAnchor(float horizontal, float vertical) {}
 
-    public void setIcon(Object drawable) {}
+    public Object getIcon() { return icon; }
+
+    public void setIcon(Object drawable) { icon = drawable; }
+
+    public float getAlpha() { return alpha; }
+
+    public void setAlpha(float value) { alpha = value; }
+
+    private Object icon;
+    private float alpha = 1f;
 
     public boolean isDraggable() { return draggable; }
 

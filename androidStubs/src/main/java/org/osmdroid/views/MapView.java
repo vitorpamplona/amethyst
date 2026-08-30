@@ -59,7 +59,15 @@ public class MapView extends View {
 
     public void setMinZoomLevel(Double value) {}
 
-    public CustomZoomButtonsController getZoomController() { return new CustomZoomButtonsController(); }
+    public CustomZoomButtonsController getZoomController() { return zoomController; }
+
+    /**
+     * The overlay manager, chiefly so the app can hand the tile overlay its
+     * colour filter — the map's day and night looks are two colour matrices,
+     * and a renderer that ignored them would show bright MAPNIK tiles inside a
+     * dark theme.
+     */
+    public OverlayManager getOverlayManager() { return overlayManager; }
 
     public void addMapListener(Object listener) {}
 
@@ -76,6 +84,38 @@ public class MapView extends View {
 
         public void animateTo(GeoPoint point) { center = point; }
 
+        /**
+         * Animations land instantly here. The end state is what the caller
+         * asked for, which is what everything downstream reads; only the
+         * in-between frames are missing, and there is nothing drawing them.
+         */
+        public void animateTo(GeoPoint point, Double zoomLevel, Long durationMs) {
+            center = point;
+            if (zoomLevel != null) zoom = zoomLevel;
+        }
+
         public void zoomTo(double value) { zoom = value; }
+
+        public void zoomTo(Double value, Long durationMs) {
+            if (value != null) zoom = value;
+        }
     }
+
+    /** Holds the tile overlay; see {@link #getOverlayManager()}. */
+    public static class OverlayManager {
+        private final TilesOverlay tilesOverlay = new TilesOverlay();
+
+        public TilesOverlay getTilesOverlay() { return tilesOverlay; }
+    }
+
+    public static class TilesOverlay {
+        private android.graphics.ColorFilter colorFilter;
+
+        public android.graphics.ColorFilter getColorFilter() { return colorFilter; }
+
+        public void setColorFilter(android.graphics.ColorFilter filter) { colorFilter = filter; }
+    }
+
+    private final OverlayManager overlayManager = new OverlayManager();
+    private final CustomZoomButtonsController zoomController = new CustomZoomButtonsController();
 }

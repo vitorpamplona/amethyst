@@ -1,5 +1,7 @@
 package android.content.res;
 
+import android.util.DisplayMetrics;
+
 /** JVM stand-in for android.content.res.Resources. See Context. */
 public abstract class Resources {
     public abstract String getString(int resId);
@@ -11,6 +13,13 @@ public abstract class Resources {
     public abstract String getQuantityString(int resId, int quantity, Object... formatArgs);
 
     public abstract Configuration getConfiguration();
+
+    /**
+     * Density and pixel size. Real: the app scales a marker bitmap by the
+     * density, so a wrong value draws a pin at the wrong size rather than
+     * failing. The JVM implementation fills it from the actual screen.
+     */
+    public DisplayMetrics getDisplayMetrics() { return DisplayMetrics.fromConfiguration(getConfiguration()); }
 
     /**
      * The parser for an {@code R.xml} resource. Real: the app reads its own
