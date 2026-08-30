@@ -44,6 +44,9 @@ dependencies {
     implementation(libs.androidx.webkit)
     implementation(libs.okhttp)
 
+    // Tree-level JSON for the bridge/broker envelopes (no @Serializable codegen, so no plugin needed).
+    implementation(libs.kotlinx.serialization.json)
+
     // Provider side of the cross-process UI embedding: hosts the browser WebView in this keyless
     // `:napplet` process and ships its rendered surface to the main app via SurfaceControlViewHost.
     implementation(libs.androidx.privacysandbox.ui.core)

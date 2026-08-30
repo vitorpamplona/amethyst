@@ -73,12 +73,11 @@ node shim-events.mjs /path/to/other/shim.js   # diff a candidate against it
 Set `CHROMIUM_PATH` if your Chromium lives somewhere other than
 `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
 
-**Why this and not a JVM unit test.** The host-side parser
-(`parseImeEvent`) runs on Android's `org.json`, which the unit tests stub out
-(`unitTests.isReturnDefaultValues = true` in `amethyst/build.gradle.kts`, and
-there is no Robolectric); a Kotlin test would "pass" without parsing anything.
-The half worth protecting is the page↔host contract, and that only exists in a
-browser.
+**Why this and not a JVM unit test.** The half worth protecting is the
+page↔host contract — real browser focus/gesture behavior and the envelopes the
+shim emits for it — and that only exists in a browser. A JVM test of the
+host-side parser (`parseImeEvent`, kotlinx.serialization) would only re-parse
+envelopes the test itself fabricated.
 
 ## `perf.html` — why does the embed feel slower than the full-screen browser?
 
