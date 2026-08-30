@@ -18,6 +18,7 @@ public class Intent {
     public static final String ACTION_BOOT_COMPLETED = "android.intent.action.BOOT_COMPLETED";
     public static final String ACTION_MY_PACKAGE_REPLACED = "android.intent.action.MY_PACKAGE_REPLACED";
     public static final String ACTION_SEND = "android.intent.action.SEND";
+    public static final String ACTION_SEND_MULTIPLE = "android.intent.action.SEND_MULTIPLE";
     public static final String ACTION_SENDTO = "android.intent.action.SENDTO";
     public static final String ACTION_MAIN = "android.intent.action.MAIN";
     public static final String ACTION_GET_CONTENT = "android.intent.action.GET_CONTENT";
@@ -45,6 +46,7 @@ public class Intent {
     private final Bundle extras = new Bundle();
     private final java.util.Set<String> categories = new java.util.LinkedHashSet<>();
     private Class<?> targetClass;
+    private ComponentName component;
     private ClipData clipData;
 
     public Intent() {}
@@ -65,13 +67,34 @@ public class Intent {
      */
     public Class<?> getTargetClass() { return targetClass; }
 
-    public Intent setClass(Context packageContext, Class<?> cls) { this.targetClass = cls; return this; }
+    public Intent setClass(Context packageContext, Class<?> cls) {
+        this.targetClass = cls;
+        this.component = new ComponentName(packageContext, cls);
+        return this;
+    }
 
-    public Intent setClassName(String packageName, String className) { return this; }
+    public Intent setClassName(String packageName, String className) {
+        this.component = new ComponentName(packageName, className);
+        return this;
+    }
+
+    /**
+     * The explicit target as a name. Kept alongside {@link #getTargetClass()}
+     * because the share routing reads the class NAME — the desktop shell builds
+     * these intents from a name it was handed, with no class to point at — and
+     * a null component there routes every share to the same screen.
+     */
+    public ComponentName getComponent() { return component; }
+
+    public Intent setComponent(ComponentName component) {
+        this.component = component;
+        return this;
+    }
 
     /** The target's class name, or the action, for a diagnostic message. */
     public String getComponentClassName() {
         if (targetClass != null) return targetClass.getName();
+        if (component != null) return component.getClassName();
         return action == null ? "(no component)" : action;
     }
 
@@ -131,6 +154,11 @@ public class Intent {
     public Intent putExtra(String name, Bundle value) { extras.putBundle(name, value); return this; }
 
     public Intent putExtra(String name, android.net.Uri value) { extras.putObject(name, value); return this; }
+
+    public Intent putParcelableArrayListExtra(String name, java.util.ArrayList<? extends android.net.Uri> value) {
+        extras.putObject(name, value);
+        return this;
+    }
 
     public android.net.Uri getParcelableExtra(String name) {
         Object v = extras.get(name);
