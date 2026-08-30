@@ -63,6 +63,13 @@ public class View {
 
     public void getLocationInWindow(int[] out) {}
 
+    public int getBackgroundColor() { return backgroundColor; }
+
+    /** Recorded; Compose paints the desktop window's background, not this. */
+    public void setBackgroundColor(int color) { backgroundColor = color; }
+
+    private int backgroundColor;
+
     public void invalidate() {}
 
     public void requestLayout() {}

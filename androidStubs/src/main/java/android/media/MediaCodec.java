@@ -7,6 +7,7 @@ public final class MediaCodec {
     public static final int BUFFER_FLAG_CODEC_CONFIG = 2;
     public static final int BUFFER_FLAG_END_OF_STREAM = 4;
     public static final int BUFFER_FLAG_KEY_FRAME = 1;
+    public static final int BUFFER_FLAG_PARTIAL_FRAME = 8;
     public static final int INFO_TRY_AGAIN_LATER = -1;
     public static final int INFO_OUTPUT_FORMAT_CHANGED = -2;
     public static final int INFO_OUTPUT_BUFFERS_CHANGED = -3;

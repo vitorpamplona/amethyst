@@ -36,6 +36,23 @@ public class Window {
 
     public void clearFlags(int flags) { params.flags &= ~flags; }
 
+    /**
+     * The system-bar tints. Deprecated on Android and meaningless here — a
+     * desktop window's title bar is drawn by the window manager in the user's
+     * theme — so they are recorded and never read. Silent on purpose: unlike
+     * FLAG_SECURE, nothing is at stake beyond a colour that is not there.
+     */
+    public int getStatusBarColor() { return statusBarColor; }
+
+    public void setStatusBarColor(int color) { statusBarColor = color; }
+
+    public int getNavigationBarColor() { return navigationBarColor; }
+
+    public void setNavigationBarColor(int color) { navigationBarColor = color; }
+
+    private int statusBarColor;
+    private int navigationBarColor;
+
     public void setFlags(int flags, int mask) {
         params.flags = (params.flags & ~mask) | (flags & mask);
         report();

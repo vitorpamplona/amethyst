@@ -6,9 +6,18 @@ import java.nio.ByteBuffer;
 public final class MediaExtractor {
     public static final int SEEK_TO_CLOSEST_SYNC = 2;
 
+    public static final int SAMPLE_FLAG_SYNC = 1;
+    public static final int SAMPLE_FLAG_ENCRYPTED = 2;
+    public static final int SAMPLE_FLAG_PARTIAL_FRAME = 4;
+
     public MediaExtractor() { MediaCodecStubs.unsupported("MediaExtractor"); }
 
     public void setDataSource(String path) {}
+
+    public void setDataSource(
+            android.content.Context context,
+            android.net.Uri uri,
+            java.util.Map<String, String> headers) {}
 
     public int getTrackCount() { return 0; }
 
