@@ -26,6 +26,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.content.res.StaxXmlResourceParser
+import android.content.res.XmlResourceParser
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
@@ -33,6 +35,7 @@ import android.os.LocaleList
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import com.vitorpamplona.amethyst.shared.resources.AndroidResourceTable
+import com.vitorpamplona.amethyst.shared.resources.JvmXmlResources
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -293,6 +296,20 @@ object JvmResources : Resources() {
     ): String = AndroidResourceTable.getQuantityString(resId, quantity, *formatArgs)
 
     override fun getConfiguration(): Configuration = JvmConfiguration
+
+    /**
+     * The parser for an `R.xml` resource, over the file the resource generator
+     * copied onto the classpath. An id with nothing behind it throws rather
+     * than returning an empty document: a caller asking for a resource that is
+     * not there has a build problem, and an empty parse would hide it as a
+     * missing feature (an empty language list, in the one case that exists).
+     */
+    override fun getXml(resId: Int): XmlResourceParser {
+        val stream =
+            JvmXmlResources.open(resId)
+                ?: throw Resources.NotFoundException("no xml resource on the classpath for id 0x${resId.toString(16)}")
+        return StaxXmlResourceParser(stream)
+    }
 }
 
 object JvmConfiguration : Configuration() {

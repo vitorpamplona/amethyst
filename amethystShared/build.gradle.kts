@@ -30,6 +30,7 @@ plugins {
 val resSourceDir: Directory = layout.projectDirectory.dir("src/androidMain/res")
 val generatedResRoot: Provider<Directory> = layout.buildDirectory.dir("generated/androidRes")
 val commonsGeneratedResRoot: Provider<Directory> = layout.buildDirectory.dir("generated/commonsRes")
+val appGeneratedResRoot: Provider<Directory> = layout.buildDirectory.dir("generated/appRes")
 
 val generateAndroidResourceTable by tasks.registering(GenerateAndroidResourceTable::class) {
     group = "build"
@@ -60,6 +61,23 @@ val generateCommonsResourceTable by tasks.registering(GenerateAndroidResourceTab
     packageName.set("com.vitorpamplona.amethyst.commons")
     tableDir.set("amethyst-commons-res")
     packageByte.set(0x7e)
+}
+
+// The app module keeps a small res tree of its own — the launcher colours, the
+// themes, and `xml/locales_config.xml`, which the language picker reads to
+// build its list. aapt2 gives those a `com.vitorpamplona.amethyst.R`; this is
+// its JVM twin, with a third id space so all three tables coexist.
+val appResSourceDir: Directory = rootProject.layout.projectDirectory.dir("amethyst/src/main/res")
+
+val generateAppResourceTable by tasks.registering(GenerateAndroidResourceTable::class) {
+    group = "build"
+    description = "Generate the JVM R class and xml resources from the app module's own res/ tree."
+    resDir.set(appResSourceDir)
+    kotlinOutputDir.set(appGeneratedResRoot.map { it.dir("kotlin") })
+    resourceOutputDir.set(appGeneratedResRoot.map { it.dir("resources") })
+    packageName.set("com.vitorpamplona.amethyst")
+    tableDir.set("amethyst-app-res")
+    packageByte.set(0x7d)
 }
 
 @CacheableTask
@@ -132,14 +150,17 @@ abstract class GenerateAndroidResourceTable : DefaultTask() {
         val stringIds = stringNames.withIndex().associate { (i, n) -> n to resourceId(TYPE_STRING, i) }
         val pluralIds = pluralNames.withIndex().associate { (i, n) -> n to resourceId(TYPE_PLURALS, i) }
         val drawableIds = drawableNames.withIndex().associate { (i, n) -> n to resourceId(TYPE_DRAWABLE, i) }
+        val xmlNames = collectXmlNames(res)
+        val xmlIds = xmlNames.withIndex().associate { (i, n) -> n to resourceId(TYPE_XML, i) }
 
-        writeRClass(stringIds, pluralIds, drawableIds)
+        writeRClass(stringIds, pluralIds, drawableIds, xmlIds)
         writeTables(perQualifierStrings, perQualifierPlurals, stringIds, pluralIds)
         copyDrawables(res, drawableIds)
+        copyXmlResources(res, xmlIds)
 
         logger.lifecycle(
             "$name: ${stringNames.size} strings, ${pluralNames.size} plurals, " +
-                "${drawableNames.size} drawables across ${perQualifierStrings.size} locale qualifiers",
+                "${drawableNames.size} drawables, ${xmlNames.size} xml across ${perQualifierStrings.size} locale qualifiers",
         )
     }
 
@@ -147,6 +168,7 @@ abstract class GenerateAndroidResourceTable : DefaultTask() {
         stringIds: Map<String, Int>,
         pluralIds: Map<String, Int>,
         drawableIds: Map<String, Int>,
+        xmlIds: Map<String, Int>,
     ) {
         val pkg = packageName.get()
         val out = File(kotlinOutputDir.get().asFile, pkg.replace('.', '/') + "/R.kt")
@@ -157,7 +179,12 @@ abstract class GenerateAndroidResourceTable : DefaultTask() {
         sb.append("package $pkg\n\n")
         sb.append("/** JVM stand-in for the aapt2-generated `R`. See :androidStubs/README.md. */\n")
         sb.append("public object R {\n")
-        listOf("string" to stringIds, "plurals" to pluralIds, "drawable" to drawableIds).forEach { (type, ids) ->
+        listOf(
+            "string" to stringIds,
+            "plurals" to pluralIds,
+            "drawable" to drawableIds,
+            "xml" to xmlIds,
+        ).forEach { (type, ids) ->
             sb.append("    public object $type {\n")
             ids.forEach { (name, id) -> sb.append("        public const val $name: Int = $id\n") }
             sb.append("    }\n")
@@ -204,6 +231,36 @@ abstract class GenerateAndroidResourceTable : DefaultTask() {
             .replace("\t", "\\t")
             .replace("\n", "\\n")
             .replace("\r", "\\r")
+
+    /**
+     * `res/xml/` holds the app's own configuration documents — the locale list
+     * the language picker reads, chief among them. Unlike drawables these have
+     * no qualifier variants in this project, so they are copied verbatim.
+     */
+    private fun collectXmlNames(res: File): List<String> =
+        File(res, "xml")
+            .listFiles { f -> f.isFile && f.extension == "xml" }
+            .orEmpty()
+            .map { it.name.substringBeforeLast('.') }
+            .distinct()
+            .sorted()
+
+    private fun copyXmlResources(
+        res: File,
+        xmlIds: Map<String, Int>,
+    ) {
+        if (xmlIds.isEmpty()) return
+        val outRoot = File(resourceOutputDir.get().asFile, tableDir.get() + "/xml")
+        outRoot.mkdirs()
+        val index = StringBuilder()
+        xmlIds.forEach { (name, id) ->
+            val source = File(res, "xml/$name.xml")
+            if (!source.isFile) return@forEach
+            source.copyTo(File(outRoot, "$name.xml"), overwrite = true)
+            index.append(id).append('\t').append("$name.xml").append('\n')
+        }
+        File(resourceOutputDir.get().asFile, tableDir.get() + "/xmls.tsv").writeText(index.toString())
+    }
 
     private fun collectDrawableNames(res: File): List<String> =
         drawableDirs(res)
@@ -380,6 +437,7 @@ abstract class GenerateAndroidResourceTable : DefaultTask() {
         private const val TYPE_STRING = 0x04
         private const val TYPE_PLURALS = 0x05
         private const val TYPE_DRAWABLE = 0x06
+        private const val TYPE_XML = 0x07
     }
 }
 
@@ -490,9 +548,11 @@ kotlin {
             dependsOn(jvmAndroid)
             kotlin.srcDir(generateAndroidResourceTable.map { it.kotlinOutputDir })
             kotlin.srcDir(generateCommonsResourceTable.map { it.kotlinOutputDir })
+            kotlin.srcDir(generateAppResourceTable.map { it.kotlinOutputDir })
             kotlin.srcDir(generateJvmBuildConfig)
             resources.srcDir(generateAndroidResourceTable.map { it.resourceOutputDir })
             resources.srcDir(generateCommonsResourceTable.map { it.resourceOutputDir })
+            resources.srcDir(generateAppResourceTable.map { it.resourceOutputDir })
             dependencies {
                 implementation(project(":androidStubs"))
                 // CLDR plural rules + locale matching. Unicode-3.0 (permissive).
