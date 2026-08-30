@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.ui.note.creators.notify
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**

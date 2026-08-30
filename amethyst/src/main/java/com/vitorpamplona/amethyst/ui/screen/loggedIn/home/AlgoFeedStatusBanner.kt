@@ -93,7 +93,7 @@ private fun SingleAlgoFeedBanner(
                     ?.appMetaData()
                     ?.name
                     ?.takeIf { it.isNotBlank() }
-                    ?: (note as? com.vitorpamplona.amethyst.model.AddressableNote)?.dTag()
+                    ?: (note as? com.vitorpamplona.amethyst.commons.model.AddressableNote)?.dTag()
                     ?: ""
             }
 

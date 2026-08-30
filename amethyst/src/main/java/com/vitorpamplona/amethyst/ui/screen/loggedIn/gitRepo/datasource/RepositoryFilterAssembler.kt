@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.gitRepo.datasource
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 class RepositoryQueryState(

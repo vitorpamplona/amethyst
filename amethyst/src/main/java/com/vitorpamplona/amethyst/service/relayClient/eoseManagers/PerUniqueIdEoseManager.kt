@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.attributedTo
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.service.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.service.relays.EOSEByKey
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter

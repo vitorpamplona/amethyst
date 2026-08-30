@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
 import android.content.Context
 import android.text.format.DateFormat
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
-import com.vitorpamplona.amethyst.model.Note
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date

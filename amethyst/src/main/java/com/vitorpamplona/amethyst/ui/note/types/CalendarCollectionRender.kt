@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.runtime.Composable
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.note.CalendarCollectionCard
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent

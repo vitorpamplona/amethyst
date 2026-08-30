@@ -53,6 +53,9 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListD
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupListState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.GitRepositoryListState
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
@@ -102,10 +105,7 @@ import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPacksState
 import com.vitorpamplona.amethyst.model.nip46Signer.Nip46SignerState
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcInfoCache
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcSignerState
-import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
-import com.vitorpamplona.amethyst.model.nip51Lists.GitRepositoryListState
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
-import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockPeopleList.BlockPeopleListState
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListDecryptionCache

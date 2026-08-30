@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.favorites
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 /**
@@ -40,7 +40,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
  * which is why opening that feed and coming back made a favorite suddenly launchable.
  *
  * This subscribes each favorited coordinate to the shared
- * [EventFinder][com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssembler]
+ * [EventFinder][com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler]
  * — the same lifecycle-aware loader [observeNote][com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote]
  * uses — so the manifests fetch (via the author's outbox relays) as soon as the launcher opens and are
  * already in [LocalCache] by the time the user taps. The loader drops each coordinate from its filter

@@ -21,14 +21,9 @@
 package com.vitorpamplona.amethyst.service.relays
 
 import androidx.collection.LruCache
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relays.EOSERelayList
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-
-// Re-export from commons for backwards compatibility
-typealias EOSERelayList = com.vitorpamplona.amethyst.commons.relays.EOSERelayList
-typealias SincePerRelayMap = com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
-typealias MutableTime = com.vitorpamplona.amethyst.commons.relays.MutableTime
-typealias EOSEAccountFast<T> = com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast<T>
 
 open class EOSEByKey<U : Any>(
     cacheSize: Int = 200,

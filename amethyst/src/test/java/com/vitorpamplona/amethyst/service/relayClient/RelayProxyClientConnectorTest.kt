@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.service.relayClient
 
 import com.vitorpamplona.amethyst.commons.tor.RelayClassification
+import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
-import com.vitorpamplona.amethyst.model.torState.TorRelayEvaluation
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector.RelayServiceInfra
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus

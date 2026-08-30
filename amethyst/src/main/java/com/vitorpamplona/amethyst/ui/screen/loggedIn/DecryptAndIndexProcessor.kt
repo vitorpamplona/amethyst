@@ -21,11 +21,11 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.chatMessageMarksRoomAsRead
 import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent

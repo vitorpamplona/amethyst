@@ -18,9 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.torState
+package com.vitorpamplona.amethyst.ui.screen
 
-// Canonical type now lives in commons
-typealias TorRelayEvaluation = com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
+import com.vitorpamplona.amethyst.commons.viewmodels.FeedViewModel
+import com.vitorpamplona.amethyst.model.LocalCache
 
-typealias RelayClassification = com.vitorpamplona.amethyst.commons.tor.RelayClassification
+/**
+ * Android-specific FeedViewModel base class that provides LocalCache as the cache provider.
+ * Subclasses can extend this to automatically use LocalCache without passing cacheProvider.
+ */
+abstract class AndroidFeedViewModel(
+    localFilter: FeedFilter<Note>,
+) : FeedViewModel(localFilter, LocalCache)

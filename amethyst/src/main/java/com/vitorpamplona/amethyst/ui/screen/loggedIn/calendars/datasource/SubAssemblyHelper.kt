@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNa
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.subassemblies.filterCalendarsByAuthors
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.subassemblies.filterCalendarsByFollows
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.subassemblies.filterCalendarsByGeohashes

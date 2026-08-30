@@ -67,11 +67,11 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
-import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route

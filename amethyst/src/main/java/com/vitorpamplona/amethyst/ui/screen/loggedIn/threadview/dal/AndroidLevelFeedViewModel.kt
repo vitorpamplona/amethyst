@@ -18,10 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal
 
-// Re-export from commons for backwards compatibility
-typealias BundledUpdate = com.vitorpamplona.amethyst.commons.service.BundledUpdate
-typealias BasicBundledUpdate = com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
-typealias BundledInsert<T> = com.vitorpamplona.amethyst.commons.service.BundledInsert<T>
-typealias BasicBundledInsert<T> = com.vitorpamplona.amethyst.commons.service.BasicBundledInsert<T>
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
+import com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel
+import com.vitorpamplona.amethyst.model.LocalCache
+
+/**
+ * Android-specific LevelFeedViewModel base class that provides LocalCache as the cache provider.
+ * Subclasses can extend this to automatically use LocalCache without passing cacheProvider.
+ */
+abstract class AndroidLevelFeedViewModel(
+    localFilter: FeedFilter<Note>,
+) : LevelFeedViewModel(localFilter, LocalCache)

@@ -232,7 +232,7 @@ private fun AwardRow(
 @Composable
 private fun StaticAwardRow(
     definition: BadgeDefinitionEvent?,
-    defNote: com.vitorpamplona.amethyst.model.AddressableNote?,
+    defNote: com.vitorpamplona.amethyst.commons.model.AddressableNote?,
     isAccepted: Boolean,
     accountViewModel: AccountViewModel,
     award: BadgeAwardEvent,

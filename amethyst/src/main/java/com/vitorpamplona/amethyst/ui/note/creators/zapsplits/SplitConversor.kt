@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.zapsplits
 
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import kotlin.math.round
 

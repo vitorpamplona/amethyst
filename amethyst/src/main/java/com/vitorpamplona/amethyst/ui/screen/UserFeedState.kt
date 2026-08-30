@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.commons.model.User
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 

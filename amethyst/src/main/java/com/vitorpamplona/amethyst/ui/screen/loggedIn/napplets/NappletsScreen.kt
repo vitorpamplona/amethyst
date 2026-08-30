@@ -52,7 +52,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
  * Lists the napplet manifests currently in the local cache (NIP-5D kinds 15129/35129). These are
  * replaceable/addressable events, so the screen observes the **AddressableNote** store ([observeNotes],
  * which scans `LocalCache.addressables`): exactly one note per address — the latest version — keyed by
- * the stable address ([com.vitorpamplona.amethyst.model.Note.idHex]) and auto-updating in place as
+ * the stable address ([com.vitorpamplona.amethyst.commons.model.Note.idHex]) and auto-updating in place as
  * newer versions arrive. The top bar carries a follow-list filter (like the Pictures/Articles feeds)
  * and each row is rendered through the shared [NoteCompose] — the same path the main feed uses for
  * these events — so it gets the author header, the

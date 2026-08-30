@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.service.notifications.renderers
 
 import android.content.Context
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.notifications.NotificationCategory
 import com.vitorpamplona.amethyst.service.notifications.NotificationContent
 import com.vitorpamplona.amethyst.service.notifications.NotificationEnricher

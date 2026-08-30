@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.viewmodels.ListChangeFeedViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ListChangeFeedViewModel
 
 class ChannelFeedViewModel(
     val channel: Channel,

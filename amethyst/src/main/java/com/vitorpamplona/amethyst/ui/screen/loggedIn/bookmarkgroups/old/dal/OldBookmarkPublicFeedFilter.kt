@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.dal
 
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.dal.FeedFilter
 
 class OldBookmarkPublicFeedFilter(
     val account: Account,

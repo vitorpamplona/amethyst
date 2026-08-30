@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -85,8 +86,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.RenderCodeSnippetHeaderForThre
 import com.vitorpamplona.amethyst.commons.ui.note.RenderFedimint
 import com.vitorpamplona.amethyst.commons.ui.note.RenderMintRecommendation
 import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
+import com.vitorpamplona.amethyst.commons.viewmodels.thread.LevelFeedViewModel
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.ui.components.LoadNote
@@ -228,7 +229,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.LevelFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness

@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.note.ReactionChoicePopupContent
 import com.vitorpamplona.amethyst.ui.note.popupAnimationEnter
 import com.vitorpamplona.amethyst.ui.note.popupAnimationExit
