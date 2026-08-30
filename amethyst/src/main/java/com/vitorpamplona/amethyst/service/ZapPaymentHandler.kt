@@ -567,6 +567,10 @@ class ZapPaymentHandler(
     ): Payable {
         var progressThisPayment = 0.00f
 
+        // Only the request the provider actually accepted may be claimed as bound to
+        // this invoice; see lnAddressInvoice's onZapRequestSent.
+        var sentZapRequest: LnZapRequestEvent? = null
+
         val invoice =
             LightningAddressResolver().lnAddressInvoice(
                 lnAddress = lud16,
@@ -580,6 +584,7 @@ class ZapPaymentHandler(
                     onProgressStep(step)
                 },
                 context = context,
+                onZapRequestSent = { sentZapRequest = it },
             )
 
         onProgressStep(1 - progressThisPayment)
@@ -588,7 +593,7 @@ class ZapPaymentHandler(
             info = splitSetup,
             amountMilliSats = zapValue,
             invoice = invoice,
-            zapRequest = nostrZapRequest,
+            zapRequest = sentZapRequest,
             message = message,
         )
     }

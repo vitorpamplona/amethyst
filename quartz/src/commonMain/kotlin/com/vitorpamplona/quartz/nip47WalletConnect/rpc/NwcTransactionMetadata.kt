@@ -127,12 +127,32 @@ class NwcTransactionMetadata(
          */
         const val MAX_METADATA_CHARS = 4096
 
-        // The keys and punctuation around the values —
-        // `{"recipient_data":{"identifier":""},"comment":"","nostr":}` is 58 chars —
-        // plus room for JSON escaping to expand `identifier` and `comment` on the way
-        // out, which is the only thing that can make this estimate low. `nostr` needs
-        // no such allowance: the length added below is the serialized string itself.
-        private const val KEY_OVERHEAD = 96
+        // The keys and punctuation around the values:
+        // `{"recipient_data":{"identifier":""},"comment":"","nostr":}` is 58 chars.
+        // Escaping is counted separately by [escapedLength], so this is a fixed cost.
+        private const val KEY_OVERHEAD = 64
+
+        /**
+         * The length a string occupies once JSON-escaped.
+         *
+         * `comment` is free text a user typed, so its raw length is not what reaches
+         * the wire: a quote or backslash becomes two characters and a control
+         * character becomes six. Counting the raw length instead would let an
+         * escaping-heavy comment breach [MAX_METADATA_CHARS] unnoticed — and NWC-06
+         * makes the wallet drop the WHOLE object then, losing `recipient_data` too,
+         * which is the degradation this budget exists to protect.
+         *
+         * Over-counts the short forms (`\n` is two characters, not six), which is
+         * the safe direction.
+         */
+        private fun escapedLength(value: String): Int =
+            value.sumOf { char ->
+                when {
+                    char == '"' || char == '\\' -> 2
+                    char < ' ' -> 6
+                    else -> 1
+                }
+            }
 
         /**
          * Assembles NWC-06 `metadata` for an outgoing payment, or null when there is
@@ -175,7 +195,7 @@ class NwcTransactionMetadata(
                 // string that gets embedded, not a reconstruction of it.
                 val raw = zapRequest.toJson()
                 val chars =
-                    recipientIdentifier.orEmpty().length + comment.orEmpty().length +
+                    escapedLength(recipientIdentifier.orEmpty()) + escapedLength(comment.orEmpty()) +
                         raw.length + KEY_OVERHEAD
                 if (chars <= MAX_METADATA_CHARS) {
                     lean["nostr"] = RawJson(raw)

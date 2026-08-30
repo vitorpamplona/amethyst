@@ -121,6 +121,40 @@ class NwcOutgoingMetadataTest {
         assertEquals("hi", meta["comment"])
     }
 
+    /**
+     * A provider that does not advertise `allowsNostr` never receives the zap request,
+     * so its invoice commits to nothing about it. Passing null here is how the caller
+     * says so, and the metadata must then make no claim it cannot support — while the
+     * payee's address still labels the row.
+     */
+    @Test
+    fun withoutAZapRequestTheRowIsStillNamedButClaimsNoBinding() {
+        val meta = assertNotNull(NwcTransactionMetadata.build(null, "user@domain.com", "great post"))
+
+        assertFalse(meta.containsKey("nostr"))
+        assertEquals(mapOf("identifier" to "user@domain.com"), meta["recipient_data"])
+        assertEquals("great post", meta["comment"])
+    }
+
+    /**
+     * `comment` is free text, and JSON escaping expands it on the way out. Counting the
+     * raw length would let an escaping-heavy comment breach the 4096 ceiling unnoticed
+     * — and NWC-06 makes the wallet drop the WHOLE object then, taking `recipient_data`
+     * with it.
+     */
+    @Test
+    fun theCeilingCountsEscapedLengthNotRawLength() {
+        // Every character escapes to six, so 900 raw chars occupy ~5400 on the wire.
+        val controlHeavy = "\u0001".repeat(900)
+        val meta = assertNotNull(NwcTransactionMetadata.build(zapRequest(), "user@domain.com", controlHeavy))
+
+        assertFalse(meta.containsKey("nostr"), "the escaped comment alone exceeds the ceiling")
+
+        // The same length in plain characters leaves room for the zap request.
+        val plain = "a".repeat(900)
+        assertTrue(assertNotNull(NwcTransactionMetadata.build(zapRequest(), "user@domain.com", plain)).containsKey("nostr"))
+    }
+
     @Test
     fun whatWeSendStaysUnderTheSpecCeiling() {
         val meta = NwcTransactionMetadata.build(zapRequest(), "user@domain.com", "great post")
