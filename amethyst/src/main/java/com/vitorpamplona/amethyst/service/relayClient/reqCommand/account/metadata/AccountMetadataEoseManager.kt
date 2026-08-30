@@ -21,6 +21,10 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata
 
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterBasicAccountInfoFromKeys
+import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterBookmarksAndReportsFromKey
+import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterFollowsAndMutesFromKey
+import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterLastPostsFromKey
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.MergedAuthorTracker
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap

@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
+import com.vitorpamplona.amethyst.commons.relayClient.auth.InMemoryRelayAuthPermissionStore
+import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionCache
+import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPermissionLedger
+import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthSessionGrants
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthContext

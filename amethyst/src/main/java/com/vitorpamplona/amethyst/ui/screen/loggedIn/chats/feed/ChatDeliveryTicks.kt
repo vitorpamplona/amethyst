@@ -50,8 +50,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.ChatDelivery
-import com.vitorpamplona.amethyst.service.relayClient.chatDelivery.RecipientDelivery
+import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.ChatDelivery
+import com.vitorpamplona.amethyst.commons.relayClient.chatDelivery.RecipientDelivery
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture

@@ -20,6 +20,14 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.AllNotificationKinds
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.GroupNotificationKinds
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.NotificationsPerKeyKinds
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.NotificationsPerKeyKinds2
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.NotificationsPerKeyKinds3
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.SummaryKinds
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.filterGroupNotificationsHistoryToPubkey
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.filterNotificationsHistoryToPubkey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

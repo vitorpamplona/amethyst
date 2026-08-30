@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
+import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPromptBus
+import com.vitorpamplona.amethyst.commons.relayClient.auth.UserAuthChoice
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications
 
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.GroupNotificationKinds
+import com.vitorpamplona.amethyst.commons.relayClient.account.nip01Notifications.filterGroupNotificationsToPubkey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

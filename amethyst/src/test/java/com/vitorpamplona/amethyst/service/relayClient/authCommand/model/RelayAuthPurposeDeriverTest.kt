@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
+import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPurposeDeriver
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
