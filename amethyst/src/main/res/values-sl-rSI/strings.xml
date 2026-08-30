@@ -4849,7 +4849,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="ai_tone_elaborate">Razloži podrobneje</string>
     <string name="ai_tone_friendly">Prijateljsko</string>
     <string name="ai_tone_professional">Profesionalno</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji paketi</string>
     <string name="emoji_pack_management_title">Dodaj v seznam emojijev</string>

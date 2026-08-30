@@ -4606,7 +4606,6 @@
     <string name="ai_tone_elaborate">Uitbreiden</string>
     <string name="ai_tone_friendly">Vriendelijk</string>
     <string name="ai_tone_professional">Professioneel</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-pakketten</string>
     <string name="emoji_pack_management_title">Toevoegen aan emoji-lijst</string>

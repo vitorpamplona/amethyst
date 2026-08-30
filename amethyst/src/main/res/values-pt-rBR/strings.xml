@@ -4641,7 +4641,6 @@
     <string name="ai_tone_elaborate">Elaborar</string>
     <string name="ai_tone_friendly">Amigável</string>
     <string name="ai_tone_professional">Profissional</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Pacotes de emojis</string>
     <string name="emoji_pack_management_title">Adicionar à lista de emojis</string>
