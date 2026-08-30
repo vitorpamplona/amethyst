@@ -44,6 +44,12 @@ object ContextCompat {
         serviceClass: Class<T>,
     ): T? = context.getSystemService(serviceClass)
 
+    /** Same target as [Context.startForegroundService]; see the note there. */
+    fun startForegroundService(
+        context: Context,
+        intent: Intent,
+    ) = context.startForegroundService(intent)
+
     fun checkSelfPermission(
         context: Context,
         permission: String,
