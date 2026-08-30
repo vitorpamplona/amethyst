@@ -85,6 +85,11 @@ sourceSets {
             // :commons. The desktop implementations of the same seams live in
             // :desktopApp over ffmpeg.
             "**/service/uploads/transcode/**",
+            // The one file that names all of the above by construction: the
+            // ServiceLoader installer that puts Android's engines behind the
+            // shared seams. Excluding it is the point of the seam — nothing
+            // outside META-INF/services refers to it.
+            "**/service/platform/**",
         )
         resources.setSrcDirs(emptyList<String>())
     }
@@ -166,6 +171,7 @@ val jvmReadiness by tasks.registering {
             "/ui/call/",
             "/service/call/",
             "/service/uploads/transcode/",
+            "/service/platform/",
         )
     val launcher = rootProject.file("gradlew")
     val rootDir = rootProject.projectDir
@@ -292,7 +298,8 @@ val jvmReadiness by tasks.registering {
                 appendLine("files with errors     : $broken")
                 appendLine(
                 "files excluded        : $excluded (Android implementations behind a seam: " +
-                    "ExoPlayer engine, WebRTC calls, LightCompressor transcode)",
+                    "ExoPlayer engine, WebRTC calls, LightCompressor transcode, " +
+                    "the ServiceLoader installer that names them)",
             )
                 appendLine("total errors          : ${matches.size}")
                 appendLine()

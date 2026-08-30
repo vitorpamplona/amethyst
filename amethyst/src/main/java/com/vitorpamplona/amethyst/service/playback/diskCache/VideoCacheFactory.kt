@@ -33,5 +33,21 @@ class VideoCacheFactory {
             )
             return newCache
         }
+
+        @Volatile
+        private var shared: VideoCache? = null
+
+        /**
+         * The process-wide cache, owned here rather than by `AppModules`.
+         *
+         * It is an ExoPlayer cache and every user of it is in this package, so
+         * holding it in the shared startup object only meant that object had to
+         * name an Android-only type — the same coupling the playback seam
+         * exists to remove.
+         */
+        fun shared(app: Context): VideoCache =
+            shared ?: synchronized(this) {
+                shared ?: new(app).also { shared = it }
+            }
     }
 }

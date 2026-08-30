@@ -18,13 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.uploads
+package com.vitorpamplona.amethyst.desktop.service.platform
 
+import com.vitorpamplona.amethyst.commons.platform.PlatformEngineInstaller
 import com.vitorpamplona.amethyst.commons.uploads.GifToVideoConverter
-import com.vitorpamplona.amethyst.commons.uploads.UploadEngineInstaller
 import com.vitorpamplona.amethyst.commons.uploads.VideoTranscoder
 import com.vitorpamplona.amethyst.commons.uploads.hls.HlsTranscoder
 import com.vitorpamplona.amethyst.desktop.service.media.FfmpegBinary
+import com.vitorpamplona.amethyst.desktop.service.uploads.FfmpegGifConverter
+import com.vitorpamplona.amethyst.desktop.service.uploads.FfmpegHlsTranscoder
+import com.vitorpamplona.amethyst.desktop.service.uploads.FfmpegVideoTranscoder
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
@@ -35,7 +38,7 @@ import java.io.File
  * `META-INF/services` — so neither platform's startup path names the other's
  * engine, or its own.
  */
-class DesktopUploadEngineInstaller : UploadEngineInstaller {
+class DesktopPlatformEngineInstaller : PlatformEngineInstaller {
     override fun install(context: Any?) {
         val transcodeDir = File(System.getProperty("user.home"), ".cache/amethyst-desktop/transcode")
 
@@ -44,7 +47,7 @@ class DesktopUploadEngineInstaller : UploadEngineInstaller {
         HlsTranscoder.installed = FfmpegHlsTranscoder(transcodeDir)
 
         if (!FfmpegBinary.isAvailable) {
-            Log.w("DesktopUploadEngines") { "No ffmpeg found; videos will be uploaded without re-encoding" }
+            Log.w("DesktopPlatformEngines") { "No ffmpeg found; videos will be uploaded without re-encoding" }
         }
     }
 }

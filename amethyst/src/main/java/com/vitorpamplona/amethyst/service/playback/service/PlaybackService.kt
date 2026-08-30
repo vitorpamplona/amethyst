@@ -40,6 +40,7 @@ import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.service.okhttp.DynamicCallFactory
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
@@ -111,7 +112,7 @@ class PlaybackService : MediaSessionService() {
             poolNoProxy?.let { return it }
 
             val okHttpClient = Amethyst.instance.okHttpClients.getDynamicCallFactory(false)
-            val videoCache = Amethyst.instance.videoCache
+            val videoCache = VideoCacheFactory.shared(applicationContext)
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
             // creates new
@@ -131,7 +132,7 @@ class PlaybackService : MediaSessionService() {
             // proxy port can change without affecting the pool because
             // the choice of okhttp is resolved in newCall
             val okHttpClient = Amethyst.instance.okHttpClients.getDynamicCallFactory(true)
-            val videoCache = Amethyst.instance.videoCache
+            val videoCache = VideoCacheFactory.shared(applicationContext)
             val blossomServerResolver = Amethyst.instance.blossomResolver
 
             newPool(videoCache, okHttpClient, blossomServerResolver)

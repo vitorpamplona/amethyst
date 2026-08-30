@@ -18,20 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.uploads
+package com.vitorpamplona.amethyst.commons.platform
 
 /**
- * Installs this platform's upload engines.
+ * Puts this platform's implementations behind the shared seams.
  *
- * The seams ([VideoTranscoder] and friends) let shared code *use* whatever
- * encodes video here. This is the other half: how the right one gets installed
- * without the shared startup path naming it.
+ * The seams (`VideoTranscoder`, `HlsTranscoder`, …) let shared code *use*
+ * whatever does the work here. This is the other half: how the right one gets
+ * installed without the shared startup path naming it.
  *
- * That distinction is what makes the seam worth anything. `AppModules` runs on
+ * That distinction is what makes a seam worth anything. `AppModules` runs on
  * both platforms, so a line there saying `VideoTranscoder.installed =
- * LightCompressorTranscoder(...)` puts an Android-only class back into shared
- * code and undoes the separation — the engine would be swappable everywhere
- * except at the one place that chooses it.
+ * LightCompressorTranscoder(...)` puts an Android-only class straight back into
+ * shared code — the engine would be swappable everywhere except at the one
+ * place that chooses it.
  *
  * So the choice is made by whoever is on the classpath. Each platform ships one
  * implementation of this and declares it in `META-INF/services`; startup asks
@@ -40,6 +40,13 @@ package com.vitorpamplona.amethyst.commons.uploads
  * [context] is the platform's application context where it has one (Android),
  * and null where it does not.
  */
-interface UploadEngineInstaller {
+interface PlatformEngineInstaller {
     fun install(context: Any?)
+
+    /**
+     * Optional work to do once the app is up and idle — forcing an expensive
+     * lazy off the main thread, typically. Called well after [install], and
+     * only if the platform has something to warm.
+     */
+    fun warmUp(context: Any?) {}
 }

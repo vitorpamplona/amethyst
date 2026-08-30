@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationReadState
 import com.vitorpamplona.amethyst.commons.moderation.notifications.PreferencesNotificationSettings
+import com.vitorpamplona.amethyst.commons.platform.PlatformEngines
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalBanner
 import com.vitorpamplona.amethyst.commons.relayClient.event.LocalEventFinder
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
@@ -95,7 +96,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrN
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinder
 import com.vitorpamplona.amethyst.commons.relayClient.user.LocalUserFinderAccount
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
-import com.vitorpamplona.amethyst.commons.uploads.UploadEngines
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
@@ -297,7 +297,7 @@ fun main(args: Array<String>) {
     // Uploads re-encode through the same ffmpeg that already produces video
     // thumbnails. Which engine that is comes off the classpath rather than from
     // a line here, so the Android app's shared startup can ask the same way.
-    UploadEngines.install(null)
+    PlatformEngines.install(null)
     Runtime.getRuntime().addShutdownHook(
         Thread {
             GlobalMediaPlayer.shutdown()

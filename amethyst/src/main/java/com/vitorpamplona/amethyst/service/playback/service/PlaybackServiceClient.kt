@@ -25,6 +25,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.vitorpamplona.amethyst.commons.lifecycle.AppShutdownHooks
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.awaitClose
@@ -37,6 +38,13 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 object PlaybackServiceClient {
+    init {
+        // The playback stack owns its own teardown. Registering it here rather
+        // than having the shared shutdown path call it keeps ExoPlayer's types
+        // out of code that also compiles for the desktop.
+        AppShutdownHooks.register("PlaybackServiceClient") { shutdown() }
+    }
+
     // Runs the MediaController.buildAsync() completion callbacks. The work per callback is
     // trivial in the steady state (Future.get() on an already-completed future + a non-blocking
     // trySend into this video's own callbackFlow channel), so the IPC bind itself dominates and

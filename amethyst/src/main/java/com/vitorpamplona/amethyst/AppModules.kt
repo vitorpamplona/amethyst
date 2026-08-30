@@ -27,8 +27,10 @@ import android.os.SystemClock
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.lifecycle.AppShutdownHooks
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.platform.PlatformEngines
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
@@ -38,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResol
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
-import com.vitorpamplona.amethyst.commons.uploads.UploadEngines
 import com.vitorpamplona.amethyst.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.model.Account
@@ -84,10 +85,7 @@ import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
 import com.vitorpamplona.amethyst.service.okhttp.OnionLocationCache
-import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
-import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
-import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.pow.PowJobRestorer
 import com.vitorpamplona.amethyst.service.pow.PowJobStore
 import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
@@ -1052,12 +1050,6 @@ class AppModules(
         CastRegistry(appContext)
     }
 
-    // local video cache with disk + memory
-    val videoCache: VideoCache by lazy {
-        Log.d("AppModules", "VideoCache Init")
-        VideoCacheFactory.new(appContext)
-    }
-
     // image cache in disk for coil
     val diskCache: DiskCache by lazy {
         Log.d("AppModules", "ImageCacheFactory Init")
@@ -1151,11 +1143,12 @@ class AppModules(
         // forces initialization of uiPrefs in the main thread to avoid blinking themes
         uiPrefs
 
-        // Video transcoding runs through a platform seam so the upload
-        // decisions (bitrate, resolution, whether the result was worth keeping)
-        // can stay shared. Which engine goes behind it is decided by whatever
-        // is on the classpath, not named here — see UploadEngines.
-        UploadEngines.install(appContext)
+        // Transcoding and the video disk cache run through platform seams so
+        // the decisions around them (bitrate, resolution, whether the result
+        // was worth keeping) can stay shared. Which engines go behind them is
+        // decided by whatever is on the classpath, not named here — see
+        // PlatformEngines.
+        PlatformEngines.install(appContext)
 
         // initializes diskcache on an IO thread.
         applicationIOScope.launch {
@@ -1306,25 +1299,27 @@ class AppModules(
             localBlossomCacheProbe.isAvailable()
         }
 
-        // Warms the video cache off the main thread. SimpleCache's constructor opens a SQLite
-        // index over StandaloneDatabaseProvider and walks every cached span on disk — up to a
-        // few hundred ms on a populated 4 GB cache — so leaving it for the first session's
-        // onGetSession would do that work on the main thread. The short delay keeps the IO
-        // dispatcher free for the urgent first-paint work above (account load, image loader,
-        // ui state, robohash) while still landing the warmup well before a typical user can
-        // scroll to and tap a video. The previous 10 s delay was long enough that a fast user
-        // (or a deep link) could lose the lazy { } race and trigger main-thread init.
+        // Lets each platform force its own expensive lazies off the main thread
+        // (on Android that is the ExoPlayer disk cache, whose constructor walks
+        // every cached span). The short delay keeps the IO dispatcher free for
+        // the urgent first-paint work above (account load, image loader, ui
+        // state, robohash) while still landing the warmup well before a typical
+        // user can scroll to and tap a video. A longer delay was tried and lost
+        // the race against fast users and deep links, which then paid the init
+        // on the main thread.
         applicationIOScope.launch {
             delay(1_500)
-            videoCache
+            PlatformEngines.warmUp(appContext)
         }
     }
 
     fun terminate(appContext: Context) {
+        // Subsystems that own platform resources register their own teardown
+        // rather than being named here; see AppShutdownHooks.
+        AppShutdownHooks.runAll()
         pokeyReceiver.unregister(appContext)
         notificationDispatcher.stop()
         BackgroundMedia.removeBackgroundControllerAndReleaseIt()
-        PlaybackServiceClient.shutdown()
         alwaysOnNotificationServiceManager.stop()
         // Best-effort flush before the scope is cancelled. Android rarely calls onTerminate in
         // production, but when it does we get one last chance to persist the cache.

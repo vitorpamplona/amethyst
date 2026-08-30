@@ -18,33 +18,42 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.uploads
+package com.vitorpamplona.amethyst.commons.platform
 
 import com.vitorpamplona.quartz.utils.Log
 import java.util.ServiceLoader
 
 /**
- * Finds and runs this build's [UploadEngineInstaller].
+ * Finds and runs this build's [PlatformEngineInstaller].
  *
- * `ServiceLoader` because it is the one mechanism both platforms already have —
- * Android's runtime supports it, and it needs no reflection by name, no
- * initialisation order, and no dependency from the startup path onto any
- * implementation.
+ * `ServiceLoader` because it is the one mechanism both runtimes already have —
+ * Android supports it, and it needs no reflection by name, no initialisation
+ * order, and no dependency from the startup path onto any implementation.
  *
  * A build with none installs nothing, which every seam already handles by
- * falling back to the un-transcoded original.
+ * falling back to whatever it does without an engine.
  */
-object UploadEngines {
-    fun install(context: Any?) {
-        val installers = runCatching { ServiceLoader.load(UploadEngineInstaller::class.java).toList() }.getOrDefault(emptyList())
+object PlatformEngines {
+    private val installers: List<PlatformEngineInstaller> by lazy {
+        runCatching { ServiceLoader.load(PlatformEngineInstaller::class.java).toList() }.getOrDefault(emptyList())
+    }
 
+    fun install(context: Any?) {
         if (installers.isEmpty()) {
-            Log.w("UploadEngines") { "no upload engines on the classpath; uploads will not be re-encoded" }
+            Log.w("PlatformEngines") { "no platform engines on the classpath; every seam falls back to its no-engine behaviour" }
             return
         }
-        installers.forEach { installer ->
-            runCatching { installer.install(context) }
-                .onFailure { Log.w("UploadEngines", "installer ${installer::class.java.name} failed", it) }
-        }
+        each("install") { it.install(context) }
+    }
+
+    /** Runs after startup settles; see [PlatformEngineInstaller.warmUp]. */
+    fun warmUp(context: Any?) = each("warmUp") { it.warmUp(context) }
+
+    private fun each(
+        phase: String,
+        action: (PlatformEngineInstaller) -> Unit,
+    ) = installers.forEach { installer ->
+        runCatching { action(installer) }
+            .onFailure { Log.w("PlatformEngines", "${installer::class.java.name} failed to $phase", it) }
     }
 }
