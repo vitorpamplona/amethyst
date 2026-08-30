@@ -55,6 +55,9 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
+import com.vitorpamplona.amethyst.commons.util.stringOrNull
+import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.json.JsonObject
 import java.io.ByteArrayOutputStream
@@ -591,10 +594,10 @@ class NappletBrowserService : Service() {
         if (!isMainFrame) return
         tab.bridgeReplyProxy = replyProxy
         val raw = message.data ?: return
-        val envelope = parseJsonObject(raw) ?: return
+        val envelope = parseJsonObjectOrNull(raw) ?: return
 
         // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
-        if (envelope.stringOrEmpty("type").startsWith("ime.")) {
+        if (envelope.stringOrNull("type").orEmpty().startsWith("ime.")) {
             val reply =
                 Message.obtain(null, NappletBrowserContract.MSG_IME_EVENT).apply {
                     data = Bundle().apply { putString(NappletBrowserContract.KEY_IME_PAYLOAD, raw) }
@@ -607,7 +610,7 @@ class NappletBrowserService : Service() {
         val host = sourceOrigin.host ?: return
         val origin = "$scheme://$host" + if (sourceOrigin.port > 0) ":${sourceOrigin.port}" else ""
 
-        val id = envelope.stringOrEmpty("id").ifEmpty { "fire-${tab.fireSeq++}" }
+        val id = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${tab.fireSeq++}" }
         val msg =
             Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
                 replyTo = tab.replyMessenger
@@ -716,7 +719,7 @@ class NappletBrowserService : Service() {
             NappletIpc.MSG_RESPONSE -> {
                 val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
                 val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                val result = (parseJsonObject(payload) ?: JsonObject(emptyMap())).withString("id", id)
+                val result = (parseJsonObjectOrNull(payload) ?: JsonObject(emptyMap())).withString("id", id)
                 runCatching { tab.bridgeReplyProxy?.postMessage(result.toString()) }
             }
             NappletIpc.MSG_PUSH -> {

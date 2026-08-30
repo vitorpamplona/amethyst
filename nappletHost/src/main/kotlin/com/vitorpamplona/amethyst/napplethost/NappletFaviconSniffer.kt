@@ -25,6 +25,8 @@ import android.os.Looper
 import android.util.Base64
 import android.webkit.WebView
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
+import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -110,9 +112,9 @@ internal object NappletFaviconSniffer {
     /** `state` to base64 payload, or null when the page has not produced a result for this seq yet. */
     private fun parse(raw: String?): Pair<String, String>? {
         if (raw == null || raw == "null") return null
-        val json = parseJsonObject(raw) ?: return null
-        val state = json.stringOrEmpty("state").ifBlank { return null }
-        return state to json.stringOrEmpty("data")
+        val json = parseJsonObjectOrNull(raw) ?: return null
+        val state = json.stringOrNull("state")?.ifBlank { null } ?: return null
+        return state to json.stringOrNull("data").orEmpty()
     }
 
     /**
