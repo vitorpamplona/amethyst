@@ -34,6 +34,10 @@ import com.google.mlkit.genai.rewriting.Rewriter
 import com.google.mlkit.genai.rewriting.RewriterOptions
 import com.google.mlkit.genai.rewriting.Rewriting
 import com.google.mlkit.genai.rewriting.RewritingRequest
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistantStatus
+import com.vitorpamplona.amethyst.commons.service.ai.WritingResult
+import com.vitorpamplona.amethyst.commons.service.ai.WritingTone
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException

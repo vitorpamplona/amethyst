@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.VideoPostKind
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

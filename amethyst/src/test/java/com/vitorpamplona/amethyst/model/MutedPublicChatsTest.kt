@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model
 
+import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
+import com.vitorpamplona.amethyst.commons.model.publicChatChannelIdOf
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent

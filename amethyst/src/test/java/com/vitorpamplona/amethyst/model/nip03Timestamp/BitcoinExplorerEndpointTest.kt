@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip03Timestamp
 
+import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import org.junit.Assert.assertEquals
 import org.junit.Test

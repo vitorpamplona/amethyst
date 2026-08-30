@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
+import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

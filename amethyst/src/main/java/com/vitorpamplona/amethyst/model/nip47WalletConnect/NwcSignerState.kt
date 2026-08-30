@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.nip47WalletConnect
 
 import com.vitorpamplona.amethyst.commons.model.INwcSignerState
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcInfoCache
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentQueryState
 import com.vitorpamplona.amethyst.model.AccountSettings

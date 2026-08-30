@@ -41,6 +41,10 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
+import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistantStatus
+import com.vitorpamplona.amethyst.commons.service.ai.WritingResult
+import com.vitorpamplona.amethyst.commons.service.ai.WritingTone
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.ui.text.appendSignature
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -51,11 +55,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
-import com.vitorpamplona.amethyst.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
-import com.vitorpamplona.amethyst.service.ai.WritingAssistantStatus
-import com.vitorpamplona.amethyst.service.ai.WritingResult
-import com.vitorpamplona.amethyst.service.ai.WritingTone
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor

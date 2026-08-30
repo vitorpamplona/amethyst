@@ -28,6 +28,8 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
+import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagnostics
@@ -38,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
+import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthInterceptor
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
@@ -54,9 +58,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
-import com.vitorpamplona.amethyst.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
-import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
 import com.vitorpamplona.amethyst.model.preferences.BuzzAttestationPreferences
 import com.vitorpamplona.amethyst.model.preferences.BuzzChannelStarPreferences
@@ -76,7 +78,6 @@ import com.vitorpamplona.amethyst.service.calendar.CalendarReminderPrefs
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
-import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
@@ -119,7 +120,6 @@ import com.vitorpamplona.amethyst.service.resourceusage.SessionTimeIntegrator
 import com.vitorpamplona.amethyst.service.resourceusage.UsageCountingInterceptor
 import com.vitorpamplona.amethyst.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.service.safeCacheDir
-import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundService
@@ -212,7 +212,7 @@ class AppModules(
     /**
      * Mints and caches BUD-01 read-auth tokens for auth-gated Blossom hosts.
      * Shared by the OkHttp interceptor (which only reads the cache) and Coil's
-     * [com.vitorpamplona.amethyst.service.images.BlossomReadAuthFetcher] (which
+     * [com.vitorpamplona.amethyst.commons.service.image.BlossomReadAuthFetcher] (which
      * awaits a signature), so both see one token and one in-flight signature per
      * host. Signing runs on [applicationIOScope], never on an OkHttp thread.
      */

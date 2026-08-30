@@ -29,9 +29,9 @@ import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
+import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
+import com.vitorpamplona.amethyst.commons.service.image.ThumbhashWrapper
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
-import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
-import com.vitorpamplona.amethyst.service.images.ThumbhashWrapper
 import com.vitorpamplona.amethyst.service.uploads.isAvif
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log

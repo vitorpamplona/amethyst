@@ -34,7 +34,9 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotification
+import com.vitorpamplona.amethyst.commons.napplet.NappletNotificationStore
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotifyGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
@@ -49,8 +51,6 @@ import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentSummary
-import com.vitorpamplona.amethyst.napplet.NappletNotificationStore
-import com.vitorpamplona.amethyst.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.napplet.buildConnectInfo
 import com.vitorpamplona.amethyst.napplet.buildSignerConsentInfo
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader

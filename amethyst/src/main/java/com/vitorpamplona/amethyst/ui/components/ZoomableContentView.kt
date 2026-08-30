@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
+import com.vitorpamplona.amethyst.commons.service.image.placeholderModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
@@ -901,8 +902,7 @@ fun DisplayBlurHash(
     thumbhash: String? = null,
 ) {
     val model =
-        com.vitorpamplona.amethyst.service.images
-            .placeholderModel(thumbhash, blurhash) ?: return
+        placeholderModel(thumbhash, blurhash) ?: return
 
     AsyncImage(
         model = model,
