@@ -44,6 +44,11 @@ hat.
 | **Per-app locale settings** | Android exposes a per-app language screen in system settings. Desktop has none; the in-app picker is the whole story. |
 | **System share sheet** | No desktop OS has one. Sharing falls back to the clipboard, which is the closest honest equivalent — and says so. |
 | **Battery optimization exemptions** | Doze and app standby are Android power-management policies with no desktop analogue, so there is no exemption to request. |
+| **Quick-settings tile** | The tile lives in the system's pull-down panel. A desktop tray icon or menu-bar item is a different surface with a different lifecycle, not a port of this one — and the switch the tile toggles is already in the app's notification settings. |
+| **System bar insets** | There are no status or navigation bars on a desktop window, so hiding and showing them is meaningless. Immersive fullscreen is the window manager's job and belongs to the desktop shell, not to view insets. |
+| **System day/night mode** | Android lets an app put the whole system into night mode. On a desktop that is a setting the user owns; the app's own theme still follows the app's own preference. |
+| **StrictMode** | A debug-build detector for main-thread IO and leaked closeables. The JVM has no main-thread policy to violate and the JDK owns the leak checks, so there is nothing here for it to find. |
+| **Display folds** | `TwoPane` snaps its split to a hinge when a device has one. A monitor has none, so the fold list is empty — the correct answer, not a placeholder — and the non-folding layout path is the right one.
 
 Several of these are less lossy than they look. Foreground services and
 UnifiedPush exist on Android to survive a hostile process lifecycle that desktop
@@ -63,7 +68,11 @@ Worth recording so nobody re-litigates them as gaps:
 | `ConnectivityManager` | `NetworkInterface`, polled for transitions |
 | `TextToSpeech` | `say` / SAPI / `spd-say` |
 | `SharedPreferences` | `java.util.prefs` |
-| Android Keystore | OS keychain via jkeychain |
+| Android Keystore | OS keychain via jkeychain — **but see below**: `KeyStoreEncryption` still asks for `KeyStore.getInstance("AndroidKeyStore")`, which no JVM provider answers to, so it fails loudly rather than encrypting with a key kept beside the data. Routing it through the keychain is open work. |
+| Material 3 `WindowSizeClass` | computed live from the composition's own window, at Material's own breakpoints — a desktop window crosses all three as the user drags its edge |
+| accompanist `TwoPane` | a real split-pane layout; only the fold snapping is dropped, and only because there is no fold |
+| `IntentCompat` typed extras | the same read plus a type check, so a share that drops a file says so |
+| new-intent listeners | the same registry, delivered by the desktop shell for a `nostr:` URL, an opened file, or a second launch folded into the first window |
 | `DateFormat`, `DateUtils` | `java.time` / `java.text`, same CLDR data |
 | aapt2 resources | a generated `R` plus locale tables, built from the same `res/` tree |
 | WorkManager | a daemon timer with the same retry backoff and constraint waiting |

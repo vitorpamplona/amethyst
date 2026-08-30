@@ -49,6 +49,11 @@ object DesktopCapabilities {
         const val APP_LOCALE_SETTINGS = "AppLocaleSettings"
         const val SHARE_SHEET = "ShareSheet"
         const val BATTERY_OPTIMIZATION = "BatteryOptimization"
+        const val QUICK_SETTINGS_TILE = "TileService"
+        const val SYSTEM_BAR_INSETS = "SystemBarInsets"
+        const val SYSTEM_NIGHT_MODE = "SystemNightMode"
+        const val STRICT_MODE = "StrictMode"
+        const val DISPLAY_FOLDS = "DisplayFolds"
     }
 
     fun declare() {
@@ -96,6 +101,35 @@ object DesktopCapabilities {
             Feature.BATTERY_OPTIMIZATION,
             "Doze and app standby are Android power-management policies with no desktop analogue, " +
                 "so there is no exemption to request.",
+        )
+        PlatformGaps.declareUnavailable(
+            Feature.QUICK_SETTINGS_TILE,
+            "A quick-settings tile lives in the system's pull-down panel. A desktop tray icon or " +
+                "menu-bar item is a different surface with a different lifecycle, not a port of this " +
+                "one, and the switch the tile toggles is already in the app's notification settings.",
+        )
+        PlatformGaps.declareUnavailable(
+            Feature.SYSTEM_BAR_INSETS,
+            "There are no status or navigation bars on a desktop window, so hiding and showing them " +
+                "is meaningless. Immersive fullscreen is the window manager's job and belongs to the " +
+                "desktop shell rather than to view insets.",
+        )
+        PlatformGaps.declareUnavailable(
+            Feature.SYSTEM_NIGHT_MODE,
+            "Android lets an app put the whole system into night mode. On a desktop that is a setting " +
+                "the user owns; the app's own theme still follows the app's own preference.",
+        )
+        PlatformGaps.declareUnavailable(
+            Feature.STRICT_MODE,
+            "StrictMode is a debug-build detector for main-thread IO and leaked closeables. The JVM " +
+                "has no main-thread policy to violate and the JDK owns the leak checks, so there is " +
+                "nothing here for it to find.",
+        )
+        PlatformGaps.declareUnavailable(
+            Feature.DISPLAY_FOLDS,
+            "A two-pane layout snaps its split to a hinge when the device has one. A monitor has none, " +
+                "so the fold list is empty — the correct answer, not a placeholder — and the " +
+                "non-folding layout path is the right one.",
         )
     }
 }
