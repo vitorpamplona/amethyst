@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -83,6 +84,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -344,6 +346,38 @@ object SearchFieldExtractor {
 
             is NamedNappletEvent -> {
                 tiers(event, event.title(), event.description(), null)
+            }
+
+            // kinds 30392-30395 -- a Trusted List's title is the ONLY
+            // human-authored text the family carries (`content` is a machine
+            // echo of the membership, the member tags are hex ids, and
+            // `metric`/`d` name the computation), so `indexableContent()` is
+            // exactly `title()`. Without this branch the fallback below put
+            // that title in the TERTIARY tier: a list titled "Verified Human"
+            // matched the words on the same rung as a bio that happens to
+            // mention them, and lost the prefix/typo columns a title gets.
+            is TrustedListEvent -> {
+                tiers(event, event.title(), null, null)
+            }
+
+            // kind 30382 -- a contact card's petname is a trust provider's
+            // NAME for a person, the direct analogue of kind 0's `name`, and
+            // its summary is the description beside it. The encrypted half of
+            // the card stays out, as it always has: petName()/summary() read
+            // the public tag array only, and build() puts both in the NIP-44
+            // content, so a card authored by this library has NO public text
+            // beyond its topics.
+            //
+            // topics() is deliberately absent: it is `TopicTag`, which is the
+            // `t` tag under another name (same predicate, same array), so the
+            // tiers() funnel already carries every topic in the hashtag role.
+            // Passing them again would index the same words twice -- which is
+            // what the fallback below was doing, since indexableContent()
+            // concatenates the topics INTO the body while the funnel added
+            // them as hashtags. Whether that role is tokenized or kept as
+            // keywords is the backend's call, per IndexableFields.
+            is ContactCardEvent -> {
+                tiers(event, event.petName(), event.summary(), null)
             }
 
             is FeedDefinitionEvent -> {
