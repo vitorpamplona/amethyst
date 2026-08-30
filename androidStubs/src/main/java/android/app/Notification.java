@@ -19,6 +19,10 @@ public class Notification {
     public static final int DEFAULT_ALL = -1;
     public static final int FLAG_ONGOING_EVENT = 0x00000002;
 
+    public static final int FLAG_GROUP_SUMMARY = 0x00000200;
+    public static final int FLAG_AUTO_CANCEL = 0x00000010;
+    public static final int FLAG_FOREGROUND_SERVICE = 0x00000040;
+
     public int flags;
     public int priority;
     public String category;
@@ -40,6 +44,12 @@ public class Notification {
     public PendingIntent contentIntent;
     public PendingIntent deleteIntent;
     public PendingIntent fullScreenIntent;
+
+    /** The redacted copy a lock screen shows, when one was built. */
+    public Notification publicVersion;
+
+    /** The conversation this notification carries, for a presenter that renders one. */
+    public Object messagingStyle;
 
     /** Progress, as a determinate bar; -1 max means "no progress bar". */
     public int progressMax = -1;

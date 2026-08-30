@@ -44,6 +44,7 @@ import coil3.SingletonImageLoader
 import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
+import com.vitorpamplona.amethyst.commons.images.asCoilContext
 import com.vitorpamplona.amethyst.shared.R
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -538,11 +539,11 @@ object NotificationUtils {
             try {
                 val request =
                     ImageRequest
-                        .Builder(applicationContext)
+                        .Builder(applicationContext.asCoilContext())
                         .data(pictureUrl)
                         .allowHardware(false)
                         .build()
-                val imageLoader = SingletonImageLoader.get(applicationContext)
+                val imageLoader = SingletonImageLoader.get(applicationContext.asCoilContext())
                 val result = imageLoader.execute(request)
                 (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
             } catch (_: Exception) {

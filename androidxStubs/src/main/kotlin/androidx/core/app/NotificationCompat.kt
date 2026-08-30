@@ -68,6 +68,10 @@ object NotificationCompat {
     const val CATEGORY_TRANSPORT = "transport"
     const val CATEGORY_WORKOUT = "workout"
 
+    const val GROUP_ALERT_ALL = 0
+    const val GROUP_ALERT_SUMMARY = 1
+    const val GROUP_ALERT_CHILDREN = 2
+
     const val FOREGROUND_SERVICE_DEFAULT = 0
     const val FOREGROUND_SERVICE_IMMEDIATE = 1
     const val FOREGROUND_SERVICE_DEFERRED = 2
@@ -129,6 +133,20 @@ object NotificationCompat {
 
         fun setTimeoutAfter(durationMs: Long) = apply { }
 
+        /** The redacted copy shown on a lock screen. Kept for a presenter that has one. */
+        fun setPublicVersion(value: Notification?) = apply { notification.publicVersion = value }
+
+        fun setGroupAlertBehavior(behavior: Int) = apply { }
+
+        fun addPerson(person: Person?) = apply { }
+
+        fun setShortcutId(id: String?) = apply { }
+
+        fun setWhen(
+            whenMs: Long,
+            show: Boolean,
+        ) = apply { notification.`when` = whenMs }
+
         fun setUsesChronometer(uses: Boolean) = apply { }
 
         fun setLocalOnly(localOnly: Boolean) = apply { }
@@ -182,6 +200,23 @@ object NotificationCompat {
                     is InboxStyle -> {
                         notification.lines.clear()
                         notification.lines.addAll(style.lines)
+                        style.bigContentTitle?.let { notification.title = it }
+                        style.summaryText?.let { notification.subText = it }
+                    }
+                    is MessagingStyle -> {
+                        // The last message is what a one-line presenter shows;
+                        // the whole conversation stays on the notification for
+                        // one that can show more.
+                        notification.messagingStyle = style
+                        style.messages.lastOrNull()?.let { last ->
+                            notification.text = last.text
+                            last.person?.name?.let { notification.title = it }
+                        }
+                        style.conversationTitle?.let { notification.subText = it }
+                        notification.lines.clear()
+                        notification.lines.addAll(style.messages.mapNotNull { it.text })
+                    }
+                    is BigPictureStyle -> {
                         style.bigContentTitle?.let { notification.title = it }
                         style.summaryText?.let { notification.subText = it }
                     }
@@ -260,6 +295,60 @@ object NotificationCompat {
             private set
 
         fun bigText(text: CharSequence?) = apply { bigText = text }
+
+        fun setBigContentTitle(title: CharSequence?) = apply { bigContentTitle = title }
+
+        fun setSummaryText(text: CharSequence?) = apply { summaryText = text }
+    }
+
+    /**
+     * A conversation, as a series of messages with senders.
+     *
+     * Kept in full — every message, with its [Person] and timestamp — because
+     * that is the whole content of a DM notification. Flattening it to one line
+     * of text on the way in would leave a presenter that *can* render a
+     * conversation with nothing to render.
+     */
+    class MessagingStyle(
+        val user: Person,
+    ) {
+        val messages = mutableListOf<Message>()
+
+        var conversationTitle: CharSequence? = null
+            private set
+        var isGroupConversation: Boolean = false
+            private set
+
+        fun addMessage(
+            text: CharSequence?,
+            timestamp: Long,
+            person: Person?,
+        ) = apply { messages.add(Message(text, timestamp, person)) }
+
+        fun addMessage(message: Message) = apply { messages.add(message) }
+
+        fun setConversationTitle(title: CharSequence?) = apply { conversationTitle = title }
+
+        fun setGroupConversation(group: Boolean) = apply { isGroupConversation = group }
+
+        class Message(
+            val text: CharSequence?,
+            val timestamp: Long,
+            val person: Person?,
+        )
+    }
+
+    class BigPictureStyle {
+        var picture: Any? = null
+            private set
+        var bigContentTitle: CharSequence? = null
+            private set
+        var summaryText: CharSequence? = null
+            private set
+
+        fun bigPicture(value: Any?) = apply { picture = value }
+
+        fun bigLargeIcon(value: Any?) = apply { }
 
         fun setBigContentTitle(title: CharSequence?) = apply { bigContentTitle = title }
 

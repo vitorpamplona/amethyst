@@ -30,6 +30,7 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.images.asCoilContext
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
@@ -459,11 +460,11 @@ class EventNotificationConsumer(
                     try {
                         val request =
                             ImageRequest
-                                .Builder(applicationContext)
+                                .Builder(applicationContext.asCoilContext())
                                 .data(pictureUrl)
                                 .allowHardware(false)
                                 .build()
-                        val result = ImageLoader(applicationContext).execute(request)
+                        val result = ImageLoader(applicationContext.asCoilContext()).execute(request)
                         (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
                     } catch (_: Exception) {
                         null

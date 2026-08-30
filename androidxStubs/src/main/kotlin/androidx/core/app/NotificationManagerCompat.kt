@@ -25,6 +25,7 @@ import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
 import android.app.NotificationManager
 import android.content.Context
+import android.service.notification.StatusBarNotification
 
 /** JVM stand-in for androidx.core.app.NotificationManagerCompat. */
 class NotificationManagerCompat private constructor(
@@ -74,4 +75,7 @@ class NotificationManagerCompat private constructor(
     ) = delegate.cancel(tag, id)
 
     fun cancelAll() = delegate.cancelAll()
+
+    /** What is still showing. Read by the group-summary cleanup. */
+    val activeNotifications: List<StatusBarNotification> get() = delegate.activeNotifications.toList()
 }

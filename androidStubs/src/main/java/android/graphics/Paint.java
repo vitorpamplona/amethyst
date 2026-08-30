@@ -22,6 +22,10 @@ public class Paint {
     private Align textAlign = Align.LEFT;
     private boolean antiAlias;
 
+    private boolean filterBitmap;
+    private Shader shader;
+    private int alpha = 255;
+
     public Paint() {}
 
     public Paint(int flags) { antiAlias = (flags & ANTI_ALIAS_FLAG) != 0; }
@@ -47,6 +51,21 @@ public class Paint {
     public void setTextAlign(Align value) { textAlign = value; }
 
     public boolean isAntiAlias() { return antiAlias; }
+
+    public boolean isFilterBitmap() { return filterBitmap; }
+
+    public void setFilterBitmap(boolean value) { filterBitmap = value; }
+
+    public Shader getShader() { return shader; }
+
+    public Shader setShader(Shader value) {
+        shader = value;
+        return value;
+    }
+
+    public void setAlpha(int value) { alpha = Math.max(0, Math.min(255, value)); }
+
+    public int getAlpha() { return alpha; }
 
     public void setAntiAlias(boolean value) { antiAlias = value; }
 
