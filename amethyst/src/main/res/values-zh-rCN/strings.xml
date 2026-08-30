@@ -3885,7 +3885,6 @@
     <string name="ai_tone_elaborate">详述</string>
     <string name="ai_tone_friendly">友好</string>
     <string name="ai_tone_professional">专业</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">表情包</string>
     <string name="emoji_pack_management_title">添加到表情列表</string>

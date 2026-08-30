@@ -4643,7 +4643,6 @@
     <string name="ai_tone_elaborate">Ausführen</string>
     <string name="ai_tone_friendly">Freundlich</string>
     <string name="ai_tone_professional">Professionell</string>
-    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-Pakete</string>
     <string name="emoji_pack_management_title">Zur Emoji-Liste hinzufügen</string>
