@@ -20,17 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
-import com.vitorpamplona.quartz.nip01Core.core.RawJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.JsonUnquotedLiteral
-import kotlinx.serialization.json.add
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 
 // Helper function to convert JsonElement to standard Kotlin types recursively
 fun JsonElement.toAnyValue(): Any =
@@ -53,30 +46,3 @@ fun JsonElement.toAnyValue(): Any =
     }
 
 fun JsonObject.toAnyMap(): Map<String, Any?> = entries.associate { it.key to it.value.toAnyValue() }
-
-/**
- * The inverse of [toAnyValue], for the `Map<String, Any?>` blobs NIP-47 carries as
- * `metadata`.
- *
- * `Json.encodeToJsonElement` CANNOT do this — it needs a serializer for the static
- * type, and `Any` has none, so it throws `SerializerException: Serializer for class
- * 'Any' is not found` at runtime for every populated metadata object. This walks
- * the value instead.
- *
- * [RawJson] becomes a `JsonUnquotedLiteral` so pre-serialized JSON reaches the wire
- * byte-for-byte; that is what lets a zap request still hash to the invoice's
- * `description_hash` after a round trip through this map.
- */
-fun anyToJsonElement(value: Any?): JsonElement =
-    when (value) {
-        null -> JsonNull
-        is RawJson -> JsonUnquotedLiteral(value.json)
-        is JsonElement -> value
-        is String -> JsonPrimitive(value)
-        is Boolean -> JsonPrimitive(value)
-        is Number -> JsonPrimitive(value)
-        is Map<*, *> -> buildJsonObject { value.forEach { (k, v) -> put(k.toString(), anyToJsonElement(v)) } }
-        is Iterable<*> -> buildJsonArray { value.forEach { add(anyToJsonElement(it)) } }
-        is Array<*> -> buildJsonArray { value.forEach { add(anyToJsonElement(it)) } }
-        else -> JsonPrimitive(value.toString())
-    }

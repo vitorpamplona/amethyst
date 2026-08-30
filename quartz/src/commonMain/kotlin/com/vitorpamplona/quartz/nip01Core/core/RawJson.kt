@@ -35,12 +35,8 @@ package com.vitorpamplona.quartz.nip01Core.core
  * `JsonUnquotedLiteral`. [json] MUST already be well-formed JSON; nothing
  * validates it, and an invalid value corrupts the whole document.
  */
-class RawJson(
+data class RawJson(
     val json: String,
 ) {
     override fun toString() = json
-
-    override fun equals(other: Any?) = other is RawJson && other.json == json
-
-    override fun hashCode() = json.hashCode()
 }

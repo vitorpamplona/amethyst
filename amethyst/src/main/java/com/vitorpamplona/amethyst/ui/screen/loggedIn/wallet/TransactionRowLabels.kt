@@ -75,18 +75,14 @@ data class TransactionRowLabels(
                     description == null || !comment.equals(description, ignoreCase = true)
                 }
 
-            // Whether the title names a counterparty rather than describing the payment.
-            // A named row wants a second line saying what the payment was; a row whose
-            // title IS the description must not repeat it underneath.
-            val isNamed = pubkeyHex != null || displayName != null
-
-            val title =
-                pubkeyHex?.let { Title.User(it, displayName) }
-                    ?: Title.Literal(displayName ?: description ?: directionLabel)
+            // A title that NAMES a counterparty wants a second line saying what the
+            // payment was; a title that IS the description must not repeat it below.
+            val named = pubkeyHex?.let { Title.User(it, displayName) } ?: displayName?.let { Title.Literal(it) }
+            val fallback = description ?: directionLabel
 
             return TransactionRowLabels(
-                title = title,
-                subtitle = comment ?: if (isNamed) description ?: directionLabel else null,
+                title = named ?: Title.Literal(fallback),
+                subtitle = comment ?: fallback.takeIf { named != null },
             )
         }
     }

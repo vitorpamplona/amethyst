@@ -550,19 +550,6 @@ class WalletViewModel : ViewModel() {
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
 
-        // Re-read the wallet's advertised capabilities whenever the user opens or
-        // refreshes this screen, bypassing the info cache's TTL.
-        //
-        // A wallet that ADDS an extension is otherwise invisible for the life of the
-        // cached entry: nothing errors, the feature simply does not appear, and the
-        // user has no way to learn that. Interop testing found a pairing sending no
-        // NWC-06 metadata to a wallet that had been advertising `06` for twenty
-        // minutes. This is the deliberate user-visible remedy — its own coroutine, so
-        // a slow info fetch never delays the transaction list.
-        viewModelScope.launch(Dispatchers.IO) {
-            acc.nip47SignerState.infoCache?.getFresh(walletUri)
-        }
-
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             _error.value = null

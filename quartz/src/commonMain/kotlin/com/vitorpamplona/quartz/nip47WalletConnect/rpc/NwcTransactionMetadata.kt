@@ -127,9 +127,11 @@ class NwcTransactionMetadata(
          */
         const val MAX_METADATA_CHARS = 4096
 
-        // The keys and punctuation around the values once serialized —
-        // `{"recipient_data":{"identifier":""},"comment":"","nostr":}` is ~56 chars.
-        // Only this wrapper is estimated now; every value's length is exact.
+        // The keys and punctuation around the values —
+        // `{"recipient_data":{"identifier":""},"comment":"","nostr":}` is 58 chars —
+        // plus room for JSON escaping to expand `identifier` and `comment` on the way
+        // out, which is the only thing that can make this estimate low. `nostr` needs
+        // no such allowance: the length added below is the serialized string itself.
         private const val KEY_OVERHEAD = 96
 
         /**

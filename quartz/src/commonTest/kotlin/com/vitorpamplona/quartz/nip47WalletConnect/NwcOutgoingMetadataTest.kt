@@ -195,7 +195,7 @@ class NwcOutgoingMetadataTest {
         // The p tag, not the pubkey: on an outgoing zap the pubkey is US.
         assertEquals(recipientHex, parsed.recipientPubkeyHex())
         assertEquals("user@domain.com", parsed.recipientIdentifier())
-        // A wallet storing only  still yields the message.
+        // A wallet storing only `nostr` still yields the message.
         assertEquals("for the article", parsed.displayComment())
     }
 
@@ -217,10 +217,10 @@ class NwcOutgoingMetadataTest {
 
     @Test
     fun emptyDescriptionIsNotAName() {
-        // The wallet-side habit this exists for:  rather than an
-        // omitted field. The row must fall back, not render an empty line.
+        // The wallet-side habit this exists for: an empty `description` string
+        // rather than an omitted field. The row must fall back, not render an empty line.
         val tx = NwcTransaction(type = "outgoing", description = "", amount = 21000L)
-        assertEquals("", tx.description)
-        assertNull(tx.description?.ifBlank { null })
+        assertEquals("", tx.description, "the raw field keeps what the wallet sent")
+        assertNull(tx.displayDescription(), "but nothing downstream sees an empty name")
     }
 }

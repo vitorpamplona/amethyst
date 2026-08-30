@@ -143,38 +143,34 @@ class NwcSignerState(
      * The negotiated encryption preference for a wallet. NIP-47 says a client
      * "should always prefer nip44 if supported by the wallet service", so a false
      * here has to mean "the wallet does not offer NIP-44" — not "we have not asked
-     * yet".
-     *
-     * That distinction is why this waits. The info cache is per-account and held in
-     * memory only, so it starts empty on every app launch, and reading it without
-     * waiting made the first transaction to each wallet after every launch fall
-     * back to NIP-04 even against a wallet advertising `nip44_v2`. Only a cold
-     * cache waits: a stale entry still says what the wallet advertises and is used
-     * as-is while it refreshes in the background.
-     *
-     * The wait is capped, because this sits in front of a payment the user has
-     * already tapped. Its own fetch is bounded only by the relay accessory's 30s
-     * idle window, and the no-response timer below does not start until this
-     * returns. On expiry we send NIP-04 for this one request rather than hold the
-     * tap; the fetch keeps running in the cache's scope, so the next request gets
-     * the negotiated scheme. Never bound the fetch itself instead — a null from it
-     * is cached as a definitive "no info event" for the whole TTL, which would pin
-     * the wallet to NIP-04 for days.
+     * yet". [walletInfo] is what makes that distinction true.
      */
     private fun prefersNip44(info: NwcInfoEvent?): Boolean = info?.encryptionSchemes()?.any { it.equals("nip44_v2", ignoreCase = true) } == true
 
     /**
-     * The wallet's advertised capabilities, fetched AT MOST ONCE per send.
+     * The wallet's advertised capabilities: the one place a send waits on them, and
+     * it waits AT MOST ONCE.
      *
-     * Every send asks this event two questions — which encryption to use, and
-     * whether NWC-06 metadata may travel — and each used to fetch it for itself.
-     * That is free on a warm cache and doubles the stall on a cold one, because
-     * [NwcInfoCache] deliberately does not cache a FAILED fetch: when the wallet's
-     * relay is down, both waits run in full. A relay dropping hourly turned a 3s
-     * worst case into 6s, which is what the wallet operator saw as a stall.
+     * WAITING IS THE POINT. The info cache is per-account and in memory only, so it
+     * starts empty on every app launch, and reading it without waiting makes "not
+     * fetched yet" indistinguishable from "not supported". That shipped twice: the
+     * first transaction to each wallet after a launch fell back to NIP-04 against a
+     * wallet advertising `nip44_v2`, and a payment to a wallet that had been
+     * advertising NWC-06 for twenty minutes still went out bare — with nothing, on
+     * either side, reporting an error.
      *
-     * Bounded, and a timeout answers null — the callers treat "don't know" as
-     * NIP-04 and as no-metadata respectively, both of which are safe.
+     * ONCE, because both questions read the same event. Each used to fetch for
+     * itself, which is free on a warm cache and doubles the stall on a cold one:
+     * [NwcInfoCache] deliberately does not cache a FAILED fetch, so with the relay
+     * down both waits ran in full and a 3s worst case became 6s.
+     *
+     * BOUNDED, because this sits in front of a payment the user has already tapped
+     * and the no-response timer does not start until it returns. On expiry the
+     * answer is null — read as NIP-04 and as no-metadata, both of them the safe
+     * direction — while the fetch keeps running in the cache's own scope so the next
+     * request gets the negotiated scheme. Never bound the fetch itself instead: a
+     * null from it is cached as a definitive "no info event" for the whole TTL,
+     * which would pin the wallet to NIP-04 for days.
      */
     private suspend fun walletInfo(uri: Nip47WalletConnect.Nip47URINorm?): NwcInfoEvent? {
         uri ?: return null
@@ -182,48 +178,19 @@ class NwcSignerState(
     }
 
     /**
-     * Whether this wallet advertises NWC-06 (metadata conventions) and may therefore
-     * be sent a populated `metadata`.
-     *
-     * WAITS ON A COLD CACHE, and that is the whole point. The first version paired
-     * [NwcInfoCache.refreshIfStale] — which only *starts* a fetch — with [current],
-     * read immediately after, so a wallet whose info event had not been fetched yet
-     * answered "no" and the payment went out bare. Interop testing against a live
-     * wallet caught it: a pairing whose wallet had been advertising `06` for twenty
-     * minutes still sent no metadata, and nothing anywhere reported an error.
-     *
-     * This is the same trap [currentOrFetch] was written for on the NIP-44 path —
-     * "not fetched yet" is indistinguishable from "not supported" — so it takes the
-     * same remedy, including the bounded wait so a slow relay cannot stall a
-     * payment. A timeout still reads as NO: the cost of that is a history row
-     * without a recipient, whereas a wrong YES to a wallet that types `metadata`
-     * narrowly costs the user a refused payment.
-     *
-     * [currentOrFetch] also kicks a background refresh for an expired entry, so a
-     * wallet that adds the tag later is picked up without any user action.
-     */
-    private fun supportsMetadata(info: NwcInfoEvent?): Boolean = info?.supportsExtension(ExtensionsTag.METADATA_CONVENTIONS) == true
-
-    /**
      * Strips NWC-06 `metadata` from a request bound for a wallet that never said it
-     * understands the field.
+     * understands the field — [MetadataCarrying] has the reason that matters.
      *
-     * APPLIED WHERE THE REQUEST IS BUILT rather than at each call site, because the
-     * cost of forgetting is a refused payment: a wallet that types `metadata`
-     * narrowly accepts a null but cannot decode an object, and answers a params
-     * error instead of paying. Every send path funnels through here, so populating
+     * APPLIED WHERE THE REQUEST IS BUILT rather than at each call site, so populating
      * `metadata` anywhere upstream is safe by construction.
      *
      * MUTATES the request in place — see the callers' KDoc. Requests are built per
-     * send and not reused, and stripping a copy would mean rebuilding a params
-     * object whose field list would then drift from the original.
-     *
-     * A method with no metadata returns before the info cache is consulted, so this
-     * costs nothing on the RPCs that can never carry any.
+     * send and not reused, and stripping a copy would mean rebuilding a params object
+     * whose field list would then drift from the original.
      */
     private fun Request.dropMetadataIfUnsupported(info: NwcInfoEvent?) {
         val carrier = metadataCarrier ?: return
-        if (carrier.metadata == null || supportsMetadata(info)) return
+        if (carrier.metadata == null || info?.supportsExtension(ExtensionsTag.METADATA_CONVENTIONS) == true) return
         carrier.metadata = null
     }
 

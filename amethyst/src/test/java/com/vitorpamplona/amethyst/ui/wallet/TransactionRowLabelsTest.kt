@@ -37,23 +37,15 @@ class TransactionRowLabelsTest {
      * nothing in it. Outgoing rows looked like a bare arrow and a date.
      */
     @Test
-    fun anEmptyDescriptionFallsBackToTheDirection() {
-        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = ""), "Sent")
+    fun aDescriptionWithNothingInItFallsBackToTheDirection() {
+        // Empty and whitespace are what wallets actually send for a payment with no
+        // memo; absent is the spec-clean form. All three must reach the fallback.
+        listOf("", "   ", null).forEach { description ->
+            val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = description), "Sent")
 
-        assertEquals(TransactionRowLabels.Title.Literal("Sent"), labels.title)
-        assertNull(labels.subtitle)
-    }
-
-    @Test
-    fun aWhitespaceDescriptionIsTreatedTheSameWay() {
-        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = "   "), "Sent")
-        assertEquals(TransactionRowLabels.Title.Literal("Sent"), labels.title)
-    }
-
-    @Test
-    fun anAbsentDescriptionStillFallsBack() {
-        val labels = TransactionRowLabels.resolve(NwcTransaction(type = "outgoing", description = null), "Sent")
-        assertEquals(TransactionRowLabels.Title.Literal("Sent"), labels.title)
+            assertEquals("description=<$description>", TransactionRowLabels.Title.Literal("Sent"), labels.title)
+            assertNull("description=<$description>", labels.subtitle)
+        }
     }
 
     @Test

@@ -40,16 +40,15 @@ sealed class Request(
     var method: String? = null,
 ) : OptimizedSerializable {
     /**
-     * This request's NWC-06 metadata, or null for a method that has none.
+     * This request's NWC-06 metadata carrier, or null for a method that has none.
      *
-     * Declared HERE, and overridden beside each method that carries one, so that
-     * adding a metadata-bearing method is a decision made where the method is
-     * written. The alternative — a `when` over request types in the client — needs
-     * an `else`, and an `else` silently leaks the field to a wallet that never
-     * opted in.
+     * Declared HERE, and overridden beside each method that carries one, so adding a
+     * metadata-bearing method is a decision made where the method is written. The
+     * alternative — a `when` over request types in the client — needs an `else`, and
+     * an `else` silently leaks the field to a wallet that never opted in.
      *
-     * create_connection is deliberately absent: its `metadata` names the
-     * connection and is not NWC-06's per-payment blob.
+     * create_connection is deliberately absent: its `metadata` names the connection
+     * and is not NWC-06's per-payment blob.
      */
     open val metadataCarrier: MetadataCarrying? get() = null
 }
@@ -67,10 +66,7 @@ class PayInvoiceMethod(
     override val metadataCarrier get() = params
 
     companion object {
-        // `metadata` is NIP-47's optional per-payment blob, whose keys NWC-06 defines.
-        // Only ever populate it for a wallet that advertises NWC-06 (`06` in the info
-        // event's `extensions` tag): a wallet is free to type the field narrowly, and
-        // one that cannot decode an object it never asked for refuses the payment.
+        // `metadata` may only travel to a wallet that advertised it — see [MetadataCarrying].
         fun create(
             bolt11: String,
             metadata: Map<String, Any?>? = null,
@@ -79,8 +75,7 @@ class PayInvoiceMethod(
         fun create(
             bolt11: String,
             amount: Long,
-            metadata: Map<String, Any?>? = null,
-        ): PayInvoiceMethod = PayInvoiceMethod(PayInvoiceParams(bolt11, amount, metadata))
+        ): PayInvoiceMethod = PayInvoiceMethod(PayInvoiceParams(bolt11, amount))
     }
 }
 

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization
 
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.anyToJsonElement
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
