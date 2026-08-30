@@ -18,27 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.privacyOptions
+package com.vitorpamplona.amethyst.commons.service.http
 
 import okhttp3.OkHttpClient
-import java.net.InetSocketAddress
 
-class SingleRoleBasedHttpClientBuilder(
-    val okHttpClient: OkHttpClient,
-) : IRoleBasedHttpClientBuilder {
-    override fun proxyPortForVideo(url: String) = (okHttpClient.proxy?.address() as? InetSocketAddress)?.port
+interface IHttpClientManager {
+    fun getHttpClient(useProxy: Boolean): OkHttpClient
 
-    override fun okHttpClientForNip05(url: String) = okHttpClient
+    fun getCurrentProxyPort(useProxy: Boolean): Int?
+}
 
-    override fun okHttpClientForUploads(url: String) = okHttpClient
+object EmptyHttpClientManager : IHttpClientManager {
+    val rootOkHttpClient by lazy {
+        OkHttpClient
+            .Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+    }
 
-    override fun okHttpClientForImage(url: String) = okHttpClient
+    override fun getHttpClient(useProxy: Boolean) = rootOkHttpClient
 
-    override fun okHttpClientForVideo(url: String) = okHttpClient
-
-    override fun okHttpClientForMoney(url: String) = okHttpClient
-
-    override fun okHttpClientForPreview(url: String) = okHttpClient
-
-    override fun okHttpClientForPushRegistration(url: String) = okHttpClient
+    override fun getCurrentProxyPort(useProxy: Boolean) = null
 }

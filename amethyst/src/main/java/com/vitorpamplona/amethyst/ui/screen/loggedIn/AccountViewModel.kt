@@ -58,6 +58,8 @@ import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
+import com.vitorpamplona.amethyst.commons.service.http.EmptyRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
@@ -72,8 +74,6 @@ import com.vitorpamplona.amethyst.model.Dao
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.model.UrlCachedPreviewer
-import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
-import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.service.ClinkDebitPayer

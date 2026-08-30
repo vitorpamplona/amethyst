@@ -18,31 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.okhttp
+package com.vitorpamplona.amethyst.commons.service.http
 
-import com.vitorpamplona.quartz.utils.Log
-import okhttp3.Interceptor
-import okhttp3.Request
-import okhttp3.Response
-import java.net.InetSocketAddress
-
-class LoggingInterceptor : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val request: Request = chain.request()
-        val t1 = System.nanoTime()
-        val port =
-            (
-                chain
-                    .connection()
-                    ?.route()
-                    ?.proxy
-                    ?.address() as? InetSocketAddress
-            )?.port
-        val response: Response = chain.proceed(request)
-        val t2 = System.nanoTime()
-
-        Log.d("OkHttpLog") { "Req $port ${request.url} in ${(t2 - t1) / 1e6}ms" }
-
-        return response
-    }
+/**
+ * Host-environment facts the OkHttp factories need but cannot detect from
+ * shared code. Front ends set these once at startup; the defaults match a
+ * real device / desktop machine.
+ */
+object HttpClientEnvironment {
+    /**
+     * True when running on an Android emulator. The factories skip socket
+     * tweaks that misbehave on emulated network stacks. The Android app sets
+     * this from its `Build`-fingerprint detection; desktop leaves it false.
+     */
+    var isEmulator: Boolean = false
 }

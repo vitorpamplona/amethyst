@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.okhttp
+package com.vitorpamplona.amethyst.commons.service.http
 
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import okhttp3.Call

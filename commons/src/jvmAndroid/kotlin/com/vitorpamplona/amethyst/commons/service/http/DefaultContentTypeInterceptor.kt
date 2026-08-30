@@ -18,39 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.okhttp
+package com.vitorpamplona.amethyst.commons.service.http
 
-import android.util.LruCache
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
+import okhttp3.Interceptor
+import okhttp3.Request
+import okhttp3.Response
 
-/**
- * Neigther ExoPlayer, nor Coil support passing key and nonce to the Interceptor via
- * Request.tag, which would be the right way to do this.
- *
- * This class serves as a key cache to decrypt the body of HTTP calls that need it.
- */
-class EncryptionKeyCache {
-    val cache = LruCache<String, DecryptInformation>(100)
-
-    fun add(
-        url: String?,
-        decryptInformation: DecryptInformation,
-    ) {
-        if (cache.get(url) == null) {
-            cache.put(url, decryptInformation)
-        }
+class DefaultContentTypeInterceptor(
+    private val userAgentHeader: String,
+) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val originalRequest: Request = chain.request()
+        val requestWithUserAgent: Request =
+            originalRequest
+                .newBuilder()
+                .header("User-Agent", userAgentHeader)
+                .build()
+        return chain.proceed(requestWithUserAgent)
     }
-
-    fun add(
-        url: String?,
-        cipher: NostrCipher,
-        expectedMimeType: String?,
-    ) = add(url, DecryptInformation(cipher, expectedMimeType))
-
-    fun get(url: String): DecryptInformation? = cache.get(url)
 }
-
-class DecryptInformation(
-    val cipher: NostrCipher,
-    val mimeType: String?,
-)

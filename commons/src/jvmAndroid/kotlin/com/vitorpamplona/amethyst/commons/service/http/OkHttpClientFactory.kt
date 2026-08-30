@@ -18,12 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.okhttp
+package com.vitorpamplona.amethyst.commons.service.http
 
-import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_IS_MOBILE
-import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_SOCKS_PORT
-import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_TIMEOUT_ON_MOBILE_SECS
-import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_TIMEOUT_ON_WIFI_SECS
+import com.vitorpamplona.amethyst.commons.service.http.OkHttpClientFactoryForRelays.Companion.DEFAULT_IS_MOBILE
+import com.vitorpamplona.amethyst.commons.service.http.OkHttpClientFactoryForRelays.Companion.DEFAULT_SOCKS_PORT
+import com.vitorpamplona.amethyst.commons.service.http.OkHttpClientFactoryForRelays.Companion.DEFAULT_TIMEOUT_ON_MOBILE_SECS
+import com.vitorpamplona.amethyst.commons.service.http.OkHttpClientFactoryForRelays.Companion.DEFAULT_TIMEOUT_ON_WIFI_SECS
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import okhttp3.ConnectionPool
 import okhttp3.Dispatcher
@@ -88,7 +88,7 @@ class OkHttpClientFactory(
     // can parallelize downloads the way a browser does.
     private val dispatcher =
         Dispatcher().apply {
-            if (!isEmulator()) {
+            if (!HttpClientEnvironment.isEmulator) {
                 maxRequestsPerHost = 16
                 maxRequests = 128
             } else {

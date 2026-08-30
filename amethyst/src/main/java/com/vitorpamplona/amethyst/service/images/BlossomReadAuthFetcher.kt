@@ -26,8 +26,8 @@ import coil3.fetch.Fetcher
 import coil3.network.HttpException
 import coil3.network.httpHeaders
 import coil3.request.Options
-import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthInterceptor
-import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthInterceptor
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /**

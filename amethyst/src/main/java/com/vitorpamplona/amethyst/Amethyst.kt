@@ -23,12 +23,15 @@ package com.vitorpamplona.amethyst
 import android.app.Application
 import android.content.ComponentCallbacks2
 import android.os.Build
+import com.vitorpamplona.amethyst.commons.service.http.HttpClientEnvironment
+import com.vitorpamplona.amethyst.commons.service.http.MediaCallEventListener
 import com.vitorpamplona.amethyst.favorites.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.favorites.BrowserIconRegistry
 import com.vitorpamplona.amethyst.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
+import com.vitorpamplona.amethyst.service.okhttp.isEmulator
 import com.vitorpamplona.amethyst.service.priority.WorkerThreadPriorityGovernor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
 import com.vitorpamplona.quartz.utils.Log
@@ -164,6 +167,11 @@ class Amethyst : Application() {
         // Foreground signal for the resource-usage ledger (fg/bg attribution
         // of bytes and connection-time). Main process only.
         registerActivityLifecycleCallbacks(instance.foregroundTracker)
+
+        // Debug builds log every completed media HTTP call, not just slow/failed ones.
+        MediaCallEventListener.verboseLogging = isDebug
+        // The shared OkHttp factories skip socket tweaks on emulated network stacks.
+        HttpClientEnvironment.isEmulator = isEmulator()
 
         if (isDebug) {
             Logging.setup()

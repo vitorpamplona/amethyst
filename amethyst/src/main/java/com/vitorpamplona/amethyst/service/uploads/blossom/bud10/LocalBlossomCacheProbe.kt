@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.uploads.blossom.bud10
 
-import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO

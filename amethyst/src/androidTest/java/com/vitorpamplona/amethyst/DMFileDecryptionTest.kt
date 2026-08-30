@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.service.okhttp.EncryptedBlobInterceptor
-import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
+import com.vitorpamplona.amethyst.commons.service.http.EncryptedBlobInterceptor
+import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import okhttp3.OkHttpClient

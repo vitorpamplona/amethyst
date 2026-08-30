@@ -18,26 +18,40 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.okhttp
+package com.vitorpamplona.amethyst.commons.service.http
 
-import okhttp3.OkHttpClient
+import androidx.collection.LruCache
+import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 
-interface IHttpClientManager {
-    fun getHttpClient(useProxy: Boolean): OkHttpClient
+/**
+ * Neigther ExoPlayer, nor Coil support passing key and nonce to the Interceptor via
+ * Request.tag, which would be the right way to do this.
+ *
+ * This class serves as a key cache to decrypt the body of HTTP calls that need it.
+ */
+class EncryptionKeyCache {
+    val cache = LruCache<String, DecryptInformation>(100)
 
-    fun getCurrentProxyPort(useProxy: Boolean): Int?
-}
-
-object EmptyHttpClientManager : IHttpClientManager {
-    val rootOkHttpClient by lazy {
-        OkHttpClient
-            .Builder()
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .build()
+    fun add(
+        url: String?,
+        decryptInformation: DecryptInformation,
+    ) {
+        if (url == null) return
+        if (cache.get(url) == null) {
+            cache.put(url, decryptInformation)
+        }
     }
 
-    override fun getHttpClient(useProxy: Boolean) = rootOkHttpClient
+    fun add(
+        url: String?,
+        cipher: NostrCipher,
+        expectedMimeType: String?,
+    ) = add(url, DecryptInformation(cipher, expectedMimeType))
 
-    override fun getCurrentProxyPort(useProxy: Boolean) = null
+    fun get(url: String): DecryptInformation? = cache.get(url)
 }
+
+class DecryptInformation(
+    val cipher: NostrCipher,
+    val mimeType: String?,
+)

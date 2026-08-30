@@ -18,22 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.okhttp
+package com.vitorpamplona.amethyst.commons.service.http
 
-import okhttp3.Interceptor
-import okhttp3.Request
-import okhttp3.Response
+import okhttp3.OkHttpClient
 
-class DefaultContentTypeInterceptor(
-    private val userAgentHeader: String,
-) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest: Request = chain.request()
-        val requestWithUserAgent: Request =
-            originalRequest
-                .newBuilder()
-                .header("User-Agent", userAgentHeader)
-                .build()
-        return chain.proceed(requestWithUserAgent)
-    }
+interface IRoleBasedHttpClientBuilder {
+    fun proxyPortForVideo(url: String): Int?
+
+    fun okHttpClientForNip05(url: String): OkHttpClient
+
+    fun okHttpClientForUploads(url: String): OkHttpClient
+
+    fun okHttpClientForImage(url: String): OkHttpClient
+
+    fun okHttpClientForVideo(url: String): OkHttpClient
+
+    fun okHttpClientForMoney(url: String): OkHttpClient
+
+    fun okHttpClientForPreview(url: String): OkHttpClient
+
+    fun okHttpClientForPushRegistration(url: String): OkHttpClient
 }

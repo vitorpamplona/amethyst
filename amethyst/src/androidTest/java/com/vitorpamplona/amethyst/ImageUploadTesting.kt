@@ -25,10 +25,10 @@ import android.graphics.Color
 import androidx.core.graphics.createBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.vitorpamplona.amethyst.commons.service.http.DefaultContentTypeInterceptor
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
-import com.vitorpamplona.amethyst.service.okhttp.DefaultContentTypeInterceptor
 import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.service.uploads.ImageDownloader
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader

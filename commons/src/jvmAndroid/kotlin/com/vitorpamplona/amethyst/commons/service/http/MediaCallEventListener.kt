@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.okhttp
+package com.vitorpamplona.amethyst.commons.service.http
 
-import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.utils.Log
 import okhttp3.Call
@@ -141,7 +140,7 @@ class MediaCallEventListener(
         val isSlow = totalMs >= SLOW_CALL_THRESHOLD_MS
         val wasQueued = queuedAtStart > 0
 
-        if (error == null && !isSlow && !wasQueued && !isDebug) return
+        if (error == null && !isSlow && !wasQueued && !verboseLogging) return
 
         val ttfbMs = if (responseHeadersNanos > 0) (responseHeadersNanos - callStartNanos) / 1_000_000 else -1L
         val reuseTag = if (connectionReused) "reused" else "new"
@@ -177,6 +176,13 @@ class MediaCallEventListener(
     companion object {
         const val TAG = "MediaHttp"
         const val SLOW_CALL_THRESHOLD_MS = 1500L
+
+        /**
+         * When true, logs every completed call instead of only slow/queued/failed
+         * ones. The Android app sets this from its BuildConfig at startup; other
+         * front ends leave it off.
+         */
+        var verboseLogging: Boolean = false
     }
 }
 

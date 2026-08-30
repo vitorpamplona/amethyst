@@ -38,6 +38,12 @@ import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthInterceptor
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
+import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
+import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
+import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
+import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
@@ -82,13 +88,7 @@ import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServ
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.NwcPaymentNotificationWatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
-import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthInterceptor
-import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
-import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
-import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
-import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpWebSocket
-import com.vitorpamplona.amethyst.service.okhttp.OnionLocationCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
