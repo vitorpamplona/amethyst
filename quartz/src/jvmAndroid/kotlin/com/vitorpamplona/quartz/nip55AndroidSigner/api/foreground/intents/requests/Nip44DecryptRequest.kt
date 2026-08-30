@@ -21,11 +21,11 @@
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
 
 import android.content.Intent
-import androidx.core.net.toUri
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 
-class Nip04DecryptRequest {
+class Nip44DecryptRequest {
     companion object {
         fun assemble(
             ciphertext: String,
@@ -33,9 +33,9 @@ class Nip04DecryptRequest {
             loggedInUser: HexKey,
             packageName: String,
         ): Intent {
-            val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:$ciphertext".toUri())
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$ciphertext"))
             intent.`package` = packageName
-            intent.putExtra("type", CommandType.NIP04_DECRYPT.code)
+            intent.putExtra("type", CommandType.NIP44_DECRYPT.code)
             intent.putExtra("pubKey", fromPubKey)
             intent.putExtra("current_user", loggedInUser)
             return intent

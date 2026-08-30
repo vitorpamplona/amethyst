@@ -21,22 +21,20 @@
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
 
 import android.content.Intent
-import androidx.core.net.toUri
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 
-class Nip04EncryptRequest {
+class DeriveKeyRequest {
     companion object {
         fun assemble(
-            plaintext: String,
-            toPubKey: HexKey,
+            nonce: HexKey,
             loggedInUser: HexKey,
             packageName: String,
         ): Intent {
-            val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:$plaintext".toUri())
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$nonce"))
             intent.`package` = packageName
-            intent.putExtra("type", CommandType.NIP04_ENCRYPT.code)
-            intent.putExtra("pubKey", toPubKey)
+            intent.putExtra("type", CommandType.DERIVE_KEY.code)
             intent.putExtra("current_user", loggedInUser)
             return intent
         }

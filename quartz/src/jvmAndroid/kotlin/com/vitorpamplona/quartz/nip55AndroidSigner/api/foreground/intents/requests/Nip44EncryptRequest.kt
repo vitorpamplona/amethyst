@@ -18,37 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
 
-import android.content.ContentResolver
-import androidx.core.net.toUri
+import android.content.Intent
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.EncryptionResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
 
-class Nip44EncryptQuery(
-    val loggedInUser: HexKey,
-    val packageName: String,
-    val contentResolver: ContentResolver,
-) {
-    val uri = "content://$packageName.${CommandType.NIP44_ENCRYPT}".toUri()
-
-    fun query(
-        plaintext: String,
-        toPubKey: HexKey,
-    ): SignerResult<EncryptionResult> =
-        contentResolver.query(
-            uri,
-            arrayOf(plaintext, toPubKey, loggedInUser),
-        ) { cursor ->
-            val ciphertext = cursor.getStringByName("result")
-            if (!ciphertext.isNullOrBlank()) {
-                SignerResult.RequestAddressed.Successful(EncryptionResult(ciphertext))
-            } else {
-                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-            }
+class Nip44EncryptRequest {
+    companion object {
+        fun assemble(
+            plaintext: String,
+            toPubKey: HexKey,
+            loggedInUser: HexKey,
+            packageName: String,
+        ): Intent {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$plaintext"))
+            intent.`package` = packageName
+            intent.putExtra("type", CommandType.NIP44_ENCRYPT.code)
+            intent.putExtra("pubKey", toPubKey)
+            intent.putExtra("current_user", loggedInUser)
+            return intent
         }
+    }
 }

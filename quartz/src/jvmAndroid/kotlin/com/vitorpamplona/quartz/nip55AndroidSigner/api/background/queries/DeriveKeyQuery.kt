@@ -18,31 +18,34 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
 
-import android.content.Intent
-import androidx.core.net.toUri
+import android.content.ContentResolver
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.DerivationResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
 
-/**
- * NIP-BC `sign_psbt` foreground Intent request.
- *
- * Carries the PSBT (lowercase hex) as the `nostrsigner:` URI data so the
- * signer app can display the inputs/outputs to the user for confirmation.
- */
-class SignPsbtRequest {
-    companion object {
-        fun assemble(
-            psbtHex: String,
-            loggedInUser: HexKey,
-            packageName: String,
-        ): Intent {
-            val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:$psbtHex".toUri())
-            intent.`package` = packageName
-            intent.putExtra("type", CommandType.SIGN_PSBT.code)
-            intent.putExtra("current_user", loggedInUser)
-            return intent
+class DeriveKeyQuery(
+    val loggedInUser: HexKey,
+    val packageName: String,
+    val contentResolver: ContentResolver,
+) {
+    val uri = Uri.parse("content://$packageName.${CommandType.DERIVE_KEY}")
+
+    fun query(nonce: HexKey): SignerResult<DerivationResult> =
+        contentResolver.query(
+            uri,
+            arrayOf(nonce, loggedInUser),
+        ) { cursor ->
+            val newPrivateKey = cursor.getStringByName("result")
+            if (!newPrivateKey.isNullOrBlank()) {
+                SignerResult.RequestAddressed.Successful(DerivationResult(newPrivateKey))
+            } else {
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+            }
         }
-    }
 }

@@ -18,25 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
+package com.vitorpamplona.quartz.nip55AndroidSigner.client
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
-import androidx.core.net.toUri
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
+import android.content.pm.ResolveInfo
+import android.net.Uri
 
-class DeriveKeyRequest {
-    companion object {
-        fun assemble(
-            nonce: HexKey,
-            loggedInUser: HexKey,
-            packageName: String,
-        ): Intent {
-            val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:$nonce".toUri())
-            intent.`package` = packageName
-            intent.putExtra("type", CommandType.DERIVE_KEY.code)
-            intent.putExtra("current_user", loggedInUser)
-            return intent
-        }
-    }
-}
+@SuppressLint("QueryPermissionsNeeded")
+fun isExternalSignerInstalled(context: Context): Boolean =
+    context.packageManager
+        .queryIntentActivities(
+            Intent().apply {
+                action = Intent.ACTION_VIEW
+                data = Uri.parse("nostrsigner:")
+            },
+            0,
+        ).isNotEmpty()
+
+@SuppressLint("QueryPermissionsNeeded")
+fun getExternalSignersInstalled(context: Context): List<ResolveInfo> =
+    context.packageManager
+        .queryIntentActivities(
+            Intent().apply {
+                action = Intent.ACTION_VIEW
+                data = Uri.parse("nostrsigner:")
+            },
+            0,
+        )

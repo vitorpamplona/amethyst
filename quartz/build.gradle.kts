@@ -214,6 +214,21 @@ kotlin {
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
+
+                // The android.* stand-ins, for the one jvmAndroid package that
+                // is written against Android IPC: NIP-55, which signs by
+                // handing an Intent to a separate app. That is Android-shaped
+                // by specification, but it is still protocol code, and the JVM
+                // needs it to compile so a desktop build can answer "no signer
+                // installed" instead of not knowing the concept exists.
+                //
+                // compileOnly on purpose. On Android these come from
+                // android.jar, and quartz publishes a JVM artifact — a
+                // project() dependency here would land in its POM and be
+                // unresolvable for anyone outside this build. Consumers that
+                // actually call into NIP-55 on the JVM supply :androidStubs
+                // themselves; nothing else touches it.
+                compileOnly(project(":androidStubs"))
             }
         }
 
@@ -222,6 +237,11 @@ kotlin {
             dependencies {
                 // Bitcoin secp256k1 bindings
                 implementation(libs.secp256k1.kmp.jni.jvm)
+
+                // On the JVM the stubs are what android.jar is on Android, so
+                // the NIP-55 code above can actually be exercised here. Test
+                // scope only; the published artifact still declares nothing.
+                implementation(project(":androidStubs"))
 
                 // Custom C secp256k1 (libschnorr256k1) for cross-validation + 3-way benchmark
                 implementation(libs.schnorr256k1.kmp)

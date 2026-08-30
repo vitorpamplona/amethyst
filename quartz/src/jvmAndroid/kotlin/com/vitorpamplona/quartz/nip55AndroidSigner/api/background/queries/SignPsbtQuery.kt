@@ -21,32 +21,37 @@
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
 
 import android.content.ContentResolver
-import androidx.core.net.toUri
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.DecryptionResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignPsbtResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
 
-class Nip04DecryptQuery(
+/**
+ * NIP-BC `sign_psbt` background (ContentResolver) query.
+ *
+ * Passes the unsigned/partially-signed PSBT (lowercase hex) to the external
+ * signer app and expects the updated PSBT back in the `result` column. The
+ * signer signs each input whose `tapInternalKey` matches the user's pubkey;
+ * it does NOT finalize the PSBT.
+ */
+class SignPsbtQuery(
     val loggedInUser: HexKey,
     val packageName: String,
     val contentResolver: ContentResolver,
 ) {
-    val uri = "content://$packageName.${CommandType.NIP04_DECRYPT}".toUri()
+    val uri = Uri.parse("content://$packageName.${CommandType.SIGN_PSBT}")
 
-    fun query(
-        ciphertext: String,
-        fromPubKey: HexKey,
-    ): SignerResult<DecryptionResult> =
+    fun query(psbtHex: String): SignerResult<SignPsbtResult> =
         contentResolver.query(
             uri,
-            arrayOf(ciphertext, fromPubKey, loggedInUser),
+            arrayOf(psbtHex, loggedInUser),
         ) { cursor ->
-            val plaintext = cursor.getStringByName("result")
-            if (!plaintext.isNullOrBlank()) {
-                SignerResult.RequestAddressed.Successful(DecryptionResult(plaintext))
+            val signedPsbtHex = cursor.getStringByName("result")
+            if (!signedPsbtHex.isNullOrBlank()) {
+                SignerResult.RequestAddressed.Successful(SignPsbtResult(signedPsbtHex))
             } else {
                 SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }

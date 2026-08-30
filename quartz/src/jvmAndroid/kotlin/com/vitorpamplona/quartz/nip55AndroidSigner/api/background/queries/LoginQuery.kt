@@ -18,32 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
 
-import android.content.Intent
-import androidx.core.net.toUri
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
-import com.vitorpamplona.quartz.nip55AndroidSigner.JsonMapperNip55
+import android.content.ContentResolver
+import android.net.Uri
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
 
-class LoginRequest {
+class LoginQuery(
+    val packageName: String,
+    val contentResolver: ContentResolver,
+) {
     companion object {
-        val DefaultPermissions =
-            listOf(
-                Permission(CommandType.SIGN_EVENT, RelayAuthEvent.KIND),
-                Permission(CommandType.NIP04_ENCRYPT),
-                Permission(CommandType.NIP04_DECRYPT),
-                Permission(CommandType.NIP44_DECRYPT),
-                Permission(CommandType.NIP44_ENCRYPT),
-                Permission(CommandType.DECRYPT_ZAP_EVENT),
-            )
-
-        fun assemble(permissions: List<Permission> = DefaultPermissions): Intent {
-            val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:".toUri())
-            intent.putExtra("type", CommandType.GET_PUBLIC_KEY.code)
-            intent.putExtra("permissions", JsonMapperNip55.toJson(permissions))
-            return intent
-        }
+        val LOGIN = arrayOf("login")
     }
+
+    val uri = Uri.parse("content://$packageName.${CommandType.GET_PUBLIC_KEY}")
+
+    fun query(): SignerResult<PubKeyResult> =
+        contentResolver.query(
+            uri,
+            LOGIN,
+        ) { cursor ->
+            val pubkeyHex = cursor.getStringByName("result")
+            if (!pubkeyHex.isNullOrBlank()) {
+                SignerResult.RequestAddressed.Successful(PubKeyResult(pubkeyHex, packageName))
+            } else {
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+            }
+        }
 }

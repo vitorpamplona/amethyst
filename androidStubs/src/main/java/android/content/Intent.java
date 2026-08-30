@@ -47,6 +47,7 @@ public class Intent {
     private final java.util.Set<String> categories = new java.util.LinkedHashSet<>();
     private Class<?> targetClass;
     private ComponentName component;
+    private String packageName;
     private ClipData clipData;
 
     public Intent() {}
@@ -84,6 +85,17 @@ public class Intent {
      * these intents from a name it was handed, with no class to point at — and
      * a null component there routes every share to the same screen.
      */
+    /**
+     * The target app's package. NIP-55 sets it to address one installed signer
+     * rather than every app that claims the scheme, so it has to survive.
+     */
+    public String getPackage() { return packageName; }
+
+    public Intent setPackage(String value) {
+        this.packageName = value;
+        return this;
+    }
+
     public ComponentName getComponent() { return component; }
 
     public Intent setComponent(ComponentName component) {

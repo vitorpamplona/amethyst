@@ -18,34 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
 
-import android.content.ContentResolver
-import androidx.core.net.toUri
+import android.content.Intent
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.DerivationResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
 
-class DeriveKeyQuery(
-    val loggedInUser: HexKey,
-    val packageName: String,
-    val contentResolver: ContentResolver,
-) {
-    val uri = "content://$packageName.${CommandType.DERIVE_KEY}".toUri()
-
-    fun query(nonce: HexKey): SignerResult<DerivationResult> =
-        contentResolver.query(
-            uri,
-            arrayOf(nonce, loggedInUser),
-        ) { cursor ->
-            val newPrivateKey = cursor.getStringByName("result")
-            if (!newPrivateKey.isNullOrBlank()) {
-                SignerResult.RequestAddressed.Successful(DerivationResult(newPrivateKey))
-            } else {
-                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-            }
+class Nip04EncryptRequest {
+    companion object {
+        fun assemble(
+            plaintext: String,
+            toPubKey: HexKey,
+            loggedInUser: HexKey,
+            packageName: String,
+        ): Intent {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:$plaintext"))
+            intent.`package` = packageName
+            intent.putExtra("type", CommandType.NIP04_ENCRYPT.code)
+            intent.putExtra("pubKey", toPubKey)
+            intent.putExtra("current_user", loggedInUser)
+            return intent
         }
+    }
 }

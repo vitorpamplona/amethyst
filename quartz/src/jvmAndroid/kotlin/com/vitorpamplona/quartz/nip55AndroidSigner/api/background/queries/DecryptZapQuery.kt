@@ -21,33 +21,45 @@
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
 
 import android.content.ContentResolver
-import androidx.core.net.toUri
+import android.net.Uri
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
+import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 
-class LoginQuery(
+class DecryptZapQuery(
+    val loggedInUser: HexKey,
     val packageName: String,
     val contentResolver: ContentResolver,
 ) {
-    companion object {
-        val LOGIN = arrayOf("login")
-    }
-
-    val uri = "content://$packageName.${CommandType.GET_PUBLIC_KEY}".toUri()
-
-    fun query(): SignerResult<PubKeyResult> =
+    fun query(event: Event): SignerResult<ZapEventDecryptionResult> =
         contentResolver.query(
-            uri,
-            LOGIN,
+            Uri.parse("content://$packageName.${CommandType.DECRYPT_ZAP_EVENT}"),
+            arrayOf(event.toJson(), event.pubKey, loggedInUser),
         ) { cursor ->
-            val pubkeyHex = cursor.getStringByName("result")
-            if (!pubkeyHex.isNullOrBlank()) {
-                SignerResult.RequestAddressed.Successful(PubKeyResult(pubkeyHex, packageName))
+            val decryptedEventAsJson = cursor.getStringByName("result")
+            if (!decryptedEventAsJson.isNullOrBlank()) {
+                if (decryptedEventAsJson.startsWith("{")) {
+                    val event = Event.fromJsonOrNull(decryptedEventAsJson) as? LnZapPrivateEvent
+                    if (event != null) {
+                        if (event.verify()) {
+                            SignerResult.RequestAddressed.Successful(ZapEventDecryptionResult(event))
+                        } else {
+                            SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(event)
+                        }
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult(decryptedEventAsJson)
+                    }
+                } else {
+                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform(decryptedEventAsJson)
+                }
             } else {
-                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform(decryptedEventAsJson)
             }
         }
 }

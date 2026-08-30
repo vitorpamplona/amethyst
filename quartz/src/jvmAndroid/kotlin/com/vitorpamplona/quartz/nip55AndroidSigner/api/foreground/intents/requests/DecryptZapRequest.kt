@@ -18,37 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
 
-import android.content.ContentResolver
-import androidx.core.net.toUri
+import android.content.Intent
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.DecryptionResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
-class Nip44DecryptQuery(
-    val loggedInUser: HexKey,
-    val packageName: String,
-    val contentResolver: ContentResolver,
-) {
-    val uri = "content://$packageName.${CommandType.NIP44_DECRYPT}".toUri()
-
-    fun query(
-        ciphertext: String,
-        fromPubKey: HexKey,
-    ): SignerResult<DecryptionResult> =
-        contentResolver.query(
-            uri,
-            arrayOf(ciphertext, fromPubKey, loggedInUser),
-        ) { cursor ->
-            val plaintext = cursor.getStringByName("result")
-            if (!plaintext.isNullOrBlank()) {
-                SignerResult.RequestAddressed.Successful(DecryptionResult(plaintext))
-            } else {
-                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
-            }
+class DecryptZapRequest {
+    companion object {
+        fun assemble(
+            event: LnZapRequestEvent,
+            loggedInUser: HexKey,
+            packageName: String,
+        ): Intent {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:${event.toJson()}"))
+            intent.`package` = packageName
+            intent.putExtra("type", CommandType.DECRYPT_ZAP_EVENT.code)
+            intent.putExtra("current_user", loggedInUser)
+            return intent
         }
+    }
 }

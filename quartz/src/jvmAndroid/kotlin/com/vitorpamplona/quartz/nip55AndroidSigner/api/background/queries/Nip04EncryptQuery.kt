@@ -21,37 +21,32 @@
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
 
 import android.content.ContentResolver
-import androidx.core.net.toUri
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignPsbtResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.EncryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
 
-/**
- * NIP-BC `sign_psbt` background (ContentResolver) query.
- *
- * Passes the unsigned/partially-signed PSBT (lowercase hex) to the external
- * signer app and expects the updated PSBT back in the `result` column. The
- * signer signs each input whose `tapInternalKey` matches the user's pubkey;
- * it does NOT finalize the PSBT.
- */
-class SignPsbtQuery(
+class Nip04EncryptQuery(
     val loggedInUser: HexKey,
     val packageName: String,
     val contentResolver: ContentResolver,
 ) {
-    val uri = "content://$packageName.${CommandType.SIGN_PSBT}".toUri()
+    val uri = Uri.parse("content://$packageName.${CommandType.NIP04_ENCRYPT}")
 
-    fun query(psbtHex: String): SignerResult<SignPsbtResult> =
+    fun query(
+        plaintext: String,
+        toPubKey: HexKey,
+    ): SignerResult<EncryptionResult> =
         contentResolver.query(
             uri,
-            arrayOf(psbtHex, loggedInUser),
+            arrayOf(plaintext, toPubKey, loggedInUser),
         ) { cursor ->
-            val signedPsbtHex = cursor.getStringByName("result")
-            if (!signedPsbtHex.isNullOrBlank()) {
-                SignerResult.RequestAddressed.Successful(SignPsbtResult(signedPsbtHex))
+            val ciphertext = cursor.getStringByName("result")
+            if (!ciphertext.isNullOrBlank()) {
+                SignerResult.RequestAddressed.Successful(EncryptionResult(ciphertext))
             } else {
                 SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }

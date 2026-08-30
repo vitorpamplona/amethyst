@@ -21,32 +21,32 @@
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
 
 import android.content.ContentResolver
-import androidx.core.net.toUri
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.EncryptionResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.DecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
 
-class Nip04EncryptQuery(
+class Nip44DecryptQuery(
     val loggedInUser: HexKey,
     val packageName: String,
     val contentResolver: ContentResolver,
 ) {
-    val uri = "content://$packageName.${CommandType.NIP04_ENCRYPT}".toUri()
+    val uri = Uri.parse("content://$packageName.${CommandType.NIP44_DECRYPT}")
 
     fun query(
-        plaintext: String,
-        toPubKey: HexKey,
-    ): SignerResult<EncryptionResult> =
+        ciphertext: String,
+        fromPubKey: HexKey,
+    ): SignerResult<DecryptionResult> =
         contentResolver.query(
             uri,
-            arrayOf(plaintext, toPubKey, loggedInUser),
+            arrayOf(ciphertext, fromPubKey, loggedInUser),
         ) { cursor ->
-            val ciphertext = cursor.getStringByName("result")
-            if (!ciphertext.isNullOrBlank()) {
-                SignerResult.RequestAddressed.Successful(EncryptionResult(ciphertext))
+            val plaintext = cursor.getStringByName("result")
+            if (!plaintext.isNullOrBlank()) {
+                SignerResult.RequestAddressed.Successful(DecryptionResult(plaintext))
             } else {
                 SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
             }

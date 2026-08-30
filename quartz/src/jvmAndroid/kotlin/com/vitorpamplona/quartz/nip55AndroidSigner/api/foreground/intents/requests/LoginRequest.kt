@@ -21,22 +21,28 @@
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
 
 import android.content.Intent
-import androidx.core.net.toUri
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import android.net.Uri
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.JsonMapperNip55
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
-import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 
-class DecryptZapRequest {
+class LoginRequest {
     companion object {
-        fun assemble(
-            event: LnZapRequestEvent,
-            loggedInUser: HexKey,
-            packageName: String,
-        ): Intent {
-            val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:${event.toJson()}".toUri())
-            intent.`package` = packageName
-            intent.putExtra("type", CommandType.DECRYPT_ZAP_EVENT.code)
-            intent.putExtra("current_user", loggedInUser)
+        val DefaultPermissions =
+            listOf(
+                Permission(CommandType.SIGN_EVENT, RelayAuthEvent.KIND),
+                Permission(CommandType.NIP04_ENCRYPT),
+                Permission(CommandType.NIP04_DECRYPT),
+                Permission(CommandType.NIP44_DECRYPT),
+                Permission(CommandType.NIP44_ENCRYPT),
+                Permission(CommandType.DECRYPT_ZAP_EVENT),
+            )
+
+        fun assemble(permissions: List<Permission> = DefaultPermissions): Intent {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("nostrsigner:"))
+            intent.putExtra("type", CommandType.GET_PUBLIC_KEY.code)
+            intent.putExtra("permissions", JsonMapperNip55.toJson(permissions))
             return intent
         }
     }

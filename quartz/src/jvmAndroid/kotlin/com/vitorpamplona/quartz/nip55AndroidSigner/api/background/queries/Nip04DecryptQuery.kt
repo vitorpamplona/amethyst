@@ -18,27 +18,37 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
 
-import android.content.Intent
-import androidx.core.net.toUri
+import android.content.ContentResolver
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.DecryptionResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
 
-class Nip44EncryptRequest {
-    companion object {
-        fun assemble(
-            plaintext: String,
-            toPubKey: HexKey,
-            loggedInUser: HexKey,
-            packageName: String,
-        ): Intent {
-            val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:$plaintext".toUri())
-            intent.`package` = packageName
-            intent.putExtra("type", CommandType.NIP44_ENCRYPT.code)
-            intent.putExtra("pubKey", toPubKey)
-            intent.putExtra("current_user", loggedInUser)
-            return intent
+class Nip04DecryptQuery(
+    val loggedInUser: HexKey,
+    val packageName: String,
+    val contentResolver: ContentResolver,
+) {
+    val uri = Uri.parse("content://$packageName.${CommandType.NIP04_DECRYPT}")
+
+    fun query(
+        ciphertext: String,
+        fromPubKey: HexKey,
+    ): SignerResult<DecryptionResult> =
+        contentResolver.query(
+            uri,
+            arrayOf(ciphertext, fromPubKey, loggedInUser),
+        ) { cursor ->
+            val plaintext = cursor.getStringByName("result")
+            if (!plaintext.isNullOrBlank()) {
+                SignerResult.RequestAddressed.Successful(DecryptionResult(plaintext))
+            } else {
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+            }
         }
-    }
 }

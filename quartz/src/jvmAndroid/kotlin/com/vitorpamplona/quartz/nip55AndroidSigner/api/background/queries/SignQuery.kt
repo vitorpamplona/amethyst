@@ -21,45 +21,66 @@
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries
 
 import android.content.ContentResolver
-import androidx.core.net.toUri
+import android.net.Uri
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
-import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.getStringByName
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.utils.query
-import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 
-class DecryptZapQuery(
+class SignQuery(
     val loggedInUser: HexKey,
     val packageName: String,
     val contentResolver: ContentResolver,
 ) {
-    fun query(event: Event): SignerResult<ZapEventDecryptionResult> =
+    val uri = Uri.parse("content://$packageName.${CommandType.SIGN_EVENT}")
+
+    fun query(unsignedEvent: Event): SignerResult<SignResult> =
         contentResolver.query(
-            "content://$packageName.${CommandType.DECRYPT_ZAP_EVENT}".toUri(),
-            arrayOf(event.toJson(), event.pubKey, loggedInUser),
+            uri,
+            arrayOf(unsignedEvent.toJson(), unsignedEvent.pubKey, loggedInUser),
         ) { cursor ->
-            val decryptedEventAsJson = cursor.getStringByName("result")
-            if (!decryptedEventAsJson.isNullOrBlank()) {
-                if (decryptedEventAsJson.startsWith("{")) {
-                    val event = Event.fromJsonOrNull(decryptedEventAsJson) as? LnZapPrivateEvent
+            val eventJson = cursor.getStringByName("event")
+            if (!eventJson.isNullOrBlank()) {
+                if (eventJson.startsWith("{")) {
+                    val event = Event.fromJsonOrNull(eventJson)
                     if (event != null) {
                         if (event.verify()) {
-                            SignerResult.RequestAddressed.Successful(ZapEventDecryptionResult(event))
+                            SignerResult.RequestAddressed.Successful(SignResult(event))
                         } else {
                             SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(event)
                         }
                     } else {
-                        SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult(decryptedEventAsJson)
+                        SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult(eventJson)
                     }
                 } else {
-                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform(decryptedEventAsJson)
+                    SignerResult.RequestAddressed.ReceivedButCouldNotParseEventFromResult(eventJson)
                 }
             } else {
-                SignerResult.RequestAddressed.ReceivedButCouldNotPerform(decryptedEventAsJson)
+                val signature = cursor.getStringByName("result")
+                if (!signature.isNullOrBlank()) {
+                    val event: Event =
+                        EventFactory.create(
+                            id = unsignedEvent.id,
+                            pubKey = unsignedEvent.pubKey,
+                            createdAt = unsignedEvent.createdAt,
+                            kind = unsignedEvent.kind,
+                            tags = unsignedEvent.tags,
+                            content = unsignedEvent.content,
+                            sig = signature,
+                        )
+                    if (event.verify()) {
+                        SignerResult.RequestAddressed.Successful(SignResult(event))
+                    } else {
+                        SignerResult.RequestAddressed.ReceivedButCouldNotVerifyResultingEvent(event)
+                    }
+                } else {
+                    SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+                }
             }
         }
 }
