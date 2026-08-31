@@ -119,10 +119,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Mail,
                 resolveRoute = { Route.Message },
             ),
+        // The combined media feed (VideoFeedFilter): pictures, NIP-94 files and every NIP-71
+        // video kind. Deliberately *not* labelled "Shorts" — NavBarItem.SHORTS below is the
+        // vertical-video-only feed, and the two used to share that label.
         NavBarItem.VIDEO to
             NavBarItemDef(
                 id = NavBarItem.VIDEO,
-                labelRes = R.string.route_video,
+                labelRes = R.string.route_media,
                 icon = MaterialSymbols.Subscriptions,
                 resolveRoute = { Route.Video() },
             ),
@@ -315,6 +318,8 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.AutoMirrored.FormatListBulleted,
                 resolveRoute = { Route.CalendarCollections },
             ),
+        // Vertical/short video only (ShortsFeedFilter: kinds 22 + 34236). The broader
+        // picture-and-video feed is NavBarItem.VIDEO ("Media") above.
         NavBarItem.SHORTS to
             NavBarItemDef(
                 id = NavBarItem.SHORTS,
