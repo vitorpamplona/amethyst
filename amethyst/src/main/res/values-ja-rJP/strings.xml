@@ -1729,7 +1729,8 @@
     <string name="route_discover">発見</string>
     <string name="route_messages">メッセージ</string>
     <string name="route_notifications">通知</string>
-    <string name="route_video">ショート</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">カレンダー</string>
     <string name="route_calendar_collections">カレンダーリスト</string>
     <string name="route_chess">チェス</string>
@@ -1940,7 +1941,6 @@
     </plurals>
     <string name="route_import_follows">フォローをインポート</string>
     <string name="new_post">新規投稿</string>
-    <string name="new_short">新規ショート：画像または動画</string>
     <string name="new_community_note">新規コミュニティノート</string>
     <string name="new_product">新規商品</string>
     <string name="new_long_form_post">新規記事</string>

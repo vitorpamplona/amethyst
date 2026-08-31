@@ -1698,6 +1698,8 @@ Seharusnya %3$s</string>
     <string name="route_discover">Temukan</string>
     <string name="route_messages">Pesan</string>
     <string name="route_notifications">Notifikasi</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">Kalender</string>
     <string name="route_calendar_collections">Daftar kalender</string>
     <string name="route_chess">Catur</string>
@@ -1906,7 +1908,6 @@ Seharusnya %3$s</string>
     </plurals>
     <string name="route_import_follows">Impor Pengikutan</string>
     <string name="new_post">Postingan Baru</string>
-    <string name="new_short">Shorts Baru: gambar atau video</string>
     <string name="new_community_note">Catatan Komunitas Baru</string>
     <string name="new_product">Produk Baru</string>
     <string name="new_long_form_post">Artikel Baru</string>

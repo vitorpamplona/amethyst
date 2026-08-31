@@ -1722,6 +1722,8 @@
     <string name="route_discover">탐색</string>
     <string name="route_messages">메시지</string>
     <string name="route_notifications">알림</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">캘린더</string>
     <string name="route_calendar_collections">캘린더 목록</string>
     <string name="route_chess">체스</string>
@@ -1931,7 +1933,6 @@
     </plurals>
     <string name="route_import_follows">팔로우 가져오기</string>
     <string name="new_post">새 게시물</string>
-    <string name="new_short">새 쇼츠: 이미지 또는 동영상</string>
     <string name="new_community_note">새 커뮤니티 노트</string>
     <string name="new_product">새 상품</string>
     <string name="new_long_form_post">새 글</string>
