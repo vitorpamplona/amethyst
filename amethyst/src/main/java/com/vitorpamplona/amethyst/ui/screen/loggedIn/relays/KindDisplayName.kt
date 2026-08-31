@@ -72,8 +72,14 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -248,8 +254,14 @@ fun kindDisplayName(kind: Int): Int =
         EphemeralGiftWrapEvent.KIND -> R.string.kind_gift_wraps
         GitIssueEvent.KIND -> R.string.kind_git_issue
         GitPatchEvent.KIND -> R.string.kind_git_patch
+        GitPullRequestEvent.KIND -> R.string.kind_git_pr
+        GitPullRequestUpdateEvent.KIND -> R.string.kind_git_pr_update
         GitRepositoryEvent.KIND -> R.string.kind_git_repo
         GitReplyEvent.KIND -> R.string.kind_git_reply
+        GitStatusOpenEvent.KIND -> R.string.kind_git_status_open
+        GitStatusAppliedEvent.KIND -> R.string.kind_git_status_applied
+        GitStatusClosedEvent.KIND -> R.string.kind_git_status_closed
+        GitStatusDraftEvent.KIND -> R.string.kind_git_status_draft
         GoalEvent.KIND -> R.string.kind_zap_goals
         HashtagListEvent.KIND -> R.string.kind_hashtag_follows
         HighlightEvent.KIND -> R.string.kind_highlights

@@ -549,6 +549,7 @@ class WalletViewModel : ViewModel() {
         val walletId = _selectedWalletId.value ?: _defaultWalletId.value ?: _wallets.value.firstOrNull()?.id ?: return
         val acc = account ?: return
         val walletUri = getWalletUri(walletId) ?: return
+
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             _error.value = null

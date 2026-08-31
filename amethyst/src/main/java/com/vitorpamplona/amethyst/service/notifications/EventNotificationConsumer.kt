@@ -76,6 +76,11 @@ import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
@@ -278,6 +283,11 @@ class EventNotificationConsumer(
             is GitPatchEvent -> CodeNotification.notify(applicationContext, account, event)
             is GitPullRequestEvent -> CodeNotification.notify(applicationContext, account, event)
             is GitPullRequestUpdateEvent -> CodeNotification.notify(applicationContext, account, event)
+            is GitReplyEvent -> CodeNotification.notify(applicationContext, account, event)
+            is GitStatusOpenEvent -> CodeNotification.notify(applicationContext, account, event)
+            is GitStatusAppliedEvent -> CodeNotification.notify(applicationContext, account, event)
+            is GitStatusClosedEvent -> CodeNotification.notify(applicationContext, account, event)
+            is GitStatusDraftEvent -> CodeNotification.notify(applicationContext, account, event)
 
             is LiveChessGameAcceptEvent -> ChessNotification.notify(applicationContext, account, event, R.string.app_notification_chess_challenge_accepted)
             is LiveChessMoveEvent -> ChessNotification.notify(applicationContext, account, event, R.string.app_notification_chess_your_turn)

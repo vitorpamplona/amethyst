@@ -38,7 +38,12 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -73,6 +78,16 @@ val RepliesAndReactionsKinds2 =
         NIP90StatusEvent.KIND,
         TorrentCommentEvent.KIND,
         GitReplyEvent.KIND,
+        // NIP-34 PR revision (1619) and status events (1630/1631/1632/1633).
+        // Rooted at the target patch/PR/issue via a `root`-marked `e` tag, so
+        // an `e=<targetId>` engagement fetch surfaces the PR's revision chain
+        // and every open/applied/closed/draft transition — the signal
+        // GitStatusIndex needs to answer isClosedOrResolved() for repo rows.
+        GitPullRequestUpdateEvent.KIND,
+        GitStatusOpenEvent.KIND,
+        GitStatusAppliedEvent.KIND,
+        GitStatusClosedEvent.KIND,
+        GitStatusDraftEvent.KIND,
         PollResponseEvent.KIND,
         ZapPollEvent.KIND,
     )

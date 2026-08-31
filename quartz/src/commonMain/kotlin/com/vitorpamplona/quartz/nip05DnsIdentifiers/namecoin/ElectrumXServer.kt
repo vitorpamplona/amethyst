@@ -122,6 +122,21 @@ val DEFAULT_ELECTRUMX_SERVERS =
         // self-signed peer above is unreachable (e.g. corporate networks that
         // strip unknown CAs but allow LE).
         ElectrumxServer("electrum.nmc.ethicnology.com", 50002, useSsl = true, usePinnedTrustStore = false),
+        // electrumx2.testls.space — redundancy endpoint for the testls.space
+        // operator, on the same box as relay.testls.bit (23.158.233.10) but
+        // terminating TLS at nginx with a publicly-trusted Let's Encrypt cert
+        // (CN=electrumx2.testls.space, issuer LE YE1) instead of the self-signed
+        // relay.testls.bit cert served on the standard ports. usePinnedTrustStore
+        // is left at the default (false) because the system trust store is
+        // sufficient.
+        //
+        // Port 50012 is the TCP+TLS endpoint (what this client uses). The same
+        // nginx vhost also exposes WSS on port 50014 for browser-based Nostr
+        // clients that want to do Namecoin NIP-05 lookups without a backend
+        // proxy — browsers refuse WSS to self-signed certs, so the LE cert on
+        // electrumx2 makes it the first browser-viable public Namecoin
+        // ElectrumX endpoint alongside electrum.nmc.ethicnology.com.
+        ElectrumxServer("electrumx2.testls.space", 50012, useSsl = true, usePinnedTrustStore = false),
         // Note: no bare-IP companion entry for electrum.nmc.ethicnology.com.
         // Unlike the 46.229.238.187 / 23.158.233.10 peers above (which use
         // usePinnedTrustStore=true and DER-SHA256 pinning that doesn't care
@@ -157,4 +172,6 @@ val TOR_ELECTRUMX_SERVERS =
         ElectrumxServer("23.158.233.10", 50002, useSsl = true, usePinnedTrustStore = true),
         // electrum.nmc.ethicnology.com — public LE-cert ElectrumX. See clearnet list above.
         ElectrumxServer("electrum.nmc.ethicnology.com", 50002, useSsl = true, usePinnedTrustStore = false),
+        // electrumx2.testls.space — LE-cert redundancy endpoint. See clearnet list above.
+        ElectrumxServer("electrumx2.testls.space", 50012, useSsl = true, usePinnedTrustStore = false),
     )

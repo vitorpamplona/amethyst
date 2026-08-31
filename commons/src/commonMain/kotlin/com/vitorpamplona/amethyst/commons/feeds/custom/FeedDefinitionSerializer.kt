@@ -20,17 +20,18 @@
  */
 package com.vitorpamplona.amethyst.commons.feeds.custom
 
+import com.vitorpamplona.amethyst.commons.util.booleanOrNull
+import com.vitorpamplona.amethyst.commons.util.intOrNull
+import com.vitorpamplona.amethyst.commons.util.longOrNull
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.intOrNull as primitiveIntOrNull
 
 object FeedDefinitionSerializer {
     private val json = Json { ignoreUnknownKeys = true }
@@ -65,8 +66,8 @@ object FeedDefinitionSerializer {
         val id = node.string("id") ?: return null
         val name = node.string("name") ?: return null
         val emoji = node.string("emoji") ?: ""
-        val pinned = node.bool("pinned") ?: false
-        val pinOrder = node.int("pinOrder") ?: Int.MAX_VALUE
+        val pinned = node.booleanOrNull("pinned") ?: false
+        val pinOrder = node.intOrNull("pinOrder") ?: Int.MAX_VALUE
         val refreshMode =
             node.string("refreshMode")?.let {
                 try {
@@ -75,7 +76,7 @@ object FeedDefinitionSerializer {
                     RefreshMode.LIVE_STREAM
                 }
             } ?: RefreshMode.LIVE_STREAM
-        val createdAt = node.long("createdAt") ?: 0L
+        val createdAt = node.longOrNull("createdAt") ?: 0L
         val source = (node["source"] as? JsonObject)?.let { deserializeSource(it) } ?: return null
 
         return FeedDefinition(
@@ -158,7 +159,7 @@ object FeedDefinitionSerializer {
 
             "people_list" -> {
                 FeedSource.PeopleList(
-                    kind = node.int("kind") ?: 30000,
+                    kind = node.intOrNull("kind") ?: 30000,
                     pubkey = node.string("pubkey") ?: return null,
                     dTag = node.string("dTag") ?: return null,
                 )
@@ -166,7 +167,7 @@ object FeedDefinitionSerializer {
 
             "interest_set" -> {
                 FeedSource.InterestSet(
-                    kind = node.int("kind") ?: 30015,
+                    kind = node.intOrNull("kind") ?: 30015,
                     pubkey = node.string("pubkey") ?: return null,
                     dTag = node.string("dTag") ?: return null,
                 )
@@ -174,7 +175,7 @@ object FeedDefinitionSerializer {
 
             "dvm" -> {
                 FeedSource.DVM(
-                    kind = node.int("kind") ?: 31990,
+                    kind = node.intOrNull("kind") ?: 31990,
                     pubkey = node.string("pubkey") ?: return null,
                     dTag = node.string("dTag") ?: return null,
                 )
@@ -194,13 +195,9 @@ object FeedDefinitionSerializer {
 
     private fun stringArray(values: Iterable<String>): JsonArray = buildJsonArray { values.forEach { add(JsonPrimitive(it)) } }
 
+    // Deliberately stricter than the shared stringOrNull: a persisted feed field must be an actual
+    // quoted string — a number or boolean here is a corrupt record, not a value to coerce.
     private fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
-
-    private fun JsonObject.bool(key: String): Boolean? = (this[key] as? JsonPrimitive)?.booleanOrNull
-
-    private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.intOrNull
-
-    private fun JsonObject.long(key: String): Long? = (this[key] as? JsonPrimitive)?.longOrNull
 
     private fun JsonObject.stringList(key: String) =
         (this[key] as? JsonArray)
@@ -209,6 +206,6 @@ object FeedDefinitionSerializer {
 
     private fun JsonObject.intList(key: String) =
         (this[key] as? JsonArray)
-            ?.mapNotNull { (it as? JsonPrimitive)?.intOrNull }
+            ?.mapNotNull { (it as? JsonPrimitive)?.primitiveIntOrNull }
             ?.toImmutableList()
 }

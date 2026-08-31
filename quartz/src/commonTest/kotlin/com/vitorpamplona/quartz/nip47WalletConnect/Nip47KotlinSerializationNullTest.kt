@@ -34,9 +34,13 @@ import kotlin.test.assertNull
 /**
  * Exercises the **kotlinx** (native/iOS) NWC serializers directly — not through
  * `OptimizedJsonMapper`, whose JVM actual is Jackson — to cover the cross-backend
- * asymmetry: Jackson (JVM/Android) writes explicit `null` for every null field, and a
- * native peer parsing that output must read those as real nulls, not the string "null",
- * and must not crash on a null `metadata` object.
+ * asymmetry on the DECODE side: a peer may write an explicit `null` for a field it
+ * has nothing to say about, and a native client parsing that must read it as a real
+ * null, not the string "null", and must not crash on a null `metadata` object.
+ *
+ * Our own Jackson backend no longer emits those on request params — see
+ * [com.vitorpamplona.quartz.nip01Core.jackson.OmitNullsMixin] — but a third-party
+ * wallet still may, so tolerating them on the way in remains required.
  */
 class Nip47KotlinSerializationNullTest {
     @Test

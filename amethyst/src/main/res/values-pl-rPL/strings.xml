@@ -4851,6 +4851,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="ai_tone_elaborate">Rozwiń</string>
     <string name="ai_tone_friendly">Przyjazny</string>
     <string name="ai_tone_professional">Profesjonalny</string>
+    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Pakiety emotikonów</string>
     <string name="emoji_pack_management_title">Dodaj do listy emotikonów</string>

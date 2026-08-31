@@ -44,6 +44,10 @@ import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusDraftEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusOpenEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -111,6 +115,14 @@ val NotificationsPerKeyKinds2 =
         GitPatchEvent.KIND,
         GitPullRequestEvent.KIND,
         GitPullRequestUpdateEvent.KIND,
+        // NIP-34 status events (1630/1631/1632/1633): opened, applied/merged,
+        // closed, drafted. The status author p-tags every prior participant of
+        // the target patch/PR/issue, so a `#p`=me subscription surfaces
+        // "someone merged/closed a thread I'm on" without a repo-scoped query.
+        GitStatusOpenEvent.KIND,
+        GitStatusAppliedEvent.KIND,
+        GitStatusClosedEvent.KIND,
+        GitStatusDraftEvent.KIND,
         HighlightEvent.KIND,
         CommentEvent.KIND,
         CalendarDateSlotEvent.KIND,
