@@ -93,7 +93,10 @@ class DesktopBlossomServerListTest {
                     scope = backgroundScope,
                 )
 
-            assertEquals(servers, state.getBlossomServersList()?.servers())
+            // Await the IO-backed stateIn subscription first: the flow settling proves the
+            // state finished wiring, after which the synchronous getter must agree. Asserting
+            // the getter before the flow raced the Dispatchers.IO hop on fast CI runners.
             assertEquals(servers, state.flow.first { it.isNotEmpty() })
+            assertEquals(servers, state.getBlossomServersList()?.servers())
         }
 }
