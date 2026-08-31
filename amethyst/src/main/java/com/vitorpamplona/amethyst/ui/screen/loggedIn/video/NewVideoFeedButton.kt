@@ -225,7 +225,7 @@ fun NewVideoFeedButton(
             ) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(id = R.string.new_short),
+                    contentDescription = stringRes(id = R.string.new_media),
                     modifier = Size26Modifier,
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
@@ -238,7 +238,7 @@ fun NewVideoFeedButton(
             ) {
                 Icon(
                     painter = painterRes(R.drawable.ic_compose, 5),
-                    contentDescription = stringRes(id = R.string.new_short),
+                    contentDescription = stringRes(id = R.string.new_media),
                     modifier = Size26Modifier,
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
