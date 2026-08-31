@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.relays.health
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
@@ -78,6 +80,9 @@ class TorCircuitHealthTracker(
     /** Failures in the current streak. */
     private var streakCount: Int = 0
 
+    /** Guards the streak fields; KMP-safe replacement for `synchronized`. */
+    private val lock = KmpLock()
+
     private val listener =
         object : RelayConnectionListener {
             override fun onConnected(
@@ -87,7 +92,7 @@ class TorCircuitHealthTracker(
             ) {
                 if (!isTorRouted(relay.url)) return
                 // One Tor success means circuits work — end the streak.
-                synchronized(this@TorCircuitHealthTracker) { resetStreak() }
+                lock.withLock { resetStreak() }
             }
 
             override fun onCannotConnect(
@@ -99,7 +104,7 @@ class TorCircuitHealthTracker(
 
                 val now = nowMs()
                 val fire =
-                    synchronized(this@TorCircuitHealthTracker) {
+                    lock.withLock {
                         // Start a fresh streak on the first failure, or whenever the gap since the
                         // last failure is too long for them to count as the same sustained outage.
                         if (streakStartMs < 0 || now - lastFailureMs > SUSTAINED_MS) {
