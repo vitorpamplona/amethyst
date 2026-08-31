@@ -24,12 +24,14 @@ import android.content.Context
 import android.net.Uri
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.service.uploads.originless.OriginlessUploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -191,6 +193,53 @@ class UploadOrchestrator {
         }
     }
 
+    private suspend fun uploadOriginless(
+        fileUri: Uri,
+        contentType: String?,
+        size: Long?,
+        alt: String?,
+        contentWarningReason: String?,
+        serverBaseUrl: String,
+        contentTypeForResult: String?,
+        originalHash: String?,
+        account: Account,
+        context: Context,
+    ): UploadingFinalState {
+        updateState(0.2, UploadingState.Uploading)
+        val targets = OriginlessUrls.uploadTargets(account.originlessServers.flow.value)
+        // Default POST /upload (original bytes). POST /media only when the user
+        // opted into server-side EXIF strip / compact on the Originless page.
+        val useMedia = account.settings.optimizeMediaOnUpload.value
+        return try {
+            val result =
+                OriginlessUploader().uploadToAll(
+                    uri = fileUri,
+                    contentType = contentType,
+                    size = size,
+                    alt = alt,
+                    sensitiveContent = contentWarningReason,
+                    serverBaseUrls = targets,
+                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+                    onProgress = { percent: Float ->
+                        updateState(0.2 + (0.2 * percent), UploadingState.Uploading)
+                    },
+                    context = context,
+                    useMedia = useMedia,
+                )
+
+            verifyHeader(
+                uploadResult = result,
+                localContentType = contentType,
+                originalContentType = contentTypeForResult,
+                originalHash = originalHash,
+                okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            error(R.string.failed_to_upload_media, e.message ?: e.javaClass.simpleName)
+        }
+    }
+
     private suspend fun uploadBlossom(
         fileUri: Uri,
         contentType: String?,
@@ -287,8 +336,8 @@ class UploadOrchestrator {
         if (hash.length != 64) return
 
         // Only the user's *explicitly configured* kind-10063 servers (flow), NOT the
-        // DEFAULT_MEDIA_SERVERS fallback that hostNameFlow injects — we must never fan
-        // uploads out to public defaults the user never opted into.
+        // DEFAULT_MEDIA_SERVERS fallback that uploadServers.hostNameFlow injects — we
+        // must never fan uploads out to public defaults the user never opted into.
         val primaryDomain = BlossomServerUrl.domain(primaryServerBaseUrl)
         val targets =
             account.blossomServers.flow.value
@@ -323,7 +372,8 @@ class UploadOrchestrator {
 
         updateState(0.6, UploadingState.Downloading)
 
-        // Use streaming verification for memory efficiency with large files
+        // Use streaming verification for memory efficiency with large files.
+        // Originless failover across configured nodes is the OkHttp interceptor.
         val verification =
             ImageDownloader().waitAndVerifyStream(uploadResult.url, okHttpClient)
                 ?: return error(R.string.could_not_download_from_the_server)
@@ -471,6 +521,7 @@ class UploadOrchestrator {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
                 ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
+                ServerType.Originless -> uploadOriginless(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
                 ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
             }
         } finally {
@@ -516,6 +567,7 @@ class UploadOrchestrator {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
                 ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
+                ServerType.Originless -> uploadOriginless(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
                 ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
             }
         } finally {

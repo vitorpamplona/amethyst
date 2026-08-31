@@ -155,7 +155,9 @@ private fun LoadedPdfPreviewCard(
         value =
             try {
                 PdfFetcher
-                    .fetchSnapshot(content.url) { url ->
+                    .fetchSnapshot(
+                        url = content.url,
+                    ) { url ->
                         accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
                     }.use { snapshot ->
                         withContext(Dispatchers.IO) {

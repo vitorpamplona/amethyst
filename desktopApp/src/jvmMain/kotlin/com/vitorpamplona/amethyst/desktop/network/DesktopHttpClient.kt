@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.network
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessGatewayFailoverInterceptor
 import com.vitorpamplona.amethyst.commons.tor.ITorManager
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -76,6 +77,7 @@ class DesktopHttpClient(
             .writeTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .pingInterval(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
+            .addInterceptor(OriginlessGatewayFailoverInterceptor())
             .build()
     }
 
@@ -97,6 +99,7 @@ class DesktopHttpClient(
                         .writeTimeout(torTimeout, TimeUnit.SECONDS)
                         .pingInterval(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                         .retryOnConnectionFailure(true)
+                        .addInterceptor(OriginlessGatewayFailoverInterceptor())
                         .build()
                 }
             }.stateIn(scope, SharingStarted.Eagerly, null)
@@ -165,6 +168,7 @@ class DesktopHttpClient(
                 .writeTimeout(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .pingInterval(BASE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(true)
+                .addInterceptor(OriginlessGatewayFailoverInterceptor())
                 .build()
         }
 

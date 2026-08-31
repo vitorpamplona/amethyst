@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessGatewayFailoverInterceptor
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_IS_MOBILE
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_SOCKS_PORT
 import com.vitorpamplona.amethyst.service.okhttp.OkHttpClientFactoryForRelays.Companion.DEFAULT_TIMEOUT_ON_MOBILE_SECS
@@ -81,6 +82,7 @@ class OkHttpClientFactory(
     val keyDecryptor = EncryptedBlobInterceptor(keyCache)
     private val blossomCacheRedirect =
         shouldBridgeBlossomCache?.let { LocalBlossomCacheRedirectInterceptor(it) }
+    private val originlessFailover = OriginlessGatewayFailoverInterceptor()
 
     // Most images/videos in a feed come from a small set of hosts (e.g. a single
     // Blossom/imgproxy server). OkHttp's default dispatcher caps inflight requests
@@ -128,7 +130,7 @@ class OkHttpClientFactory(
             // authenticated response. Only signs on an actual 401.
             .apply {
                 blossomReadAuth?.let { addInterceptor(it) }
-            }
+            }.addInterceptor(originlessFailover)
             // .addNetworkInterceptor(logging)
             .addNetworkInterceptor(keyDecryptor)
             // Passively populates [onionCache] from any HTTP/WebSocket response

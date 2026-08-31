@@ -61,7 +61,7 @@ class PlaybackService : MediaSessionService() {
     ): MediaSessionPool {
         val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
 
-        val resolvingDataSourceFactory: DataSource.Factory =
+        val blossomResolvingDataSourceFactory: DataSource.Factory =
             ResolvingDataSource.Factory(
                 dataSourceFactory,
                 ResolvingDataSource.Resolver { dataSpec: DataSpec ->
@@ -79,6 +79,8 @@ class PlaybackService : MediaSessionService() {
                     dataSpec
                 },
             )
+        val resolvingDataSourceFactory: DataSource.Factory =
+            IpfsDataSource.Factory(blossomResolvingDataSourceFactory)
 
         // The device's concurrent-decoder ceiling bounds both how many players may be checked out
         // at once (the session cache) and how many the pool may retain, since a session and a warm

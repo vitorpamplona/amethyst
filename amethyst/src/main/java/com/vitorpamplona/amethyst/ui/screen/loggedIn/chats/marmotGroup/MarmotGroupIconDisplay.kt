@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.service.okhttp.addForMediaUrl
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -85,7 +86,7 @@ fun rememberMarmotGroupIconUrl(
     // and synchronously during composition so the interceptor can decrypt before Coil fetches.
     // The plaintext MIME isn't stored (MIP-01 v2), so Coil sniffs the format from the bytes.
     remember(url, cipher) {
-        Amethyst.instance.keyCache.add(url, cipher, null)
+        Amethyst.instance.keyCache.addForMediaUrl(url, cipher, null)
         url
     }
 

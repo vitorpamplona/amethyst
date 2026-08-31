@@ -35,6 +35,7 @@ import coil3.network.ConnectivityChecker
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import com.vitorpamplona.amethyst.service.okhttp.BlossomReadAuthTokenProvider
 import kotlinx.coroutines.CoroutineScope
@@ -114,12 +115,19 @@ class ProfilePictureFetcher(
         ): Fetcher {
             val diskCacheLazy = lazy { imageLoader.diskCache }
 
+            val url =
+                if (IpfsGatewayResolver.isIpfsUri(data.url)) {
+                    IpfsGatewayResolver.toHttpUrl(data.url)
+                } else {
+                    data.url
+                }
+
             val netFetcher =
-                readAuthAware(data.url, readAuth) { authHeader ->
+                readAuthAware(url, readAuth) { authHeader ->
                     NetworkFetcher(
-                        url = data.url,
+                        url = url,
                         options = options.withAuthHeader(authHeader),
-                        networkClient = lazy { networkClient(data.url).asNetworkClient() },
+                        networkClient = lazy { networkClient(url).asNetworkClient() },
                         diskCache = diskCacheLazy,
                         cacheStrategy = cacheStrategyLazy,
                         connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },

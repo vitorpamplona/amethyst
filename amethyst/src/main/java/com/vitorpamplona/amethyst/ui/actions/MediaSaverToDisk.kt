@@ -32,6 +32,7 @@ import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import androidx.core.net.toFile
 import androidx.core.net.toUri
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk.AMETHYST_SUBDIRECTORY
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -97,6 +98,10 @@ object MediaSaverToDisk {
      * http/https. When resolution fails the save reports an error instead of
      * crashing with "expected scheme http or https but was blossom".
      *
+     * `ipfs://` URIs rewrite to the first configured Originless gateway; OkHttp
+     * [com.vitorpamplona.amethyst.commons.originless.OriginlessGatewayFailoverInterceptor]
+     * tries the rest of the list if that node is down.
+     *
      * @see AMETHYST_SUBDIRECTORY
      */
     suspend fun downloadAndSave(
@@ -110,11 +115,13 @@ object MediaSaverToDisk {
     ) {
         try {
             val downloadUrl =
-                if (url.startsWith(BLOSSOM_SCHEME, ignoreCase = true)) {
-                    resolveBlossom(url)
-                        ?: throw IOException("Could not find a Blossom server that hosts $url")
-                } else {
-                    url
+                when {
+                    url.startsWith(BLOSSOM_SCHEME, ignoreCase = true) -> {
+                        resolveBlossom(url)
+                            ?: throw IOException("Could not find a Blossom server that hosts $url")
+                    }
+                    IpfsGatewayResolver.isIpfsUri(url) -> IpfsGatewayResolver.toHttpUrl(url)
+                    else -> url
                 }
 
             val client = okHttpClient(downloadUrl)

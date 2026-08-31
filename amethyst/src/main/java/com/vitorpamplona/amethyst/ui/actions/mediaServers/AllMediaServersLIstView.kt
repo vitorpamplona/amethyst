@@ -246,11 +246,12 @@ private fun UploadBehaviorSection(
 }
 
 @Composable
-private fun UploadToggleRow(
+internal fun UploadToggleRow(
     title: String,
     caption: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -264,13 +265,13 @@ private fun UploadToggleRow(
                 color = MaterialTheme.colorScheme.grayText,
             )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
 
 /** Compact section header: an accent label with an optional gray caption below. */
 @Composable
-private fun SectionLabel(
+internal fun SectionLabel(
     title: String,
     caption: String? = null,
     topPadding: Dp = 20.dp,
@@ -375,6 +376,49 @@ fun MediaServerRow(
             )
         }
     }
+}
+
+/**
+ * Inline "add a server" area: a URL field followed by the recommended servers as a
+ * horizontal strip of add-chips (already-added ones read as done).
+ */
+@Composable
+internal fun OriginlessAddServerSection(
+    addedHosts: Set<String>,
+    onAddServer: (String) -> Unit,
+) {
+    Text(
+        text = stringRes(id = R.string.media_servers_recommended_label),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.grayText,
+        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+    )
+
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 4.dp),
+    ) {
+        items(
+            DEFAULT_ORIGINLESS_SERVERS,
+            key = { it.baseUrl },
+        ) { server ->
+            val host = runCatching { Rfc3986.host(server.baseUrl) }.getOrNull()
+            RecommendedChip(
+                serverEntry = server,
+                added = host != null && host in addedHosts,
+                onAdd = { onAddServer(server.baseUrl) },
+            )
+        }
+    }
+
+    Text(
+        text = stringRes(id = R.string.media_servers_add_url_label),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.grayText,
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+    )
+    MediaServerEditField(R.string.add_an_originless_server) { onAddServer(it) }
 }
 
 /**

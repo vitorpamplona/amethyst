@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.mediaServers
 
+import com.vitorpamplona.amethyst.commons.originless.OriginlessUrls
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -33,7 +34,41 @@ enum class ServerType {
     Blossom,
     NIP95,
     NIP96,
+    Originless,
+    ;
+
+    /**
+     * Media Quality is the user's choice for every backend, including Originless.
+     * If they pick a quality, Amethyst compresses locally and uploads those bytes
+     * (the `ipfs://CID` is of the file we pin). Originless `POST /media` is a
+     * separate node-side EXIF/GPS opt-in and stays off by default (`POST /upload`).
+     */
+    val usesClientMediaCompression: Boolean
+        get() = true
 }
+
+/**
+ * Compose-picker entry for Originless. Uploads pin to every configured node;
+ * this URL is never POSTed to.
+ */
+val ORIGINLESS_UPLOAD_TARGET = ServerName("Originless", "originless://all", ServerType.Originless)
+
+fun originlessServer(url: String = OriginlessUrls.DEFAULT_SERVER): ServerName {
+    val base = OriginlessUrls.normalizeBase(url)
+    val host =
+        base
+            .removePrefix("https://")
+            .removePrefix("http://")
+            .substringBefore('/')
+            .substringBefore(':')
+            .ifBlank { "Originless" }
+    return ServerName(host, base, ServerType.Originless)
+}
+
+val DEFAULT_ORIGINLESS_SERVERS: List<ServerName> =
+    listOf(
+        originlessServer(OriginlessUrls.DEFAULT_SERVER),
+    )
 
 val DEFAULT_MEDIA_SERVERS: List<ServerName> =
     listOf(

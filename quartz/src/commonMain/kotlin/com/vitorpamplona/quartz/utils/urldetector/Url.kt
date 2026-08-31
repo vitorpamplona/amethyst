@@ -127,7 +127,10 @@ class Url(
             if (this.rawHost == null) {
                 this.rawHost =
                     getPart(UrlPart.HOST)?.let {
-                        lowercaseLiteralChars(normalizeComponent(it))
+                        val normalized = normalizeComponent(it)
+                        // RFC 3986 host names are case-insensitive. ipfs://CID puts the
+                        // CID in the host slot, and CIDv0 is base58btc — case-sensitive.
+                        if (isIpfsScheme) normalized else lowercaseLiteralChars(normalized)
                     }
                 if (exists(UrlPart.PORT)) {
                     this.rawHost =
@@ -160,7 +163,7 @@ class Url(
             if (this.rawPath == null) {
                 this.rawPath = getPart(UrlPart.PATH)?.let {
                     normalizeComponent(removeDotSegments(it))
-                } ?: "/"
+                } ?: if (isIpfsScheme) "" else "/"
             }
             return this.rawPath
         }
@@ -314,6 +317,13 @@ class Url(
             output.clear()
         }
     }
+
+    /**
+     * `ipfs://CID` (and `ipfs:CID`) store the CID where HTTP URLs store a DNS host.
+     * Empty path must stay empty so normalization does not invent a trailing slash.
+     */
+    private val isIpfsScheme: Boolean
+        get() = scheme == "ipfs"
 
     /**
      * Unreserved characters per RFC 3986 §2.3:

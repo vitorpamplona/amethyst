@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.AllMediaServersScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomBlobManagerScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.BlossomImportScreen
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DisplayBlossomSyncProgress
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.OriginlessServersScreen
 import com.vitorpamplona.amethyst.ui.actions.paymentTargets.PaymentTargetsScreen
 import com.vitorpamplona.amethyst.ui.broadcast.DisplayBroadcastProgress
 import com.vitorpamplona.amethyst.ui.call.CallActivity
@@ -621,6 +622,7 @@ fun BuildNavigation(
         composableFromEnd<Route.RequestToVanish> { RequestToVanishScreen(accountViewModel, nav) }
         composableFromEnd<Route.VanishEvents> { VanishEventsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.EditOriginlessServers> { OriginlessServersScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ManageBlossomBlobs> { BlossomBlobManagerScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.ImportBlossomBlobs> { BlossomImportScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.EditNestsServers> {

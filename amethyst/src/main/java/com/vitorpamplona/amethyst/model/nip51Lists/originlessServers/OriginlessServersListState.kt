@@ -1,0 +1,110 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.model.nip51Lists.originlessServers
+
+import com.vitorpamplona.amethyst.model.AccountSettings
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.NoteState
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+class OriginlessServersListState(
+    val signer: NostrSigner,
+    val cache: LocalCache,
+    val decryptionCache: OriginlessServersDecryptionCache,
+    val scope: CoroutineScope,
+    val settings: AccountSettings,
+) {
+    // Creates a long-term reference for this note so that the GC doesn't collect the note it self
+    val originlessListNote = cache.getOrCreateAddressableNote(getOriginlessServersAddress())
+
+    fun getOriginlessServersAddress() = OriginlessServersEvent.createAddress(signer.pubKey)
+
+    fun getOriginlessServersListFlow(): StateFlow<NoteState> = originlessListNote.flow().metadata.stateFlow
+
+    fun getOriginlessServersList(): OriginlessServersEvent? = originlessListNote.event as? OriginlessServersEvent
+
+    suspend fun normalizeServersWithBackup(note: Note): List<String> {
+        val event = note.event as? OriginlessServersEvent ?: settings.backupOriginlessServersList
+        return event?.let { decryptionCache.servers(it) } ?: emptyList()
+    }
+
+    val flow =
+        getOriginlessServersListFlow()
+            .map {
+                normalizeServersWithBackup(it.note)
+            }.onStart { emit(normalizeServersWithBackup(originlessListNote)) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptyList(),
+            )
+
+    suspend fun saveServerList(servers: List<String>): OriginlessServersEvent {
+        if (!signer.isWriteable()) throw SignerExceptions.ReadOnlyException()
+        val existing = getOriginlessServersList()
+
+        return if (existing != null) {
+            OriginlessServersEvent.updateServerList(
+                earlierVersion = existing,
+                servers = servers,
+                signer = signer,
+            )
+        } else {
+            OriginlessServersEvent.create(
+                servers = servers,
+                signer = signer,
+            )
+        }
+    }
+
+    init {
+        settings.backupOriginlessServersList?.let {
+            Log.d("AccountRegisterObservers") { "Loading saved Originless server list ${it.toJson()}" }
+            @OptIn(DelicateCoroutinesApi::class)
+            scope.launch(Dispatchers.IO) { LocalCache.justConsumeMyOwnEvent(it) }
+        }
+
+        scope.launch(Dispatchers.IO) {
+            Log.d("AccountRegisterObservers", "Originless Server List Collector Start")
+            getOriginlessServersListFlow().collect {
+                Log.d("AccountRegisterObservers") { "Updating Originless Server List for ${signer.pubKey}" }
+                (it.note.event as? OriginlessServersEvent)?.let {
+                    settings.updateOriginlessServersList(it)
+                }
+            }
+        }
+    }
+}

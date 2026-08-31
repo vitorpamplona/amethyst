@@ -172,6 +172,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
@@ -1821,6 +1822,7 @@ fun MainContent(
                         SearchRelayListEvent.KIND,
                         BlockedRelayListEvent.KIND,
                         BlossomServersEvent.KIND,
+                        OriginlessServersEvent.KIND,
                         MuteListEvent.KIND,
                     ),
                 authors = listOf(account.pubKeyHex),
@@ -1847,6 +1849,7 @@ fun MainContent(
                         if (event is AdvertisedRelayListEvent ||
                             event is ChatMessageRelayListEvent ||
                             event is BlossomServersEvent ||
+                            event is OriginlessServersEvent ||
                             event is MuteListEvent
                         ) {
                             scope.launch(Dispatchers.IO) {
@@ -1881,6 +1884,7 @@ fun MainContent(
                                     SearchRelayListEvent.KIND,
                                     BlockedRelayListEvent.KIND,
                                     BlossomServersEvent.KIND,
+                                    OriginlessServersEvent.KIND,
                                     MuteListEvent.KIND,
                                 ),
                             authors = listOf(account.pubKeyHex),
@@ -1896,7 +1900,7 @@ fun MainContent(
                             relay: NormalizedRelayUrl,
                             forFilters: List<Filter>?,
                         ) {
-                            if (event is AdvertisedRelayListEvent || event is BlossomServersEvent || event is MuteListEvent) {
+                            if (event is AdvertisedRelayListEvent || event is BlossomServersEvent || event is OriginlessServersEvent || event is MuteListEvent) {
                                 scope.launch(Dispatchers.IO) {
                                     localCache.justConsumeMyOwnEvent(event)
                                 }

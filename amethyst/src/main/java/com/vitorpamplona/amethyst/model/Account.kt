@@ -121,6 +121,8 @@ import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
+import com.vitorpamplona.amethyst.model.nip51Lists.originlessServers.OriginlessServersDecryptionCache
+import com.vitorpamplona.amethyst.model.nip51Lists.originlessServers.OriginlessServersListState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
@@ -149,7 +151,9 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
+import com.vitorpamplona.amethyst.model.uploads.UploadServerListState
 import com.vitorpamplona.amethyst.service.location.LocationState
+import com.vitorpamplona.amethyst.service.okhttp.addForMediaUrl
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.InMemoryRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionCache
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPermissionLedger
@@ -599,6 +603,9 @@ class Account(
     val blockedRelayListDecryptionCache = BlockedRelayListDecryptionCache(signer)
     val blockedRelayList = BlockedRelayListState(signer, cache, blockedRelayListDecryptionCache, scope, settings)
 
+    val originlessServersDecryptionCache = OriginlessServersDecryptionCache(signer)
+    val originlessServers = OriginlessServersListState(signer, cache, originlessServersDecryptionCache, scope, settings)
+
     val kind3FollowList = Kind3FollowListState(signer, cache, scope, settings)
 
     val ephemeralChatListDecryptionCache = EphemeralChatListDecryptionCache(signer)
@@ -669,7 +676,7 @@ class Account(
         val keyCache = Amethyst.instance.keyCache
         images.forEach { img ->
             if (img.algo == AESGCM.NAME) {
-                keyCache.add(img.url, AESGCM(img.key, img.nonce), img.mimeType)
+                keyCache.addForMediaUrl(img.url, AESGCM(img.key, img.nonce), img.mimeType)
             }
         }
     }
@@ -756,7 +763,8 @@ class Account(
 
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
 
-    val blossomServers = BlossomServerListState(signer, cache, scope, settings)
+    val blossomServers = BlossomServerListState(signer, cache, scope)
+    val uploadServers = UploadServerListState(blossomServers, originlessServers, settings, scope)
 
     val nestsServers =
         com.vitorpamplona.amethyst.model.nip53NestsServers
@@ -3558,6 +3566,7 @@ class Account(
             bookmarkState.getBookmarkList(),
             pinState.getPinList(),
             blossomServers.getBlossomServersList(),
+            originlessServers.getOriginlessServersList(),
             nestsServers.getNestsServersList(),
             paymentTargetsState.getPaymentTargetsEvent(),
             trustProviderList.getTrustProviderList(),
@@ -3618,6 +3627,13 @@ class Account(
     }
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
+
+    suspend fun sendOriginlessServersList(servers: List<String>) {
+        sendMyPublicAndPrivateOutbox(originlessServers.saveServerList(servers))
+        if (servers.isEmpty() && settings.originlessUploadsEnabled.value) {
+            settings.changeOriginlessUploadsEnabled(false)
+        }
+    }
 
     suspend fun sendNestsServersList(servers: List<com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer>) = sendMyPublicAndPrivateOutbox(nestsServers.saveNestsServersList(servers))
 

@@ -48,6 +48,7 @@ val httpScheme = listOf(DualCase("http"))
 val websocketScheme = listOf(DualCase("ws"))
 val nostrScheme = listOf(DualCase("nostr"))
 val blossomScheme = listOf(DualCase("blossom"))
+val ipfsScheme = listOf(DualCase("ipfs"))
 
 class UrlParser {
     fun Char.isAsciiLetter(): Boolean = (this in 'a'..'z' || this in 'A'..'Z')
@@ -92,7 +93,10 @@ class UrlParser {
 
         urls.forEach { url ->
             try {
-                if (url.isValidTopLevelDomain()) {
+                // Originless `ipfs://CID` has no dotted host, so the TLD gate would
+                // drop it. The `||` short-circuits for normal http(s) URLs. Once past
+                // this gate, ipfs falls through to completeUrls with other unknown schemes.
+                if (url.isValidTopLevelDomain() || url.originalUrl.startsWithAny(ipfsScheme)) {
                     if (url.wroteWithSchema()) {
                         if (url.originalUrl.startsWithAny(httpScheme)) {
                             // quick exit

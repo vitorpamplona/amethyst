@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.media
 
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -51,23 +53,21 @@ object EncryptedMediaService {
         cache[url]?.let { return it }
 
         return withContext(Dispatchers.IO) {
-            val request = Request.Builder().url(url).build()
+            val fetchUrl = IpfsGatewayResolver.toHttpUrl(url)
+            val request = Request.Builder().url(fetchUrl).build()
             val response = httpClient.newCall(request).executeAsync()
             val encryptedBytes =
                 response.use {
-                    if (!it.isSuccessful) throw RuntimeException("Download failed: ${it.code}")
+                    if (!it.isSuccessful) throw IOException("Download failed: ${it.code}")
                     it.body.bytes()
                 }
-
-            val cipher = AESGCM(keyBytes, nonce)
-            val decrypted = cipher.decrypt(encryptedBytes)
+            val decrypted = AESGCM(keyBytes, nonce).decrypt(encryptedBytes)
 
             // Evict oldest entries if cache is full
             if (cache.size >= MAX_CACHE_ENTRIES) {
                 cache.keys.firstOrNull()?.let { cache.remove(it) }
             }
             cache[url] = decrypted
-
             decrypted
         }
     }

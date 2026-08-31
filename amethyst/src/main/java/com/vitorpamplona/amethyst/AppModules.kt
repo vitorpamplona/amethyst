@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
@@ -936,6 +937,20 @@ class AppModules(
             localPreferences = LocalPreferences,
             scope = applicationIOScope,
         )
+
+    init {
+        // Coil, OkHttp, and ImageDownloader are process-wide. Read Originless
+        // nodes from the account that currently owns the UI session so two
+        // logged-in accounts cannot overwrite each other's gateway list.
+        IpfsGatewayResolver.serverBasesProvider = {
+            sessionManager
+                .loggedInAccount()
+                ?.originlessServers
+                ?.flow
+                ?.value
+                .orEmpty()
+        }
+    }
 
     // Surfaces non-zap Lightning payments reported by the logged-in account's NWC
     // wallet(s) as tray notifications (zaps are already shown via ZapNotification).

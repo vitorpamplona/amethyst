@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.okhttp.addForMediaUrl
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -119,7 +120,7 @@ private fun RenderMip04Content(
                 filename = meta.filename,
             )
         }
-    Amethyst.instance.keyCache.add(meta.url, cipher, meta.mimeType)
+    Amethyst.instance.keyCache.addForMediaUrl(meta.url, cipher, meta.mimeType)
 
     val description = note.event?.alt()
     val isImage = meta.mimeType.startsWith("image/") || RichTextParser.isImageUrl(meta.url)

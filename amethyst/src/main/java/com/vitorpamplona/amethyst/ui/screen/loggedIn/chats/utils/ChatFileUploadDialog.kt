@@ -147,7 +147,7 @@ private fun ImageVideoPostChat(
     accountViewModel: AccountViewModel,
     isNip17: Boolean = false,
 ) {
-    val fileServers by accountViewModel.account.blossomServers.hostNameFlow
+    val fileServers by accountViewModel.account.uploadServers.hostNameFlow
         .collectAsState()
 
     val fileServerOptions =
@@ -216,7 +216,9 @@ private fun ImageVideoPostChat(
         )
     }
 
-    if (fileUploadState.multiOrchestrator?.hasCompressible() == true) {
+    if (fileUploadState.selectedServer.type.usesClientMediaCompression &&
+        fileUploadState.multiOrchestrator?.hasCompressible() == true
+    ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(Size5dp),

@@ -605,7 +605,7 @@ private fun NewPostScreenBody(
                 // Show preview for both uploaded messages (voiceMetadata) and pending recordings
                 (postViewModel.voiceMetadata ?: postViewModel.getVoicePreviewMetadata())?.let { metadata ->
                     val fileServersState =
-                        accountViewModel.account.blossomServers.hostNameFlow
+                        accountViewModel.account.uploadServers.hostNameFlow
                             .collectAsState()
                     val fileServers = fileServersState.value
 

@@ -243,7 +243,7 @@ private fun BadgeFormFields(
     postViewModel: NewBadgeModel,
     accountViewModel: AccountViewModel,
 ) {
-    val fileServers by accountViewModel.account.blossomServers.hostNameFlow
+    val fileServers by accountViewModel.account.uploadServers.hostNameFlow
         .collectAsState()
 
     val fileServerOptions =
@@ -311,48 +311,50 @@ private fun BadgeFormFields(
         )
     }
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(Size5dp),
-    ) {
-        Text(
-            text = stringRes(R.string.media_compression_quality_label),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = stringRes(R.string.media_compression_quality_explainer),
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            maxLines = 5,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.fillMaxWidth()) {
+    if (postViewModel.selectedServer?.type?.usesClientMediaCompression != false) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(Size5dp),
+        ) {
             Text(
-                text =
-                    when (postViewModel.mediaQualitySlider) {
-                        0 -> stringRes(R.string.media_compression_quality_low)
-                        1 -> stringRes(R.string.media_compression_quality_medium)
-                        2 -> stringRes(R.string.media_compression_quality_high)
-                        3 -> stringRes(R.string.media_compression_quality_uncompressed)
-                        else -> stringRes(R.string.media_compression_quality_medium)
-                    },
-                modifier = Modifier.align(Alignment.Center),
+                text = stringRes(R.string.media_compression_quality_label),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringRes(R.string.media_compression_quality_explainer),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                maxLines = 5,
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
-        Slider(
-            value = postViewModel.mediaQualitySlider.toFloat(),
-            onValueChange = { postViewModel.mediaQualitySlider = it.toInt() },
-            valueRange = 0f..3f,
-            steps = 2,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text =
+                        when (postViewModel.mediaQualitySlider) {
+                            0 -> stringRes(R.string.media_compression_quality_low)
+                            1 -> stringRes(R.string.media_compression_quality_medium)
+                            2 -> stringRes(R.string.media_compression_quality_high)
+                            3 -> stringRes(R.string.media_compression_quality_uncompressed)
+                            else -> stringRes(R.string.media_compression_quality_medium)
+                        },
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+
+            Slider(
+                value = postViewModel.mediaQualitySlider.toFloat(),
+                onValueChange = { postViewModel.mediaQualitySlider = it.toInt() },
+                valueRange = 0f..3f,
+                steps = 2,
+            )
+        }
     }
 
     SettingSwitchItem(

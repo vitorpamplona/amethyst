@@ -38,18 +38,25 @@ class HttpUrlFormatter {
                 .removePrefix("http://")
                 .removeSuffix("/")
 
-        fun addSchemeIfNeeded(url: String): String =
-            if (!url.startsWith("https://") && !url.startsWith("http://")) {
-                // TODO: How to identify relays on the local network?
-                val isLocalHost = url.contains("127.0.0.1") || url.contains("localhost")
-                if (url.endsWith(".onion") || url.endsWith(".onion/") || isLocalHost) {
-                    "http://${url.trim()}"
-                } else {
-                    "https://${url.trim()}"
-                }
-            } else {
-                url.trim()
+        fun addSchemeIfNeeded(url: String): String {
+            val trimmed = url.trim()
+            // Already-schemed URIs must keep their scheme. Prepending https:// to
+            // ipfs://CID makes UrlDetector see a nested URI and still normalize the
+            // CID as a DNS host.
+            if (trimmed.startsWith("https://", ignoreCase = true) ||
+                trimmed.startsWith("http://", ignoreCase = true) ||
+                trimmed.startsWith("ipfs:", ignoreCase = true)
+            ) {
+                return trimmed
             }
+            // TODO: How to identify relays on the local network?
+            val isLocalHost = trimmed.contains("127.0.0.1") || trimmed.contains("localhost")
+            return if (trimmed.endsWith(".onion") || trimmed.endsWith(".onion/") || isLocalHost) {
+                "http://$trimmed"
+            } else {
+                "https://$trimmed"
+            }
+        }
 
         fun normalize(url: String): String {
             val newUrl = addSchemeIfNeeded(url)

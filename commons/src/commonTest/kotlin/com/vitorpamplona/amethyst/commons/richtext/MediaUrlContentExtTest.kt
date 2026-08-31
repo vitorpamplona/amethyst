@@ -20,12 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.richtext
 
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class MediaUrlContentExtTest {
     private val sha = "b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553"
+    private val originlessNode = "https://originless.example"
+
+    @AfterTest
+    fun restoreGateway() {
+        IpfsGatewayResolver.serverBasesProvider = { emptyList() }
+    }
 
     @Test
     fun bridgeOffReturnsOriginalUrl() {
@@ -268,6 +275,53 @@ class MediaUrlContentExtTest {
         assertEquals(
             "blossom:$urlSha.png?xs=https://image.nostr.build",
             image.toCoilModel(useLocalBlossomBridge = true),
+        )
+    }
+
+    @Test
+    fun toCoilModelLeavesIpfsUriWhenNoOriginlessNodeIsConfigured() {
+        val ipfsUrl = "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX"
+        val image = MediaUrlImage(url = ipfsUrl)
+        assertEquals(ipfsUrl, image.toCoilModel(useLocalBlossomBridge = false))
+    }
+
+    @Test
+    fun toCoilModelResolvesIpfsCidV0() {
+        IpfsGatewayResolver.serverBasesProvider = { listOf(originlessNode) }
+        val ipfsUrl = "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX"
+        val image = MediaUrlImage(url = ipfsUrl)
+        assertEquals(
+            "$originlessNode/ipfs/QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX",
+            image.toCoilModel(useLocalBlossomBridge = false),
+        )
+    }
+
+    @Test
+    fun toCoilModelResolvesIpfsUri() {
+        IpfsGatewayResolver.serverBasesProvider = { listOf(originlessNode) }
+        val ipfsUrl = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png"
+        val image = MediaUrlImage(url = ipfsUrl)
+        assertEquals(
+            "$originlessNode/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png",
+            image.toCoilModel(useLocalBlossomBridge = false),
+        )
+        assertEquals(
+            "$originlessNode/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png",
+            image.toCoilModel(useLocalBlossomBridge = true),
+        )
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlResolvesIpfsUri() {
+        IpfsGatewayResolver.serverBasesProvider = { listOf(originlessNode) }
+        val ipfsUrl = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg"
+        assertEquals(
+            "$originlessNode/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg",
+            bridgeProfilePictureUrl(ipfsUrl, useBridge = false),
+        )
+        assertEquals(
+            "$originlessNode/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/avatar.jpg",
+            bridgeProfilePictureUrl(ipfsUrl, useBridge = true),
         )
     }
 }

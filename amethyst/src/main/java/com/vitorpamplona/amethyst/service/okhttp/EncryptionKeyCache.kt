@@ -20,22 +20,28 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import android.util.LruCache
+import androidx.collection.LruCache
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 
 /**
- * Neigther ExoPlayer, nor Coil support passing key and nonce to the Interceptor via
+ * Neither ExoPlayer nor Coil support passing key and nonce to the Interceptor via
  * Request.tag, which would be the right way to do this.
  *
- * This class serves as a key cache to decrypt the body of HTTP calls that need it.
+ * This class is a string-to-cipher map for HTTP bodies that need decrypting.
+ * URL aliases (ipfs://CID vs Originless `{gateway}/ipfs/{CID}`) are registered
+ * by the caller via [addForMediaUrl]; lookups here stay exact.
  */
 class EncryptionKeyCache {
+    // androidx.collection, not android.util: the latter is a no-op stub under
+    // unitTests.isReturnDefaultValues = true.
     val cache = LruCache<String, DecryptInformation>(100)
 
     fun add(
         url: String?,
         decryptInformation: DecryptInformation,
     ) {
+        if (url == null) return
+        // First write wins: a later add must not clobber an existing cipher for this URL.
         if (cache.get(url) == null) {
             cache.put(url, decryptInformation)
         }

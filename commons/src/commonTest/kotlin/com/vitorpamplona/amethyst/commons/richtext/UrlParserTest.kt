@@ -388,4 +388,22 @@ class UrlParserTest {
         val blossom = "blossom:a7b3c2d1e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1.png?xs=cdn.example.com&xs=media.nostr.build&as=781208004e09102d7da3b7345e64fd193cd1bc3fce8fdae6008d77f9cabcd036&as=b53185b9f27962ebdf76b8a9b0a84cd8b27f9f3d4abd59f715788a3bf9e7f75e&sz=2547831"
         test(blossom, Urls(blossomUris = setOf(blossom)))
     }
+
+    @Test
+    fun testIpfsCidV0() {
+        val ipfs = "ipfs://QmcnXw2spQuvsegCQ56SWHxFtU8u41VHh7r4PRTxDgvMHX"
+        test(ipfs, Urls(withScheme = setOf(ipfs)))
+    }
+
+    @Test
+    fun testIpfsUrl() {
+        val ipfs = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+        test(ipfs, Urls(withScheme = setOf(ipfs)))
+    }
+
+    @Test
+    fun testIpfsUrlWithPath() {
+        val ipfs = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/image.png"
+        test(ipfs, Urls(withScheme = setOf(ipfs)))
+    }
 }

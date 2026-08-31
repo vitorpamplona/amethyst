@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.components.pdf
 
 import coil3.disk.DiskCache
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.richtext.IpfsGatewayResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -43,6 +44,9 @@ object PdfFetcher {
         okHttpClient: (String) -> OkHttpClient,
     ): DiskCache.Snapshot =
         withContext(Dispatchers.IO) {
+            val fetchUrl = IpfsGatewayResolver.toHttpUrl(url)
+            if (fetchUrl.isBlank()) throw IOException("Unable to resolve PDF URL $url")
+
             val diskCache = Amethyst.instance.diskCache
             // Covers the cache-hit fast path too, not just the download below it. openSnapshot()
             // contends on the global DiskLruCache lock, which Coil's cleanup pass holds across a
@@ -56,17 +60,17 @@ object PdfFetcher {
                 val request =
                     Request
                         .Builder()
-                        .url(url)
+                        .url(fetchUrl)
                         .get()
                         .build()
 
-                okHttpClient(url).newCall(request).executeAsync().use { response ->
+                okHttpClient(fetchUrl).newCall(request).executeAsync().use { response ->
                     if (!response.isSuccessful) {
-                        throw IOException("PDF download failed: ${response.code}")
+                        throw IOException("PDF download failed from $fetchUrl: ${response.code}")
                     }
                     diskCache.fileSystem.write(editor.data) {
                         val bytes = writeAll(response.body.source())
-                        if (bytes == 0L) throw IOException("PDF download failed: empty response body")
+                        if (bytes == 0L) throw IOException("PDF download failed from $fetchUrl: empty response body")
                     }
                 }
 

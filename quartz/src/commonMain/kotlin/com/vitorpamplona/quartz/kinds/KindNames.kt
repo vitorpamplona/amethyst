@@ -160,6 +160,7 @@ import com.vitorpamplona.quartz.nip51Lists.labeledBookmarkList.LabeledBookmarkLi
 import com.vitorpamplona.quartz.nip51Lists.mediaFollowList.MediaFollowListEvent
 import com.vitorpamplona.quartz.nip51Lists.mediaStarterPack.MediaStarterPackEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
 import com.vitorpamplona.quartz.nip51Lists.peopleList.PeopleListEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
@@ -359,6 +360,7 @@ object KindNames {
             BadgeDefinitionEvent.KIND to KindName("Badge Definitions", "58"),
             BlockedRelayListEvent.KIND to KindName("Blocked Relays", "51"),
             BlossomServersEvent.KIND to KindName("Blossom Servers", "B7"),
+            OriginlessServersEvent.KIND to KindName("Originless Servers", "51"),
             NestsServersEvent.KIND to KindName("Nests Servers", "53"),
             BlossomAuthorizationEvent.KIND to KindName("Blossom Auth", "B7"),
             BroadcastRelayListEvent.KIND to KindName("Broadcast Relays", "51"),

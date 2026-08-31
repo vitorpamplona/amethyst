@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.model.nipB7Blossom
 
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
@@ -38,15 +37,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
 class BlossomServerListState(
     val signer: NostrSigner,
     val cache: ICacheProvider,
     val scope: CoroutineScope,
-    val settings: AccountSettings,
 ) {
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
     val blossomListNote = cache.getOrCreateAddressableNote(getBlossomServersAddress())
@@ -80,18 +76,14 @@ class BlossomServerListState(
                 emptyList(),
             )
 
-    fun mergeServerList(blossom: List<String>?): List<ServerName> = blossom?.map { ServerName(host(it), it, ServerType.Blossom) }?.ifEmpty { DEFAULT_MEDIA_SERVERS } ?: DEFAULT_MEDIA_SERVERS
-
+    /**
+     * Kind-10063 Blossom hosts only. Does not mutate the persisted default file
+     * server, so an Originless default is not snapped back when a 10063 event loads.
+     */
     val hostNameFlow: StateFlow<List<ServerName>> =
         flow
-            .map { blossoms ->
-                mergeServerList(blossoms)
-            }.onStart {
-                emit(mergeServerList(flow.value))
-            }.onEach { servers ->
-                resetTargetOrNull(flow.value, servers, settings.defaultFileServer)?.let {
-                    settings.changeDefaultFileServer(it)
-                }
+            .map { servers ->
+                servers.map { ServerName(host(it), it, ServerType.Blossom) }.ifEmpty { DEFAULT_MEDIA_SERVERS }
             }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
@@ -141,25 +133,3 @@ class BlossomServerListState(
         servers: List<String> = emptyList(),
     ): BlossomAuthorizationEvent = BlossomAuthorizationEvent.createListAuth(signer, alt, servers)
 }
-
-/**
- * Decides whether the persisted default file server must be reset, and to what.
- *
- * Returns the new default server, or `null` when no change should happen.
- *
- * The guard on [rawList] being non-empty is what prevents the startup race: before the user's
- * [BlossomServersEvent] (kind 10063) loads from cache/relay, [rawList] is empty and [merged] is the
- * transient [DEFAULT_MEDIA_SERVERS] fallback. Resetting against that fallback would clobber the
- * locally-saved pick on every launch. Only reset once a real, loaded list is in hand and it no
- * longer contains the current pick (e.g. the user removed it from their list).
- */
-fun resetTargetOrNull(
-    rawList: List<String>,
-    merged: List<ServerName>,
-    current: ServerName,
-): ServerName? =
-    if (rawList.isNotEmpty() && merged.none { it == current }) {
-        merged.firstOrNull() ?: DEFAULT_MEDIA_SERVERS[0]
-    } else {
-        null
-    }

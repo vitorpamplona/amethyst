@@ -37,7 +37,9 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ORIGINLESS_UPLOAD_TARGET
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.BottomBarEntry
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.navigation.drawer.DrawerItemVisibility
@@ -64,6 +66,7 @@ import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFee
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.originlessServers.OriginlessServersEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.IndexerRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
@@ -195,6 +198,12 @@ class AccountSettings(
     var externalSignerPackageName: String? = null,
     var localRelayServers: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     var defaultFileServer: ServerName = DEFAULT_MEDIA_SERVERS[0],
+    /**
+     * When true, compose uploads go to Originless (`ipfs://`) and Blossom/NIP-96
+     * targets are hidden from the picker. `ipfs://` fetches always use the
+     * kind-10062 Originless server list, even when this is false.
+     */
+    val originlessUploadsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
     var stripLocationOnUpload: Boolean = true,
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
@@ -293,6 +302,7 @@ class AccountSettings(
     var backupIndexRelayList: IndexerRelayListEvent? = null,
     var backupRelayFeedsList: RelayFeedsListEvent? = null,
     var backupBlockedRelayList: BlockedRelayListEvent? = null,
+    var backupOriginlessServersList: OriginlessServersEvent? = null,
     var backupTrustedRelayList: TrustedRelayListEvent? = null,
     var backupMuteList: MuteListEvent? = null,
     var backupPrivateHomeRelayList: PrivateOutboxRelayListEvent? = null,
@@ -682,6 +692,18 @@ class AccountSettings(
     fun changeDefaultFileServer(server: ServerName) {
         if (defaultFileServer != server) {
             defaultFileServer = server
+            saveAccountSettings()
+        }
+    }
+
+    fun changeOriginlessUploadsEnabled(enabled: Boolean) {
+        if (originlessUploadsEnabled.value != enabled) {
+            originlessUploadsEnabled.tryEmit(enabled)
+            if (enabled) {
+                defaultFileServer = ORIGINLESS_UPLOAD_TARGET
+            } else if (defaultFileServer.type == ServerType.Originless) {
+                defaultFileServer = DEFAULT_MEDIA_SERVERS[0]
+            }
             saveAccountSettings()
         }
     }
@@ -1433,6 +1455,16 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupBlockedRelayList?.id != newBlockedRelayList.id) {
             backupBlockedRelayList = newBlockedRelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateOriginlessServersList(newOriginlessServersList: OriginlessServersEvent?) {
+        if (newOriginlessServersList == null) return
+
+        // Public tags are empty by design (nodes live in encrypted content).
+        if (backupOriginlessServersList?.id != newOriginlessServersList.id) {
+            backupOriginlessServersList = newOriginlessServersList
             saveAccountSettings()
         }
     }

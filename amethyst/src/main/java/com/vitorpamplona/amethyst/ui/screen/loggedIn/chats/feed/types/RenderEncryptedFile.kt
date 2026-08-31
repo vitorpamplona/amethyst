@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.okhttp.addForMediaUrl
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -61,7 +62,7 @@ fun RenderEncryptedFile(
     val mimeType = noteEvent.mimeType()
 
     if (algo == AESGCM.NAME && key != null && nonce != null) {
-        Amethyst.instance.keyCache.add(noteEvent.content, AESGCM(key, nonce), mimeType)
+        Amethyst.instance.keyCache.addForMediaUrl(noteEvent.content, AESGCM(key, nonce), mimeType)
 
         val content by remember(noteEvent) {
             val isImage = mimeType?.startsWith("image/") == true || RichTextParser.isImageUrl(noteEvent.content)
