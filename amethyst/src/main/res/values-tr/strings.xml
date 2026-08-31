@@ -1911,7 +1911,6 @@
     
     <string name="route_notifications">Bildirimler</string>
     
-    <string name="route_video">Kısa Videolar</string>
     
     <string name="route_calendars">Takvimler</string>
     
@@ -2344,7 +2343,6 @@
     
     <string name="new_post">Yeni Gönderi</string>
     
-    <string name="new_short">Yeni Kısalar: görüntü veya video</string>
     
     <string name="new_community_note">Yeni Topluluk Notu</string>
     

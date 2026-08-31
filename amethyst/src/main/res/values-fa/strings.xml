@@ -596,9 +596,7 @@
     <string name="route_discover">کاوش</string>
     <string name="route_messages">پیغام‌ها</string>
     <string name="route_notifications">اعلان‌ها</string>
-    <string name="route_video">کوتاه</string>
     <string name="new_post">نوشته جدید</string>
-    <string name="new_short">رسانه های کوتاه جدید: تصاویر یا ویدئوها</string>
     <string name="new_community_note">یادداشت جدید در انجمن</string>
     <string name="open_all_reactions_to_this_post">باز کردن تمام واکنش ها به این پست</string>
     <string name="close_all_reactions_to_this_post">بستن تمام واکنش ها به این پست</string>
