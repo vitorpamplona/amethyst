@@ -371,6 +371,88 @@ formatters).
 6. **Wave 5 (deep platform seams):** uploads core (`Uri`→stream + typed
    errors), zap payment handlers, playback policy extraction, post composers.
 
+## jvmAndroid audit: what the migration parked there, and what can promote to commonMain
+
+Everything below landed in `commons/src/jvmAndroid` (or `androidMain`) during
+Waves 0-1. For each file: the exact JVM-only API pinning it there, and whether
+the repo already has a KMP replacement. Replacements referenced:
+`KmpLock`/`withLock` (commons/util), `TimeUtils.nowMillis()` (quartz),
+`kotlin.concurrent.atomics` (stdlib KMP, already used in quartz BLE),
+`quartz/utils/concurrent/ConcurrentMap` + `ConcurrentSet` (expect/actual),
+`RandomInstance` (quartz secure random), `kotlin.time.TimeSource.Monotonic`
+(used in quartz RelayProber), okio (KMP), kotlinx-serialization +
+`commons/util/JsonTreeUtils`, and the `PlatformImage` expect (android + jvm +
+ios actuals in commons/blurhash).
+
+### Tier 1 — promotable to commonMain by moving the file (no code change)
+
+| File | JVM pin | Note |
+|---|---|---|
+| `relayClient/auth/` `RelayAuthPermissionCache`, `RelayAuthPermissionLedger`, `RelayAuthSessionGrants`, `InMemoryRelayAuthPermissionStore`, `RelayAuthVenues`, `RelayAuthPurposeDeriver`, `RelayAuthFirstParty` (7 files) | none | Zero JVM imports; no deps on the two pinned siblings. Wave 0b parked the whole group conservatively. |
+| `relayClient/nip47WalletConnect/NWCPaymentWatcherSubAssembler` | none | Doesn't even import the pinned assembler. |
+| `service/http/EncryptionKeyCache` | none | androidx.collection LruCache is commonMain-safe. |
+| `service/http/HttpClientEnvironment` | none | Plain object; conceptually pairs with the factories but nothing pins it. |
+
+### Tier 2 — promotable with mechanical one-line swaps (replacement exists in-repo)
+
+| File | JVM pin | KMP replacement |
+|---|---|---|
+| `relayClient/auth/RelayAuthPromptBus` | `synchronized()` | `KmpLock.withLock` |
+| `relayClient/auth/ListWithUniqueSetCache` | `AtomicReference` | `kotlin.concurrent.atomics.AtomicReference` |
+| `relayClient/chatDelivery/ChatDeliveryTracker` | `@Volatile` + `synchronized()` ×9 | `KmpLock` + stdlib atomics |
+| `relayClient/speedLogger/FrameStat`, `KindGroup` | `AtomicInteger` | `kotlin.concurrent.atomics.AtomicInt` |
+| `relayClient/speedLogger/RelaySpeedLogger` | none (blocked by the two above) | moves with them |
+| `relayClient/diagnostics/DmRelayDiagnosticsLogger` | `System.currentTimeMillis` | `TimeUtils.nowMillis()` |
+| `relayClient/nip47WalletConnect/NWCPaymentFilterAssembler` | `@Volatile` + `synchronized()` | `KmpLock` + atomics |
+| `model/nip47WalletConnect/NwcInfoCache` | `ConcurrentHashMap` | quartz `ConcurrentMap` |
+| `marmot/InMemoryMlsGroupStateStore` | `ConcurrentHashMap` | quartz `ConcurrentMap` |
+| `napplet/NappletIdentityWatch` | `ConcurrentHashMap` | quartz `ConcurrentMap` |
+| `napplet/NappletLaunchRegistry` | `SecureRandom`, `@Synchronized` | `RandomInstance.bytes()`, `KmpLock` |
+| `napplet/NappletNotificationStore` | `ConcurrentHashMap`, `AtomicLong`, `synchronized()`, millis | `ConcurrentMap` + atomics + `KmpLock` + `TimeUtils` |
+| `service/namecoin/NamecoinNameService` | `@Volatile` ×1 | atomics (verify the injected resolver ifaces are commonMain) |
+| `service/http/BlossomReadAuthTokenProvider` | `ConcurrentHashMap`, millis | `ConcurrentMap` + `TimeUtils.nowMillis()` |
+| `service/http/OnionLocationCache` | `ConcurrentHashMap`, `TimeUnit`, millis | `ConcurrentMap` + plain-ms TTL + `TimeUtils` |
+| `service/image/DeferredDeleteFileSystem` | `java.io.IOException`, `synchronized()` | already okio-based → `okio.IOException` + `KmpLock` |
+
+### Tier 3 — promotable with a small refactor
+
+| File | JVM pin | Path |
+|---|---|---|
+| `relayClient/diagnostics/BootRelayDiagnostics` | `kotlin.concurrent.thread`, `ConcurrentHashMap`, atomics, millis | swap thread → coroutine launch; rest is Tier-2 swaps |
+| `actions/BuzzInviteMinter` | Jackson `ObjectMapper`, OkHttp call | Jackson → kotlinx-serialization (`JsonTreeUtils` landed in commonMain); inject a `suspend (url, body) -> String` fetch or Ktor client |
+| `podcasts/PodcastRemoteContent` | OkHttp call | inject a fetch function or Ktor client |
+| `[androidMain]` `Base64Fetcher`, `BlurHashFetcher`, `ThumbHashFetcher` | android `Bitmap` bridge (`toAndroidBitmap`) | coil3 core is KMP and `PlatformImage` has android/jvm/ios actuals — add an expect `PlatformImage → coil3.Image` bridge; deletes desktop's three clone fetchers |
+
+### Tier 4 — blocked by a dependency that must move first
+
+| File | Blocker |
+|---|---|
+| `scheduledposts/ScheduledPostWorkGate` | `ScheduledPostStore` (pre-existing jvmAndroid: Jackson + `java.io.File`) — store needs kotlinx-serialization + okio first |
+| `model/cache/LargeSoftCacheAddressExt` | `LargeSoftCache` (`WeakReference`, `ConcurrentSkipListMap`) — soft/weak-reference caching has no KMP equivalent; a native actual would change eviction semantics. Long-term expect/actual candidate. |
+| `model/nip03Timestamp/BitcoinExplorerEndpoint`, `OtsSettings`, `TorAwareOkHttpOtsResolverBuilder` | quartz's own OTS explorer/calendar clients are OkHttp-only (`quartz…nip03Timestamp.okhttp.*`) — quartz needs a KMP (Ktor) OTS transport before these can follow |
+
+### Tier 5 — stays jvmAndroid by design (typed against OkHttp / java.net)
+
+`service/http/`: `IHttpClientManager`, `IRoleBasedHttpClientBuilder`,
+`DualHttpClientManager(+ForRelays)`, `OkHttpClientFactory(+ForRelays)`,
+`Empty/SingleRoleBasedHttpClientBuilder`, `ProxiedSocketFactory`, and the
+interceptor/listener set (`BlossomReadAuth`, `EncryptedBlob`,
+`LocalBlossomCacheRedirect`, `OnionLocation`, `OnionUrlRewrite`,
+`DefaultContentType`, `Logging`, `DnsInvalidatingEventListener`,
+`MediaCallEventListener`, `OkHttpDebugLogging`), plus
+`service/image/BlossomReadAuthFetcher` (coil-network-okhttp).
+
+These are the OkHttp engine itself: `okhttp3.Interceptor`/`EventListener`
+types, `java.net.Proxy`/`Socket`. The KMP path is a Ktor-client rewrite
+(Ktor 3.5.2 is already in the catalog, server-side only today), but quartz's
+relay websockets are equally OkHttp-bound on jvmAndroid, so an iOS transport
+story has to land in quartz first; rewriting commons alone buys nothing.
+Revisit when quartz grows a non-JVM socket/HTTP engine.
+
+**Score:** of the 59 files parked, 11 move with zero code change, 17 with
+one-line in-repo swaps, 6 with small refactors, 5 wait on a dependency, and
+20 are the OkHttp engine that should stay until quartz has a KMP transport.
+
 ## Corrections to `commons/ARCHITECTURE.md` found during the sweep
 
 - §2 is stale: `commons/service` also holds `pow/`, `georelay/`, `broadcast/`;
