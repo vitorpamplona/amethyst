@@ -1731,6 +1731,8 @@
     <string name="route_discover">Ανακάλυψη</string>
     <string name="route_messages">Μηνύματα</string>
     <string name="route_notifications">Ειδοποιήσεις</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">Ημερολόγια</string>
     <string name="route_calendar_collections">Λίστες ημερολογίων</string>
     <string name="route_chess">Σκάκι</string>
@@ -1949,7 +1951,6 @@
     </plurals>
     <string name="route_import_follows">Εισαγωγή Ακολουθούμενων</string>
     <string name="new_post">Νέα Ανάρτηση</string>
-    <string name="new_short">Νέα Shorts: εικόνες ή βίντεο</string>
     <string name="new_community_note">Νέα Σημείωση Κοινότητας</string>
     <string name="new_product">Νέο Προϊόν</string>
     <string name="new_long_form_post">Νέο Άρθρο</string>

@@ -1760,7 +1760,8 @@
     <string name="route_discover">Atklāt</string>
     <string name="route_messages">Ziņojumi</string>
     <string name="route_notifications">Paziņojumi</string>
-    <string name="route_video">Īsfilmas</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">Kalendāri</string>
     <string name="route_calendar_collections">Kalendāru saraksti</string>
     <string name="route_chess">Šahs</string>
@@ -1985,7 +1986,6 @@
     </plurals>
     <string name="route_import_follows">Importēt sekotājus</string>
     <string name="new_post">Jauns ieraksts</string>
-    <string name="new_short">Jauni īsie: attēli vai video</string>
     <string name="new_community_note">Jauna kopienas piezīme</string>
     <string name="new_product">Jauns produkts</string>
     <string name="new_long_form_post">Jauns raksts</string>

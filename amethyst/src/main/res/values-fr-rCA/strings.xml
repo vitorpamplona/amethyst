@@ -1682,7 +1682,8 @@
     <string name="login_with_qr_code">Se connecter avec un QR Code</string>
     <string name="route_home">Accueil</string>
     <string name="route_discover">Découvrir</string>
-    <string name="route_video">Vidéos courtes</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">Calendriers</string>
     <string name="route_calendar_collections">Listes de calendriers</string>
     <string name="route_chess">Échecs</string>
@@ -1895,7 +1896,6 @@
     </plurals>
     <string name="route_import_follows">Importer des abonnements</string>
     <string name="new_post">Nouveau Message</string>
-    <string name="new_short">Nouveaux Shorts : images ou vidéos</string>
     <string name="new_community_note">Nouvelle Note Communautaire</string>
     <string name="new_product">Nouveau produit</string>
     <string name="new_long_form_post">Nouvel Article</string>

@@ -1739,7 +1739,8 @@
     <string name="route_discover">Kashf etish</string>
     <string name="route_messages">Xabarlar</string>
     <string name="route_notifications">Bildirishnomalar</string>
-    <string name="route_video">Qisqa videolar</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">Taqvimlar</string>
     <string name="route_calendar_collections">Taqvim ro\'yxatlari</string>
     <string name="route_chess">Shaxmat</string>
@@ -1956,7 +1957,6 @@
     </plurals>
     <string name="route_import_follows">Kuzatuvlarni import qilish</string>
     <string name="new_post">Yangi post</string>
-    <string name="new_short">Yangi qisqa: rasmlar yoki videolar</string>
     <string name="new_community_note">Yangi hamjamiyat eslatmasi</string>
     <string name="new_product">Yangi mahsulot</string>
     <string name="new_long_form_post">Yangi maqola</string>

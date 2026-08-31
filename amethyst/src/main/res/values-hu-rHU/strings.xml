@@ -2907,7 +2907,8 @@
     <string name="route_discover">Felfedezés</string>
     <string name="route_messages">Üzenetek</string>
     <string name="route_notifications">Értesítések</string>
-    <string name="route_video">Rövidek</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">Naptárak</string>
     <string name="route_calendar_collections">Naptárlisták</string>
     <string name="route_chess">Sakk</string>
@@ -3177,7 +3178,6 @@
     </plurals>
     <string name="route_import_follows">Követettek importálása</string>
     <string name="new_post">Új bejegyzés</string>
-    <string name="new_short">Új rövidek: képek vagy videók</string>
     <string name="new_community_note">Új közösségi bejegyzés</string>
     <string name="new_product">Új termék</string>
     <string name="new_long_form_post">Új cikk</string>
