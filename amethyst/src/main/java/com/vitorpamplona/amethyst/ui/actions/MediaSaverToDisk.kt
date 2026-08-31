@@ -24,6 +24,7 @@ import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.media.MediaScannerConnection
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -57,10 +58,11 @@ object MediaSaverToDisk {
         resolveBlossom: suspend (String) -> String? = { null },
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
-    ) = withContext(Dispatchers.IO) {
+    ) {
+        // No dispatch here: save() and downloadAndSave() both move themselves to IO.
         when {
             videoUri.isNullOrBlank() -> {
-                return@withContext
+                return
             }
 
             videoUri.startsWith("file") -> {
@@ -131,18 +133,25 @@ object MediaSaverToDisk {
                     }
 
                     val trimmedUrl = trimInlineMetaData(downloadUrl)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        val headerType =
-                            response
-                                .header("Content-Type")
-                                ?.substringBefore(";")
-                                ?.trim()
+                    val headerType =
+                        response
+                            .header("Content-Type")
+                            ?.substringBefore(";")
+                            ?.trim()
 
-                        val realType =
-                            headerType?.takeIf(::isSaveableMimeType)
-                                ?: mimeType?.takeIf(::isSaveableMimeType)
-                                ?: getMimeTypeFromExtension(trimmedUrl).takeIf(::isSaveableMimeType)
-                                ?: ""
+                    // Resolved for both paths: the API level decides how the file is
+                    // written, never which directory it belongs in.
+                    val realType =
+                        headerType?.takeIf(::isSaveableMimeType)
+                            ?: mimeType?.takeIf(::isSaveableMimeType)
+                            ?: getMimeTypeFromExtension(trimmedUrl).takeIf(::isSaveableMimeType)
+                            ?: ""
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        // Deliberately Q-only: MediaStore refuses an insert without a usable
+                        // type, so there is nothing to do but report it. The legacy path has
+                        // always written whatever it downloaded and still does - an unresolved
+                        // type lands in Downloads, which accepts any file.
                         check(realType.isNotBlank()) { "Can't find out the content type" }
 
                         saveContentQ(
@@ -154,6 +163,7 @@ object MediaSaverToDisk {
                     } else {
                         saveContentDefault(
                             fileName = File(trimmedUrl).name,
+                            contentType = realType,
                             contentSource = response.body.source(),
                             context = context,
                         )
@@ -176,44 +186,53 @@ object MediaSaverToDisk {
     private fun isSaveableMimeType(type: String): Boolean =
         type.isNotBlank() &&
             (
-                type.startsWith("image/", ignoreCase = true) ||
-                    type.startsWith("video/", ignoreCase = true) ||
-                    type.startsWith("audio/", ignoreCase = true) ||
+                MediaStoreTarget.of(type) != MediaStoreTarget.DOWNLOADS ||
                     type.equals(PDF_MIME_TYPE, ignoreCase = true)
             )
 
+    /**
+     * Copies a local file into the gallery. Suspending and dispatched to IO like
+     * [downloadAndSave]: callers reach this from click handlers, and a
+     * storage-permission callback among them launches on the main dispatcher,
+     * where copying a whole video would block the UI thread.
+     */
     @OptIn(ExperimentalUuidApi::class)
-    fun save(
+    suspend fun save(
         localFile: File,
         mimeType: String?,
         context: Context,
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
     ) {
-        try {
-            val extension =
-                mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
-            val buffer = localFile.inputStream().source().buffer()
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                saveContentQ(
-                    displayName = Uuid.random().toString(),
-                    contentType = mimeType ?: "",
-                    contentSource = buffer,
-                    contentResolver = context.contentResolver,
-                )
-            } else {
-                saveContentDefault(
-                    fileName = "${Uuid.random()}.$extension",
-                    contentSource = buffer,
-                    context = context,
-                )
+        withContext(Dispatchers.IO) {
+            try {
+                // use{}: readAll leaves its source open, so without this the file
+                // descriptor stays open until the finalizer runs.
+                localFile.inputStream().source().buffer().use { buffer ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        saveContentQ(
+                            displayName = Uuid.random().toString(),
+                            contentType = mimeType ?: "",
+                            contentSource = buffer,
+                            contentResolver = context.contentResolver,
+                        )
+                    } else {
+                        val extension =
+                            mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+                        saveContentDefault(
+                            fileName = "${Uuid.random()}.$extension",
+                            contentType = mimeType ?: "",
+                            contentSource = buffer,
+                            context = context,
+                        )
+                    }
+                }
+                onSuccess()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("MediaSaverToDisk", "Unable to save", e)
+                onError(e)
             }
-            onSuccess()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w("MediaSaverToDisk", "Unable to save", e)
-            onError(e)
         }
     }
 
@@ -225,29 +244,7 @@ object MediaSaverToDisk {
         contentResolver: ContentResolver,
     ) {
         val cleanMimeType = normalizeMimeTypeForMediaStore(contentType.substringBefore(";").trim())
-
-        val (masterUri, baseDir) =
-            when {
-                cleanMimeType.startsWith("image/", ignoreCase = true) -> {
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_PICTURES
-                }
-
-                cleanMimeType.startsWith("audio/", ignoreCase = true) -> {
-                    // Audio content goes into the Music MediaStore + folder. Routing it through
-                    // Video.EXTERNAL_CONTENT_URI (the previous fall-through behavior) crashes
-                    // with IllegalArgumentException because MediaProvider rejects audio/* into
-                    // the Video collection.
-                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_MUSIC
-                }
-
-                cleanMimeType.equals(PDF_MIME_TYPE, ignoreCase = true) -> {
-                    MediaStore.Downloads.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_DOWNLOADS
-                }
-
-                else -> {
-                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_PICTURES
-                }
-            }
+        val target = MediaStoreTarget.of(cleanMimeType)
 
         val contentValues =
             ContentValues().apply {
@@ -255,11 +252,11 @@ object MediaSaverToDisk {
                 put(MediaStore.MediaColumns.MIME_TYPE, cleanMimeType)
                 put(
                     MediaStore.MediaColumns.RELATIVE_PATH,
-                    baseDir + File.separatorChar + AMETHYST_SUBDIRECTORY,
+                    target.relativeDirectory + File.separatorChar + AMETHYST_SUBDIRECTORY,
                 )
             }
 
-        val uri = contentResolver.insert(masterUri, contentValues)
+        val uri = contentResolver.insert(target.collectionUri(), contentValues)
         checkNotNull(uri) { "Can't insert the new content" }
 
         try {
@@ -276,12 +273,15 @@ object MediaSaverToDisk {
 
     private fun saveContentDefault(
         fileName: String,
+        contentType: String,
         contentSource: BufferedSource,
         context: Context,
     ) {
+        val baseDir = MediaStoreTarget.of(contentType).relativeDirectory
+
         val subdirectory =
             File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+                Environment.getExternalStoragePublicDirectory(baseDir),
                 AMETHYST_SUBDIRECTORY,
             ).apply {
                 if (!exists()) mkdirs()
@@ -306,6 +306,60 @@ object MediaSaverToDisk {
             "video/x-m4v" -> "video/mp4"
             else -> mimeType
         }
+
+    /**
+     * The MediaStore collection a download is filed under, together with the public
+     * directory it is written to.
+     *
+     * MediaProvider validates the primary directory of [MediaStore.MediaColumns.RELATIVE_PATH]
+     * against the collection being inserted into and rejects a mismatch with
+     * `IllegalArgumentException: Primary directory Pictures not allowed for
+     * content://media/external/video/media; allowed directories are [DCIM, Movies]`.
+     * A collection usually accepts more than one directory; these are the ones Amethyst
+     * files under.
+     */
+    internal enum class MediaStoreTarget(
+        val relativeDirectory: String,
+    ) {
+        // The directory names are the values of Environment.DIRECTORY_PICTURES, _MUSIC,
+        // _MOVIES and _DOWNLOADS. They are spelled out because those are plain static
+        // fields that the unit-test android.jar leaves null, which would make this
+        // mapping impossible to cover off-device. MediaStoreTargetInstrumentedTest pins
+        // them back to the platform constants on-device.
+        IMAGES("Pictures"),
+        AUDIO("Music"),
+        VIDEO("Movies"),
+        DOWNLOADS("Download"),
+        ;
+
+        /**
+         * Has to stay a method. The EXTERNAL_CONTENT_URI fields are null under the same
+         * unit-test android.jar, and MediaStore.Downloads only exists from API 29, so
+         * reading them from the constructor would break class init off-device and below Q.
+         */
+        @RequiresApi(Build.VERSION_CODES.Q)
+        fun collectionUri(): Uri =
+            when (this) {
+                IMAGES -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                AUDIO -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                VIDEO -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                DOWNLOADS -> MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            }
+
+        companion object {
+            /**
+             * PDFs, and anything that isn't image, audio or video content, go to Downloads
+             * — the one collection that accepts every kind of file.
+             */
+            fun of(mimeType: String): MediaStoreTarget =
+                when {
+                    mimeType.startsWith("image/", ignoreCase = true) -> IMAGES
+                    mimeType.startsWith("audio/", ignoreCase = true) -> AUDIO
+                    mimeType.startsWith("video/", ignoreCase = true) -> VIDEO
+                    else -> DOWNLOADS
+                }
+        }
+    }
 
     private const val AMETHYST_SUBDIRECTORY = "Amethyst"
     private const val PDF_MIME_TYPE = "application/pdf"
