@@ -55,13 +55,26 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerResponseDeserial
 import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerResponseSerializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.NotificationDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.NotificationSerializer
+import com.vitorpamplona.quartz.nip47WalletConnect.jackson.OmitNullParamsMixin
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.RequestDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.RequestSerializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.ResponseDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.ResponseSerializer
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceParams
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Notification
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveParams
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageParams
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorSerializer
@@ -108,6 +121,21 @@ class JacksonMapper {
                         .addDeserializer(Request::class.java, RequestDeserializer())
                         .addSerializer(Notification::class.java, NotificationSerializer())
                         .addDeserializer(Notification::class.java, NotificationDeserializer())
+                        // NIP-47's optional params are OMITTED when null, never written as
+                        // `null` — see OmitNullParamsMixin. Matches what the kotlinx backend
+                        // has always done, and what a strictly-typed wallet accepts.
+                        .setMixInAnnotation(PayInvoiceParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(PayParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(ReceiveParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(PayKeysendParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(MakeInvoiceParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(LookupInvoiceParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(ListTransactionsParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(MakeHoldInvoiceParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(CancelHoldInvoiceParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(SettleHoldInvoiceParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(SignMessageParams::class.java, OmitNullParamsMixin::class.java)
+                        .setMixInAnnotation(CreateConnectionParams::class.java, OmitNullParamsMixin::class.java)
                         // nip 46
                         .addDeserializer(BunkerMessage::class.java, BunkerMessageDeserializer())
                         .addSerializer(BunkerRequest::class.java, BunkerRequestSerializer())
