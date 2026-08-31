@@ -27,11 +27,8 @@ import android.os.Environment
 import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -49,12 +46,25 @@ import java.io.IOException
  *
  * There is no JVM coverage of any of this: Build.VERSION.SDK_INT is 0 under
  * returnDefaultValues, so unit tests can only reach the routing function, never the writer.
+ *
+ * **Running this suite:** below Q the storage grant must exist before the app process
+ * forks (external storage is mounted at fork time), and Gradle's connectedAndroidTest
+ * installs and instruments with no window to grant in between - so these tests skip
+ * under it. Drive them manually on an API 26-28 device:
+ * ```
+ * ./gradlew :amethyst:assemblePlayDebug :amethyst:assemblePlayDebugAndroidTest
+ * adb install -r -g amethyst/build/outputs/apk/play/debug/amethyst-play-arm64-v8a-debug.apk
+ * adb install -r -g amethyst/build/outputs/apk/androidTest/play/debug/amethyst-play-debug-androidTest.apk
+ * adb shell am instrument -w -e class com.vitorpamplona.amethyst.ui.actions.MediaSaverToDiskLegacyStorageTest \
+ *     com.vitorpamplona.amethyst.debug.test/androidx.test.runner.AndroidJUnitRunner
+ * ```
  */
 @RunWith(AndroidJUnit4::class)
 class MediaSaverToDiskLegacyStorageTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    private val watchedDirs = listOf("Movies", "Pictures", "Download", "Music")
+    /** Every directory production can write to, straight from the routing table. */
+    private val watchedDirs = MediaSaverToDisk.MediaStoreTarget.entries.map { it.relativeDirectory }
     private val createdFiles = mutableListOf<File>()
 
     @Before
@@ -85,9 +95,8 @@ class MediaSaverToDiskLegacyStorageTest {
         // reaches it and every write fails with EACCES. Probe for real writability and
         // skip rather than report a routing failure that is really a harness problem.
         assumeTrue(
-            "External storage is not writable by this process. Below API 29 the grant must " +
-                "exist before the process starts - install with `adb install -r -g` and drive " +
-                "the run with `am instrument`; Gradle's connectedAndroidTest cannot grant in time.",
+            "External storage is not writable by this process; below API 29 the grant must " +
+                "exist at install time. See this class's KDoc for the exact run recipe.",
             canWriteToPublicStorage(),
         )
     }
@@ -96,7 +105,9 @@ class MediaSaverToDiskLegacyStorageTest {
         try {
             val dir = amethystDir("Movies").apply { if (!exists()) mkdirs() }
             val probe = File(dir, ".write-probe-${System.nanoTime()}")
-            probe.createNewFile().also { probe.delete() }
+            val writable = probe.createNewFile()
+            probe.delete()
+            writable
         } catch (e: IOException) {
             false
         }
@@ -128,26 +139,7 @@ class MediaSaverToDiskLegacyStorageTest {
     ) {
         val before = snapshot()
 
-        val localFile = File(context.cacheDir, "legacy-save-${System.nanoTime()}.bin")
-        localFile.writeBytes(ByteArray(2048) { it.toByte() })
-
-        var failure: Throwable? = null
-        var succeeded = false
-
-        runBlocking {
-            MediaSaverToDisk.save(
-                localFile = localFile,
-                mimeType = mimeType,
-                context = context,
-                onSuccess = { succeeded = true },
-                onError = { failure = it },
-            )
-        }
-
-        localFile.delete()
-
-        assertNull("save() reported an error: ${failure?.message}", failure)
-        assertTrue("save() never reported success", succeeded)
+        MediaSaverTestSupport.saveAndAssertSuccess(context, mimeType)
 
         val added = snapshot().mapValues { (dir, names) -> names - before.getValue(dir) }
         added.forEach { (dir, names) -> names.forEach { createdFiles.add(File(amethystDir(dir), it)) } }

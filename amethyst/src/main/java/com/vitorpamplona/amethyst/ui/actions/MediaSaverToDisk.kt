@@ -58,10 +58,11 @@ object MediaSaverToDisk {
         resolveBlossom: suspend (String) -> String? = { null },
         onSuccess: () -> Any?,
         onError: (Throwable) -> Any?,
-    ) = withContext(Dispatchers.IO) {
+    ) {
+        // No dispatch here: save() and downloadAndSave() both move themselves to IO.
         when {
             videoUri.isNullOrBlank() -> {
-                return@withContext
+                return
             }
 
             videoUri.startsWith("file") -> {
@@ -191,9 +192,9 @@ object MediaSaverToDisk {
 
     /**
      * Copies a local file into the gallery. Suspending and dispatched to IO like
-     * [downloadAndSave]: callers reach this from a click handler, and one of them
-     * (the storage-permission callback in FullScreenViewerChrome) launches on the
-     * main dispatcher, where copying a whole video would block the UI thread.
+     * [downloadAndSave]: callers reach this from click handlers, and a
+     * storage-permission callback among them launches on the main dispatcher,
+     * where copying a whole video would block the UI thread.
      */
     @OptIn(ExperimentalUuidApi::class)
     suspend fun save(
@@ -205,9 +206,6 @@ object MediaSaverToDisk {
     ) {
         withContext(Dispatchers.IO) {
             try {
-                val extension =
-                    mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
-
                 // use{}: readAll leaves its source open, so without this the file
                 // descriptor stays open until the finalizer runs.
                 localFile.inputStream().source().buffer().use { buffer ->
@@ -219,6 +217,8 @@ object MediaSaverToDisk {
                             contentResolver = context.contentResolver,
                         )
                     } else {
+                        val extension =
+                            mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
                         saveContentDefault(
                             fileName = "${Uuid.random()}.$extension",
                             contentType = mimeType ?: "",

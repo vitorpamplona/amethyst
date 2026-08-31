@@ -21,41 +21,33 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.ContentResolver
+import android.content.ContentUris
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 
 /**
- * End-to-end regression test for issue #4009.
- *
- * MediaProvider validates RELATIVE_PATH's primary directory against the collection
- * being written to. Filing a video under "Pictures" threw
- * `IllegalArgumentException: Primary directory Pictures not allowed for
- * content://media/external/video/media; allowed directories are [DCIM, Movies]`
- * on Android 10; later releases accept the mismatch and silently misfile the video.
- *
- * This drives the real ContentResolver, so it catches both symptoms: the insert has
- * to succeed AND the row has to land in the directory the collection accepts.
+ * End-to-end regression test for issue #4009: drives the real ContentResolver, so it
+ * catches both symptoms of a collection/directory mismatch - Android 10 rejects the
+ * insert outright (the quoted rejection lives in [MediaSaverToDisk.MediaStoreTarget]'s
+ * KDoc), and later releases accept it and silently misfile the video.
  */
 @RunWith(AndroidJUnit4::class)
 class MediaSaverToDiskMediaStoreTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val resolver: ContentResolver get() = context.contentResolver
 
-    /** Only rows this test inserted, identified by id in the collection they went into. */
-    private val created = mutableListOf<Pair<Uri, Long>>()
+    /** Only rows this test inserted, as item Uris in the collection they went into. */
+    private val created = mutableListOf<Uri>()
 
     @Before
     fun requiresScopedStorage() {
@@ -64,9 +56,7 @@ class MediaSaverToDiskMediaStoreTest {
 
     @After
     fun cleanUp() {
-        created.forEach { (collection, id) ->
-            resolver.delete(collection, "${MediaStore.MediaColumns._ID} = ?", arrayOf(id.toString()))
-        }
+        created.forEach { resolver.delete(it, null, null) }
     }
 
     @Test
@@ -91,27 +81,7 @@ class MediaSaverToDiskMediaStoreTest {
         // this suite is meant to be runnable on a real device holding real media.
         val highWaterMark = maxIdIn(collection)
 
-        val localFile = File(context.cacheDir, "media-saver-${System.nanoTime()}.bin")
-        localFile.writeBytes(ByteArray(2048) { it.toByte() })
-
-        var failure: Throwable? = null
-        var succeeded = false
-
-        runBlocking {
-            MediaSaverToDisk.save(
-                localFile = localFile,
-                mimeType = mimeType,
-                context = context,
-                onSuccess = { succeeded = true },
-                onError = { failure = it },
-            )
-        }
-
-        localFile.delete()
-
-        // Surfaces the #4009 IllegalArgumentException as the test failure message.
-        assertNull("save() reported an error: ${failure?.message}", failure)
-        assertTrue("save() never reported success", succeeded)
+        MediaSaverTestSupport.saveAndAssertSuccess(context, mimeType)
 
         return rowInsertedAfter(collection, highWaterMark)
     }
@@ -139,7 +109,7 @@ class MediaSaverToDiskMediaStoreTest {
                 "${MediaStore.MediaColumns._ID} ASC",
             )?.use { cursor ->
                 assertTrue("save() reported success but inserted no row into $collection", cursor.moveToFirst())
-                created.add(collection to cursor.getLong(0))
+                created.add(ContentUris.withAppendedId(collection, cursor.getLong(0)))
                 return cursor.getString(1)
             }
         return null
