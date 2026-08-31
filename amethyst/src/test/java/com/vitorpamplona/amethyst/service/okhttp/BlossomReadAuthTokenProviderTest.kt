@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal

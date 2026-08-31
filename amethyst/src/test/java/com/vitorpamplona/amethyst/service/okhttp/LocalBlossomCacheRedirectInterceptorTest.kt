@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheRedirectInterceptor
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.Protocol

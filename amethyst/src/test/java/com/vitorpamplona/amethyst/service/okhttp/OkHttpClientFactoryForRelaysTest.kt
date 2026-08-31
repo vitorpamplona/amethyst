@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.amethyst.commons.service.http.OkHttpClientFactoryForRelays
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.InetSocketAddress

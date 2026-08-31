@@ -34,7 +34,7 @@ object NappletRelayCleartext {
         signer: NostrSigner,
     ): Event? = forDelivery(event, signer.pubKey, signer::decrypt)
 
-    internal suspend fun forDelivery(
+    suspend fun forDelivery(
         event: Event,
         userPubKey: HexKey,
         decrypt: suspend (String, HexKey) -> String,
