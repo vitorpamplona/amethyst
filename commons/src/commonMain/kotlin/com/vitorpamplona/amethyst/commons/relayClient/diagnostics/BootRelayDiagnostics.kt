@@ -33,10 +33,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
-import kotlin.concurrent.thread
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Debug-only cold-start census: what every relay in the pool actually did, and why the ones
@@ -54,6 +60,7 @@ import kotlin.concurrent.thread
  *
  * Attach only in debug builds; it holds one small record per relay for the process lifetime.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class BootRelayDiagnostics(
     val client: INostrClient,
     // 5s first: the pool is assembled and dialling well before 20s, and the early datapoint is what
@@ -85,41 +92,41 @@ class BootRelayDiagnostics(
     }
 
     class RelayRecord {
-        val tentatives = AtomicInteger()
-        val opens = AtomicInteger()
-        val disconnects = AtomicInteger()
-        val reqsSent = AtomicInteger()
-        val authsSent = AtomicInteger()
-        val events = AtomicInteger()
-        val eoses = AtomicInteger()
-        val notices = AtomicInteger()
+        val tentatives = AtomicInt(0)
+        val opens = AtomicInt(0)
+        val disconnects = AtomicInt(0)
+        val reqsSent = AtomicInt(0)
+        val authsSent = AtomicInt(0)
+        val events = AtomicInt(0)
+        val eoses = AtomicInt(0)
+        val notices = AtomicInt(0)
 
         /** failure cause -> count, see [classify]. */
-        val failures = ConcurrentHashMap<String, AtomicInteger>()
+        val failures = ConcurrentMap<String, AtomicInt>()
 
         /** CLOSED machine-readable prefix (or "unprefixed") -> count. */
-        val closed = ConcurrentHashMap<String, AtomicInteger>()
+        val closed = ConcurrentMap<String, AtomicInt>()
 
-        val firstOpenAtMs = AtomicLong(0)
-        val firstEoseAtMs = AtomicLong(0)
+        val firstOpenAtMs = AtomicLong(0L)
+        val firstEoseAtMs = AtomicLong(0L)
 
         fun bump(
-            map: ConcurrentHashMap<String, AtomicInteger>,
+            map: ConcurrentMap<String, AtomicInt>,
             key: String,
-        ) = map.computeIfAbsent(key) { AtomicInteger() }.incrementAndGet()
+        ) = map.getOrPut(key) { AtomicInt(0) }.addAndFetch(1)
     }
 
-    private val records = ConcurrentHashMap<NormalizedRelayUrl, RelayRecord>()
-    private val startedAtMs = System.currentTimeMillis()
+    private val records = ConcurrentMap<NormalizedRelayUrl, RelayRecord>()
+    private val startedAtMs = TimeUtils.nowMillis()
 
-    private fun record(url: NormalizedRelayUrl) = records.computeIfAbsent(url) { RelayRecord() }
+    private fun record(url: NormalizedRelayUrl) = records.getOrPut(url) { RelayRecord() }
 
-    private fun elapsed() = System.currentTimeMillis() - startedAtMs
+    private fun elapsed() = TimeUtils.nowMillis() - startedAtMs
 
     private val listener =
         object : RelayConnectionListener {
             override fun onConnecting(relay: IRelayClient) {
-                record(relay.url).tentatives.incrementAndGet()
+                record(relay.url).tentatives.addAndFetch(1)
             }
 
             override fun onConnected(
@@ -128,8 +135,8 @@ class BootRelayDiagnostics(
                 compressed: Boolean,
             ) {
                 val r = record(relay.url)
-                r.opens.incrementAndGet()
-                r.firstOpenAtMs.compareAndSet(0, elapsed())
+                r.opens.addAndFetch(1)
+                r.firstOpenAtMs.compareAndSet(0L, elapsed())
             }
 
             override fun onCannotConnect(
@@ -141,7 +148,7 @@ class BootRelayDiagnostics(
             }
 
             override fun onDisconnected(relay: IRelayClient) {
-                record(relay.url).disconnects.incrementAndGet()
+                record(relay.url).disconnects.addAndFetch(1)
             }
 
             override fun onSent(
@@ -152,8 +159,8 @@ class BootRelayDiagnostics(
             ) {
                 val r = record(relay.url)
                 when (cmd) {
-                    is ReqCmd -> r.reqsSent.incrementAndGet()
-                    is AuthCmd -> r.authsSent.incrementAndGet()
+                    is ReqCmd -> r.reqsSent.addAndFetch(1)
+                    is AuthCmd -> r.authsSent.addAndFetch(1)
                     else -> Unit
                 }
             }
@@ -165,12 +172,12 @@ class BootRelayDiagnostics(
             ) {
                 val r = record(relay.url)
                 when (msg) {
-                    is EventMessage -> r.events.incrementAndGet()
+                    is EventMessage -> r.events.addAndFetch(1)
                     is EoseMessage -> {
-                        r.eoses.incrementAndGet()
-                        r.firstEoseAtMs.compareAndSet(0, elapsed())
+                        r.eoses.addAndFetch(1)
+                        r.firstEoseAtMs.compareAndSet(0L, elapsed())
                     }
-                    is NoticeMessage -> r.notices.incrementAndGet()
+                    is NoticeMessage -> r.notices.addAndFetch(1)
                     is ClosedMessage -> r.bump(r.closed, prefixOf(msg.message))
                     else -> Unit
                 }
@@ -187,10 +194,12 @@ class BootRelayDiagnostics(
 
     init {
         client.addConnectionListener(listener)
-        thread(isDaemon = true, name = TAG) {
+        // A coroutine instead of a daemon thread: KMP-portable and finishes after
+        // the last scheduled census instead of holding a parked thread.
+        CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
             var last = 0L
             dumpAtSeconds.forEach { at ->
-                Thread.sleep((at - last) * 1000)
+                delay((at - last) * 1000)
                 last = at
                 dump(at)
             }
@@ -209,26 +218,26 @@ class BootRelayDiagnostics(
      * relay, too long (up to 45 lines a census) to sit in the default log.
      */
     fun dump(atSeconds: Long) {
-        val snapshot = records.toMap()
+        val snapshot = records.snapshot()
 
-        val served = snapshot.filter { it.value.events.get() > 0 }
-        val opened = snapshot.filter { it.value.opens.get() > 0 }
-        val neverOpened = snapshot.filter { it.value.opens.get() == 0 }
+        val served = snapshot.filter { it.value.events.load() > 0 }
+        val opened = snapshot.filter { it.value.opens.load() > 0 }
+        val neverOpened = snapshot.filter { it.value.opens.load() == 0 }
 
         val causeTotals = mutableMapOf<String, Int>()
         val closedTotals = mutableMapOf<String, Int>()
         snapshot.values.forEach { r ->
-            r.failures.forEach { (k, v) -> causeTotals[k] = (causeTotals[k] ?: 0) + v.get() }
-            r.closed.forEach { (k, v) -> closedTotals[k] = (closedTotals[k] ?: 0) + v.get() }
+            r.failures.snapshot().forEach { (k, v) -> causeTotals[k] = (causeTotals[k] ?: 0) + v.load() }
+            r.closed.snapshot().forEach { (k, v) -> closedTotals[k] = (closedTotals[k] ?: 0) + v.load() }
         }
 
         Log.d(TAG) { "===== boot census @${atSeconds}s =====" }
         Log.i(TAG) {
             "census @${atSeconds}s pool=${snapshot.size} opened=${opened.size} served_events=${served.size} never_opened=${neverOpened.size} " +
-                "dials=${snapshot.values.sumOf { it.tentatives.get() }} " +
-                "events=${snapshot.values.sumOf { it.events.get() }} " +
-                "reqs=${snapshot.values.sumOf { it.reqsSent.get() }} " +
-                "auths=${snapshot.values.sumOf { it.authsSent.get() }}"
+                "dials=${snapshot.values.sumOf { it.tentatives.load() }} " +
+                "events=${snapshot.values.sumOf { it.events.load() }} " +
+                "reqs=${snapshot.values.sumOf { it.reqsSent.load() }} " +
+                "auths=${snapshot.values.sumOf { it.authsSent.load() }}"
         }
         Log.i(TAG) { "census @${atSeconds}s failures_by_cause=${causeTotals.byCountDesc()}" }
         Log.i(TAG) { "census @${atSeconds}s closed_by_prefix=${closedTotals.byCountDesc()}" }
@@ -236,16 +245,16 @@ class BootRelayDiagnostics(
         // Relays that cost us dials and gave nothing back, worst first: the wasted-effort list.
         Log.d(TAG, "--- top wasted dials (no events received) ---")
         snapshot
-            .filter { it.value.events.get() == 0 }
+            .filter { it.value.events.load() == 0 }
             .entries
-            .sortedByDescending { it.value.tentatives.get() }
+            .sortedByDescending { it.value.tentatives.load() }
             .take(25)
             .forEach { (url, r) ->
                 Log.d(TAG) {
-                    "WASTE ${url.url} dials=${r.tentatives.get()} opens=${r.opens.get()} " +
-                        "fail=[${r.failures.entries.joinToString { "${it.key}:${it.value.get()}" }}] " +
-                        "closed=[${r.closed.entries.joinToString { "${it.key}:${it.value.get()}" }}] " +
-                        "reqs=${r.reqsSent.get()} eose=${r.eoses.get()}"
+                    "WASTE ${url.url} dials=${r.tentatives.load()} opens=${r.opens.load()} " +
+                        "fail=[${r.failures.snapshot().entries.joinToString { "${it.key}:${it.value.load()}" }}] " +
+                        "closed=[${r.closed.snapshot().entries.joinToString { "${it.key}:${it.value.load()}" }}] " +
+                        "reqs=${r.reqsSent.load()} eose=${r.eoses.load()}"
                 }
             }
 
@@ -253,12 +262,12 @@ class BootRelayDiagnostics(
         // coverage loss rather than just CLOSED reduction.
         Log.d(TAG, "--- top event providers ---")
         served.entries
-            .sortedByDescending { it.value.events.get() }
+            .sortedByDescending { it.value.events.load() }
             .take(20)
             .forEach { (url, r) ->
                 Log.d(TAG) {
-                    "SERVE ${url.url} events=${r.events.get()} reqs=${r.reqsSent.get()} eose=${r.eoses.get()} " +
-                        "openMs=${r.firstOpenAtMs.get()} eoseMs=${r.firstEoseAtMs.get()} dials=${r.tentatives.get()}"
+                    "SERVE ${url.url} events=${r.events.load()} reqs=${r.reqsSent.load()} eose=${r.eoses.load()} " +
+                        "openMs=${r.firstOpenAtMs.load()} eoseMs=${r.firstEoseAtMs.load()} dials=${r.tentatives.load()}"
                 }
             }
         Log.d(TAG) { "===== end census @${atSeconds}s =====" }

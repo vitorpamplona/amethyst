@@ -22,49 +22,52 @@ package com.vitorpamplona.amethyst.commons.service.image
 
 import androidx.compose.runtime.Stable
 import coil3.ImageLoader
-import coil3.asImage
+import coil3.Uri
 import coil3.decode.DataSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.request.Options
-import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
-import com.vitorpamplona.amethyst.commons.blurhash.toAndroidBitmap
-
-data class BlurhashWrapper(
-    val blurhash: String,
-)
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.sha256.sha256
 
 @Stable
-class BlurHashFetcher(
+class Base64Fetcher(
     private val options: Options,
-    private val data: BlurhashWrapper,
+    private val data: Uri,
 ) : Fetcher {
-    override suspend fun fetch(): FetchResult? {
-        val hash = data.blurhash
+    override suspend fun fetch(): FetchResult? =
+        runCatching {
+            ImageFetchResult(
+                image = base64DataUriToCoilImage(data.toString()),
+                isSampled = false,
+                dataSource = DataSource.MEMORY,
+            )
+        }.getOrNull()
 
-        val platformImage = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: return null
-
-        return ImageFetchResult(
-            image = platformImage.toAndroidBitmap().asImage(true),
-            isSampled = false,
-            dataSource = DataSource.MEMORY,
-        )
-    }
-
-    object Factory : Fetcher.Factory<BlurhashWrapper> {
+    object Factory : Fetcher.Factory<Uri> {
         override fun create(
-            data: BlurhashWrapper,
+            data: Uri,
             options: Options,
             imageLoader: ImageLoader,
-        ): Fetcher = BlurHashFetcher(options, data)
+        ): Fetcher? =
+            if (data.scheme == "data") {
+                Base64Fetcher(options, data)
+            } else {
+                null
+            }
     }
 
-    object BKeyer : Keyer<BlurhashWrapper> {
+    object BKeyer : Keyer<Uri> {
         override fun key(
-            data: BlurhashWrapper,
+            data: Uri,
             options: Options,
-        ): String = data.blurhash
+        ): String? =
+            if (data.scheme == "data") {
+                sha256(data.toString().encodeToByteArray()).toHexKey()
+            } else {
+                null
+            }
     }
 }

@@ -22,64 +22,47 @@ package com.vitorpamplona.amethyst.commons.service.image
 
 import androidx.compose.runtime.Stable
 import coil3.ImageLoader
-import coil3.asImage
 import coil3.decode.DataSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.request.Options
-import com.vitorpamplona.amethyst.commons.blurhash.toAndroidBitmap
-import com.vitorpamplona.amethyst.commons.thumbhash.ThumbHashDecoder
+import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
 
-data class ThumbhashWrapper(
-    val thumbhash: String,
+data class BlurhashWrapper(
+    val blurhash: String,
 )
 
 @Stable
-class ThumbHashFetcher(
+class BlurHashFetcher(
     private val options: Options,
-    private val data: ThumbhashWrapper,
+    private val data: BlurhashWrapper,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? {
-        val hash = data.thumbhash
-        val platformImage = ThumbHashDecoder.decodeKeepAspectRatio(hash, 25) ?: return null
+        val hash = data.blurhash
+
+        val platformImage = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: return null
+
         return ImageFetchResult(
-            image = platformImage.toAndroidBitmap().asImage(true),
+            image = platformImage.toCoilImage(),
             isSampled = false,
             dataSource = DataSource.MEMORY,
         )
     }
 
-    object Factory : Fetcher.Factory<ThumbhashWrapper> {
+    object Factory : Fetcher.Factory<BlurhashWrapper> {
         override fun create(
-            data: ThumbhashWrapper,
+            data: BlurhashWrapper,
             options: Options,
             imageLoader: ImageLoader,
-        ): Fetcher = ThumbHashFetcher(options, data)
+        ): Fetcher = BlurHashFetcher(options, data)
     }
 
-    object TKeyer : Keyer<ThumbhashWrapper> {
+    object BKeyer : Keyer<BlurhashWrapper> {
         override fun key(
-            data: ThumbhashWrapper,
+            data: BlurhashWrapper,
             options: Options,
-        ): String = data.thumbhash
+        ): String = data.blurhash
     }
 }
-
-/**
- * Pick the best Coil model for a media placeholder.
- *
- * Prefers [ThumbhashWrapper] when a thumbhash is available (better quality, preserves aspect ratio
- * and alpha) and falls back to [BlurhashWrapper] when only a blurhash is present. Returns null
- * when neither is available, so callers can skip the placeholder request entirely.
- */
-fun placeholderModel(
-    thumbhash: String?,
-    blurhash: String?,
-): Any? =
-    when {
-        !thumbhash.isNullOrEmpty() -> ThumbhashWrapper(thumbhash)
-        !blurhash.isNullOrEmpty() -> BlurhashWrapper(blurhash)
-        else -> null
-    }

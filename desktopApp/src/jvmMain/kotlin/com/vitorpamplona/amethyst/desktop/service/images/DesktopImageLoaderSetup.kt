@@ -37,6 +37,9 @@ import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
 import coil3.size.Precision
 import coil3.svg.SvgDecoder
+import com.vitorpamplona.amethyst.commons.service.image.Base64Fetcher
+import com.vitorpamplona.amethyst.commons.service.image.BlurHashFetcher
+import com.vitorpamplona.amethyst.commons.service.image.ThumbHashFetcher
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import okhttp3.Call
 import okio.Path.Companion.toOkioPath
@@ -58,12 +61,12 @@ object DesktopImageLoaderSetup {
                 add(TorAwareOkHttpFactory { DesktopHttpClient.currentClient() })
                 add(SvgDecoder.Factory())
                 add(SkiaGifDecoder.Factory())
-                add(DesktopBase64Fetcher.Factory)
-                add(DesktopBlurHashFetcher.Factory)
-                add(DesktopThumbHashFetcher.Factory)
-                add(DesktopBase64Fetcher.BKeyer)
-                add(DesktopBlurHashFetcher.BKeyer)
-                add(DesktopThumbHashFetcher.TKeyer)
+                add(Base64Fetcher.Factory)
+                add(BlurHashFetcher.Factory)
+                add(ThumbHashFetcher.Factory)
+                add(Base64Fetcher.BKeyer)
+                add(BlurHashFetcher.BKeyer)
+                add(ThumbHashFetcher.TKeyer)
             }.build()
 
     private fun newMemoryCache(): MemoryCache {

@@ -18,70 +18,66 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.images
+package com.vitorpamplona.amethyst.commons.service.image
 
 import androidx.compose.runtime.Stable
 import coil3.ImageLoader
-import coil3.asImage
 import coil3.decode.DataSource
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.request.Options
-import com.vitorpamplona.amethyst.commons.blurhash.BlurHashDecoder
-import com.vitorpamplona.amethyst.commons.blurhash.toBufferedImage
+import com.vitorpamplona.amethyst.commons.thumbhash.ThumbHashDecoder
 
-data class BlurhashWrapper(
-    val blurhash: String,
+data class ThumbhashWrapper(
+    val thumbhash: String,
 )
 
 @Stable
-class DesktopBlurHashFetcher(
-    private val data: BlurhashWrapper,
+class ThumbHashFetcher(
+    private val options: Options,
+    private val data: ThumbhashWrapper,
 ) : Fetcher {
     override suspend fun fetch(): FetchResult? {
-        val hash = data.blurhash
-        val platformImage = BlurHashDecoder.decodeKeepAspectRatio(hash, 25) ?: return null
-        val bufferedImage = platformImage.toBufferedImage()
-        val bitmap = bufferedImageToSkiaBitmap(bufferedImage)
-
+        val hash = data.thumbhash
+        val platformImage = ThumbHashDecoder.decodeKeepAspectRatio(hash, 25) ?: return null
         return ImageFetchResult(
-            image = bitmap.asImage(true),
+            image = platformImage.toCoilImage(),
             isSampled = false,
             dataSource = DataSource.MEMORY,
         )
     }
 
-    object Factory : Fetcher.Factory<BlurhashWrapper> {
+    object Factory : Fetcher.Factory<ThumbhashWrapper> {
         override fun create(
-            data: BlurhashWrapper,
+            data: ThumbhashWrapper,
             options: Options,
             imageLoader: ImageLoader,
-        ): Fetcher = DesktopBlurHashFetcher(data)
+        ): Fetcher = ThumbHashFetcher(options, data)
     }
 
-    object BKeyer : Keyer<BlurhashWrapper> {
+    object TKeyer : Keyer<ThumbhashWrapper> {
         override fun key(
-            data: BlurhashWrapper,
+            data: ThumbhashWrapper,
             options: Options,
-        ): String = data.blurhash
+        ): String = data.thumbhash
     }
 }
 
-internal fun convertArgbToBgra(pixels: IntArray): ByteArray {
-    val bytes = ByteArray(pixels.size * 4)
-    for (i in pixels.indices) {
-        val argb = pixels[i]
-        val a = (argb shr 24) and 0xFF
-        val r = (argb shr 16) and 0xFF
-        val g = (argb shr 8) and 0xFF
-        val b = argb and 0xFF
-        val offset = i * 4
-        bytes[offset] = b.toByte()
-        bytes[offset + 1] = g.toByte()
-        bytes[offset + 2] = r.toByte()
-        bytes[offset + 3] = a.toByte()
+/**
+ * Pick the best Coil model for a media placeholder.
+ *
+ * Prefers [ThumbhashWrapper] when a thumbhash is available (better quality, preserves aspect ratio
+ * and alpha) and falls back to [BlurhashWrapper] when only a blurhash is present. Returns null
+ * when neither is available, so callers can skip the placeholder request entirely.
+ */
+fun placeholderModel(
+    thumbhash: String?,
+    blurhash: String?,
+): Any? =
+    when {
+        !thumbhash.isNullOrEmpty() -> ThumbhashWrapper(thumbhash)
+        !blurhash.isNullOrEmpty() -> BlurhashWrapper(blurhash)
+        else -> null
     }
-    return bytes
-}

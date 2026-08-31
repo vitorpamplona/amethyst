@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -42,8 +45,6 @@ import okhttp3.coroutines.executeAsync
  * `crates/buzz-relay/src/api/invites.rs`.
  */
 object BuzzInviteMinter {
-    private val json = ObjectMapper()
-
     /** A freshly minted invite: the opaque [code], the shareable [url], and its [expiresAt] (secs). */
     data class MintedInvite(
         val code: String,
@@ -89,18 +90,22 @@ object BuzzInviteMinter {
 
             okHttpClient(url).newCall(request).executeAsync().use { response ->
                 val payload = response.body.string()
-                val tree = runCatching { json.readTree(payload) }.getOrNull()
+                val tree = runCatching { Json.parseToJsonElement(payload).jsonObject }.getOrNull()
 
                 if (!response.isSuccessful) {
-                    val slug = tree?.get("error")?.asText() ?: "HTTP ${response.code}"
+                    val slug = tree?.get("error")?.stringOrNull() ?: "HTTP ${response.code}"
                     throw IllegalStateException(slug)
                 }
 
                 MintedInvite(
-                    code = tree?.get("code")?.asText().orEmpty(),
-                    url = tree?.get("url")?.asText().orEmpty(),
-                    expiresAt = tree?.get("expires_at")?.asLong() ?: 0L,
+                    code = tree?.get("code")?.stringOrNull().orEmpty(),
+                    url = tree?.get("url")?.stringOrNull().orEmpty(),
+                    expiresAt = tree?.get("expires_at")?.longOrNull() ?: 0L,
                 )
             }
         }
 }
+
+private fun JsonElement.stringOrNull(): String? = (this as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+private fun JsonElement.longOrNull(): Long? = (this as? JsonPrimitive)?.content?.toLongOrNull()
