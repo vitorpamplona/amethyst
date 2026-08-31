@@ -201,6 +201,13 @@ class LightningAddressResolver {
             ?: response.code.toString()
     }
 
+    /**
+     * @param onZapRequestSent receives the zap request that was ACTUALLY sent to the
+     *   callback, or null when it was not. A provider that does not advertise
+     *   `allowsNostr` never sees [nostrRequest], and its invoice therefore commits to
+     *   nothing about it — so a caller must not go on to claim the two are bound. See
+     *   the drop below.
+     */
     suspend fun lnAddressInvoice(
         lnAddress: String,
         milliSats: Long,
@@ -209,6 +216,7 @@ class LightningAddressResolver {
         okHttpClient: (String) -> OkHttpClient,
         onProgress: (percent: Float) -> Unit,
         context: Context,
+        onZapRequestSent: (LnZapRequestEvent?) -> Unit = {},
     ): String {
         val mapper = jacksonObjectMapper()
 
@@ -264,12 +272,19 @@ class LightningAddressResolver {
             )
         }
 
+        // NIP-57 binds a zap request to its invoice through `description_hash`, and a
+        // provider that ignores `nostr=` mints an invoice that commits to nothing about
+        // it. Report what actually went, so a caller cannot attach the event to a
+        // payment it was never bound to.
+        val sentZapRequest = nostrRequest?.takeIf { allowsNostr }
+        onZapRequestSent(sentZapRequest)
+
         val invoice =
             fetchLightningInvoice(
                 lnCallback = callbackUrl,
                 milliSats = milliSats,
                 message = message,
-                nostrRequest = if (allowsNostr) nostrRequest else null,
+                nostrRequest = sentZapRequest,
                 okHttpClient = okHttpClient,
                 context = context,
             )

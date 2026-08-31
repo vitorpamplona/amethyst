@@ -83,7 +83,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import kotlinx.coroutines.delay
-import org.json.JSONObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlin.math.roundToInt
 
 // How far off-screen a parked (inactive) warm tab is shifted — well past any real screen width.
@@ -106,12 +107,12 @@ private fun EmbeddedImeBridge.sendFieldOp(
     cssX: Float,
     cssY: Float,
 ) = sendImeOp(
-    JSONObject()
-        .put("type", type)
-        .apply { if (edge != null) put("edge", edge) }
-        .put("x", cssX.toDouble())
-        .put("y", cssY.toDouble())
-        .toString(),
+    buildJsonObject {
+        put("type", type)
+        if (edge != null) put("edge", edge)
+        put("x", cssX.toDouble())
+        put("y", cssY.toDouble())
+    }.toString(),
 )
 
 /**
@@ -508,7 +509,14 @@ fun EmbeddedTabLayer(barFavoriteIds: List<String>) {
                         fingerPx.y > oy + bounds.height - edgeZonePx -> AUTOSCROLL_STEP_CSS
                         else -> 0.0
                     }
-                if (dy != 0.0) imeBridge?.sendImeOp(JSONObject().put("type", "ime.autoscroll").put("dy", dy).toString())
+                if (dy != 0.0) {
+                    imeBridge?.sendImeOp(
+                        buildJsonObject {
+                            put("type", "ime.autoscroll")
+                            put("dy", dy)
+                        }.toString(),
+                    )
+                }
             }
             if (!active || magProbe == null) {
                 magnifier.hide()

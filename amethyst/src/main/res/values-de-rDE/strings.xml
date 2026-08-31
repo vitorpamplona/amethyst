@@ -4539,6 +4539,8 @@
     <string name="relay_members_removed">%1$d Mitglieder aus Relay entfernt</string>
     <string name="relay_join_request">Relay-Beitrittsanfrage</string>
     <string name="relay_leave_request">Relay-Austrittsanfrage</string>
+    <string name="ai_writing_setting_title">Textverbesserungen vorschlagen</string>
+    <string name="ai_writing_setting_description">Verwendet ein KI-Modell auf dem Gerät, um Textkorrekturen und Tonänderungen vorzuschlagen.</string>
     <string name="tracked_broadcasts_setting_title">Verfolgte Übertragungen</string>
     <string name="tracked_broadcasts_setting_description">Verwende den verfolgten Broadcaster beim Senden von Ereignissen. Zeigt Live-Fortschritt und Status pro Relay während der Übertragung.</string>
     <string name="suggest_workouts_setting_title">Workouts zum Teilen vorschlagen</string>
@@ -4633,6 +4635,14 @@
     <string name="pow_publish_failed_retry">Dein %1$s wurde fertig geschürft, konnte aber nicht veröffentlicht werden. Es wird beim nächsten Start der App erneut versucht.</string>
     <string name="pow_kind_chat_message">Chat-Nachricht</string>
     <string name="pow_kind_report">Meldung</string>
+    <string name="ai_writing_use_this">Verwenden</string>
+    <string name="ai_writing_dismiss">Schließen</string>
+    <string name="ai_tone_correct">Korrigieren</string>
+    <string name="ai_tone_rephrase">Umformulieren</string>
+    <string name="ai_tone_shorter">Kürzer</string>
+    <string name="ai_tone_elaborate">Ausführen</string>
+    <string name="ai_tone_friendly">Freundlich</string>
+    <string name="ai_tone_professional">Professionell</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Emoji-Pakete</string>
     <string name="emoji_pack_management_title">Zur Emoji-Liste hinzufügen</string>

@@ -2,9 +2,9 @@
 //
 // Loads the REAL shim (commons/src/commonMain/composeResources/files/napplet/shim.js) into real Chromium
 // with the embedded-surface flags set, drives genuine focus/tap/blur gestures, and asserts the `ime.*`
-// envelopes it emits. This is the only honest automated coverage for this code: the host-side parser runs
-// on Android's `org.json`, which the JVM unit tests stub out (`unitTests.isReturnDefaultValues = true`), so
-// a Kotlin test of it would pass without parsing anything.
+// envelopes it emits. This is the only honest automated coverage for this code: the half worth protecting
+// is the page↔host contract (real browser focus/gesture behavior), which no JVM unit test of the host-side
+// parser (`parseImeEvent`, kotlinx.serialization) can exercise.
 //
 //   cd tools/ime-test && npm i playwright-core && node shim-events.mjs
 //

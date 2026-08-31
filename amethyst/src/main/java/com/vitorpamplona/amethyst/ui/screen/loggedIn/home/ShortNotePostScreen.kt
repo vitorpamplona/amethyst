@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -103,6 +104,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.creators.aihelp.AiWritingHelpPanel
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.ContentSensitivityExplainer
 import com.vitorpamplona.amethyst.ui.note.creators.contentWarning.MarkAsSensitiveButton
 import com.vitorpamplona.amethyst.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
@@ -178,6 +180,17 @@ fun ShortNotePostScreen(
     val context = LocalContext.current
     val activity = context.getActivity()
     val scope = rememberCoroutineScope()
+
+    val proposeAiImprovements by
+        accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements
+            .collectAsStateWithLifecycle()
+
+    LaunchedEffect(proposeAiImprovements) {
+        if (proposeAiImprovements == BooleanType.ALWAYS) {
+            // The assistant outlives this Activity inside the ViewModel, so it must not hold it.
+            postViewModel.initWritingAssistant(context.applicationContext)
+        }
+    }
 
     LaunchedEffect(postViewModel, accountViewModel) {
         val baseReplyTo = baseReplyToId?.let { accountViewModel.getNoteIfExists(it) }
@@ -708,6 +721,19 @@ private fun NewPostScreenBody(
                 modifier = SuggestionListDefaultHeightPage,
             )
         }
+
+        val proposeAiImprovements by
+            accountViewModel.settings.uiSettingsFlow.automaticallyProposeAiImprovements
+                .collectAsStateWithLifecycle()
+
+        AiWritingHelpPanel(
+            isVisible = proposeAiImprovements == BooleanType.ALWAYS && postViewModel.showAiPanel,
+            readyResults = postViewModel.aiResults,
+            selectedResult = postViewModel.aiSelectedResult,
+            onToneSelected = postViewModel::selectAiResult,
+            onApply = postViewModel::applyAiResult,
+            onDismiss = postViewModel::dismissAiResult,
+        )
 
         val alwaysOnEnabled by accountViewModel.account.settings.alwaysOnNotificationService
             .collectAsStateWithLifecycle()

@@ -65,6 +65,18 @@ class NwcTransaction(
     var metadata: Map<String, Any?>? = null,
 ) {
     fun parsedMetadata(): NwcTransactionMetadata? = NwcTransactionMetadata.parse(metadata)
+
+    /**
+     * The description, or null when the wallet had nothing to say.
+     *
+     * Wallets send `"description": ""` for a payment with no memo rather than
+     * omitting the field, so an elvis on [description] yields an empty string that
+     * renders as a blank line. Normalized HERE rather than in the parser because
+     * [com.vitorpamplona.quartz.nip47WalletConnect.Nip47Server] serializes this same
+     * class back onto the wire — rewriting blank to null at parse time would change
+     * what a wallet service echoes.
+     */
+    fun displayDescription(): String? = description?.ifBlank { null }
 }
 
 class TlvRecord(

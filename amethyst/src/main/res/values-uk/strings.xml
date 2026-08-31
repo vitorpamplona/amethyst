@@ -4092,7 +4092,9 @@
     <string name="relay_leave_request">Запит на вихід з relay</string>
     
     
+    <string name="ai_writing_setting_title">Пропонувати вдосконалення тексту</string>
     
+    <string name="ai_writing_setting_description">Використовує AI-модель на пристрої для пропозиції виправлень тексту та зміни тону.</string>
     
     <string name="tracked_broadcasts_setting_title">Відстежувані трансляції</string>
     
@@ -4108,16 +4110,25 @@
     
     <string name="auto_create_drafts_setting_description">Автоматично зберігає чернетку події, коли ви друкуєте або залишаєте редактор з ненадісленим текстом, і надсилає до ваших приватних вихідних relay.</string>
     
+    <string name="ai_writing_use_this">Використати</string>
+    
+    <string name="ai_writing_dismiss">Відхилити</string>
+    
+    <string name="ai_tone_correct">Виправити</string>
+    
+    <string name="ai_tone_rephrase">Перефразувати</string>
+    
+    <string name="ai_tone_shorter">Коротше</string>
+    
+    <string name="ai_tone_elaborate">Розгорнути</string>
+    
+    <string name="ai_tone_friendly">Дружній</string>
+    
+    <string name="ai_tone_professional">Професійний</string>
     
     
     
-    
-    
-    
-    
-    
-    
-    
+    <string name="ai_tone_emojify">+ Емодзі</string>
     
     <string name="emoji_packs_title">Пакети емодзі</string>
     

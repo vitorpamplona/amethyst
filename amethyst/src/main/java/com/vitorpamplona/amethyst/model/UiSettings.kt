@@ -39,6 +39,7 @@ data class UiSettings(
     val dontAskForNotificationPermissions: Boolean = false,
     val featureSet: FeatureSetType = FeatureSetType.SIMPLIFIED,
     val gallerySet: ProfileGalleryType = ProfileGalleryType.CLASSIC,
+    val automaticallyProposeAiImprovements: BooleanType = BooleanType.ALWAYS,
     val useTrackedBroadcasts: BooleanType = BooleanType.ALWAYS,
     val automaticallyCreateDrafts: BooleanType = BooleanType.ALWAYS,
     val showHomeNewThreadsTab: Boolean = true,

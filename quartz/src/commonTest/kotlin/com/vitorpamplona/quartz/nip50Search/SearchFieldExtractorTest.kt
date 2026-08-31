@@ -21,12 +21,14 @@
 package com.vitorpamplona.quartz.nip50Search
 
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
+import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import kotlin.test.Test
@@ -108,6 +110,76 @@ class SearchFieldExtractorTest {
         val content = """{"name":"CoolApp","about":"an app","website":"https://coolapp.example"}"""
         val fields = SearchFieldExtractor.extract(AppDefinitionEvent("7".repeat(64), alice, 1L, arrayOf(arrayOf("d", "x")), content, ""))
         assertEquals(IndexableFields.Profile(name = "CoolApp", about = "an app", website = "https://coolapp.example"), fields)
+    }
+
+    @Test
+    fun trustedListsDecomposeIntoTheirTitle() {
+        // The title is the whole of indexableContent() for the family, and it
+        // is a title: primary, not the body tier. Everything else the list
+        // carries -- content echo, member tags, metric, d -- stays out.
+        val tags =
+            arrayOf(
+                arrayOf("d", "tl-pin-verified-human"),
+                arrayOf("title", "Verified Human"),
+                arrayOf("metric", "pinned-tag-membership"),
+                arrayOf("p", alice, "", "87"),
+            )
+        val fields = SearchFieldExtractor.extract(UserTrustedListEvent("d".repeat(64), alice, 1L, tags, """{"members":[]}""", ""))
+        assertEquals(IndexableFields.Tiered(primary = listOf("Verified Human")), fields)
+    }
+
+    @Test
+    fun titlelessTrustedListsExtractNothing() {
+        // Most machine-published lists have no title. The branch reads title()
+        // directly rather than indexableContent(), so the None comes from the
+        // tiers funnel finding nothing to clean -- not from title() ?: "".
+        val tags = arrayOf(arrayOf("d", "tl-pin-untitled"), arrayOf("p", alice, "", "50"))
+        assertEquals(IndexableFields.None, SearchFieldExtractor.extract(UserTrustedListEvent("e".repeat(64), alice, 1L, tags, "", "")))
+    }
+
+    @Test
+    fun contactCardsDecomposeIntoPetnameSummaryAndTopics() {
+        // A provider's petname for a person is that provider's NAME for them,
+        // so it lands where kind 0's name does. topics() reads `t` tags, so
+        // the tiers() funnel carries them once, as hashtags.
+        val tags =
+            arrayOf(
+                arrayOf("d", alice),
+                arrayOf("petname", "Verified Human"),
+                arrayOf("summary", "vouched by two independent raters"),
+                arrayOf("t", "bitcoin"),
+                arrayOf("rank", "87"),
+            )
+        val fields = SearchFieldExtractor.extract(ContactCardEvent("f".repeat(64), alice, 1L, tags, "", ""))
+        assertEquals(
+            IndexableFields.Tiered(
+                primary = listOf("Verified Human"),
+                secondary = listOf("vouched by two independent raters"),
+                hashtags = listOf("bitcoin"),
+            ),
+            fields,
+        )
+    }
+
+    @Test
+    fun contactCardsCarryTopicsEvenWithNoPublicPetname() {
+        // THE SHAPE THIS LIBRARY ITSELF PUBLISHES: build() puts petname and
+        // summary in the NIP-44 content, so a card's only public text is its
+        // topics. They must still reach the backend -- through the hashtag
+        // role, once -- and a hashtags-only extraction must not normalize to
+        // None (Tiered.isEmpty() compares against a fully-empty Tiered).
+        val tags = arrayOf(arrayOf("d", alice), arrayOf("t", "bitcoin"), arrayOf("t", "nostr"), arrayOf("rank", "87"))
+        val fields = SearchFieldExtractor.extract(ContactCardEvent("2a".repeat(32), alice, 1L, tags, "encrypted", ""))
+        assertEquals(IndexableFields.Tiered(hashtags = listOf("bitcoin", "nostr")), fields)
+    }
+
+    @Test
+    fun contactCardsWithNoPublicTextExtractNothing() {
+        // The petname and summary of a private card live in the NIP-44
+        // encrypted content, which is never indexed -- so a card carrying only
+        // scores has nothing to search.
+        val tags = arrayOf(arrayOf("d", alice), arrayOf("rank", "87"), arrayOf("followers", "1200"))
+        assertEquals(IndexableFields.None, SearchFieldExtractor.extract(ContactCardEvent("1a".repeat(32), alice, 1L, tags, "encrypted", "")))
     }
 
     @Test

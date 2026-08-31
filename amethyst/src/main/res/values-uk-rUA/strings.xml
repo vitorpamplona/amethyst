@@ -2944,6 +2944,8 @@
     <string name="relay_members_removed">%1$d учасників видалено з relay</string>
     <string name="relay_join_request">Запит на вступ до relay</string>
     <string name="relay_leave_request">Запит на вихід з relay</string>
+    <string name="ai_writing_setting_title">Пропонувати вдосконалення тексту</string>
+    <string name="ai_writing_setting_description">Використовує AI-модель на пристрої для пропозиції виправлень тексту та зміни тону.</string>
     <string name="tracked_broadcasts_setting_title">Відстежувані трансляції</string>
     <string name="tracked_broadcasts_setting_description">Використовувати відстежувальний транслятор під час надсилання подій. Відображає живий прогрес та статус по кожному relay під час трансляції.</string>
     <string name="suggest_workouts_setting_title">Пропонувати тренування для поширення</string>
@@ -2951,6 +2953,15 @@
     <string name="compose_settings">Налаштування редактора</string>
     <string name="auto_create_drafts_setting_title">Автоматично створювати чернетки</string>
     <string name="auto_create_drafts_setting_description">Автоматично зберігає чернетку події, коли ви друкуєте або залишаєте редактор з ненадісленим текстом, і надсилає до ваших приватних вихідних relay.</string>
+    <string name="ai_writing_use_this">Використати</string>
+    <string name="ai_writing_dismiss">Відхилити</string>
+    <string name="ai_tone_correct">Виправити</string>
+    <string name="ai_tone_rephrase">Перефразувати</string>
+    <string name="ai_tone_shorter">Коротше</string>
+    <string name="ai_tone_elaborate">Розгорнути</string>
+    <string name="ai_tone_friendly">Дружній</string>
+    <string name="ai_tone_professional">Професійний</string>
+    <string name="ai_tone_emojify">+ Емодзі</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Пакети емодзі</string>
     <string name="emoji_pack_management_title">Додати до списку емодзі</string>

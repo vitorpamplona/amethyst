@@ -94,6 +94,39 @@ jobs:
             $CMD
           fi
 
+      # This job runs five test suites (:quartz, :commons, :nestsClient, :cli,
+      # :desktopApp) but, unlike test-geode / test-quartz-ios /
+      # test-and-build-android, published nothing when one of them failed. The
+      # console line names the failing test and the exception class and stops
+      # there, so the message is lost with the runner. That is how the
+      # NostrClientNegentropySyncTest failure in run 10540 became
+      # undiagnosable: NegentropySyncException carries a `detail` naming which
+      # branch fired (connect timeout / idle silence / NEG-ERR / disconnect),
+      # and nobody could read it. Same action and pin as the Android job below.
+      - name: Desktop Test Report
+        uses: mikepenz/action-junit-report@d9f48fc87bc235f7e214acf696ca5abc0a986f16 # v6.4.2
+        if: always()
+        with:
+          report_paths: '**/build/test-results/**/TEST-*.xml'
+          annotate_only: true
+          detailed_summary: true
+          fail_on_failure: true
+
+      # The HTML reports carry the full stack traces and stdout/stderr the
+      # annotations truncate. Named per-OS because the three matrix legs upload
+      # into the same run and artifact names must be unique.
+      - name: Upload Desktop Test Reports
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: Desktop Test Reports (${{ matrix.os }})
+          path: |
+            quartz/build/reports/tests
+            commons/build/reports/tests
+            nestsClient/build/reports/tests
+            cli/build/reports/tests
+            desktopApp/build/reports/tests
+
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu
       # releases can install the uploaded artifact.

@@ -586,13 +586,26 @@ fun ListContent(
     // Side Menu settings screen. Empty (the default) means the full stock drawer.
     val hidden by accountViewModel.hiddenDrawerItemsFlow().collectAsStateWithLifecycle()
 
+    // Device-global and never synced: which headings the user folded away, restored from disk at
+    // startup so the menu opens the way they left it. Collected once here rather than per section —
+    // one collector feeds every heading. See DrawerSectionCollapsePreferences.
+    val collapsePrefs = Amethyst.instance.drawerSectionCollapsePrefs
+    val collapsed by collapsePrefs.flow.collectAsStateWithLifecycle()
+
     Column(modifier) {
         DrawerSections.forEach { section ->
             // Keyed by section: hiding the last row of a section removes it from the drawer
             // entirely, and without a key the sections below would slide up into its slots and
-            // inherit its CollapsibleSection expanded/collapsed state.
+            // inherit its animateContentSize state, animating a height they never had.
             key(section.id) {
-                CatalogSection(section, hidden, accountViewModel, nav)
+                CatalogSection(
+                    section = section,
+                    hidden = hidden,
+                    expanded = section.id !in collapsed,
+                    onToggleExpand = { collapsePrefs.toggle(section.id) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             }
         }
 
@@ -641,6 +654,8 @@ private fun CreateRows(nav: INav) {
 fun CatalogSection(
     section: DrawerSection,
     hidden: Set<NavBarItem>,
+    expanded: Boolean,
+    onToggleExpand: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -650,7 +665,7 @@ fun CatalogSection(
     val visible = remember(section, hidden) { DrawerItemVisibility.visibleItems(section, hidden) }
     if (visible.isEmpty() && !section.hasFixedRows) return
 
-    CollapsibleSection(title = section.titleRes) {
+    CollapsibleSection(title = section.titleRes, expanded = expanded, onToggleExpand = onToggleExpand) {
         when (section.id) {
             DrawerSectionId.CREATE -> CreateRows(nav)
             DrawerSectionId.SYSTEM ->
@@ -764,16 +779,17 @@ fun CatalogNavigationRow(
 }
 
 @Composable
-fun CollapsibleSection(
+private fun CollapsibleSection(
     title: Int,
+    expanded: Boolean,
+    onToggleExpand: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(true) }
     val sectionTitle = stringRes(title)
 
     Column(modifier = Modifier.animateContentSize()) {
         Row(
-            modifier = DrawerSectionHeaderModifier.clickable { expanded = !expanded },
+            modifier = DrawerSectionHeaderModifier.clickable(onClick = onToggleExpand),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -1071,7 +1087,7 @@ fun BottomContent(
 private fun CollapsibleSectionPreview() {
     ThemeComparisonColumn {
         Column {
-            CollapsibleSection(title = R.string.drawer_section_you) {
+            CollapsibleSection(title = R.string.drawer_section_you, expanded = true, onToggleExpand = {}) {
                 IconRow(
                     title = R.string.profile,
                     icon = MaterialSymbols.AccountCircle,
@@ -1091,7 +1107,9 @@ private fun CollapsibleSectionPreview() {
                     onClick = {},
                 )
             }
-            CollapsibleSection(title = R.string.drawer_section_feeds) {
+            // Collapsed, to preview the other half of the heading: its rows are hidden and the
+            // chevron points down. Real collapse state lives in DrawerSectionCollapsePreferences.
+            CollapsibleSection(title = R.string.drawer_section_feeds, expanded = false, onToggleExpand = {}) {
                 IconRow(
                     title = R.string.pictures,
                     icon = MaterialSymbols.Photo,

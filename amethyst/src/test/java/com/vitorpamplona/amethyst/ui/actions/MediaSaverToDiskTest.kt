@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions
 
+import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk.MediaStoreTarget
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -46,5 +47,35 @@ class MediaSaverToDiskTest {
         assertEquals("image/jpeg", MediaSaverToDisk.normalizeMimeTypeForMediaStore("image/jpeg"))
         assertEquals("image/png", MediaSaverToDisk.normalizeMimeTypeForMediaStore("image/png"))
         assertEquals("audio/mpeg", MediaSaverToDisk.normalizeMimeTypeForMediaStore("audio/mpeg"))
+    }
+
+    @Test
+    fun routesEachMediaKindToItsOwnCollection() {
+        assertEquals(MediaStoreTarget.IMAGES, MediaStoreTarget.of("image/jpeg"))
+        assertEquals(MediaStoreTarget.AUDIO, MediaStoreTarget.of("audio/mpeg"))
+        assertEquals(MediaStoreTarget.VIDEO, MediaStoreTarget.of("video/mp4"))
+    }
+
+    @Test
+    fun routesPdfsAndUnknownTypesToDownloads() {
+        assertEquals(MediaStoreTarget.DOWNLOADS, MediaStoreTarget.of("application/pdf"))
+        assertEquals(MediaStoreTarget.DOWNLOADS, MediaStoreTarget.of("application/zip"))
+        assertEquals(MediaStoreTarget.DOWNLOADS, MediaStoreTarget.of(""))
+    }
+
+    @Test
+    fun routingIsCaseInsensitive() {
+        assertEquals(MediaStoreTarget.IMAGES, MediaStoreTarget.of("Image/PNG"))
+        assertEquals(MediaStoreTarget.AUDIO, MediaStoreTarget.of("Audio/MPEG"))
+        assertEquals(MediaStoreTarget.VIDEO, MediaStoreTarget.of("Video/MP4"))
+    }
+
+    @Test
+    fun eachCollectionIsPairedWithADirectoryMediaProviderAcceptsForIt() {
+        // Video content filed under "Pictures" is the rejection reported in #4009.
+        assertEquals("Pictures", MediaStoreTarget.IMAGES.relativeDirectory)
+        assertEquals("Music", MediaStoreTarget.AUDIO.relativeDirectory)
+        assertEquals("Movies", MediaStoreTarget.VIDEO.relativeDirectory)
+        assertEquals("Download", MediaStoreTarget.DOWNLOADS.relativeDirectory)
     }
 }

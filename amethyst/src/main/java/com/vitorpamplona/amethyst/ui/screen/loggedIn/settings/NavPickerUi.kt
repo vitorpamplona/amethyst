@@ -42,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
@@ -52,10 +53,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.SimpleImage35Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -348,5 +352,23 @@ fun RestoreDefaultRow(onClick: () -> Unit) {
         TextButton(onClick = onClick) {
             Text(stringRes(R.string.bottom_bar_settings_restore_default))
         }
+    }
+}
+
+/**
+ * Publishes the picker's pending edits when the screen goes away — either the composable leaves the
+ * composition (back out of the screen, account switch) or the app stops.
+ *
+ * The pickers debounce their NIP-78 publish, and a synced setting has no local copy other than the
+ * published event, so an edit still inside the debounce window when the process dies is simply gone.
+ * ON_STOP is the last point the app is reliably alive, and it always precedes the ViewModel's
+ * onCleared, so between the two arms nothing is left pending.
+ */
+@Composable
+fun FlushPickerEditsOnExit(accountViewModel: AccountViewModel) {
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { accountViewModel.flushPickerPublish() }
+
+    DisposableEffect(accountViewModel) {
+        onDispose { accountViewModel.flushPickerPublish() }
     }
 }

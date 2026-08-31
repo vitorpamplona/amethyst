@@ -4729,6 +4729,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="relay_members_removed">%1$d użytkowników usuniętych z transmitera</string>
     <string name="relay_join_request">Prośba o dołączenie do transmitera</string>
     <string name="relay_leave_request">Żądanie opuszczenia transmitera</string>
+    <string name="ai_writing_setting_title">Zaproponuj poprawki w tekście</string>
+    <string name="ai_writing_setting_description">Używa modelu sztucznej inteligencji wbudowanego w urządzenie, proponując poprawki tekstu i zmiany tonu wypowiedzi.</string>
     <string name="tracked_broadcasts_setting_title">Monitorowane transmisje</string>
     <string name="tracked_broadcasts_setting_description">Podczas wysyłania zdarzeń korzystaj z monitora transmisji. Pokazuje postęp na żywo i status transmisji podczas nadawania.</string>
     <string name="suggest_workouts_setting_title">Zaproponuj treningi, którymi warto się podzielić</string>
@@ -4841,6 +4843,15 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="pow_publish_failed_retry">Twój %1$s zakończył wydobywanie, ale nie udało się go opublikować. Próba zostanie powtórzona przy następnym uruchomieniu aplikacji.</string>
     <string name="pow_kind_chat_message">Wiadomość Czatu</string>
     <string name="pow_kind_report">Zgłoś</string>
+    <string name="ai_writing_use_this">Użyj tego</string>
+    <string name="ai_writing_dismiss">Ignoruj</string>
+    <string name="ai_tone_correct">Popraw</string>
+    <string name="ai_tone_rephrase">Przeformułuj</string>
+    <string name="ai_tone_shorter">Krócej</string>
+    <string name="ai_tone_elaborate">Rozwiń</string>
+    <string name="ai_tone_friendly">Przyjazny</string>
+    <string name="ai_tone_professional">Profesjonalny</string>
+    <string name="ai_tone_emojify">+ Emoji</string>
     <!-- Emoji packs -->
     <string name="emoji_packs_title">Pakiety emotikonów</string>
     <string name="emoji_pack_management_title">Dodaj do listy emotikonów</string>
@@ -5108,4 +5119,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="buzz_persona_publishing">Publikowanie…</string>
     <string name="buzz_persona_publish">Publikuj persona</string>
     <!-- Profile card (kind-0 rendered in the feed) -->
+    <string name="profile_card_follows_you">Obserwuje cię</string>
+    <string name="profile_card_bot">Bot</string>
 </resources>

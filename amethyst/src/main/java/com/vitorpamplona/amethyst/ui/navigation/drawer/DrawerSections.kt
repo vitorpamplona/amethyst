@@ -73,6 +73,27 @@ enum class DrawerSectionId {
     SYSTEM,
 }
 
+private val DrawerSectionIdsByName = DrawerSectionId.entries.associateBy { it.name }
+
+/**
+ * Parses the persisted names of the headings the user has collapsed, silently dropping any this
+ * build doesn't know. Mirrors [com.vitorpamplona.amethyst.ui.navigation.bottombars.navBarItemsFromNames]:
+ * names rather than ordinals, so reordering this enum renames nothing by accident, and a value left
+ * by a build with one more section costs that heading rather than the whole read.
+ *
+ * The stored set holds the **collapsed** headings rather than the expanded ones, for the same reason
+ * [DrawerItemVisibility] stores the hidden rows: a heading nobody has ever collapsed simply isn't in
+ * the set, so a section added in a later release opens expanded for everyone with no migration.
+ */
+fun drawerSectionIdsFromNames(names: Collection<String>): Set<DrawerSectionId> = names.mapNotNullTo(mutableSetOf()) { DrawerSectionIdsByName[it] }
+
+/**
+ * The inverse of [drawerSectionIdsFromNames]. Unlike the NavBarItem codec this returns an unsorted
+ * Set rather than a sorted List: the destination is a DataStore string set, whose equality is
+ * already order-independent, so there is no serialized form to keep deterministic.
+ */
+fun Set<DrawerSectionId>.toNames(): Set<String> = mapTo(mutableSetOf()) { it.name }
+
 private val DrawerNavigateItems: List<NavBarItem> =
     listOf(
         NavBarItem.HOME,

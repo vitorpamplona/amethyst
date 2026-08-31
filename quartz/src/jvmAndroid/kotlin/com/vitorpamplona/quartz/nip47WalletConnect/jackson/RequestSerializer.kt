@@ -25,6 +25,9 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBudgetMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceMethod
@@ -119,6 +122,14 @@ class RequestSerializer : StdSerializer<Request>(Request::class.java) {
                     gen.writeObjectField("params", value.params)
                 }
             }
+
+            // Parameterless: `method` alone is the whole request. Spelled out rather
+            // than left to fall through, because Request is sealed and the compiler
+            // now makes every method state which of the two shapes it is.
+            is GetBalanceMethod,
+            is GetBudgetMethod,
+            is GetInfoMethod,
+            -> Unit
         }
         gen.writeEndObject()
     }
