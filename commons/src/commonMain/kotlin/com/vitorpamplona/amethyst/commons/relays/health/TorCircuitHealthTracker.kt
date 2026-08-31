@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Detects the "Tor is Active but every circuit is dead" state and asks [onCircuitsDead] to
@@ -69,7 +70,7 @@ class TorCircuitHealthTracker(
     private val isTorActive: () -> Boolean,
     private val isConnectivityActive: () -> Boolean,
     private val onCircuitsDead: () -> Unit,
-    private val nowMs: () -> Long = System::currentTimeMillis,
+    private val nowMs: () -> Long = TimeUtils::nowMillis,
 ) {
     /** Epoch-millis of the first failure in the current unbroken streak, or -1 when no streak is open. */
     private var streakStartMs: Long = -1L

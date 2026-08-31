@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.topNavFeeds
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -28,7 +29,7 @@ sealed class TopFilter(
     val code: String,
 ) {
     interface AddressableTopFilter {
-        val address: Address
+        @Contextual val address: Address
     }
 
     @Serializable
@@ -69,19 +70,19 @@ sealed class TopFilter(
 
     @Serializable
     class PeopleList(
-        override val address: Address,
+        @Contextual override val address: Address,
     ) : TopFilter(address.toValue()),
         AddressableTopFilter
 
     @Serializable
     class MuteList(
-        override val address: Address,
+        @Contextual override val address: Address,
     ) : TopFilter(address.toValue()),
         AddressableTopFilter
 
     @Serializable
     class Community(
-        override val address: Address,
+        @Contextual override val address: Address,
     ) : TopFilter("Community/${address.toValue()}"),
         AddressableTopFilter
 
@@ -102,13 +103,13 @@ sealed class TopFilter(
 
     @Serializable
     class FavoriteAlgoFeed(
-        val address: Address,
+        @Contextual val address: Address,
     ) : TopFilter("FavoriteAlgoFeed/${address.toValue()}")
 
     @Serializable object AllFavoriteAlgoFeeds : TopFilter(" All Favourite DVMs ")
 
     @Serializable
     class InterestSet(
-        val address: Address,
+        @Contextual val address: Address,
     ) : TopFilter("InterestSet/${address.toValue()}")
 }
