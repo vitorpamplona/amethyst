@@ -21,8 +21,12 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotification
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Per-coordinate registry of the notifications a napplet created via the NAP `notify` domain. Lives
@@ -32,9 +36,17 @@ import java.util.concurrent.atomic.AtomicLong
  * Namespaced by applet coordinate, like [DataStoreNappletStorage]: a napplet can only ever see and
  * dismiss its **own** notifications. In-memory only — notifications are ephemeral UI, not durable state.
  */
+@OptIn(ExperimentalAtomicApi::class)
 object NappletNotificationStore {
-    // coordinate -> (id -> notification), insertion-ordered so list() is stable.
-    private val byCoordinate = ConcurrentHashMap<String, LinkedHashMap<String, NappletNotification>>()
+    // coordinate -> insertion-ordered bucket so list() is stable. The bucket lock
+    // guards the LinkedHashMap's ordered mutation; per-bucket so coordinates never
+    // contend with each other.
+    private class Bucket {
+        val lock = KmpLock()
+        val map = LinkedHashMap<String, NappletNotification>()
+    }
+
+    private val byCoordinate = ConcurrentMap<String, Bucket>()
     private val seq = AtomicLong(0)
 
     fun create(
@@ -42,22 +54,22 @@ object NappletNotificationStore {
         title: String,
         body: String,
     ): String {
-        val id = "n${System.currentTimeMillis()}-${seq.incrementAndGet()}"
-        val map = byCoordinate.getOrPut(coordinate) { LinkedHashMap() }
-        synchronized(map) { map[id] = NappletNotification(id, title, body) }
+        val id = "n${TimeUtils.nowMillis()}-${seq.addAndFetch(1L)}"
+        val bucket = byCoordinate.getOrPut(coordinate) { Bucket() }
+        bucket.lock.withLock { bucket.map[id] = NappletNotification(id, title, body) }
         return id
     }
 
     fun list(coordinate: String): List<NappletNotification> {
-        val map = byCoordinate[coordinate] ?: return emptyList()
-        return synchronized(map) { map.values.toList() }
+        val bucket = byCoordinate[coordinate] ?: return emptyList()
+        return bucket.lock.withLock { bucket.map.values.toList() }
     }
 
     fun dismiss(
         coordinate: String,
         id: String,
     ) {
-        val map = byCoordinate[coordinate] ?: return
-        synchronized(map) { map.remove(id) }
+        val bucket = byCoordinate[coordinate] ?: return
+        bucket.lock.withLock { bucket.map.remove(id) }
     }
 }

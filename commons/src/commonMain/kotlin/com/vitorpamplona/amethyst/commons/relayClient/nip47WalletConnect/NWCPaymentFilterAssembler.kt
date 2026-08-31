@@ -22,17 +22,21 @@ package com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 
 // This allows multiple screen to be listening to tags, even the same tag.
 // The subscription filter carries `#e: [request id]` plus `#p: [client pubkey]`.
@@ -65,7 +69,7 @@ class NWCPaymentFilterAssembler(
     // unbatched filter mutation triggers a fresh replay storm.
     private val unsubDelayMs = 1500L
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val pendingLock = Any()
+    private val pendingLock = KmpLock()
     private val pendingUnsubs = mutableSetOf<NWCPaymentQueryState>()
 
     @Volatile private var pendingJob: Job? = null
@@ -99,42 +103,43 @@ class NWCPaymentFilterAssembler(
      * unsubscribed is a no-op.
      */
     fun unsubscribeSoon(query: NWCPaymentQueryState) {
-        val oldJob: Job?
-        synchronized(pendingLock) {
-            pendingUnsubs.add(query)
-            oldJob = pendingJob
-            pendingJob =
-                scope.launch {
-                    try {
-                        delay(unsubDelayMs)
-                        val batch =
-                            synchronized(pendingLock) {
-                                val copy = pendingUnsubs.toList()
-                                pendingUnsubs.clear()
-                                pendingJob = null
-                                copy
+        val oldJob: Job? =
+            pendingLock.withLock {
+                pendingUnsubs.add(query)
+                val previous = pendingJob
+                pendingJob =
+                    scope.launch {
+                        try {
+                            delay(unsubDelayMs)
+                            val batch =
+                                pendingLock.withLock {
+                                    val copy = pendingUnsubs.toList()
+                                    pendingUnsubs.clear()
+                                    pendingJob = null
+                                    copy
+                                }
+                            if (batch.isNotEmpty()) {
+                                unsubscribe(batch)
                             }
-                        if (batch.isNotEmpty()) {
-                            unsubscribe(batch)
+                        } catch (_: CancellationException) {
+                            // Superseded by a newer schedule; the replacement
+                            // job owns the pending set from here.
                         }
-                    } catch (_: CancellationException) {
-                        // Superseded by a newer schedule; the replacement
-                        // job owns the pending set from here.
                     }
-                }
-        }
+                previous
+            }
         oldJob?.cancel()
     }
 
     private fun drainPendingUnsubs() {
-        val batch: List<NWCPaymentQueryState>
-        val cancelled: Job?
-        synchronized(pendingLock) {
-            batch = pendingUnsubs.toList()
-            pendingUnsubs.clear()
-            cancelled = pendingJob
-            pendingJob = null
-        }
+        val (batch, cancelled) =
+            pendingLock.withLock {
+                val copy = pendingUnsubs.toList()
+                pendingUnsubs.clear()
+                val old = pendingJob
+                pendingJob = null
+                copy to old
+            }
         cancelled?.cancel()
         if (batch.isNotEmpty()) {
             unsubscribe(batch)

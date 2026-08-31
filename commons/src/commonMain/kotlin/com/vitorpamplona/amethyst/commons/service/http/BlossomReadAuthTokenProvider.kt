@@ -22,11 +22,12 @@ package com.vitorpamplona.amethyst.commons.service.http
 
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -64,15 +65,15 @@ import kotlin.coroutines.cancellation.CancellationException
 class BlossomReadAuthTokenProvider(
     private val signerProvider: () -> NostrSigner?,
     private val scope: CoroutineScope,
-    private val clock: () -> Long = { System.currentTimeMillis() },
+    private val clock: () -> Long = { TimeUtils.nowMillis() },
 ) {
     private class CachedToken(
         val header: String,
         val expiresAtMs: Long,
     )
 
-    private val cache = ConcurrentHashMap<String, CachedToken>()
-    private val inFlight = ConcurrentHashMap<String, CompletableDeferred<String?>>()
+    private val cache = ConcurrentMap<String, CachedToken>()
+    private val inFlight = ConcurrentMap<String, CompletableDeferred<String?>>()
 
     /**
      * The token already held for [host], or null. Pure map read — safe to call

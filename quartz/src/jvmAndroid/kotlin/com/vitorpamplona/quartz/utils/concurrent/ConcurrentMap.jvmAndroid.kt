@@ -51,6 +51,18 @@ actual class ConcurrentMap<K : Any, V : Any> {
 
     actual fun remove(key: K): V? = map.remove(key)
 
+    actual fun putIfAbsent(
+        key: K,
+        value: V,
+    ): V? = map.putIfAbsent(key, value)
+
+    actual fun remove(
+        key: K,
+        value: V,
+    ): Boolean = map.remove(key, value)
+
+    actual fun clear() = map.clear()
+
     actual fun size(): Int = map.size
 
     actual fun snapshot(): Map<K, V> = HashMap(map)

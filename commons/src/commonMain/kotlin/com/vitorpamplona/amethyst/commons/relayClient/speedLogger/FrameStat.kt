@@ -24,11 +24,12 @@ import com.vitorpamplona.amethyst.commons.relayClient.speedLogger.RelaySpeedLogg
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.timer
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
+@OptIn(ExperimentalAtomicApi::class)
 class FrameStat {
-    var eventCount = AtomicInteger(0)
+    var eventCount = AtomicInt(0)
     var kinds = LargeCache<Int, KindGroup>()
 
     fun increment(
@@ -37,7 +38,7 @@ class FrameStat {
         relayUrl: NormalizedRelayUrl,
         memory: Int,
     ) {
-        eventCount.incrementAndGet()
+        eventCount.addAndFetch(1)
 
         val kindGroup = kinds.get(kind)
         if (kindGroup != null) {
@@ -49,28 +50,18 @@ class FrameStat {
         }
     }
 
-    fun hasAnything() = eventCount.get() > 0
+    fun hasAnything() = eventCount.load() > 0
 
     fun reset() {
-        eventCount.set(0)
+        eventCount.store(0)
         kinds.forEach { _, value -> value.reset() }
     }
 
     fun log() {
-        Log.d(TAG) { "Events Per Second: ${eventCount.get()}" }
+        Log.d(TAG) { "Events Per Second: ${eventCount.load()}" }
         kinds.forEach { key, value ->
-            if (value.count.get() > 0) {
+            if (value.count.load() > 0) {
                 Log.d(TAG) { "-- Kind $key $value" }
-            }
-        }
-    }
-
-    init {
-        // Use a timer to reset the counter every second.
-        timer(name = "EventsPerSecondCounter", period = 1000, daemon = true) {
-            if (hasAnything()) {
-                log()
-                reset()
             }
         }
     }

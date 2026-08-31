@@ -21,12 +21,15 @@
 package com.vitorpamplona.amethyst.commons.relayClient.chatDelivery
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.concurrent.Volatile
 
 /** Delivery progress of one recipient's gift wrap (NIP-17 DMs). */
 @Immutable
@@ -92,7 +95,7 @@ data class ChatDelivery(
 class ChatDeliveryTracker(
     client: INostrClient,
 ) {
-    private val lock = Any()
+    private val lock = KmpLock()
 
     // One flow per tracked (or queried) displayed-note id; LinkedHashMap iteration
     // order is insertion order, used for eviction. Guarded by [lock].
@@ -118,7 +121,7 @@ class ChatDeliveryTracker(
         targetRelays: Set<NormalizedRelayUrl>,
     ) {
         if (targetRelays.isEmpty()) return
-        synchronized(lock) {
+        lock.withLock {
             flowForLocked(eventId).value = ChatDelivery(targetRelays)
         }
     }
@@ -134,7 +137,7 @@ class ChatDeliveryTracker(
         targetRelays: Set<NormalizedRelayUrl>,
         isSelf: Boolean = false,
     ) {
-        synchronized(lock) {
+        lock.withLock {
             val flow = flowForLocked(displayedNoteId)
             val current = flow.value
 
@@ -163,7 +166,7 @@ class ChatDeliveryTracker(
         targetRelays: Set<NormalizedRelayUrl>,
     ) {
         if (targetRelays.isEmpty()) return
-        synchronized(lock) {
+        lock.withLock {
             flowForLocked(displayedNoteId).value = ChatDelivery(targetRelays)
             // recipient is unused for a relay-only delivery (recipients stays null, so
             // onAccepted never matches on it); reuse the note id as a harmless value.
@@ -172,18 +175,18 @@ class ChatDeliveryTracker(
     }
 
     fun deliveryFlow(noteId: HexKey): StateFlow<ChatDelivery?> =
-        synchronized(lock) {
+        lock.withLock {
             flowForLocked(noteId)
         }
 
     fun currentFor(noteId: HexKey): ChatDelivery? =
-        synchronized(lock) {
+        lock.withLock {
             deliveries[noteId]?.value
         }
 
     fun destroy() {
         okCollector.destroy()
-        synchronized(lock) {
+        lock.withLock {
             deliveries.clear()
             wrapIndex = emptyMap()
             knownIds = emptySet()
@@ -198,7 +201,7 @@ class ChatDeliveryTracker(
         // anywhere; almost all are not chat messages we track.
         if (eventId !in wrapIndex && eventId !in knownIds) return
 
-        synchronized(lock) {
+        lock.withLock {
             val wrapTarget = wrapIndex[eventId]
             if (wrapTarget != null) {
                 val (noteId, recipient) = wrapTarget

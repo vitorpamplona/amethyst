@@ -20,28 +20,30 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.auth
 
-import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
+@OptIn(ExperimentalAtomicApi::class)
 class ListWithUniqueSetCache<T, U>(
     val key: (T) -> U,
 ) {
     private val list = AtomicReference(listOf<T>())
     private val cacheSet = AtomicReference<Set<U>?>(setOf())
 
-    fun isEmpty() = list.get().isEmpty()
+    fun isEmpty() = list.load().isEmpty()
 
-    fun add(item: T) = set(list.get() + item)
+    fun add(item: T) = set(list.load() + item)
 
-    fun remove(item: T) = set(list.get() - item)
+    fun remove(item: T) = set(list.load() - item)
 
     fun set(newList: List<T>) {
-        list.set(newList)
+        list.store(newList)
         // Invalidate the cache - next read will recompute
-        cacheSet.set(null)
+        cacheSet.store(null)
     }
 
     fun distinct(): Set<U> {
-        val currentSet = cacheSet.get()
+        val currentSet = cacheSet.load()
 
         // Check if the cached set is based on the current list
         if (currentSet != null) {
@@ -49,7 +51,7 @@ class ListWithUniqueSetCache<T, U>(
         }
 
         // Compute and attempt to atomically update the cache
-        val newSet = list.get().mapTo(mutableSetOf(), key)
+        val newSet = list.load().mapTo(mutableSetOf(), key)
         cacheSet.compareAndSet(currentSet, newSet)
         return newSet
     }
@@ -57,11 +59,11 @@ class ListWithUniqueSetCache<T, U>(
     /** One representative [T] per unique key — the first occurrence wins. */
     fun distinctValues(): List<T> {
         val seen = HashSet<U>()
-        return list.get().filter { seen.add(key(it)) }
+        return list.load().filter { seen.add(key(it)) }
     }
 
     fun forEachSubscriber(action: (T) -> Unit) {
-        list.get().forEach(action)
+        list.load().forEach(action)
     }
 
     fun forEachUniqueSubscriber(action: (U) -> Unit) {

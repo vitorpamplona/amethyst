@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.image
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -28,9 +30,9 @@ import kotlinx.coroutines.yield
 import okio.FileHandle
 import okio.FileSystem
 import okio.ForwardingFileSystem
+import okio.IOException
 import okio.Path
 import okio.Sink
-import java.io.IOException
 
 /**
  * okio [FileSystem] wrapper that moves Coil's eviction `unlink()` out from
@@ -76,7 +78,7 @@ class DeferredDeleteFileSystem(
         private const val TAG = "DeferredDeleteFileSystem"
     }
 
-    private val lock = Any()
+    private val lock = KmpLock()
     private val pendingDeletes = LinkedHashSet<Path>()
     private val wakeUp = Channel<Unit>(Channel.CONFLATED)
 
@@ -92,7 +94,7 @@ class DeferredDeleteFileSystem(
         path: Path,
         mustExist: Boolean,
     ) {
-        synchronized(lock) { pendingDeletes.add(path) }
+        lock.withLock { pendingDeletes.add(path) }
         wakeUp.trySend(Unit)
     }
 
@@ -100,7 +102,7 @@ class DeferredDeleteFileSystem(
         source: Path,
         target: Path,
     ) {
-        synchronized(lock) {
+        lock.withLock {
             pendingDeletes.remove(source)
             pendingDeletes.remove(target)
         }
@@ -111,7 +113,7 @@ class DeferredDeleteFileSystem(
         file: Path,
         mustCreate: Boolean,
     ): Sink {
-        synchronized(lock) { pendingDeletes.remove(file) }
+        lock.withLock { pendingDeletes.remove(file) }
         return super.sink(file, mustCreate)
     }
 
@@ -119,7 +121,7 @@ class DeferredDeleteFileSystem(
         file: Path,
         mustExist: Boolean,
     ): Sink {
-        synchronized(lock) { pendingDeletes.remove(file) }
+        lock.withLock { pendingDeletes.remove(file) }
         return super.appendingSink(file, mustExist)
     }
 
@@ -128,7 +130,7 @@ class DeferredDeleteFileSystem(
         mustCreate: Boolean,
         mustExist: Boolean,
     ): FileHandle {
-        synchronized(lock) { pendingDeletes.remove(file) }
+        lock.withLock { pendingDeletes.remove(file) }
         return super.openReadWrite(file, mustCreate, mustExist)
     }
 
@@ -136,17 +138,17 @@ class DeferredDeleteFileSystem(
         dir: Path,
         mustCreate: Boolean,
     ) {
-        synchronized(lock) { pendingDeletes.remove(dir) }
+        lock.withLock { pendingDeletes.remove(dir) }
         super.createDirectory(dir, mustCreate)
     }
 
     /** Visible for tests: number of paths waiting to be unlinked. */
-    fun pendingCount(): Int = synchronized(lock) { pendingDeletes.size }
+    fun pendingCount(): Int = lock.withLock { pendingDeletes.size }
 
     /** Visible for tests: unlink everything currently queued, synchronously. */
     fun drainNow() {
         while (true) {
-            synchronized(lock) {
+            lock.withLock {
                 val iterator = pendingDeletes.iterator()
                 if (!iterator.hasNext()) return
                 val path = iterator.next()
@@ -158,7 +160,7 @@ class DeferredDeleteFileSystem(
 
     private suspend fun drainPending() {
         while (true) {
-            synchronized(lock) {
+            lock.withLock {
                 val iterator = pendingDeletes.iterator()
                 if (!iterator.hasNext()) return
                 val path = iterator.next()

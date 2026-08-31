@@ -23,15 +23,15 @@ package com.vitorpamplona.amethyst.commons.relayClient.speedLogger
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
-import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @OptIn(ExperimentalAtomicApi::class)
 class KindGroup(
-    var count: AtomicInteger = AtomicInteger(0),
-    var memory: AtomicInteger = AtomicInteger(0),
-    val subs: LargeCache<String, AtomicInteger> = LargeCache(),
-    val relays: LargeCache<NormalizedRelayUrl, AtomicInteger> = LargeCache(),
+    var count: AtomicInt = AtomicInt(0),
+    var memory: AtomicInt = AtomicInt(0),
+    val subs: LargeCache<String, AtomicInt> = LargeCache(),
+    val relays: LargeCache<NormalizedRelayUrl, AtomicInt> = LargeCache(),
 ) {
     companion object {
         const val MB: Int = 1024
@@ -42,34 +42,34 @@ class KindGroup(
         subId: String,
         relayUrl: NormalizedRelayUrl,
     ) {
-        count.incrementAndGet()
-        memory.addAndGet(mem)
+        count.addAndFetch(1)
+        memory.addAndFetch(mem)
 
         val subStats = subs.get(subId)
         if (subStats != null) {
-            subStats.incrementAndGet()
+            subStats.addAndFetch(1)
         } else {
-            subs.put(subId, AtomicInteger(1))
+            subs.put(subId, AtomicInt(1))
         }
 
         val relayStats = relays.get(relayUrl)
         if (relayStats != null) {
-            relayStats.incrementAndGet()
+            relayStats.addAndFetch(1)
         } else {
-            relays.put(relayUrl, AtomicInteger(1))
+            relays.put(relayUrl, AtomicInt(1))
         }
     }
 
     fun reset() {
-        count.set(0)
-        memory.set(0)
-        subs.forEach { _, value -> value.set(0) }
-        relays.forEach { _, value -> value.set(0) }
+        count.store(0)
+        memory.store(0)
+        subs.forEach { _, value -> value.store(0) }
+        relays.forEach { _, value -> value.store(0) }
     }
 
-    fun printSubs() = subs.joinToString(", ") { key, value -> if (value.get() > 0) "$key ($value)" else "" }
+    fun printSubs() = subs.joinToString(", ") { key, value -> if (value.load() > 0) "$key ($value)" else "" }
 
-    fun printRelays() = relays.joinToString(", ") { key, value -> if (value.get() > 0) "${key.displayUrl()} ($value)" else "" }
+    fun printRelays() = relays.joinToString(", ") { key, value -> if (value.load() > 0) "${key.displayUrl()} ($value)" else "" }
 
-    override fun toString() = "(${count.get()} - ${memory.get().div(MB)}kb); ${printSubs()}; ${printRelays()}"
+    override fun toString() = "(${count.load()} - ${memory.load().div(MB)}kb); ${printSubs()}; ${printRelays()}"
 }

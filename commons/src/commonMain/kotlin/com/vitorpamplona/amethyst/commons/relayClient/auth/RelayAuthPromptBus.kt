@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.auth
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -113,7 +114,7 @@ class RelayAuthPromptBus(
     // revealed, so two accounts challenged by the same relay are two different questions and must not
     // share one answer. Concurrent challenges for the SAME account still collapse into one prompt,
     // which is what this dedupe was always for.
-    private val inFlight = mutableMapOf<Pair<NormalizedRelayUrl, HexKey>, CompletableDeferred<UserAuthChoice>>()
+    private val inFlight = ConcurrentMap<Pair<NormalizedRelayUrl, HexKey>, CompletableDeferred<UserAuthChoice>>()
 
     suspend fun requestDecision(
         relayUrl: NormalizedRelayUrl,
@@ -121,15 +122,15 @@ class RelayAuthPromptBus(
         askingAccount: HexKey,
         isMyOwnRelay: Boolean,
     ): UserAuthChoice {
-        // Suspension can't happen inside synchronized, so we only decide ownership under the lock
-        // and await outside it. The owner is the challenge that first created the prompt; any
-        // concurrent challenge for the same relay awaits the same answer.
+        // Lock-free ownership: getOrPut atomically installs OUR deferred or returns the
+        // incumbent, and identity tells us which happened. The owner is the challenge that
+        // first created the prompt; any concurrent challenge for the same relay awaits the
+        // same answer. (The spare deferred allocated on a lost race is garbage-collected;
+        // prompts are user-facing and rare, so that race is essentially never hit.)
         val key = relayUrl to askingAccount
-        val (deferred, isOwner) =
-            synchronized(inFlight) {
-                inFlight[key]?.let { it to false }
-                    ?: CompletableDeferred<UserAuthChoice>().also { inFlight[key] = it } to true
-            }
+        val mine = CompletableDeferred<UserAuthChoice>()
+        val deferred = inFlight.getOrPut(key) { mine }
+        val isOwner = deferred === mine
 
         // Only the owner surfaces a dialog and owns its deadline. A second challenge for the same
         // (relay, account) just rides along on the owner's answer — it must NOT run a deadline of its
@@ -142,7 +143,7 @@ class RelayAuthPromptBus(
         return try {
             awaitOrTimeout(prompt, deferred)
         } finally {
-            synchronized(inFlight) { inFlight.remove(key) }
+            inFlight.remove(key)
         }
     }
 

@@ -24,12 +24,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Per-account cache of NWC wallets' kind 13194 info events, keyed by wallet
@@ -72,10 +73,10 @@ class NwcInfoCache(
         val fetchedAt: Long,
     )
 
-    private val cache = ConcurrentHashMap<HexKey, Entry>()
+    private val cache = ConcurrentMap<HexKey, Entry>()
 
     // Fetches in progress, keyed like [cache]. Every fetching path goes through [fetchOnce].
-    private val inFlight = ConcurrentHashMap<HexKey, CompletableDeferred<NwcInfoEvent?>>()
+    private val inFlight = ConcurrentMap<HexKey, CompletableDeferred<NwcInfoEvent?>>()
 
     private fun isFresh(entry: Entry): Boolean = now() - entry.fetchedAt < ttlSeconds
 

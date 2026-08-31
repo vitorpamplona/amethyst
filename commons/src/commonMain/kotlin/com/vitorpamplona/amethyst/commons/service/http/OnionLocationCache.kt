@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.http
 
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 
 /**
  * Maps clearnet hostnames to their advertised .onion equivalents, populated
@@ -44,18 +44,18 @@ class OnionLocationCache {
         val expiresAtMs: Long,
     )
 
-    private val cache = ConcurrentHashMap<String, Entry>()
+    private val cache = ConcurrentMap<String, Entry>()
 
     fun put(
         host: String,
         onionUrl: String,
     ) {
-        cache[host] = Entry(onionUrl, System.currentTimeMillis() + TTL_MS)
+        cache[host] = Entry(onionUrl, TimeUtils.nowMillis() + TTL_MS)
     }
 
     fun get(host: String): String? {
         val entry = cache[host] ?: return null
-        if (System.currentTimeMillis() > entry.expiresAtMs) {
+        if (TimeUtils.nowMillis() > entry.expiresAtMs) {
             cache.remove(host)
             return null
         }
@@ -63,6 +63,6 @@ class OnionLocationCache {
     }
 
     companion object {
-        val TTL_MS: Long = TimeUnit.HOURS.toMillis(24)
+        const val TTL_MS: Long = 24L * 60L * 60L * 1000L
     }
 }

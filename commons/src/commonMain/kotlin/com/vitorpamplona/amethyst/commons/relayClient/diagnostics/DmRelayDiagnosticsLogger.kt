@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Diagnostic connection listener for the DM loading path — both NIP-17 gift wraps
@@ -57,9 +58,9 @@ import com.vitorpamplona.quartz.utils.Log
 class DmRelayDiagnosticsLogger(
     val client: INostrClient,
 ) {
-    private val startMs = System.currentTimeMillis()
+    private val startMs = TimeUtils.nowMillis()
 
-    private fun at() = System.currentTimeMillis() - startMs
+    private fun at() = TimeUtils.nowMillis() - startMs
 
     // Subscription ids whose REQ carried a DM kind, so we can attribute their EOSE/CLOSED.
     private val dmSubIds = mutableSetOf<String>()

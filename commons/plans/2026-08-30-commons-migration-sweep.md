@@ -401,6 +401,32 @@ ios actuals in commons/blurhash).
 
 ### Tier 2 — promotable with mechanical one-line swaps (replacement exists in-repo)
 
+> Executed on this branch, with a concurrency review per file rather than
+> blind swaps. Locks that guarded nothing were removed instead of ported:
+> `RelayAuthPromptBus` is now lock-free (`ConcurrentMap.getOrPut` +
+> identity-check ownership), and `NappletLaunchRegistry` dropped all three
+> `@Synchronized` by replacing its JVM-only access-ordered LinkedHashMap
+> with `androidx.collection.LruCache` (internally synchronized,
+> access-ordered cap — same semantics). Locks that protect real multi-field
+> invariants stayed as `KmpLock` deliberately: `ChatDeliveryTracker` (its
+> hot OK path was already lock-free via volatile immutable maps; CAS-ing
+> the three coordinated structures would copy maps per write — GC churn for
+> zero contention win), `NWCPaymentFilterAssembler` (debounce set + job
+> swapped atomically), `NappletNotificationStore` (per-coordinate ordered
+> buckets), `DeferredDeleteFileSystem` (pending-set membership must decide
+> deletion atomically). `java.util.concurrent` atomics/CHM became stdlib
+> `kotlin.concurrent.atomics` + quartz `ConcurrentMap` (which grew
+> `putIfAbsent`/`remove(key,value)`/`clear` for the leader-follower caches).
+> Extra pins found while executing: speedLogger used `kotlin.concurrent.timer`
+> and `::class.java` (the tick now runs on a cancellable coroutine scope —
+> the old daemon timer outlived `destroy()`); `OnionLocationCache`,
+> `BlossomReadAuthTokenProvider`, `DmRelayDiagnosticsLogger`,
+> `NappletNotificationStore` swapped to `TimeUtils.nowMillis()`.
+> **Bonus promote:** `service/upload/BlossomAuth` (quartz-only imports).
+> **Two reclassified to Tier 4:** `NappletIdentityWatch` (depends on
+> `NappletProtocolJson`, pinned by `java.util.Base64`) and
+> `NamecoinNameService` (quartz `ElectrumXClient` is jvmAndroid).
+
 | File | JVM pin | KMP replacement |
 |---|---|---|
 | `relayClient/auth/RelayAuthPromptBus` | `synchronized()` | `KmpLock.withLock` |

@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
-import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 
 /**
  * In-memory fallback implementation of [MlsGroupStateStore].
@@ -32,8 +32,8 @@ import java.util.concurrent.ConcurrentHashMap
  * with "Marmot not initialized".
  */
 class InMemoryMlsGroupStateStore : MlsGroupStateStore {
-    private val states = ConcurrentHashMap<String, ByteArray>()
-    private val retainedEpochs = ConcurrentHashMap<String, List<ByteArray>>()
+    private val states = ConcurrentMap<String, ByteArray>()
+    private val retainedEpochs = ConcurrentMap<String, List<ByteArray>>()
 
     override suspend fun save(
         nostrGroupId: String,
@@ -49,7 +49,7 @@ class InMemoryMlsGroupStateStore : MlsGroupStateStore {
         retainedEpochs.remove(nostrGroupId)
     }
 
-    override suspend fun listGroups(): List<String> = states.keys.toList()
+    override suspend fun listGroups(): List<String> = states.snapshot().keys.toList()
 
     override suspend fun saveRetainedEpochs(
         nostrGroupId: String,

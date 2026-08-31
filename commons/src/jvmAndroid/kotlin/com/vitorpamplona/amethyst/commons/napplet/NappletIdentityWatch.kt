@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Streams `identity.changed` pushes to an applet that registered `napplet.identity.onChanged`. It
@@ -42,14 +42,15 @@ class NappletIdentityWatch(
     private val scope: CoroutineScope,
     private val pubKey: (boundPubKey: String) -> Flow<String>,
 ) {
-    private val jobs = ConcurrentHashMap<String, Job>()
+    private val jobs = ConcurrentMap<String, Job>()
 
     fun start(
         watchId: String,
         boundPubKey: String,
         push: (String) -> Unit,
     ) {
-        jobs.computeIfAbsent(watchId) { id ->
+        jobs.getOrPut(watchId) {
+            val id = watchId
             scope
                 .launch {
                     pubKey(boundPubKey)
@@ -63,7 +64,7 @@ class NappletIdentityWatch(
     }
 
     fun stopAll() {
-        jobs.values.forEach { it.cancel() }
+        jobs.snapshot().values.forEach { it.cancel() }
         jobs.clear()
     }
 }

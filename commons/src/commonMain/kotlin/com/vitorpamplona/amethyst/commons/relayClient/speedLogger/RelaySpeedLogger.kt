@@ -27,6 +27,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * Listens to INostrClient's onNotify messages from the relay
@@ -35,10 +42,15 @@ class RelaySpeedLogger(
     val client: INostrClient,
 ) {
     companion object {
-        val TAG: String = RelaySpeedLogger::class.java.simpleName
+        const val TAG: String = "RelaySpeedLogger"
     }
 
     var current = FrameStat()
+
+    // Owns the once-per-second log+reset tick. A coroutine on Default instead of a
+    // JVM Timer so the tick is KMP-portable and actually stops in [destroy] (the
+    // old daemon timer outlived the logger).
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     private val clientListener =
         object : RelayConnectionListener {
@@ -56,6 +68,15 @@ class RelaySpeedLogger(
     init {
         Log.d(TAG, "Init, Subscribe")
         client.addConnectionListener(clientListener)
+        scope.launch {
+            while (isActive) {
+                delay(1000)
+                if (current.hasAnything()) {
+                    current.log()
+                    current.reset()
+                }
+            }
+        }
         // OkHttpDebugLogging.enableHttp2()
         // OkHttpDebugLogging.enableTaskRunner()
     }
@@ -64,5 +85,6 @@ class RelaySpeedLogger(
         // makes sure to run
         Log.d(TAG, "Destroy, Unsubscribe")
         client.removeConnectionListener(clientListener)
+        scope.cancel()
     }
 }
