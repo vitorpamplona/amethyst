@@ -22,21 +22,29 @@ package com.vitorpamplona.quartz.nip47WalletConnect
 
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.Nip47RequestKSerializer
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CancelHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.CreateConnectionMethod
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.LookupInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeHoldInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayKeysendMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ReceiveMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageMethod
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.TlvRecord
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -45,22 +53,37 @@ import kotlin.test.assertTrue
  * `Invalid list_transactions params: from must be an integer` from a real wallet
  * and failed the request outright.
  *
- * The two serialization backends had disagreed since they were written: kotlinx
- * omits nulls (`params.x?.let { put(...) }`), Jackson wrote them reflectively. The
- * same request was two different documents depending on the platform, and only the
- * JVM/Android one was broken.
+ * EVERY params-bearing method is listed here on purpose. The Jackson mixin
+ * registrations that fix this are a hand-maintained list, and unlike the two
+ * `when` blocks over the sealed `Request` they are not compiler-checked — so a
+ * thirteenth method can be added, serialize correctly on native, and regress on
+ * JVM/Android alone. This list is the only thing that would catch that.
  */
 class Nip47NullParamOmissionTest {
     private val requests: List<Pair<String, Request>> =
         listOf(
-            // The reported failure: every field but three is absent.
+            // The reported failure: five of eight fields absent.
             "list_transactions" to ListTransactionsMethod.create(limit = 20, offset = 0, unpaid = false),
             "pay_invoice" to PayInvoiceMethod.create("lnbc50n1abc"),
+            "pay" to PayMethod.create("bitcoin:?lno=lno1abc"),
+            "receive" to ReceiveMethod.create(amount = 21000L),
+            "pay_keysend" to PayKeysendMethod.create(amount = 21000L, pubkey = "0266e4"),
+            // Reaches the NESTED TlvRecord, with one of its two optional fields absent.
+            // A record is only checked when the list is non-empty, so the plain
+            // pay_keysend fixture above never executes this path.
+            "pay_keysend+tlv" to
+                PayKeysendMethod.create(
+                    amount = 21000L,
+                    pubkey = "0266e4",
+                    tlvRecords = listOf(TlvRecord(type = 5482373484L)),
+                ),
             "make_invoice" to MakeInvoiceMethod.create(amount = 21000L),
             "lookup_invoice" to LookupInvoiceMethod.createByHash("31afdf1"),
-            "pay_keysend" to PayKeysendMethod.create(amount = 21000L, pubkey = "0266e4"),
+            "make_hold_invoice" to MakeHoldInvoiceMethod.create(amount = 21000L, paymentHash = "31afdf1"),
+            "cancel_hold_invoice" to CancelHoldInvoiceMethod.create("31afdf1"),
+            "settle_hold_invoice" to SettleHoldInvoiceMethod.create("0123456789abcdef"),
+            "sign_message" to SignMessageMethod.create("hello"),
             "create_connection" to CreateConnectionMethod.create(pubkey = "abc123", name = "app"),
-            "get_balance" to GetBalanceMethod.create(),
         )
 
     @Test
@@ -69,26 +92,45 @@ class Nip47NullParamOmissionTest {
             val json = OptimizedJsonMapper.toJson(request)
             val params = Json.parseToJsonElement(json).jsonObject["params"] as? JsonObject
 
-            params?.forEach { (key, value) ->
-                assertTrue(value !is JsonNull, "$name sent \"$key\": null - omit it instead. Full: $json")
-            }
+            // RECURSIVE: `tlv_records` holds objects with optional fields of their own,
+            // so a null can hide a level below the params object.
+            params?.let { assertNoNulls(it, name, json) }
         }
     }
 
-    /** The exact document the failing wallet rejected, now minimal. */
-    @Test
-    fun listTransactionsCarriesOnlyWhatWasAsked() {
-        val json = OptimizedJsonMapper.toJson(ListTransactionsMethod.create(limit = 20, offset = 0, unpaid = false))
+    private fun assertNoNulls(
+        element: JsonElement,
+        name: String,
+        json: String,
+    ) {
+        when (element) {
+            is JsonObject ->
+                element.forEach { (key, value) ->
+                    assertTrue(value !is JsonNull, "$name sent \"$key\": null - omit it instead. Full: $json")
+                    assertNoNulls(value, name, json)
+                }
 
-        assertEquals(
-            """{"method":"list_transactions","params":{"limit":20,"offset":0,"unpaid":false}}""",
-            json,
-        )
+            is JsonArray -> element.forEach { assertNoNulls(it, name, json) }
+            else -> Unit
+        }
     }
 
     /**
-     * The invariant the bug broke: both backends must produce the same document.
-     * Compared as parsed objects, since key ORDER is each backend's own business.
+     * The document the failing wallet rejected, now minimal. Asserted as a KEY SET
+     * rather than a literal string: which keys travel is the property under test,
+     * while their order is each backend's own business.
+     */
+    @Test
+    fun listTransactionsCarriesOnlyWhatWasAsked() {
+        val json = OptimizedJsonMapper.toJson(ListTransactionsMethod.create(limit = 20, offset = 0, unpaid = false))
+        val params = assertNotNull(Json.parseToJsonElement(json).jsonObject["params"], "no params in $json").jsonObject
+
+        assertEquals(setOf("limit", "offset", "unpaid"), params.keys, "unexpected keys in $json")
+    }
+
+    /**
+     * The invariant the bug broke: one wire format, two backends, same document.
+     * This is the actual fix — the mixin is only the mechanism that restores it.
      */
     @Test
     fun bothBackendsProduceTheSameDocument() {
@@ -98,18 +140,5 @@ class Nip47NullParamOmissionTest {
 
             assertEquals(viaKotlinx, viaJackson, "$name differs between backends")
         }
-    }
-
-    /** Omitting a field must not change how the request reads back. */
-    @Test
-    fun anOmittedParamStillParsesBack() {
-        val json = OptimizedJsonMapper.toJson(ListTransactionsMethod.create(limit = 20, offset = 0, unpaid = false))
-        val back = OptimizedJsonMapper.fromJsonTo<Request>(json)
-
-        assertIs<ListTransactionsMethod>(back)
-        assertEquals(20, back.params?.limit)
-        assertEquals(0, back.params?.offset)
-        assertEquals(false, back.params?.unpaid)
-        assertEquals(null, back.params?.from)
     }
 }

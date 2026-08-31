@@ -285,6 +285,9 @@ class RequestTest {
         assertEquals(1000L, request.params?.from)
         assertEquals(2000L, request.params?.until)
         assertEquals(10, request.params?.limit)
+        // Omitted is how an absent optional param arrives, and it must read as null
+        // rather than as a default — this is the shape we now send.
+        assertNull(request.params?.offset)
     }
 
     // --- GetBalance ---

@@ -18,28 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip47WalletConnect.jackson
+package com.vitorpamplona.quartz.nip01Core.jackson
 
 import com.fasterxml.jackson.annotation.JsonInclude
 
 /**
- * Applied to every NIP-47 request `params` class so Jackson OMITS a null field
- * instead of writing it.
+ * Applied to a reflectively-serialized DTO so Jackson OMITS a null field instead
+ * of writing it.
  *
- * NIP-47 marks these parameters optional, and a wallet is free to type one
- * strictly: sending `"from": null` for an absent `from` earns
- * `Invalid list_transactions params: from must be an integer` from a wallet that
- * expects an integer or nothing, and the request fails.
+ * Optional protocol fields are absent, not null. A peer is free to type one
+ * strictly: sending `"from": null` for an absent `from` earned
+ * `Invalid list_transactions params: from must be an integer` from a NIP-47
+ * wallet, and the request failed.
  *
- * THE TWO BACKENDS DISAGREED, which is the reason this is a mixin rather than a
- * fix at one call site. [com.vitorpamplona.quartz.nip47WalletConnect.kotlinSerialization.Nip47RequestKSerializer]
- * builds every params object with `params.x?.let { put("x", it) }`, so the
- * kotlinx (native) backend has always omitted nulls; Jackson serializes the
- * params classes reflectively and wrote them. The same request was two different
- * documents depending on the platform.
- *
- * A MIXIN rather than an annotation on the class, because the params classes live
- * in `commonMain` and Jackson annotations are JVM-only.
+ * A MIXIN rather than an annotation on the class, because these DTOs live in
+ * `commonMain` and Jackson annotations are JVM-only. Class-level rather than the
+ * mapper-wide `setSerializationInclusion`, which in Jackson 2.x also suppresses
+ * null MAP ENTRIES — and [com.vitorpamplona.quartz.nip01Core.kotlinSerialization.anyToJsonElement]
+ * deliberately keeps those, so a global setting would close one backend
+ * divergence by opening another.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-abstract class OmitNullParamsMixin
+abstract class OmitNullsMixin

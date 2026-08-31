@@ -55,7 +55,6 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerResponseDeserial
 import com.vitorpamplona.quartz.nip46RemoteSigner.jackson.BunkerResponseSerializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.NotificationDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.NotificationSerializer
-import com.vitorpamplona.quartz.nip47WalletConnect.jackson.OmitNullParamsMixin
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.RequestDeserializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.RequestSerializer
 import com.vitorpamplona.quartz.nip47WalletConnect.jackson.ResponseDeserializer
@@ -75,6 +74,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SettleHoldInvoiceParams
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.SignMessageParams
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.TlvRecord
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorDeserializer
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson.RumorSerializer
@@ -121,21 +121,24 @@ class JacksonMapper {
                         .addDeserializer(Request::class.java, RequestDeserializer())
                         .addSerializer(Notification::class.java, NotificationSerializer())
                         .addDeserializer(Notification::class.java, NotificationDeserializer())
-                        // NIP-47's optional params are OMITTED when null, never written as
-                        // `null` — see OmitNullParamsMixin. Matches what the kotlinx backend
-                        // has always done, and what a strictly-typed wallet accepts.
-                        .setMixInAnnotation(PayInvoiceParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(PayParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(ReceiveParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(PayKeysendParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(MakeInvoiceParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(LookupInvoiceParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(ListTransactionsParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(MakeHoldInvoiceParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(CancelHoldInvoiceParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(SettleHoldInvoiceParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(SignMessageParams::class.java, OmitNullParamsMixin::class.java)
-                        .setMixInAnnotation(CreateConnectionParams::class.java, OmitNullParamsMixin::class.java)
+                        // NIP-47's optional params are OMITTED when null — see OmitNullsMixin.
+                        // Matches what the kotlinx backend has always done.
+                        .setMixInAnnotation(PayInvoiceParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(PayParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(ReceiveParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(PayKeysendParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(MakeInvoiceParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(LookupInvoiceParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(ListTransactionsParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(MakeHoldInvoiceParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(CancelHoldInvoiceParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(SettleHoldInvoiceParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(SignMessageParams::class.java, OmitNullsMixin::class.java)
+                        .setMixInAnnotation(CreateConnectionParams::class.java, OmitNullsMixin::class.java)
+                        // NESTED, and the only params field that is not a primitive or an
+                        // already-registered type: a TlvRecord inside pay_keysend's
+                        // `tlv_records` has two independently optional fields of its own.
+                        .setMixInAnnotation(TlvRecord::class.java, OmitNullsMixin::class.java)
                         // nip 46
                         .addDeserializer(BunkerMessage::class.java, BunkerMessageDeserializer())
                         .addSerializer(BunkerRequest::class.java, BunkerRequestSerializer())
