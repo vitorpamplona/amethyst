@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.nip71Video.selectVideoTrack
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
@@ -78,7 +79,7 @@ fun VideoDisplay(
     val videoEvent = (note.event as? VideoEvent) ?: return
     val event = (videoEvent as? Event) ?: return
 
-    val imeta = videoEvent.imetaTags().firstOrNull() ?: return
+    val imeta = remember(videoEvent) { videoEvent.selectVideoTrack() } ?: return
 
     val title = remember(videoEvent) { videoEvent.title() }
     val summary = remember(videoEvent, title) { videoEvent.content.ifBlank { null }?.takeIf { title != it } }

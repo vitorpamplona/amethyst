@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.richtext.toCoilModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.service.playback.composable.controls.VideoQualityPolicy
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
@@ -169,6 +170,10 @@ fun ZoomableContentView(
     roundedCorner: Boolean,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
+    // Which HLS rendition an inline player starts on. Defaults to the bandwidth-saving choice
+    // that suits a video attached to a note; the media-card feeds, where the video is the post,
+    // pass VideoQualityPolicy.AUTO instead.
+    qualityPolicy: VideoQualityPolicy = VideoQualityPolicy.LOWEST,
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
     var sourceBounds by remember(content) { mutableStateOf<Rect?>(null) }
@@ -269,6 +274,7 @@ fun ZoomableContentView(
                         thumbhash = content.thumbhash,
                         isLiveStream = content.isLiveStream,
                         hash = content.hash,
+                        qualityPolicy = qualityPolicy,
                     )
                 }
             }

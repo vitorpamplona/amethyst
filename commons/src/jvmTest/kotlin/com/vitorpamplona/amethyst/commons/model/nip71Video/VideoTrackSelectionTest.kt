@@ -1,0 +1,201 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.model.nip71Video
+
+import com.vitorpamplona.quartz.nip71Video.VideoMeta
+import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
+import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+/**
+ * Kind 34236 events carry a whole HLS ladder in their imeta tags. Rendering tag[0] blindly plays
+ * whichever rung the publisher happened to list first — the master (adaptive) for Amethyst's own
+ * uploads, a single low rung for clients that order the tags differently.
+ */
+class VideoTrackSelectionTest {
+    private val hls = "application/vnd.apple.mpegurl"
+
+    private fun event(vararg metas: VideoMeta) =
+        VideoVerticalEvent(
+            id = "bfe2f2244fefc7cebc7b2eae825495f99dabb4649ee3f90ab1fa33bcd1e9bb9f",
+            pubKey = "3b6187c08b9dd5617150ea047e788a0fdd44b4394cb5566cba76f683ddc027d2",
+            createdAt = 1780894816,
+            tags = arrayOf(arrayOf("d", "abc")) + metas.map { it.toIMetaArray() },
+            content = "",
+            sig = "",
+        )
+
+    private fun rendition(
+        label: String,
+        width: Int,
+        height: Int,
+        mimeType: String? = hls,
+    ) = VideoMeta(
+        url = "https://host/$label.m3u8",
+        mimeType = mimeType,
+        dimension = DimensionTag(width, height),
+    )
+
+    @Test
+    fun picksTheMasterWhenItIsListedFirst() {
+        // Amethyst's own layout (HlsVideoEventBuilder): master first, dim = the top rung.
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls, dimension = DimensionTag(1080, 1920))
+        val selected = event(master, rendition("360", 360, 640), rendition("1080", 1080, 1920)).selectVideoTrack()
+
+        assertEquals("https://host/master.m3u8", selected?.url)
+    }
+
+    @Test
+    fun picksTheMasterWhenItIsListedLast() {
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls, dimension = DimensionTag(1080, 1920))
+        val selected = event(rendition("360", 360, 640), rendition("720", 720, 1280), master).selectVideoTrack()
+
+        // The 1080 master ties with nothing here, so max-dim alone finds it.
+        assertEquals("https://host/master.m3u8", selected?.url)
+    }
+
+    @Test
+    fun picksTheDimensionlessMasterOverDimensionedRenditions() {
+        // A manifest spanning a ladder has no single resolution to declare, so many publishers
+        // leave `dim` off the master entirely.
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls)
+        val selected = event(rendition("360", 360, 640), master, rendition("1080", 1080, 1920)).selectVideoTrack()
+
+        assertEquals("https://host/master.m3u8", selected?.url)
+    }
+
+    @Test
+    fun fillsPresentationMetadataFromSiblingsWhenTheMasterIsBare() {
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls)
+        val rung =
+            VideoMeta(
+                url = "https://host/1080.m3u8",
+                mimeType = hls,
+                dimension = DimensionTag(1080, 1920),
+                blurhash = "LEHV6nWB2yk8",
+                thumbhash = "1QcSHQRnh493",
+                image = listOf("https://host/poster.jpg"),
+                alt = "a koi pond",
+            )
+        val selected = event(master, rung).selectVideoTrack()
+
+        assertEquals("https://host/master.m3u8", selected?.url)
+        assertEquals(1080, selected?.dimension?.width)
+        assertEquals(1920, selected?.dimension?.height)
+        assertEquals("LEHV6nWB2yk8", selected?.blurhash)
+        assertEquals("1QcSHQRnh493", selected?.thumbhash)
+        assertEquals(listOf("https://host/poster.jpg"), selected?.image)
+        assertEquals("a koi pond", selected?.alt)
+    }
+
+    @Test
+    fun neverOverridesMetadataTheSelectedTrackDeclares() {
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls, blurhash = "own", alt = "own alt")
+        val rung = rendition("1080", 1080, 1920).copy(blurhash = "sibling", alt = "sibling alt")
+        val selected = event(master, rung).selectVideoTrack()
+
+        assertEquals("own", selected?.blurhash)
+        assertEquals("own alt", selected?.alt)
+    }
+
+    @Test
+    fun picksTheTopRungWhenNoMasterIsPublished() {
+        val selected =
+            event(
+                rendition("360", 360, 640),
+                rendition("720", 720, 1280),
+                rendition("1080", 1080, 1920),
+            ).selectVideoTrack()
+
+        assertEquals("https://host/1080.m3u8", selected?.url)
+    }
+
+    @Test
+    fun prefersHlsOverAProgressiveFile() {
+        val mp4 = VideoMeta(url = "https://host/video.mp4", mimeType = "video/mp4", dimension = DimensionTag(1080, 1920))
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls)
+        val selected = event(mp4, master).selectVideoTrack()
+
+        assertEquals("https://host/master.m3u8", selected?.url)
+    }
+
+    @Test
+    fun identifiesAnHlsPlaylistByExtensionWhenNoMimeIsDeclared() {
+        val master = VideoMeta(url = "https://host/master.m3u8")
+        val mp4 = VideoMeta(url = "https://host/video.mp4", mimeType = "video/mp4")
+        val selected = event(mp4, master).selectVideoTrack()
+
+        assertEquals("https://host/master.m3u8", selected?.url)
+    }
+
+    @Test
+    fun doesNotMistakeAQueryStringForAPlaylist() {
+        val mp4 = VideoMeta(url = "https://host/video.mp4?ref=a.m3u8", mimeType = "video/mp4")
+        val other = VideoMeta(url = "https://host/other.mp4", mimeType = "video/mp4")
+        val selected = event(mp4, other).selectVideoTrack()
+
+        // Neither is HLS, so the first candidate stands — the old behaviour, unchanged.
+        assertEquals("https://host/video.mp4?ref=a.m3u8", selected?.url)
+    }
+
+    @Test
+    fun skipsTheSeparateAudioTrack() {
+        // NIP-71 PR #2255 splits audio into its own imeta so resolution can change without
+        // interrupting sound. It is never the thing to hand the video player.
+        val audio = VideoMeta(url = "https://host/audio.m3u8", mimeType = "audio/mp4")
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls)
+        val selected = event(audio, master).selectVideoTrack()
+
+        assertEquals("https://host/master.m3u8", selected?.url)
+    }
+
+    @Test
+    fun skipsAPosterImage() {
+        val poster = VideoMeta(url = "https://host/poster.jpg", mimeType = "image/jpeg")
+        val mp4 = VideoMeta(url = "https://host/video.mp4", mimeType = "video/mp4")
+        val selected = event(poster, mp4).selectVideoTrack()
+
+        assertEquals("https://host/video.mp4", selected?.url)
+    }
+
+    @Test
+    fun fallsBackToTheFirstImetaWhenNothingLooksLikeAVideo() {
+        // A NIP-71 event asserts its own type; the renderers already handle an image-shaped one,
+        // so an all-image event must keep rendering rather than disappear.
+        val poster = VideoMeta(url = "https://host/poster.jpg", mimeType = "image/jpeg")
+        val other = VideoMeta(url = "https://host/other.jpg", mimeType = "image/jpeg")
+
+        assertEquals("https://host/poster.jpg", event(poster, other).selectVideoTrack()?.url)
+    }
+
+    @Test
+    fun returnsNullWithoutImetas() {
+        assertNull(event().selectVideoTrack())
+    }
+
+    @Test
+    fun aSingleImetaIsReturnedUntouched() {
+        val only = VideoMeta(url = "https://host/only.m3u8", mimeType = hls)
+        assertEquals("https://host/only.m3u8", event(only).selectVideoTrack()?.url)
+    }
+}

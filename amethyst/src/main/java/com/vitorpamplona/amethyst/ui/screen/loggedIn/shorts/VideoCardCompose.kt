@@ -38,6 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.nip71Video.selectVideoTrack
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
@@ -45,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.playback.composable.controls.VideoQualityPolicy
 import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
@@ -102,7 +104,7 @@ private fun VideoCardImage(
     val videoEvent = (note.event as? VideoEvent) ?: return
     val event = (event as? Event) ?: return
 
-    val imeta = videoEvent.imetaTags().getOrNull(0) ?: return
+    val imeta = remember(videoEvent) { videoEvent.selectVideoTrack() } ?: return
     val isSensitive = remember(note) { event.isSensitiveOrNSFW() }
     val reasons = remember(note) { collectContentWarningReasons(event) }
     // A NIP-71 event asserts its own type, so only an explicit image imeta diverts to the
@@ -156,6 +158,11 @@ private fun VideoCardImage(
             roundedCorner = false,
             contentScale = ContentScale.FillWidth,
             accountViewModel = accountViewModel,
+            // The card *is* the video here (shorts, video and longs feeds), rendered full-width —
+            // a portrait short fills most of the screen. Pinning it to the bottom rung of the
+            // ladder, which is right for a video incidentally attached to a note, wastes the
+            // qualities the master playlist advertises. Let ExoPlayer adapt instead.
+            qualityPolicy = VideoQualityPolicy.AUTO,
         )
     }
 }
