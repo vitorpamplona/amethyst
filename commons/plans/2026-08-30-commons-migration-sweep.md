@@ -386,10 +386,16 @@ ios actuals in commons/blurhash).
 
 ### Tier 1 — promotable to commonMain by moving the file (no code change)
 
+> Executed on this branch: the 7 auth files, `EncryptionKeyCache` and
+> `HttpClientEnvironment` now live in commonMain (verified against JVM, iOS
+> and `verifyKmpPurity`). `NWCPaymentWatcherSubAssembler` turned out to use
+> `NWCPaymentQueryState` from its pinned same-package sibling — reclassified
+> to Tier 2.
+
 | File | JVM pin | Note |
 |---|---|---|
 | `relayClient/auth/` `RelayAuthPermissionCache`, `RelayAuthPermissionLedger`, `RelayAuthSessionGrants`, `InMemoryRelayAuthPermissionStore`, `RelayAuthVenues`, `RelayAuthPurposeDeriver`, `RelayAuthFirstParty` (7 files) | none | Zero JVM imports; no deps on the two pinned siblings. Wave 0b parked the whole group conservatively. |
-| `relayClient/nip47WalletConnect/NWCPaymentWatcherSubAssembler` | none | Doesn't even import the pinned assembler. |
+| `relayClient/nip47WalletConnect/NWCPaymentWatcherSubAssembler` | none directly — but uses `NWCPaymentQueryState`, declared *same-package* in the pinned assembler | Reclassified to Tier 2: moves with `NWCPaymentFilterAssembler`. |
 | `service/http/EncryptionKeyCache` | none | androidx.collection LruCache is commonMain-safe. |
 | `service/http/HttpClientEnvironment` | none | Plain object; conceptually pairs with the factories but nothing pins it. |
 
