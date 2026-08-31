@@ -1753,7 +1753,8 @@
     <string name="route_discover">کاوش</string>
     <string name="route_messages">پیغام‌ها</string>
     <string name="route_notifications">اعلان‌ها</string>
-    <string name="route_video">کوتاه</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">تقویم‌ها</string>
     <string name="route_calendar_collections">لیست‌های تقویم</string>
     <string name="route_chess">شطرنج</string>
@@ -1972,7 +1973,6 @@
     </plurals>
     <string name="route_import_follows">وارد کردن دنبال‌شوندگان</string>
     <string name="new_post">نوشته جدید</string>
-    <string name="new_short">رسانه های کوتاه جدید: تصاویر یا ویدئوها</string>
     <string name="new_community_note">یادداشت جدید در انجمن</string>
     <string name="new_product">محصول جدید</string>
     <string name="new_long_form_post">مقاله جدید</string>

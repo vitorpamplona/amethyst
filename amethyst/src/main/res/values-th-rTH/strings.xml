@@ -1707,7 +1707,8 @@
     <string name="route_discover">สำรวจ</string>
     <string name="route_messages">ข้อความ</string>
     <string name="route_notifications">การแจ้งเตือน</string>
-    <string name="route_video">Shorts</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">ปฏิทิน</string>
     <string name="route_calendar_collections">รายการปฏิทิน</string>
     <string name="route_chess">หมากรุก</string>
@@ -1919,7 +1920,6 @@
     </plurals>
     <string name="route_import_follows">นำเข้ารายการที่ติดตาม</string>
     <string name="new_post">โพสต์ใหม่</string>
-    <string name="new_short">สร้าง Shorts: รูปภาพ/วิดีโอ</string>
     <string name="new_community_note">สร้างโน๊ตสำหรับชุมชม</string>
     <string name="new_product">สินค้าใหม่</string>
     <string name="new_long_form_post">บทความใหม่</string>

@@ -3029,7 +3029,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="route_discover">Eksploracja</string>
     <string name="route_messages">Wiadomości</string>
     <string name="route_notifications">Powiadomienia</string>
-    <string name="route_video">Filmiki</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">Kalendarze</string>
     <string name="route_calendar_collections">Listy kalendarzy</string>
     <string name="route_chess">Szachy</string>
@@ -3313,7 +3314,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     </plurals>
     <string name="route_import_follows">Import Obserwowanych</string>
     <string name="new_post">Nowy post</string>
-    <string name="new_short">Nowe Króciaki: zdjęcia lub filmiki</string>
     <string name="new_community_note">Nowy wpis w społeczności</string>
     <string name="new_product">Nowy produkt</string>
     <string name="new_long_form_post">Nowy artykuł</string>

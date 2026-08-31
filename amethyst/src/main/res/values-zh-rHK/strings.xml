@@ -1741,7 +1741,8 @@
     <string name="route_discover">发现</string>
     <string name="route_messages">消息</string>
     <string name="route_notifications">通知</string>
-    <string name="route_video">短篇</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">日历</string>
     <string name="route_calendar_collections">日历列表</string>
     <string name="route_chess">国际象棋</string>
@@ -1956,7 +1957,6 @@
     </plurals>
     <string name="route_import_follows">导入关注</string>
     <string name="new_post">新帖子</string>
-    <string name="new_short">新短篇媒体：图像或视频</string>
     <string name="new_community_note">新社区笔记</string>
     <string name="new_product">新产品</string>
     <string name="new_long_form_post">新文章</string>
