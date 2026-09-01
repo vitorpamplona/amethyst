@@ -298,24 +298,52 @@ class SearchFieldExtractorTest {
 
     @Test
     fun birdSightingsAreNamedByTheirSpeciesUnderBothNames() {
-        // Birdstar's `alt` is a boilerplate wrapper around the two names, so
-        // once commonName() has parsed it there is nothing left in it to
-        // index -- carrying it whole would repeat both names in a second role.
+        // The scientific name comes from the `n` tag, the vernacular one from
+        // commonName()'s parse of the `alt` -- both are names, so both are
+        // titles. The alt still reaches the summary tier whole.
         val tags =
             arrayOf(
                 arrayOf("n", "Porphyrio martinica"),
                 arrayOf("alt", "Bird detection: Purple Gallinule (Porphyrio martinica)"),
             )
         val fields = SearchFieldExtractor.extract(BirdDetectionEvent("26".repeat(32), alice, 1L, tags, "", ""))
-        assertEquals(IndexableFields.Tiered(primary = listOf("Porphyrio martinica", "Purple Gallinule")), fields)
+        assertEquals(
+            IndexableFields.Tiered(
+                primary = listOf("Porphyrio martinica", "Purple Gallinule"),
+                secondary = listOf("Bird detection: Purple Gallinule (Porphyrio martinica)"),
+            ),
+            fields,
+        )
+    }
+
+    @Test
+    fun aBirdSightingKeepsAltTextBeyondTheParsedNames() {
+        // commonName() only matches a PREFIX, so a publisher can write
+        // anything after the parenthetical. Dropping the alt whenever that
+        // prefix parsed lost the tail ("at Lake Merritt, 7am") from every
+        // role, while indexableContent() still carried it -- the exact drift
+        // this extractor exists to prevent.
+        val tags =
+            arrayOf(
+                arrayOf("n", "Porphyrio martinica"),
+                arrayOf("alt", "Bird detection: Purple Gallinule (Porphyrio martinica) at Lake Merritt, 7am"),
+            )
+        val fields = SearchFieldExtractor.extract(BirdDetectionEvent("3a".repeat(32), alice, 1L, tags, "", ""))
+        assertEquals(
+            IndexableFields.Tiered(
+                primary = listOf("Porphyrio martinica", "Purple Gallinule"),
+                secondary = listOf("Bird detection: Purple Gallinule (Porphyrio martinica) at Lake Merritt, 7am"),
+            ),
+            fields,
+        )
     }
 
     @Test
     fun aBirdSightingWithAnUnrecognizedAltStillIndexesIt() {
-        // A publisher that words the alt differently keeps it: the summary is
-        // dropped only when commonName() proves it was the boilerplate.
+        // An alt that does not start with the known prefix parses to no
+        // common name, and is carried as the summary it is.
         val tags = arrayOf(arrayOf("n", "Ramphastos toco"), arrayOf("alt", "a toucan at the feeder"))
-        val fields = SearchFieldExtractor.extract(BirdDetectionEvent("3a".repeat(32), alice, 1L, tags, "", ""))
+        val fields = SearchFieldExtractor.extract(BirdDetectionEvent("3c".repeat(32), alice, 1L, tags, "", ""))
         assertEquals(
             IndexableFields.Tiered(primary = listOf("Ramphastos toco"), secondary = listOf("a toucan at the feeder")),
             fields,

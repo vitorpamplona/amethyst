@@ -44,7 +44,10 @@ import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.fastAny
+import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
@@ -494,15 +497,18 @@ object SearchFieldExtractor {
 
             // kind 2473 -- a sighting IS its species, under both names: the
             // scientific one from the `n` tag and the vernacular one
-            // commonName() parses out of the `alt`. Once that parse succeeds
-            // the alt is only Birdstar's boilerplate wrapper around the two
-            // ("Bird detection: <Common> (<Scientific>)"), so indexing it
-            // whole would repeat both names in a second role; the alt is
-            // carried only when it is NOT that shape and so holds text of its
-            // own.
+            // commonName() parses out of the `alt`. The `alt` itself still
+            // goes to the summary tier whole. It is usually just Birdstar's
+            // boilerplate wrapper around those two names ("Bird detection:
+            // <Common> (<Scientific>)"), so this repeats them in a second
+            // role -- but only commonName()'s PREFIX match decides that the
+            // alt is boilerplate, and a publisher can write anything after
+            // the parenthetical. Dropping the alt on a prefix match lost that
+            // tail from every role, which is precisely the drift against
+            // indexableContent() this file exists to prevent: the repeat
+            // costs a duplicate in the weakest role, the drop cost recall.
             is BirdDetectionEvent -> {
-                val common = event.commonName()
-                tiers(event, listOf(event.speciesName(), common), listOf(event.summary().takeIf { common == null }), null)
+                tiers(event, listOf(event.speciesName(), event.commonName()), listOf(event.summary()), null)
             }
 
             // kind 12473 is a life LIST, not a sighting: its species names are
@@ -628,46 +634,94 @@ object SearchFieldExtractor {
             }
         }
 
-    /** Single-value convenience over the list funnel — most kinds carry one title, one summary, one body. */
+    /**
+     * Single-value convenience over the list funnel — most kinds carry one
+     * title, one summary, one body. Cleans each value straight into its role
+     * rather than wrapping it in a list first: extraction runs once per stored
+     * event, and the wrappers were three throwaway lists on every one of them.
+     */
     private fun tiers(
         event: Event,
         primary: String?,
         secondary: String?,
         text: String?,
         website: String? = null,
-    ) = tiers(event, listOf(primary), listOf(secondary), text, listOf(website))
+    ) = build(event, cleanOne(primary), cleanOne(secondary), text, cleanOne(website))
 
-    /**
-     * The one funnel every content branch uses — [IndexableFields.Tiered.hashtags]
-     * and [IndexableFields.Tiered.locations] are filled here, so no branch can
-     * forget them. Values stay UNJOINED: separator choices belong to the backend.
-     */
     private fun tiers(
         event: Event,
         primary: List<String?>,
         secondary: List<String?>,
         text: String?,
         websites: List<String?> = emptyList(),
+    ) = build(event, cleanAll(primary), cleanAll(secondary), text, cleanAll(websites))
+
+    /**
+     * The one funnel BOTH [tiers] overloads end in — [IndexableFields.Tiered.hashtags]
+     * and [IndexableFields.Tiered.locations] are filled here, so no branch can
+     * forget them. Values stay UNJOINED: separator choices belong to the backend.
+     */
+    private fun build(
+        event: Event,
+        primary: List<String>,
+        secondary: List<String>,
+        text: String?,
+        websites: List<String>,
     ) = IndexableFields.Tiered(
-        primary = cleanAll(primary),
-        secondary = cleanAll(secondary),
+        primary = primary,
+        secondary = secondary,
         text = clean(text),
-        hashtags = cleanAll(event.tags.hashtags()),
+        hashtags = hashtagValues(event),
         locations = locationValues(event),
-        websites = cleanAll(websites),
+        websites = websites,
     )
 
     /** Trim and drop empties at the single funnel every derived string passes through. */
     private fun clean(s: String?): String? = s?.trim()?.ifEmpty { null }
 
-    private fun cleanAll(parts: List<String?>): List<String> = parts.mapNotNull { clean(it) }
+    private fun cleanOne(s: String?): List<String> = clean(s)?.let { listOf(it) } ?: emptyList()
+
+    /**
+     * Collects lazily: a role whose values are all absent — the common case on
+     * most kinds — costs no list at all.
+     */
+    private fun cleanAll(parts: List<String?>): List<String> {
+        var values: MutableList<String>? = null
+        for (i in parts.indices) {
+            val value = clean(parts[i]) ?: continue
+            (values ?: ArrayList<String>(parts.size).also { values = it }).add(value)
+        }
+        return values ?: emptyList()
+    }
+
+    /**
+     * The hashtag role. [hashtags] allocates unconditionally, so the scan for
+     * a `t` tag comes first — most events carry none. The guard is exactly
+     * [HashtagTag.parse]'s own acceptance test, so it can never skip a tag the
+     * accessor would have returned.
+     */
+    private fun hashtagValues(event: Event): List<String> = if (!event.tags.fastAny(HashtagTag::isTagged)) emptyList() else cleanAll(event.tags.hashtags())
 
     /**
      * Every `location` tag value, on ANY kind. Deliberately a raw scan, not a
      * typed accessor: Quartz's LocationTag classes are per-NIP (calendar,
      * picture, classifieds) and only those kinds expose locations(), while
      * this funnel must also catch location tags on kinds whose class doesn't
-     * model them.
+     * model them. Collects lazily, like [cleanAll]: an event with no location
+     * tag — nearly all of them — allocates nothing here.
      */
-    private fun locationValues(event: Event): List<String> = event.tags.mapNotNull { tag -> if (tag.getOrNull(0) != "location") null else clean(tag.getOrNull(1)) }
+    private fun locationValues(event: Event): List<String> {
+        var values: MutableList<String>? = null
+        event.tags.fastForEach { tag ->
+            if (tag.size > 1 && tag[0] == LOCATION_TAG) {
+                val value = clean(tag[1])
+                if (value != null) {
+                    (values ?: ArrayList<String>(2).also { values = it }).add(value)
+                }
+            }
+        }
+        return values ?: emptyList()
+    }
+
+    private const val LOCATION_TAG = "location"
 }
