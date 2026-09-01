@@ -494,3 +494,87 @@ one-line in-repo swaps, 6 with small refactors, 5 wait on a dependency, and
   deserves a stated rule.
 - `commons/model/nip02FollowList` (singular) vs app `model/nip02FollowLists`
   (plural) — reconcile on the quartz name when merging.
+
+## Session handoff — state as of 2026-09-01 (PR #4025)
+
+Everything below is the live state for whoever picks this up next; the
+sections above are the original audit and stay as reference.
+
+### What is DONE and pushed (branch `claude/amethyst-commons-migration-hm8vgm`)
+
+- **Waves 0 + 1** (~145 files moved to `:commons`, 12 typealias shims
+  deleted, importers rewritten repo-wide). See the batch tables above.
+- **jvmAndroid promotion Tiers 1–3** (the 5-tier table above, annotated
+  per-tier): ~28 more files promoted to commonMain, incl. the diagnostics
+  stack (BootRelayDiagnostics, RelaySpeedLogger, DmRelayDiagnosticsLogger),
+  the image fetchers (Base64/BlurHash/ThumbHash via the new
+  `CoilImageBridge` expect/actual, three Desktop clones deleted), and the
+  Tier-2 concurrency review (2 locks removed, 4 kept as `KmpLock` with
+  documented invariants; quartz `ConcurrentMap` gained
+  `putIfAbsent`/`remove(k,v)`/`clear`).
+- **Merged main twice**; second merge brought the #4026 Shorts rename, and
+  commit `5cf47f6f` dropped the 30 orphaned `route_video`/`new_short`
+  translation entries (15 locales × 2 keys) that were failing
+  `:amethyst:lintFdroidBenchmark` on main and every branch. Main is still
+  red until that cleanup lands there — cherry-picking `5cf47f6f` fixes it.
+- **CI fully green** on head `5cf47f6f`; PR #4025 mergeable_state clean.
+
+### Audit findings to fix BEFORE or right after merge (2026-09-01 review)
+
+1. **[ship-blocker] `TopFilter` serial names changed** — the move to
+   `commons.model.topNavFeeds` changed every subclass's kotlinx default
+   serial name; persisted per-tab feed-filter prefs (written by
+   `JsonMapper.toJson`, read via `parseTopFilterOrDefault` which swallows
+   decode errors) silently reset for every user on upgrade. Fix: add
+   `@SerialName("com.vitorpamplona.amethyst.model.TopFilter.…")` (old FQNs)
+   to each subclass.
+2. **`HttpClientEnvironment.isEmulator` set too late** — `Amethyst.onCreate`
+   builds `AppModules` (which eagerly constructs both OkHttp factories and
+   their dispatchers) before setting the flag; the emulator branch is dead.
+   Set the flag before `AppModules(this)`, or read it lazily.
+3. **`@Contextual Address` in `TopFilter` has no iOS serializer** — the
+   nativeMain `Address` actual is not `@Serializable` and JsonMapper
+   registers no contextual serializer; serializing address-carrying filters
+   throws on iOS. Annotate the native actual or register a serializer.
+4. **Baseline profile stale** — `baseline-prof.txt` has ~251 rules naming
+   pre-move classes; regenerate via `:baselineprofile` (cold-start wins
+   regress until then).
+5. **`NappletLaunchRegistry` in commons breaches the documented napplet
+   sandbox boundary** (CLAUDE.md says the broker-side registry stays in
+   `:amethyst` so `:nappletHost` cannot import it). Move it back or update
+   the boundary doc + add a guard.
+6. **`PlatformImage.toSkiaBitmap()` duplicated** verbatim in
+   `CoilImageBridge.jvm.kt` and `.ios.kt` — hoist to a shared Skiko source
+   set.
+
+### Next work, in recommended order (needs maintainer go-ahead per item)
+
+- **Tier 4 unlocks** (small, mechanical): `NappletProtocolJson`
+  `java.util.Base64` → `kotlin.io.encoding.Base64` (frees
+  `NappletIdentityWatch`); `ScheduledPostStore` Jackson+`java.io.File` →
+  kotlinx-serialization+okio (frees `ScheduledPostWorkGate`).
+  `LargeSoftCache` stays parked (needs a WeakReference expect/actual).
+- **Wave 2: LocalCache move-group** (~200 files behind it) — **blocked on a
+  design decision**: `CachePruner`/`CacheSearch` call
+  `Account.isFollowing(...)`; either `IAccount` grows it (DesktopIAccount
+  must implement) or they take a narrower interface (recommended).
+- **Wave 3: strings bridge** — a `stringRes` twin backed by Compose
+  resources in commons; gates ~210 otherwise-pure UI files.
+- **Wave 4: Account/AccountViewModel decomposition** — long-tail.
+
+### Environment notes for the next session (hard-won)
+
+- Run gradle tests and pushes with `LC_ALL=C.UTF-8 LANG=C.UTF-8` (a POSIX
+  locale breaks an em-dash test-report filename).
+- One gradle invocation at a time; concurrent runs die on the project lock.
+- Pre-push hook runs `:quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest
+  :quic:jvmTest :amethyst:testPlayDebugUnitTest :cli:test` (not geode); a
+  PreToolUse hook blocks pushes when spotlessApply reformatted files —
+  commit first, then push.
+- `:commons:compileKotlinIosArm64` is the cheap local gate for iOS breakage
+  (CI's test-quartz-ios compiles commons for iosSimulatorArm64). If the
+  Kotlin/Native toolchain corrupts (dangling `liblto_plugin.so` symlink),
+  delete the extracted dirs under `/root/.konan/dependencies` and let
+  gradle re-extract.
+- stdlib atomics have no `incrementAndFetch()` here — use `addAndFetch(1)`;
+  `withLock {}` can't assign outer `val`s — restructure to lambda-return.
