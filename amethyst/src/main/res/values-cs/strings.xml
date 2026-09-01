@@ -1209,6 +1209,8 @@
     <string name="relay_auth_remember_relay">Zapamatovat pro toto relé</string>
     <string name="relay_auth_log_in">Přihlásit se</string>
     <string name="relay_auth_not_now">Teď ne</string>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <string name="relay_auth_never_allow">Nikdy nepovolovat</string>
     <string name="relay_auth_how_we_decide">Jak se Amethyst rozhoduje</string>
     <!-- Settings: three lists that each hold what their header says. -->

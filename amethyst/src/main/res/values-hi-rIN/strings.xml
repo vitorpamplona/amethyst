@@ -1145,6 +1145,8 @@
     <string name="relay_auth_remember_relay">इस पुनःप्रसारक के लिए स्मृत रखें</string>
     <string name="relay_auth_log_in">प्रवेशांकन</string>
     <string name="relay_auth_not_now">अभी नहीं</string>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <string name="relay_auth_never_allow">कभी अनुमत नहीं</string>
     <string name="relay_auth_how_we_decide">अमेथिस्ट कैसे निर्णय लेता है</string>
     <!-- Settings: three lists that each hold what their header says. -->

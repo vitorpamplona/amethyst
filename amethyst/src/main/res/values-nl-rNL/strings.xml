@@ -1132,6 +1132,8 @@
     <string name="relay_auth_remember_relay">Onthouden voor deze relay</string>
     <string name="relay_auth_log_in">Aanmelden</string>
     <string name="relay_auth_not_now">Niet nu</string>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <string name="relay_auth_never_allow">Nooit toestaan</string>
     <string name="relay_auth_how_we_decide">Hoe Amethyst beslist</string>
     <!-- Settings: three lists that each hold what their header says. -->
