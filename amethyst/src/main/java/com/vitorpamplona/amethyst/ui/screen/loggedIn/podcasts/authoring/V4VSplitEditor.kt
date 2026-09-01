@@ -58,7 +58,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_add_address
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_editor_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_fee
-import com.vitorpamplona.amethyst.commons.resources.podcast_value_for_value
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_lnaddress
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_lnaddress_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_node_pubkey
@@ -115,7 +114,7 @@ fun V4VSplitEditor(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = stringRes(Res.string.podcast_value_for_value),
+                text = stringRes(R.string.podcast_value_for_value),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -158,7 +157,7 @@ fun V4VSplitEditor(
                     val added = state.addUser(user)
                     if (!added) {
                         accountViewModel.toastManager.toast(
-                            Res.string.podcast_value_for_value,
+                            R.string.podcast_value_for_value,
                             R.string.podcast_value_user_no_lnaddress,
                         )
                     }

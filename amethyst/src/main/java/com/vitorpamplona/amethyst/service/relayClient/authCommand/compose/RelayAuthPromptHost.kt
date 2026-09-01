@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.relayClient.auth.RelayAuthPrompt
+import com.vitorpamplona.amethyst.commons.relayClient.auth.UserAuthChoice
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurposeKind
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
@@ -87,8 +89,6 @@ import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_thread
 import com.vitorpamplona.amethyst.commons.resources.relay_auth_why_thread_with
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.RelayAuthPrompt
-import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.UserAuthChoice
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
