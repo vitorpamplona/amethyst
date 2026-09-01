@@ -57,6 +57,19 @@ fun DisplayNotifyMessages(
             accountViewModel = accountViewModel,
             nav = nav,
             onDismiss = { requests.dismissPaymentRequest(request) },
+            onBlockRelay =
+                if (accountViewModel.isWriteable()) {
+                    {
+                        accountViewModel.blockRelay(request.relayUrl)
+                        // Every queued prompt from this relay goes with the block, not just the one
+                        // on screen: a paid relay files one NOTIFY per rejected AUTH, so dismissing
+                        // only [request] would immediately re-open the dialog for a relay the user
+                        // just asked us to stop talking to.
+                        requests.dismissAllFrom(request.relayUrl)
+                    }
+                } else {
+                    null
+                },
         )
     }
 }

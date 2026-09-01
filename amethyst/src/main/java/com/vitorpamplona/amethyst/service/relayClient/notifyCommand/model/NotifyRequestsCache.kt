@@ -52,4 +52,19 @@ class NotifyRequestsCache {
             this.transientPaymentRequestDismissals.update { it + request }
         }
     }
+
+    /**
+     * Drops every pending prompt from [relayUrl] at once.
+     *
+     * Used when the user blocks the relay: a relay that asks for payment usually queues one NOTIFY
+     * per rejected AUTH, so dismissing them one at a time would keep re-showing the dialog for a
+     * relay the user just told us never to talk to again.
+     */
+    fun dismissAllFrom(relayUrl: NormalizedRelayUrl) {
+        val fromRelay = this.transientPaymentRequests.value.filterTo(mutableSetOf()) { it.relayUrl == relayUrl }
+        if (fromRelay.isEmpty()) return
+
+        this.transientPaymentRequests.update { it - fromRelay }
+        this.transientPaymentRequestDismissals.update { it + fromRelay }
+    }
 }

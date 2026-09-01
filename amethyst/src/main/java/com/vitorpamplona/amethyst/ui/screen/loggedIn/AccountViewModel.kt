@@ -1919,6 +1919,8 @@ class AccountViewModel(
 
     fun unfollowRelayFeed(url: NormalizedRelayUrl) = launchSigner { account.unfollowRelayFeed(url) }
 
+    fun blockRelay(url: NormalizedRelayUrl) = launchSigner { account.blockRelay(url) }
+
     fun showWord(word: String) = launchSigner { account.showWord(word) }
 
     fun hideWord(word: String) = launchSigner { account.hideWord(word) }

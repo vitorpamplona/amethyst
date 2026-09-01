@@ -73,6 +73,20 @@ class BlockedRelayListState(
                 emptySet(),
             )
 
+    /**
+     * Adds [relay] to the kind-10006 list, keeping whatever is already there.
+     *
+     * Callers that only want to block one relay (the NOTIFY prompt's "Block Relay" button, for
+     * instance) must not rebuild the list from a snapshot they captured earlier: the list is
+     * shared across clients and may have grown since. Reading the current note here keeps the
+     * add additive.
+     */
+    suspend fun addRelay(relay: NormalizedRelayUrl): BlockedRelayListEvent {
+        val current = normalizeBlockedRelayListWithBackup(blockedListNote).toMutableList()
+        if (relay !in current) current.add(relay)
+        return saveRelayList(current)
+    }
+
     suspend fun saveRelayList(blockedRelays: List<NormalizedRelayUrl>): BlockedRelayListEvent {
         if (!signer.isWriteable()) throw SignerExceptions.ReadOnlyException()
         val relayListForBlocked = getBlockedRelayList()
