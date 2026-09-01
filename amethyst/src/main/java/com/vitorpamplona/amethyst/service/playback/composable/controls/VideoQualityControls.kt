@@ -33,6 +33,7 @@ import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
+import kotlin.math.ceil
 
 internal fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
 
@@ -54,7 +55,44 @@ internal fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.f
  * away. A manual pick from the quality menu still wins — overrides are re-applied after
  * constraint-based selection runs.
  */
-internal fun Modifier.constrainVideoQualityToViewport(player: Player): Modifier = onSizeChanged { applyViewportConstraint(player, it.width, it.height) }
+internal fun Modifier.constrainVideoQualityToViewport(
+    player: Player,
+    shouldApply: () -> Boolean = { true },
+): Modifier =
+    onSizeChanged {
+        // Evaluated at measure time, not at composition: a caller whose window is still resizing
+        // (PiP) needs the answer for *this* layout pass.
+        if (shouldApply()) applyViewportConstraint(player, it.width, it.height)
+    }
+
+/**
+ * Short side the viewport is capped to on a metered connection.
+ *
+ * Sizing the ladder to the player is the right default on wifi, but on mobile data it would hand a
+ * full-width card most of the ladder with nothing holding it back — the app's other lever is the
+ * autoplay `ConnectivityType` gate, which decides *whether* to play, not how much to pull. 480 on
+ * the short side keeps a card watchable while staying near the rung the old fixed-lowest policy
+ * would have picked.
+ */
+const val METERED_MAX_SHORT_SIDE_PX = 480
+
+/**
+ * Scales a measured player size down until its short side fits [maxShortSidePx], preserving aspect
+ * so the viewport still describes the shape of the player and not just its area. Sizes already
+ * within the cap, and a non-positive cap, pass through untouched.
+ */
+internal fun clampViewportShortSide(
+    widthPx: Int,
+    heightPx: Int,
+    maxShortSidePx: Int,
+): Pair<Int, Int> {
+    val shortSide = minOf(widthPx, heightPx)
+    if (maxShortSidePx <= 0 || shortSide <= 0 || shortSide <= maxShortSidePx) return widthPx to heightPx
+
+    val scale = maxShortSidePx.toDouble() / shortSide
+    // Round up so the cap is never undershot into a lower rung by a rounding artifact.
+    return ceil(widthPx * scale).toInt() to ceil(heightPx * scale).toInt()
+}
 
 // Runs from onSizeChanged on the player's application looper (main thread), which is where
 // trackSelectionParameters must be written. Writing them re-runs track selection and, for a

@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,11 +49,13 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.BottomGra
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeControlsState
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeLevelIndicator
 import com.vitorpamplona.amethyst.service.playback.composable.controls.LogVideoQualitySelection
+import com.vitorpamplona.amethyst.service.playback.composable.controls.METERED_MAX_SHORT_SIDE_PX
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAnimatedBottomInfo
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.applyViewportConstraint
+import com.vitorpamplona.amethyst.service.playback.composable.controls.clampViewportShortSide
 import com.vitorpamplona.amethyst.service.playback.composable.controls.fullscreenSwipeControls
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
@@ -107,6 +110,12 @@ fun RenderVideoPlayer(
     // unnecessary recomposition of the whole player tree just to update a value that is only
     // ever read inside the onDoubleTap callback below.
     val containerWidth = remember { intArrayOf(0) }
+
+    // Last measured player size, kept out of snapshot state for the same reason as containerWidth:
+    // it exists only so a connectivity flip can re-push the viewport without a layout pass.
+    val lastMeasured = remember { intArrayOf(0, 0) }
+    val isMetered by accountViewModel.settings.isMobileOrMeteredConnection.collectAsStateWithLifecycle()
+    val viewportCeiling = if (isMetered) METERED_MAX_SHORT_SIDE_PX else 0
     val isLive = remember(mediaItem.src.videoUri, mediaItem.src.mimeType) { isHlsMedia(mediaItem.src.videoUri, mediaItem.src.mimeType) }
 
     val swipeState = remember { FullscreenSwipeControlsState() }
@@ -135,6 +144,13 @@ fun RenderVideoPlayer(
     WatchPlaybackErrors(controllerState)
     LogVideoQualitySelection(controllerState.controller)
 
+    // Moving on or off mobile data does not relayout, so the new ceiling has to be pushed by hand.
+    // Before the first measurement lastMeasured is still zero and applyViewportConstraint no-ops.
+    LaunchedEffect(viewportCeiling, controllerState.controller) {
+        val (w, h) = clampViewportShortSide(lastMeasured[0], lastMeasured[1], viewportCeiling)
+        applyViewportConstraint(controllerState.controller, w, h)
+    }
+
     // Audio files have no video dimensions, so without this the player collapses to a thin strip and
     // the controls get crammed. Size it square (capped) so the visualizer and controls get room.
     // Voice notes keep their seek-bar strip; the full-screen dialog fills the screen.
@@ -153,7 +169,10 @@ fun RenderVideoPlayer(
             playerModifier
                 .onSizeChanged {
                     containerWidth[0] = it.width
-                    applyViewportConstraint(controllerState.controller, it.width, it.height)
+                    lastMeasured[0] = it.width
+                    lastMeasured[1] = it.height
+                    val (w, h) = clampViewportShortSide(it.width, it.height, viewportCeiling)
+                    applyViewportConstraint(controllerState.controller, w, h)
                 }.pointerInput(isLive, controllerState) {
                     detectTapGestures(
                         onTap = { controllerVisible.value = !controllerVisible.value },

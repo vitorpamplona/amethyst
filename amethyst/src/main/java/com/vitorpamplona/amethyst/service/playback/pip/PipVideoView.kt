@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.playback.pip
 
+import androidx.activity.compose.LocalActivity
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -70,7 +71,19 @@ fun RenderPipVideo(
             }
         }
 
-    Box(modifier.constrainVideoQualityToViewport(controller.controller), contentAlignment = Alignment.Center) {
+    // processIntentForPiP calls enterPictureInPictureMode from composition (PiPFromIntents), so the
+    // first layout pass can measure the activity at full screen before the window shrinks. Pushing
+    // that size would hand the selector a full-screen viewport for the first seconds of a PiP that
+    // is a few inches wide; the shrink relayouts and pushes the real size.
+    val activity = LocalActivity.current
+
+    Box(
+        modifier.constrainVideoQualityToViewport(
+            player = controller.controller,
+            shouldApply = { activity?.isInPictureInPictureMode == true },
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
         ContentFrame(
             player = controller.controller,
             keepContentOnReset = true,
