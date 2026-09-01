@@ -89,6 +89,64 @@ object OnchainZapBuilder {
     ): Long = ceil(estimateVsize(inputCount, outputCount) * feeRateSatPerVByte).toLong()
 
     /**
+     * The largest total-to-recipients amount [buildToScripts] can actually pay
+     * out of [availableUtxos] at [feeRateSatPerVByte] — the spendable balance
+     * net of the miner fee.
+     *
+     * This is the funding question a UI needs *before* it offers an on-chain
+     * amount ("can my wallet pay 10k sats?"), and it is answered against the
+     * exact same greedy selection the builder uses, so `amount <=
+     * maxSpendableSats(...)` implies the matching [build] / [buildSplit] /
+     * [buildToScripts] call will not throw [InsufficientFundsException]:
+     *
+     *  - Selection is largest-first, so the candidate input sets are exactly
+     *    the prefixes of the value-descending UTXO list. For a prefix of `k`
+     *    inputs the most it can hand to the recipients is
+     *    `prefixSum(k) - fee(k, recipients + 1)` (fee for a tx that also
+     *    carries a change output).
+     *  - The selector's last-chance branch drops the change output when the
+     *    change would be dust, which frees that output's fee. That is only
+     *    reachable with the whole set selected, hence the final
+     *    `prefixSum(n) - fee(n, recipients)` candidate.
+     *
+     * Per-recipient dust ([DUST_THRESHOLD_SATS]) is a caller concern — this is
+     * the total across [recipientOutputCount] outputs, not a per-output cap.
+     *
+     * @param availableUtxos UTXOs spendable from the sender's Taproot address.
+     * @param feeRateSatPerVByte Target fee rate; a higher rate lowers the result.
+     * @param recipientOutputCount How many recipient outputs the payment pays.
+     * @param allowUnconfirmed See [build]. When false (the default),
+     *        0-confirmation UTXOs don't count towards the spendable balance.
+     * @return the maximum payable total, or 0 when nothing is spendable.
+     */
+    fun maxSpendableSats(
+        availableUtxos: List<Utxo>,
+        feeRateSatPerVByte: Double,
+        recipientOutputCount: Int = 1,
+        allowUnconfirmed: Boolean = false,
+    ): Long {
+        require(recipientOutputCount > 0) { "must have at least one recipient" }
+        require(feeRateSatPerVByte > 0) { "fee rate must be positive" }
+
+        val spendableUtxos =
+            if (allowUnconfirmed) availableUtxos else availableUtxos.filter { it.confirmations > 0 }
+        if (spendableUtxos.isEmpty()) return 0L
+
+        val sorted = spendableUtxos.sortedByDescending { it.valueSats }
+        var prefixSum = 0L
+        var best = 0L
+        sorted.forEachIndexed { index, utxo ->
+            prefixSum += utxo.valueSats
+            val withChange = prefixSum - estimateFee(index + 1, recipientOutputCount + 1, feeRateSatPerVByte)
+            if (withChange > best) best = withChange
+        }
+        val noChange = prefixSum - estimateFee(sorted.size, recipientOutputCount, feeRateSatPerVByte)
+        if (noChange > best) best = noChange
+
+        return best.coerceAtLeast(0L)
+    }
+
+    /**
      * Build the unsigned onchain-zap PSBT.
      *
      * @param senderPubKey The sender's 32-byte x-only Nostr pubkey (hex).

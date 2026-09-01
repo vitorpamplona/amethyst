@@ -293,16 +293,18 @@ class AccountZapActions(
         val backend =
             account.cache.onchainBackend
                 ?: return onchainBackendNotConfigured()
-        return OnchainZapSender.send(
-            backend = backend,
-            signer = account.signer,
-            senderPubKey = account.signer.pubKey,
-            recipientPubKey = recipientPubKey,
-            amountSats = amountSats,
-            feeRateSatPerVByte = feeRateSatPerVByte,
-            comment = comment,
-            zappedEvent = zappedEvent,
-        ) { template -> account.broadcaster.signAndComputeBroadcast(template) }
+        return OnchainZapSender
+            .send(
+                backend = backend,
+                signer = account.signer,
+                senderPubKey = account.signer.pubKey,
+                recipientPubKey = recipientPubKey,
+                amountSats = amountSats,
+                feeRateSatPerVByte = feeRateSatPerVByte,
+                comment = comment,
+                zappedEvent = zappedEvent,
+            ) { template -> account.broadcaster.signAndComputeBroadcast(template) }
+            .alsoRefreshBalanceIfSpent()
     }
 
     /**
@@ -318,14 +320,15 @@ class AccountZapActions(
         val backend =
             account.cache.onchainBackend
                 ?: return onchainBackendNotConfigured()
-        return OnchainZapSender.sendToAddress(
-            backend = backend,
-            signer = account.signer,
-            senderPubKey = account.signer.pubKey,
-            recipientAddress = recipientAddress,
-            amountSats = amountSats,
-            feeRateSatPerVByte = feeRateSatPerVByte,
-        )
+        return OnchainZapSender
+            .sendToAddress(
+                backend = backend,
+                signer = account.signer,
+                senderPubKey = account.signer.pubKey,
+                recipientAddress = recipientAddress,
+                amountSats = amountSats,
+                feeRateSatPerVByte = feeRateSatPerVByte,
+            ).alsoRefreshBalanceIfSpent()
     }
 
     /**
@@ -342,14 +345,30 @@ class AccountZapActions(
         val backend =
             account.cache.onchainBackend
                 ?: return onchainBackendNotConfigured()
-        return OnchainZapSender.sendSplit(
-            backend = backend,
-            signer = account.signer,
-            senderPubKey = account.signer.pubKey,
-            recipients = recipients,
-            feeRateSatPerVByte = feeRateSatPerVByte,
-            comment = comment,
-            zappedEvent = zappedEvent,
-        ) { template -> account.broadcaster.signAndComputeBroadcast(template) }
+        return OnchainZapSender
+            .sendSplit(
+                backend = backend,
+                signer = account.signer,
+                senderPubKey = account.signer.pubKey,
+                recipients = recipients,
+                feeRateSatPerVByte = feeRateSatPerVByte,
+                comment = comment,
+                zappedEvent = zappedEvent,
+            ) { template -> account.broadcaster.signAndComputeBroadcast(template) }
+            .alsoRefreshBalanceIfSpent()
+    }
+
+    /**
+     * Once a transaction is on the chain the cached balance is wrong — and it is
+     * what the zap picker gates the on-chain rail on, so leaving it would keep
+     * offering amounts the wallet just spent. Covers the failure case too: a
+     * receipt that fails to publish still broadcast the payment.
+     */
+    private fun OnchainZapSendResult.alsoRefreshBalanceIfSpent(): OnchainZapSendResult {
+        val broadcast =
+            this is OnchainZapSendResult.Success ||
+                (this is OnchainZapSendResult.Failure && broadcastTxid != null)
+        if (broadcast) account.onchainWalletState.invalidate()
+        return this
     }
 }

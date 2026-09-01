@@ -279,4 +279,124 @@ class OnchainZapBuilderTest {
             )
         }
     }
+
+    @Test
+    fun maxSpendableIsZeroWithoutUtxos() {
+        assertEquals(0L, OnchainZapBuilder.maxSpendableSats(emptyList(), feeRateSatPerVByte = 5.0))
+    }
+
+    @Test
+    fun maxSpendableIgnoresUnconfirmedUtxosByDefault() {
+        val utxos = listOf(utxo(100_000L, 1, confirmations = 0))
+        assertEquals(0L, OnchainZapBuilder.maxSpendableSats(utxos, feeRateSatPerVByte = 5.0))
+        assertTrue(
+            OnchainZapBuilder.maxSpendableSats(utxos, feeRateSatPerVByte = 5.0, allowUnconfirmed = true) > 0L,
+        )
+    }
+
+    @Test
+    fun maxSpendableIsExactlyBuildable() {
+        val utxos = listOf(utxo(100_000L, 1), utxo(50_000L, 2), utxo(7_000L, 3))
+        val max = OnchainZapBuilder.maxSpendableSats(utxos, feeRateSatPerVByte = 5.0)
+
+        // The whole balance minus a fee: payable, but not a sat more.
+        assertTrue(max in 1 until utxos.sumOf { it.valueSats })
+
+        val result =
+            OnchainZapBuilder.build(
+                senderPubKey = senderPubKey,
+                recipientPubKey = recipientPubKey,
+                amountSats = max,
+                feeRateSatPerVByte = 5.0,
+                availableUtxos = utxos,
+            )
+        assertEquals(max, result.recipientSats)
+
+        assertFailsWith<InsufficientFundsException> {
+            OnchainZapBuilder.build(
+                senderPubKey = senderPubKey,
+                recipientPubKey = recipientPubKey,
+                amountSats = max + 1,
+                feeRateSatPerVByte = 5.0,
+                availableUtxos = utxos,
+            )
+        }
+    }
+
+    @Test
+    fun maxSpendableAccountsForTheForcedSweepOfADustyInput() {
+        // A 200-sat input costs ~288 sats to spend at 5 sat/vB. Greedy selection
+        // sweeps every UTXO before it will drop the change output, so at the very
+        // top of the range that dusty input is forced in and *lowers* the payable
+        // total. The estimate has to mirror the selector rather than assume the
+        // wallet can leave a bad input behind.
+        val utxos = listOf(utxo(100_000L, 1), utxo(200L, 2))
+        val withDust = OnchainZapBuilder.maxSpendableSats(utxos, feeRateSatPerVByte = 5.0)
+        val withoutDust = OnchainZapBuilder.maxSpendableSats(listOf(utxos[0]), feeRateSatPerVByte = 5.0)
+        assertTrue(withDust < withoutDust, "the dusty input costs more than it adds")
+
+        // And the reported figure is still exactly what the builder will pay.
+        assertEquals(
+            withDust,
+            OnchainZapBuilder
+                .build(
+                    senderPubKey = senderPubKey,
+                    recipientPubKey = recipientPubKey,
+                    amountSats = withDust,
+                    feeRateSatPerVByte = 5.0,
+                    availableUtxos = utxos,
+                ).recipientSats,
+        )
+        assertFailsWith<InsufficientFundsException> {
+            OnchainZapBuilder.build(
+                senderPubKey = senderPubKey,
+                recipientPubKey = recipientPubKey,
+                amountSats = withDust + 1,
+                feeRateSatPerVByte = 5.0,
+                availableUtxos = utxos,
+            )
+        }
+    }
+
+    @Test
+    fun maxSpendableDropsWithHigherFeeRateAndMoreRecipients() {
+        val utxos = listOf(utxo(100_000L, 1), utxo(50_000L, 2))
+        val cheap = OnchainZapBuilder.maxSpendableSats(utxos, feeRateSatPerVByte = 1.0)
+        val pricey = OnchainZapBuilder.maxSpendableSats(utxos, feeRateSatPerVByte = 50.0)
+        assertTrue(pricey < cheap)
+
+        val oneRecipient = OnchainZapBuilder.maxSpendableSats(utxos, feeRateSatPerVByte = 5.0)
+        val threeRecipients = OnchainZapBuilder.maxSpendableSats(utxos, feeRateSatPerVByte = 5.0, recipientOutputCount = 3)
+        assertTrue(threeRecipients < oneRecipient)
+    }
+
+    @Test
+    fun maxSpendableMatchesBuildSplitForMultipleRecipients() {
+        val r2 =
+            Secp256k1Instance
+                .compressedPubKeyFor("000000000000000000000000000000000000000000000000000000000000000c".hexToByteArray())
+                .copyOfRange(1, 33)
+                .toHexKey()
+        val utxos = listOf(utxo(100_000L, 1), utxo(50_000L, 2))
+        val max = OnchainZapBuilder.maxSpendableSats(utxos, feeRateSatPerVByte = 5.0, recipientOutputCount = 2)
+
+        val half = max / 2
+        val result =
+            OnchainZapBuilder.buildSplit(
+                senderPubKey = senderPubKey,
+                recipients = listOf(recipientPubKey to half, r2 to max - half),
+                feeRateSatPerVByte = 5.0,
+                availableUtxos = utxos,
+            )
+        assertEquals(max, result.recipientSats)
+
+        assertFailsWith<InsufficientFundsException> {
+            OnchainZapBuilder.buildSplit(
+                senderPubKey = senderPubKey,
+                recipients = listOf(recipientPubKey to half + 1, r2 to max - half + 1),
+                feeRateSatPerVByte = 5.0,
+                availableUtxos = utxos,
+            )
+        }
+    }
 }
