@@ -115,7 +115,10 @@ fun RenderVideoPlayer(
     // it exists only so a connectivity flip can re-push the viewport without a layout pass.
     val lastMeasured = remember { intArrayOf(0, 0) }
     val isMetered by accountViewModel.settings.isMobileOrMeteredConnection.collectAsStateWithLifecycle()
-    val viewportCeiling = if (isMetered) METERED_MAX_SHORT_SIDE_PX else 0
+    // Fullscreen is exempt: the cap exists to hold back feeds that autoplay without being asked,
+    // and someone who tapped into fullscreen on mobile data asked. Capping there would also put a
+    // ceiling the quality menu's "Auto" could not exceed.
+    val viewportCeiling = if (isMetered && !isFullscreen) METERED_MAX_SHORT_SIDE_PX else 0
     val isLive = remember(mediaItem.src.videoUri, mediaItem.src.mimeType) { isHlsMedia(mediaItem.src.videoUri, mediaItem.src.mimeType) }
 
     val swipeState = remember { FullscreenSwipeControlsState() }

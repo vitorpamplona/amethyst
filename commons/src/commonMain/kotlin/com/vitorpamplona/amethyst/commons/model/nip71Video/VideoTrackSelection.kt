@@ -85,7 +85,12 @@ fun VideoEvent.selectVideoTrack(): VideoMeta? {
 // `audio/*` is a separate track under PR #2255, and `image/*` is a poster. Everything else —
 // including the HLS playlist MIMEs, which are neither `video/*` nor an image, and a bare URL with
 // no MIME at all — belongs in the player.
-private fun VideoMeta.canBeTheVideo(): Boolean = !isAudio && RichTextParser.classifyMedia(url, mimeType) != MediaContentKind.IMAGE
+//
+// The HLS test comes first because two of the four playlist MIMEs this repo recognises are spelled
+// `audio/x-mpegurl` and `audio/mpegurl` — legacy aliases naming the *manifest* format, not audio
+// content. Reading those as an audio track drops a master out of the ladder, and drops the whole
+// event to its poster when every entry is labelled that way.
+private fun VideoMeta.canBeTheVideo(): Boolean = (isHlsPlaylist() || !isAudio) && !isPoster()
 
 // Mirrors MediaItemCache.toExoPlayerMimeType: a declared HLS MIME is authoritative, and the
 // `.m3u8` fallback is anchored to the path so `video.mp4?ref=a.m3u8` is not mistaken for a
@@ -93,9 +98,18 @@ private fun VideoMeta.canBeTheVideo(): Boolean = !isAudio && RichTextParser.clas
 // extension, so only its MIME identifies it.
 private fun VideoMeta.isHlsPlaylist(): Boolean {
     if (RichTextParser.isHlsMimeType(mimeType)) return true
-    if (mimeType != null) return false
+    // A declared media type is authoritative, but `application/octet-stream` and friends declare
+    // nothing — a server default, not a claim about the file — so the extension still gets a say.
+    // Without this a `master.m3u8` served as octet-stream loses to a correctly labelled 360p rung.
+    val declared = mimeType
+    if (declared != null && !declared.isUninformativeMimeType()) return false
     return url.substringBefore('?').substringBefore('#').endsWith(".m3u8", ignoreCase = true)
 }
+
+private fun String.isUninformativeMimeType(): Boolean =
+    isBlank() ||
+        equals("application/octet-stream", ignoreCase = true) ||
+        equals("binary/octet-stream", ignoreCase = true)
 
 private fun VideoMeta.isPoster(): Boolean = RichTextParser.classifyMedia(url, mimeType) == MediaContentKind.IMAGE
 
@@ -110,7 +124,9 @@ private fun VideoMeta.withLadderMetadataFrom(ladder: List<VideoMeta>): VideoMeta
     if (dimension != null && blurhash != null && thumbhash != null && image.isNotEmpty() && alt != null) return this
 
     return copy(
-        dimension = dimension ?: ladder.firstNotNullOfOrNull { it.dimension },
+        // Deliberately not from the poster: a 16:9 thumbnail on a vertical short would size the
+        // player's box at 16:9. Only entries that could be the video describe its shape.
+        dimension = dimension ?: ladder.firstOrNull { it.canBeTheVideo() && it.dimension != null }?.dimension,
         blurhash = blurhash ?: ladder.firstNotNullOfOrNull { it.blurhash },
         thumbhash = thumbhash ?: ladder.firstNotNullOfOrNull { it.thumbhash },
         // An `image/*` sibling carries the poster as its own url, not in its `image` list, so fall

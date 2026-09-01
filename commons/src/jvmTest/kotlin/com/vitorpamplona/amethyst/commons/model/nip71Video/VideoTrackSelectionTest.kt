@@ -195,6 +195,58 @@ class VideoTrackSelectionTest {
     }
 
     @Test
+    fun treatsTheLegacyAudioMpegurlAliasAsAPlaylistNotAnAudioTrack() {
+        // Audit finding: `audio/x-mpegurl` and `audio/mpegurl` are two of the four HLS playlist
+        // MIMEs this repo recognises — legacy aliases for the manifest format, not a claim that the
+        // content is audio. Reading them as an audio track dropped the master out of the ladder.
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = "audio/mpegurl", dimension = DimensionTag(1080, 1920))
+        val rung = rendition("360", 360, 640)
+
+        assertEquals("https://host/master.m3u8", event(master, rung).selectVideoTrack()?.url)
+    }
+
+    @Test
+    fun stillRendersWhenEveryPlaylistUsesTheAudioAlias() {
+        // Same finding, worse case: with every entry labelled that way the candidate list emptied
+        // and selection fell back to imetas.first() — the poster JPEG, handed to the video player.
+        val poster = VideoMeta(url = "https://host/poster.jpg", mimeType = "image/jpeg")
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = "audio/x-mpegurl", dimension = DimensionTag(1080, 1920))
+        val rung = VideoMeta(url = "https://host/360.m3u8", mimeType = "audio/x-mpegurl", dimension = DimensionTag(360, 640))
+
+        assertEquals("https://host/master.m3u8", event(poster, master, rung).selectVideoTrack()?.url)
+    }
+
+    @Test
+    fun identifiesAPlaylistServedAsOctetStream() {
+        // A server default is not a claim about the file, so the .m3u8 path still decides. Without
+        // this the master lost to a correctly labelled low rung.
+        val master =
+            VideoMeta(
+                url = "https://host/master.m3u8",
+                mimeType = "application/octet-stream",
+                dimension = DimensionTag(1080, 1920),
+            )
+        val rung = rendition("360", 360, 640)
+
+        assertEquals("https://host/master.m3u8", event(master, rung).selectVideoTrack()?.url)
+    }
+
+    @Test
+    fun neverTakesTheAspectRatioFromThePoster() {
+        // A 16:9 thumbnail alongside a vertical short would otherwise size the player's box at 16:9,
+        // since JustVideoDisplay lays out from the selected entry's dim.
+        val poster = VideoMeta(url = "https://host/poster.jpg", mimeType = "image/jpeg", dimension = DimensionTag(1600, 900))
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls)
+        val rung = rendition("1080", 1080, 1920)
+        val selected = event(poster, master, rung).selectVideoTrack()
+
+        assertEquals(1080, selected?.dimension?.width)
+        assertEquals(1920, selected?.dimension?.height)
+        // The poster itself is still picked up as the still image.
+        assertEquals(listOf("https://host/poster.jpg"), selected?.image)
+    }
+
+    @Test
     fun skipsTheSeparateAudioTrack() {
         // NIP-71 PR #2255 splits audio into its own imeta so resolution can change without
         // interrupting sound. It is never the thing to hand the video player.

@@ -43,6 +43,7 @@ import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
+import com.vitorpamplona.amethyst.service.playback.composable.controls.PIP_PRESHRINK_MAX_SHORT_SIDE_PX
 import com.vitorpamplona.amethyst.service.playback.composable.controls.constrainVideoQualityToViewport
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
@@ -72,15 +73,18 @@ fun RenderPipVideo(
         }
 
     // processIntentForPiP calls enterPictureInPictureMode from composition (PiPFromIntents), so the
-    // first layout pass can measure the activity at full screen before the window shrinks. Pushing
-    // that size would hand the selector a full-screen viewport for the first seconds of a PiP that
-    // is a few inches wide; the shrink relayouts and pushes the real size.
+    // first layout pass can measure the activity at full screen before the window shrinks. Cap that
+    // measurement instead of skipping it: skipping would leave a pooled player on whatever viewport
+    // its previous view pushed if PiP is never actually entered (per-app PiP off, no
+    // FEATURE_PICTURE_IN_PICTURE). The shrink relayouts and pushes the real size.
     val activity = LocalActivity.current
 
     Box(
         modifier.constrainVideoQualityToViewport(
             player = controller.controller,
-            shouldApply = { activity?.isInPictureInPictureMode == true },
+            maxShortSidePx = {
+                if (activity?.isInPictureInPictureMode == true) 0 else PIP_PRESHRINK_MAX_SHORT_SIDE_PX
+            },
         ),
         contentAlignment = Alignment.Center,
     ) {

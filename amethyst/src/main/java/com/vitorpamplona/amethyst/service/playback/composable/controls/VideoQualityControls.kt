@@ -57,12 +57,15 @@ internal fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.f
  */
 internal fun Modifier.constrainVideoQualityToViewport(
     player: Player,
-    shouldApply: () -> Boolean = { true },
+    maxShortSidePx: () -> Int = { 0 },
 ): Modifier =
     onSizeChanged {
         // Evaluated at measure time, not at composition: a caller whose window is still resizing
-        // (PiP) needs the answer for *this* layout pass.
-        if (shouldApply()) applyViewportConstraint(player, it.width, it.height)
+        // (PiP) needs the answer for *this* layout pass. Always pushes something — a caller that
+        // wants to distrust its own measurement caps it rather than skipping, so a pooled player
+        // can never keep a viewport left over from the view that had it last.
+        val (width, height) = clampViewportShortSide(it.width, it.height, maxShortSidePx())
+        applyViewportConstraint(player, width, height)
     }
 
 /**
@@ -75,6 +78,16 @@ internal fun Modifier.constrainVideoQualityToViewport(
  * would have picked.
  */
 const val METERED_MAX_SHORT_SIDE_PX = 480
+
+/**
+ * Ceiling the PiP player uses until its window has actually shrunk.
+ *
+ * `processIntentForPiP` calls `enterPictureInPictureMode` from composition, so the first layout
+ * pass can measure the activity at full screen. Capping rather than skipping the push means the
+ * selector never sees that full-screen size, and never keeps a stale one either when PiP is never
+ * entered at all — the window is a few inches wide, so nothing above this is ever wanted here.
+ */
+const val PIP_PRESHRINK_MAX_SHORT_SIDE_PX = 480
 
 /**
  * Scales a measured player size down until its short side fits [maxShortSidePx], preserving aspect
