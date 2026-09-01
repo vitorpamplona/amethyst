@@ -20,6 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import kotlinx.serialization.Serializable
+
+// @Serializable matches the jvm/android actuals: common code marks Address
+// properties @Contextual, and the plugin's compile-time fallback only exists
+// on targets whose actual is itself serializable — without it, encoding any
+// address-carrying type throws "Serializer for class 'Address' is not found"
+// at runtime on native.
+@Serializable
 actual data class Address actual constructor(
     actual val kind: Kind,
     actual val pubKeyHex: HexKey,

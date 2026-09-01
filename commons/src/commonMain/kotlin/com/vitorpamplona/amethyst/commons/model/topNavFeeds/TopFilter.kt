@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.topNavFeeds
 
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -33,6 +34,7 @@ sealed class TopFilter(
     }
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Global")
     object Global : TopFilter(" Global ")
 
     /**
@@ -43,18 +45,23 @@ sealed class TopFilter(
      * [Global] shows every event that p-tags the user instead.
      */
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Selected")
     object Selected : TopFilter(" Selected ")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.AllFollows")
     object AllFollows : TopFilter(" All Follows ")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.AllUserFollows")
     object AllUserFollows : TopFilter(" All User Follows ")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.DefaultFollows")
     object DefaultFollows : TopFilter(" Main User Follows ")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.AroundMe")
     object AroundMe : TopFilter(" Around Me ")
 
     /**
@@ -63,52 +70,64 @@ sealed class TopFilter(
      * [Geohash] instead — it is never persisted or dispatched to a feed flow.
      */
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.TeleportPicker")
     object TeleportPicker : TopFilter(" Teleport ")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Mine")
     object Mine : TopFilter(" Mine ")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.PeopleList")
     class PeopleList(
         @Contextual override val address: Address,
     ) : TopFilter(address.toValue()),
         AddressableTopFilter
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.MuteList")
     class MuteList(
         @Contextual override val address: Address,
     ) : TopFilter(address.toValue()),
         AddressableTopFilter
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Community")
     class Community(
         @Contextual override val address: Address,
     ) : TopFilter("Community/${address.toValue()}"),
         AddressableTopFilter
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Hashtag")
     class Hashtag(
         val tag: String,
     ) : TopFilter("Hashtag/$tag")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Geohash")
     class Geohash(
         val tag: String,
     ) : TopFilter("Geohash/$tag")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.Relay")
     class Relay(
         val url: String,
     ) : TopFilter("Relay/$url")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.FavoriteAlgoFeed")
     class FavoriteAlgoFeed(
         @Contextual val address: Address,
     ) : TopFilter("FavoriteAlgoFeed/${address.toValue()}")
 
-    @Serializable object AllFavoriteAlgoFeeds : TopFilter(" All Favourite DVMs ")
+    @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.AllFavoriteAlgoFeeds")
+    object AllFavoriteAlgoFeeds : TopFilter(" All Favourite DVMs ")
 
     @Serializable
+    @SerialName("com.vitorpamplona.amethyst.model.TopFilter.InterestSet")
     class InterestSet(
         @Contextual val address: Address,
     ) : TopFilter("InterestSet/${address.toValue()}")
