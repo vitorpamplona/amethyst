@@ -58,14 +58,23 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * copy-on-write*    n/a        n/a    n/a       n/a    n/a   n/a   n/a
  * HAMT + CAS         70         78      6       117    676    24  67MB
  * lock + HashMap     13          6      3        71   1197    36  51MB
- * this               15          3      3        13     64     1  43MB
+ * this               16          4      1        16     86     1  41MB
  * ```
  *
  * (*copy-on-write is off the scale: 20k entries alone took 18s to fill.) "mixed" is a
  * full fill with a whole-table scan every 1000 writes, which is the shape `LocalCache`
  * actually has — arriving events interleaved with feeds filtering the whole cache.
- * Figures are one representative run of several; they were stable to within ~10%,
- * except the HAMT's scan column, which wandered between 115ms and 190ms.
+ * Figures are one representative run of several; they were stable to within ~10%, except
+ * the HAMT's scan column, which wandered between 115ms and 190ms. This row was
+ * re-measured on the shipped code, after the stripe-selection fix and after
+ * [INITIAL_CAPACITY] dropped to [STRIPES] — neither moved it out of the noise.
+ *
+ * An *empty* instance costs ~970 bytes, nearly all of it the 16 [PlatformLock]s (two
+ * objects each). That is well above the ~50 bytes an empty map used to cost, and it is
+ * charged to every one of the hundreds of small caches a client holds. Folding the stripe
+ * locks into a single `AtomicIntArray` would take it to ~250 bytes and is the obvious next
+ * step if it ever shows up in a heap profile; it is left alone here because hand-rolling
+ * the spin is exactly the kind of change that wants its own review.
  *
  * ## Concurrency contract
  *
@@ -111,10 +120,23 @@ internal class StripedHashMap<K, V> {
     }
 
     /**
-     * Derived from the hash alone, never from the table size, so a key keeps the same
-     * stripe across a resize.
+     * **The stripe must be a function of the bucket**, or the locks do not partition the
+     * table and the whole design is unsound: two keys could share a bucket while holding
+     * different locks, so two writers would read the same chain head and both publish
+     * over it, silently dropping one insert.
+     *
+     * It is a function of the bucket here because [STRIPES] and every table capacity are
+     * powers of two with `STRIPES <= capacity`, so `hash and (STRIPES - 1)` is exactly the
+     * low bits of `hash and (capacity - 1)`. Same bucket therefore implies same stripe, at
+     * every size. Using the hash and not the capacity also keeps a key on one stripe
+     * across a resize, which is what lets [growTable] exclude writers by taking all of
+     * them.
+     *
+     * An earlier version took bits 16-19 instead. That is still resize-stable and still
+     * spreads well, which is why it looked right — but it is not derived from the bucket,
+     * so it broke the invariant above.
      */
-    private fun lockFor(hash: Int) = locks[(hash ushr 16) and (STRIPES - 1)]
+    private fun lockFor(hash: Int) = locks[hash and (STRIPES - 1)]
 
     fun size(): Int = entryCount.load()
 
@@ -301,8 +323,19 @@ internal class StripedHashMap<K, V> {
          */
         private const val STRIPES = 16
 
-        /** Sized to carry a warm cache's first few thousand entries without a resize. */
-        private const val INITIAL_CAPACITY = 1024
+        /**
+         * Tied to [STRIPES] rather than chosen independently: the stripe is only a
+         * function of the bucket while `STRIPES <= capacity` (see [lockFor]), and defining
+         * it this way makes that impossible to break by raising [STRIPES] alone.
+         *
+         * Kept small on purpose. `LargeCache` is not only the one big `LocalCache`
+         * instance: `EphemeralRoom`, `RelaySession`, `PoolRequests` and friends each build
+         * one per room, per connection and per subscription set, so a client holds
+         * hundreds of them and most stay nearly empty. Starting at 1024 slots charged every
+         * one of those ~8 KB it would never use. Growth is geometric, so a table that does
+         * fill to 100k pays the same ~2n node rebuilds in total either way.
+         */
+        private const val INITIAL_CAPACITY = STRIPES
 
         private const val MAX_CAPACITY = 1 shl 30
     }
