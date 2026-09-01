@@ -38,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.service.playback.composable.controls.VideoQualityPolicy
 import com.vitorpamplona.amethyst.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.ui.note.DownloadForOfflineIcon
@@ -74,7 +73,6 @@ fun VideoView(
     thumbhash: String? = null,
     isLiveStream: Boolean = false,
     hash: String? = null,
-    qualityPolicy: VideoQualityPolicy = VideoQualityPolicy.LOWEST,
 ) {
     val borderModifier =
         if (roundedCorner) {
@@ -85,7 +83,7 @@ fun VideoView(
             Modifier
         }
 
-    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream, hash = hash, qualityPolicy = qualityPolicy)
+    VideoView(videoUri, mimeType, title, thumb, borderModifier, contentScale, waveform, artworkUri, authorName, dimensions, blurhash, nostrUriCallback, onDialog, alwaysShowVideo, accountViewModel = accountViewModel, thumbhash = thumbhash, isLiveStream = isLiveStream, hash = hash)
 }
 
 @Composable
@@ -109,9 +107,6 @@ fun VideoView(
     accountViewModel: AccountViewModel,
     thumbhash: String? = null,
     hash: String? = null,
-    // Inline media defaults to the cheapest rendition; a feed built around the video itself passes
-    // VideoQualityPolicy.AUTO so the master playlist's whole ladder is on the table.
-    qualityPolicy: VideoQualityPolicy = VideoQualityPolicy.LOWEST,
 ) {
     val initialAutoStart = if (alwaysShowVideo) true else accountViewModel.settings.startVideoPlayback()
     // Reset the manual-show toggle when the video URI changes so a recycled feed slot
@@ -187,7 +182,6 @@ fun VideoView(
                     thumbhash = thumbhash,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
-                    qualityPolicy = qualityPolicy,
                 )
             }
         }
@@ -244,7 +238,6 @@ fun VideoView(
                     thumbhash = thumbhash,
                     accountViewModel = accountViewModel,
                     showControls = showControls,
-                    qualityPolicy = qualityPolicy,
                 )
             }
         }

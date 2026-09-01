@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAni
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
+import com.vitorpamplona.amethyst.service.playback.composable.controls.applyViewportConstraint
 import com.vitorpamplona.amethyst.service.playback.composable.controls.fullscreenSwipeControls
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
@@ -148,8 +149,10 @@ fun RenderVideoPlayer(
     Box(
         modifier =
             playerModifier
-                .onSizeChanged { containerWidth[0] = it.width }
-                .pointerInput(isLive, controllerState) {
+                .onSizeChanged {
+                    containerWidth[0] = it.width
+                    applyViewportConstraint(controllerState.controller, it.width, it.height)
+                }.pointerInput(isLive, controllerState) {
                     detectTapGestures(
                         onTap = { controllerVisible.value = !controllerVisible.value },
                         onDoubleTap = { offset ->

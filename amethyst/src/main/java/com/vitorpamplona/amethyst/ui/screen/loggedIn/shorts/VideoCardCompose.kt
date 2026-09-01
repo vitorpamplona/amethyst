@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.playback.composable.controls.VideoQualityPolicy
 import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.ui.components.ContentWarningGate
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
@@ -158,11 +157,6 @@ private fun VideoCardImage(
             roundedCorner = false,
             contentScale = ContentScale.FillWidth,
             accountViewModel = accountViewModel,
-            // The card *is* the video here (shorts, video and longs feeds), rendered full-width —
-            // a portrait short fills most of the screen. Pinning it to the bottom rung of the
-            // ladder, which is right for a video incidentally attached to a note, wastes the
-            // qualities the master playlist advertises. Let ExoPlayer adapt instead.
-            qualityPolicy = VideoQualityPolicy.AUTO,
         )
     }
 }

@@ -42,6 +42,7 @@ import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
+import com.vitorpamplona.amethyst.service.playback.composable.controls.constrainVideoQualityToViewport
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.ui.components.getActivity
@@ -69,7 +70,7 @@ fun RenderPipVideo(
             }
         }
 
-    Box(modifier, contentAlignment = Alignment.Center) {
+    Box(modifier.constrainVideoQualityToViewport(controller.controller), contentAlignment = Alignment.Center) {
         ContentFrame(
             player = controller.controller,
             keepContentOnReset = true,
