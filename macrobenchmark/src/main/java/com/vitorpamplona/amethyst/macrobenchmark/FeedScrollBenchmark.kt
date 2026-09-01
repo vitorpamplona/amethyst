@@ -150,6 +150,20 @@ class FeedScrollBenchmark {
                             "No scrollable feed appeared — is an account logged in with a non-empty feed?"
                         }
                         Thread.sleep(INGEST_SETTLE_MS)
+
+                        // Warm the image cache before measuring anything. A corpus of real notes
+                        // carries remote image URLs, and those resolve asynchronously: until they
+                        // do, card heights keep changing, so a fixed-distance scroll composes a
+                        // different number of cards on every run. That alone widened section
+                        // spreads from ~1-3% to 17-28% and made an A/B unreadable. Scrolling the
+                        // whole corpus once, with the network still up, settles every height and
+                        // fills Coil's cache; only then is it safe to cut the network.
+                        repeat(WARMUP_SCROLLS) { swipeFeed(down = true) }
+                        device.waitForIdle()
+                        repeat(WARMUP_SCROLLS) { swipeFeed(down = false) }
+                        device.waitForIdle()
+                        Thread.sleep(IMAGE_SETTLE_MS)
+
                         if (quiet) setNetworkEnabled(false)
                         prepared = true
                     }
@@ -229,6 +243,12 @@ class FeedScrollBenchmark {
         const val INGEST_SETTLE_MS = 20_000L
 
         const val NETWORK_TOGGLE_SETTLE_MS = 3_000L
+
+        /** Enough passes to touch every card in the corpus so all images resolve. */
+        const val WARMUP_SCROLLS = 24
+
+        /** Lets the last decodes land after the warm-up gesture stops. */
+        const val IMAGE_SETTLE_MS = 8_000L
 
         /**
          * Frame-phase sections emitted by the platform and by Compose UI itself. Nothing in the app

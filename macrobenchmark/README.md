@@ -78,3 +78,39 @@ one only in `benchmark`) so release genuinely contains none of it.
 `PROBE_NO_FLOW_STATE` kills every live counter, `PROBE_NO_RX_ICONS` blanks the icons,
 `PROBE_NO_RX_CLICKABLE` makes buttons untappable. They exist to be measured and thrown
 away. All default to false.
+
+## Normalize `Sum` metrics by their count — always
+
+`TraceSectionMetric(Mode.Sum)` reports the summed duration of every matching slice
+in an iteration. That sum is comparable across arms **only if every iteration
+renders the same number of cards.** On a corpus of real notes it does not: card
+heights vary, so a fixed-distance swipe crosses a different number of cards each
+run. Three arms measured here — two of them running *identical code* — reported
+`NoteCardCount` of 10, 13 and 8.
+
+The summed metrics therefore drifted 36–73% between identical arms, which is far
+larger than any effect worth shipping, and made a real result invisible. Dividing
+`<Section>SumSumMs` by `<Section>SumCount` removes the denominator:
+
+```bash
+python3 macrobenchmark/tools/normalize.py path/to/*.json
+```
+
+In the run that motivated this, that single step took `DrawAuthor` from an
+unreadable 41.8% apparent swing to a **4.6% drift floor with a clear +74% effect**.
+Read the per-occurrence table, never the raw sums.
+
+## Warm the image cache before measuring
+
+Freezing the *events* (`tools/feed-bench-corpus/setup.sh`) is not enough. Real
+notes carry remote image URLs that resolve asynchronously, so card heights keep
+moving until they land. The benchmark now scrolls the whole corpus once, with the
+network still up, before cutting the radios — see `WARMUP_SCROLLS`.
+
+## Analysing a trace
+
+`tools/rt_analyze.sh <trace.perfetto-trace>` decomposes a trace with Perfetto's
+`trace_processor`: RenderThread and main-thread **self**-time by slice (summing by
+name across depths double-counts), texture/atlas uploads, and the children of the
+`animation` slice. Prefer this to parsing `atrace` text — text parsing is what
+previously credited macrobenchmark's own `reportMetricsWithPresentTime` to the app.
