@@ -584,10 +584,15 @@ Original findings, for reference:
     keys with bare `%s`/`%d` (compose-resources needs positional `%1$s`).
   - Exemplar shipped: `profile_banner` (the ui/layouts cluster's only
     string blocker) migrated + all 7 call-site files repointed.
-  - **Remaining Wave-3 work:** migrate keys feature-by-feature with this
-    tool (keys whose non-composable `ctx`-based call sites exist must have
-    those call sites adapted to `loadStringRes` first), then move the
-    now-unblocked composables. Note the layouts cluster ALSO needs theme
+  - **Bulk migration executed (2026-09-01, commit 7c6a18ee):** all 2,565
+    mechanically-safe keys (composable-only call sites, no XML refs, only
+    `%N$s`/`%N$d` args, no markup) moved to commons; 568 app files
+    repointed. The app keeps 1,866 keys that are genuinely Android-bound:
+    ctx-based call sites (adapt to `loadStringRes` to free them),
+    `Int`-typed id storage (maps/`when`s over resource ids), `@string/`
+    XML references, and exotic format specifiers.
+  - **Remaining Wave-3 work:** free the ctx-based keys by adapting call
+    sites, then move the now-unblocked composables. Note the layouts cluster ALSO needs theme
     constants (`DividerThickness`, `Size55Modifier`, …) hoisted from app
     `ui/theme/Shape.kt` into `commons/ui/theme/Sizes.kt`, plus
     `painterRes`/`TimeAgo`/`NewItemsBubble` decisions — the audit's
