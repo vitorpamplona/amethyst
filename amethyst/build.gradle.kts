@@ -218,6 +218,18 @@ android {
             (project.findProperty("probeCircleCrop")?.toString() ?: "false"),
         )
 
+        // Measurement probe: swaps the feed avatar's SubcomposeAsyncImage for a plain AsyncImage.
+        // Coil documents SubcomposeAsyncImage as the slower option, but MEASURED IT IS NOT: the
+        // swap is a regression, DrawAuthor +74% per occurrence against a 4.6% drift floor, because
+        // AsyncImagePainter keeps the placeholder/error/fallback painters live and draws through
+        // more indirection than the resolved Image subcomposition settles into. Kept so the
+        // result can be re-verified; do not "fix" the feed by taking the plain path.
+        buildConfigField(
+            "boolean",
+            "PROBE_NO_SUBCOMPOSE_AVATAR",
+            (project.findProperty("probeNoSubcomposeAvatar")?.toString() ?: "false"),
+        )
+
         // Measurement probe: drops the circular clip from feed avatars, so the RenderThread cost of
         // the per-avatar graphics layer + outline clip can be separated from decoding and drawing
         // the image itself. Probe builds show square avatars. -PprobeNoAvatarClip=true.

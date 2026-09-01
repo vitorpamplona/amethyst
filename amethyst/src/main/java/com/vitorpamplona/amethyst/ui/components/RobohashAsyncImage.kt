@@ -41,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.asDrawable
+import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
 import coil3.compose.SubcomposeAsyncImage
@@ -153,6 +154,30 @@ fun RobohashFallbackAsyncImage(
             }
 
         val resources = LocalContext.current.resources
+        if (BuildConfig.PROBE_NO_SUBCOMPOSE_AVATAR) {
+            // Probe: same pixels for a loaded image, and the same fallback painter while loading or
+            // on error — but no subcomposition. The Animatable start/stop below is not needed here:
+            // animated URLs are routed to GifProfilePicture by the branch above.
+            AsyncImage(
+                model =
+                    if (bridgedModel.startsWith("http://", ignoreCase = true) || bridgedModel.startsWith("https://", ignoreCase = true)) {
+                        ProfilePictureUrl(bridgedModel)
+                    } else {
+                        bridgedModel
+                    },
+                contentDescription = contentDescription,
+                modifier = modifier,
+                alignment = alignment,
+                contentScale = contentScale,
+                alpha = alpha,
+                colorFilter = colorFilter,
+                filterQuality = filterQuality,
+                placeholder = fallbackPainter,
+                error = fallbackPainter,
+                fallback = fallbackPainter,
+            )
+            return
+        }
         SubcomposeAsyncImage(
             // The thumbnail-cache fetcher behind ProfilePictureUrl delegates to Coil's http-only
             // NetworkFetcher, so a LOCAL model (e.g. a decrypted Concord community icon cached at
