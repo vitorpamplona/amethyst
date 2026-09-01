@@ -1605,7 +1605,6 @@
 <string name="route_discover">Malkovri</string>
 <string name="route_messages">Mesaĝoj</string>
 <string name="route_notifications">Sciigoj</string>
-<string name="route_video">Mallongaĵoj</string>
 <string name="route_calendars">Kalendaroj</string>
 <string name="route_calendar_collections">Kalendarlistoj</string>
 <string name="route_chess">Ŝako</string>
@@ -1804,7 +1803,6 @@
 <string name="onchain_send_error_publish_receipt">Pago sendita, sed la Zap-kvitanco ne povis esti publikigita</string>
 <string name="route_import_follows">Importi sekvantojn</string>
 <string name="new_post">Nova afiŝo</string>
-<string name="new_short">Novaj Mallongaĵoj: bildoj aŭ videoj</string>
 <string name="new_community_note">Nova komunuma noto</string>
 <string name="new_product">Nova produkto</string>
 <string name="new_long_form_post">Nova artikolo</string>

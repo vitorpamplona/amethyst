@@ -512,9 +512,7 @@
     <string name="route_discover">สำรวจ</string>
     <string name="route_messages">ข้อความ</string>
     <string name="route_notifications">การแจ้งเตือน</string>
-    <string name="route_video">Shorts</string>
     <string name="new_post">โพสต์ใหม่</string>
-    <string name="new_short">สร้าง Shorts: รูปภาพ/วิดีโอ</string>
     <string name="new_community_note">สร้างโน๊ตสำหรับชุมชม</string>
     <string name="open_all_reactions_to_this_post">แสดง Reactions ทั้งหมด</string>
     <string name="close_all_reactions_to_this_post">ปิดการสดง Reactions</string>

@@ -1679,7 +1679,6 @@
     
     <string name="route_notifications">Сповіщення</string>
     
-    <string name="route_video">Shorts</string>
     
     <string name="route_calendars">Календарі</string>
     
@@ -2126,7 +2125,6 @@
 
     <string name="new_post">Новий допис</string>
     
-    <string name="new_short">Нові Shorts: зображення або відео</string>
     
     <string name="new_community_note">Нова нотатка спільноти</string>
     

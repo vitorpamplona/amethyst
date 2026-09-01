@@ -607,9 +607,7 @@
     <string name="route_discover">Découvrir</string>
     <string name="route_messages">Messages</string>
     <string name="route_notifications">Notifications</string>
-    <string name="route_video">Vidéos courtes</string>
     <string name="new_post">Nouveau Message</string>
-    <string name="new_short">Nouveaux Shorts : images ou vidéos</string>
     <string name="new_community_note">Nouvelle Note Communautaire</string>
     <string name="open_all_reactions_to_this_post">Ouvrir toutes les réactions à ce message</string>
     <string name="close_all_reactions_to_this_post">Fermer toutes les réactions à ce message</string>

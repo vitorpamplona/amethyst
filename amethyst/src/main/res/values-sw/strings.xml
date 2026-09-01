@@ -1736,6 +1736,8 @@
     <string name="route_discover">Gundua</string>
     <string name="route_messages">Ujumbe</string>
     <string name="route_notifications">Arifa</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">Kalenda</string>
     <string name="route_calendar_collections">Orodha za kalenda</string>
     <string name="wallet">Mkoba</string>
@@ -1953,7 +1955,6 @@
     </plurals>
     <string name="route_import_follows">Ingiza Wanaofuatwa</string>
     <string name="new_post">Chapisho Jipya</string>
-    <string name="new_short">Shorts Mpya: picha au video</string>
     <string name="new_community_note">Kumbukumbu Mpya ya Jamii</string>
     <string name="new_product">Bidhaa Mpya</string>
     <string name="new_long_form_post">Makala Mpya</string>

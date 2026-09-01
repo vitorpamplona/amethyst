@@ -617,9 +617,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="route_discover">Entdecken</string>
     <string name="route_messages">Nachrichten</string>
     <string name="route_notifications">Benachrichtigungen</string>
-    <string name="route_video">Kurzfilme</string>
     <string name="new_post">Neuer Beitrag</string>
-    <string name="new_short">Neue Kurzfilme: Bilder oder Videos</string>
     <string name="new_community_note">Neue Community-Notiz</string>
     <string name="open_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag öffnen</string>
     <string name="close_all_reactions_to_this_post">Alle Reaktionen auf diesen Beitrag schließen</string>

@@ -2903,7 +2903,8 @@
     <string name="route_discover">Descobrir</string>
     <string name="route_messages">Mensagens</string>
     <string name="route_notifications">Notificações</string>
-    <string name="route_video">Vídeos Curtos</string>
+    <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
+         Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <string name="route_calendars">Calendários</string>
     <string name="route_calendar_collections">Listas de calendário</string>
     <string name="route_chess">Xadrez</string>
@@ -3173,7 +3174,6 @@
     </plurals>
     <string name="route_import_follows">Importar Seguidos</string>
     <string name="new_post">Novo Post</string>
-    <string name="new_short">Novos Vídeos Curtos: imagens ou vídeos</string>
     <string name="new_community_note">Nova Nota da Comunidade</string>
     <string name="new_product">Produto Novo</string>
     <string name="new_long_form_post">Novo artigo</string>
