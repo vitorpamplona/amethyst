@@ -26,7 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -35,6 +37,7 @@ import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.fail
 
 /**
  * The desktop app must load the user's media server list from the same event
@@ -97,7 +100,13 @@ class DesktopBlossomServerListTest {
             val event = signedServerList(servers, signer)
             cache.consume(event, relayUrl)
 
-            val scope = CoroutineScope(SupervisorJob())
+            // Unconfined on purpose: the state's stateIn(Eagerly) collector then starts
+            // synchronously and resumes directly on the flowOn(IO) producer thread, so the
+            // test depends only on the 64+-thread IO pool. With the default scope the
+            // collector needs a Dispatchers.Default worker (4 on CI), and any of the other
+            // ~330 desktop tests in this JVM leaking a blocked Default thread starved it —
+            // that is the 30s timeout this test hit on CI after surviving local runs.
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
             try {
                 val state =
                     BlossomServerListState(
@@ -108,8 +117,16 @@ class DesktopBlossomServerListTest {
 
                 // Await the IO-backed stateIn subscription first: the flow settling proves the
                 // state finished wiring, after which the synchronous getter must agree.
-                withTimeout(30_000) {
-                    assertEquals(servers, state.flow.first { it.isNotEmpty() })
+                try {
+                    withTimeout(30_000) {
+                        assertEquals(servers, state.flow.first { it.isNotEmpty() })
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    fail(
+                        "flow never surfaced the servers: flow.value=${state.flow.value}, " +
+                            "getter=${state.getBlossomServersList()?.servers()}",
+                        e,
+                    )
                 }
                 assertEquals(servers, state.getBlossomServersList()?.servers())
             } finally {
