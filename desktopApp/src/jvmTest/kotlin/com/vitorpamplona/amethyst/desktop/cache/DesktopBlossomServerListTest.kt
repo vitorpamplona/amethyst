@@ -63,9 +63,14 @@ class DesktopBlossomServerListTest {
             val servers = listOf("https://blossom.example.com", "https://cdn.example.org")
             val event = signedServerList(servers, signer)
 
+            // Pin the note across consume -> read: the cache holds notes via
+            // SoftReference (LargeSoftCache), so without a strong reference a GC
+            // between the two calls evicts the note and the re-fetch mints an
+            // empty one (seen on memory-tight CI runners).
+            val pinned = cache.getOrCreateAddressableNote(event.address())
             cache.consume(event, relayUrl)
 
-            val stored = cache.getOrCreateAddressableNote(event.address()).event as? BlossomServersEvent
+            val stored = pinned.event as? BlossomServersEvent
             assertNotNull(stored, "kind 10063 event must be stored in the addressable cache")
             assertEquals(servers, stored.servers())
         }
@@ -78,10 +83,11 @@ class DesktopBlossomServerListTest {
             val newer = signedServerList(listOf("https://new.example.com"), signer, createdAt = 2_000)
             val older = signedServerList(listOf("https://old.example.com"), signer, createdAt = 1_000)
 
+            val pinned = cache.getOrCreateAddressableNote(newer.address())
             cache.consume(newer, relayUrl)
             cache.consume(older, relayUrl)
 
-            val stored = cache.getOrCreateAddressableNote(newer.address()).event as? BlossomServersEvent
+            val stored = pinned.event as? BlossomServersEvent
             assertEquals(listOf("https://new.example.com"), stored?.servers())
         }
 
@@ -98,7 +104,16 @@ class DesktopBlossomServerListTest {
             val signer = NostrSignerInternal(KeyPair())
             val servers = listOf("https://blossom.example.com")
             val event = signedServerList(servers, signer)
+            // Pin the note across the consume -> construct window: the cache holds
+            // notes via SoftReference (LargeSoftCache), and a GC under CI memory
+            // pressure evicted the consumed note before the state's
+            // getOrCreateAddressableNote re-fetched it, minting a fresh EMPTY note
+            // (observed as flow=[] / getter=null on the macOS runner). Production
+            // is immune the same way: BlossomServerListState pins blossomListNote
+            // as a field for its lifetime.
+            val pinned = cache.getOrCreateAddressableNote(event.address())
             cache.consume(event, relayUrl)
+            assertNotNull(pinned.event, "consume must store the event before the state is built")
 
             // Unconfined on purpose: the state's stateIn(Eagerly) collector then starts
             // synchronously and resumes directly on the flowOn(IO) producer thread, so the
