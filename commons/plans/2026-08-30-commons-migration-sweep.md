@@ -519,7 +519,18 @@ sections above are the original audit and stay as reference.
   red until that cleanup lands there — cherry-picking `5cf47f6f` fixes it.
 - **CI fully green** on head `5cf47f6f`; PR #4025 mergeable_state clean.
 
-### Audit findings to fix BEFORE or right after merge (2026-09-01 review)
+### Audit findings (2026-09-01 review) — 5 of 6 FIXED on the branch
+
+Findings 1, 2, 3, 5 and 6 below are fixed and covered where testable
+(`TopFilterSerialNameTest` in commons commonTest pins the pre-move serial
+names and legacy-JSON decoding on JVM **and** iOS). The one still open:
+
+- **Baseline profile stale (finding 4)** — `baseline-prof.txt` has ~251
+  rules naming pre-move classes; regenerating requires the
+  `:baselineprofile` macrobenchmark on a device, which this environment
+  cannot run. Regenerate before or shortly after release.
+
+Original findings, for reference:
 
 1. **[ship-blocker] `TopFilter` serial names changed** — the move to
    `commons.model.topNavFeeds` changed every subclass's kotlinx default
