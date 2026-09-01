@@ -62,4 +62,5 @@
         <item quantity="few">%1$d događaja</item>
         <item quantity="other">%1$d događaja</item>
     </plurals>
+    <string name="profile_banner">Baner profila</string>
 </resources>

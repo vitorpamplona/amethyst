@@ -99,7 +99,6 @@
     <string name="add">إضافة</string>
     <string name="replying_to">"الرد على"</string>
     <string name="and">" و "</string>
-    <string name="profile_banner">لافتة الملف الشخصي</string>
     <string name="error_parsing_error_message">خطأ أثناء تحليل رسالة الخطأ</string>
     <string name="following">"المتابعون"</string>
     <string name="followers">"متابِعاً"</string>

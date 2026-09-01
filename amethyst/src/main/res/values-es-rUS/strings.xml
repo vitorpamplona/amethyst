@@ -88,7 +88,6 @@
     <string name="add">Agregar</string>
     <string name="replying_to">"respondiendo a "</string>
     <string name="and">" y "</string>
-    <string name="profile_banner">Banner del perfil</string>
     <string name="error_parsing_error_message">Error al analizar el mensaje de error</string>
     <string name="following">" Siguiendo"</string>
     <string name="followers">" Seguidores"</string>

@@ -85,7 +85,6 @@
     <string name="add">Dodaj</string>
     <string name="replying_to">"odgovara na "</string>
     <string name="and">" i "</string>
-    <string name="profile_banner">Baner profila</string>
     <string name="error_parsing_error_message">Greška pri parsiranju poruke o grešci</string>
     <string name="following">" Praćeni"</string>
     <string name="followers">" Pratioci"</string>

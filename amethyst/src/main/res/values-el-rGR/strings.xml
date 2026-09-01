@@ -85,7 +85,6 @@
     <string name="add">Προσθήκη</string>
     <string name="replying_to">"απάντηση σε "</string>
     <string name="and">" και "</string>
-    <string name="profile_banner">Ταπετσαρία Προφίλ</string>
     <string name="error_parsing_error_message">Σφάλμα ανάλυσης σφάλμα μηνύματος</string>
     <string name="following">" Ακολουθείτε"</string>
     <string name="followers">" Ακόλουθοι"</string>

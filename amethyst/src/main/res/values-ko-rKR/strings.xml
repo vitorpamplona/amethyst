@@ -83,7 +83,6 @@
     <string name="add">추가</string>
     <string name="replying_to">"답글 대상: "</string>
     <string name="and">" 및 "</string>
-    <string name="profile_banner">프로필 배너</string>
     <string name="error_parsing_error_message">오류 메시지 파싱 실패</string>
     <string name="following">" 팔로잉"</string>
     <string name="followers">" 팔로워"</string>

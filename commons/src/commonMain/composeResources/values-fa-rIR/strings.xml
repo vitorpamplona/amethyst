@@ -59,4 +59,5 @@
         <item quantity="one">%1$d رویداد</item>
         <item quantity="other">%1$d رویداد</item>
     </plurals>
+    <string name="profile_banner">بنر پروفایل</string>
 </resources>

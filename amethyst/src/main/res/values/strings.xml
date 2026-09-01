@@ -103,7 +103,6 @@
     <string name="add">Add</string>
     <string name="replying_to">"replying to "</string>
     <string name="and">" and "</string>
-    <string name="profile_banner">Profile Banner</string>
     <string name="error_parsing_error_message">Error parsing error message</string>
     <string name="following">" Following"</string>
     <string name="followers">" Followers"</string>

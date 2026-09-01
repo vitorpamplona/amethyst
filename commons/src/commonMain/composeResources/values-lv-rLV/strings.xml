@@ -62,4 +62,5 @@
         <item quantity="one">%1$d notikums</item>
         <item quantity="other">%1$d notikumi</item>
     </plurals>
+    <string name="profile_banner">Profila reklāmkarogs</string>
 </resources>

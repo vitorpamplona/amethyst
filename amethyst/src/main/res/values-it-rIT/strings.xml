@@ -84,7 +84,6 @@
     <string name="add">Aggiungi</string>
     <string name="replying_to">"rispondendo a"</string>
     <string name="and">" e "</string>
-    <string name="profile_banner">Immagine di copertina</string>
     <string name="error_parsing_error_message">Errore analisi messaggio d\'errore</string>
     <string name="following">" Seguiti"</string>
     <string name="followers">" Seguaci"</string>

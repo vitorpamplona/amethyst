@@ -66,4 +66,5 @@
         <item quantity="many">%1$d подій</item>
         <item quantity="other">%1$d подій</item>
     </plurals>
+    <string name="profile_banner">Банер профілю</string>
 </resources>

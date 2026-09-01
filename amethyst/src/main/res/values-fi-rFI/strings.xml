@@ -87,7 +87,6 @@
     <string name="add">Lisää</string>
     <string name="replying_to">"vastaus kohteeseen "</string>
     <string name="and">" ja "</string>
-    <string name="profile_banner">Profiilin banneri</string>
     <string name="error_parsing_error_message">Virhe virhesanomaa tulkittaessa</string>
     <string name="following">" Seuratut"</string>
     <string name="followers">" Seuraajat"</string>

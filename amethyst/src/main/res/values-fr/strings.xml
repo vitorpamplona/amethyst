@@ -59,7 +59,6 @@
     <string name="add">Ajouter</string>
     <string name="replying_to">"répondre à "</string>
     <string name="and">" et "</string>
-    <string name="profile_banner">Bannière du profil</string>
     <string name="error_parsing_error_message">Erreur d\'analyse du message d\'erreur</string>
     <string name="following">" Abonnements"</string>
     <string name="followers">" Abonnés"</string>

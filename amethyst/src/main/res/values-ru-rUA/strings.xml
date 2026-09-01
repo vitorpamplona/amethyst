@@ -91,7 +91,6 @@
     <string name="add">Добавить</string>
     <string name="replying_to">"ответ на "</string>
     <string name="and">" и "</string>
-    <string name="profile_banner">Баннер профиля</string>
     <string name="error_parsing_error_message">Ошибка разбора сообщения об ошибке</string>
     <string name="following">" Подписки"</string>
     <string name="followers">" Подписчики"</string>

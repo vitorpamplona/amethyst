@@ -30,6 +30,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import org.jetbrains.compose.resources.PluralStringResource
+import org.jetbrains.compose.resources.StringResource
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes as commonsPluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes as commonsStringRes
 
 /**
  * Cache for stringResource because it seems to be > 1ms function in some phones
@@ -72,6 +76,28 @@ fun StringResSetup() {
 
 @Composable
 fun stringRes(id: Int): String = resourceCache.get(id) ?: stringResource(id).also { resourceCache.put(id, it) }
+
+// Overloads for keys already migrated to commons Compose resources
+// (com.vitorpamplona.amethyst.commons.resources.Res.string.*). They let a file
+// mix migrated and unmigrated keys under this one import — overload resolution
+// picks by argument type — so migrating a key is just R.string.x -> Res.string.x.
+// When a whole file moves to commons, swap this import for
+// com.vitorpamplona.amethyst.commons.ui.stringRes.
+@Composable
+fun stringRes(id: StringResource): String = commonsStringRes(id)
+
+@Composable
+fun stringRes(
+    id: StringResource,
+    vararg args: Any,
+): String = commonsStringRes(id, *args)
+
+@Composable
+fun pluralStringRes(
+    id: PluralStringResource,
+    count: Int,
+    vararg args: Any,
+): String = if (args.isEmpty()) commonsPluralStringRes(id, count) else commonsPluralStringRes(id, count, *args)
 
 @Composable
 fun stringRes(

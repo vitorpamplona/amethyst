@@ -195,4 +195,5 @@
         <item quantity="few">%1$d dogodki</item>
         <item quantity="other">%1$d dogodkov</item>
     </plurals>
+    <string name="profile_banner">Pasica profila</string>
 </resources>

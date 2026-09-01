@@ -72,4 +72,5 @@
         <item quantity="many">%1$d حدثًا</item>
         <item quantity="other">%1$d حدث</item>
     </plurals>
+    <string name="profile_banner">لافتة الملف الشخصي</string>
 </resources>

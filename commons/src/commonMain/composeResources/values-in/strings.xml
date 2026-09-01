@@ -44,4 +44,5 @@
     <plurals name="calendar_collection_count">
         <item quantity="other">%1$d acara</item>
     </plurals>
+    <string name="profile_banner">Spanduk Profil</string>
 </resources>

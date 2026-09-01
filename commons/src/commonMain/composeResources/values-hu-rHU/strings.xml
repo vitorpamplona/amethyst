@@ -185,4 +185,5 @@
         <item quantity="one">%1$d esemény</item>
         <item quantity="other">%1$d esemény</item>
     </plurals>
+    <string name="profile_banner">Profilplakát</string>
 </resources>

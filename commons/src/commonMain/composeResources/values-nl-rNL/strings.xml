@@ -185,4 +185,5 @@
         <item quantity="one">%1$d evenement</item>
         <item quantity="other">%1$d evenementen</item>
     </plurals>
+    <string name="profile_banner">Profielbanner</string>
 </resources>

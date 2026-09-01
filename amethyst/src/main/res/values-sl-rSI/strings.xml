@@ -115,7 +115,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="add">Dodaj</string>
     <string name="replying_to">"odgovoriti "</string>
     <string name="and">" in "</string>
-    <string name="profile_banner">Pasica profila</string>
     <string name="error_parsing_error_message">Napaka pri razčlembi sporočila o napaki</string>
     <string name="following">" Sledi"</string>
     <string name="followers">" Sledilcev"</string>

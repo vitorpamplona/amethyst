@@ -97,7 +97,6 @@
     <string name="add">Hozzáadás</string>
     <string name="replying_to">"válasz erre: "</string>
     <string name="and">" és "</string>
-    <string name="profile_banner">Profilplakát</string>
     <string name="error_parsing_error_message">Hiba a hibaüzenet elemzésekor</string>
     <string name="following">" Követett"</string>
     <string name="followers">" Követő"</string>

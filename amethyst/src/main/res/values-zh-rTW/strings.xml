@@ -85,7 +85,6 @@
     <string name="add">添加</string>
     <string name="replying_to">"回覆 "</string>
     <string name="and">" 和 "</string>
-    <string name="profile_banner">個人檔案橫幅</string>
     <string name="error_parsing_error_message">錯誤解析錯誤消息</string>
     <string name="following">" 關注"</string>
     <string name="followers">" 粉絲"</string>

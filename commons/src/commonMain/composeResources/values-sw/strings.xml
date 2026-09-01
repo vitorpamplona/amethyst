@@ -59,4 +59,5 @@
         <item quantity="one">tukio %1$d</item>
         <item quantity="other">matukio %1$d</item>
     </plurals>
+    <string name="profile_banner">Bango la Wasifu</string>
 </resources>

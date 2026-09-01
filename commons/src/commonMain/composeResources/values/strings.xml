@@ -197,4 +197,5 @@
         <item quantity="one">%1$d event</item>
         <item quantity="other">%1$d events</item>
     </plurals>
+    <string name="profile_banner">Profile Banner</string>
 </resources>

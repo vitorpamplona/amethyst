@@ -59,4 +59,5 @@
         <item quantity="one">%1$d συμβάν</item>
         <item quantity="other">%1$d συμβάντα</item>
     </plurals>
+    <string name="profile_banner">Ταπετσαρία Προφίλ</string>
 </resources>

@@ -88,7 +88,6 @@
     <string name="add">যুক্ত করুন</string>
     <string name="replying_to">"এই ব্যক্তির প্রতিউত্তর দিচ্ছেন "</string>
     <string name="and">" এবং "</string>
-    <string name="profile_banner">প্রোফাইলের ব্যানার</string>
     <string name="error_parsing_error_message">ত্রুটি বার্তা পার্স করতে ব্যর্থ</string>
     <string name="following">" অনুসরণ"</string>
     <string name="followers">" অনুসারী"</string>

@@ -185,4 +185,5 @@
         <item quantity="one">%1$d Termin</item>
         <item quantity="other">%1$d Termine</item>
     </plurals>
+    <string name="profile_banner">Profilbanner</string>
 </resources>

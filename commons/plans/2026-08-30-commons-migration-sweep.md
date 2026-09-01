@@ -569,8 +569,29 @@ Original findings, for reference:
   design decision**: `CachePruner`/`CacheSearch` call
   `Account.isFollowing(...)`; either `IAccount` grows it (DesktopIAccount
   must implement) or they take a narrower interface (recommended).
-- **Wave 3: strings bridge** — a `stringRes` twin backed by Compose
-  resources in commons; gates ~210 otherwise-pure UI files.
+- **Wave 3: strings bridge** — **BUILT (2026-09-01)**. The pieces:
+  - `commons/ui/StringRes.kt` (commonMain): `stringRes(StringResource)`,
+    formatted + plural variants, `loadStringRes`/`loadPluralStringRes` for
+    non-composable scopes. Thin delegates over compose-resources — no extra
+    cache (the library caches parsed locale files process-wide).
+  - App-side `ui/StringResourceCache.kt` gained `stringRes(StringResource)`
+    overloads delegating to the bridge, so ONE `stringRes` import serves
+    mixed files: migrating a key is just `R.string.x` → `Res.string.x`
+    (+ the two `commons.resources` imports). No aliasing, no churn.
+  - `tools/strings-migrate/migrate.py <keys…>`: moves keys from app res to
+    commons composeResources across all 57 locales byte-for-byte (Crowdin
+    covers both trees with the same mapping — see crowdin.yml). It refuses
+    keys with bare `%s`/`%d` (compose-resources needs positional `%1$s`).
+  - Exemplar shipped: `profile_banner` (the ui/layouts cluster's only
+    string blocker) migrated + all 7 call-site files repointed.
+  - **Remaining Wave-3 work:** migrate keys feature-by-feature with this
+    tool (keys whose non-composable `ctx`-based call sites exist must have
+    those call sites adapted to `loadStringRes` first), then move the
+    now-unblocked composables. Note the layouts cluster ALSO needs theme
+    constants (`DividerThickness`, `Size55Modifier`, …) hoisted from app
+    `ui/theme/Shape.kt` into `commons/ui/theme/Sizes.kt`, plus
+    `painterRes`/`TimeAgo`/`NewItemsBubble` decisions — the audit's
+    "strings-only" tally under-counted transitive deps.
 - **Wave 4: Account/AccountViewModel decomposition** — long-tail.
 
 ### Environment notes for the next session (hard-won)

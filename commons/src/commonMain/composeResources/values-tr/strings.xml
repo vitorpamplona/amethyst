@@ -47,4 +47,5 @@
         <item quantity="one">%1$d etkinlik</item>
         <item quantity="other">%1$d etkinlik</item>
     </plurals>
+    <string name="profile_banner">Profil Bayrağı</string>
 </resources>

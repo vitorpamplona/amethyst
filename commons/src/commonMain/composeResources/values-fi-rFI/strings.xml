@@ -59,4 +59,5 @@
         <item quantity="one">%1$d tapahtuma</item>
         <item quantity="other">%1$d tapahtumaa</item>
     </plurals>
+    <string name="profile_banner">Profiilin banneri</string>
 </resources>

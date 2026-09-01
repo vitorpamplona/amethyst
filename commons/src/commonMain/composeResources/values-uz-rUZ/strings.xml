@@ -59,4 +59,5 @@
         <item quantity="one">%1$d tadbir</item>
         <item quantity="other">%1$d tadbir</item>
     </plurals>
+    <string name="profile_banner">Profil banneri</string>
 </resources>

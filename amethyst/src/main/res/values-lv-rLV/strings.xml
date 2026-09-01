@@ -90,7 +90,6 @@
     <string name="add">Pievienot</string>
     <string name="replying_to">"atbild uz "</string>
     <string name="and">" un "</string>
-    <string name="profile_banner">Profila reklāmkarogs</string>
     <string name="error_parsing_error_message">Kļūda, parsējot kļūdas ziņojumu</string>
     <string name="following">" Seko"</string>
     <string name="followers">" Sekotāji"</string>

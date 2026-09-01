@@ -47,4 +47,5 @@
         <item quantity="one">%1$d நிகழ்வு</item>
         <item quantity="other">%1$d நிகழ்வுகள்</item>
     </plurals>
+    <string name="profile_banner">தன்விவர பேனர்</string>
 </resources>

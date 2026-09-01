@@ -42,7 +42,6 @@
     <string name="add">Додати</string>
     <string name="replying_to">"у відповідь "</string>
     <string name="and">" та "</string>
-    <string name="profile_banner">Банер профілю</string>
     <string name="error_parsing_error_message">Помилка при обробці повідомлення про помилку</string>
     <string name="following">" Підписок"</string>
     <string name="followers">" Підписників"</string>

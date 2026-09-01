@@ -185,4 +185,5 @@
         <item quantity="one">%1$d घटना</item>
         <item quantity="other">%1$d घटनाएँ</item>
     </plurals>
+    <string name="profile_banner">परिचय ध्वजचित्र</string>
 </resources>

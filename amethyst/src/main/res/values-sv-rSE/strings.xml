@@ -97,7 +97,6 @@
     <string name="add">Lägg till</string>
     <string name="replying_to">"Svarar till "</string>
     <string name="and">" och "</string>
-    <string name="profile_banner">Profil Banner</string>
     <string name="error_parsing_error_message">Fel vid tolkning av felmeddelande</string>
     <string name="following">" Följer"</string>
     <string name="followers">" Följare"</string>

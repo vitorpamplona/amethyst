@@ -47,4 +47,5 @@
         <item quantity="one">%1$d evento</item>
         <item quantity="other">%1$d eventoj</item>
     </plurals>
+    <string name="profile_banner">Profila Murpapero</string>
 </resources>

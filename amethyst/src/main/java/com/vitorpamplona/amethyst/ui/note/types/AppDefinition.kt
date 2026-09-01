@@ -81,6 +81,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
@@ -175,7 +177,7 @@ fun RenderAppDefinition(
             } else {
                 Image(
                     painter = painterRes(R.drawable.profile_banner, 6),
-                    contentDescription = stringRes(id = R.string.profile_banner),
+                    contentDescription = stringRes(id = Res.string.profile_banner),
                     contentScale = ContentScale.FillWidth,
                     modifier =
                         Modifier

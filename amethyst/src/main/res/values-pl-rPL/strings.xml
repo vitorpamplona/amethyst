@@ -105,7 +105,6 @@
     <string name="add">Dodaj</string>
     <string name="replying_to">"odpowiadając do "</string>
     <string name="and">" i "</string>
-    <string name="profile_banner">Baner profilu</string>
     <string name="error_parsing_error_message">Błąd podczas analizowania komunikatu o błędzie</string>
     <string name="following">" Obserwowane"</string>
     <string name="followers">" Obserwujące"</string>

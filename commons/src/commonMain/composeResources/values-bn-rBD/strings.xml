@@ -59,4 +59,5 @@
         <item quantity="one">%1$d টি ইভেন্ট</item>
         <item quantity="other">%1$d টি ইভেন্ট</item>
     </plurals>
+    <string name="profile_banner">প্রোফাইলের ব্যানার</string>
 </resources>
