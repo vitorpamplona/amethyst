@@ -20,44 +20,30 @@
  */
 package com.vitorpamplona.quartz.utils.cache
 
-import kotlinx.collections.immutable.PersistentMap
-import kotlinx.collections.immutable.persistentHashMapOf
-import kotlin.concurrent.atomics.AtomicReference
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
-
 /**
- * Linux/Native actual for [ConcurrentHashCache].
+ * Linux/Native actual for [ConcurrentHashCache], over the same [StripedHashMap] as
+ * `LargeCache.linux.kt` — read its docs for why.
  *
- * Same fix, and for the same reason, as `LargeCache.linux.kt` — read its docs for the
- * full rationale. This was copy-on-write over a plain `HashMap`, so every [put] rebuilt
- * the entire map: O(n) per write, and a CAS retry loop that re-did the whole rebuild on
- * every lost race. Bad anywhere; worst here, because the only caller is
- * `CachingEventDecoder`, which writes once per event arriving from a relay.
- *
- * A HAMT keeps the wait-free single-load read and the non-blocking write while making
- * the write O(log32 n) — [PersistentMap.putting] shares structure with the map it came
- * from and copies only the path to the changed key.
+ * This one was the worst-placed of the copy-on-write caches: its only caller,
+ * `CachingEventDecoder`, writes once per event arriving from a relay, so every decode
+ * rebuilt the whole map under a CAS retry loop. Now a write touches one bucket and a
+ * read takes no lock at all.
  */
-@OptIn(ExperimentalAtomicApi::class)
 actual class ConcurrentHashCache<K : Any, V : Any> {
-    private val ref = AtomicReference<PersistentMap<K, V>>(persistentHashMapOf())
+    private val cache = StripedHashMap<K, V>()
 
-    actual fun get(key: K): V? = ref.load()[key]
+    actual fun get(key: K): V? = cache.get(key)
 
     actual fun put(
         key: K,
         value: V,
     ) {
-        while (true) {
-            val current = ref.load()
-            val next = current.putting(key, value)
-            if (next === current || ref.compareAndSet(current, next)) return
-        }
+        cache.put(key, value)
     }
 
-    actual fun size(): Int = ref.load().size
+    actual fun size(): Int = cache.size()
 
     actual fun clear() {
-        ref.store(persistentHashMapOf())
+        cache.clear()
     }
 }
