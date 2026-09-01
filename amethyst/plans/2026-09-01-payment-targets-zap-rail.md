@@ -95,10 +95,12 @@ targets and always show them**: opening `venmo.com/<handle>` in a browser is a
 legitimate way to pay, so nothing is broken. The sender-symmetry gate (§5) is
 the real filter there.
 
-*(Refinement, not v1: to detect a genuine app handler behind an https target,
-resolve a control `https://<nonexistent-host>/` and treat the target as
-app-backed only if its resolver set contains a package outside that control
-set.)*
+**But §4.2 still needs the control probe here.** To tell a real app handler
+from a browser, resolve a control `https://<nonexistent-host>/` and treat the
+target as app-backed only if its resolver set contains a package outside that
+control set. It never gates the chip — it decides whether the chip wears the
+app's icon or the brand-colour glyph, and a Chrome icon on a Venmo chip is
+worse than no icon at all.
 
 ### 3.3 The cache — keyed by scheme+host, warmed from the sender
 
@@ -132,7 +134,9 @@ of the UI file into `commons` (§6.0).
 
 ---
 
-## 4. Saying "the app decides the amount"
+## 4. The chip's face
+
+### 4.1 Saying "the app decides the amount"
 
 An amount-less chip beside pills that all show numbers reads as a bug unless
 it is visibly a *different kind of thing*. Three cues, no extra layout:
@@ -143,13 +147,76 @@ it is visibly a *different kind of thing*. Three cues, no extra layout:
 3. **A string that says it outright**, e.g. *"Amount set in %1$s"*, shown as
    the chip's `contentDescription` and as a toast on long-press.
 
-**Both icons are already in `MaterialSymbols.kt`** (`OpenInNew:280`,
+**Both glyphs are already in `MaterialSymbols.kt`** (`OpenInNew:280`,
 `AccountBalanceWallet:27`) — **no `tools/material-symbols-subset/subset.sh`
-run is needed.**
+run is needed**, and §4.2 adds no new glyphs either.
 
 Long-press must **not** inherit `onChangeAmount` (the sat-preset editor is
 meaningless here); it copies the authority, matching `PaymentTargetChip`'s
 long-press on the profile.
+
+### 4.2 Which icon it wears — the installed app's, not a bundled logo
+
+**This already works in this codebase.** `ExternalSignerButton.kt:118` renders
+installed NIP-55 signers with `it.loadLabel(pm)` / `it.loadIcon(pm)` →
+`toBitmap()` → Coil's `rememberAsyncImagePainter`, off the back of
+`getExternalSignersInstalled` (`quartz/…/IsExternalSignerInstalled.kt`), which
+is `queryIntentActivities(ACTION_VIEW, "nostrsigner:")` — **the same call
+§3 already makes for discovery.** The `ResolveInfo` we keep to answer "can
+anything open this?" also carries the icon and the app's own name. The icon is
+therefore very close to free; what it costs is care.
+
+**Do not bundle brand logos.** Three reasons, in order of weight:
+
+1. **Trademark, not licence.** `CLAUDE.md`'s dependency gate covers *code*
+   licences; a Venmo or PayPal mark shipped inside an MIT APK is a separate
+   trademark question. Referential use is usually permitted, redistribution of
+   the mark often is not. That is a maintainer's call, not a silent one.
+2. **The type space is unbounded.** `PaymentTargetsViewModel.addTarget` accepts
+   any `type.trim().lowercase()`, so a bundled set can never be complete —
+   `pix`, `upi`, `swish`, `interac` and the next one all miss.
+3. **The codebase already decided this.** `paymentTargetStyleFor` pairs brand
+   *colours* (`VENMO_BLUE #008CFF`, `PAYPAL_DEEP_BLUE #003087`,
+   `CASHAPP_LIME #00E64D`) with the generic `AccountBalanceWallet` glyph.
+   Brand colour + generic glyph is the established pattern; keep it as the
+   fallback. Brand marks are also absent from Material Symbols, so each would
+   be a hand-authored `ImageVector` like `CustomHashTagIcons.Cashu`.
+
+So: **the installed app's icon *is* the brand icon**, sourced from the device
+instead of shipped. It is self-limiting in the right direction — the "popular
+options" are exactly the ones with an app installed.
+
+**Four things the precedent gets away with and we would not:**
+
+- **Load once, in the warm step.** `ExternalSignerButton` calls `loadIcon()` +
+  `toBitmap()` inside a `LazyColumn` item, so it re-runs on recomposition —
+  tolerable in a one-shot dialog, not in the zap popup. `loadIcon` reads the
+  target APK's resources, so it is I/O: do it in §3.3's off-main warm and
+  cache the **`ImageBitmap`**, never the `Drawable`.
+- **Size and mask it.** minSdk is 26, so any icon may be an
+  `AdaptiveIconDrawable`: a 108×108 canvas whose outer margin the launcher
+  masks away. A bare `toBitmap()` drawn at 18dp shows a small logo floating in
+  padding. Use `toBitmap(px, px)` at the target size plus
+  `Modifier.clip(CircleShape)` — what a launcher does. The precedent renders
+  at 48dp and gets away with it.
+- **Pick one app, or none.** `payto://` can resolve to several. Ask
+  `resolveActivity(intent, MATCH_DEFAULT_ONLY)` for the user's default; when
+  Android hands back its `ResolverActivity` (no default set) there is no app
+  to name — fall back to the glyph rather than showing the chooser's icon.
+- **Accept that it cannot be tinted.** Every other rail is a monochrome glyph
+  tinted `BitcoinOrange` / `onSurface`. A full-colour raster can't join that
+  scheme — which is arguably the point: it is the visual signal that this
+  segment leaves the app. It needs the circular clip and a slightly smaller
+  optical size to sit beside 18dp glyphs.
+
+**This promotes the https control-probe from a nicety to v1 work.** §3.2 exempts
+`venmo` / `paypal` / `cashapp` from discovery because a browser always resolves
+`https://`. That is fine for *gating*, but not for *icons*: with only a browser
+installed, `resolveActivity` returns **Chrome**, and a Chrome icon on a Venmo
+chip is worse than no icon. So an https target needs the control probe
+(resolve `https://<nonexistent-host>/`, treat the target as app-backed only if
+its resolver set contains a package outside that control set) to decide
+**icon vs brand-colour glyph**, even though it never gates the chip.
 
 ---
 
@@ -201,7 +268,11 @@ Compose.
 
 ### 6.2 Discovery
 `amethyst/…/service/payments/PayToAppAvailability.kt` per §3.3 + the manifest
-`<queries>` entries per §3.1.
+`<queries>` entries per §3.1. Each cache entry holds what §4.2 needs as well as
+the yes/no: `{ resolves: Boolean, label: String?, icon: ImageBitmap? }` —
+decoded once in the warm step at the 18dp target size, never per composition.
+Icon and label are null for the no-default (`ResolverActivity`) and
+browser-only cases, and the chip falls back to the brand-colour glyph.
 
 ### 6.3 Capability
 - `RailCapability` += `payToTargets: List<PaymentTarget> = emptyList()` —
@@ -237,8 +308,8 @@ new strings; changelog.
 | `commons/commonTest` | `PaymentTargetTypesTest` | alias collapse, case/whitespace, wallet-covered set, scheme mapping |
 | `commons/commonTest` | `PayToRailMatcherTest` | empty sender → empty; no overlap → empty; `ln` vs `lightning` → empty (wallet-covered); `Venmo` vs `venmo` → match; dedupe by type |
 | `amethyst/test` | sibling of `RailCapabilityCashuStatusTest` | split present → empty; setting off → empty; no author → empty; unavailable scheme → empty; https target → shown without probe; **existing rails unaffected** |
-| `amethyst/test` | `PayToAppAvailabilityTest` | key is scheme+host, not scheme; probe count == sender's target count, independent of post count |
-| Manual | | chip appears once (not per pill); tap opens the app; **counter does not move**; split note shows no chip; install app → background → foreground → chip appears |
+| `amethyst/test` | `PayToAppAvailabilityTest` | key is scheme+host, not scheme; probe count == sender's target count, independent of post count; `ResolverActivity` default → null icon; browser-only https → null icon (control probe) |
+| Manual | | chip appears once (not per pill); tap opens the app; **counter does not move**; split note shows no chip; install app → background → foreground → chip appears; adaptive icon is masked round, not floating in padding; https target with no app shows the glyph, not Chrome |
 
 ---
 
@@ -255,7 +326,11 @@ new strings; changelog.
 4. **`ReactionRowAction.Pay` overlap** — recommend keeping both, `Pay`
    disabled by default: `Pay` browses *all* of a recipient's targets, this
    chip is the *matched, installed, splitless* shortcut.
-5. **Symmetry heuristic** — right for closed loops (Venmo, Cash App, UPI),
+5. **Colour icon beside monochrome glyphs** (§4.2). The app icon can't be
+   tinted, so the chip will be the one full-colour thing in the popup.
+   Recommend **accepting** it as the "this leaves the app" signal — but it is a
+   visible break from the rail iconography and worth an explicit yes.
+6. **Symmetry heuristic** — right for closed loops (Venmo, Cash App, UPI),
    arguably too strict for open ones (Monero: a sender needs a wallet, not a
    published address). Ship strict; relaxing later is additive. Note that
    intent discovery already covers much of what symmetry was proxying for, so
