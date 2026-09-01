@@ -194,24 +194,15 @@ jobs:
           name: geode Test Reports
           path: geode/build/reports
 
-  # linuxX64 is the only target whose LargeCache / ConcurrentHashCache actuals are
-  # hand-written concurrent maps rather than a delegation to a platform concurrent
-  # collection, and until this job existed nothing ran them: the target was compiled
-  # by no CI leg at all. That is how a copy-on-write LargeCache with O(n) writes and a
-  # non-atomic read-copy-write (concurrent writers silently dropped entries) sat in
-  # the tree unnoticed.
+  # Until this job existed nothing ran the linuxX64 target at all — it was compiled by
+  # no CI leg. That is how a copy-on-write LargeCache with O(n) writes and a non-atomic
+  # read-copy-write (concurrent writers silently dropped entries) sat in the tree
+  # unnoticed, and how TestResourceLoader stayed a TODO() that failed every vector-driven
+  # suite on the target.
   #
-  # Scoped to the cache/concurrency packages on purpose. The full linuxX64Test suite
-  # is 3,490 tests with 78 pre-existing failures, essentially all of them `TODO()`
-  # stubs in linux actuals that were never written — MLS crypto, the SQLite driver,
-  # NIP-44, Bolt12 — plus two URL-handling divergences. Filling those in is its own
-  # project; gating PRs on them today would just mean a permanently red job. The
-  # filter keeps the leg meaningful and green, and widening it is a one-line change
-  # once the native actuals land.
-  #
-  # This still compiles and links the whole module for linuxX64, so a commonMain or
-  # commonTest source that reaches for a JVM-only API fails here too — on a target
-  # with no Foundation to fall back on the way Apple has.
+  # Runs the whole :quartz suite on a Linux Native frontend, which also catches a
+  # commonMain or commonTest source reaching for a JVM-only API on a target that, unlike
+  # Apple, has no Foundation to fall back on.
   test-quartz-linux-native:
     needs: lint
     runs-on: ubuntu-latest
@@ -242,11 +233,8 @@ jobs:
           key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
           restore-keys: konan-${{ runner.os }}-
 
-      - name: Test Quartz caches on Linux Native
-        run: |
-          ./gradlew :quartz:linuxX64Test \
-            --tests "com.vitorpamplona.quartz.utils.cache.*" \
-            --tests "com.vitorpamplona.quartz.utils.concurrent.*"
+      - name: Test Quartz on Linux Native
+        run: ./gradlew :quartz:linuxX64Test
 
       - name: Linux Native Test Report
         uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
