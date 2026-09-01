@@ -36,10 +36,16 @@ import com.vitorpamplona.amethyst.model.ReactionRowAction
  * layout and draw phases, which is what makes this useful for separating "building
  * the tree" from "drawing it".
  *
- * The whole thing is behind [BuildConfig.TRACE_NOTE_RENDER], which is `true` only in
- * the `benchmark` build type. In `debug` and `release` the constant folds to `false`,
- * the function is inline, and R8 deletes the branch outright — so shipped builds pay
- * nothing at all, not even an `isEnabled` check.
+ * Gated on [BuildConfig.TRACE_NOTE_RENDER], `true` only in the `benchmark` build type, so
+ * the sections never execute in `debug` or `release`.
+ *
+ * They are **not stripped**, though — verified by grepping the R8'd release DEX, which
+ * still contains the marker strings, this file's classes and a reference to
+ * `androidx.tracing.Trace`. R8 cannot prove the branch dead, most likely because this is
+ * a `@Composable inline` function the Compose plugin rewrites before R8 sees it. Runtime
+ * cost in a shipped build is nil; APK footprint is not zero. Before this lands on `main`,
+ * move the tracer behind a source-set split (no-op for debug/release, real one only in
+ * `benchmark`).
  *
  * Section names are read back by `TraceSectionMetric` in
  * `:macrobenchmark`'s `FeedScrollBenchmark`, so they must stay in sync with the names
