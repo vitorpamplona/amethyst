@@ -100,7 +100,8 @@ private const val AVATAR_SLOT = "avatar"
  */
 @Composable
 fun RelayAuthPromptHost(accountViewModel: AccountViewModel) {
-    val bus = remember { Amethyst.instance.authCoordinator.promptBus }
+    val coordinator = remember { Amethyst.instance.authCoordinator }
+    val bus = remember { coordinator.promptBus }
     val queue = remember { mutableStateListOf<RelayAuthPrompt>() }
 
     LaunchedEffect(bus) {
@@ -117,6 +118,28 @@ fun RelayAuthPromptHost(accountViewModel: AccountViewModel) {
     queue.firstOrNull { !it.isResolved }?.let { prompt ->
         LaunchedEffect(prompt) { prompt.markShown() }
         RelayAuthPromptDialog(prompt, accountViewModel) { choice ->
+            choice.policyEverywhere?.let { policy ->
+                // Applied here, not left to the answer below, so the setting survives an expired
+                // prompt — the answer window runs while the user reads the confirmation. See
+                // AuthCoordinator.applyPolicyEverywhere.
+                coordinator.applyPolicyEverywhere(prompt.askingAccount, policy)
+
+                // "all relays" has to mean the ones already queued behind this dialog too. They were
+                // decided before the policy existed, so nothing else resolves them, and asking again
+                // about relay B right after being told "always/never, all relays" reads as the answer
+                // not having taken. Same account only: the policy is that account's.
+                //
+                // markShown() first even though these are never shown: a prompt still waiting its
+                // turn is parked in the bus's queue-wait window, and an answer dropped into it does
+                // not land until that window ends — five minutes of an unauthenticated relay the
+                // user already answered for. Marking it shown opens its answer window immediately.
+                queue.toList().forEach {
+                    if (it.askingAccount == prompt.askingAccount) {
+                        it.markShown()
+                        it.respond(choice)
+                    }
+                }
+            }
             prompt.respond(choice)
             queue.remove(prompt)
         }

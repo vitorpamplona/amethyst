@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient.authCommand.model
 
 import com.vitorpamplona.amethyst.commons.relayauth.AuthPurpose
+import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CompletableDeferred
@@ -42,7 +43,7 @@ enum class UserAuthChoice {
 
     /**
      * Authenticate now and switch the asking account's top-level policy to
-     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy.ALWAYS], so every relay that
+     * [RelayAuthPolicy.ALWAYS], so every relay that
      * asks is answered without a prompt. The account-wide counterpart of [ALWAYS_ALLOW]; the dialog
      * confirms it before sending it, because it is a global setting.
      */
@@ -53,7 +54,7 @@ enum class UserAuthChoice {
 
     /**
      * Do not authenticate, and switch the asking account's top-level policy to
-     * [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy.NEVER], so no relay is ever
+     * [RelayAuthPolicy.NEVER], so no relay is ever
      * answered again. The account-wide counterpart of [BLOCK], confirmed the same way — and, like
      * every route through [com.vitorpamplona.amethyst.model.Account.changeDefaultRelayAuthPolicy],
      * it drops this run's session grants, which would otherwise outrank the policy it just set.
@@ -62,6 +63,20 @@ enum class UserAuthChoice {
 
     /** No decision (dismissed or timed out) — do not authenticate, don't remember. */
     DISMISS,
+    ;
+
+    /**
+     * The account-wide policy this choice sets, or null for the four answers that are only about the
+     * relay being asked about. Lets a caller apply the setting without re-deriving which choices are
+     * account-wide.
+     */
+    val policyEverywhere: RelayAuthPolicy?
+        get() =
+            when (this) {
+                ALWAYS_ALLOW_EVERYWHERE -> RelayAuthPolicy.ALWAYS
+                NEVER_ALLOW_EVERYWHERE -> RelayAuthPolicy.NEVER
+                ALLOW_ONCE, ALWAYS_ALLOW, BLOCK, DISMISS -> null
+            }
 }
 
 /**

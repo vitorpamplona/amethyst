@@ -157,13 +157,11 @@ class AuthCoordinator(
                                         true
                                     }
                                     UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE -> {
-                                        // Written here rather than in the dialog because the policy belongs to
-                                        // the account the prompt named — one socket serves every logged-in
-                                        // account, so the screen's account is not necessarily this one.
                                         // No per-relay decision is stored: the policy already answers this
                                         // relay, and an exception on top of it would survive a later switch
-                                        // back to "decide per relay".
-                                        account.changeDefaultRelayAuthPolicy(RelayAuthPolicy.ALWAYS)
+                                        // back to "decide per relay". The UI has normally applied this
+                                        // already (see [applyPolicyEverywhere]); repeating it is free.
+                                        applyPolicyEverywhere(account.pubKey, RelayAuthPolicy.ALWAYS)
                                         true
                                     }
                                     UserAuthChoice.BLOCK -> {
@@ -171,11 +169,7 @@ class AuthCoordinator(
                                         false
                                     }
                                     UserAuthChoice.NEVER_ALLOW_EVERYWHERE -> {
-                                        // Same reasoning as ALWAYS_ALLOW_EVERYWHERE above, and through the
-                                        // account rather than its settings for one more reason: this is the
-                                        // policy that session grants outrank, so the grants have to go with
-                                        // it. Account.changeDefaultRelayAuthPolicy is what pairs them.
-                                        account.changeDefaultRelayAuthPolicy(RelayAuthPolicy.NEVER)
+                                        applyPolicyEverywhere(account.pubKey, RelayAuthPolicy.NEVER)
                                         false
                                     }
                                     UserAuthChoice.DISMISS -> false
@@ -197,6 +191,32 @@ class AuthCoordinator(
                 signed + streamAuths
             },
         )
+
+    /**
+     * Sets [askingAccount]'s top-level NIP-42 policy — the "Always, all relays" / "Never, all relays"
+     * answers. Public because the *prompt* calls it the moment the user confirms, instead of relying
+     * on the answer reaching the suspended challenge above: that answer window is 60s from the dialog
+     * appearing (see [RelayAuthPromptBus]), and a user who spends it reading the confirmation would
+     * otherwise have their setting silently dropped along with the expired prompt. The relay's own
+     * AUTH is the only thing worth losing to a timeout; a setting is not, and the next challenge —
+     * seconds later, on reconnect — is answered by the policy this wrote.
+     *
+     * Goes through [Account.changeDefaultRelayAuthPolicy] rather than the settings object because
+     * that is what pairs [RelayAuthPolicy.NEVER] with dropping this run's session grants, which
+     * outrank the policy and would otherwise keep authenticating the relays just answered "log in".
+     *
+     * Takes a pubkey rather than an [Account] because the prompt names the account whose npub is at
+     * stake, which on a multi-account device is not the one the screen is showing. Unknown pubkeys
+     * (an account logged out while its prompt was up) are a no-op.
+     */
+    fun applyPolicyEverywhere(
+        askingAccount: HexKey,
+        policy: RelayAuthPolicy,
+    ) {
+        authWithAccounts.distinctValues().forEach { screen ->
+            if (screen.account.pubKey == askingAccount) screen.account.changeDefaultRelayAuthPolicy(policy)
+        }
+    }
 
     /**
      * The joined Concord community whose plane [planeAddress] is, across every watched account, or

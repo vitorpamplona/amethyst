@@ -89,7 +89,7 @@ data class RelayAuthInputs(
  * 1. Blocked-relay list → [RelayAuthVerdict.DENY] (never reveal identity to a blocked relay).
  * 2. Explicit per-relay override → honor it.
  * 3. [RelayAuthInputs.hasSessionGrant] → [RelayAuthVerdict.ALLOW]. Ranked *below* the stored override
- *    so a later "never allow" — the only way a DENY can be written for a relay already granted this
+ *    so a later "never" answer — the only way a DENY can be written for a relay already granted this
  *    session — takes effect immediately instead of losing to the in-memory grant.
  * 4. Top-level [RelayAuthPolicy]:
  *    - [RelayAuthPolicy.NEVER] → DENY

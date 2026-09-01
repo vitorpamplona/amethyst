@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthVerdict
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -123,6 +124,25 @@ class RelayAuthPolicyEverywhereTest {
             assertEquals(RelayAuthVerdict.ALLOW, ledger.decide(askable(other)))
             assertEquals(RelayAuthVerdict.DENY, ledger.decide(askable(relay)))
         }
+
+    /**
+     * The two account-wide answers are the only ones the host may apply to prompts other than the one
+     * on screen, and only to the account that was asked. Pinning the mapping keeps that fan-out — and
+     * the setting write that survives an expired prompt — from ever reaching a per-relay answer.
+     */
+    @Test
+    fun onlyTheAccountWideAnswersCarryAPolicy() {
+        assertEquals(RelayAuthPolicy.ALWAYS, UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE.policyEverywhere)
+        assertEquals(RelayAuthPolicy.NEVER, UserAuthChoice.NEVER_ALLOW_EVERYWHERE.policyEverywhere)
+        assertTrue(
+            listOf(
+                UserAuthChoice.ALLOW_ONCE,
+                UserAuthChoice.ALWAYS_ALLOW,
+                UserAuthChoice.BLOCK,
+                UserAuthChoice.DISMISS,
+            ).all { it.policyEverywhere == null },
+        )
+    }
 
     /**
      * Why the coordinator routes this through [com.vitorpamplona.amethyst.model.Account], which drops
