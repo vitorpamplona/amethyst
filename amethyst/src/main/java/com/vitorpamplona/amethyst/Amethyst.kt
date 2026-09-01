@@ -129,6 +129,12 @@ class Amethyst : Application() {
 
         Log.i("AmethystApp") { "Amethyst ${BuildConfig.VERSION_NAME} starting in main process (log level ${Log.minLevel})" }
 
+        // Both flags MUST be set before AppModules: its constructor eagerly builds the
+        // OkHttp factories, whose dispatchers read isEmulator at construction time —
+        // set afterwards, the emulator-safe limits are never applied.
+        MediaCallEventListener.verboseLogging = isDebug
+        HttpClientEnvironment.isEmulator = isEmulator()
+
         instance = AppModules(this)
 
         // Keeps the ~650 relay/ingest worker threads a cold start spawns from starving the UI
@@ -167,11 +173,6 @@ class Amethyst : Application() {
         // Foreground signal for the resource-usage ledger (fg/bg attribution
         // of bytes and connection-time). Main process only.
         registerActivityLifecycleCallbacks(instance.foregroundTracker)
-
-        // Debug builds log every completed media HTTP call, not just slow/failed ones.
-        MediaCallEventListener.verboseLogging = isDebug
-        // The shared OkHttp factories skip socket tweaks on emulated network stacks.
-        HttpClientEnvironment.isEmulator = isEmulator()
 
         if (isDebug) {
             Logging.setup()
