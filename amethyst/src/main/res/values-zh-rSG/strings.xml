@@ -339,6 +339,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="shorts">短视频</string>
@@ -432,7 +434,6 @@
     <string name="content_description_add_image">添加图片</string>
     <string name="content_description_add_video">添加视频</string>
     <string name="content_description_add_document">添加文件</string>
-    <string name="use_direct_url">使用直接链接</string>
     <string name="file_server">文件服务器</string>
     <string name="file_server_description">选择上传文件时使用的服务器</string>
     <string name="media_servers">媒体服务器</string>
@@ -971,13 +972,6 @@
     <string name="git_repo_section_links">链接</string>
     <string name="git_repo_section_maintainers">维护者</string>
     <string name="git_repo_section_topics">话题</string>
-    <string name="nsite_title">静态网站: %1$s</string>
-    <string name="napplet_card_title">nApple: %1$s</string>
-    <string name="napplet_card_permissions">权限：</string>
-    <string name="nsite_root_site">根站点</string>
-    <string name="nsite_source">源：</string>
-    <string name="nsite_servers">服务器：</string>
-    <string name="nsite_open">打开</string>
     <string name="ots_info_title">OpenTimestamps 证明</string>
     <string name="ots_info_description">%1$s之前的某个时候签署了此帖子的证明。此证明是在那个日期和时间在比特币区块链中盖章的。</string>
     <string name="edit_post">编辑帖子</string>

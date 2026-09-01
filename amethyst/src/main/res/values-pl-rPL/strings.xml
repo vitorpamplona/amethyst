@@ -631,6 +631,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="many">Trzyma także %1$d innych rzeczy.</item>
         <item quantity="other">Trzyma również %1$d inne rzeczy.</item>
     </plurals>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Zawsze, ustawione przez Ciebie</string>
     <string name="relay_auth_exception_never">Nigdy, ustawione przez Ciebie</string>
@@ -695,7 +697,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="route_podcast_episodes">Odcinki</string>
     <string name="route_podcasts">Podcasty</string>
     <string name="podcast_premium">Premium</string>
-    <string name="podcast_value_for_value">Wartość-za-wartość</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d rozdział</item>
         <item quantity="few">%1$d rozdziałów</item>
@@ -841,7 +842,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="content_description_add_image">Dodaj zdjęcie</string>
     <string name="content_description_add_video">Dodaj wideo</string>
     <string name="content_description_add_document">Dodaj dokument</string>
-    <string name="use_direct_url">Użyj bezpośredniego adresu URL</string>
     <string name="file_server">Serwer Plików</string>
     <string name="file_server_description">Wybierz serwer, aby przesłać ten plik</string>
     <string name="media_servers">Serwery Multimediów</string>
@@ -1901,13 +1901,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="highlights">Wyróżnienia</string>
     <string name="git_repositories_search_open">Filtruj repozytoria</string>
     <string name="git_repositories_search_close">Zamknij filtr</string>
-    <string name="nsite_title">Statyczna Witryna: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    <string name="napplet_card_permissions">Uprawnienia:</string>
-    <string name="nsite_root_site">Strona główna</string>
-    <string name="nsite_source">Źródło:</string>
-    <string name="nsite_servers">Serwery:</string>
-    <string name="nsite_open">Otwórz</string>
     <string name="ots_info_title">Potwierdzenie znacznika czasu</string>
     <string name="ots_info_description">Istnieje dowód na to, że ten post został podpisany przed %1$s. Dowód został opatrzony pieczęcią w łańcuchu bloków Bitcoin w tym dniu i czasie.</string>
     <string name="ots_info_pending_description">Zgłoszono prośbę o potwierdzenie czasu publikacji tego wpisu, które oczekuje na wpisanie do łańcucha bloków Bitcoin. Zazwyczaj proces ten trwa kilka godzin.</string>

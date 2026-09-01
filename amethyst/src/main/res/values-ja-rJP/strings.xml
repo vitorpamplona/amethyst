@@ -339,6 +339,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="shorts">ショート</string>
@@ -431,7 +433,6 @@
     <string name="content_description_add_image">画像を追加</string>
     <string name="content_description_add_video">動画を追加</string>
     <string name="content_description_add_document">ドキュメントを追加</string>
-    <string name="use_direct_url">直接URLを使用</string>
     <string name="file_server">ファイルサーバ</string>
     <string name="file_server_description">このファイルをアップロードするサーバーを選択</string>
     <string name="media_servers">メディアサーバー</string>
@@ -964,11 +965,6 @@
     <string name="git_repo_section_links">リンク</string>
     <string name="git_repo_section_maintainers">メンテナー</string>
     <string name="git_repo_section_topics">トピック</string>
-    <string name="napplet_card_permissions">権限:</string>
-    <string name="nsite_root_site">ルートサイト</string>
-    <string name="nsite_source">ソース:</string>
-    <string name="nsite_servers">サーバー:</string>
-    <string name="nsite_open">開く</string>
     <string name="ots_info_title">タイムスタンプ証明</string>
     <string name="ots_info_description">この投稿が %1$s より前に署名されたことの証明があります。この証明はその日時に Bitcoin ブロックチェーンに刻印されています。</string>
     <string name="edit_post">投稿を編集</string>

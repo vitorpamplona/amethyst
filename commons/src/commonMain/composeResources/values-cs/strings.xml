@@ -107,13 +107,13 @@
         <item quantity="other">%1$d relayů</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">odpovídá na </string>
+    <string name="replying_to">"odpovídá na "</string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statický web: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
-    <string name="napplet_card_permissions">K čemu má přístup</string>
+    <string name="napplet_card_permissions">Oprávnění:</string>
     <string name="nsite_root_site">Kořenový web</string>
     <string name="nsite_source">Zdroj:</string>
     <string name="nsite_servers">Servery:</string>

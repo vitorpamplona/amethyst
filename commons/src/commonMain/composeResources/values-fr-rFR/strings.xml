@@ -1994,4 +1994,12 @@
     <string name="ots_explorer_api_label">URL de base de l\'API Explorer</string>
     <string name="dvm_pay_invoice_from_dvm">Payer la facture depuis le DVM</string>
     <string name="dvm_pay_amount_to_dvm">Payer %1$s sats au DVM</string>
+    <string name="use_direct_url">Utiliser l\'URL directe</string>
+    <string name="nsite_title">nSite : %1$s</string>
+    <string name="napplet_card_title">nApplet : %1$s</string>
+    <string name="napplet_card_permissions">Permissions :</string>
+    <string name="nsite_root_site">Site racine</string>
+    <string name="nsite_source">Source :</string>
+    <string name="nsite_servers">Serveurs :</string>
+    <string name="nsite_open">Ouvrir</string>
 </resources>

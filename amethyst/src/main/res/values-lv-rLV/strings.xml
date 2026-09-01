@@ -354,6 +354,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="shorts">Šorti</string>
@@ -451,7 +453,6 @@
     <string name="content_description_add_image">Pievienot attēlu</string>
     <string name="content_description_add_video">Pievienot video</string>
     <string name="content_description_add_document">Pievienot dokumentu</string>
-    <string name="use_direct_url">Izmantot tiešo URL</string>
     <string name="file_server">Failu serveris</string>
     <string name="file_server_description">Izvēlieties serveri, uz kuru augšupielādēt šo failu</string>
     <string name="media_servers">Mediju serveri</string>
@@ -1005,11 +1006,6 @@
     <string name="git_repo_section_links">Saites</string>
     <string name="git_repo_section_maintainers">Uzturētāji</string>
     <string name="git_repo_section_topics">Tēmas</string>
-    <string name="napplet_card_permissions">Atļaujas:</string>
-    <string name="nsite_root_site">Saknes vietne</string>
-    <string name="nsite_source">Avots:</string>
-    <string name="nsite_servers">Serveri:</string>
-    <string name="nsite_open">Atvērt</string>
     <string name="ots_info_title">Laika zīmoga pierādījums</string>
     <string name="ots_info_description">Ir pierādījums, ka šī ziņa tika parakstīta kādreiz pirms %1$s. Pierādījums tika ierakstīts Bitcoin blokķēdē šajā datumā un laikā.</string>
     <string name="edit_post">Rediģēt ierakstu</string>

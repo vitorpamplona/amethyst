@@ -1811,4 +1811,12 @@
     <string name="ots_explorer_api_label">URL พื้นฐานของ Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">ชำระใบแจ้งหนี้จาก DVM</string>
     <string name="dvm_pay_amount_to_dvm">ชำระ %1$s sats ให้ DVM</string>
+    <string name="use_direct_url">ใช้ URL โดยตรง</string>
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">สิทธิ์:</string>
+    <string name="nsite_root_site">ไซต์หลัก</string>
+    <string name="nsite_source">แหล่งที่มา:</string>
+    <string name="nsite_servers">เซิร์ฟเวอร์:</string>
+    <string name="nsite_open">เปิด</string>
 </resources>

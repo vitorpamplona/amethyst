@@ -72,17 +72,17 @@
     <!-- Notes & Replies -->
     <string name="replying_to">回复 </string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="nsite_title">静态网站: %1$s</string>
+    <string name="napplet_card_title">nApple: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
-    <string name="napplet_card_permissions">此应用可以访问什么</string>
+    <string name="napplet_card_permissions">权限：</string>
     <string name="nsite_root_site">根站点</string>
     <string name="nsite_source">源：</string>
     <string name="nsite_servers">服务器：</string>
     <string name="nsite_open">打开</string>
     <!-- Custom emoji suggestions (NIP-30) -->
-    <string name="use_direct_url">使用直接 URL</string>
+    <string name="use_direct_url">使用直接链接</string>
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="nickname_dialog_title">昵称</string>
     <string name="nickname_dialog_explainer">显示给你而不是这个用户的名字，在应用中的每个地方。 它被加密保存到您的联系卡上：只有您可以阅读它。请输入 : 使用您的自定义表情符号。</string>
@@ -129,7 +129,7 @@
     <string name="road_event_unknown">道路事件</string>
     <string name="podcast_value_zap_split_hint">对此的Zaps 在以下对象间分割：</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_for_value">值对值</string>
+    <string name="podcast_value_for_value">Value-for-Value</string>
     <string name="relay_monitor_rtt_open">打开</string>
     <string name="relay_monitor_rtt_read">读取</string>
     <string name="relay_monitor_rtt_write">写入</string>

@@ -115,7 +115,6 @@ erie gespeichert</string>
     <string name="content_description_add_image">Bild hinzufügen</string>
     <string name="content_description_add_video">Video hinzufügen</string>
     <string name="content_description_add_document">Dokument hinzufügen</string>
-    <string name="use_direct_url">Direkte URL verwenden</string>
     <string name="file_server">Dateiserver</string>
     <string name="file_server_description">Wählen Sie einen Server zum Hochladen dieser Datei</string>
     <string name="media_servers">Medienserver</string>
@@ -2198,13 +2197,9 @@ erie gespeichert</string>
 <string name="git_repo_section_topics">Themen</string>
     
     
-<string name="nsite_title">Statische Website: %1$s</string>
     
-<string name="nsite_root_site">Stammseite</string>
     
-<string name="nsite_source">Quelle:</string>
     
-<string name="nsite_servers">Server:</string>
     
     
     
@@ -3334,9 +3329,7 @@ erie gespeichert</string>
     
 <string name="napplet_cap_value_desc">Lightning-Rechnungen bezahlen</string>
     
-<string name="napplet_card_permissions">Berechtigungen:</string>
     
-<string name="napplet_card_title">nApplet: %1$s</string>
     
     
     
@@ -3390,7 +3383,6 @@ erie gespeichert</string>
 <string name="no_camera_app_found">Keine Kamera-App auf diesem Gerät gefunden</string>
     
     
-<string name="nsite_open">Öffnen</string>
     
 <string name="nsites">nSites</string>
     

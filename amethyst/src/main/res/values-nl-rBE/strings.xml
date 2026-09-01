@@ -1202,7 +1202,6 @@
     
     
     
-<string name="use_direct_url">Directe URL gebruiken</string>
     
     
     
@@ -2626,13 +2625,9 @@
 <string name="git_repo_section_topics">Onderwerpen</string>
     
     
-<string name="nsite_title">Statische website: %1$s</string>
     
-<string name="nsite_root_site">Root-site</string>
     
-<string name="nsite_source">Bron:</string>
     
-<string name="nsite_servers">Servers:</string>
     
 <string name="ots_info_title">Bewijs van tijdstempel</string>
     
@@ -4115,12 +4110,9 @@
 </plurals>
     
     
-<string name="napplet_card_title">nApplet: %1$s</string>
-    
-<string name="napplet_card_permissions">Machtigingen:</string>
     
     
-<string name="nsite_open">Openen</string>
+    
     
     
     

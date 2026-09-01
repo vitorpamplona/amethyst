@@ -342,6 +342,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="public_chats">Δημόσιες Συνομιλίες</string>
@@ -434,7 +436,6 @@
     <string name="content_description_add_image">Προσθήκη Εικόνας</string>
     <string name="content_description_add_video">Προσθήκη Βίντεο</string>
     <string name="content_description_add_document">Προσθήκη Εγγράφου</string>
-    <string name="use_direct_url">Χρήση άμεσης URL</string>
     <string name="file_server">Εξυπηρετητής Αρχείων</string>
     <string name="file_server_description">Επιλέξτε έναν διακομιστή για αποστολή αυτού του αρχείου</string>
     <string name="media_servers">Διακομιστές μέσων</string>
@@ -979,11 +980,6 @@
     <string name="git_repo_section_links">Σύνδεσμοι</string>
     <string name="git_repo_section_maintainers">Συντηρητές</string>
     <string name="git_repo_section_topics">Θέματα</string>
-    <string name="napplet_card_permissions">Δικαιώματα:</string>
-    <string name="nsite_root_site">Κύριος Ιστότοπος</string>
-    <string name="nsite_source">Πηγή:</string>
-    <string name="nsite_servers">Διακομιστές:</string>
-    <string name="nsite_open">Άνοιγμα</string>
     <string name="ots_info_title">Απόδειξη Χρονοσήμανσης</string>
     <string name="ots_info_description">Υπάρχει απόδειξη ότι αυτή η ανάρτηση υπογράφηκε κάποτε πριν από %1$s. Η απόδειξη σφραγίστηκε στο blockchain του Bitcoin σε εκείνη την ημερομηνία και ώρα.</string>
     <string name="edit_post">Επεξεργασία Ανάρτησης</string>

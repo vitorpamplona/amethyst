@@ -1815,4 +1815,12 @@
     <string xmlns:ns0="http://schemas.android.com/tools" name="account_backup_tips3_md" ns0:ignore="Typos">        为了额外的安全性，你可以用密码加密你的密钥。 此密钥以 **ncryptsec1** 开头，没有密码就不能使用。
         \n\n如果你丢失密码， 你将无法恢复你的密钥。
     </string>
+    <string name="use_direct_url">使用直接链接</string>
+    <string name="nsite_title">静态网站: %1$s</string>
+    <string name="napplet_card_title">nApple: %1$s</string>
+    <string name="napplet_card_permissions">权限：</string>
+    <string name="nsite_root_site">根站点</string>
+    <string name="nsite_source">源：</string>
+    <string name="nsite_servers">服务器：</string>
+    <string name="nsite_open">打开</string>
 </resources>

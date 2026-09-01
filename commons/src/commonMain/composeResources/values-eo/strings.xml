@@ -1820,4 +1820,12 @@
     <string name="ots_explorer_api_label">Baza URL de Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Pagi Fakturon de la DVM</string>
     <string name="dvm_pay_amount_to_dvm">Pagi %1$s sats al la DVM</string>
+    <string name="use_direct_url">Uzi rektan URL</string>
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">Permesoj:</string>
+    <string name="nsite_root_site">Radika Retejo</string>
+    <string name="nsite_source">Fonto:</string>
+    <string name="nsite_servers">Serviloj:</string>
+    <string name="nsite_open">Malfermi</string>
 </resources>

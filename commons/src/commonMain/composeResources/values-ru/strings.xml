@@ -1825,4 +1825,12 @@
     <string name="ots_explorer_api_label">Базовый URL API обозревателя</string>
     <string name="dvm_pay_invoice_from_dvm">Оплатить счёт от DVM</string>
     <string name="dvm_pay_amount_to_dvm">Оплатить %1$s sats DVM</string>
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">Разрешения:</string>
+    <string name="nsite_root_site">Корневой сайт</string>
+    <string name="nsite_source">Источник:</string>
+    <string name="nsite_servers">Серверы:</string>
+    <string name="nsite_open">Открыть</string>
+    <string name="use_direct_url">Использовать прямой URL</string>
 </resources>

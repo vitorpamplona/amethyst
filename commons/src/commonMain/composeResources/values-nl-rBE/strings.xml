@@ -1808,4 +1808,12 @@
     <string name="dvm_pay_amount_to_dvm">%1$s sats betalen aan de DVM</string>
     <string xmlns:ns0="http://schemas.android.com/tools" name="account_backup_tips2_md" ns0:ignore="Typos">## Sleutelback-up en veiligheidstips\n\nJe account wordt beveiligd door een privésleutel (begint met **nsec1**). Iedereen met deze sleutel kan namens jou posten.\n\n- Voer je privésleutel **nooit** in op een website of app die je niet volledig vertrouwt.\n- Amethyst-ontwikkelaars zullen **nooit** om je privésleutel vragen.\n- Maak een veilige back-up van je privésleutel (bijvoorbeeld in een wachtwoordmanager).</string>
     <string xmlns:ns0="http://schemas.android.com/tools" name="account_backup_tips3_md" ns0:ignore="Typos">Voor extra veiligheid kun je je sleutel versleutelen met een wachtwoord. Deze versleutelde sleutel begint met **ncryptsec1** en kan alleen met je wachtwoord worden gebruikt.\n\nAls je het wachtwoord vergeet, kun je de sleutel niet meer herstellen.</string>
+    <string name="use_direct_url">Directe URL gebruiken</string>
+    <string name="nsite_title">Statische website: %1$s</string>
+    <string name="nsite_root_site">Root-site</string>
+    <string name="nsite_source">Bron:</string>
+    <string name="nsite_servers">Servers:</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">Machtigingen:</string>
+    <string name="nsite_open">Openen</string>
 </resources>

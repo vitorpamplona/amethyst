@@ -340,6 +340,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="public_chats">공개 채팅</string>
@@ -430,7 +432,6 @@
     <string name="content_description_add_image">이미지 추가</string>
     <string name="content_description_add_video">동영상 추가</string>
     <string name="content_description_add_document">문서 추가</string>
-    <string name="use_direct_url">직접 URL 사용</string>
     <string name="file_server">파일 서버</string>
     <string name="file_server_description">이 파일을 업로드할 서버를 선택하세요</string>
     <string name="media_servers">미디어 서버</string>
@@ -963,11 +964,6 @@
     <string name="git_repo_section_links">링크</string>
     <string name="git_repo_section_maintainers">관리자</string>
     <string name="git_repo_section_topics">주제</string>
-    <string name="napplet_card_permissions">권한:</string>
-    <string name="nsite_root_site">루트 사이트</string>
-    <string name="nsite_source">출처:</string>
-    <string name="nsite_servers">서버:</string>
-    <string name="nsite_open">열기</string>
     <string name="ots_info_title">타임스탬프 증명</string>
     <string name="ots_info_description">이 게시물이 %1$s 이전에 서명되었다는 증명이 있습니다. 해당 날짜와 시간에 Bitcoin 블록체인에 증명이 기록되었습니다.</string>
     <string name="edit_post">게시물 편집</string>

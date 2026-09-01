@@ -392,7 +392,6 @@
 <string name="poll_is_closed_explainer">Balotenketo estas fermita al novaj voĉoj</string>
 <string name="hash_verification_info_title">Kion tio signifas?</string>
 <string name="content_description_add_media">Aldoni Amaskomunikilaron</string>
-<string name="use_direct_url">Uzi rektan URL</string>
 <string name="file_server_description">Elektu servilon por alŝuti tiun ĉi dosieron</string>
 <string name="media_servers">Amaskomunikilaj Serviloj</string>
 <string name="set_preferred_media_servers">Agordu viajn preferatajn amaskomunikilajn alŝutservilojn.</string>
@@ -800,13 +799,6 @@
 <string name="git_repo_section_links">Ligiloj</string>
 <string name="git_repo_section_maintainers">Prizorgantoj</string>
 <string name="git_repo_section_topics">Temoj</string>
-<string name="nsite_title">nSite: %1$s</string>
-<string name="napplet_card_title">nApplet: %1$s</string>
-<string name="napplet_card_permissions">Permesoj:</string>
-<string name="nsite_root_site">Radika Retejo</string>
-<string name="nsite_source">Fonto:</string>
-<string name="nsite_servers">Serviloj:</string>
-<string name="nsite_open">Malfermi</string>
 <string name="ots_info_title">Tempomarko-Pruvo</string>
 <string name="ots_info_description">Estas pruvo ke ĉi tiu afiŝo estis subskribita iam antaŭ %1$s. La pruvo estis stampita en la Bitcoin-blokĉeno en tiu dato kaj horo.</string>
 <string name="edit_post">Redakti Afiŝon</string>

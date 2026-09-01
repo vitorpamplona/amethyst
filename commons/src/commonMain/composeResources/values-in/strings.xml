@@ -1817,4 +1817,12 @@
     <string name="ots_explorer_api_label">URL dasar Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Bayar Tagihan dari DVM</string>
     <string name="dvm_pay_amount_to_dvm">Bayar %1$s sats ke DVM</string>
+    <string name="use_direct_url">Gunakan URL langsung</string>
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">Izin:</string>
+    <string name="nsite_root_site">Situs Root</string>
+    <string name="nsite_source">Sumber:</string>
+    <string name="nsite_servers">Server:</string>
+    <string name="nsite_open">Buka</string>
 </resources>

@@ -1771,4 +1771,10 @@
     <string name="ots_explorer_api_label">Explorer API 기본 URL</string>
     <string name="dvm_pay_invoice_from_dvm">DVM에서 청구서 결제</string>
     <string name="dvm_pay_amount_to_dvm">DVM에 %1$s sats 결제</string>
+    <string name="use_direct_url">직접 URL 사용</string>
+    <string name="napplet_card_permissions">권한:</string>
+    <string name="nsite_root_site">루트 사이트</string>
+    <string name="nsite_source">출처:</string>
+    <string name="nsite_servers">서버:</string>
+    <string name="nsite_open">열기</string>
 </resources>

@@ -1197,7 +1197,6 @@
     
     
     
-<string name="use_direct_url">使用直接链接</string>
     
     
     
@@ -2866,20 +2865,13 @@
 <string name="git_repo_section_topics">话题</string>
     
     
-<string name="nsite_title">静态网站: %1$s</string>
-    
-<string name="napplet_card_title">nApple: %1$s</string>
-    
-<string name="napplet_card_permissions">权限：</string>
     
     
-<string name="nsite_root_site">根站点</string>
     
-<string name="nsite_source">源：</string>
     
-<string name="nsite_servers">服务器：</string>
     
-<string name="nsite_open">打开</string>
+    
+    
     
 <string name="ots_info_title">OpenTimestamps 证明</string>
     

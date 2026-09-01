@@ -364,6 +364,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="public_chats">Публічні чати</string>
@@ -461,7 +463,6 @@
     <string name="content_description_add_image">Додати фото</string>
     <string name="content_description_add_video">Додати відео</string>
     <string name="content_description_add_document">Додати документ</string>
-    <string name="use_direct_url">Використовувати пряме посилання</string>
     <string name="file_server">Сервер для завантаження</string>
     <string name="file_server_description">Оберіть сервер для завантаження цього файлу</string>
     <string name="media_servers">Медіасервери</string>
@@ -1037,11 +1038,6 @@
     <string name="git_repo_section_links">Посилання</string>
     <string name="git_repo_section_maintainers">Супровідники</string>
     <string name="git_repo_section_topics">Теми</string>
-    <string name="napplet_card_permissions">Дозволи:</string>
-    <string name="nsite_root_site">Кореневий сайт</string>
-    <string name="nsite_source">Джерело:</string>
-    <string name="nsite_servers">Сервери:</string>
-    <string name="nsite_open">Відкрити</string>
     <string name="ots_info_title">Доказ часової позначки</string>
     <string name="ots_info_description">Є доказ того, що ця публікація була підписана до %1$s. Доказ засвідчено в блокчейні Bitcoin на ту дату та час.</string>
     <string name="edit_post">Редагувати публікацію</string>

@@ -332,6 +332,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="public_chats">Trò chuyện công khai</string>
@@ -421,7 +423,6 @@
     <string name="content_description_add_image">Thêm Hình ảnh</string>
     <string name="content_description_add_video">Thêm Video</string>
     <string name="content_description_add_document">Thêm Tài liệu</string>
-    <string name="use_direct_url">Dùng URL trực tiếp</string>
     <string name="file_server">Máy chủ Tệp</string>
     <string name="file_server_description">Chọn máy chủ để tải tệp này lên</string>
     <string name="media_servers">Máy chủ Phương tiện</string>
@@ -953,11 +954,6 @@
     <string name="git_repo_section_links">Liên kết</string>
     <string name="git_repo_section_maintainers">Người bảo trì</string>
     <string name="git_repo_section_topics">Chủ đề</string>
-    <string name="napplet_card_permissions">Quyền hạn:</string>
-    <string name="nsite_root_site">Trang chủ gốc</string>
-    <string name="nsite_source">Nguồn:</string>
-    <string name="nsite_servers">Máy chủ:</string>
-    <string name="nsite_open">Mở</string>
     <string name="ots_info_title">Bằng chứng Dấu thời gian</string>
     <string name="ots_info_description">Có bằng chứng bài đăng này đã được ký trước %1$s. Bằng chứng đã được đóng dấu vào blockchain Bitcoin tại thời điểm đó.</string>
     <string name="edit_post">Chỉnh sửa Bài đăng</string>

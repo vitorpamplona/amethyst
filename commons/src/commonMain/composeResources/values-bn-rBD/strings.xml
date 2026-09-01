@@ -1785,4 +1785,10 @@
     <string name="ots_explorer_api_label">এক্সপ্লোরার API বেস URL</string>
     <string name="dvm_pay_invoice_from_dvm">DVM থেকে ইনভয়েস পরিশোধ করুন</string>
     <string name="dvm_pay_amount_to_dvm">DVM-কে %1$s sats পরিশোধ করুন</string>
+    <string name="use_direct_url">সরাসরি URL ব্যবহার করুন</string>
+    <string name="napplet_card_permissions">অনুমতি:</string>
+    <string name="nsite_root_site">রুট সাইট</string>
+    <string name="nsite_source">উৎস:</string>
+    <string name="nsite_servers">সার্ভার:</string>
+    <string name="nsite_open">খুলুন</string>
 </resources>

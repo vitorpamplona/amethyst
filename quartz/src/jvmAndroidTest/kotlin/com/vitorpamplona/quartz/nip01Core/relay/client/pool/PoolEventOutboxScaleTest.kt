@@ -41,6 +41,40 @@ import kotlin.time.TimeSource
  * quadratic makes the second half of a run dramatically slower than the first,
  * whatever the machine. A constant factor cannot be pinned in a unit test, but
  * a growth curve can.
+ *
+ * ## Why this lives in jvmAndroidTest and not in commonTest
+ *
+ * The instrument only works on a runtime whose GC cost does not scale with the
+ * retained set. This test deliberately keeps 60k entries alive, so the late
+ * window measures a heap ~30x larger than the early one. A generational
+ * collector (HotSpot, ART) does not rescan that old generation on a young
+ * collection, so the growth stays invisible and the ratio reflects the outbox.
+ * Kotlin/Native's non-generational tracing GC does rescan it, and the ratio
+ * then reflects the GC instead.
+ *
+ * Measured on Kotlin/Native (linuxX64, `-opt`), publishing the same 60k events
+ * into structures that are O(1) per put by construction:
+ *
+ * ```
+ * retains nothing                       ratio 0.51 - 0.80
+ * one HashMap, 60k live                 ratio 1.93 - 3.39
+ * two HashMaps per put, 60k live        ratio 2.28 - 5.21
+ * ```
+ *
+ * The last row is what Apple targets actually run: LargeCache there wraps
+ * charlietap's CacheMap, whose LeftRight `mutate` applies each write to both
+ * of its two maps under a lock — O(1), no copying. It still crossed the 5.0
+ * threshold on a loaded machine, which is how this failed on the iOS simulator
+ * without anything being wrong with the outbox. The `retains nothing` row is
+ * the control: same allocations, nothing kept alive, ratio flat.
+ *
+ * So on Apple the O(1) guarantee comes from the data structure by
+ * construction and does not need pinning here; on JVM/Android it comes from
+ * LargeCache being a ConcurrentHashMap, and a regression in this class
+ * (someone reintroducing a copy-on-write map, or a per-publish full scan)
+ * shows up cleanly. Note that Kotlin/Native's linuxX64 LargeCache IS
+ * copy-on-write today — that is a real cost, but not one a wall-clock ratio
+ * can report reliably, as the numbers above show.
  */
 class PoolEventOutboxScaleTest {
     private val relay = NormalizedRelayUrl("wss://scale.relay.test")
@@ -97,25 +131,5 @@ class PoolEventOutboxScaleTest {
             "cost per publish must not grow with the backlog: first $sample took ${early.inWholeMilliseconds}ms at " +
                 "~$sample entries, last $sample took ${late.inWholeMilliseconds}ms at ~$total entries (ratio $ratio)",
         )
-    }
-
-    @Test
-    fun `the relay set still reflects what is pending`() {
-        val outbox = PoolEventOutbox()
-        val a = NormalizedRelayUrl("wss://a.relay.test")
-        val b = NormalizedRelayUrl("wss://b.relay.test")
-
-        outbox.markAsSending(event(1), setOf(a))
-        assertEquals(setOf(a), outbox.relays.value, "a publish adds its relay immediately")
-
-        outbox.markAsSending(event(2), setOf(b))
-        assertEquals(setOf(a, b), outbox.relays.value, "a second relay joins without a rebuild")
-
-        // Draining every entry must clear the set — the sweep is batched, but
-        // emptying the outbox forces it, so a finished push does not strand a
-        // connection open forever.
-        outbox.newResponse(event(1).id, a, true, "")
-        outbox.newResponse(event(2).id, b, true, "")
-        assertEquals(emptySet(), outbox.relays.value, "an empty outbox wants no relays")
     }
 }

@@ -105,13 +105,13 @@
         <item quantity="other">%1$d पुनःप्रसारक</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">उत्तर इनको </string>
+    <string name="replying_to">"उत्तर इनको "</string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">नोस्टरस्थान : %1$s</string>
-    <string name="napplet_card_title">नोस्टरसंलग्नक्रमक : %1$s</string>
+    <string name="napplet_card_title">नोस्टर संलग्नक्रमक : %1$s</string>
     <string name="napplet_card_kind">नोस्टरसंलग्नक्रमक</string>
     <string name="nsite_website_kind">नोस्टरस्थान</string>
-    <string name="napplet_card_permissions">इसके लिए क्या अभिगम्य है</string>
+    <string name="napplet_card_permissions">अनुमतियाँ :</string>
     <string name="nsite_root_site">मूल स्थान</string>
     <string name="nsite_source">स्रोत :</string>
     <string name="nsite_servers">सेवासंगणक :</string>

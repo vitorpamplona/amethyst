@@ -381,6 +381,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="shorts">مقاطع قصيرة</string>
@@ -487,7 +489,6 @@
     <string name="content_description_add_image">أضف صورة</string>
     <string name="content_description_add_video">اضف فيديو</string>
     <string name="content_description_add_document">أضف مستند</string>
-    <string name="use_direct_url">استخدام الرابط المباشر</string>
     <string name="file_server">خادم الملفات</string>
     <string name="file_server_description">اختر خادم لرفع الملف به</string>
     <string name="media_servers">خوادم الوسائط</string>
@@ -1077,11 +1078,6 @@
     <string name="git_repo_section_links">الروابط</string>
     <string name="git_repo_section_maintainers">المشرفون</string>
     <string name="git_repo_section_topics">المواضيع</string>
-    <string name="napplet_card_permissions">الصلاحيات:</string>
-    <string name="nsite_root_site">الموقع الجذر</string>
-    <string name="nsite_source">المصدر:</string>
-    <string name="nsite_servers">الخوادم:</string>
-    <string name="nsite_open">فتح</string>
     <string name="ots_info_title">إثبات الطابع الزمني</string>
     <string name="ots_info_description">يوجد دليل على أن هذا المنشور تم توقيعه في وقت ما قبل %1$s. تم ختم الإثبات في بلوكتشين Bitcoin في ذلك التاريخ والوقت.</string>
     <string name="edit_post">تعديل المنشور</string>

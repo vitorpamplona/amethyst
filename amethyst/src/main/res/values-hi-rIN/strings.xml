@@ -567,6 +567,8 @@
         <item quantity="one">यह %1$d अन्य वस्तु को भी रोक रहा है।</item>
         <item quantity="other">यह %1$d अन्य वस्तुओं को भी रोक रहा है।</item>
     </plurals>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">सर्वदा। आपके द्वारा स्थापित</string>
     <string name="relay_auth_exception_never">कभी नहीं। आपके द्वारा स्थापित</string>
@@ -629,7 +631,6 @@
     <string name="route_podcast_episodes">कडियाँ</string>
     <string name="route_podcasts">पुटप्रसार</string>
     <string name="podcast_premium">अधिमूल्य</string>
-    <string name="podcast_value_for_value">मूल्य के लिए मूल्य</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d अध्याय</item>
         <item quantity="other">%1$d अध्याय</item>
@@ -755,7 +756,6 @@
     <string name="content_description_add_image">चित्र जोडें</string>
     <string name="content_description_add_video">चलचित्र जोडें</string>
     <string name="content_description_add_document">पत्र जोडें</string>
-    <string name="use_direct_url">सीधे जालपता का उपयोग करें</string>
     <string name="file_server">अभिलेख सेवासंगणक</string>
     <string name="file_server_description">इस अभिलेख का आरोहण करने के लिए सेवासंगणक का चयन करें</string>
     <string name="media_servers">श्रव्यदृश्याभिलेख सेवासंगणक</string>
@@ -1751,13 +1751,6 @@
     <string name="highlights">प्रमुखताएँ</string>
     <string name="git_repositories_search_open">क्रमलेखकोश छलनी</string>
     <string name="git_repositories_search_close">छलनी आवृत</string>
-    <string name="nsite_title">नोस्टरस्थान : %1$s</string>
-    <string name="napplet_card_title">नोस्टर संलग्नक्रमक : %1$s</string>
-    <string name="napplet_card_permissions">अनुमतियाँ :</string>
-    <string name="nsite_root_site">मूल स्थान</string>
-    <string name="nsite_source">स्रोत :</string>
-    <string name="nsite_servers">सेवासंगणक :</string>
-    <string name="nsite_open">खोलें</string>
     <string name="ots_info_title">समयांकन प्रमाण</string>
     <string name="ots_info_description">प्रमाण उपलब्ध है कि इस पत्र पर हस्ताक्षर किया गया %1$s के कुछ पहले। प्रमाण अंकित किया गया द्व्यंकरूप्य खण्डश्रृंखला में उस समय उस दिन पर।</string>
     <string name="ots_info_pending_description">इस पत्र के लिए एक समयांकन प्रमाण का अनुरोध किया गया है तथा द्व्यंकरूप्य खण्डश्रृंखला में अंकन की प्रतीक्षा हो रही है। सामान्यतः कुछ घण्टों में सम्पन्न हो जाएगा।</string>

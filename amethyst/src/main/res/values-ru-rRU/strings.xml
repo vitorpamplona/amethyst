@@ -365,6 +365,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="public_chats">Публичные чаты</string>
@@ -465,7 +467,6 @@
     <string name="content_description_add_image">Добавить фото</string>
     <string name="content_description_add_video">Добавить видео</string>
     <string name="content_description_add_document">Добавить документ</string>
-    <string name="use_direct_url">Использовать прямой URL-адрес</string>
     <string name="file_server">Сервер для загрузки</string>
     <string name="file_server_description">Выберите сервер для загрузки этого файла</string>
     <string name="media_servers">Медиасерверы</string>
@@ -1035,11 +1036,6 @@
     <string name="git_repo_section_links">Ссылки</string>
     <string name="git_repo_section_maintainers">Сопровождающие</string>
     <string name="git_repo_section_topics">Темы</string>
-    <string name="napplet_card_permissions">Разрешения:</string>
-    <string name="nsite_root_site">Корневой сайт</string>
-    <string name="nsite_source">Источник:</string>
-    <string name="nsite_servers">Серверы:</string>
-    <string name="nsite_open">Открыть</string>
     <string name="ots_info_title">Доказательство временно́й метки</string>
     <string name="ots_info_description">Есть доказательство того, что эта публикация была подписана до %1$s. Доказательство зафиксировано в блокчейне Bitcoin в указанную дату и время.</string>
     <string name="edit_post">Редактировать пост</string>

@@ -1766,4 +1766,10 @@
     <string name="ots_explorer_api_label">URL cơ sở Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Thanh toán hóa đơn từ DVM</string>
     <string name="dvm_pay_amount_to_dvm">Thanh toán %1$s sats cho DVM</string>
+    <string name="use_direct_url">Dùng URL trực tiếp</string>
+    <string name="napplet_card_permissions">Quyền hạn:</string>
+    <string name="nsite_root_site">Trang chủ gốc</string>
+    <string name="nsite_source">Nguồn:</string>
+    <string name="nsite_servers">Máy chủ:</string>
+    <string name="nsite_open">Mở</string>
 </resources>

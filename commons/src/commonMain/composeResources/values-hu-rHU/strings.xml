@@ -105,14 +105,14 @@
         <item quantity="other">%1$d relé</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">válasz neki: </string>
+    <string name="replying_to">"válasz erre: "</string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">nOldal: %1$s</string>
     <string name="napplet_card_title">nKisalkalmazás: %1$s</string>
     <string name="napplet_card_kind">nKisalkalmazás</string>
     <string name="nsite_website_kind">nOldal</string>
-    <string name="napplet_card_permissions">Amihez hozzáférhet</string>
-    <string name="nsite_root_site">Gyökéroldal</string>
+    <string name="napplet_card_permissions">Engedélyek:</string>
+    <string name="nsite_root_site">Főoldal</string>
     <string name="nsite_source">Forrás:</string>
     <string name="nsite_servers">Kiszolgálók:</string>
     <string name="nsite_open">Megnyitás</string>

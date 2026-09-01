@@ -107,13 +107,13 @@
         <item quantity="other">%1$d transmitery</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">odpowiadając do </string>
+    <string name="replying_to">"odpowiadając do "</string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
-    <string name="nsite_title">nSite: %1$s</string>
+    <string name="nsite_title">Statyczna Witryna: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nAplet</string>
     <string name="nsite_website_kind">nSite</string>
-    <string name="napplet_card_permissions">Do czego ma dostęp</string>
+    <string name="napplet_card_permissions">Uprawnienia:</string>
     <string name="nsite_root_site">Strona główna</string>
     <string name="nsite_source">Źródło:</string>
     <string name="nsite_servers">Serwery:</string>

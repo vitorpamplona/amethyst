@@ -324,7 +324,6 @@
     
     
     
-    <string name="use_direct_url">Використовувати пряме посилання</string>
     
     
     
@@ -1821,20 +1820,13 @@
     <string name="git_repo_section_topics">Теми</string>
     
     
-    <string name="nsite_title">nSite: %1$s</string>
-    
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    
-    <string name="napplet_card_permissions">Дозволи:</string>
     
     
-    <string name="nsite_root_site">Кореневий сайт</string>
     
-    <string name="nsite_source">Джерело:</string>
     
-    <string name="nsite_servers">Сервери:</string>
     
-    <string name="nsite_open">Відкрити</string>
+    
+    
     
     <string name="ots_info_title">Доказ часової позначки</string>
     

@@ -1820,4 +1820,12 @@
     <string name="ots_explorer_api_label">Explorer API taban URL\'si</string>
     <string name="dvm_pay_invoice_from_dvm">DVM\'den Fatura Öde</string>
     <string name="dvm_pay_amount_to_dvm">DVM\'ye %1$s sats öde</string>
+    <string name="use_direct_url">Doğrudan URL kullan</string>
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">İzinler:</string>
+    <string name="nsite_root_site">Kök Site</string>
+    <string name="nsite_source">Kaynak:</string>
+    <string name="nsite_servers">Sunucular:</string>
+    <string name="nsite_open">Aç</string>
 </resources>

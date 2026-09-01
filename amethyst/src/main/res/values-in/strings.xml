@@ -332,7 +332,6 @@
     
     
     
-    <string name="use_direct_url">Gunakan URL langsung</string>
     
     
     
@@ -1776,20 +1775,13 @@
     <string name="git_repo_section_topics">Topik</string>
     
     
-    <string name="nsite_title">nSite: %1$s</string>
-    
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    
-    <string name="napplet_card_permissions">Izin:</string>
     
     
-    <string name="nsite_root_site">Situs Root</string>
     
-    <string name="nsite_source">Sumber:</string>
     
-    <string name="nsite_servers">Server:</string>
     
-    <string name="nsite_open">Buka</string>
+    
+    
     
     <string name="ots_info_title">Bukti Stempel Waktu</string>
     

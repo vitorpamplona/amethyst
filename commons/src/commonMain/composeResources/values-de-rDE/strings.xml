@@ -105,13 +105,13 @@
         <item quantity="other">%1$d Relays</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">Antworten auf </string>
+    <string name="replying_to">"Antworten auf "</string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statische Website: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
-    <string name="napplet_card_permissions">Worauf sie zugreifen kann</string>
+    <string name="napplet_card_permissions">Berechtigungen:</string>
     <string name="nsite_root_site">Stammseite</string>
     <string name="nsite_source">Quelle:</string>
     <string name="nsite_servers">Server:</string>

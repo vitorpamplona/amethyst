@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RelayAuthPromptBusTest {
@@ -143,6 +144,39 @@ class RelayAuthPromptBusTest {
             prompts[1].respond(UserAuthChoice.ALWAYS_ALLOW)
 
             assertEquals(UserAuthChoice.ALWAYS_ALLOW, callerB.await())
+        }
+
+    /**
+     * "Always/Never, all relays" is answered on one dialog and applies to the prompts still queued
+     * behind it, which the host resolves without ever showing them. A prompt that is answered but not
+     * marked shown sits in the queue-wait window — up to five minutes — before its caller reads the
+     * answer already sitting in the deferred, so the relay it belongs to goes unauthenticated for that
+     * long despite the user having answered. Marking it shown is what makes the answer land now.
+     */
+    @Test
+    fun anAnswerFannedOutToAQueuedPromptLandsWithoutWaitingOutTheQueueWindow() =
+        runTest {
+            val clock = testScheduler
+            val bus = RelayAuthPromptBus(timeoutMs = 1_000L, queueWaitMs = 300_000L)
+            val relayA = NormalizedRelayUrl("wss://a.relay.test")
+            val relayB = NormalizedRelayUrl("wss://b.relay.test")
+
+            val surfaced = async { bus.prompts.take(2).toList() }
+            val callerA = async { bus.requestDecision(relayA, emptyList(), alice, isMyOwnRelay = false) }
+            val callerB = async { bus.requestDecision(relayB, emptyList(), alice, isMyOwnRelay = false) }
+            val prompts = surfaced.await()
+
+            // Only A is on screen. The user's account-wide answer resolves B too, sight unseen.
+            prompts[0].markShown()
+            val start = clock.currentTime
+            prompts.forEach {
+                it.markShown()
+                it.respond(UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE)
+            }
+
+            assertEquals(UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE, callerA.await())
+            assertEquals(UserAuthChoice.ALWAYS_ALLOW_EVERYWHERE, callerB.await())
+            assertTrue("the queued relay waited ${clock.currentTime - start}ms for an answer it already had", clock.currentTime - start < 1_000)
         }
 
     @Test

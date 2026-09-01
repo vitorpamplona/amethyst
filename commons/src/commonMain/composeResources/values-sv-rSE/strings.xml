@@ -105,14 +105,14 @@
         <item quantity="other">%1$d reläer</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">Svarar till </string>
+    <string name="replying_to">"Svarar till "</string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Statisk webbplats: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
-    <string name="napplet_card_permissions">Vad det har åtkomst till</string>
-    <string name="nsite_root_site">Rotplats</string>
+    <string name="napplet_card_permissions">Behörigheter:</string>
+    <string name="nsite_root_site">Webbplats rot</string>
     <string name="nsite_source">Källa:</string>
     <string name="nsite_servers">Servrar:</string>
     <string name="nsite_open">Öppna</string>

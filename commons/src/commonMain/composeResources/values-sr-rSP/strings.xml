@@ -1777,4 +1777,10 @@
     <string name="ots_explorer_api_label">Osnovni URL Explorer API-ja</string>
     <string name="dvm_pay_invoice_from_dvm">Plati fakturu od DVM-a</string>
     <string name="dvm_pay_amount_to_dvm">Plati %1$s sats DVM-u</string>
+    <string name="use_direct_url">Koristi direktan URL</string>
+    <string name="napplet_card_permissions">Dozvole:</string>
+    <string name="nsite_root_site">Koren sajta</string>
+    <string name="nsite_source">Izvor:</string>
+    <string name="nsite_servers">Serveri:</string>
+    <string name="nsite_open">Otvori</string>
 </resources>

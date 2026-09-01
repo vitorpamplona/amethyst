@@ -1817,4 +1817,12 @@
     <string name="ots_explorer_api_label">Explorer API-basis-URL</string>
     <string name="dvm_pay_invoice_from_dvm">Factuur betalen van de DVM</string>
     <string name="dvm_pay_amount_to_dvm">%1$s sats betalen aan de DVM</string>
+    <string name="use_direct_url">Directe URL gebruiken</string>
+    <string name="nsite_title">Statische website: %1$s</string>
+    <string name="nsite_root_site">Root-site</string>
+    <string name="nsite_source">Bron:</string>
+    <string name="nsite_servers">Servers:</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">Machtigingen:</string>
+    <string name="nsite_open">Openen</string>
 </resources>

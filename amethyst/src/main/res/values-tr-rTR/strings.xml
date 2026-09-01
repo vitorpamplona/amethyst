@@ -347,6 +347,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="shorts">Kısa videolar</string>
@@ -441,7 +443,6 @@
     <string name="content_description_add_image">Resim Ekle</string>
     <string name="content_description_add_video">Video Ekle</string>
     <string name="content_description_add_document">Belge Ekle</string>
-    <string name="use_direct_url">Doğrudan URL kullan</string>
     <string name="file_server">Dosya Sunucusu</string>
     <string name="file_server_description">Bu dosyayı yüklemek için bir sunucu seçin</string>
     <string name="media_servers">Medya Sunucuları</string>
@@ -984,11 +985,6 @@
     <string name="git_repo_section_links">Bağlantılar</string>
     <string name="git_repo_section_maintainers">Bakımcılar</string>
     <string name="git_repo_section_topics">Konular</string>
-    <string name="napplet_card_permissions">İzinler:</string>
-    <string name="nsite_root_site">Kök Site</string>
-    <string name="nsite_source">Kaynak:</string>
-    <string name="nsite_servers">Sunucular:</string>
-    <string name="nsite_open">Aç</string>
     <string name="ots_info_title">Zaman Damgası Kanıtı</string>
     <string name="ots_info_description">Bu gönderinin %1$s tarihinden önce imzalandığına dair kanıt var. Kanıt, o tarih ve saatte Bitcoin blok zincirine işlendi.</string>
     <string name="edit_post">Gönderiyi Düzenle</string>

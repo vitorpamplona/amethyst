@@ -1777,4 +1777,10 @@
     <string name="ots_explorer_api_label">URL ya msingi ya Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Lipa ankara kutoka kwa DVM</string>
     <string name="dvm_pay_amount_to_dvm">Lipa %1$s sats kwa DVM</string>
+    <string name="use_direct_url">Tumia URL ya moja kwa moja</string>
+    <string name="napplet_card_permissions">Ruhusa:</string>
+    <string name="nsite_root_site">Tovuti Kuu</string>
+    <string name="nsite_source">Chanzo:</string>
+    <string name="nsite_servers">Seva:</string>
+    <string name="nsite_open">Fungua</string>
 </resources>

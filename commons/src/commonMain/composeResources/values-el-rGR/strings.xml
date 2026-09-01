@@ -1772,4 +1772,10 @@
     <string name="ots_explorer_api_label">Βασική διεύθυνση URL Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Πληρωμή Τιμολογίου από το DVM</string>
     <string name="dvm_pay_amount_to_dvm">Πληρωμή %1$s sats στο DVM</string>
+    <string name="use_direct_url">Χρήση άμεσης URL</string>
+    <string name="napplet_card_permissions">Δικαιώματα:</string>
+    <string name="nsite_root_site">Κύριος Ιστότοπος</string>
+    <string name="nsite_source">Πηγή:</string>
+    <string name="nsite_servers">Διακομιστές:</string>
+    <string name="nsite_open">Άνοιγμα</string>
 </resources>

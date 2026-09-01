@@ -105,15 +105,15 @@
         <item quantity="other">%1$d Relés</item>
     </plurals>
     <!-- Notes & Replies -->
-    <string name="replying_to">respondendo para </string>
+    <string name="replying_to">"respondendo para "</string>
     <!-- Static sites (NIP-5A) & napplets (NIP-5D) feed card -->
     <string name="nsite_title">Site Estático: %1$s</string>
     <string name="napplet_card_title">nApplet: %1$s</string>
     <string name="napplet_card_kind">nApplet</string>
     <string name="nsite_website_kind">nSite</string>
-    <string name="napplet_card_permissions">O que ele pode acessar</string>
-    <string name="nsite_root_site">Site raiz</string>
-    <string name="nsite_source">Origem:</string>
+    <string name="napplet_card_permissions">Permissões:</string>
+    <string name="nsite_root_site">Site Raiz</string>
+    <string name="nsite_source">Fonte:</string>
     <string name="nsite_servers">Servidores:</string>
     <string name="nsite_open">Abrir</string>
     <!-- Custom emoji suggestions (NIP-30) -->
@@ -167,7 +167,7 @@
     <string name="road_event_unknown">Evento na via</string>
     <string name="podcast_value_zap_split_hint">Os zaps para isto são divididos entre:</string>
     <string name="podcast_value_split_percent">%1$d%%</string>
-    <string name="podcast_value_for_value">Valor por Valor</string>
+    <string name="podcast_value_for_value">Valor-para-Valor</string>
     <string name="relay_monitor_rtt_open">Abrir</string>
     <string name="relay_monitor_rtt_read">Leitura</string>
     <string name="relay_monitor_rtt_write">Escrita</string>

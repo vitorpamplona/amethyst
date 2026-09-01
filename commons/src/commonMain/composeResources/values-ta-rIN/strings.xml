@@ -1776,4 +1776,10 @@
     <string name="ots_explorer_api_label">Explorer API அடிப்படை URL</string>
     <string name="dvm_pay_invoice_from_dvm">DVM-இலிருந்து Invoice செலுத்து</string>
     <string name="dvm_pay_amount_to_dvm">DVM-க்கு %1$s sats செலுத்து</string>
+    <string name="use_direct_url">நேரடி URL பயன்படுத்து</string>
+    <string name="napplet_card_permissions">அனுமதிகள்:</string>
+    <string name="nsite_root_site">வேர் தளம்</string>
+    <string name="nsite_source">மூலம்:</string>
+    <string name="nsite_servers">சேவையகங்கள்:</string>
+    <string name="nsite_open">திறக்கவும்</string>
 </resources>

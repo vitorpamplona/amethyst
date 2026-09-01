@@ -1787,4 +1787,12 @@
     <string name="ots_explorer_api_label">Explorer API 基礎網址</string>
     <string name="dvm_pay_invoice_from_dvm">支付來自 DVM 的發票</string>
     <string name="dvm_pay_amount_to_dvm">向 DVM 支付 %1$s sats</string>
+    <string name="use_direct_url">使用直接 URL</string>
+    <string name="nsite_title">nSite：%1$s</string>
+    <string name="napplet_card_title">nApplet：%1$s</string>
+    <string name="napplet_card_permissions">權限：</string>
+    <string name="nsite_root_site">根網站</string>
+    <string name="nsite_source">來源：</string>
+    <string name="nsite_servers">伺服器：</string>
+    <string name="nsite_open">開啟</string>
 </resources>

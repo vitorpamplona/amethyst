@@ -601,6 +601,16 @@
         <item quantity="one">It\'s also holding back %1$d other thing.</item>
         <item quantity="other">It\'s also holding back %1$d other things.</item>
     </plurals>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <string name="relay_auth_always_log_in">Always log in</string>
+    <string name="relay_auth_never">Never</string>
+    <string name="relay_auth_always_allow_everywhere">Always, all relays</string>
+    <string name="relay_auth_never_allow_everywhere">Never, all relays</string>
+    <string name="relay_auth_always_everywhere_title">Log in to every relay?</string>
+    <string name="relay_auth_always_everywhere_body">Amethyst will log in as %1$s to every relay that asks, and stop asking. Relays you blocked, and the ones you set to never log in, stay that way. You can change this under Relay login.</string>
+    <string name="relay_auth_never_everywhere_title">Never log in to any relay?</string>
+    <string name="relay_auth_never_everywhere_body">Amethyst will stop telling relays that you are %1$s, and stop asking. Some relays will refuse to serve you: messages, replies and notifications may not go through. Relays you set to always log in stay that way. You can change this under Relay login.</string>
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
 
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Always, set by you</string>
@@ -666,7 +676,6 @@
     <string name="route_podcast_episodes">Episodes</string>
     <string name="route_podcasts">Podcasts</string>
     <string name="podcast_premium">Premium</string>
-    <string name="podcast_value_for_value">Value-for-Value</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d chapter</item>
         <item quantity="other">%1$d chapters</item>
@@ -809,7 +818,6 @@
     <string name="content_description_add_document">Add Document</string>
 
 
-    <string name="use_direct_url">Use direct URL</string>
 
 
 
@@ -2087,13 +2095,6 @@
     <string name="highlights">Highlights</string>
     <string name="git_repositories_search_open">Filter repositories</string>
     <string name="git_repositories_search_close">Close filter</string>
-    <string name="nsite_title">nSite: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    <string name="napplet_card_permissions">Permissions:</string>
-    <string name="nsite_root_site">Root Site</string>
-    <string name="nsite_source">Source:</string>
-    <string name="nsite_servers">Servers:</string>
-    <string name="nsite_open">Open</string>
 
     <string name="ots_info_title">Timestamp Proof</string>
     <string name="ots_info_description">There\'s proof this post was signed sometime before %1$s. The proof was stamped in the Bitcoin blockchain at that date and time.</string>

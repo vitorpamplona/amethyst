@@ -1777,4 +1777,10 @@
     <string name="ots_explorer_api_label">Explorer API -perus-URL</string>
     <string name="dvm_pay_invoice_from_dvm">Maksa lasku DVM:ltä</string>
     <string name="dvm_pay_amount_to_dvm">Maksa %1$s sats DVM:lle</string>
+    <string name="use_direct_url">Käytä suoraa URL-osoitetta</string>
+    <string name="napplet_card_permissions">Käyttöoikeudet:</string>
+    <string name="nsite_root_site">Juurisivusto</string>
+    <string name="nsite_source">Lähde:</string>
+    <string name="nsite_servers">Palvelimet:</string>
+    <string name="nsite_open">Avaa</string>
 </resources>

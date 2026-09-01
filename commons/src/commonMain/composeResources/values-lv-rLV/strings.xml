@@ -1794,4 +1794,10 @@
     <string name="ots_explorer_api_label">Explorer API bāzes URL</string>
     <string name="dvm_pay_invoice_from_dvm">Apmaksāt rēķinu no DVM</string>
     <string name="dvm_pay_amount_to_dvm">Samaksāt %1$s sats DVM</string>
+    <string name="use_direct_url">Izmantot tiešo URL</string>
+    <string name="napplet_card_permissions">Atļaujas:</string>
+    <string name="nsite_root_site">Saknes vietne</string>
+    <string name="nsite_source">Avots:</string>
+    <string name="nsite_servers">Serveri:</string>
+    <string name="nsite_open">Atvērt</string>
 </resources>

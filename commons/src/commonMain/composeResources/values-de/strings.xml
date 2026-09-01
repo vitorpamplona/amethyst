@@ -1818,4 +1818,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="ots_explorer_api_label">Explorer-API-Basis-URL</string>
     <string name="dvm_pay_invoice_from_dvm">Rechnung vom DVM bezahlen</string>
     <string name="dvm_pay_amount_to_dvm">%1$s sats an das DVM zahlen</string>
+    <string name="use_direct_url">Direkte URL verwenden</string>
+    <string name="nsite_title">Statische Website: %1$s</string>
+    <string name="nsite_root_site">Stammseite</string>
+    <string name="nsite_source">Quelle:</string>
+    <string name="nsite_servers">Server:</string>
+    <string name="napplet_card_permissions">Berechtigungen:</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="nsite_open">Öffnen</string>
 </resources>

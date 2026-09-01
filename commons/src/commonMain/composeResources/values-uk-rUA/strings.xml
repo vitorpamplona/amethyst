@@ -1787,4 +1787,10 @@
     <string name="ots_explorer_api_label">Базова URL-адреса Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">Оплатити рахунок від DVM</string>
     <string name="dvm_pay_amount_to_dvm">Сплатити %1$s sats DVM</string>
+    <string name="use_direct_url">Використовувати пряме посилання</string>
+    <string name="napplet_card_permissions">Дозволи:</string>
+    <string name="nsite_root_site">Кореневий сайт</string>
+    <string name="nsite_source">Джерело:</string>
+    <string name="nsite_servers">Сервери:</string>
+    <string name="nsite_open">Відкрити</string>
 </resources>

@@ -104,7 +104,6 @@
     <string name="content_description_add_image">Afbeelding toevoegen</string>
     <string name="content_description_add_video">Video toevoegen</string>
     <string name="content_description_add_document">Document toevoegen</string>
-    <string name="use_direct_url">Directe URL gebruiken</string>
     <string name="file_server">File server</string>
     <string name="file_server_description">Kies een server om dit bestand naar te uploaden</string>
     <string name="media_servers">Mediaservers</string>
@@ -2016,13 +2015,9 @@
 <string name="git_repo_section_topics">Onderwerpen</string>
     
     
-<string name="nsite_title">Statische website: %1$s</string>
     
-<string name="nsite_root_site">Root-site</string>
     
-<string name="nsite_source">Bron:</string>
     
-<string name="nsite_servers">Servers:</string>
     
     
     
@@ -3389,12 +3384,9 @@
 </plurals>
     
     
-<string name="napplet_card_title">nApplet: %1$s</string>
-    
-<string name="napplet_card_permissions">Machtigingen:</string>
     
     
-<string name="nsite_open">Openen</string>
+    
     
     
     

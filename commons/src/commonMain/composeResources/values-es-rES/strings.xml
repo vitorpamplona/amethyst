@@ -1826,4 +1826,12 @@
     <string name="ots_explorer_api_label">URL base de la API del explorador</string>
     <string name="dvm_pay_invoice_from_dvm">Pagar factura del DVM</string>
     <string name="dvm_pay_amount_to_dvm">Pagar %1$s sats al DVM</string>
+    <string name="use_direct_url">Usar URL directa</string>
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">Permisos:</string>
+    <string name="nsite_root_site">Sitio raíz</string>
+    <string name="nsite_source">Fuente:</string>
+    <string name="nsite_servers">Servidores:</string>
+    <string name="nsite_open">Abrir</string>
 </resources>

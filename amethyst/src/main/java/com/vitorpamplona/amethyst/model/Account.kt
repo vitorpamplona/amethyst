@@ -3672,7 +3672,7 @@ class Account(
 
         // Blocking a relay has to forget any "just for now" login to it, or unblocking later would
         // silently resume authenticating off an answer given before the block. Blocking is the
-        // strongest signal available here — the weaker "never allow" already drops the grant via
+        // strongest signal available here — the weaker per-relay "never" answer already drops the grant via
         // RelayAuthPermissionLedger.setDecision, so it would be odd for the stronger one not to.
         //
         // Observed rather than hooked onto the local block action because the kind-10006 list is

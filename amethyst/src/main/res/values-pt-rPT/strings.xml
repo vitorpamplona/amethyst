@@ -339,6 +339,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="shorts">Curtas</string>
@@ -434,7 +436,6 @@
     <string name="content_description_add_image">Adicionar Imagem</string>
     <string name="content_description_add_video">Adicionar Vídeo</string>
     <string name="content_description_add_document">Adicionar Documento</string>
-    <string name="use_direct_url">Usar URL direto</string>
     <string name="file_server">Servidor de arquivos</string>
     <string name="file_server_description">Escolha um servidor para onde enviar este arquivo</string>
     <string name="media_servers">Servidores de Mídia</string>
@@ -970,12 +971,6 @@
     <string name="git_repo_section_about">Sobre</string>
     <string name="git_repo_section_maintainers">Mantenedores</string>
     <string name="git_repo_section_topics">Tópicos</string>
-    <string name="nsite_title">Site Estático: %1$s</string>
-    <string name="napplet_card_permissions">Permissões:</string>
-    <string name="nsite_root_site">Site Raiz</string>
-    <string name="nsite_source">Fonte:</string>
-    <string name="nsite_servers">Servidores:</string>
-    <string name="nsite_open">Abrir</string>
     <string name="ots_info_title">Prova de Carimbo de data/hora</string>
     <string name="ots_info_description">Há prova de que esta postagem foi assinada antes de %1$s. A prova foi carimbada no blockchain do Bitcoin naquela data e hora.</string>
     <string name="edit_post">Editar postagem</string>

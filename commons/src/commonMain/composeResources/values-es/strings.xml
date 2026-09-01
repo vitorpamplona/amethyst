@@ -1817,4 +1817,12 @@
     <string xmlns:ns0="http://schemas.android.com/tools" name="account_backup_tips3_md" ns0:ignore="Typos">        Para mayor seguridad, puedes cifrar la clave con una contraseña. Esta clave empieza por **ncryptsec1** y no puede utilizarse sin tu contraseña.
        \n\nSi pierdes la contraseña, no podrás recuperar tu clave.
     </string>
+    <string name="use_direct_url">Usar URL directa</string>
+    <string name="nsite_title">nSite: %1$s</string>
+    <string name="napplet_card_title">nApplet: %1$s</string>
+    <string name="napplet_card_permissions">Permisos:</string>
+    <string name="nsite_root_site">Sitio raíz</string>
+    <string name="nsite_source">Fuente:</string>
+    <string name="nsite_servers">Servidores:</string>
+    <string name="nsite_open">Abrir</string>
 </resources>

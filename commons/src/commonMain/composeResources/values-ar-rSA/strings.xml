@@ -1800,4 +1800,10 @@
     <string name="ots_explorer_api_label">رابط الـ URL الأساسي لـ Explorer API</string>
     <string name="dvm_pay_invoice_from_dvm">دفع الفاتورة من DVM</string>
     <string name="dvm_pay_amount_to_dvm">دفع %1$s sats إلى DVM</string>
+    <string name="use_direct_url">استخدام الرابط المباشر</string>
+    <string name="napplet_card_permissions">الصلاحيات:</string>
+    <string name="nsite_root_site">الموقع الجذر</string>
+    <string name="nsite_source">المصدر:</string>
+    <string name="nsite_servers">الخوادم:</string>
+    <string name="nsite_open">فتح</string>
 </resources>

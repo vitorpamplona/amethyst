@@ -567,6 +567,8 @@
         <item quantity="one">Ele também está retendo mais %1$d coisa.</item>
         <item quantity="other">Ele também está retendo mais %1$d coisas.</item>
     </plurals>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Sempre, definido por você</string>
     <string name="relay_auth_exception_never">Nunca, definido por você</string>
@@ -629,7 +631,6 @@
     <string name="route_podcast_episodes">Episódios</string>
     <string name="route_podcasts">Podcasts</string>
     <string name="podcast_premium">Premium</string>
-    <string name="podcast_value_for_value">Valor-para-Valor</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d capítulo</item>
         <item quantity="other">%1$d capítulos</item>
@@ -755,7 +756,6 @@
     <string name="content_description_add_image">Adicionar Imagem</string>
     <string name="content_description_add_video">Adicionar Vídeo</string>
     <string name="content_description_add_document">Adicionar Documento</string>
-    <string name="use_direct_url">Usar URL direto</string>
     <string name="file_server">Servidor de arquivos</string>
     <string name="file_server_description">Escolha um servidor para onde enviar este arquivo</string>
     <string name="media_servers">Servidores de Mídia</string>
@@ -1750,13 +1750,6 @@
     <string name="highlights">Destaques</string>
     <string name="git_repositories_search_open">Filtrar repositórios</string>
     <string name="git_repositories_search_close">Fechar filtro</string>
-    <string name="nsite_title">Site Estático: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    <string name="napplet_card_permissions">Permissões:</string>
-    <string name="nsite_root_site">Site Raiz</string>
-    <string name="nsite_source">Fonte:</string>
-    <string name="nsite_servers">Servidores:</string>
-    <string name="nsite_open">Abrir</string>
     <string name="ots_info_title">Prova de Carimbo de data/hora</string>
     <string name="ots_info_description">Há prova de que esta postagem foi assinada antes de %1$s. A prova foi carimbada no blockchain do Bitcoin naquela data e hora.</string>
     <string name="ots_info_pending_description">Uma prova de carimbo de data/hora para esta publicação foi solicitada e está aguardando para ser registrada na blockchain do Bitcoin. Geralmente conclui em algumas horas.</string>

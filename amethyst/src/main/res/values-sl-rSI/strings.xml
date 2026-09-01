@@ -643,6 +643,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
         <item quantity="few">Zadržuje pa še %1$d druge stvari.</item>
         <item quantity="other">Zadržuje pa še %1$d drugih stvari.</item>
     </plurals>
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <string name="relay_auth_exception_always">Vedno, po vaši izbiri</string>
     <string name="relay_auth_exception_never">Nikoli, po vaši izbiri</string>
@@ -707,7 +709,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="route_podcast_episodes">Epizode</string>
     <string name="route_podcasts">Podkasti</string>
     <string name="podcast_premium">Premium</string>
-    <string name="podcast_value_for_value">Vrednost za vrednost</string>
     <plurals name="podcast_chapters_count">
         <item quantity="one">%1$d poglavje</item>
         <item quantity="two">%1$d poglavji</item>
@@ -853,7 +854,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="content_description_add_image">Dodaj sliko</string>
     <string name="content_description_add_video">Dodaj video</string>
     <string name="content_description_add_document">Dodaj dokument</string>
-    <string name="use_direct_url">Uporabi direktni URL</string>
     <string name="file_server">Datotečni strežnik</string>
     <string name="file_server_description">Izberi strežnik za nalaganje te datoteke</string>
     <string name="media_servers">Medijski strežniki</string>
@@ -1898,13 +1898,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="highlights">Poudarki</string>
     <string name="git_repositories_search_open">Filtriraj repozitorij</string>
     <string name="git_repositories_search_close">Zapri filter</string>
-    <string name="nsite_title">Statična spletna stran: %1$s</string>
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    <string name="napplet_card_permissions">Dovoljenja:</string>
-    <string name="nsite_root_site">Izhodiščno spletišče</string>
-    <string name="nsite_source">Vir:</string>
-    <string name="nsite_servers">Strežniki:</string>
-    <string name="nsite_open">Odpri</string>
     <string name="ots_info_title">Dokaz časovnega žiga</string>
     <string name="ots_info_description">Obstaja dokaz, da je bil ta zapisek podpisan pred %1$s. Dokaz je bil ožigosan v Bitcoin verigi blokov na ta datum in čas.</string>
     <string name="ots_info_pending_description">Za to objavo je bilo zahtevano dokazilo o časovnem žigu, ki čaka na zapis v verigo blokov Bitcoin. Postopek se običajno zaključi v nekaj urah.</string>

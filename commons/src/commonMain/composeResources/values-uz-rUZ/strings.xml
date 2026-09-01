@@ -1778,4 +1778,10 @@
     <string name="ots_explorer_api_label">Explorer API asosiy URL manzili</string>
     <string name="dvm_pay_invoice_from_dvm">DVM dan hisob-fakturani to\'lash</string>
     <string name="dvm_pay_amount_to_dvm">DVM ga %1$s sats to\'lash</string>
+    <string name="use_direct_url">To\'g\'ridan-to\'g\'ri URL ishlatish</string>
+    <string name="napplet_card_permissions">Ruxsatlar:</string>
+    <string name="nsite_root_site">Asosiy Sayt</string>
+    <string name="nsite_source">Manba:</string>
+    <string name="nsite_servers">Serverlar:</string>
+    <string name="nsite_open">Ochish</string>
 </resources>

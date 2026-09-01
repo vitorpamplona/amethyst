@@ -332,6 +332,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="public_chats">Obrolan Publik</string>
@@ -420,7 +422,6 @@
     <string name="content_description_add_image">Tambahkan Gambar</string>
     <string name="content_description_add_video">Tambahkan Video</string>
     <string name="content_description_add_document">Tambahkan Dokumen</string>
-    <string name="use_direct_url">Gunakan URL langsung</string>
     <string name="file_server">Server File</string>
     <string name="file_server_description">Pilih server untuk mengunggah file ini</string>
     <string name="media_servers">Server Media</string>
@@ -943,11 +944,6 @@ Seharusnya %3$s</string>
     <string name="git_repo_section_links">Tautan</string>
     <string name="git_repo_section_maintainers">Pemelihara</string>
     <string name="git_repo_section_topics">Topik</string>
-    <string name="napplet_card_permissions">Izin:</string>
-    <string name="nsite_root_site">Situs Root</string>
-    <string name="nsite_source">Sumber:</string>
-    <string name="nsite_servers">Server:</string>
-    <string name="nsite_open">Buka</string>
     <string name="ots_info_title">Bukti Stempel Waktu</string>
     <string name="ots_info_description">Ada bukti bahwa postingan ini ditandatangani sebelum %1$s. Bukti ini dicap dalam blockchain Bitcoin pada tanggal dan waktu tersebut.</string>
     <string name="edit_post">Edit Postingan</string>

@@ -348,6 +348,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="shorts">শর্টস</string>
@@ -443,7 +445,6 @@
     <string name="content_description_add_image">ছবি যোগ করুন</string>
     <string name="content_description_add_video">ভিডিও যোগ করুন</string>
     <string name="content_description_add_document">নথি যোগ করুন</string>
-    <string name="use_direct_url">সরাসরি URL ব্যবহার করুন</string>
     <string name="file_server">ফাইল সার্ভার</string>
     <string name="file_server_description">এই ফাইল আপলোড করতে একটি সার্ভার বেছে নিন</string>
     <string name="media_servers">মিডিয়া সার্ভার</string>
@@ -989,11 +990,6 @@
     <string name="git_repo_section_links">লিঙ্ক</string>
     <string name="git_repo_section_maintainers">মেইনটেইনার</string>
     <string name="git_repo_section_topics">বিষয়</string>
-    <string name="napplet_card_permissions">অনুমতি:</string>
-    <string name="nsite_root_site">রুট সাইট</string>
-    <string name="nsite_source">উৎস:</string>
-    <string name="nsite_servers">সার্ভার:</string>
-    <string name="nsite_open">খুলুন</string>
     <string name="ots_info_title">টাইমস্ট্যাম্প প্রমাণ</string>
     <string name="ots_info_description">এই পোস্টটি %1$s-এর আগে কোনো এক সময়ে সাইন করা হয়েছিল তার প্রমাণ আছে। প্রমাণটি সেই তারিখ ও সময়ে Bitcoin ব্লকচেইনে স্ট্যাম্প করা হয়েছিল।</string>
     <string name="edit_post">পোস্ট সম্পাদনা করুন</string>

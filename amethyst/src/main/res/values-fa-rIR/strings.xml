@@ -347,6 +347,8 @@
          exactly one "why" line varies, and it states the consequence of declining too, which is why
          there is no separate "if you don\'t" line. New keys throughout: these replaced a set of
          labels ("Notify:", "Post to this room") whose translations would otherwise still bind. -->
+    <!-- What the same two buttons say once "Remember for this relay" is on. -->
+    <!-- No longer shown in the prompt: kept so the existing translations aren't orphaned. -->
     <!-- Settings: three lists that each hold what their header says. -->
     <!-- Short labels for the purpose chips on a "recent logins" row. -->
     <string name="shorts">ویدیوهای کوتاه</string>
@@ -442,7 +444,6 @@
     <string name="content_description_add_image">افزودن تصویر</string>
     <string name="content_description_add_video">افزودن فیلم</string>
     <string name="content_description_add_document">افزودن مدارک</string>
-    <string name="use_direct_url">استفاده از آدرس مستقیم اینترنتی</string>
     <string name="file_server">سرور فایل</string>
     <string name="file_server_description">یک سرور برای بارگذاری این فایل انتخاب کنید</string>
     <string name="media_servers">سرورهای رسانه</string>
@@ -996,11 +997,6 @@
     <string name="git_repo_section_links">لینک‌ها</string>
     <string name="git_repo_section_maintainers">نگهدارندگان</string>
     <string name="git_repo_section_topics">موضوعات</string>
-    <string name="napplet_card_permissions">مجوزها:</string>
-    <string name="nsite_root_site">سایت اصلی</string>
-    <string name="nsite_source">منبع:</string>
-    <string name="nsite_servers">سرورها:</string>
-    <string name="nsite_open">باز کردن</string>
     <string name="ots_info_title">اثبات مهر زمان</string>
     <string name="ots_info_description">مدرکی وجود دارد که ثابت کند این پست پیش از %1$s امضا شده است. این مدرک در بلاکچین بیتکوین در آن تاریخ و زمان ثبت شده است.</string>
     <string name="edit_post">ویرایش نوشته</string>

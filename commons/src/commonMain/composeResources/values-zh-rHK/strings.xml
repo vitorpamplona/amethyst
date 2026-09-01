@@ -1797,4 +1797,12 @@
     <string name="ots_explorer_api_label">Explorer API 基础URL</string>
     <string name="dvm_pay_invoice_from_dvm">支付来自DVM的发票</string>
     <string name="dvm_pay_amount_to_dvm">支付 %1$s sats 到 DVM</string>
+    <string name="use_direct_url">使用直接链接</string>
+    <string name="nsite_title">静态网站: %1$s</string>
+    <string name="napplet_card_title">nApple: %1$s</string>
+    <string name="napplet_card_permissions">权限：</string>
+    <string name="nsite_root_site">根站点</string>
+    <string name="nsite_source">源：</string>
+    <string name="nsite_servers">服务器：</string>
+    <string name="nsite_open">打开</string>
 </resources>

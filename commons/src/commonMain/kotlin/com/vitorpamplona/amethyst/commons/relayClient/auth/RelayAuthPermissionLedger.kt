@@ -182,7 +182,7 @@ class RelayAuthPermissionLedger(
      *
      * Blocking already denies while it is in force, so this is about what happens *after* it is
      * lifted: without it, unblocking would resume authenticating off an answer given before the
-     * block. The weaker "never allow" drops the grant too (see [setDecision]), so the stronger
+     * block. The weaker "not now, and remember it" drops the grant too (see [setDecision]), so the stronger
      * signal has to as well.
      */
     fun revokeSessionGrantsFor(blockedRelayUrls: Collection<String>) = blockedRelayUrls.forEach(sessionGrants::revoke)
@@ -198,7 +198,8 @@ class RelayAuthPermissionLedger(
      * *after* its disk write returns — so a challenge arriving between them must never see neither.
      * Which side to fail on depends on the decision:
      * - **DENY** revokes first. The window then asks or denies, never signs: a user who just pressed
-     *   "never allow" must not get one more AUTH out of the grant they are replacing.
+     *   "not now" with the remember switch on must not get one more AUTH out of the grant they are
+     *   replacing.
      * - **ALLOW** revokes last, so the grant still covers the window. Revoking first left the relay
      *   momentarily undecided, which re-prompted the user who had just pressed "always" — the very
      *   dialog this whole feature exists to stop.

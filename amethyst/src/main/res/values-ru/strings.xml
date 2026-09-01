@@ -1717,20 +1717,13 @@
     <string name="git_repo_section_topics">Темы</string>
     
     
-    <string name="nsite_title">nSite: %1$s</string>
-    
-    <string name="napplet_card_title">nApplet: %1$s</string>
-    
-    <string name="napplet_card_permissions">Разрешения:</string>
     
     
-    <string name="nsite_root_site">Корневой сайт</string>
     
-    <string name="nsite_source">Источник:</string>
     
-    <string name="nsite_servers">Серверы:</string>
     
-    <string name="nsite_open">Открыть</string>
+    
+    
     
     <string name="ots_info_title">Доказательство временно́й метки</string>
     
@@ -3837,7 +3830,6 @@
 <string name="unauthorized_exception_description">Подписант не разрешил расшифровку, необходимую для выполнения этой операции. Активируйте расшифровки NIP-44 в вашем приложении-подписанте и повторите попытку</string>
 <string name="upload_error_title">Ошибка загрузки</string>
 <string name="upload_error_voice_message_failed">Не удалось загрузить голосовое сообщение</string>
-<string name="use_direct_url">Использовать прямой URL</string>
 <string name="video_download_has_started_toast">Загрузка видео начата…</string>
 <string name="video_saved_to_the_gallery">Видео сохранено в видеогалерею телефона</string>
 <string name="voice_preset_deep">Низкий</string>
