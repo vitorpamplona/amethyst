@@ -337,6 +337,10 @@ private fun PolicyEverywhereConfirmation(
             )
         },
         confirmButton = {
+            // The label echoes the link that opened this, not the buttons behind it: with the switch
+            // on those now read "Always log in" / "Never" for *this relay*, so confirming an
+            // account-wide answer under the same words would make the scope ambiguous exactly where
+            // it matters most.
             Button(
                 onClick = onConfirm,
                 colors =
@@ -348,7 +352,9 @@ private fun PolicyEverywhereConfirmation(
                             contentColor = MaterialTheme.colorScheme.onError,
                         )
                     },
-            ) { Text(stringRes(if (always) R.string.relay_auth_policy_always else R.string.relay_auth_policy_never)) }
+            ) {
+                Text(stringRes(if (always) R.string.relay_auth_always_allow_everywhere else R.string.relay_auth_never_allow_everywhere))
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) } },
     )
