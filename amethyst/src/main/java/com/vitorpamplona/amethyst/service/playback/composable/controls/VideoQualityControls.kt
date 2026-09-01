@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
 import androidx.annotation.OptIn
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.media3.common.C
@@ -28,6 +30,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
+import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogLevel
 
 internal fun getVideoTrackGroup(tracks: Tracks): Tracks.Group? = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
 
@@ -63,6 +68,11 @@ internal fun applyViewportConstraint(
     val current = player.trackSelectionParameters
     if (!needsViewportUpdate(current.viewportWidth, current.viewportHeight, widthPx, heightPx)) return
 
+    Log.d(VIDEO_QUALITY_TAG) {
+        "viewport ${widthPx}x$heightPx mediaId=${player.currentMediaItem?.mediaId} " +
+            "(was ${current.viewportWidth}x${current.viewportHeight})"
+    }
+
     player.trackSelectionParameters =
         current
             .buildUpon()
@@ -70,6 +80,49 @@ internal fun applyViewportConstraint(
             // a portrait box (a letterboxed live stream) from being judged against the short edge.
             .setViewportSize(widthPx, heightPx, true)
             .build()
+}
+
+/**
+ * Logcat tag for the rendition trace: every viewport push, and the rung actually selected against
+ * the ladder that was on offer. Replaces the per-media-item trace the old fixed-policy selector
+ * emitted — without it, "Amethyst is eating my data" is not a debuggable report.
+ *
+ * ```
+ * adb logcat -s VideoQuality
+ * ```
+ */
+const val VIDEO_QUALITY_TAG = "VideoQuality"
+
+/**
+ * Traces which rendition adaptive selection landed on, against the full ladder the manifest
+ * offered.
+ *
+ * The listener is registered only when the trace can actually be emitted — debug builds set
+ * `Log.minLevel = DEBUG` while benchmark/release set `ERROR` (see [PLAYBACK_DIAG_TAG]) — so the
+ * release path keeps the "no listener per player" property that dropping the old selector bought.
+ */
+@Composable
+fun LogVideoQualitySelection(player: Player) {
+    if (Log.minLevel > LogLevel.DEBUG) return
+
+    DisposableEffect(player) {
+        val listener =
+            object : Player.Listener {
+                override fun onTracksChanged(tracks: Tracks) {
+                    val group = getVideoTrackGroup(tracks) ?: return
+                    val ladder =
+                        (0 until group.length).joinToString(", ") { i ->
+                            val f = group.getTrackFormat(i)
+                            "${f.width}x${f.height}${if (group.isTrackSelected(i)) "*" else ""}"
+                        }
+                    Log.d(VIDEO_QUALITY_TAG) {
+                        "selected(*) mediaId=${player.currentMediaItem?.mediaId} of $ladder"
+                    }
+                }
+            }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
 }
 
 // A zero dimension means the player has not been laid out yet — leaving the previous constraint

@@ -47,6 +47,7 @@ import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import com.vitorpamplona.amethyst.service.playback.composable.controls.BottomGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeControlsState
 import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeLevelIndicator
+import com.vitorpamplona.amethyst.service.playback.composable.controls.LogVideoQualitySelection
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAnimatedBottomInfo
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
@@ -132,6 +133,7 @@ fun RenderVideoPlayer(
     }
 
     WatchPlaybackErrors(controllerState)
+    LogVideoQualitySelection(controllerState.controller)
 
     // Audio files have no video dimensions, so without this the player collapses to a thin strip and
     // the controls get crammed. Size it square (capped) so the visualizer and controls get room.

@@ -75,23 +75,39 @@ class VideoTrackSelectionTest {
     }
 
     @Test
-    fun picksTheDimensionlessMasterOverDimensionedRenditions() {
-        // A manifest spanning a ladder has no single resolution to declare, so many publishers
-        // leave `dim` off the master entirely.
-        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls)
-        val selected = event(rendition("360", 360, 640), master, rendition("1080", 1080, 1920)).selectVideoTrack()
+    fun aDimlessRenditionNeverBeatsADimensionedMaster() {
+        // Regression (PR #4028 review): a missing `dim` is not a master signal on its own. The
+        // sloppy-publisher shape is a master that declares its top resolution alongside a rendition
+        // that forgot one — preferring the dim-less entry there pins playback to a single low rung,
+        // which is the bug this selector exists to fix.
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls, dimension = DimensionTag(1080, 1920))
+        val dimlessRung = VideoMeta(url = "https://host/360.m3u8", mimeType = hls)
+        val selected = event(master, dimlessRung).selectVideoTrack()
 
         assertEquals("https://host/master.m3u8", selected?.url)
     }
 
     @Test
-    fun fillsPresentationMetadataFromSiblingsWhenTheMasterIsBare() {
+    fun fallsBackToTagOrderWhenNoHlsEntryDeclaresADimension() {
+        // With nothing to compare there is no ladder to reason about, so the master-first
+        // convention decides.
         val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls)
+        val rung = VideoMeta(url = "https://host/360.m3u8", mimeType = hls)
+        val selected = event(master, rung).selectVideoTrack()
+
+        assertEquals("https://host/master.m3u8", selected?.url)
+    }
+
+    @Test
+    fun fillsPresentationMetadataFromSiblingsWhenTheChosenEntryIsBare() {
+        // The master declares the ladder top but carries none of the presentation metadata; the
+        // rungs do.
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls, dimension = DimensionTag(1080, 1920))
         val rung =
             VideoMeta(
-                url = "https://host/1080.m3u8",
+                url = "https://host/720.m3u8",
                 mimeType = hls,
-                dimension = DimensionTag(1080, 1920),
+                dimension = DimensionTag(720, 1280),
                 blurhash = "LEHV6nWB2yk8",
                 thumbhash = "1QcSHQRnh493",
                 image = listOf("https://host/poster.jpg"),
@@ -109,9 +125,29 @@ class VideoTrackSelectionTest {
     }
 
     @Test
+    fun takesThePosterFromASeparateImageImeta() {
+        // Publishers routinely ship the still as its own image/* entry rather than as `image` on
+        // the video entries. canBeTheVideo() excludes it from selection, but it is still where the
+        // poster lives — the notification big-picture path depends on finding it.
+        val poster = VideoMeta(url = "https://host/poster.jpg", mimeType = "image/jpeg")
+        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls, dimension = DimensionTag(1080, 1920))
+        val selected = event(poster, master).selectVideoTrack()
+
+        assertEquals("https://host/master.m3u8", selected?.url)
+        assertEquals(listOf("https://host/poster.jpg"), selected?.image)
+    }
+
+    @Test
     fun neverOverridesMetadataTheSelectedTrackDeclares() {
-        val master = VideoMeta(url = "https://host/master.m3u8", mimeType = hls, blurhash = "own", alt = "own alt")
-        val rung = rendition("1080", 1080, 1920).copy(blurhash = "sibling", alt = "sibling alt")
+        val master =
+            VideoMeta(
+                url = "https://host/master.m3u8",
+                mimeType = hls,
+                dimension = DimensionTag(1080, 1920),
+                blurhash = "own",
+                alt = "own alt",
+            )
+        val rung = rendition("720", 720, 1280).copy(blurhash = "sibling", alt = "sibling alt")
         val selected = event(master, rung).selectVideoTrack()
 
         assertEquals("own", selected?.blurhash)

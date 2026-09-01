@@ -46,8 +46,12 @@ import com.vitorpamplona.quartz.nip71Video.VideoMeta
  *    advertises the top of its own ladder, so it ties for the maximum and wins by position under
  *    the master-first convention. When a publisher omits the master entirely this picks the top
  *    rendition rather than the bottom one, which is the same complaint answered a weaker way.
- * 4. An HLS entry with **no** `dim` at all is treated as a master ahead of dimensioned siblings:
- *    a manifest that spans a ladder has no single resolution to declare, while a rendition does.
+ * 4. Only when **no** HLS entry declares a `dim` does tag order decide. A missing `dim` is not a
+ *    reliable master signal on its own: a ladder-spanning manifest has no single resolution to
+ *    declare, but a sloppily-published *rendition* can equally omit one, and preferring the
+ *    dim-less entry outright would then pin us to a single low rung — the exact bug this function
+ *    exists to fix. Deferring to the largest declared `dim` fails the other way instead: worst
+ *    case we select the top rendition and lose adaptation, never the bottom one.
  *
  * Presentation metadata is ladder-wide — every rung shares the poster, the blurhash and the
  * aspect ratio — so anything missing from the chosen entry is filled in from its siblings. That
@@ -64,13 +68,17 @@ fun VideoEvent.selectVideoTrack(): VideoMeta? {
     val selected =
         when {
             hls.isEmpty() -> candidates.first()
-            // A master playlist that declares no resolution beats one that does; among equals,
-            // maxByOrNull keeps the first, which is the master under the master-first convention.
-            hls.any { it.dimension == null } -> hls.first { it.dimension == null }
+            // Nothing declares a resolution, so there is no ladder to compare: fall back to tag
+            // order, where the master-first convention puts the manifest first.
+            hls.none { it.dimension != null } -> hls.first()
+            // maxByOrNull keeps the first of equal maxima, which is the master under that same
+            // convention, since it advertises the top rung of its own ladder.
             else -> hls.maxByOrNull { it.pixelCount() } ?: hls.first()
         }
 
-    return selected.withLadderMetadataFrom(candidates)
+    // Presentation metadata is filled from every imeta, not just the playable candidates: a poster
+    // is routinely published as its own `image/*` entry, which canBeTheVideo() excludes.
+    return selected.withLadderMetadataFrom(imetas)
 }
 
 // A NIP-71 event asserts it is a video, so an imeta is a candidate unless it says otherwise:
@@ -89,6 +97,8 @@ private fun VideoMeta.isHlsPlaylist(): Boolean {
     return url.substringBefore('?').substringBefore('#').endsWith(".m3u8", ignoreCase = true)
 }
 
+private fun VideoMeta.isPoster(): Boolean = RichTextParser.classifyMedia(url, mimeType) == MediaContentKind.IMAGE
+
 private fun VideoMeta.pixelCount(): Long {
     val dim = dimension ?: return -1L
     return dim.width.toLong() * dim.height.toLong()
@@ -103,7 +113,14 @@ private fun VideoMeta.withLadderMetadataFrom(ladder: List<VideoMeta>): VideoMeta
         dimension = dimension ?: ladder.firstNotNullOfOrNull { it.dimension },
         blurhash = blurhash ?: ladder.firstNotNullOfOrNull { it.blurhash },
         thumbhash = thumbhash ?: ladder.firstNotNullOfOrNull { it.thumbhash },
-        image = image.ifEmpty { ladder.firstOrNull { it.image.isNotEmpty() }?.image ?: emptyList() },
+        // An `image/*` sibling carries the poster as its own url, not in its `image` list, so fall
+        // back to that before giving up — it is what a still-rendering surface actually wants.
+        image =
+            image.ifEmpty {
+                ladder.firstOrNull { it.image.isNotEmpty() }?.image
+                    ?: ladder.firstOrNull { it.isPoster() }?.let { listOf(it.url) }
+                    ?: emptyList()
+            },
         alt = alt ?: ladder.firstNotNullOfOrNull { it.alt },
     )
 }
