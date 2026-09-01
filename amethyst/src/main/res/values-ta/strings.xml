@@ -1605,7 +1605,6 @@
 <string name="route_discover">கண்டுபிடிக்கவும்</string>
 <string name="route_messages">செய்திகள்</string>
 <string name="route_notifications">அறிவிப்புகள்</string>
-<string name="route_video">குறும் வீடியோக்கள்</string>
 <string name="route_calendars">காலண்டர்கள்</string>
 <string name="route_calendar_collections">காலண்டர் பட்டியல்கள்</string>
 <string name="route_chess">சதுரங்கம்</string>
@@ -1804,7 +1803,6 @@
 <string name="onchain_send_error_publish_receipt">கட்டணம் அனுப்பப்பட்டது, ஆனால் zap ரசீதை வெளியிட முடியவில்லை</string>
 <string name="route_import_follows">பின்தொடர்பவர்களை இறக்குமதி செய்</string>
 <string name="new_post">புதிய இடுகை</string>
-<string name="new_short">புதிய குறுக்கங்கள்: படங்கள் அல்லது வீடியோக்கள்</string>
 <string name="new_community_note">புதிய சமூக குறிப்பு</string>
 <string name="new_product">புதிய தயாரிப்பு</string>
 <string name="new_long_form_post">புதிய கட்டுரை</string>

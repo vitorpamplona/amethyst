@@ -9,48 +9,23 @@
 # so a clean apply means a green check.
 set -uo pipefail
 
+hook_dir="$(cd "$(dirname "$0")" && pwd)"
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
 
-# --- Parse the tool call off stdin; decide whether this call is a boundary. ---
+# --- Is this call a push/PR boundary? ---
 payload="$(cat)"
-should_gate="$(
-  printf '%s' "$payload" | python3 -c '
-import json, shlex, sys
-try:
-    data = json.load(sys.stdin)
-except Exception:
-    print("no"); sys.exit(0)
-tool = data.get("tool_name", "")
-if tool.endswith("create_pull_request"):
-    print("yes"); sys.exit(0)
-if tool != "Bash":
-    print("no"); sys.exit(0)
-cmd = (data.get("tool_input") or {}).get("command", "")
-# Tokenize like a shell so `push` inside a quoted commit message or heredoc
-# stays one token and is NOT mistaken for the push subcommand.
-try:
-    tokens = shlex.split(cmd, comments=True)
-except ValueError:
-    tokens = cmd.split()
-GLOBAL_WITH_ARG = {"-c", "-C", "--namespace", "--git-dir", "--work-tree", "--exec-path"}
-for i, t in enumerate(tokens):
-    if t != "git" and not t.endswith("/git"):
-        continue
-    j = i + 1
-    while j < len(tokens):  # skip git global options to reach the subcommand
-        tok = tokens[j]
-        if tok in GLOBAL_WITH_ARG:
-            j += 2; continue
-        if tok.startswith("-"):
-            j += 1; continue
-        break
-    if j < len(tokens) and tokens[j] == "push":
-        print("yes"); sys.exit(0)
-print("no")
-' 2>/dev/null
-)"
 
-[ "$should_gate" = "yes" ] || exit 0
+# Cheap pure-bash pre-filter before paying for a python spawn. The gate below
+# can only answer "yes" for a payload containing "push" (a git push command) or
+# "pull_request" (the create_pull_request MCP tool), so anything else is a
+# guaranteed no. This hook runs on EVERY Bash tool call, and the spawn it skips
+# costs ~35ms each time.
+case "$payload" in
+  *push*|*pull_request*) ;;
+  *) exit 0 ;;
+esac
+
+printf '%s' "$payload" | python3 "$hook_dir/lib/git_push_gate.py" || exit 0
 
 # Nothing to format if no Kotlin is tracked/changed at all — cheap early out.
 if ! git ls-files --error-unmatch '*.kt' '*.kts' >/dev/null 2>&1; then

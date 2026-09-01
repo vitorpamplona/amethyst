@@ -1744,7 +1744,6 @@
     
     <string name="route_notifications">通知</string>
     
-    <string name="route_video">ショート</string>
     
     <string name="route_calendars">カレンダー</string>
     
@@ -2170,7 +2169,6 @@
     
     <string name="new_post">新規投稿</string>
     
-    <string name="new_short">新規ショート：画像または動画</string>
     
     <string name="new_community_note">新規コミュニティノート</string>
     

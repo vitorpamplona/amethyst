@@ -1652,7 +1652,6 @@
     
     <string name="route_notifications">Notifikasi</string>
     
-    <string name="route_video">Shorts</string>
     
     <string name="route_calendars">Kalender</string>
     
@@ -2078,7 +2077,6 @@
     
     <string name="new_post">Postingan Baru</string>
     
-    <string name="new_short">Shorts Baru: gambar atau video</string>
     
     <string name="new_community_note">Catatan Komunitas Baru</string>
     

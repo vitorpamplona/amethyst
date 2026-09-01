@@ -606,9 +606,7 @@
     <string name="route_discover">Ontdekken</string>
     <string name="route_messages">Berichten</string>
     <string name="route_notifications">Notificaties</string>
-    <string name="route_video">Shorts</string>
     <string name="new_post">Nieuw bericht</string>
-    <string name="new_short">Nieuwe shorts: afbeeldingen of video\'s</string>
     <string name="new_community_note">Nieuwe community note</string>
     <string name="open_all_reactions_to_this_post">Open alle reacties op dit bericht</string>
     <string name="close_all_reactions_to_this_post">Sluit alle reacties op dit bericht</string>
