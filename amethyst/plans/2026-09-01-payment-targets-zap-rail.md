@@ -1,235 +1,262 @@
-# NIP-A3 Payment Targets as a zap rail
+# NIP-A3 Payment Targets in the zap picker — v1
 
 **Status:** proposal
 **Modules:** `quartz`, `commons`, `amethyst`
-**Goal:** when the sender and the recipient both publish a NIP-A3 payment
-target of the *same* protocol, offer that protocol as a selectable segment in
-the zap amount chip — but only on notes with no NIP-57 zap split.
+**Scope:** when the sender and recipient both publish a NIP-A3 payment target
+of the same protocol, **an installed app can handle it**, and the note carries
+no NIP-57 zap split — show one amount-less chip that hands off to that app.
+
+Deliberately excluded from v1: amounts, in-app payment, receipts, fiat
+conversion, desktop.
 
 ---
 
-## 1. What already exists (survey)
+## 1. Why v1 has no amounts
 
-Almost all of the machinery is already in the tree. This feature is mostly
-**wiring**, plus one small refactor and one honest UX decision.
+Zap presets are **sats**. A `venmo` / `iban` / `upi` chip cannot send 1000
+sats, and there is **no FX or bitcoin-price service anywhere in this repo**
+(grepped `quartz`, `commons`, `amethyst`). So v1 does not pretend: the chip
+carries no number, emits no RFC-8905 `amount=`, and the amount is named in the
+external app. The UI has to *say* that rather than leave a suspicious blank —
+see §4.
 
-| Component | Where | Verdict |
-|---|---|---|
-| `PaymentTarget(type, authority)`, `PaymentTargetTag`, `PaymentTargetsEvent` (kind 10133) | `quartz/…/experimental/nipA3/` | **Reuse** (one tweak, §4.0) |
-| Sender's own targets as a `StateFlow<List<PaymentTarget>>` | `Account.paymentTargetsState.flow` (`Account.kt:902`) | **Reuse as-is** |
-| **Recipient's** kind:10133 already co-loaded with kind:0 | `commons/…/watchers/FilterUserMetadataForKey.kt:50` | **Reuse — no new subscription** |
-| Segmented multi-rail zap chip (CASHU/RELOAD/LIGHTNING/ONCHAIN toggle) | `ReactionsRow.kt:2362` `UnifiedZapAmountChip` | **Extend** |
-| `RailCapability` + `RailCapabilityResolver.peek` (already reads `zapSplitSetup()`) | `amethyst/…/model/zap/RailCapability.kt` | **Extend** |
-| `observeZapRailCapability` (async recompute keys) | `ReactionsRow.kt:2098` | **Extend** |
-| `User.nutzapInfoNote` addressable-note accessor | `commons/…/model/User.kt:79` | **Pattern to copy** |
-| `inAppPaymentRouteFor` (lightning/bitcoin targets → Send Payment screen) | `DisplayPaymentTargets.kt:82` | **Reuse** |
-| `PaymentTargetsDialog` (list + copy + QR + pay) | `PaymentButton.kt:149` | **Reuse** for the overflow picker |
-| `ReactionRowAction.Pay` — full target browser, `enabled = false` by default | `AccountSyncedSettingsInternal.kt:87`, `ReactionsRow.kt:371` | **Keep, don't duplicate** (§6.3) |
-| Type-alias tables (`lightning/ln/lnurl`, `bitcoin/btc/onchain`, + the 15-entry style table) | `DisplayPaymentTargets.kt:67,70,190` | **Extract to `commons`** — currently duplicated twice inside one Android UI file |
-| `showOnchainWallet` opt-out plumbing | `UiSettings.kt:62` → `UiSettingsFlow.kt:58` → `UISharedPreferences.kt:190` | **Pattern to copy** for the new setting |
-
-**Verified constraints:**
-
-- **There is no FX / bitcoin-price service anywhere in the repo.** Grepped
-  `commons`, `amethyst`, `quartz`. This is the single fact that shapes the
-  whole design (§3.2).
-- Zap presets are **sats**. `MIN_ONCHAIN_ZAP_SATS = 1_000`,
-  `CASHU_PREFERRED_BELOW_SATS = 10`, `ONCHAIN_PREFERRED_ABOVE_SATS = 10_000`.
-- `PaymentTarget` is a plain `class` with **no `equals`** — identity equality
-  only. This bites us in §4.0.
+Corollary: **the note's zap counter will not move.** No kind:9735, nothing to
+count. In code it is a rail; to the user it must read as *pay*, not *zap*.
 
 ---
 
-## 2. What the obvious plan gets wrong
+## 2. The layout decision — and the refactor it deletes
 
-The naive version is "add `PAYTO` to `enum class ZapRail` and a `hasPayTo`
-boolean to `RailCapability`." That version ships five bugs:
+> This is the one place v1 diverges from the sketch, and the reason is that it
+> makes the change roughly half the size.
 
-1. **It invents amounts that don't exist.** The chip is amount-first: every
-   segment shows `1000` and sends 1000 **sats**. Tapping a `venmo` or `iban`
-   segment cannot mean 1000 sats, and we have no rate to convert with. The
-   naive chip silently lies about how much money is moving.
-2. **It double-renders Lightning and on-chain.** `lightning` / `ln` / `lnurl`
-   / `bitcoin` / `btc` / `onchain` are legal `payto` types and are exactly the
-   rails already on the chip. A naive match puts a second Bolt icon next to
-   the first one.
-3. **A boolean can't say *which* target.** `ZapRail` is a payload-free enum;
-   `hasPayTo: Boolean` gets you a segment that doesn't know what to open.
-4. **It corrupts the zap state machine.** A `payto://` handoff produces no
-   kind:9735 receipt, so `zappingProgress`, `zapStartingTime`, the "zapped by
-   you" icon and the counter must all stay untouched — a naive `send()` branch
-   wires it in beside `onLightningZap` and inherits all of them.
-5. **It moves bank and Venmo handles into the feed by default.** Those carry
-   legal names. Today they sit behind an explicit tap on a profile.
+The sketch was "add the icons to the toggle." The toggle is the segmented
+control **inside each amount pill** (`UnifiedZapAmountChip`,
+`ReactionsRow.kt:2362`). Putting an amount-less rail there has two costs:
+
+1. **It repeats.** With presets of 1000/5000/10000, the identical amount-less
+   Venmo segment renders three times and means the same thing each time.
+2. **It forces `ZapRail` to become a sealed interface.** The enum
+   (`ReactionsRow.kt:2481`) is payload-free, so a segment can't know *which*
+   target it opens. Making it data-carrying drags in `present`, `preferred`,
+   `selectedRail`, `ZapRailIcon`, `previewPreferredRail`, `previewRailsFor`
+   and the settings preview row — and, because `PaymentTarget` has no
+   `equals`, breaks the `remember(preferred, present)` key so the user's
+   selection resets on recompose.
+
+**Instead: render the chip as a sibling of the amount pills**, appended to the
+existing `FlowRow` in `ZapAmountChoiceGrid` (`ReactionsRow.kt:2297`), next to
+the `Tune` preset-editor button. It wraps for free, it renders **once**, and
+`ZapRail`, `UnifiedZapAmountChip` and every preview stay **completely
+untouched**. Same popup, same place the user is already looking.
+
+If an FX service ever lands and the amount becomes expressible, the chip moves
+into the toggle then — that is the natural migration, not a reason to pay for
+it now.
 
 ---
 
-## 3. Design
+## 3. Intent discovery — the constraint that decides it
 
-### 3.1 Two classes of `payto` type — only one becomes a segment
+`targetSdk = 37`. Under Android 11+ package visibility,
+`queryIntentActivities` returns **empty** for any intent not covered by a
+`<queries>` declaration — so *without a manifest change this feature silently
+shows nothing on every modern device*. The existing `<queries>` block
+(`AndroidManifest.xml:4`) covers only `nostrsigner`, TTS, Health Connect and
+Tor.
 
-Canonicalize the type, then split it:
+### 3.1 Manifest
 
-- **Wallet-covered types** — `lightning`/`ln`/`lnurl` and
-  `bitcoin`/`btc`/`onchain`. These **never** create a new segment; they are
-  the existing LIGHTNING and ONCHAIN rails. (Optional later: a `bitcoin`
-  target *enriches* ONCHAIN by supplying an explicit address instead of the
-  `TaprootAddress.fromPubKey` derivation — out of scope here.) This kills bug 2.
-- **Handoff types** — everything else (`venmo`, `paypal`, `cashapp`, `iban`,
-  `upi`, `monero`, `ethereum`, …). These get **one** segment.
+Add one `<intent>` per scheme we probe. The important economy: an arbitrary
+user-typed type (`iban`, `upi`, `pix`, …) always falls back to
+`payto://<type>/<authority>`, so **one `payto` entry covers every generic
+type**. Only the ~12 special-cased crypto schemes in `paymentTargetStyleFor`
+(`DisplayPaymentTargets.kt:190`) need their own entries.
 
-### 3.2 The handoff segment carries no sat amount — and says so
-
-Because there is no FX service, the `PayTo` segment is the one segment that
-does **not** display the amount when selected. It shows the protocol label and
-the arrow (`VENMO →`), and the handoff URI is emitted **without** an RFC-8905
-`amount=` parameter. The user names the amount in their bank/Venmo app.
-
-This is deliberate. The alternatives were considered and rejected:
-
-- *Prefill `amount=<ccy>:<value>` from the sat preset* — requires a rate we do
-  not have, and would be wrong for every altcoin type too.
-- *Restrict to BTC-denominated types only* — collapses the feature to almost
-  nothing (those are exactly the wallet-covered types).
-- *Add an FX service* — a real feature with its own privacy (who do we query?),
-  Tor-routing and caching design. Not a prerequisite for this one.
-
-Consequence to document in the UI string: **the note's zap counter will not
-move.** No 9735, no receipt, nothing to count. Calling it a "zap rail" in code
-is a convenience; to the user it must read as *pay*, not *zap*.
-
-### 3.3 `ZapRail` becomes a sealed interface
-
-```kotlin
-internal sealed interface ZapRail {
-    data object Cashu : ZapRail
-    data object Reload : ZapRail
-    data object Lightning : ZapRail
-    data object Onchain : ZapRail
-    data class PayTo(val target: PaymentTarget) : ZapRail
-}
+```xml
+<intent>
+    <action android:name="android.intent.action.VIEW" />
+    <data android:scheme="payto" />
+</intent>
+<!-- + one each: bitcoin, lightning, liquidnetwork, ethereum, monero, dash,
+     zcash, bitcoincash, litecoin, dogecoin, solana, tron -->
 ```
 
-`PayTo` is **never** the `preferred` rail. The amount tiers
-(cashu < 10 sats < lightning < 10 000 sats < on-chain) are untouched; `PayTo`
-is always an explicit second tap. That keeps the one-tap muscle memory intact
-and means an accidental tap never opens a banking app.
+Use **`<queries>`, never `QUERY_ALL_PACKAGES`** — the latter is a
+policy-restricted permission on Play and would need a declaration; specific
+`<intent>` filters need nothing. On minSdk 26–29 `<queries>` is ignored and
+everything resolves, which is a strict superset of the gated behaviour.
 
-### 3.4 Gates (all must hold)
+### 3.2 https targets are exempt
 
-1. `showPayToZapRail` setting is on — **default off**, opt-in (§2 bug 5).
-2. The note has **no** zap split: `baseNote.event?.zapSplitSetup().isNullOrEmpty()`.
-   `RailCapabilityResolver.peek` already computes `splits`; reuse it.
-3. The recipient (note author) publishes ≥1 handoff-class target.
-4. The sender publishes a target of the **same canonical type**.
-5. Author pubkey exists (payto pays a person, not a split set).
+`cashapp` / `venmo` / `paypal` map to `https://…`, which a browser always
+resolves — discovery would be a tautology. **Skip discovery for https
+targets and always show them**: opening `venmo.com/<handle>` in a browser is a
+legitimate way to pay, so nothing is broken. The sender-symmetry gate (§5) is
+the real filter there.
 
-### 3.5 At most one segment, picker on overflow
+*(Refinement, not v1: to detect a genuine app handler behind an https target,
+resolve a control `https://<nonexistent-host>/` and treat the target as
+app-backed only if its resolver set contains a package outside that control
+set.)*
 
-If more than one canonical type matches, render **one** segment (generic wallet
-icon) whose tap opens `PaymentTargetsDialog` filtered to the matches — it
-already does list + copy + QR + pay. Rendering N segments would make the chip
-grow without bound; today's worst case is already 4.
+### 3.3 The cache — keyed by scheme+host, warmed from the sender
 
----
+The naive cache is per-post and lazy. The better one falls out of the
+symmetry gate:
 
-## 4. Implementation
+> **Only protocols the sender themself declares can ever be shown.** So the
+> probe set is the *sender's own* target list — typically 1–5 entries — not
+> anything derived from posts.
 
-### 4.0 Phase 0 — prep, no behaviour change
+- **Key:** `"<scheme>://<host>"`, e.g. `payto://iban`, `bitcoin://`. Scheme
+  alone is too coarse — an app may declare `android:scheme="payto"
+  android:host="iban"`, so a scheme-only hit would wrongly claim `payto://upi`
+  is handled.
+- **Warm:** collect `account.paymentTargetsState.flow` (already an eagerly
+  started `StateFlow`, `Account.kt:902`); on each emission, probe the handful
+  of keys off the main thread. Feed rendering never triggers a probe.
+- **Read:** synchronous map lookup — required, because
+  `RailCapabilityResolver.peek` is called from inside `remember {}`.
+- **Recomposition:** the map must be a `MutableStateFlow<Map<String, Boolean>>`,
+  not a bare `ConcurrentHashMap`. A plain map write is invisible to Compose and
+  the chip would not appear until something else recomposed.
+- **Invalidation:** clear on app foreground (`ProcessLifecycleOwner`
+  `ON_START`) and re-warm — this is exactly the "user left, installed Venmo,
+  came back" flow. A `PACKAGE_ADDED`/`REMOVED` receiver is more precise but is
+  more moving parts than v1 needs.
 
-- **`quartz`**: `PaymentTarget` → `data class`. Without value equality,
-  `ZapRail.PayTo` compares by identity, so `remember(preferred, present)` in
-  `UnifiedZapAmountChip` resets `selectedRail` on every recompose that
-  re-derives the list. (It also fixes the hand-rolled field-by-field dedupe in
-  `PaymentTargetsViewModel.addTarget`.)
-- **`commons`** — new `model/payments/PaymentTargetTypes.kt` (package already
-  exists, holds `PaymentSourceResolver`):
-  - `canonical(rawType): String` — `trim().lowercase()` + alias collapse.
-  - `isWalletCovered(canonical): Boolean` — lightning + bitcoin families.
-  - Move `LIGHTNING_TARGET_TYPES` / `BITCOIN_TARGET_TYPES` here and point
-    `inAppPaymentRouteFor` and `paymentTargetStyleFor` at them. Non-UI and
-    CLI-safe, per `commons/ARCHITECTURE.md`.
-- **`commons`** — `User.paymentTargetsNote` + `paymentTargets()`, mirroring
-  `nutzapInfoNote` (`User.kt:79`), so the resolver can read the recipient
-  synchronously.
-
-### 4.1 Phase 1 — the matcher (pure, headless)
-
-`commons/…/model/payments/PayToRailMatcher.kt`:
-
-```kotlin
-fun match(
-    senderTargets: List<PaymentTarget>,
-    recipientTargets: List<PaymentTarget>,
-): List<PaymentTarget>
-```
-
-Canonicalize both sides, drop wallet-covered types, keep recipient targets
-whose type is in the sender's type set, de-dupe by canonical type keeping the
-first. Pure function, no Android, no Compose — fully unit-testable.
-
-### 4.2 Phase 2 — capability
-
-- `RailCapability` += `payToTargets: List<PaymentTarget> = emptyList()`.
-  Defaulted, so `RailCapabilityCashuStatusTest` and all existing call sites
-  compile unchanged.
-- `RailCapabilityResolver.peek(..., senderTargets = emptyList(), payToEnabled = false)`
-  — **defaulted**, because `zapClick` (`ReactionsRow.kt:1464`) also calls
-  `peek` for the one-tap fast path and that path must stay Lightning-only.
-  Returns `emptyList()` when `splits.isNotEmpty()`.
-- `observeZapRailCapability` adds three inputs, each both a subscription
-  trigger and a `remember` key (same contract as the existing four — see the
-  "do NOT delete these as unused" comment at `ReactionsRow.kt:2105`):
-  `account.paymentTargetsState.flow`, the author's `paymentTargetsNote`, and
-  `uiSettingsFlow.showPayToZapRail`.
-
-### 4.3 Phase 3 — UI
-
-- `ZapRail` → sealed interface; update `present`, `preferred`, `selectedRail`,
-  `ZapRailIcon`, `previewPreferredRail`, `previewRailsFor` and the settings
-  preview row.
-- Selected `PayTo` renders the label + arrow, not the amount (§3.2).
-- Action: try `inAppPaymentRouteFor` first (defensive — a bitcoin target that
-  slipped through), else `uriHandler.openUri("payto://$type/$authority")`, else
-  toast `no_payment_app_found_for_type` (string already exists). It must not
-  touch `zappingProgress` / `zapStartingTime` / `accountViewModel.zap`.
-- No new icons: `AccountBalanceWallet` is already referenced in
-  `MaterialSymbols.kt`, so **no `subset.sh` run is needed**.
-
-### 4.4 Phase 4 — settings + docs
-
-`showPayToZapRail` through `UiSettings.kt` → `UiSettingsFlow.kt` →
-`UISharedPreferences.kt` → `SettingsCatalogBuilder.kt`, mirroring
-`showOnchainWallet`. New strings (+ `payment_targets_search_keywords`), and a
-changelog entry.
+Home: `amethyst/…/service/payments/PayToAppAvailability.kt` (Android-only;
+`PackageManager` has no KMP equivalent). The scheme mapping it needs moves out
+of the UI file into `commons` (§6.0).
 
 ---
 
-## 5. Tests
+## 4. Saying "the app decides the amount"
+
+An amount-less chip beside pills that all show numbers reads as a bug unless
+it is visibly a *different kind of thing*. Three cues, no extra layout:
+
+1. **No number.** Icon + protocol label only (`VENMO`).
+2. **A different terminal glyph.** `MaterialSymbols.OpenInNew` instead of the
+   `ArrowForward` every amount segment uses — "this leaves the app."
+3. **A string that says it outright**, e.g. *"Amount set in %1$s"*, shown as
+   the chip's `contentDescription` and as a toast on long-press.
+
+**Both icons are already in `MaterialSymbols.kt`** (`OpenInNew:280`,
+`AccountBalanceWallet:27`) — **no `tools/material-symbols-subset/subset.sh`
+run is needed.**
+
+Long-press must **not** inherit `onChangeAmount` (the sat-preset editor is
+meaningless here); it copies the authority, matching `PaymentTargetChip`'s
+long-press on the profile.
+
+---
+
+## 5. Gates (all must hold)
+
+1. Setting `showPayToZapRail` — **default off**, opt-in. Fiat handles carry
+   legal names; this puts them one tap from every feed note. Mirrors
+   `showOnchainWallet` (`UiSettings.kt:62` → `UiSettingsFlow.kt:58` →
+   `UISharedPreferences.kt:190`).
+2. Note has **no** zap split: `zapSplitSetup().isNullOrEmpty()`. payto can't
+   fan out and returns no receipt. `RailCapabilityResolver.peek` **already
+   computes `splits`** — one-line reuse.
+3. Recipient (note author) publishes ≥1 handoff-class target.
+4. Sender publishes a target of the **same canonical type**.
+5. §3 says an app can handle it (or it's https).
+6. Cap at **2 chips**; with discovery filtering, 0–1 is the normal case, so v1
+   needs no overflow picker.
+
+**Handoff-class** excludes the wallet-covered types — `lightning`/`ln`/`lnurl`
+and `bitcoin`/`btc`/`onchain` *are* the existing LIGHTNING and ONCHAIN rails.
+Without this exclusion the picker grows a second Bolt icon beside the first.
+
+---
+
+## 6. Implementation
+
+### 6.0 Prep — no behaviour change
+- `quartz`: `PaymentTarget` → `data class` (it has no `equals` today; needed
+  for list keys and dedupe, and it fixes the hand-rolled field-by-field
+  compare in `PaymentTargetsViewModel.addTarget`).
+- `commons/…/model/payments/PaymentTargetTypes.kt` (package exists, holds
+  `PaymentSourceResolver`): `canonical(raw)`, `isWalletCovered(canonical)`,
+  `schemeFor(canonical)`. Move `LIGHTNING_TARGET_TYPES` /
+  `BITCOIN_TARGET_TYPES` (`DisplayPaymentTargets.kt:67,70`) and the scheme half
+  of `paymentTargetStyleFor` here — today they are duplicated twice inside one
+  Android UI file, and discovery needs them too.
+- `commons/…/model/User.kt`: `paymentTargetsNote` + `paymentTargets()`,
+  mirroring `nutzapInfoNote` (`User.kt:79`).
+
+**No new relay subscription:** kind 10133 already rides in
+`UserMetadataForKeyKinds` beside kind:0 and kind:10019
+(`FilterUserMetadataForKey.kt:50`), so the recipient's targets are in cache by
+the time the note renders — same as the nutzap rail.
+
+### 6.1 Matcher — pure, headless
+`commons/…/model/payments/PayToRailMatcher.kt`: canonicalize both sides, drop
+wallet-covered types, intersect on type, dedupe by type. No Android, no
+Compose.
+
+### 6.2 Discovery
+`amethyst/…/service/payments/PayToAppAvailability.kt` per §3.3 + the manifest
+`<queries>` entries per §3.1.
+
+### 6.3 Capability
+- `RailCapability` += `payToTargets: List<PaymentTarget> = emptyList()` —
+  defaulted, so `RailCapabilityCashuStatusTest` and every existing call site
+  compile untouched.
+- `peek(..., senderTargets = emptyList(), payToEnabled = false, available = emptyMap())`
+  — **defaulted, because `zapClick` also calls `peek`**
+  (`ReactionsRow.kt:1464`) for the one-tap fast path, which must stay
+  Lightning-only. Returns empty when splits exist.
+- `observeZapRailCapability` (`ReactionsRow.kt:2098`) adds four inputs, each
+  both a subscription trigger and a `remember` key — the contract spelled out
+  in the "do NOT delete these as unused" comment at `ReactionsRow.kt:2105`:
+  `paymentTargetsState.flow`, the author's `paymentTargetsNote`,
+  `uiSettingsFlow.showPayToZapRail`, and the availability `StateFlow`.
+
+### 6.4 UI
+One new `PayToHandoffChip` composable appended to `ZapAmountChoiceGrid`'s
+`FlowRow`. Action: `uriHandler.openUri(...)`; keep the existing try/catch →
+`no_payment_app_found_for_type` toast (string exists) as a belt-and-braces
+fallback for the race where the app is uninstalled between warm and tap. It
+must not touch `zappingProgress`, `zapStartingTime` or `accountViewModel.zap`.
+
+### 6.5 Settings + strings
+`showPayToZapRail` through the `showOnchainWallet` chain + `SettingsCatalogBuilder`;
+new strings; changelog.
+
+---
+
+## 7. Tests
 
 | Level | Test | Asserts |
 |---|---|---|
-| `quartz/commonTest` | `PaymentTargetEqualityTest` | value equality; dedupe by value |
-| `commons/commonTest` | `PaymentTargetTypesTest` | alias collapse, case/whitespace, wallet-covered set |
-| `commons/commonTest` | `PayToRailMatcherTest` | empty sender → empty; no overlap → empty; `ln` vs `lightning` never matches (wallet-covered); `Venmo` vs `venmo` matches; multi-type dedupe |
-| `amethyst/test` | extend `RailCapabilityCashuStatusTest` sibling | split present → `payToTargets` empty; setting off → empty; no author → empty; existing rails unaffected |
-| Manual | | chip renders; tap opens the external app; counter does **not** move; a split note shows no payto segment |
+| `commons/commonTest` | `PaymentTargetTypesTest` | alias collapse, case/whitespace, wallet-covered set, scheme mapping |
+| `commons/commonTest` | `PayToRailMatcherTest` | empty sender → empty; no overlap → empty; `ln` vs `lightning` → empty (wallet-covered); `Venmo` vs `venmo` → match; dedupe by type |
+| `amethyst/test` | sibling of `RailCapabilityCashuStatusTest` | split present → empty; setting off → empty; no author → empty; unavailable scheme → empty; https target → shown without probe; **existing rails unaffected** |
+| `amethyst/test` | `PayToAppAvailabilityTest` | key is scheme+host, not scheme; probe count == sender's target count, independent of post count |
+| Manual | | chip appears once (not per pill); tap opens the app; **counter does not move**; split note shows no chip; install app → background → foreground → chip appears |
 
 ---
 
-## 6. Open decisions for review
+## 8. Open decisions
 
-1. **Private rumors.** On-chain is suppressed there (it would e-tag the rumor).
-   A payto handoff publishes nothing, so it is arguably safe. *Recommend:
-   allow* — but it is a deliberate divergence from the on-chain precedent.
-2. **Default for `showPayToZapRail`.** Recommend **off**. It puts legal-name
-   handles one tap from every feed note; opt-in is the conservative call and
-   matches how `ReactionRowAction.Pay` already ships disabled.
-3. **`ReactionRowAction.Pay` overlap.** Recommend keeping both and leaving
-   `Pay` disabled by default: `Pay` browses *all* of a recipient's targets,
-   the zap segment is the *matched* shortcut. Merging them is a bigger UX
-   change than this feature needs.
-4. **Symmetry heuristic.** "Both parties declare the protocol" is exactly
-   right for closed loops (Venmo, Cash App, UPI) and arguably too strict for
-   open ones (Monero — a sender needs a wallet, not a published address).
-   Recommend shipping the strict rule first; relaxing it later is additive.
+1. **Chip placement** — sibling vs inside the toggle (§2). Recommend sibling:
+   renders once and deletes the whole `ZapRail` refactor. Flagged because it
+   diverges from the original sketch.
+2. **Default for `showPayToZapRail`** — recommend **off**, matching how
+   `ReactionRowAction.Pay` already ships disabled.
+3. **Private rumors** — on-chain is suppressed there (it would e-tag the
+   rumor). A payto handoff publishes nothing, so it is arguably safe.
+   Recommend **allow**, noting the divergence from the on-chain precedent.
+4. **`ReactionRowAction.Pay` overlap** — recommend keeping both, `Pay`
+   disabled by default: `Pay` browses *all* of a recipient's targets, this
+   chip is the *matched, installed, splitless* shortcut.
+5. **Symmetry heuristic** — right for closed loops (Venmo, Cash App, UPI),
+   arguably too strict for open ones (Monero: a sender needs a wallet, not a
+   published address). Ship strict; relaxing later is additive. Note that
+   intent discovery already covers much of what symmetry was proxying for, so
+   dropping symmetry for scheme-based types is a live option.
