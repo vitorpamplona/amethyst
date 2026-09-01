@@ -20,175 +20,226 @@
  */
 package com.vitorpamplona.quartz.utils.cache
 
-import kotlin.concurrent.AtomicReference
-
+/**
+ * Linux/Native actual for [LargeCache] — the store behind Amethyst's `LocalCache`.
+ *
+ * All of the concurrency and the performance rationale lives in [StripedHashMap]; this
+ * class is only the [ICacheOperations] surface over it. The short version: `LocalCache`
+ * fills ~100,000 entries in a few seconds while feeds scan the whole cache, so the
+ * backing store has to take writes at O(1) with next to no garbage *and* let a scan run
+ * in place without copying. A chained hash table with lock-free reads and striped-lock
+ * writes — `ConcurrentHashMap`'s shape, which Kotlin/Native does not ship — is the
+ * structure that does both; copy-on-write and a persistent HAMT each fail one half.
+ *
+ * Every bulk operation below walks the table through [StripedHashMap.forEachEntry],
+ * which takes no lock and allocates nothing beyond the result being built. Two things
+ * follow, both of which the earlier implementations had to work around:
+ *
+ * - The caller's lambda never runs inside a critical section, so a `LocalCache`
+ *   predicate that reaches back into the cache cannot deadlock.
+ * - There is no snapshot and no defensive `entries.toList()`, so no
+ *   `ConcurrentModificationException` window and no per-scan copy.
+ *
+ * Iteration is weakly consistent and in bucket order. JVM/Android iterates in
+ * sorted-key order (`ConcurrentSkipListMap`) and Apple in hash order; nothing in the
+ * codebase depends on a specific one. The `from`/`to` range overloads degrade to a full
+ * scan here, as they always have — they have no callers outside the JVM-only
+ * `LargeSoftCache`.
+ */
 actual class LargeCache<K, V> : ICacheOperations<K, V> {
-    private val mapRef = AtomicReference(LinkedHashMap<K, V>())
+    private val cache = StripedHashMap<K, V>()
 
-    private inline fun <R> withMap(block: (LinkedHashMap<K, V>) -> R): R = block(mapRef.value)
-
-    private inline fun mutate(block: (LinkedHashMap<K, V>) -> Unit) {
-        val copy = LinkedHashMap(mapRef.value)
-        block(copy)
-        mapRef.value = copy
+    actual fun keys(): Set<K> {
+        val results = LinkedHashSet<K>(cache.size())
+        cache.forEachEntry { key, _ -> results.add(key) }
+        return results
     }
 
-    actual fun keys(): Set<K> = withMap { LinkedHashSet(it.keys) }
-
-    actual fun values(): Iterable<V> = withMap { ArrayList(it.values) }
-
-    actual fun get(key: K): V? = withMap { it[key] }
-
-    actual fun remove(key: K): V? {
-        val current = mapRef.value
-        val value = current[key]
-        if (value != null) {
-            mutate { it.remove(key) }
-        }
-        return value
+    actual fun values(): Iterable<V> {
+        val results = ArrayList<V>(cache.size())
+        cache.forEachEntry { _, value -> results.add(value) }
+        return results
     }
 
-    actual fun isEmpty(): Boolean = withMap { it.isEmpty() }
+    actual fun get(key: K): V? = cache.get(key)
+
+    actual fun remove(key: K): V? = cache.remove(key)
+
+    actual fun isEmpty(): Boolean = cache.isEmpty()
 
     actual fun clear() {
-        mapRef.value = LinkedHashMap()
+        cache.clear()
     }
 
-    actual fun containsKey(key: K): Boolean = withMap { it.containsKey(key) }
+    actual fun containsKey(key: K): Boolean = cache.containsKey(key)
 
     actual fun put(
         key: K,
         value: V,
     ) {
-        mutate { it[key] = value }
+        cache.put(key, value)
     }
+
+    // The next two are the JVM actual's bodies verbatim, over the same putIfAbsent
+    // contract: [builder] runs outside the write path, and the loser of a race keeps
+    // the winner's value.
 
     actual fun getOrCreate(
         key: K,
         builder: (key: K) -> V,
     ): V {
-        val existing = get(key)
-        if (existing != null) return existing
-        val newObject = builder(key)
-        mutate { it[key] = newObject }
-        return get(key) ?: newObject
+        val value = cache.get(key)
+
+        return if (value != null) {
+            value
+        } else {
+            val newObject = builder(key)
+            cache.putIfAbsent(key, newObject) ?: newObject
+        }
     }
 
+    /**
+     * True only when *this* call inserted. An early implementation returned
+     * `get(key) != null`, which also reported true when another thread had just created
+     * the entry, double-firing whatever the caller does with a fresh key.
+     */
     actual fun createIfAbsent(
         key: K,
         builder: (key: K) -> V,
     ): Boolean {
-        val existing = get(key)
-        if (existing != null) return false
-        val newObject = builder(key)
-        mutate { it[key] = newObject }
-        return get(key) != null
+        val value = cache.get(key)
+        return if (value != null) {
+            false
+        } else {
+            val newObject = builder(key)
+            cache.putIfAbsent(key, newObject) == null
+        }
     }
 
-    actual override fun size(): Int = withMap { it.size }
+    actual override fun size(): Int = cache.size()
 
     actual override fun forEach(consumer: ICacheBiConsumer<K, V>) {
-        // Snapshot entries to avoid ConcurrentModificationException
-        withMap { map -> map.entries.toList() }.forEach { consumer.accept(it.key, it.value) }
+        cache.forEachEntry { key, value -> consumer.accept(key, value) }
     }
 
-    actual override fun filter(consumer: CacheCollectors.BiFilter<K, V>): List<V> = withMap { map -> map.filter { consumer.filter(it.key, it.value) }.values.toList() }
+    actual override fun filter(consumer: CacheCollectors.BiFilter<K, V>): List<V> {
+        val results = ArrayList<V>()
+        cache.forEachEntry { key, value -> if (consumer.filter(key, value)) results.add(value) }
+        return results
+    }
 
-    actual override fun filterIntoSet(consumer: CacheCollectors.BiFilter<K, V>): Set<V> = withMap { map -> map.filter { consumer.filter(it.key, it.value) }.values.toSet() }
+    actual override fun filterIntoSet(consumer: CacheCollectors.BiFilter<K, V>): Set<V> {
+        val results = LinkedHashSet<V>()
+        cache.forEachEntry { key, value -> if (consumer.filter(key, value)) results.add(value) }
+        return results
+    }
 
-    actual override fun <R> map(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): List<R> = withMap { map -> map.map { consumer.map(it.key, it.value) } }
+    actual override fun <R> map(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): List<R> {
+        val results = ArrayList<R>(cache.size())
+        cache.forEachEntry { key, value -> results.add(consumer.map(key, value)) }
+        return results
+    }
 
-    actual override fun <R> mapNotNull(consumer: CacheCollectors.BiMapper<K, V, R?>): List<R> = withMap { map -> map.mapNotNull { consumer.map(it.key, it.value) } }
+    actual override fun <R> mapNotNull(consumer: CacheCollectors.BiMapper<K, V, R?>): List<R> {
+        val results = ArrayList<R>()
+        cache.forEachEntry { key, value -> consumer.map(key, value)?.let { results.add(it) } }
+        return results
+    }
 
-    actual override fun <R> mapNotNullIntoSet(consumer: CacheCollectors.BiMapper<K, V, R?>): Set<R> = mapNotNull(consumer).toSet()
+    actual override fun <R> mapNotNullIntoSet(consumer: CacheCollectors.BiMapper<K, V, R?>): Set<R> {
+        val results = LinkedHashSet<R>()
+        cache.forEachEntry { key, value -> consumer.map(key, value)?.let { results.add(it) } }
+        return results
+    }
 
-    actual override fun <R> mapFlatten(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): List<R> = withMap { map -> map.flatMap { entry -> consumer.map(entry.key, entry.value) ?: emptyList() } }
+    actual override fun <R> mapFlatten(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): List<R> {
+        val results = ArrayList<R>()
+        cache.forEachEntry { key, value -> consumer.map(key, value)?.let { results.addAll(it) } }
+        return results
+    }
 
-    actual override fun <R> mapFlattenIntoSet(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): Set<R> = mapFlatten(consumer).toSet()
+    actual override fun <R> mapFlattenIntoSet(consumer: CacheCollectors.BiMapper<K, V, Collection<R>?>): Set<R> {
+        val results = LinkedHashSet<R>()
+        cache.forEachEntry { key, value -> consumer.map(key, value)?.let { results.addAll(it) } }
+        return results
+    }
 
     actual override fun maxOrNullOf(
         filter: CacheCollectors.BiFilter<K, V>,
         comparator: Comparator<V>,
-    ): V? =
-        withMap { map ->
-            var maxV: V? = null
-            map.forEach {
-                if (filter.filter(it.key, it.value)) {
-                    if (maxV == null || comparator.compare(it.value, maxV) > 0) {
-                        maxV = it.value
-                    }
+    ): V? {
+        var maxV: V? = null
+        cache.forEachEntry { key, value ->
+            if (filter.filter(key, value)) {
+                if (maxV == null || comparator.compare(value, maxV) > 0) {
+                    maxV = value
                 }
             }
-            maxV
         }
+        return maxV
+    }
 
-    actual override fun sumOf(consumer: CacheCollectors.BiSumOf<K, V>): Int =
-        withMap { map ->
-            var sum = 0
-            map.forEach { sum += consumer.map(it.key, it.value) }
-            sum
-        }
+    actual override fun sumOf(consumer: CacheCollectors.BiSumOf<K, V>): Int {
+        var sum = 0
+        cache.forEachEntry { key, value -> sum += consumer.map(key, value) }
+        return sum
+    }
 
-    actual override fun sumOfLong(consumer: CacheCollectors.BiSumOfLong<K, V>): Long =
-        withMap { map ->
-            var sum = 0L
-            map.forEach { sum += consumer.map(it.key, it.value) }
-            sum
-        }
+    actual override fun sumOfLong(consumer: CacheCollectors.BiSumOfLong<K, V>): Long {
+        var sum = 0L
+        cache.forEachEntry { key, value -> sum += consumer.map(key, value) }
+        return sum
+    }
 
-    actual override fun <R> groupBy(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): Map<R, List<V>> =
-        withMap { map ->
-            val results = HashMap<R, ArrayList<V>>()
-            map.forEach {
-                val group = consumer.map(it.key, it.value)
-                results.getOrPut(group) { ArrayList() }.add(it.value)
-            }
-            results
+    actual override fun <R> groupBy(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): Map<R, List<V>> {
+        val results = HashMap<R, ArrayList<V>>()
+        cache.forEachEntry { key, value ->
+            results.getOrPut(consumer.map(key, value)) { ArrayList() }.add(value)
         }
+        return results
+    }
 
-    actual override fun <R> countByGroup(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): Map<R, Int> =
-        withMap { map ->
-            val results = HashMap<R, Int>()
-            map.forEach {
-                val group = consumer.map(it.key, it.value)
-                results[group] = (results[group] ?: 0) + 1
-            }
-            results
+    actual override fun <R> countByGroup(consumer: CacheCollectors.BiNotNullMapper<K, V, R>): Map<R, Int> {
+        val results = HashMap<R, Int>()
+        cache.forEachEntry { key, value ->
+            val group = consumer.map(key, value)
+            results[group] = (results[group] ?: 0) + 1
         }
+        return results
+    }
 
     actual override fun <R> sumByGroup(
         groupMap: CacheCollectors.BiNotNullMapper<K, V, R>,
         sumOf: CacheCollectors.BiNotNullMapper<K, V, Long>,
-    ): Map<R, Long> =
-        withMap { map ->
-            val results = HashMap<R, Long>()
-            map.forEach {
-                val group = groupMap.map(it.key, it.value)
-                results[group] = (results[group] ?: 0L) + sumOf.map(it.key, it.value)
-            }
-            results
+    ): Map<R, Long> {
+        val results = HashMap<R, Long>()
+        cache.forEachEntry { key, value ->
+            val group = groupMap.map(key, value)
+            results[group] = (results[group] ?: 0L) + sumOf.map(key, value)
         }
+        return results
+    }
 
-    actual override fun count(consumer: CacheCollectors.BiFilter<K, V>): Int = withMap { map -> map.count { consumer.filter(it.key, it.value) } }
+    actual override fun count(consumer: CacheCollectors.BiFilter<K, V>): Int {
+        var count = 0
+        cache.forEachEntry { key, value -> if (consumer.filter(key, value)) count++ }
+        return count
+    }
 
-    actual override fun <T, U> associate(transform: (K, V) -> Pair<T, U>): Map<T, U> =
-        withMap { map ->
-            val results = LinkedHashMap<T, U>(map.size)
-            map.forEach {
-                val pair = transform(it.key, it.value)
-                results[pair.first] = pair.second
-            }
-            results
+    actual override fun <T, U> associate(transform: (K, V) -> Pair<T, U>): Map<T, U> {
+        val results = LinkedHashMap<T, U>(cache.size())
+        cache.forEachEntry { key, value ->
+            val pair = transform(key, value)
+            results[pair.first] = pair.second
         }
+        return results
+    }
 
-    actual override fun <U> associateWith(transform: (K, V) -> U?): Map<K, U?> =
-        withMap { map ->
-            val results = LinkedHashMap<K, U?>(map.size)
-            map.forEach {
-                results[it.key] = transform(it.key, it.value)
-            }
-            results
-        }
+    actual override fun <U> associateWith(transform: (K, V) -> U?): Map<K, U?> {
+        val results = LinkedHashMap<K, U?>(cache.size())
+        cache.forEachEntry { key, value -> results[key] = transform(key, value) }
+        return results
+    }
 
     actual override fun filter(
         from: K,

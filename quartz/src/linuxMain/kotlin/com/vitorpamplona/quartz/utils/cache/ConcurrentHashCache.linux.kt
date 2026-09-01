@@ -20,30 +20,30 @@
  */
 package com.vitorpamplona.quartz.utils.cache
 
-import kotlin.concurrent.AtomicReference
-
-// Copy-on-write, mirroring LargeCache.linux: correct and simple; the linux
-// target is CI-only so write cost is acceptable.
+/**
+ * Linux/Native actual for [ConcurrentHashCache], over the same [StripedHashMap] as
+ * `LargeCache.linux.kt` — read its docs for why.
+ *
+ * This one was the worst-placed of the copy-on-write caches: its only caller,
+ * `CachingEventDecoder`, writes once per event arriving from a relay, so every decode
+ * rebuilt the whole map under a CAS retry loop. Now a write touches one bucket and a
+ * read takes no lock at all.
+ */
 actual class ConcurrentHashCache<K : Any, V : Any> {
-    private val mapRef = AtomicReference(HashMap<K, V>())
+    private val cache = StripedHashMap<K, V>()
 
-    actual fun get(key: K): V? = mapRef.value[key]
+    actual fun get(key: K): V? = cache.get(key)
 
     actual fun put(
         key: K,
         value: V,
     ) {
-        while (true) {
-            val current = mapRef.value
-            val copy = HashMap(current)
-            copy[key] = value
-            if (mapRef.compareAndSet(current, copy)) return
-        }
+        cache.put(key, value)
     }
 
-    actual fun size(): Int = mapRef.value.size
+    actual fun size(): Int = cache.size()
 
     actual fun clear() {
-        mapRef.value = HashMap()
+        cache.clear()
     }
 }
